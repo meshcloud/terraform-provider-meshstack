@@ -47,15 +47,15 @@ func (p *MeshStackProvider) Schema(ctx context.Context, req provider.SchemaReque
 		Attributes: map[string]schema.Attribute{
 			"endpoint": schema.StringAttribute{
 				MarkdownDescription: "Example provider attribute",
-				Optional:            false,
+				Required:            true,
 			},
 			"apikey": schema.StringAttribute{
 				MarkdownDescription: "API Key to authenticate against the meshStack API",
-				Optional:            false,
+				Required:            true,
 			},
 			"apisecret": schema.StringAttribute{
 				MarkdownDescription: "API Secret to authenticate against the meshStack API",
-				Optional:            false,
+				Required:            true,
 			},
 		},
 	}
@@ -95,13 +95,12 @@ func buildClient(url *url.URL, model MeshStackProviderModel) *MeshStackProviderC
 func (p *MeshStackProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		NewExampleResource,
+		NewBuildingBlockResource,
 	}
 }
 
 func (p *MeshStackProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
-	return []func() datasource.DataSource{
-		NewExampleDataSource,
-	}
+	return []func() datasource.DataSource{}
 }
 
 func New(version string) func() provider.Provider {
