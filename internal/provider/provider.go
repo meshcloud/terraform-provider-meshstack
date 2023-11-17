@@ -3,6 +3,8 @@ package provider
 import (
 	"context"
 	"net/http"
+	"net/url"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -25,6 +27,14 @@ type MeshStackProviderModel struct {
 	Endpoint  types.String `tfsdk:"endpoint"`
 	ApiKey    types.String `tfsdk:"apikey"`
 	ApiSecret types.String `tfsdk:"apisecret"`
+}
+
+// TODO this will be an abstraction that does the login call, get a token and then use this token in the Auth header.
+type MeshStackProviderClient struct {
+	Url        *url.URL
+	httpClient *http.Client
+	apiKey     string
+	apiSecret  string
 }
 
 func (p *MeshStackProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
@@ -53,22 +63,33 @@ func (p *MeshStackProvider) Schema(ctx context.Context, req provider.SchemaReque
 
 func (p *MeshStackProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
 	var data MeshStackProviderModel
-
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
+
+	url, err := url.Parse(data.Endpoint.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError("Provider endpoint not valid.", "The value provided as the providers endpoint is not a valid URL.")
+	} else {
+		client := buildClient(url, data)
+		resp.DataSourceData = client
+		resp.ResourceData = client
+	}
 
 	if resp.Diagnostics.HasError() {
 		return
 	}
+}
 
-	// TODO validate config and append errors is case there are any e.g.
-	// resp.Diagnostics.AddAttributeError()
+func buildClient(url *url.URL, model MeshStackProviderModel) *MeshStackProviderClient {
+	client := MeshStackProviderClient{
+		Url: url,
+		httpClient: &http.Client{
+			Timeout: time.Minute * 5,
+		},
+		apiKey:    model.ApiKey.ValueString(),
+		apiSecret: model.ApiKey.ValueString(),
+	}
 
-	// TODO create client e.g. like this:
-	// Example client configuration for data sources and resources
-
-	client := http.DefaultClient
-	resp.DataSourceData = client
-	resp.ResourceData = client
+	return &client
 }
 
 func (p *MeshStackProvider) Resources(ctx context.Context) []func() resource.Resource {

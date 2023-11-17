@@ -1,4 +1,4 @@
-module github.com/hashicorp/terraform-provider-scaffolding-framework
+module github.com/meshcloud/terraform-provider-meshstack
 
 go 1.19
 
