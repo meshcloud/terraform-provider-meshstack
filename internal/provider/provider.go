@@ -29,14 +29,6 @@ type MeshStackProviderModel struct {
 	ApiSecret types.String `tfsdk:"apisecret"`
 }
 
-// TODO this will be an abstraction that does the login call, get a token and then use this token in the Auth header.
-type MeshStackProviderClient struct {
-	Url        *url.URL
-	httpClient *http.Client
-	apiKey     string
-	apiSecret  string
-}
-
 func (p *MeshStackProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
 	resp.TypeName = "meshStack"
 	resp.Version = p.version
@@ -69,7 +61,7 @@ func (p *MeshStackProvider) Configure(ctx context.Context, req provider.Configur
 	if err != nil {
 		resp.Diagnostics.AddError("Provider endpoint not valid.", "The value provided as the providers endpoint is not a valid URL.")
 	} else {
-		client := buildClient(url, data)
+		client := NewClient(url, data.ApiKey.ValueString(), data.ApiSecret.ValueString())
 		resp.DataSourceData = client
 		resp.ResourceData = client
 	}
@@ -77,19 +69,6 @@ func (p *MeshStackProvider) Configure(ctx context.Context, req provider.Configur
 	if resp.Diagnostics.HasError() {
 		return
 	}
-}
-
-func buildClient(url *url.URL, model MeshStackProviderModel) *MeshStackProviderClient {
-	client := MeshStackProviderClient{
-		Url: url,
-		httpClient: &http.Client{
-			Timeout: time.Minute * 5,
-		},
-		apiKey:    model.ApiKey.ValueString(),
-		apiSecret: model.ApiKey.ValueString(),
-	}
-
-	return &client
 }
 
 func (p *MeshStackProvider) Resources(ctx context.Context) []func() resource.Resource {
