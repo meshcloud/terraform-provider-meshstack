@@ -2,9 +2,7 @@ package provider
 
 import (
 	"context"
-	"net/http"
 	"net/url"
-	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -61,7 +59,7 @@ func (p *MeshStackProvider) Configure(ctx context.Context, req provider.Configur
 	if err != nil {
 		resp.Diagnostics.AddError("Provider endpoint not valid.", "The value provided as the providers endpoint is not a valid URL.")
 	} else {
-		client := NewClient(url, data.ApiKey.ValueString(), data.ApiSecret.ValueString())
+		client, _ := NewClient(url, data.ApiKey.ValueString(), data.ApiSecret.ValueString()) // TODO handle err
 		resp.DataSourceData = client
 		resp.ResourceData = client
 	}

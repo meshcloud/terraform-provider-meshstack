@@ -10,9 +10,10 @@ import (
 )
 
 const (
-	apiRoot       = "/api"
-	loginEndpoint = "/api/login"
+	apiMeshObjectsRoot = "/api/meshobjects"
+	loginEndpoint      = "/api/login"
 
+	ERROR_GENERIC_CLIENT_ERROR   = "client error"
 	ERROR_AUTHENTICATION_FAILURE = "not authorized. check api key and secret."
 	ERROR_ENDPOINT_LOOKUP        = "could not fetch endpoints for meshStack."
 )
@@ -29,7 +30,7 @@ type MeshStackProviderClient struct {
 }
 
 type endpoints struct {
-	buildingBlocks string
+	BuildingBlocks string `json:"meshbuildingblocks"`
 }
 
 type loginResponse struct {
@@ -73,6 +74,11 @@ func (c *MeshStackProviderClient) login() error {
 			},
 		},
 	)
+
+	if err != nil {
+		return errors.New(ERROR_GENERIC_CLIENT_ERROR)
+	}
+
 	defer res.Body.Close()
 
 	if err != nil || res.StatusCode != 200 {
@@ -104,9 +110,64 @@ func (c *MeshStackProviderClient) lookUpEndpoints() error {
 		return errors.New(ERROR_AUTHENTICATION_FAILURE)
 	}
 
-	// TODO
-	return errors.New("not implemented")
+	meshObjectsPath, err := url.JoinPath(c.url.String(), apiMeshObjectsRoot)
+	if err != nil {
+		return err
+	}
+	meshObjects, _ := url.Parse(meshObjectsPath)
+
+	res, err := c.httpClient.Do(
+		&http.Request{
+			URL:    meshObjects,
+			Method: "GET",
+			Header: http.Header{
+				"Authorization": {c.token},
+			},
+		},
+	)
+
+	if err != nil {
+		return errors.New(ERROR_GENERIC_CLIENT_ERROR)
+	}
+
+	defer res.Body.Close()
+
+	if res.StatusCode != 200 {
+		return errors.New(ERROR_AUTHENTICATION_FAILURE)
+	}
+
+	data, err := io.ReadAll(res.Body)
+	if err != nil {
+		return err
+	}
+	var endpoints endpoints
+	json.Unmarshal(data, &endpoints)
+	c.endpoints = endpoints
+
+	return nil
 }
 
-// TODO
-func (c *MeshStackProviderClient) ReadBuildingBlock() {}
+func (c *MeshStackProviderClient) ReadBuildingBlock(uuid string) (*BuildingBlockResourceModel, error) {
+	if c.ensureValidToken() != nil {
+		return nil, errors.New(ERROR_AUTHENTICATION_FAILURE)
+	}
+
+	targetPath, err := url.JoinPath(c.url.String(), c.endpoints.BuildingBlocks, uuid)
+	if err != nil {
+		return nil, err
+	}
+
+	targetUrl, _ := url.Parse(targetPath)
+	_, err = c.httpClient.Do(
+		&http.Request{
+			URL:    targetUrl,
+			Method: "GET",
+			Header: http.Header{
+				"Authorization": {c.token},
+			},
+		},
+	)
+
+	// TODO parse response into a data model and then into a BuildingBlockResourceModel
+	return nil, errors.New("not implemented")
+}
