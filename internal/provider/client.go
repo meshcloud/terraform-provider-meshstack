@@ -1,7 +1,9 @@
 package provider
 
 import (
+	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"net/url"
 	"time"
@@ -30,6 +32,11 @@ type endpoints struct {
 	buildingBlocks string
 }
 
+type loginResponse struct {
+	Token     string `json:"access_token"`
+	ExpireSec int    `json:"expires_in"`
+}
+
 func NewClient(url *url.URL, apiKey string, apiSecret string) (*MeshStackProviderClient, error) {
 	client := &MeshStackProviderClient{
 		url: url,
@@ -49,8 +56,40 @@ func NewClient(url *url.URL, apiKey string, apiSecret string) (*MeshStackProvide
 }
 
 func (c *MeshStackProviderClient) login() error {
-	// TODO
-	return errors.New(ERROR_AUTHENTICATION_FAILURE)
+	loginPath, err := url.JoinPath(c.url.String(), loginEndpoint)
+	if err != nil {
+		return err
+	}
+	loginUrl, _ := url.Parse(loginPath)
+
+	res, _ := c.httpClient.Do(
+		&http.Request{
+			URL:    loginUrl,
+			Method: "POST",
+			Header: http.Header{
+				"client_id":     {c.apiKey},
+				"client_secret": {c.apiSecret},
+				"grant_type":    {"client_credentials"},
+			},
+		},
+	)
+	defer res.Body.Close()
+
+	if err != nil || res.StatusCode != 200 {
+		return errors.New(ERROR_AUTHENTICATION_FAILURE)
+	}
+
+	data, err := io.ReadAll(res.Body)
+	if err != nil {
+		return err
+	}
+
+	var loginResult loginResponse
+	json.Unmarshal(data, &loginResult)
+	c.token = loginResult.Token
+	c.tokenExpiry = time.Now().Add(time.Second * time.Duration(loginResult.ExpireSec))
+
+	return nil
 }
 
 func (c *MeshStackProviderClient) ensureValidToken() error {
