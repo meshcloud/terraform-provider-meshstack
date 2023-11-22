@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
@@ -29,7 +30,6 @@ type BuildingBlockResourceModel struct {
 	DefinitionUUid    types.String `tfsdk:"definition_uuid"`
 	DefinitionVersion types.Int64  `tfsdk:"definition_version"`
 	TenantIdentifier  types.String `tfsdk:"tenant_identifier"`
-	Name              types.String `tfsdk:"name"`
 	DisplayName       types.String `tfsdk:"display_name"`
 	Inputs            types.Map    `tfsdk:"inputs"`
 	Parents           types.Set    `tfsdk:"parents"`
@@ -62,10 +62,6 @@ func (r *BuildingBlockResource) Schema(ctx context.Context, req resource.SchemaR
 			"tenant_identifier": schema.StringAttribute{
 				Required:            true,
 				MarkdownDescription: "The identifier of the tenant, this Building Block belongs to.",
-			},
-			"name": schema.StringAttribute{
-				Required:            true,
-				MarkdownDescription: "The name of the Building Block.",
 			},
 			"display_name": schema.StringAttribute{
 				Required:            true,
@@ -125,6 +121,22 @@ func (r *BuildingBlockResource) Read(ctx context.Context, req resource.ReadReque
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	bb, err := r.client.ReadBuildingBlock(data.Uuid.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError("An error occured while contacting the meshObjects API.", err.Error())
+		return
+	}
+
+	data.Uuid = basetypes.NewStringValue(bb.Metadata.Uuid)
+	data.DefinitionUUid = basetypes.NewStringValue(bb.Metadata.DefinitionUuid)
+	data.DefinitionVersion = basetypes.NewInt64Value(bb.Metadata.DefinitionVersion)
+	data.TenantIdentifier = basetypes.NewStringValue(bb.Metadata.TenantIdentifier)
+
+	data.DisplayName = basetypes.NewStringValue(bb.Spec.DisplayName)
+
+	// TODO set data.Inputs
+	// TODO set data.Parents
 
 	// save to STATE
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)

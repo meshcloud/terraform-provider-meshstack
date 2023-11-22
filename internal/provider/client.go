@@ -14,6 +14,7 @@ const (
 	loginEndpoint      = "/api/login"
 
 	ERROR_GENERIC_CLIENT_ERROR   = "client error"
+	ERROR_GENERIC_API_ERROR      = "api error"
 	ERROR_AUTHENTICATION_FAILURE = "not authorized. check api key and secret."
 	ERROR_ENDPOINT_LOOKUP        = "could not fetch endpoints for meshStack."
 )
@@ -147,7 +148,7 @@ func (c *MeshStackProviderClient) lookUpEndpoints() error {
 	return nil
 }
 
-func (c *MeshStackProviderClient) ReadBuildingBlock(uuid string) (*BuildingBlockResourceModel, error) {
+func (c *MeshStackProviderClient) ReadBuildingBlock(uuid string) (*MeshBuildingBlock, error) {
 	if c.ensureValidToken() != nil {
 		return nil, errors.New(ERROR_AUTHENTICATION_FAILURE)
 	}
@@ -158,7 +159,7 @@ func (c *MeshStackProviderClient) ReadBuildingBlock(uuid string) (*BuildingBlock
 	}
 
 	targetUrl, _ := url.Parse(targetPath)
-	_, err = c.httpClient.Do(
+	res, err := c.httpClient.Do(
 		&http.Request{
 			URL:    targetUrl,
 			Method: "GET",
@@ -168,6 +169,22 @@ func (c *MeshStackProviderClient) ReadBuildingBlock(uuid string) (*BuildingBlock
 		},
 	)
 
-	// TODO parse response into a data model and then into a BuildingBlockResourceModel
-	return nil, errors.New("not implemented")
+	if err != nil {
+		return nil, errors.New(ERROR_GENERIC_CLIENT_ERROR)
+	}
+
+	defer res.Body.Close()
+
+	if res.StatusCode != 200 {
+		return nil, errors.New(ERROR_GENERIC_API_ERROR)
+	}
+
+	data, err := io.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
+	}
+	
+	var bb MeshBuildingBlock
+	json.Unmarshal(data, &bb)
+	return &bb, nil
 }
