@@ -6,35 +6,58 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
-var _ datasource.DataSource = &BuildingBlockDataSource{}
+var (
+	_ datasource.DataSource              = &buildingBlockDataSource{}
+	_ datasource.DataSourceWithConfigure = &buildingBlockDataSource{}
+)
 
-func NewBuildingBlockSource() datasource.DataSource {
-	return &BuildingBlockDataSource{}
+func NewBuildingBlockDataSource() datasource.DataSource {
+	return &buildingBlockDataSource{}
 }
 
-type BuildingBlockDataSource struct {
+type buildingBlockDataSource struct {
 	client *MeshStackProviderClient
 }
 
-type BuildingBlockDataSourceModel struct {
+type buildingBlockDataSourceModel struct {
+	Metadata buildingBlockMetadataModel `tfsdk:"metadata"`
 }
 
-func (d *BuildingBlockDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+type buildingBlockMetadataModel struct {
+	Uuid           types.String `tfsdk:"uuid"`
+	DefinitionUuid types.String `tfsdk:"definition_uuid"`
+}
+
+func (d *buildingBlockDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_buildingblock"
 }
 
-func (d *BuildingBlockDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (d *buildingBlockDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "BuildingBlock data source",
 
-		Attributes: map[string]schema.Attribute{},
+		Attributes: map[string]schema.Attribute{
+			"metadata": schema.SingleNestedAttribute{
+				Description: "Metadata",
+				Required:    true,
+				Attributes: map[string]schema.Attribute{
+					"uuid": schema.StringAttribute{
+						Required: true,
+					},
+					"definition_uuid": schema.StringAttribute{
+						Computed: true,
+					},
+				},
+			},
+		},
 	}
 }
 
-func (d *BuildingBlockDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+func (d *buildingBlockDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
 	}
@@ -53,5 +76,25 @@ func (d *BuildingBlockDataSource) Configure(ctx context.Context, req datasource.
 	d.client = client
 }
 
-func (d *BuildingBlockDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+func (d *buildingBlockDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+	var state buildingBlockDataSourceModel
+
+	resp.Diagnostics.Append(req.Config.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	uuid := state.Metadata.Uuid.ValueString()
+	bb, err := d.client.ReadBuildingBlock(uuid)
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to read buildingblock", err.Error())
+	}
+
+	state.Metadata.DefinitionUuid = types.StringValue(bb.Metadata.DefinitionUuid)
+
+	diags := resp.State.Set(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 }

@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright (c) meshcloud GmbH
 // SPDX-License-Identifier: MPL-2.0
 
 package main
@@ -38,7 +38,7 @@ func main() {
 	flag.Parse()
 
 	opts := providerserver.ServeOpts{
-		Address: "registry.terraform.io/hashicorp/meshstack",
+		Address: "registry.terraform.io/meshcloud/meshstack",
 		Debug:   debug,
 	}
 
