@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright (c) meshcloud GmbH
 // SPDX-License-Identifier: MPL-2.0
 
 //go:build tools

@@ -3,9 +3,12 @@ package provider
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 )
 
@@ -15,8 +18,8 @@ const (
 
 	ERROR_GENERIC_CLIENT_ERROR   = "client error"
 	ERROR_GENERIC_API_ERROR      = "api error"
-	ERROR_AUTHENTICATION_FAILURE = "not authorized. check api key and secret."
-	ERROR_ENDPOINT_LOOKUP        = "could not fetch endpoints for meshStack."
+	ERROR_AUTHENTICATION_FAILURE = "Not authorized. Check api key and secret."
+	ERROR_ENDPOINT_LOOKUP        = "Could not fetch endpoints for meshStack."
 )
 
 // TODO this will be an abstraction that does the login call, get a token and then use this token in the Auth header.
@@ -50,41 +53,38 @@ func NewClient(url *url.URL, apiKey string, apiSecret string) (*MeshStackProvide
 		token:     "",
 	}
 
-	if err := client.lookUpEndpoints(); err != nil {
-		return nil, errors.New(ERROR_ENDPOINT_LOOKUP)
-	}
+	// if err := client.lookUpEndpoints(); err != nil {
+	// 	return nil, errors.New(ERROR_ENDPOINT_LOOKUP)
+	// }
+	client.endpoints = endpoints{BuildingBlocks: "api/meshobjects/meshbuildingblocks"}
 
 	return client, nil
 }
 
 func (c *MeshStackProviderClient) login() error {
+	log.Println("login")
 	loginPath, err := url.JoinPath(c.url.String(), loginEndpoint)
 	if err != nil {
 		return err
 	}
-	loginUrl, _ := url.Parse(loginPath)
 
-	res, _ := c.httpClient.Do(
-		&http.Request{
-			URL:    loginUrl,
-			Method: "POST",
-			Header: http.Header{
-				"client_id":     {c.apiKey},
-				"client_secret": {c.apiSecret},
-				"grant_type":    {"client_credentials"},
-			},
-		},
-	)
+	formData := url.Values{}
+	formData.Set("client_id", c.apiKey)
+	formData.Set("client_secret", c.apiSecret)
+	formData.Set("grant_type", "client_credentials")
 
-	if err != nil {
-		return errors.New(ERROR_GENERIC_CLIENT_ERROR)
-	}
+	req, _ := http.NewRequest(http.MethodPost, loginPath, strings.NewReader(formData.Encode()))
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
-	defer res.Body.Close()
+	res, err := c.httpClient.Do(req)
 
 	if err != nil || res.StatusCode != 200 {
 		return errors.New(ERROR_AUTHENTICATION_FAILURE)
 	}
+
+	log.Println(res)
+
+	defer res.Body.Close()
 
 	data, err := io.ReadAll(res.Body)
 	if err != nil {
@@ -93,13 +93,14 @@ func (c *MeshStackProviderClient) login() error {
 
 	var loginResult loginResponse
 	json.Unmarshal(data, &loginResult)
-	c.token = loginResult.Token
+	c.token = fmt.Sprintf("Bearer %s", loginResult.Token)
 	c.tokenExpiry = time.Now().Add(time.Second * time.Duration(loginResult.ExpireSec))
 
 	return nil
 }
 
 func (c *MeshStackProviderClient) ensureValidToken() error {
+	log.Printf("current token: %s", c.token)
 	if c.token == "" || time.Now().Add(time.Second*30).After(c.tokenExpiry) {
 		return c.login()
 	}
@@ -107,9 +108,11 @@ func (c *MeshStackProviderClient) ensureValidToken() error {
 }
 
 func (c *MeshStackProviderClient) lookUpEndpoints() error {
+	log.Println("lookUpEndpoints")
 	if c.ensureValidToken() != nil {
 		return errors.New(ERROR_AUTHENTICATION_FAILURE)
 	}
+	log.Printf("new token: %s", c.token)
 
 	meshObjectsPath, err := url.JoinPath(c.url.String(), apiMeshObjectsRoot)
 	if err != nil {
@@ -149,15 +152,18 @@ func (c *MeshStackProviderClient) lookUpEndpoints() error {
 }
 
 func (c *MeshStackProviderClient) ReadBuildingBlock(uuid string) (*MeshBuildingBlock, error) {
+	log.Println("ReadBuildingBlock")
 	if c.ensureValidToken() != nil {
 		return nil, errors.New(ERROR_AUTHENTICATION_FAILURE)
 	}
+	log.Printf("new token: %s", c.token)
 
 	targetPath, err := url.JoinPath(c.url.String(), c.endpoints.BuildingBlocks, uuid)
 	if err != nil {
 		return nil, err
 	}
 
+	log.Println(targetPath)
 	targetUrl, _ := url.Parse(targetPath)
 	res, err := c.httpClient.Do(
 		&http.Request{
@@ -183,7 +189,8 @@ func (c *MeshStackProviderClient) ReadBuildingBlock(uuid string) (*MeshBuildingB
 	if err != nil {
 		return nil, err
 	}
-	
+	log.Printf("response data: %s", data)
+
 	var bb MeshBuildingBlock
 	json.Unmarshal(data, &bb)
 	return &bb, nil

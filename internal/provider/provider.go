@@ -28,7 +28,7 @@ type MeshStackProviderModel struct {
 }
 
 func (p *MeshStackProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
-	resp.TypeName = "meshStack"
+	resp.TypeName = "meshstack"
 	resp.Version = p.version
 }
 
@@ -59,7 +59,10 @@ func (p *MeshStackProvider) Configure(ctx context.Context, req provider.Configur
 	if err != nil {
 		resp.Diagnostics.AddError("Provider endpoint not valid.", "The value provided as the providers endpoint is not a valid URL.")
 	} else {
-		client, _ := NewClient(url, data.ApiKey.ValueString(), data.ApiSecret.ValueString()) // TODO handle err
+		client, err := NewClient(url, data.ApiKey.ValueString(), data.ApiSecret.ValueString()) // TODO handle err
+		if err != nil {
+			resp.Diagnostics.AddError("Failed to create client.", err.Error())
+		}
 		resp.DataSourceData = client
 		resp.ResourceData = client
 	}
@@ -70,14 +73,13 @@ func (p *MeshStackProvider) Configure(ctx context.Context, req provider.Configur
 }
 
 func (p *MeshStackProvider) Resources(ctx context.Context) []func() resource.Resource {
-	return []func() resource.Resource{
-		NewExampleResource,
-		NewBuildingBlockResource,
-	}
+	return []func() resource.Resource{}
 }
 
 func (p *MeshStackProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
-	return []func() datasource.DataSource{}
+	return []func() datasource.DataSource{
+		NewBuildingBlockDataSource,
+	}
 }
 
 func New(version string) func() provider.Provider {
