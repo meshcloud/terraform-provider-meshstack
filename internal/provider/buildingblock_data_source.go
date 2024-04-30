@@ -28,20 +28,37 @@ func (d *buildingBlockDataSource) Metadata(ctx context.Context, req datasource.M
 }
 
 func (d *buildingBlockDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+	mkIoList := func(desc string) schema.ListNestedAttribute {
+		return schema.ListNestedAttribute{
+			Computed:            true,
+			MarkdownDescription: desc,
+			NestedObject: schema.NestedAttributeObject{
+				Attributes: map[string]schema.Attribute{
+					"key":        schema.StringAttribute{Computed: true},
+					"value":      schema.StringAttribute{Computed: true},
+					"value_type": schema.StringAttribute{Computed: true},
+				},
+			},
+		}
+	}
+
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "BuildingBlock data source",
+		MarkdownDescription: "Query a single Building Block by UUID.",
 
 		Attributes: map[string]schema.Attribute{
 			"api_version": schema.StringAttribute{
-				Computed: true,
+				MarkdownDescription: "Building Block datatype version",
+				Computed:            true,
 			},
 
 			"kind": schema.StringAttribute{
-				Computed: true,
+				MarkdownDescription: "meshObject type, always `meshBuildingBlock`.",
+				Computed:            true,
 			},
 
 			"metadata": schema.SingleNestedAttribute{
-				Required: true,
+				MarkdownDescription: "Building Block metadata. UUID of the target Building Block must be set here.",
+				Required:            true,
 				Attributes: map[string]schema.Attribute{
 					"uuid":               schema.StringAttribute{Required: true},
 					"definition_uuid":    schema.StringAttribute{Computed: true},
@@ -59,20 +76,12 @@ func (d *buildingBlockDataSource) Schema(ctx context.Context, req datasource.Sch
 			},
 
 			"spec": schema.SingleNestedAttribute{
-				Computed: true,
+				MarkdownDescription: "Building Block specification.",
+				Computed:            true,
 				Attributes: map[string]schema.Attribute{
 
 					"display_name": schema.StringAttribute{Computed: true},
-					"inputs": schema.ListNestedAttribute{
-						Computed: true,
-						NestedObject: schema.NestedAttributeObject{
-							Attributes: map[string]schema.Attribute{
-								"key":        schema.StringAttribute{Computed: true},
-								"value":      schema.StringAttribute{Computed: true},
-								"value_type": schema.StringAttribute{Computed: true},
-							},
-						},
-					},
+					"inputs":       mkIoList("List of Building Block inputs."),
 					"parent_building_blocks": schema.ListNestedAttribute{
 						Computed: true,
 						NestedObject: schema.NestedAttributeObject{
@@ -86,20 +95,14 @@ func (d *buildingBlockDataSource) Schema(ctx context.Context, req datasource.Sch
 			},
 
 			"status": schema.SingleNestedAttribute{
-				Computed: true,
+				MarkdownDescription: "Current Building Block status.",
+				Computed:            true,
 				Attributes: map[string]schema.Attribute{
-
-					"status": schema.StringAttribute{Computed: true},
-					"outputs": schema.ListNestedAttribute{
-						Computed: true,
-						NestedObject: schema.NestedAttributeObject{
-							Attributes: map[string]schema.Attribute{
-								"key":        schema.StringAttribute{Computed: true},
-								"value":      schema.StringAttribute{Computed: true},
-								"value_type": schema.StringAttribute{Computed: true},
-							},
-						},
+					"status": schema.StringAttribute{
+						MarkdownDescription: "Execution status. One of `WAITING_FOR_DEPENDENT_INPUT`, `WAITING_FOR_OPERATOR_INPUT`, `PENDING`, `IN_PROGRESS`, `SUCCEEDED`, `FAILED`.",
+						Computed:            true,
 					},
+					"outputs": mkIoList("List of building block outputs."),
 				},
 			},
 		},

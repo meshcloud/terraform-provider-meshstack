@@ -124,7 +124,7 @@ func (r *BuildingBlockResource) Read(ctx context.Context, req resource.ReadReque
 
 	bb, err := r.client.ReadBuildingBlock(data.Uuid.ValueString())
 	if err != nil {
-		resp.Diagnostics.AddError("An error occured while contacting the meshObjects API.", err.Error())
+		resp.Diagnostics.AddError("An error occurred while contacting the meshObjects API.", err.Error())
 		return
 	}
 
