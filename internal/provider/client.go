@@ -156,14 +156,12 @@ func (c *MeshStackProviderClient) ReadBuildingBlock(uuid string) (*MeshBuildingB
 	if c.ensureValidToken() != nil {
 		return nil, errors.New(ERROR_AUTHENTICATION_FAILURE)
 	}
-	log.Printf("new token: %s", c.token)
 
 	targetPath, err := url.JoinPath(c.url.String(), c.endpoints.BuildingBlocks, uuid)
 	if err != nil {
 		return nil, err
 	}
 
-	log.Println(targetPath)
 	targetUrl, _ := url.Parse(targetPath)
 	res, err := c.httpClient.Do(
 		&http.Request{
@@ -189,7 +187,6 @@ func (c *MeshStackProviderClient) ReadBuildingBlock(uuid string) (*MeshBuildingB
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("response data: %s", data)
 
 	var bb MeshBuildingBlock
 	json.Unmarshal(data, &bb)
