@@ -7,7 +7,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
-	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
@@ -23,15 +22,6 @@ func NewBuildingBlockDataSource() datasource.DataSource {
 type buildingBlockDataSource struct {
 	client *MeshStackProviderClient
 }
-
-type buildingBlockDataSourceModel IMeshBuildingBlock[types.String, types.Bool, types.Int64]
-
-// Aliases for nested model types
-type buildingBlockMetadataModel = IMeshBuildingBlockMetadata[types.String, types.Bool, types.Int64]
-type buildingBlockSpecModel = IMeshBuildingBlockSpec[types.String]
-type buildingBlockIOModel = IMeshBuildingBlockIO[types.String]
-type buildingBlockParentModel = IMeshBuildingBlockParent[types.String]
-type buildingBlockStatusModel = IMeshBuildingBlockStatus[types.String]
 
 func (d *buildingBlockDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_buildingblock"
@@ -144,61 +134,6 @@ func (d *buildingBlockDataSource) Read(ctx context.Context, req datasource.ReadR
 		resp.Diagnostics.AddError("Unable to read buildingblock", err.Error())
 	}
 
-	// construct attributes
-	metadata := buildingBlockMetadataModel{
-		Uuid:                types.StringValue(bb.Metadata.Uuid),
-		DefinitionUuid:      types.StringValue(bb.Metadata.DefinitionUuid),
-		DefinitionVersion:   types.Int64Value(bb.Metadata.DefinitionVersion),
-		TenantIdentifier:    types.StringValue(bb.Metadata.TenantIdentifier),
-		ForcePurge:          types.BoolValue(bb.Metadata.ForcePurge),
-		CreatedOn:           types.StringValue(bb.Metadata.CreatedOn),
-		MarkedForDeletionOn: types.StringValue(bb.Metadata.MarkedForDeletionOn),
-		MarkedForDeletionBy: types.StringValue(bb.Metadata.MarkedForDeletionBy),
-	}
-
-	specInputs := make([]buildingBlockIOModel, len(bb.Spec.Inputs))
-	for i, input := range bb.Spec.Inputs {
-		specInputs[i] = buildingBlockIOModel{
-			Key:       types.StringValue(input.Key),
-			Value:     types.StringValue(input.Value),
-			ValueType: types.StringValue(input.ValueType),
-		}
-	}
-
-	specParents := make([]buildingBlockParentModel, len(bb.Spec.ParentBuildingBlocks))
-	for i, parent := range bb.Spec.ParentBuildingBlocks {
-		specParents[i] = buildingBlockParentModel{
-			BuildingBlockUuid: types.StringValue(parent.BuildingBlockUuid),
-			DefinitionUuid:    types.StringValue(parent.DefinitionUuid),
-		}
-	}
-
-	spec := buildingBlockSpecModel{
-		DisplayName:          types.StringValue(bb.Spec.DisplayName),
-		Inputs:               specInputs,
-		ParentBuildingBlocks: specParents,
-	}
-
-	statusOutputs := make([]buildingBlockIOModel, len(bb.Status.Outputs))
-	for i, output := range bb.Status.Outputs {
-		statusOutputs[i] = buildingBlockIOModel{
-			Key:       types.StringValue(output.Key),
-			Value:     types.StringValue(output.Value),
-			ValueType: types.StringValue(output.ValueType),
-		}
-	}
-	status := buildingBlockStatusModel{
-		Status:  types.StringValue(bb.Status.Status),
-		Outputs: statusOutputs,
-	}
-
-	// assemble set full model
-	state := buildingBlockDataSourceModel{
-		ApiVersion: types.StringValue(bb.ApiVersion),
-		Kind:       types.StringValue(bb.Kind),
-		Metadata:   metadata,
-		Spec:       spec,
-		Status:     status,
-	}
-	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
+	// client data maps directly to the schema so we just need to set the state
+	resp.Diagnostics.Append(resp.State.Set(ctx, bb)...)
 }
