@@ -53,6 +53,7 @@ func NewClient(url *url.URL, apiKey string, apiSecret string) (*MeshStackProvide
 		token:     "",
 	}
 
+	// TODO: lookup endpoints
 	// if err := client.lookUpEndpoints(); err != nil {
 	// 	return nil, errors.New(ERROR_ENDPOINT_LOOKUP)
 	// }
@@ -92,7 +93,11 @@ func (c *MeshStackProviderClient) login() error {
 	}
 
 	var loginResult loginResponse
-	json.Unmarshal(data, &loginResult)
+	err = json.Unmarshal(data, &loginResult)
+	if err != nil {
+		return err
+	}
+
 	c.token = fmt.Sprintf("Bearer %s", loginResult.Token)
 	c.tokenExpiry = time.Now().Add(time.Second * time.Duration(loginResult.ExpireSec))
 
@@ -107,6 +112,7 @@ func (c *MeshStackProviderClient) ensureValidToken() error {
 	return nil
 }
 
+// nolint: unused
 func (c *MeshStackProviderClient) lookUpEndpoints() error {
 	log.Println("lookUpEndpoints")
 	if c.ensureValidToken() != nil {
@@ -144,10 +150,14 @@ func (c *MeshStackProviderClient) lookUpEndpoints() error {
 	if err != nil {
 		return err
 	}
-	var endpoints endpoints
-	json.Unmarshal(data, &endpoints)
-	c.endpoints = endpoints
 
+	var endpoints endpoints
+	err = json.Unmarshal(data, &endpoints)
+	if err != nil {
+		return err
+	}
+
+	c.endpoints = endpoints
 	return nil
 }
 
@@ -189,6 +199,10 @@ func (c *MeshStackProviderClient) ReadBuildingBlock(uuid string) (*MeshBuildingB
 	}
 
 	var bb MeshBuildingBlock
-	json.Unmarshal(data, &bb)
+	err = json.Unmarshal(data, &bb)
+	if err != nil {
+		return nil, err
+	}
+
 	return &bb, nil
 }

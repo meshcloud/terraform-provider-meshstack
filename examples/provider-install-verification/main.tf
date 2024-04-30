@@ -18,6 +18,12 @@ data "meshstack_buildingblock" "test" {
   }
 }
 
+data "meshstack_buildingblock" "test_failed" {
+  metadata = {
+    uuid = "4570f298-1f6a-48d0-8f93-13dac606ceb0"
+  }
+}
+
 output "bb_provider_uuid" {
   value = data.meshstack_buildingblock.test.metadata.definition_uuid
 }

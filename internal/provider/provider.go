@@ -36,7 +36,7 @@ func (p *MeshStackProvider) Schema(ctx context.Context, req provider.SchemaReque
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"endpoint": schema.StringAttribute{
-				MarkdownDescription: "Example provider attribute",
+				MarkdownDescription: "URl of meshStack API, e.g. `https://api.my.meshstack.io`",
 				Required:            true,
 			},
 			"apikey": schema.StringAttribute{
