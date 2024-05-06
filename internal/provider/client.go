@@ -35,6 +35,7 @@ type MeshStackProviderClient struct {
 
 type endpoints struct {
 	BuildingBlocks string `json:"meshbuildingblocks"`
+	Projects       string `json:"meshprojects"`
 }
 
 type loginResponse struct {
@@ -57,7 +58,10 @@ func NewClient(url *url.URL, apiKey string, apiSecret string) (*MeshStackProvide
 	// if err := client.lookUpEndpoints(); err != nil {
 	// 	return nil, errors.New(ERROR_ENDPOINT_LOOKUP)
 	// }
-	client.endpoints = endpoints{BuildingBlocks: "api/meshobjects/meshbuildingblocks"}
+	client.endpoints = endpoints{
+		BuildingBlocks: "api/meshobjects/meshbuildingblocks",
+		Projects:       "api/meshobjects/meshprojects",
+	}
 
 	return client, nil
 }
@@ -162,7 +166,6 @@ func (c *MeshStackProviderClient) lookUpEndpoints() error {
 }
 
 func (c *MeshStackProviderClient) ReadBuildingBlock(uuid string) (*MeshBuildingBlock, error) {
-	log.Println("ReadBuildingBlock")
 	if c.ensureValidToken() != nil {
 		return nil, errors.New(ERROR_AUTHENTICATION_FAILURE)
 	}
@@ -205,4 +208,50 @@ func (c *MeshStackProviderClient) ReadBuildingBlock(uuid string) (*MeshBuildingB
 	}
 
 	return &bb, nil
+}
+
+func (c *MeshStackProviderClient) ReadProject(workspace string, name string) (*MeshProject, error) {
+	if c.ensureValidToken() != nil {
+		return nil, errors.New(ERROR_AUTHENTICATION_FAILURE)
+	}
+
+	identifier := workspace + "." + name
+	targetPath, err := url.JoinPath(c.url.String(), c.endpoints.Projects, identifier)
+	if err != nil {
+		return nil, err
+	}
+
+	targetUrl, _ := url.Parse(targetPath)
+	res, err := c.httpClient.Do(
+		&http.Request{
+			URL:    targetUrl,
+			Method: "GET",
+			Header: http.Header{
+				"Authorization": {c.token},
+			},
+		},
+	)
+
+	if err != nil {
+		return nil, errors.New(ERROR_GENERIC_CLIENT_ERROR)
+	}
+
+	defer res.Body.Close()
+
+	if res.StatusCode != 200 {
+		return nil, errors.New(ERROR_GENERIC_API_ERROR)
+	}
+
+	data, err := io.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var project MeshProject
+	err = json.Unmarshal(data, &project)
+	if err != nil {
+		return nil, err
+	}
+
+	return &project, nil
 }
