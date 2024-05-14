@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -20,6 +21,8 @@ const (
 	ERROR_GENERIC_API_ERROR      = "api error"
 	ERROR_AUTHENTICATION_FAILURE = "Not authorized. Check api key and secret."
 	ERROR_ENDPOINT_LOOKUP        = "Could not fetch endpoints for meshStack."
+
+	CONTENT_TYPE_PROJECT = "application/vnd.meshcloud.api.meshproject.v2.hal+json"
 )
 
 // TODO this will be an abstraction that does the login call, get a token and then use this token in the Auth header.
@@ -34,8 +37,8 @@ type MeshStackProviderClient struct {
 }
 
 type endpoints struct {
-	BuildingBlocks string `json:"meshbuildingblocks"`
-	Projects       string `json:"meshprojects"`
+	BuildingBlocks *url.URL `json:"meshbuildingblocks"`
+	Projects       *url.URL `json:"meshprojects"`
 }
 
 type loginResponse struct {
@@ -43,9 +46,9 @@ type loginResponse struct {
 	ExpireSec int    `json:"expires_in"`
 }
 
-func NewClient(url *url.URL, apiKey string, apiSecret string) (*MeshStackProviderClient, error) {
+func NewClient(rootUrl *url.URL, apiKey string, apiSecret string) (*MeshStackProviderClient, error) {
 	client := &MeshStackProviderClient{
-		url: url,
+		url: rootUrl,
 		httpClient: &http.Client{
 			Timeout: time.Minute * 5,
 		},
@@ -55,12 +58,9 @@ func NewClient(url *url.URL, apiKey string, apiSecret string) (*MeshStackProvide
 	}
 
 	// TODO: lookup endpoints
-	// if err := client.lookUpEndpoints(); err != nil {
-	// 	return nil, errors.New(ERROR_ENDPOINT_LOOKUP)
-	// }
 	client.endpoints = endpoints{
-		BuildingBlocks: "api/meshobjects/meshbuildingblocks",
-		Projects:       "api/meshobjects/meshprojects",
+		BuildingBlocks: rootUrl.JoinPath(apiMeshObjectsRoot, "meshbuildingblocks"),
+		Projects:       rootUrl.JoinPath(apiMeshObjectsRoot, "meshprojects"),
 	}
 
 	return client, nil
@@ -165,40 +165,52 @@ func (c *MeshStackProviderClient) lookUpEndpoints() error {
 	return nil
 }
 
+func (c *MeshStackProviderClient) doAuthenticatedRequest(req *http.Request) (*http.Response, error) {
+	// ensure that headeres are initialized
+	if req.Header == nil {
+		req.Header = map[string][]string{}
+	}
+
+	// add authentication
+	if c.ensureValidToken() != nil {
+		return nil, errors.New(ERROR_AUTHENTICATION_FAILURE)
+	}
+	req.Header.Set("Authorization", c.token)
+
+	res, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
 func (c *MeshStackProviderClient) ReadBuildingBlock(uuid string) (*MeshBuildingBlock, error) {
 	if c.ensureValidToken() != nil {
 		return nil, errors.New(ERROR_AUTHENTICATION_FAILURE)
 	}
 
-	targetPath, err := url.JoinPath(c.url.String(), c.endpoints.BuildingBlocks, uuid)
-	if err != nil {
-		return nil, err
-	}
+	targetPath := c.endpoints.BuildingBlocks.JoinPath(uuid)
 
-	targetUrl, _ := url.Parse(targetPath)
-	res, err := c.httpClient.Do(
-		&http.Request{
-			URL:    targetUrl,
-			Method: "GET",
-			Header: http.Header{
-				"Authorization": {c.token},
-			},
-		},
+	res, err := c.doAuthenticatedRequest(&http.Request{
+		URL:    targetPath,
+		Method: "GET",
+	},
 	)
 
 	if err != nil {
-		return nil, errors.New(ERROR_GENERIC_CLIENT_ERROR)
+		return nil, err
 	}
 
 	defer res.Body.Close()
 
-	if res.StatusCode != 200 {
-		return nil, errors.New(ERROR_GENERIC_API_ERROR)
-	}
-
 	data, err := io.ReadAll(res.Body)
 	if err != nil {
 		return nil, err
+	}
+
+	if res.StatusCode != 200 {
+		return nil, errors.New(fmt.Sprintf("unexpected status code: %d, %s", res.StatusCode, data))
 	}
 
 	var bb MeshBuildingBlock
@@ -210,41 +222,32 @@ func (c *MeshStackProviderClient) ReadBuildingBlock(uuid string) (*MeshBuildingB
 	return &bb, nil
 }
 
-func (c *MeshStackProviderClient) ReadProject(workspace string, name string) (*MeshProject, error) {
-	if c.ensureValidToken() != nil {
-		return nil, errors.New(ERROR_AUTHENTICATION_FAILURE)
-	}
-
+func (c *MeshStackProviderClient) urlForProject(workspace string, name string) *url.URL {
 	identifier := workspace + "." + name
-	targetPath, err := url.JoinPath(c.url.String(), c.endpoints.Projects, identifier)
+	return c.endpoints.Projects.JoinPath(identifier)
+}
+
+func (c *MeshStackProviderClient) ReadProject(workspace string, name string) (*MeshProject, error) {
+	targetUrl := c.urlForProject(workspace, name)
+	req, err := http.NewRequest("GET", targetUrl.String(), nil)
 	if err != nil {
 		return nil, err
 	}
 
-	targetUrl, _ := url.Parse(targetPath)
-	res, err := c.httpClient.Do(
-		&http.Request{
-			URL:    targetUrl,
-			Method: "GET",
-			Header: http.Header{
-				"Authorization": {c.token},
-			},
-		},
-	)
-
+	res, err := c.doAuthenticatedRequest(req)
 	if err != nil {
-		return nil, errors.New(ERROR_GENERIC_CLIENT_ERROR)
+		return nil, err
 	}
 
 	defer res.Body.Close()
 
-	if res.StatusCode != 200 {
-		return nil, errors.New(ERROR_GENERIC_API_ERROR)
-	}
-
 	data, err := io.ReadAll(res.Body)
 	if err != nil {
 		return nil, err
+	}
+
+	if res.StatusCode != 200 {
+		return nil, errors.New(fmt.Sprintf("unexpected status code: %d, %s", res.StatusCode, data))
 	}
 
 	var project MeshProject
@@ -254,4 +257,110 @@ func (c *MeshStackProviderClient) ReadProject(workspace string, name string) (*M
 	}
 
 	return &project, nil
+}
+
+func (c *MeshStackProviderClient) CreateProject(project *MeshProjectCreate) (*MeshProject, error) {
+	payload, err := json.Marshal(project)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", c.endpoints.Projects.String(), bytes.NewBuffer(payload))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", CONTENT_TYPE_PROJECT)
+
+	res, err := c.doAuthenticatedRequest(req)
+	if err != nil {
+		return nil, err
+	}
+
+	defer res.Body.Close()
+
+	data, err := io.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO: create will also succeed if the project already exists
+	if res.StatusCode != 201 {
+		return nil, errors.New(fmt.Sprintf("unexpected status code: %d, %s", res.StatusCode, data))
+	}
+
+	var createdProject MeshProject
+	err = json.Unmarshal(data, &createdProject)
+	if err != nil {
+		return nil, err
+	}
+
+	return &createdProject, nil
+}
+
+func (c *MeshStackProviderClient) UpdateProject(project *MeshProjectCreate) (*MeshProject, error) {
+	targetPath := c.urlForProject(project.Metadata.OwnedByWorkspace, project.Metadata.Name)
+
+	payload, err := json.Marshal(project)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("PUT", targetPath.String(), bytes.NewBuffer(payload))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", CONTENT_TYPE_PROJECT)
+
+	res, err := c.doAuthenticatedRequest(req)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer res.Body.Close()
+
+	data, err := io.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	if res.StatusCode != 200 {
+		return nil, errors.New(fmt.Sprintf("unexpected status code: %d, %s", res.StatusCode, data))
+	}
+
+	var updatedProject MeshProject
+	err = json.Unmarshal(data, &updatedProject)
+	if err != nil {
+		return nil, err
+	}
+
+	return &updatedProject, nil
+}
+
+func (c *MeshStackProviderClient) DeleteProject(workspace string, name string) error {
+	targetUrl := c.urlForProject(workspace, name)
+
+	req, err := http.NewRequest("DELETE", targetUrl.String(), nil)
+	if err != nil {
+		return err
+	}
+
+	res, err := c.doAuthenticatedRequest(req)
+
+	if err != nil {
+		return errors.New(ERROR_GENERIC_CLIENT_ERROR)
+	}
+
+	defer res.Body.Close()
+
+	data, err := io.ReadAll(res.Body)
+	if err != nil {
+		return err
+	}
+
+	if res.StatusCode != 202 {
+		return errors.New(fmt.Sprintf("unexpected status code: %d, %s", res.StatusCode, data))
+	}
+
+	return nil
 }

@@ -1,0 +1,286 @@
+package provider
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/types"
+)
+
+// Ensure the implementation satisfies the expected interfaces.
+var (
+	_ resource.Resource              = &projectResource{}
+	_ resource.ResourceWithConfigure = &projectResource{}
+)
+
+// NewProjectResource is a helper function to simplify the provider implementation.
+func NewProjectResource() resource.Resource {
+	return &projectResource{}
+}
+
+// projectResource is the resource implementation.
+type projectResource struct {
+	client *MeshStackProviderClient
+}
+
+// Metadata returns the resource type name.
+func (r *projectResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_project"
+}
+
+// Configure adds the provider configured client to the resource.
+func (r *projectResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+	if req.ProviderData == nil {
+		return
+	}
+
+	client, ok := req.ProviderData.(*MeshStackProviderClient)
+
+	if !ok {
+		resp.Diagnostics.AddError(
+			"Unexpected Resource Configure Type",
+			fmt.Sprintf("Expected *MeshStackProviderClient, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+		)
+
+		return
+	}
+
+	r.client = client
+}
+
+// Schema defines the schema for the resource.
+func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+	resp.Schema = schema.Schema{
+		MarkdownDescription: "Single project by name and workspace.",
+
+		Attributes: map[string]schema.Attribute{
+			"api_version": schema.StringAttribute{
+				MarkdownDescription: "Project datatype version",
+				Computed:            true,
+			},
+
+			"kind": schema.StringAttribute{
+				MarkdownDescription: "meshObject type, always `meshBuildingBlock`.",
+				Computed:            true,
+				Validators: []validator.String{
+					stringvalidator.OneOf([]string{"meshProject"}...),
+				},
+			},
+
+			"metadata": schema.SingleNestedAttribute{
+				MarkdownDescription: "Project metadata. Name and workspace of the target Project must be set here.",
+				Required:            true,
+				Attributes: map[string]schema.Attribute{
+					"name": schema.StringAttribute{
+						Required:      true,
+						PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
+					},
+					"owned_by_workspace": schema.StringAttribute{
+						Required:      true,
+						PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
+					},
+					"created_on": schema.StringAttribute{Computed: true},
+					"deleted_on": schema.StringAttribute{Computed: true},
+				},
+			},
+
+			"spec": schema.SingleNestedAttribute{
+				MarkdownDescription: "Project specification.",
+				Required:            true,
+				Attributes: map[string]schema.Attribute{
+
+					"display_name": schema.StringAttribute{Required: true},
+					// TODO: Blocks would be more terraform-y.
+					"tags": schema.MapAttribute{
+						ElementType: types.ListType{ElemType: types.StringType},
+						Optional:    true,
+						Computed:    true,
+					},
+					// These may be
+					"payment_method_identifier": schema.StringAttribute{
+						Optional: true,
+						Computed: true,
+					},
+					"substitute_payment_method_identifier": schema.StringAttribute{
+						Optional: true,
+						Computed: true,
+					},
+				},
+			},
+		},
+	}
+}
+
+type projectCreate struct {
+	ApiVersion types.String    `json:"apiVersion" tfsdk:"api_version"`
+	Kind       types.String    `json:"kind" tfsdk:"kind"`
+	Metadata   projectMetadata `json:"metadata" tfsdk:"metadata"`
+	Spec       projectSpec     `json:"spec" tfsdk:"spec"`
+}
+
+type projectMetadata struct {
+	Name             types.String `json:"name" tfsdk:"name"`
+	OwnedByWorkspace types.String `json:"ownedByWorkspace" tfsdk:"owned_by_workspace"`
+	CreatedOn        types.String `json:"createdOn" tfsdk:"created_on"`
+	DeletedOn        types.String `json:"deletedOn" tfsdk:"deleted_on"`
+}
+
+type projectSpec struct {
+	DisplayName                       types.String `json:"displayName" tfsdk:"display_name"`
+	Tags                              types.Map    `json:"tags" tfsdk:"tags"`
+	PaymentMethodIdentifier           types.String `json:"paymentMethodIdentifier" tfsdk:"payment_method_identifier"`
+	SubstitutePaymentMethodIdentifier types.String `json:"substitutePaymentMethodIdentifier" tfsdk:"substitute_payment_method_identifier"`
+}
+
+// Create creates the resource and sets the initial Terraform state.
+func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var plan projectCreate
+
+	diags := req.Plan.Get(ctx, &plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	tags := make(map[string][]string, len(plan.Spec.Tags.Elements()))
+	diags = plan.Spec.Tags.ElementsAs(ctx, &tags, false)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Unknown values result in empty strings but we want nil instead
+	var paymentMethodIdentifier *string
+	if !plan.Spec.PaymentMethodIdentifier.IsUnknown() {
+		paymentMethodIdentifier = plan.Spec.PaymentMethodIdentifier.ValueStringPointer()
+	}
+
+	var substitutePaymentMethodIdentifier *string
+	if !plan.Spec.SubstitutePaymentMethodIdentifier.IsUnknown() {
+		paymentMethodIdentifier = plan.Spec.SubstitutePaymentMethodIdentifier.ValueStringPointer()
+	}
+
+	create := MeshProjectCreate{
+		Metadata: MeshProjectCreateMetadata{
+			Name:             plan.Metadata.Name.ValueString(),
+			OwnedByWorkspace: plan.Metadata.OwnedByWorkspace.ValueString(),
+		},
+		Spec: MeshProjectSpec{
+			DisplayName:                       plan.Spec.DisplayName.ValueString(),
+			Tags:                              tags,
+			PaymentMethodIdentifier:           paymentMethodIdentifier,
+			SubstitutePaymentMethodIdentifier: substitutePaymentMethodIdentifier,
+		},
+	}
+
+	project, err := r.client.CreateProject(&create)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error creating project",
+			"Could not create project, unexpected error: "+err.Error(),
+		)
+		return
+	}
+
+	diags = resp.State.Set(ctx, project)
+	resp.Diagnostics.Append(diags...)
+}
+
+// Read refreshes the Terraform state with the latest data.
+func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	var state MeshProject
+	diags := req.State.Get(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	project, err := r.client.ReadProject(state.Metadata.OwnedByWorkspace, state.Metadata.Name)
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to read project", err.Error())
+	}
+
+	// client data maps directly to the schema so we just need to set the state
+	resp.Diagnostics.Append(resp.State.Set(ctx, project)...)
+	return
+}
+
+// Update updates the resource and sets the updated Terraform state on success.
+func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var plan projectCreate
+
+	diags := req.Plan.Get(ctx, &plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	tags := make(map[string][]string, len(plan.Spec.Tags.Elements()))
+	diags = plan.Spec.Tags.ElementsAs(ctx, &tags, false)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Unknown values result in empty strings but we want nil instead
+	var paymentMethodIdentifier *string
+	if !plan.Spec.PaymentMethodIdentifier.IsUnknown() {
+		paymentMethodIdentifier = plan.Spec.PaymentMethodIdentifier.ValueStringPointer()
+	}
+
+	var substitutePaymentMethodIdentifier *string
+	if !plan.Spec.SubstitutePaymentMethodIdentifier.IsUnknown() {
+		paymentMethodIdentifier = plan.Spec.SubstitutePaymentMethodIdentifier.ValueStringPointer()
+	}
+
+	create := MeshProjectCreate{
+		Metadata: MeshProjectCreateMetadata{
+			Name:             plan.Metadata.Name.ValueString(),
+			OwnedByWorkspace: plan.Metadata.OwnedByWorkspace.ValueString(),
+		},
+		Spec: MeshProjectSpec{
+			DisplayName:                       plan.Spec.DisplayName.ValueString(),
+			Tags:                              tags,
+			PaymentMethodIdentifier:           paymentMethodIdentifier,
+			SubstitutePaymentMethodIdentifier: substitutePaymentMethodIdentifier,
+		},
+	}
+
+	project, err := r.client.UpdateProject(&create)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error updating project",
+			"Could not update project, unexpected error: "+err.Error(),
+		)
+		return
+	}
+
+	diags = resp.State.Set(ctx, project)
+	resp.Diagnostics.Append(diags...)
+}
+
+// Delete deletes the resource and removes the Terraform state on success.
+func (r *projectResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	var state MeshProject
+
+	diags := req.State.Get(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	err := r.client.DeleteProject(state.Metadata.OwnedByWorkspace, state.Metadata.Name)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error deleting project",
+			"Could not delete project, unexpected error: "+err.Error(),
+		)
+		return
+	}
+}
