@@ -73,7 +73,9 @@ func (p *MeshStackProvider) Configure(ctx context.Context, req provider.Configur
 }
 
 func (p *MeshStackProvider) Resources(ctx context.Context) []func() resource.Resource {
-	return []func() resource.Resource{}
+	return []func() resource.Resource{
+		NewProjectResource,
+	}
 }
 
 func (p *MeshStackProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
