@@ -26,9 +26,9 @@ type MeshBuildingBlockSpec struct {
 }
 
 type MeshBuildingBlockIO struct {
-	Key       string `json:"key" tfsdk:"key"`
-	Value     string `json:"value" tfsdk:"value"`
-	ValueType string `json:"valueType" tfsdk:"value_type"`
+	Key       string      `json:"key" tfsdk:"key"`
+	Value     interface{} `json:"value" tfsdk:"value"`
+	ValueType string      `json:"valueType" tfsdk:"value_type"`
 }
 
 type MeshBuildingBlockParent struct {
