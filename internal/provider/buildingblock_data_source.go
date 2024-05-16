@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
@@ -30,15 +31,18 @@ func (d *buildingBlockDataSource) Metadata(ctx context.Context, req datasource.M
 }
 
 func (d *buildingBlockDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+	// Dynamic attributes are not supported as nested attributes, we use mutually exclusive fields for each possible value type instead.
 	mkIoList := func(desc string) schema.ListNestedAttribute {
 		return schema.ListNestedAttribute{
 			Computed:            true,
 			MarkdownDescription: desc,
 			NestedObject: schema.NestedAttributeObject{
 				Attributes: map[string]schema.Attribute{
-					"key":        schema.StringAttribute{Computed: true},
-					"value":      schema.StringAttribute{Computed: true},
-					"value_type": schema.StringAttribute{Computed: true},
+					"key":          schema.StringAttribute{Computed: true},
+					"value_string": schema.StringAttribute{Computed: true},
+					"value_int":    schema.Int64Attribute{Computed: true},
+					"value_bool":   schema.BoolAttribute{Computed: true},
+					"value_type":   schema.StringAttribute{Computed: true},
 				},
 			},
 		}
@@ -137,6 +141,43 @@ func (d *buildingBlockDataSource) Configure(ctx context.Context, req datasource.
 }
 
 func (d *buildingBlockDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+	type io struct {
+		Key         types.String `tfsdk:"key"`
+		ValueString types.String `tfsdk:"value_string"`
+		ValueInt    types.Int64  `tfsdk:"value_int"`
+		ValueBool   types.Bool   `tfsdk:"value_bool"`
+		ValueType   types.String `tfsdk:"value_type"`
+	}
+
+	mkIoList := func(ios *[]MeshBuildingBlockIO) *[]io {
+		result := make([]io, 0)
+		for _, input := range *ios {
+			var valueString *string
+			var valueInt *int64
+			var valueBool *bool
+
+			if input.ValueType == "STRING" {
+				val := input.Value.(string)
+				valueString = &val
+			} else if input.ValueType == "INTEGER" {
+				val := int64(input.Value.(float64))
+				valueInt = &val
+			} else if input.ValueType == "BOOLEAN" {
+				val := input.Value.(bool)
+				valueBool = &val
+			}
+
+			result = append(result, io{
+				Key:         types.StringValue(input.Key),
+				ValueString: types.StringPointerValue(valueString),
+				ValueInt:    types.Int64PointerValue(valueInt),
+				ValueBool:   types.BoolPointerValue(valueBool),
+				ValueType:   types.StringValue(input.ValueType),
+			})
+		}
+		return &result
+	}
+
 	// get UUID for BB we want to query from the request
 	var uuid string
 	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("metadata").AtName("uuid"), &uuid)...)
@@ -145,6 +186,19 @@ func (d *buildingBlockDataSource) Read(ctx context.Context, req datasource.ReadR
 		resp.Diagnostics.AddError("Unable to read buildingblock", err.Error())
 	}
 
-	// client data maps directly to the schema so we just need to set the state
-	resp.Diagnostics.Append(resp.State.Set(ctx, bb)...)
+	// must set attributes individually to handle dynamic input/output types
+	resp.State.SetAttribute(ctx, path.Root("api_version"), bb.ApiVersion)
+	resp.State.SetAttribute(ctx, path.Root("kind"), bb.Kind)
+	resp.State.SetAttribute(ctx, path.Root("metadata"), bb.Metadata)
+
+	resp.State.SetAttribute(ctx, path.Root("spec").AtName("display_name"), bb.Spec.DisplayName)
+	resp.State.SetAttribute(ctx, path.Root("spec").AtName("parent_building_blocks"), bb.Spec.ParentBuildingBlocks)
+	if bb.Spec.Inputs != nil {
+		resp.State.SetAttribute(ctx, path.Root("spec").AtName("inputs"), mkIoList(&bb.Spec.Inputs))
+	}
+
+	resp.State.SetAttribute(ctx, path.Root("status").AtName("status"), bb.Status.Status)
+	if bb.Status.Outputs != nil {
+		resp.State.SetAttribute(ctx, path.Root("status").AtName("outputs"), &bb.Status.Outputs)
+	}
 }

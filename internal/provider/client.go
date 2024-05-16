@@ -191,13 +191,12 @@ func (c *MeshStackProviderClient) ReadBuildingBlock(uuid string) (*MeshBuildingB
 	}
 
 	targetPath := c.endpoints.BuildingBlocks.JoinPath(uuid)
+	req, err := http.NewRequest("GET", targetPath.String(), nil)
+	if err != nil {
+		return nil, err
+	}
 
-	res, err := c.doAuthenticatedRequest(&http.Request{
-		URL:    targetPath,
-		Method: "GET",
-	},
-	)
-
+	res, err := c.doAuthenticatedRequest(req)
 	if err != nil {
 		return nil, err
 	}
@@ -283,7 +282,6 @@ func (c *MeshStackProviderClient) CreateProject(project *MeshProjectCreate) (*Me
 		return nil, err
 	}
 
-	// TODO: create will also succeed if the project already exists
 	if res.StatusCode != 201 {
 		return nil, errors.New(fmt.Sprintf("unexpected status code: %d, %s", res.StatusCode, data))
 	}
