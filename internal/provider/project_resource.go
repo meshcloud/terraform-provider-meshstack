@@ -214,7 +214,6 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 
 	// client data maps directly to the schema so we just need to set the state
 	resp.Diagnostics.Append(resp.State.Set(ctx, project)...)
-	return
 }
 
 // Update updates the resource and sets the updated Terraform state on success.

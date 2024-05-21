@@ -209,7 +209,7 @@ func (c *MeshStackProviderClient) ReadBuildingBlock(uuid string) (*MeshBuildingB
 	}
 
 	if res.StatusCode != 200 {
-		return nil, errors.New(fmt.Sprintf("unexpected status code: %d, %s", res.StatusCode, data))
+		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
 	}
 
 	var bb MeshBuildingBlock
@@ -246,7 +246,7 @@ func (c *MeshStackProviderClient) ReadProject(workspace string, name string) (*M
 	}
 
 	if res.StatusCode != 200 {
-		return nil, errors.New(fmt.Sprintf("unexpected status code: %d, %s", res.StatusCode, data))
+		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
 	}
 
 	var project MeshProject
@@ -283,7 +283,7 @@ func (c *MeshStackProviderClient) CreateProject(project *MeshProjectCreate) (*Me
 	}
 
 	if res.StatusCode != 201 {
-		return nil, errors.New(fmt.Sprintf("unexpected status code: %d, %s", res.StatusCode, data))
+		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
 	}
 
 	var createdProject MeshProject
@@ -323,7 +323,7 @@ func (c *MeshStackProviderClient) UpdateProject(project *MeshProjectCreate) (*Me
 	}
 
 	if res.StatusCode != 200 {
-		return nil, errors.New(fmt.Sprintf("unexpected status code: %d, %s", res.StatusCode, data))
+		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
 	}
 
 	var updatedProject MeshProject
@@ -357,7 +357,7 @@ func (c *MeshStackProviderClient) DeleteProject(workspace string, name string) e
 	}
 
 	if res.StatusCode != 202 {
-		return errors.New(fmt.Sprintf("unexpected status code: %d, %s", res.StatusCode, data))
+		return fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
 	}
 
 	return nil
