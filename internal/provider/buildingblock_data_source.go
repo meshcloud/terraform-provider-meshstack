@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -149,22 +150,40 @@ func (d *buildingBlockDataSource) Read(ctx context.Context, req datasource.ReadR
 		ValueType   types.String `tfsdk:"value_type"`
 	}
 
-	mkIoList := func(ios *[]MeshBuildingBlockIO) *[]io {
+	mkIoList := func(ios *[]MeshBuildingBlockIO) (*[]io, error) {
 		result := make([]io, 0)
+		var err error
 		for _, input := range *ios {
 			var valueString *string
 			var valueInt *int64
 			var valueBool *bool
 
 			if input.ValueType == "STRING" {
-				val := input.Value.(string)
+				val, ok := input.Value.(string)
+				if !ok {
+					err = errors.Join(err, fmt.Errorf("Unexpected type '%s' for key '%s'.", input.ValueType, input.Key))
+					continue
+				}
 				valueString = &val
 			} else if input.ValueType == "INTEGER" {
-				val := int64(input.Value.(float64))
-				valueInt = &val
+				val, ok := input.Value.(float64)
+				if !ok {
+					err = errors.Join(err, fmt.Errorf("Unexpected type '%s' for key '%s'.", input.ValueType, input.Key))
+					continue
+				}
+				valInt := int64(val)
+				valueInt = &valInt
 			} else if input.ValueType == "BOOLEAN" {
-				val := input.Value.(bool)
+				val, ok := input.Value.(bool)
+				if !ok {
+					err = errors.Join(err, fmt.Errorf("Unexpected type '%s' for key '%s'.", input.ValueType, input.Key))
+					continue
+				}
 				valueBool = &val
+			}
+
+			if err != nil {
+				continue
 			}
 
 			result = append(result, io{
@@ -175,7 +194,7 @@ func (d *buildingBlockDataSource) Read(ctx context.Context, req datasource.ReadR
 				ValueType:   types.StringValue(input.ValueType),
 			})
 		}
-		return &result
+		return &result, err
 	}
 
 	// get UUID for BB we want to query from the request
@@ -194,11 +213,27 @@ func (d *buildingBlockDataSource) Read(ctx context.Context, req datasource.ReadR
 	resp.State.SetAttribute(ctx, path.Root("spec").AtName("display_name"), bb.Spec.DisplayName)
 	resp.State.SetAttribute(ctx, path.Root("spec").AtName("parent_building_blocks"), bb.Spec.ParentBuildingBlocks)
 	if bb.Spec.Inputs != nil {
-		resp.State.SetAttribute(ctx, path.Root("spec").AtName("inputs"), mkIoList(&bb.Spec.Inputs))
+		inputs, err := mkIoList(&bb.Spec.Inputs)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error(s) while reading inputs/outputs",
+				err.Error(),
+			)
+			return
+		}
+		resp.State.SetAttribute(ctx, path.Root("spec").AtName("inputs"), inputs)
 	}
 
 	resp.State.SetAttribute(ctx, path.Root("status").AtName("status"), bb.Status.Status)
 	if bb.Status.Outputs != nil {
-		resp.State.SetAttribute(ctx, path.Root("status").AtName("outputs"), &bb.Status.Outputs)
+		outputs, err := mkIoList(&bb.Status.Outputs)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error(s) while reading inputs/outputs",
+				err.Error(),
+			)
+			return
+		}
+		resp.State.SetAttribute(ctx, path.Root("status").AtName("outputs"), outputs)
 	}
 }
