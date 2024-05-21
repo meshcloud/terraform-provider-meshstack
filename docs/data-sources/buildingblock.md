@@ -59,7 +59,9 @@ Read-Only:
 Read-Only:
 
 - `key` (String)
-- `value` (String)
+- `value_bool` (Boolean)
+- `value_int` (Number)
+- `value_string` (String)
 - `value_type` (String)
 
 
@@ -87,5 +89,7 @@ Read-Only:
 Read-Only:
 
 - `key` (String)
-- `value` (String)
+- `value_bool` (Boolean)
+- `value_int` (Number)
+- `value_string` (String)
 - `value_type` (String)
