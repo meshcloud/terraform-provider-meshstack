@@ -158,7 +158,8 @@ func (d *buildingBlockDataSource) Read(ctx context.Context, req datasource.ReadR
 			var valueInt *int64
 			var valueBool *bool
 
-			if input.ValueType == "STRING" {
+			// TODO: support input type list
+			if input.ValueType == "STRING" || input.ValueType == "SINGLE_SELECT" || input.ValueType == "FILE" {
 				val, ok := input.Value.(string)
 				if !ok {
 					err = errors.Join(err, fmt.Errorf("Unexpected type '%s' for key '%s'.", input.ValueType, input.Key))
