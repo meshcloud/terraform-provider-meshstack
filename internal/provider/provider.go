@@ -84,6 +84,7 @@ func (p *MeshStackProvider) DataSources(ctx context.Context) []func() datasource
 		NewBuildingBlockDataSource,
 		NewProjectDataSource,
 		NewProjectsDataSource,
+		NewProjectBindingsDataSource,
 		NewTenantDataSource,
 	}
 }

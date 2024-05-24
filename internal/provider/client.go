@@ -22,8 +22,10 @@ const (
 	ERROR_AUTHENTICATION_FAILURE = "Not authorized. Check api key and secret."
 	ERROR_ENDPOINT_LOOKUP        = "Could not fetch endpoints for meshStack."
 
-	CONTENT_TYPE_PROJECT = "application/vnd.meshcloud.api.meshproject.v2.hal+json"
-	CONTENT_TYPE_TENANT  = "application/vnd.meshcloud.api.meshtenant.v3.hal+json"
+	CONTENT_TYPE_PROJECT               = "application/vnd.meshcloud.api.meshproject.v2.hal+json"
+	CONTENT_TYPE_TENANT                = "application/vnd.meshcloud.api.meshtenant.v3.hal+json"
+	CONTENT_TYPE_PROJECT_USER_BINDINGS = "application/vnd.meshcloud.api.meshprojectuserbinding.v1.hal+json"
+	CONTENT_TYPE_PROJECT_USER_BINDING  = "application/vnd.meshcloud.api.meshprojectuserbinding.v3.hal+json"
 )
 
 // TODO this will be an abstraction that does the login call, get a token and then use this token in the Auth header.
@@ -38,9 +40,10 @@ type MeshStackProviderClient struct {
 }
 
 type endpoints struct {
-	BuildingBlocks *url.URL `json:"meshbuildingblocks"`
-	Projects       *url.URL `json:"meshprojects"`
-	Tenants        *url.URL `json:"meshtenants"`
+	BuildingBlocks      *url.URL `json:"meshbuildingblocks"`
+	Projects            *url.URL `json:"meshprojects"`
+	ProjectUserBindings *url.URL `json:"meshprojectuserbindings"`
+	Tenants             *url.URL `json:"meshtenants"`
 }
 
 type loginResponse struct {
@@ -61,9 +64,10 @@ func NewClient(rootUrl *url.URL, apiKey string, apiSecret string) (*MeshStackPro
 
 	// TODO: lookup endpoints
 	client.endpoints = endpoints{
-		BuildingBlocks: rootUrl.JoinPath(apiMeshObjectsRoot, "meshbuildingblocks"),
-		Projects:       rootUrl.JoinPath(apiMeshObjectsRoot, "meshprojects"),
-		Tenants:        rootUrl.JoinPath(apiMeshObjectsRoot, "meshtenants"),
+		BuildingBlocks:      rootUrl.JoinPath(apiMeshObjectsRoot, "meshbuildingblocks"),
+		Projects:            rootUrl.JoinPath(apiMeshObjectsRoot, "meshprojects"),
+		ProjectUserBindings: rootUrl.JoinPath(apiMeshObjectsRoot, "meshprojects", "meshprojectuserbindings"),
+		Tenants:             rootUrl.JoinPath(apiMeshObjectsRoot, "meshtenants"),
 	}
 
 	return client, nil
@@ -538,4 +542,46 @@ func (c *MeshStackProviderClient) DeleteTenant(workspace string, project string,
 	}
 
 	return nil
+}
+
+func (c *MeshStackProviderClient) urlForPojectUserBindings(workspace string, project string) *url.URL {
+	identifier := workspace + "." + project
+	return c.endpoints.Projects.JoinPath(identifier).JoinPath("meshprojectuserbindings")
+}
+
+func (c *MeshStackProviderClient) urlForPojectUserBinding(name string) *url.URL {
+	return c.endpoints.ProjectUserBindings.JoinPath(name)
+}
+
+func (c *MeshStackProviderClient) ReadProjectUserBinding(name string) (*MeshProjectUserBinding, error) {
+	targetUrl := c.urlForPojectUserBinding(name)
+	req, err := http.NewRequest("GET", targetUrl.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", CONTENT_TYPE_PROJECT_USER_BINDING)
+
+	res, err := c.doAuthenticatedRequest(req)
+	if err != nil {
+		return nil, err
+	}
+
+	defer res.Body.Close()
+
+	data, err := io.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	if res.StatusCode != 200 {
+		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
+	}
+
+	var binding MeshProjectUserBinding
+	err = json.Unmarshal(data, &binding)
+	if err != nil {
+		return nil, err
+	}
+
+	return &binding, nil
 }
