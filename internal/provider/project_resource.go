@@ -105,6 +105,7 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 
 					"display_name": schema.StringAttribute{Required: true},
 					// TODO: Blocks would be more terraform-y.
+					// FIXME: nullable and not computed
 					"tags": schema.MapAttribute{
 						ElementType: types.ListType{ElemType: types.StringType},
 						Optional:    true,

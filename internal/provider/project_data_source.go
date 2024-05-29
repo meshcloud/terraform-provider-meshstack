@@ -98,15 +98,18 @@ func (d *projectDataSource) Configure(ctx context.Context, req datasource.Config
 
 func (d *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	// get workspace and name to query for project
-	var workspace string
+	var workspace, name string
 	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("metadata").AtName("owned_by_workspace"), &workspace)...)
-
-	var name string
 	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("metadata").AtName("name"), &name)...)
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	project, err := d.client.ReadProject(workspace, name)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read project", err.Error())
+		return
 	}
 
 	// client data maps directly to the schema so we just need to set the state
