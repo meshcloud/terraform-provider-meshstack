@@ -39,6 +39,7 @@ type MeshStackProviderClient struct {
 type endpoints struct {
 	BuildingBlocks *url.URL `json:"meshbuildingblocks"`
 	Projects       *url.URL `json:"meshprojects"`
+	Tenants        *url.URL `json:"meshtenants"`
 }
 
 type loginResponse struct {
@@ -61,6 +62,7 @@ func NewClient(rootUrl *url.URL, apiKey string, apiSecret string) (*MeshStackPro
 	client.endpoints = endpoints{
 		BuildingBlocks: rootUrl.JoinPath(apiMeshObjectsRoot, "meshbuildingblocks"),
 		Projects:       rootUrl.JoinPath(apiMeshObjectsRoot, "meshprojects"),
+		Tenants:        rootUrl.JoinPath(apiMeshObjectsRoot, "meshtenants"),
 	}
 
 	return client, nil
@@ -226,6 +228,11 @@ func (c *MeshStackProviderClient) urlForProject(workspace string, name string) *
 	return c.endpoints.Projects.JoinPath(identifier)
 }
 
+func (c *MeshStackProviderClient) urlForTenant(workspace string, project string, platform string) *url.URL {
+	identifier := workspace + "." + project + "." + platform
+	return c.endpoints.Tenants.JoinPath(identifier)
+}
+
 func (c *MeshStackProviderClient) ReadProject(workspace string, name string) (*MeshProject, error) {
 	targetUrl := c.urlForProject(workspace, name)
 	req, err := http.NewRequest("GET", targetUrl.String(), nil)
@@ -361,4 +368,36 @@ func (c *MeshStackProviderClient) DeleteProject(workspace string, name string) e
 	}
 
 	return nil
+}
+
+func (c *MeshStackProviderClient) ReadTenant(workspace string, project string, platform string) (*MeshTenant, error) {
+	targetUrl := c.urlForTenant(workspace, project, platform)
+	req, err := http.NewRequest("GET", targetUrl.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	res, err := c.doAuthenticatedRequest(req)
+	if err != nil {
+		return nil, err
+	}
+
+	defer res.Body.Close()
+
+	data, err := io.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	if res.StatusCode != 200 {
+		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
+	}
+
+	var tenant MeshTenant
+	err = json.Unmarshal(data, &tenant)
+	if err != nil {
+		return nil, err
+	}
+
+	return &tenant, nil
 }
