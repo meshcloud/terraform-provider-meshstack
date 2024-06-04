@@ -23,6 +23,7 @@ const (
 	ERROR_ENDPOINT_LOOKUP        = "Could not fetch endpoints for meshStack."
 
 	CONTENT_TYPE_PROJECT = "application/vnd.meshcloud.api.meshproject.v2.hal+json"
+	CONTENT_TYPE_TENANT  = "application/vnd.meshcloud.api.meshtenant.v3.hal+json"
 )
 
 // TODO this will be an abstraction that does the login call, get a token and then use this token in the Auth header.
@@ -239,6 +240,7 @@ func (c *MeshStackProviderClient) ReadProject(workspace string, name string) (*M
 	if err != nil {
 		return nil, err
 	}
+	req.Header.Set("Accept", CONTENT_TYPE_PROJECT)
 
 	res, err := c.doAuthenticatedRequest(req)
 	if err != nil {
@@ -276,6 +278,7 @@ func (c *MeshStackProviderClient) CreateProject(project *MeshProjectCreate) (*Me
 		return nil, err
 	}
 	req.Header.Set("Content-Type", CONTENT_TYPE_PROJECT)
+	req.Header.Set("Accept", CONTENT_TYPE_PROJECT)
 
 	res, err := c.doAuthenticatedRequest(req)
 	if err != nil {
@@ -315,6 +318,7 @@ func (c *MeshStackProviderClient) UpdateProject(project *MeshProjectCreate) (*Me
 		return nil, err
 	}
 	req.Header.Set("Content-Type", CONTENT_TYPE_PROJECT)
+	req.Header.Set("Accept", CONTENT_TYPE_PROJECT)
 
 	res, err := c.doAuthenticatedRequest(req)
 
@@ -376,6 +380,7 @@ func (c *MeshStackProviderClient) ReadTenant(workspace string, project string, p
 	if err != nil {
 		return nil, err
 	}
+	req.Header.Set("Accept", CONTENT_TYPE_TENANT)
 
 	res, err := c.doAuthenticatedRequest(req)
 	if err != nil {
