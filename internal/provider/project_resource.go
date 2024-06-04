@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -108,10 +109,10 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 					// FIXME: nullable and not computed
 					"tags": schema.MapAttribute{
 						ElementType: types.ListType{ElemType: types.StringType},
-						Optional:    true,
 						Computed:    true,
+						Default:     mapdefault.StaticValue(types.MapNull(types.ListType{ElemType: types.StringType})),
 					},
-					// These may be
+					// These can have defaults set upon creation
 					"payment_method_identifier": schema.StringAttribute{
 						Optional: true,
 						Computed: true,
@@ -157,11 +158,13 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	tags := make(map[string][]string, len(plan.Spec.Tags.Elements()))
-	diags = plan.Spec.Tags.ElementsAs(ctx, &tags, false)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
+	tags := make(map[string][]string)
+	if !plan.Spec.Tags.IsNull() {
+		diags = plan.Spec.Tags.ElementsAs(ctx, &tags, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 	}
 
 	// Unknown values result in empty strings but we want nil instead
@@ -227,11 +230,13 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	tags := make(map[string][]string, len(plan.Spec.Tags.Elements()))
-	diags = plan.Spec.Tags.ElementsAs(ctx, &tags, false)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
+	tags := make(map[string][]string)
+	if !plan.Spec.Tags.IsNull() {
+		diags = plan.Spec.Tags.ElementsAs(ctx, &tags, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 	}
 
 	// Unknown values result in empty strings but we want nil instead
