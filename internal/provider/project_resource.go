@@ -103,7 +103,6 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				MarkdownDescription: "Project specification.",
 				Required:            true,
 				Attributes: map[string]schema.Attribute{
-
 					"display_name": schema.StringAttribute{Required: true},
 					// TODO: Blocks would be more terraform-y.
 					"tags": schema.MapAttribute{
@@ -127,6 +126,7 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 	}
 }
 
+// These structs use Terraform types so that we can read the plan and check for unknown/null values.
 type projectCreate struct {
 	ApiVersion types.String    `json:"apiVersion" tfsdk:"api_version"`
 	Kind       types.String    `json:"kind" tfsdk:"kind"`
@@ -210,6 +210,10 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 	var workspace, name string
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("metadata").AtName("owned_by_workspace"), &workspace)...)
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("metadata").AtName("name"), &name)...)
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	project, err := r.client.ReadProject(workspace, name)
 	if err != nil {
