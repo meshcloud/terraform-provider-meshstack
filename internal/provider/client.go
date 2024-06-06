@@ -406,3 +406,69 @@ func (c *MeshStackProviderClient) ReadTenant(workspace string, project string, p
 
 	return &tenant, nil
 }
+
+func (c *MeshStackProviderClient) CreateTenant(tenant *MeshTenantCreate) (*MeshTenant, error) {
+	payload, err := json.Marshal(tenant)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", c.endpoints.Tenants.String(), bytes.NewBuffer(payload))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", CONTENT_TYPE_TENANT)
+	req.Header.Set("Accept", CONTENT_TYPE_TENANT)
+
+	res, err := c.doAuthenticatedRequest(req)
+	if err != nil {
+		return nil, err
+	}
+
+	defer res.Body.Close()
+
+	data, err := io.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	if res.StatusCode != 201 {
+		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
+	}
+
+	var createdTenant MeshTenant
+	err = json.Unmarshal(data, &tenant)
+	if err != nil {
+		return nil, err
+	}
+
+	return &createdTenant, nil
+}
+
+func (c *MeshStackProviderClient) DeleteTenant(workspace string, project string, platform string) error {
+	targetUrl := c.urlForTenant(workspace, project, platform)
+
+	req, err := http.NewRequest("DELETE", targetUrl.String(), nil)
+	if err != nil {
+		return err
+	}
+
+	res, err := c.doAuthenticatedRequest(req)
+
+	if err != nil {
+		return errors.New(ERROR_GENERIC_CLIENT_ERROR)
+	}
+
+	defer res.Body.Close()
+
+	data, err := io.ReadAll(res.Body)
+	if err != nil {
+		return err
+	}
+
+	if res.StatusCode != 202 {
+		return fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
+	}
+
+	return nil
+}
