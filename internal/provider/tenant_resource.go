@@ -77,13 +77,26 @@ func (r *tenantResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				Required:            true,
 				PlanModifiers:       []planmodifier.Object{objectplanmodifier.RequiresReplace()},
 				Attributes: map[string]schema.Attribute{
-					"owned_by_workspace":  schema.StringAttribute{Required: true},
-					"owned_by_project":    schema.StringAttribute{Required: true},
-					"platform_identifier": schema.StringAttribute{Required: true},
-					"deleted_on":          schema.StringAttribute{Computed: true},
+					"owned_by_workspace": schema.StringAttribute{
+						MarkdownDescription: "Identifier of the workspace the tenant belongs to.",
+						Required:            true,
+					},
+					"owned_by_project": schema.StringAttribute{
+						MarkdownDescription: "Identifier of the project the tenant belongs to.",
+						Required:            true,
+					},
+					"platform_identifier": schema.StringAttribute{
+						MarkdownDescription: "Identifier of the target platform.",
+						Required:            true,
+					},
+					"deleted_on": schema.StringAttribute{
+						MarkdownDescription: "If the tenant has been submitted for deletion by a workspace manager, the date is shown here (e.g. 2020-12-22T09:37:43Z).",
+						Computed:            true,
+					},
 					"assigned_tags": schema.MapAttribute{
-						ElementType: types.ListType{ElemType: types.StringType},
-						Computed:    true,
+						MarkdownDescription: "Tags assigned to this tenant originating from workspace, payment method and project.",
+						ElementType:         types.ListType{ElemType: types.StringType},
+						Computed:            true,
 					},
 				},
 			},
@@ -94,16 +107,19 @@ func (r *tenantResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				Required:            true,
 				Attributes: map[string]schema.Attribute{
 					"local_id": schema.StringAttribute{
-						Optional: true,
-						Computed: true,
+						MarkdownDescription: "Tenant ID local to the platform (e.g. GCP project ID, Azure subscription ID). Setting the local ID means that a tenant with this ID should be imported into meshStack. Not setting a local ID means that a new tenant should be created. Field will be empty until a successful replication has run.",
+						Optional:            true,
+						Computed:            true,
 					},
 					"landing_zone_identifier": schema.StringAttribute{
-						Optional: true,
-						Computed: true,
+						MarkdownDescription: "Identifier of landing zone to assign to this tenant.",
+						Optional:            true,
+						Computed:            true,
 					},
 					"quotas": schema.ListNestedAttribute{
-						Optional: true,
-						Computed: true,
+						MarkdownDescription: "Set of applied tenant quotas. By default the landing zone quotas are applied to new tenants.",
+						Optional:            true,
+						Computed:            true,
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
 								"key":   schema.StringAttribute{Computed: true},
