@@ -55,4 +55,4 @@ Read-Only:
 Read-Only:
 
 - `key` (String)
-- `value` (String)
+- `value` (Number)
