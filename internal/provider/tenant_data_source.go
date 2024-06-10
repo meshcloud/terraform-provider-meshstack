@@ -75,7 +75,7 @@ func (d *tenantDataSource) Schema(ctx context.Context, req datasource.SchemaRequ
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
 								"key":   schema.StringAttribute{Computed: true},
-								"value": schema.StringAttribute{Computed: true},
+								"value": schema.Int64Attribute{Computed: true},
 							},
 						},
 					},

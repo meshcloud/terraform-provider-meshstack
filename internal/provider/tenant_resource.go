@@ -124,7 +124,7 @@ func (r *tenantResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
 								"key":   schema.StringAttribute{Computed: true},
-								"value": schema.StringAttribute{Computed: true},
+								"value": schema.Int64Attribute{Computed: true},
 							},
 						},
 					},
