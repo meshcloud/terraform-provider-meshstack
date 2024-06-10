@@ -70,7 +70,6 @@ func NewClient(rootUrl *url.URL, apiKey string, apiSecret string) (*MeshStackPro
 }
 
 func (c *MeshStackProviderClient) login() error {
-	log.Println("login")
 	loginPath, err := url.JoinPath(c.url.String(), loginEndpoint)
 	if err != nil {
 		return err
@@ -89,8 +88,6 @@ func (c *MeshStackProviderClient) login() error {
 	if err != nil || res.StatusCode != 200 {
 		return errors.New(ERROR_AUTHENTICATION_FAILURE)
 	}
-
-	log.Println(res)
 
 	defer res.Body.Close()
 
@@ -112,7 +109,6 @@ func (c *MeshStackProviderClient) login() error {
 }
 
 func (c *MeshStackProviderClient) ensureValidToken() error {
-	log.Printf("current token: %s", c.token)
 	if c.token == "" || time.Now().Add(time.Second*30).After(c.tokenExpiry) {
 		return c.login()
 	}
@@ -121,11 +117,9 @@ func (c *MeshStackProviderClient) ensureValidToken() error {
 
 // nolint: unused
 func (c *MeshStackProviderClient) lookUpEndpoints() error {
-	log.Println("lookUpEndpoints")
 	if c.ensureValidToken() != nil {
 		return errors.New(ERROR_AUTHENTICATION_FAILURE)
 	}
-	log.Printf("new token: %s", c.token)
 
 	meshObjectsPath, err := url.JoinPath(c.url.String(), apiMeshObjectsRoot)
 	if err != nil {
@@ -174,6 +168,9 @@ func (c *MeshStackProviderClient) doAuthenticatedRequest(req *http.Request) (*ht
 		req.Header = map[string][]string{}
 	}
 
+	// log request before adding auth
+	log.Println(req)
+
 	// add authentication
 	if c.ensureValidToken() != nil {
 		return nil, errors.New(ERROR_AUTHENTICATION_FAILURE)
@@ -184,6 +181,7 @@ func (c *MeshStackProviderClient) doAuthenticatedRequest(req *http.Request) (*ht
 	if err != nil {
 		return nil, err
 	}
+	log.Println(res)
 
 	return res, nil
 }
@@ -437,7 +435,7 @@ func (c *MeshStackProviderClient) CreateTenant(tenant *MeshTenantCreate) (*MeshT
 	}
 
 	var createdTenant MeshTenant
-	err = json.Unmarshal(data, &tenant)
+	err = json.Unmarshal(data, &createdTenant)
 	if err != nil {
 		return nil, err
 	}

@@ -16,7 +16,7 @@ type MeshTenantMetadata struct {
 }
 
 type MeshTenantSpec struct {
-	LocalId               string            `json:"localId" tfsdk:"local_id"`
+	LocalId               *string           `json:"localId" tfsdk:"local_id"`
 	LandingZoneIdentifier string            `json:"landingZoneIdentifier" tfsdk:"landing_zone_identifier"`
 	Quotas                []MeshTenantQuota `json:"quotas" tfsdk:"quotas"`
 }

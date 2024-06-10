@@ -105,6 +105,7 @@ func (r *tenantResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 			"spec": schema.SingleNestedAttribute{
 				MarkdownDescription: "Tenant specification.",
 				Required:            true,
+				PlanModifiers:       []planmodifier.Object{objectplanmodifier.RequiresReplace()},
 				Attributes: map[string]schema.Attribute{
 					"local_id": schema.StringAttribute{
 						MarkdownDescription: "Tenant ID local to the platform (e.g. GCP project ID, Azure subscription ID). Setting the local ID means that a tenant with this ID should be imported into meshStack. Not setting a local ID means that a new tenant should be created. Field will be empty until a successful replication has run.",
