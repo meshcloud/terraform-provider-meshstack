@@ -71,3 +71,12 @@ Optional:
 - `payment_method_identifier` (String)
 - `substitute_payment_method_identifier` (String)
 - `tags` (Map of List of String)
+
+## Import
+
+Import is supported using the following syntax:
+
+```shell
+# import via full project identifier <workspace-identifier>.<project-identifier>
+terraform import 'meshstack_project.example' 'my-workspace-identifier.my-project-identifier'
+```
