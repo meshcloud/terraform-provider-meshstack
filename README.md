@@ -62,3 +62,22 @@ In order to run the full suite of Acceptance tests, run `make testacc`.
 ```shell
 make testacc
 ```
+
+## Tips for Local Testing
+
+```shellsession
+# start a nix development shell which has go an all dependencies required to build
+nix develop -c zsh 
+
+# build and install the provider
+go install
+
+# link the provider into the terraform plugins dir so terraform can pick it up as a "Implied Local Mirror"
+# https://developer.hashicorp.com/terraform/cli/config/config-file#implied-local-mirror-directories
+
+$registry=registry.terraform.io # alternatively use 'registry.opentofu.org'
+$platform=darwin_arm64 # replace with your platform
+
+mkdir -p "~/.terraform.d/plugins/$registry/meshcloud/meshstack/0.1.0/$platform/"
+ln -s ~/go/bin/terraform-provider-meshstack "~/.terraform.d/plugins/$registry/meshcloud/meshstack/0.1.0/$platform/terraform-provider-meshstack_v0.1.0"
+```
