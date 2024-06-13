@@ -265,6 +265,75 @@ func (c *MeshStackProviderClient) ReadProject(workspace string, name string) (*M
 	return &project, nil
 }
 
+func (c *MeshStackProviderClient) ReadProjects(workspaceIdentifier string, paymentMethodIdentifier *string) (*[]MeshProject, error) {
+	var allProjects []MeshProject
+
+	pageNumber := 0
+	targetUrl := c.endpoints.Projects
+	query := targetUrl.Query()
+	query.Set("workspaceIdentifier", workspaceIdentifier)
+	if paymentMethodIdentifier != nil {
+		query.Set("paymentIdentifier", *paymentMethodIdentifier)
+	}
+
+	for {
+		query.Set("page", fmt.Sprintf("%d", pageNumber))
+
+		targetUrl.RawQuery = query.Encode()
+
+		req, err := http.NewRequest("GET", targetUrl.String(), nil)
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("Accept", CONTENT_TYPE_PROJECT)
+
+		res, err := c.doAuthenticatedRequest(req)
+		if err != nil {
+			return nil, err
+		}
+
+		defer res.Body.Close()
+
+		data, err := io.ReadAll(res.Body)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read response body: %w", err)
+		}
+
+		if res.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
+		}
+
+		var response struct {
+			Embedded struct {
+				MeshProjects []MeshProject `json:"meshProjects"`
+			} `json:"_embedded"`
+			Page struct {
+				Size          int `json:"size"`
+				TotalElements int `json:"totalElements"`
+				TotalPages    int `json:"totalPages"`
+				Number        int `json:"number"`
+			} `json:"page"`
+		}
+
+		err = json.Unmarshal(data, &response)
+		if err != nil {
+			return nil, err
+		}
+
+		allProjects = append(allProjects, response.Embedded.MeshProjects...)
+
+		// Check if there are more pages
+		if response.Page.Number >= response.Page.TotalPages-1 {
+			break
+		}
+
+		pageNumber++
+	}
+
+	return &allProjects, nil
+}
+
 func (c *MeshStackProviderClient) CreateProject(project *MeshProjectCreate) (*MeshProject, error) {
 	payload, err := json.Marshal(project)
 	if err != nil {
