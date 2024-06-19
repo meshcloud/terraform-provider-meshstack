@@ -76,6 +76,7 @@ func (p *MeshStackProvider) Resources(ctx context.Context) []func() resource.Res
 	return []func() resource.Resource{
 		NewProjectResource,
 		NewTenantResource,
+		NewProjectUserBindingResource,
 	}
 }
 
@@ -84,7 +85,7 @@ func (p *MeshStackProvider) DataSources(ctx context.Context) []func() datasource
 		NewBuildingBlockDataSource,
 		NewProjectDataSource,
 		NewProjectsDataSource,
-		NewProjectBindingsDataSource,
+		NewProjectUserBindingsDataSource,
 		NewTenantDataSource,
 	}
 }
