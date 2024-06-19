@@ -66,7 +66,7 @@ func NewClient(rootUrl *url.URL, apiKey string, apiSecret string) (*MeshStackPro
 	client.endpoints = endpoints{
 		BuildingBlocks:      rootUrl.JoinPath(apiMeshObjectsRoot, "meshbuildingblocks"),
 		Projects:            rootUrl.JoinPath(apiMeshObjectsRoot, "meshprojects"),
-		ProjectUserBindings: rootUrl.JoinPath(apiMeshObjectsRoot, "meshprojects", "meshprojectuserbindings"),
+		ProjectUserBindings: rootUrl.JoinPath(apiMeshObjectsRoot, "meshprojectbindings", "userbindings"),
 		Tenants:             rootUrl.JoinPath(apiMeshObjectsRoot, "meshtenants"),
 	}
 
@@ -171,6 +171,7 @@ func (c *MeshStackProviderClient) doAuthenticatedRequest(req *http.Request) (*ht
 	if req.Header == nil {
 		req.Header = map[string][]string{}
 	}
+	req.Header.Set("User-Agent", "meshStack Terraform Provider")
 
 	// log request before adding auth
 	log.Println(req)
@@ -190,13 +191,39 @@ func (c *MeshStackProviderClient) doAuthenticatedRequest(req *http.Request) (*ht
 	return res, nil
 }
 
+func (c *MeshStackProviderClient) DeleteMeshObject(targetUrl url.URL, expectedStatus int) error {
+	req, err := http.NewRequest("DELETE", targetUrl.String(), nil)
+	if err != nil {
+		return err
+	}
+
+	res, err := c.doAuthenticatedRequest(req)
+
+	if err != nil {
+		return errors.New(ERROR_GENERIC_CLIENT_ERROR)
+	}
+
+	defer res.Body.Close()
+
+	data, err := io.ReadAll(res.Body)
+	if err != nil {
+		return err
+	}
+
+	if res.StatusCode != expectedStatus {
+		return fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
+	}
+
+	return nil
+}
+
 func (c *MeshStackProviderClient) ReadBuildingBlock(uuid string) (*MeshBuildingBlock, error) {
 	if c.ensureValidToken() != nil {
 		return nil, errors.New(ERROR_AUTHENTICATION_FAILURE)
 	}
 
-	targetPath := c.endpoints.BuildingBlocks.JoinPath(uuid)
-	req, err := http.NewRequest("GET", targetPath.String(), nil)
+	targetUrl := c.endpoints.BuildingBlocks.JoinPath(uuid)
+	req, err := http.NewRequest("GET", targetUrl.String(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -377,14 +404,14 @@ func (c *MeshStackProviderClient) CreateProject(project *MeshProjectCreate) (*Me
 }
 
 func (c *MeshStackProviderClient) UpdateProject(project *MeshProjectCreate) (*MeshProject, error) {
-	targetPath := c.urlForProject(project.Metadata.OwnedByWorkspace, project.Metadata.Name)
+	targetUrl := c.urlForProject(project.Metadata.OwnedByWorkspace, project.Metadata.Name)
 
 	payload, err := json.Marshal(project)
 	if err != nil {
 		return nil, err
 	}
 
-	req, err := http.NewRequest("PUT", targetPath.String(), bytes.NewBuffer(payload))
+	req, err := http.NewRequest("PUT", targetUrl.String(), bytes.NewBuffer(payload))
 	if err != nil {
 		return nil, err
 	}
@@ -419,30 +446,7 @@ func (c *MeshStackProviderClient) UpdateProject(project *MeshProjectCreate) (*Me
 
 func (c *MeshStackProviderClient) DeleteProject(workspace string, name string) error {
 	targetUrl := c.urlForProject(workspace, name)
-
-	req, err := http.NewRequest("DELETE", targetUrl.String(), nil)
-	if err != nil {
-		return err
-	}
-
-	res, err := c.doAuthenticatedRequest(req)
-
-	if err != nil {
-		return errors.New(ERROR_GENERIC_CLIENT_ERROR)
-	}
-
-	defer res.Body.Close()
-
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		return err
-	}
-
-	if res.StatusCode != 202 {
-		return fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
-	}
-
-	return nil
+	return c.DeleteMeshObject(*targetUrl, 202)
 }
 
 func (c *MeshStackProviderClient) ReadTenant(workspace string, project string, platform string) (*MeshTenant, error) {
@@ -518,35 +522,7 @@ func (c *MeshStackProviderClient) CreateTenant(tenant *MeshTenantCreate) (*MeshT
 
 func (c *MeshStackProviderClient) DeleteTenant(workspace string, project string, platform string) error {
 	targetUrl := c.urlForTenant(workspace, project, platform)
-
-	req, err := http.NewRequest("DELETE", targetUrl.String(), nil)
-	if err != nil {
-		return err
-	}
-
-	res, err := c.doAuthenticatedRequest(req)
-
-	if err != nil {
-		return errors.New(ERROR_GENERIC_CLIENT_ERROR)
-	}
-
-	defer res.Body.Close()
-
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		return err
-	}
-
-	if res.StatusCode != 202 {
-		return fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
-	}
-
-	return nil
-}
-
-func (c *MeshStackProviderClient) urlForPojectUserBindings(workspace string, project string) *url.URL {
-	identifier := workspace + "." + project
-	return c.endpoints.Projects.JoinPath(identifier).JoinPath("meshprojectuserbindings")
+	return c.DeleteMeshObject(*targetUrl, 202)
 }
 
 func (c *MeshStackProviderClient) urlForPojectUserBinding(name string) *url.URL {
@@ -573,6 +549,10 @@ func (c *MeshStackProviderClient) ReadProjectUserBinding(name string) (*MeshProj
 		return nil, err
 	}
 
+	if res.StatusCode == 404 {
+		return nil, nil
+	}
+
 	if res.StatusCode != 200 {
 		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
 	}
@@ -584,4 +564,47 @@ func (c *MeshStackProviderClient) ReadProjectUserBinding(name string) (*MeshProj
 	}
 
 	return &binding, nil
+}
+
+func (c *MeshStackProviderClient) CreateProjectUserBinding(binding *MeshProjectUserBinding) (*MeshProjectUserBinding, error) {
+	payload, err := json.Marshal(binding)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", c.endpoints.ProjectUserBindings.String(), bytes.NewBuffer(payload))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", CONTENT_TYPE_PROJECT_USER_BINDING)
+	req.Header.Set("Accept", CONTENT_TYPE_PROJECT_USER_BINDING)
+
+	res, err := c.doAuthenticatedRequest(req)
+	if err != nil {
+		return nil, err
+	}
+
+	defer res.Body.Close()
+
+	data, err := io.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	if res.StatusCode != 200 {
+		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
+	}
+
+	var createdBinding MeshProjectUserBinding
+	err = json.Unmarshal(data, &createdBinding)
+	if err != nil {
+		return nil, err
+	}
+
+	return &createdBinding, nil
+}
+
+func (c *MeshStackProviderClient) DeleteProjecUserBinding(name string) error {
+	targetUrl := c.urlForPojectUserBinding(name)
+	return c.DeleteMeshObject(*targetUrl, 204)
 }

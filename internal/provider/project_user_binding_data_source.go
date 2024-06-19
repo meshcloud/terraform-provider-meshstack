@@ -16,7 +16,7 @@ var (
 	_ datasource.DataSourceWithConfigure = &projectUserBindingsDataSource{}
 )
 
-func NewProjectBindingsDataSource() datasource.DataSource {
+func NewProjectUserBindingsDataSource() datasource.DataSource {
 	return &projectUserBindingsDataSource{}
 }
 
@@ -51,7 +51,12 @@ func (d *projectUserBindingsDataSource) Schema(ctx context.Context, req datasour
 				MarkdownDescription: "Project role assigned by this binding.",
 				Required:            true,
 				Attributes: map[string]schema.Attribute{
-					"name": schema.StringAttribute{Required: true},
+					"name": schema.StringAttribute{
+						Required: true,
+						Validators: []validator.String{
+							stringvalidator.LengthBetween(1, 45),
+						},
+					},
 				},
 			},
 
@@ -109,6 +114,9 @@ func (d *projectUserBindingsDataSource) Read(ctx context.Context, req datasource
 	// get workspace and project to query for bindings
 	var name string
 	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("metadata").AtName("name"), &name)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	binding, err := d.client.ReadProjectUserBinding(name)
 	if err != nil {
