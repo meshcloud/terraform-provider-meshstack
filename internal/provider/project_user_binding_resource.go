@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/meshcloud/terraform-provider-meshstack/client"
+
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -28,7 +30,7 @@ func NewProjectUserBindingResource() resource.Resource {
 
 // projectUserBindingResource is the resource implementation.
 type projectUserBindingResource struct {
-	client *MeshStackProviderClient
+	client *client.MeshStackProviderClient
 }
 
 // Metadata returns the resource type name.
@@ -42,7 +44,7 @@ func (r *projectUserBindingResource) Configure(_ context.Context, req resource.C
 		return
 	}
 
-	client, ok := req.ProviderData.(*MeshStackProviderClient)
+	client, ok := req.ProviderData.(*client.MeshStackProviderClient)
 
 	if !ok {
 		resp.Diagnostics.AddError(
@@ -137,28 +139,9 @@ func (r *projectUserBindingResource) Schema(_ context.Context, _ resource.Schema
 	}
 }
 
-type projectUserBindingCreate struct {
-	Metadata struct {
-		Name *string `tfsdk:"name"`
-	} `tfsdk:"metadata"`
-
-	RoleRef struct {
-		Name string `tfsdk:"name"`
-	} `tfsdk:"role_ref"`
-
-	TargetRef struct {
-		Name             string `tfsdk:"name"`
-		OwnedByWorkspace string `tfsdk:"owned_by_workspace"`
-	} `tfsdk:"target_ref"`
-
-	Subject struct {
-		Name string `tfsdk:"name"`
-	} `tfsdk:"subject"`
-}
-
 // Create creates the resource and sets the initial Terraform state.
 func (r *projectUserBindingResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var plan MeshProjectUserBinding
+	var plan client.MeshProjectUserBinding
 
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)

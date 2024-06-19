@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/meshcloud/terraform-provider-meshstack/client"
+
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -30,7 +32,7 @@ func NewProjectResource() resource.Resource {
 
 // projectResource is the resource implementation.
 type projectResource struct {
-	client *MeshStackProviderClient
+	client *client.MeshStackProviderClient
 }
 
 // Metadata returns the resource type name.
@@ -44,7 +46,7 @@ func (r *projectResource) Configure(_ context.Context, req resource.ConfigureReq
 		return
 	}
 
-	client, ok := req.ProviderData.(*MeshStackProviderClient)
+	client, ok := req.ProviderData.(*client.MeshStackProviderClient)
 
 	if !ok {
 		resp.Diagnostics.AddError(
@@ -178,12 +180,12 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		paymentMethodIdentifier = plan.Spec.SubstitutePaymentMethodIdentifier.ValueStringPointer()
 	}
 
-	create := MeshProjectCreate{
-		Metadata: MeshProjectCreateMetadata{
+	create := client.MeshProjectCreate{
+		Metadata: client.MeshProjectCreateMetadata{
 			Name:             plan.Metadata.Name.ValueString(),
 			OwnedByWorkspace: plan.Metadata.OwnedByWorkspace.ValueString(),
 		},
-		Spec: MeshProjectSpec{
+		Spec: client.MeshProjectSpec{
 			DisplayName:                       plan.Spec.DisplayName.ValueString(),
 			Tags:                              tags,
 			PaymentMethodIdentifier:           paymentMethodIdentifier,
@@ -259,12 +261,12 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 		paymentMethodIdentifier = plan.Spec.SubstitutePaymentMethodIdentifier.ValueStringPointer()
 	}
 
-	create := MeshProjectCreate{
-		Metadata: MeshProjectCreateMetadata{
+	create := client.MeshProjectCreate{
+		Metadata: client.MeshProjectCreateMetadata{
 			Name:             plan.Metadata.Name.ValueString(),
 			OwnedByWorkspace: plan.Metadata.OwnedByWorkspace.ValueString(),
 		},
-		Spec: MeshProjectSpec{
+		Spec: client.MeshProjectSpec{
 			DisplayName:                       plan.Spec.DisplayName.ValueString(),
 			Tags:                              tags,
 			PaymentMethodIdentifier:           paymentMethodIdentifier,
@@ -287,7 +289,7 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 
 // Delete deletes the resource and removes the Terraform state on success.
 func (r *projectResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var state MeshProject
+	var state client.MeshProject
 
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)

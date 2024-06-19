@@ -1,4 +1,12 @@
-package provider
+package client
+
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"net/http"
+)
 
 type MeshBuildingBlock struct {
 	ApiVersion string                    `json:"apiVersion" tfsdk:"api_version"`
@@ -39,4 +47,44 @@ type MeshBuildingBlockParent struct {
 type MeshBuildingBlockStatus struct {
 	Status  string                `json:"status" tfsdk:"status"`
 	Outputs []MeshBuildingBlockIO `json:"outputs" tfsdk:"outputs"`
+}
+
+func (c *MeshStackProviderClient) ReadBuildingBlock(uuid string) (*MeshBuildingBlock, error) {
+	if c.ensureValidToken() != nil {
+		return nil, errors.New(ERROR_AUTHENTICATION_FAILURE)
+	}
+
+	targetUrl := c.endpoints.BuildingBlocks.JoinPath(uuid)
+	req, err := http.NewRequest("GET", targetUrl.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	res, err := c.doAuthenticatedRequest(req)
+	if err != nil {
+		return nil, err
+	}
+
+	defer res.Body.Close()
+
+	data, err := io.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	if res.StatusCode == 404 {
+		return nil, nil
+	}
+
+	if res.StatusCode != 200 {
+		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
+	}
+
+	var bb MeshBuildingBlock
+	err = json.Unmarshal(data, &bb)
+	if err != nil {
+		return nil, err
+	}
+
+	return &bb, nil
 }

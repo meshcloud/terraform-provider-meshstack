@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/meshcloud/terraform-provider-meshstack/client"
+
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -24,7 +26,7 @@ func NewBuildingBlockDataSource() datasource.DataSource {
 }
 
 type buildingBlockDataSource struct {
-	client *MeshStackProviderClient
+	client *client.MeshStackProviderClient
 }
 
 func (d *buildingBlockDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -127,7 +129,7 @@ func (d *buildingBlockDataSource) Configure(ctx context.Context, req datasource.
 		return
 	}
 
-	client, ok := req.ProviderData.(*MeshStackProviderClient)
+	client, ok := req.ProviderData.(*client.MeshStackProviderClient)
 
 	if !ok {
 		resp.Diagnostics.AddError(
@@ -150,7 +152,7 @@ func (d *buildingBlockDataSource) Read(ctx context.Context, req datasource.ReadR
 		ValueType   types.String `tfsdk:"value_type"`
 	}
 
-	mkIoList := func(ios *[]MeshBuildingBlockIO) (*[]io, error) {
+	mkIoList := func(ios *[]client.MeshBuildingBlockIO) (*[]io, error) {
 		result := make([]io, 0)
 		var err error
 		for _, input := range *ios {

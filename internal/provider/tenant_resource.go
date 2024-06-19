@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/meshcloud/terraform-provider-meshstack/client"
+
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -27,7 +29,7 @@ func NewTenantResource() resource.Resource {
 }
 
 type tenantResource struct {
-	client *MeshStackProviderClient
+	client *client.MeshStackProviderClient
 }
 
 func (r *tenantResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -39,7 +41,7 @@ func (r *tenantResource) Configure(_ context.Context, req resource.ConfigureRequ
 		return
 	}
 
-	client, ok := req.ProviderData.(*MeshStackProviderClient)
+	client, ok := req.ProviderData.(*client.MeshStackProviderClient)
 
 	if !ok {
 		resp.Diagnostics.AddError(
@@ -165,7 +167,7 @@ func (r *tenantResource) Create(ctx context.Context, req resource.CreateRequest,
 		landing_zone_identifier = spec.LandingZoneIdentifier.ValueStringPointer()
 	}
 
-	var quotas []MeshTenantQuota
+	var quotas []client.MeshTenantQuota
 	if !spec.Quotas.IsNull() && !spec.Quotas.IsUnknown() {
 		resp.Diagnostics.Append(spec.Quotas.ElementsAs(ctx, &quotas, false)...)
 	}
@@ -174,13 +176,13 @@ func (r *tenantResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	create := MeshTenantCreate{
-		Metadata: MeshTenantCreateMetadata{
+	create := client.MeshTenantCreate{
+		Metadata: client.MeshTenantCreateMetadata{
 			OwnedByProject:     metadata.OwnedByProject.ValueString(),
 			OwnedByWorkspace:   metadata.OwnedByWorkspace.ValueString(),
 			PlatformIdentifier: metadata.PlatformIdentifier.ValueString(),
 		},
-		Spec: MeshTenantCreateSpec{
+		Spec: client.MeshTenantCreateSpec{
 			LocalId:               local_id,
 			LandingZoneIdentifier: landing_zone_identifier,
 			Quotas:                &quotas,
@@ -231,7 +233,7 @@ func (r *tenantResource) Update(ctx context.Context, req resource.UpdateRequest,
 }
 
 func (r *tenantResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var state MeshTenant
+	var state client.MeshTenant
 
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
