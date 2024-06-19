@@ -80,12 +80,12 @@ func (r *projectUserBindingResource) Schema(_ context.Context, _ resource.Schema
 			},
 
 			"metadata": schema.SingleNestedAttribute{
-				Optional:            true,
+				Required:            true,
 				MarkdownDescription: "Project user binding metadata.",
 				Attributes: map[string]schema.Attribute{
 					"name": schema.StringAttribute{
-						MarkdownDescription: "The name identifies the binding and must be unique across the meshStack. A UUID will automatically be used if left unset.",
-						Optional:            true,
+						MarkdownDescription: "The name identifies the binding and must be unique across the meshStack.",
+						Required:            true,
 						PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 						Validators: []validator.String{
 							stringvalidator.LengthBetween(1, 45),

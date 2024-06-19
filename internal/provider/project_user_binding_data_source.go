@@ -31,7 +31,7 @@ func (d *projectUserBindingsDataSource) Metadata(ctx context.Context, req dataso
 
 func (d *projectUserBindingsDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Single project by name and workspace.",
+		MarkdownDescription: "Single project user binding by name.",
 
 		Attributes: map[string]schema.Attribute{
 			"api_version": schema.StringAttribute{
