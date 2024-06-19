@@ -217,6 +217,11 @@ func (r *tenantResource) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
+	if tenant == nil {
+		resp.State.RemoveResource(ctx)
+		return
+	}
+
 	// client data maps directly to the schema so we just need to set the state
 	resp.Diagnostics.Append(resp.State.Set(ctx, tenant)...)
 }

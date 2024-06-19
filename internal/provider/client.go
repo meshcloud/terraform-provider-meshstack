@@ -240,6 +240,10 @@ func (c *MeshStackProviderClient) ReadBuildingBlock(uuid string) (*MeshBuildingB
 		return nil, err
 	}
 
+	if res.StatusCode == 404 {
+		return nil, nil
+	}
+
 	if res.StatusCode != 200 {
 		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
 	}
@@ -281,6 +285,10 @@ func (c *MeshStackProviderClient) ReadProject(workspace string, name string) (*M
 	data, err := io.ReadAll(res.Body)
 	if err != nil {
 		return nil, err
+	}
+
+	if res.StatusCode == 404 {
+		return nil, nil
 	}
 
 	if res.StatusCode != 200 {
@@ -467,6 +475,10 @@ func (c *MeshStackProviderClient) ReadTenant(workspace string, project string, p
 	data, err := io.ReadAll(res.Body)
 	if err != nil {
 		return nil, err
+	}
+
+	if res.StatusCode == 404 {
+		return nil, nil
 	}
 
 	if res.StatusCode != 200 {

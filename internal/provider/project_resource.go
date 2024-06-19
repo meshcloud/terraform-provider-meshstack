@@ -220,6 +220,11 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 		resp.Diagnostics.AddError("Unable to read project", err.Error())
 	}
 
+	if project == nil {
+		resp.State.RemoveResource(ctx)
+		return
+	}
+
 	// client data maps directly to the schema so we just need to set the state
 	resp.Diagnostics.Append(resp.State.Set(ctx, project)...)
 }
