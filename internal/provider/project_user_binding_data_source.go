@@ -123,5 +123,10 @@ func (d *projectUserBindingsDataSource) Read(ctx context.Context, req datasource
 		resp.Diagnostics.AddError("Unable to read project", err.Error())
 	}
 
+	if binding == nil {
+		resp.Diagnostics.AddError("Project user binding not found", fmt.Sprintf("Can't find project user binding with name '%s'.", name))
+		return
+	}
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, binding)...)
 }

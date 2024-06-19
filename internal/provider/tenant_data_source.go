@@ -121,6 +121,11 @@ func (d *tenantDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 		return
 	}
 
+	if tenant == nil {
+		resp.Diagnostics.AddError("Tenant not found", fmt.Sprintf("Can't find tenant for workspace '%s', project '%s', platform '%s'.", workspace, project, platform))
+		return
+	}
+
 	// client data maps directly to the schema so we just need to set the state
 	resp.Diagnostics.Append(resp.State.Set(ctx, tenant)...)
 }

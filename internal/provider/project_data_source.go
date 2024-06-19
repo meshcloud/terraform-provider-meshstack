@@ -112,6 +112,11 @@ func (d *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		return
 	}
 
+	if project == nil {
+		resp.Diagnostics.AddError("Project not found", fmt.Sprintf("Can't find project with identifier '%s' in workspace '%s'.", name, workspace))
+		return
+	}
+
 	// client data maps directly to the schema so we just need to set the state
 	resp.Diagnostics.Append(resp.State.Set(ctx, project)...)
 }

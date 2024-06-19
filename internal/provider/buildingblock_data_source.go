@@ -206,6 +206,11 @@ func (d *buildingBlockDataSource) Read(ctx context.Context, req datasource.ReadR
 		resp.Diagnostics.AddError("Unable to read buildingblock", err.Error())
 	}
 
+	if bb == nil {
+		resp.Diagnostics.AddError("Building block not found", fmt.Sprintf("Can't find building block with identifier '%s'.", uuid))
+		return
+	}
+
 	// must set attributes individually to handle dynamic input/output types
 	resp.State.SetAttribute(ctx, path.Root("api_version"), bb.ApiVersion)
 	resp.State.SetAttribute(ctx, path.Root("kind"), bb.Kind)
