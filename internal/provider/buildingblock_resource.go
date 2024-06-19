@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/meshcloud/terraform-provider-meshstack/client"
+
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -22,7 +24,7 @@ func NewBuildingBlockResource() resource.Resource {
 }
 
 type BuildingBlockResource struct {
-	client *MeshStackProviderClient
+	client *client.MeshStackProviderClient
 }
 
 type BuildingBlockResourceModel struct {
@@ -84,7 +86,7 @@ func (r *BuildingBlockResource) Configure(ctx context.Context, req resource.Conf
 		return
 	}
 
-	client, ok := req.ProviderData.(*MeshStackProviderClient)
+	client, ok := req.ProviderData.(*client.MeshStackProviderClient)
 
 	if !ok {
 		resp.Diagnostics.AddError(

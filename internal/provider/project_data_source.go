@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/meshcloud/terraform-provider-meshstack/client"
+
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -23,7 +25,7 @@ func NewProjectDataSource() datasource.DataSource {
 }
 
 type projectDataSource struct {
-	client *MeshStackProviderClient
+	client *client.MeshStackProviderClient
 }
 
 func (d *projectDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -82,7 +84,7 @@ func (d *projectDataSource) Configure(ctx context.Context, req datasource.Config
 		return
 	}
 
-	client, ok := req.ProviderData.(*MeshStackProviderClient)
+	client, ok := req.ProviderData.(*client.MeshStackProviderClient)
 
 	if !ok {
 		resp.Diagnostics.AddError(

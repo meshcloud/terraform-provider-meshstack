@@ -4,6 +4,8 @@ import (
 	"context"
 	"net/url"
 
+	"github.com/meshcloud/terraform-provider-meshstack/client"
+
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
@@ -59,7 +61,7 @@ func (p *MeshStackProvider) Configure(ctx context.Context, req provider.Configur
 	if err != nil {
 		resp.Diagnostics.AddError("Provider endpoint not valid.", "The value provided as the providers endpoint is not a valid URL.")
 	} else {
-		client, err := NewClient(url, data.ApiKey.ValueString(), data.ApiSecret.ValueString()) // TODO handle err
+		client, err := client.NewClient(url, data.ApiKey.ValueString(), data.ApiSecret.ValueString()) // TODO handle err
 		if err != nil {
 			resp.Diagnostics.AddError("Failed to create client.", err.Error())
 		}
