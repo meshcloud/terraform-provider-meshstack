@@ -9,6 +9,8 @@ import (
 	"net/url"
 )
 
+const CONTENT_TYPE_PROJECT = "application/vnd.meshcloud.api.meshproject.v2.hal+json"
+
 type MeshProject struct {
 	ApiVersion string              `json:"apiVersion" tfsdk:"api_version"`
 	Kind       string              `json:"kind" tfsdk:"kind"`
