@@ -20,11 +20,6 @@ const (
 	ERROR_GENERIC_API_ERROR      = "api error"
 	ERROR_AUTHENTICATION_FAILURE = "Not authorized. Check api key and secret."
 	ERROR_ENDPOINT_LOOKUP        = "Could not fetch endpoints for meshStack."
-
-	CONTENT_TYPE_PROJECT               = "application/vnd.meshcloud.api.meshproject.v2.hal+json"
-	CONTENT_TYPE_TENANT                = "application/vnd.meshcloud.api.meshtenant.v3.hal+json"
-	CONTENT_TYPE_PROJECT_USER_BINDINGS = "application/vnd.meshcloud.api.meshprojectuserbinding.v1.hal+json"
-	CONTENT_TYPE_PROJECT_USER_BINDING  = "application/vnd.meshcloud.api.meshprojectuserbinding.v3.hal+json"
 )
 
 type MeshStackProviderClient struct {
@@ -38,10 +33,11 @@ type MeshStackProviderClient struct {
 }
 
 type endpoints struct {
-	BuildingBlocks      *url.URL `json:"meshbuildingblocks"`
-	Projects            *url.URL `json:"meshprojects"`
-	ProjectUserBindings *url.URL `json:"meshprojectuserbindings"`
-	Tenants             *url.URL `json:"meshtenants"`
+	BuildingBlocks       *url.URL `json:"meshbuildingblocks"`
+	Projects             *url.URL `json:"meshprojects"`
+	ProjectUserBindings  *url.URL `json:"meshprojectuserbindings"`
+	ProjectGroupBindings *url.URL `json:"meshprojectgroupbindings"`
+	Tenants              *url.URL `json:"meshtenants"`
 }
 
 type loginResponse struct {
@@ -62,10 +58,11 @@ func NewClient(rootUrl *url.URL, apiKey string, apiSecret string) (*MeshStackPro
 
 	// TODO: lookup endpoints
 	client.endpoints = endpoints{
-		BuildingBlocks:      rootUrl.JoinPath(apiMeshObjectsRoot, "meshbuildingblocks"),
-		Projects:            rootUrl.JoinPath(apiMeshObjectsRoot, "meshprojects"),
-		ProjectUserBindings: rootUrl.JoinPath(apiMeshObjectsRoot, "meshprojectbindings", "userbindings"),
-		Tenants:             rootUrl.JoinPath(apiMeshObjectsRoot, "meshtenants"),
+		BuildingBlocks:       rootUrl.JoinPath(apiMeshObjectsRoot, "meshbuildingblocks"),
+		Projects:             rootUrl.JoinPath(apiMeshObjectsRoot, "meshprojects"),
+		ProjectUserBindings:  rootUrl.JoinPath(apiMeshObjectsRoot, "meshprojectbindings", "userbindings"),
+		ProjectGroupBindings: rootUrl.JoinPath(apiMeshObjectsRoot, "meshprojectbindings", "groupbindings"),
+		Tenants:              rootUrl.JoinPath(apiMeshObjectsRoot, "meshtenants"),
 	}
 
 	return client, nil
