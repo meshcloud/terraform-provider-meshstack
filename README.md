@@ -1,6 +1,6 @@
 # meshStack Terraform Provider
 
-This is the repository for the meshStack Terraform Provider, which allows one to use Terraform with meshStack by meshcloud. Learn more about meshcloud at https://www.meshcloud.io
+This is the repository for the meshStack Terraform Provider, which allows one to use Terraform with meshStack by meshcloud. Learn more about meshcloud at https://www.meshcloud.io. This provider is offcially registered and documented under [terraform registry](https://registry.terraform.io/providers/meshcloud/meshstack/latest/docs).
 
 For general information about Terraform, visit the [official website](https://www.terraform.io).
 
