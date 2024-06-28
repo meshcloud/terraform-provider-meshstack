@@ -1,11 +1,23 @@
 package client
 
 import (
+	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+)
+
+const (
+	MESH_BUILDING_BLOCK_IO_TYPE_STRING        = "STRING"
+	MESH_BUILDING_BLOCK_IO_TYPE_INTEGER       = "INTEGER"
+	MESH_BUILDING_BLOCK_IO_TYPE_BOOLEAN       = "BOOLEAN"
+	MESH_BUILDING_BLOCK_IO_TYPE_SINGLE_SELECT = "SINGLE_SELECT"
+	MESH_BUILDING_BLOCK_IO_TYPE_FILE          = "FILE"
+	MESH_BUILDING_BLOCK_IO_TYPE_LIST          = "LIST"
+
+	CONTENT_TYPE_BUILDING_BLOCK = "application/vnd.meshcloud.api.meshbuildingblock.v1.hal+json"
 )
 
 type MeshBuildingBlock struct {
@@ -49,12 +61,25 @@ type MeshBuildingBlockStatus struct {
 	Outputs []MeshBuildingBlockIO `json:"outputs" tfsdk:"outputs"`
 }
 
-func (c *MeshStackProviderClient) ReadBuildingBlock(uuid string) (*MeshBuildingBlock, error) {
-	if c.ensureValidToken() != nil {
-		return nil, errors.New(ERROR_AUTHENTICATION_FAILURE)
-	}
+type MeshBuildingBlockCreate struct {
+	ApiVersion string                          `json:"apiVersion" tfsdk:"api_version"`
+	Kind       string                          `json:"kind" tfsdk:"kind"`
+	Metadata   MeshBuildingBlockCreateMetadata `json:"metadata" tfsdk:"metadata"`
+	Spec       MeshBuildingBlockSpec           `json:"spec" tfsdk:"spec"`
+}
 
-	targetUrl := c.endpoints.BuildingBlocks.JoinPath(uuid)
+type MeshBuildingBlockCreateMetadata struct {
+	DefinitionUuid    string `json:"definitionUuid" tfsdk:"definition_uuid"`
+	DefinitionVersion int64  `json:"definitionVersion" tfsdk:"definition_version"`
+	TenantIdentifier  string `json:"tenantIdentifier" tfsdk:"tenant_identifier"`
+}
+
+func (c *MeshStackProviderClient) urlForBuildingBlock(uuid string) *url.URL {
+	return c.endpoints.BuildingBlocks.JoinPath(uuid)
+}
+
+func (c *MeshStackProviderClient) ReadBuildingBlock(uuid string) (*MeshBuildingBlock, error) {
+	targetUrl := c.urlForBuildingBlock(uuid)
 	req, err := http.NewRequest("GET", targetUrl.String(), nil)
 	if err != nil {
 		return nil, err
@@ -87,4 +112,47 @@ func (c *MeshStackProviderClient) ReadBuildingBlock(uuid string) (*MeshBuildingB
 	}
 
 	return &bb, nil
+}
+
+func (c *MeshStackProviderClient) CreateBuildingBlock(bb *MeshBuildingBlockCreate) (*MeshBuildingBlock, error) {
+	payload, err := json.Marshal(bb)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", c.endpoints.BuildingBlocks.String(), bytes.NewBuffer(payload))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", CONTENT_TYPE_BUILDING_BLOCK)
+	req.Header.Set("Accept", CONTENT_TYPE_BUILDING_BLOCK)
+
+	res, err := c.doAuthenticatedRequest(req)
+	if err != nil {
+		return nil, err
+	}
+
+	defer res.Body.Close()
+
+	data, err := io.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	if res.StatusCode != 201 {
+		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
+	}
+
+	var createdBb MeshBuildingBlock
+	err = json.Unmarshal(data, &createdBb)
+	if err != nil {
+		return nil, err
+	}
+
+	return &createdBb, nil
+}
+
+func (c *MeshStackProviderClient) DeleteBuildingBlock(uuid string) error {
+	targetUrl := c.urlForBuildingBlock(uuid)
+	return c.deleteMeshObject(*targetUrl, 202)
 }
