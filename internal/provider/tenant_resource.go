@@ -54,6 +54,7 @@ func (r *tenantResource) Configure(_ context.Context, req resource.ConfigureRequ
 
 	r.client = client
 }
+
 func (r *tenantResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Single tenant by workspace, project, and platform.",
