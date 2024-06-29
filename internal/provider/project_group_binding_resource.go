@@ -18,28 +18,28 @@ import (
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_ resource.Resource                = &projectUserBindingResource{}
-	_ resource.ResourceWithConfigure   = &projectUserBindingResource{}
-	_ resource.ResourceWithImportState = &projectUserBindingResource{}
+	_ resource.Resource                = &projectGroupBindingResource{}
+	_ resource.ResourceWithConfigure   = &projectGroupBindingResource{}
+	_ resource.ResourceWithImportState = &projectGroupBindingResource{}
 )
 
-// NewProjectUserBindingResource is a helper function to simplify the provider implementation.
-func NewProjectUserBindingResource() resource.Resource {
-	return &projectUserBindingResource{}
+// NewProjectGroupBindingResource is a helper function to simplify the provider implementation.
+func NewProjectGroupBindingResource() resource.Resource {
+	return &projectGroupBindingResource{}
 }
 
-// projectUserBindingResource is the resource implementation.
-type projectUserBindingResource struct {
+// projectGroupBindingResource is the resource implementation.
+type projectGroupBindingResource struct {
 	client *client.MeshStackProviderClient
 }
 
 // Metadata returns the resource type name.
-func (r *projectUserBindingResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_project_user_binding"
+func (r *projectGroupBindingResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_project_group_binding"
 }
 
 // Configure adds the provider configured client to the resource.
-func (r *projectUserBindingResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+func (r *projectGroupBindingResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
 	}
@@ -59,31 +59,31 @@ func (r *projectUserBindingResource) Configure(_ context.Context, req resource.C
 }
 
 // Schema defines the schema for the resource.
-func (r *projectUserBindingResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *projectGroupBindingResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Project user binding assigns a user with a specific role to a project.",
+		MarkdownDescription: "Project group binding assigns a group with a specific role to a project.",
 
 		Attributes: map[string]schema.Attribute{
 			"api_version": schema.StringAttribute{
-				MarkdownDescription: "Project user binding datatype version",
+				MarkdownDescription: "Project group binding datatype version",
 				Computed:            true,
 				Default:             stringdefault.StaticString("v3"),
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 
 			"kind": schema.StringAttribute{
-				MarkdownDescription: "meshObject type, always `meshProjectUserBinding`.",
+				MarkdownDescription: "meshObject type, always `meshProjectGroupBinding`.",
 				Computed:            true,
-				Default:             stringdefault.StaticString("meshProjectUserBinding"),
+				Default:             stringdefault.StaticString("meshProjectGroupBinding"),
 				Validators: []validator.String{
-					stringvalidator.OneOf([]string{"meshProjectUserBinding"}...),
+					stringvalidator.OneOf([]string{"meshProjectGroupBinding"}...),
 				},
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 
 			"metadata": schema.SingleNestedAttribute{
 				Required:            true,
-				MarkdownDescription: "Project user binding metadata.",
+				MarkdownDescription: "Project group binding metadata.",
 				Attributes: map[string]schema.Attribute{
 					"name": schema.StringAttribute{
 						MarkdownDescription: "The name identifies the binding and must be unique across the meshStack.",
@@ -125,11 +125,11 @@ func (r *projectUserBindingResource) Schema(_ context.Context, _ resource.Schema
 			},
 
 			"subject": schema.SingleNestedAttribute{
-				MarkdownDescription: "Selects the user for this binding.",
+				MarkdownDescription: "Selects the group for this binding.",
 				Required:            true,
 				Attributes: map[string]schema.Attribute{
 					"name": schema.StringAttribute{
-						MarkdownDescription: "Username.",
+						MarkdownDescription: "Groupname.",
 						Required:            true,
 						PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 					},
@@ -140,8 +140,8 @@ func (r *projectUserBindingResource) Schema(_ context.Context, _ resource.Schema
 }
 
 // Create creates the resource and sets the initial Terraform state.
-func (r *projectUserBindingResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var plan client.MeshProjectUserBinding
+func (r *projectGroupBindingResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var plan client.MeshProjectGroupBinding
 
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -149,11 +149,11 @@ func (r *projectUserBindingResource) Create(ctx context.Context, req resource.Cr
 		return
 	}
 
-	binding, err := r.client.CreateProjectUserBinding(&plan)
+	binding, err := r.client.CreateProjectGroupBinding(&plan)
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Error creating project user binding",
-			"Could not create project user binding, unexpected error: "+err.Error(),
+			"Error creating project group binding",
+			"Could not create project group binding, unexpected error: "+err.Error(),
 		)
 		return
 	}
@@ -163,16 +163,16 @@ func (r *projectUserBindingResource) Create(ctx context.Context, req resource.Cr
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *projectUserBindingResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+func (r *projectGroupBindingResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var name string
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("metadata").AtName("name"), &name)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	binding, err := r.client.ReadProjectUserBinding(name)
+	binding, err := r.client.ReadProjectGroupBinding(name)
 	if err != nil {
-		resp.Diagnostics.AddError("Unable to read project user binding", err.Error())
+		resp.Diagnostics.AddError("Unable to read project group binding", err.Error())
 	}
 
 	if binding == nil {
@@ -184,28 +184,28 @@ func (r *projectUserBindingResource) Read(ctx context.Context, req resource.Read
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
-func (r *projectUserBindingResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	resp.Diagnostics.AddError("Project user bindings can't be updated", "Unsupported operation: project user bindings can't be updated.")
+func (r *projectGroupBindingResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	resp.Diagnostics.AddError("Project group bindings can't be updated", "Unsupported operation: project group bindings can't be updated.")
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
-func (r *projectUserBindingResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+func (r *projectGroupBindingResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var name string
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("metadata").AtName("name"), &name)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	err := r.client.DeleteProjecUserBinding(name)
+	err := r.client.DeleteProjecGroupBinding(name)
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Error deleting project user binding",
-			"Could not delete project, unexpected error: "+err.Error(),
+			"Error deleting project group binding",
+			"Could not delete project group binding, unexpected error: "+err.Error(),
 		)
 		return
 	}
 }
 
-func (r *projectUserBindingResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+func (r *projectGroupBindingResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("metadata").AtName("name"), req.ID)...)
 }

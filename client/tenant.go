@@ -9,6 +9,8 @@ import (
 	"net/url"
 )
 
+const CONTENT_TYPE_TENANT = "application/vnd.meshcloud.api.meshtenant.v3.hal+json"
+
 type MeshTenant struct {
 	ApiVersion string             `json:"apiVersion" tfsdk:"api_version"`
 	Kind       string             `json:"kind" tfsdk:"kind"`

@@ -14,38 +14,38 @@ import (
 )
 
 var (
-	_ datasource.DataSource              = &projectUserBindingDataSource{}
-	_ datasource.DataSourceWithConfigure = &projectUserBindingDataSource{}
+	_ datasource.DataSource              = &projectGroupBindingDataSource{}
+	_ datasource.DataSourceWithConfigure = &projectGroupBindingDataSource{}
 )
 
-func NewProjectUserBindingDataSource() datasource.DataSource {
-	return &projectUserBindingDataSource{}
+func NewProjectGroupBindingDataSource() datasource.DataSource {
+	return &projectGroupBindingDataSource{}
 }
 
-type projectUserBindingDataSource struct {
+type projectGroupBindingDataSource struct {
 	client *client.MeshStackProviderClient
 }
 
-func (d *projectUserBindingDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_project_user_binding"
+func (d *projectGroupBindingDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_project_group_binding"
 
 }
 
-func (d *projectUserBindingDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (d *projectGroupBindingDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Single project user binding by name.",
+		MarkdownDescription: "Single project group binding by name.",
 
 		Attributes: map[string]schema.Attribute{
 			"api_version": schema.StringAttribute{
-				MarkdownDescription: "Project user binding datatype version",
+				MarkdownDescription: "Project group binding datatype version",
 				Computed:            true,
 			},
 
 			"kind": schema.StringAttribute{
-				MarkdownDescription: "meshObject type, always `meshProjectUserBinding`.",
+				MarkdownDescription: "meshObject type, always `meshProjectGroupBinding`.",
 				Computed:            true,
 				Validators: []validator.String{
-					stringvalidator.OneOf([]string{"meshProjectUserBinding"}...),
+					stringvalidator.OneOf([]string{"meshProjectGroupBinding"}...),
 				},
 			},
 
@@ -80,11 +80,11 @@ func (d *projectUserBindingDataSource) Schema(ctx context.Context, req datasourc
 				},
 			},
 			"subject": schema.SingleNestedAttribute{
-				MarkdownDescription: "User assigned by this binding.",
+				MarkdownDescription: "Group assigned by this binding.",
 				Computed:            true,
 				Attributes: map[string]schema.Attribute{
 					"name": schema.StringAttribute{
-						MarkdownDescription: "Username.",
+						MarkdownDescription: "Groupname.",
 						Computed:            true,
 					},
 				},
@@ -93,7 +93,7 @@ func (d *projectUserBindingDataSource) Schema(ctx context.Context, req datasourc
 	}
 }
 
-func (d *projectUserBindingDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+func (d *projectGroupBindingDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
 	}
@@ -112,20 +112,20 @@ func (d *projectUserBindingDataSource) Configure(ctx context.Context, req dataso
 	d.client = client
 }
 
-func (d *projectUserBindingDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+func (d *projectGroupBindingDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var name string
 	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("metadata").AtName("name"), &name)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	binding, err := d.client.ReadProjectUserBinding(name)
+	binding, err := d.client.ReadProjectGroupBinding(name)
 	if err != nil {
-		resp.Diagnostics.AddError("Unable to read project user binding", err.Error())
+		resp.Diagnostics.AddError("Unable to read project group binding", err.Error())
 	}
 
 	if binding == nil {
-		resp.Diagnostics.AddError("Project user binding not found", fmt.Sprintf("Can't find project user binding with name '%s'.", name))
+		resp.Diagnostics.AddError("Project group binding not found", fmt.Sprintf("Can't find project group binding with name '%s'.", name))
 		return
 	}
 
