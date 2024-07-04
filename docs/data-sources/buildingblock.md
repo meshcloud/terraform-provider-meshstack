@@ -3,12 +3,12 @@
 page_title: "meshstack_buildingblock Data Source - terraform-provider-meshstack"
 subcategory: ""
 description: |-
-  Query a single Building Block by UUID.
+  Single Building Block by UUID.
 ---
 
 # meshstack_buildingblock (Data Source)
 
-Query a single Building Block by UUID.
+Single Building Block by UUID.
 
 ## Example Usage
 
@@ -25,11 +25,11 @@ data "meshstack_buildingblock" "example" {
 
 ### Required
 
-- `metadata` (Attributes) Building Block metadata. UUID of the target Building Block must be set here. (see [below for nested schema](#nestedatt--metadata))
+- `metadata` (Attributes) Building Block metadata. (see [below for nested schema](#nestedatt--metadata))
 
 ### Read-Only
 
-- `api_version` (String) Building Block datatype version
+- `api_version` (String) Building block datatype version
 - `kind` (String) meshObject type, always `meshBuildingBlock`.
 - `spec` (Attributes) Building Block specification. (see [below for nested schema](#nestedatt--spec))
 - `status` (Attributes) Current Building Block status. (see [below for nested schema](#nestedatt--status))
@@ -39,17 +39,17 @@ data "meshstack_buildingblock" "example" {
 
 Required:
 
-- `uuid` (String)
+- `uuid` (String) UUID which uniquely identifies the Building Block.
 
 Read-Only:
 
-- `created_on` (String)
-- `definition_uuid` (String)
-- `definition_version` (Number)
-- `force_purge` (Boolean)
-- `marked_for_deletion_by` (String)
-- `marked_for_deletion_on` (String)
-- `tenant_identifier` (String)
+- `created_on` (String) Timestamp of Building Block creation.
+- `definition_uuid` (String) UUID of the Building Block Definition this Building Block is based on.
+- `definition_version` (Number) Version number of the Building Block Definition this Building Block is based on
+- `force_purge` (Boolean) Indicates whether an operator has requested purging of this Building Block.
+- `marked_for_deletion_by` (String) For deleted Building Blocks: user who requested deletion.
+- `marked_for_deletion_on` (String) For deleted Building Blocks: timestamp of deletion.
+- `tenant_identifier` (String) Full tenant identifier of the tenant this Building Block is assigned to.
 
 
 <a id="nestedatt--spec"></a>
@@ -57,20 +57,21 @@ Read-Only:
 
 Read-Only:
 
-- `display_name` (String)
-- `inputs` (Attributes List) List of Building Block inputs. (see [below for nested schema](#nestedatt--spec--inputs))
-- `parent_building_blocks` (Attributes List) (see [below for nested schema](#nestedatt--spec--parent_building_blocks))
+- `display_name` (String) Display name for the Building Block as shown in meshPanel.
+- `inputs` (Attributes Map) Contains all Building Block inputs. Each input has exactly one value attribute set according to its' type. (see [below for nested schema](#nestedatt--spec--inputs))
+- `parent_building_blocks` (Attributes List) List of parent Building Blocks. (see [below for nested schema](#nestedatt--spec--parent_building_blocks))
 
 <a id="nestedatt--spec--inputs"></a>
 ### Nested Schema for `spec.inputs`
 
 Read-Only:
 
-- `key` (String)
 - `value_bool` (Boolean)
+- `value_file` (String)
 - `value_int` (Number)
+- `value_list` (String) JSON encoded list of objects.
+- `value_single_select` (String)
 - `value_string` (String)
-- `value_type` (String)
 
 
 <a id="nestedatt--spec--parent_building_blocks"></a>
@@ -78,8 +79,8 @@ Read-Only:
 
 Read-Only:
 
-- `buildingblock_uuid` (String)
-- `definition_uuid` (String)
+- `buildingblock_uuid` (String) UUID of the parent Building Block.
+- `definition_uuid` (String) UUID of the parent Building Block definition.
 
 
 
@@ -88,7 +89,7 @@ Read-Only:
 
 Read-Only:
 
-- `outputs` (Attributes List) List of building block outputs. (see [below for nested schema](#nestedatt--status--outputs))
+- `outputs` (Attributes Map) Building Block outputs. Each output has exactly one value attribute set. (see [below for nested schema](#nestedatt--status--outputs))
 - `status` (String) Execution status. One of `WAITING_FOR_DEPENDENT_INPUT`, `WAITING_FOR_OPERATOR_INPUT`, `PENDING`, `IN_PROGRESS`, `SUCCEEDED`, `FAILED`.
 
 <a id="nestedatt--status--outputs"></a>
@@ -96,8 +97,9 @@ Read-Only:
 
 Read-Only:
 
-- `key` (String)
 - `value_bool` (Boolean)
+- `value_file` (String)
 - `value_int` (Number)
+- `value_list` (String) JSON encoded list of objects.
+- `value_single_select` (String)
 - `value_string` (String)
-- `value_type` (String)

@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
@@ -12,7 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
-	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
@@ -34,29 +32,47 @@ func (d *buildingBlockDataSource) Metadata(ctx context.Context, req datasource.M
 }
 
 func (d *buildingBlockDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
-	// Dynamic attributes are not supported as nested attributes, we use mutually exclusive fields for each possible value type instead.
-	mkIoList := func(desc string) schema.ListNestedAttribute {
-		return schema.ListNestedAttribute{
-			Computed:            true,
-			MarkdownDescription: desc,
+	mkIoMap := func() schema.MapNestedAttribute {
+		return schema.MapNestedAttribute{
+			Computed: true,
 			NestedObject: schema.NestedAttributeObject{
 				Attributes: map[string]schema.Attribute{
-					"key":          schema.StringAttribute{Computed: true},
-					"value_string": schema.StringAttribute{Computed: true},
-					"value_int":    schema.Int64Attribute{Computed: true},
-					"value_bool":   schema.BoolAttribute{Computed: true},
-					"value_type":   schema.StringAttribute{Computed: true},
+					"value_string": schema.StringAttribute{
+						Computed: true,
+						Validators: []validator.String{stringvalidator.ExactlyOneOf(
+							path.MatchRelative().AtParent().AtName("value_string"),
+							path.MatchRelative().AtParent().AtName("value_single_select"),
+							path.MatchRelative().AtParent().AtName("value_file"),
+							path.MatchRelative().AtParent().AtName("value_int"),
+							path.MatchRelative().AtParent().AtName("value_bool"),
+							path.MatchRelative().AtParent().AtName("value_list"),
+						)},
+					},
+					"value_single_select": schema.StringAttribute{Computed: true},
+					"value_file":          schema.StringAttribute{Computed: true},
+					"value_int":           schema.Int64Attribute{Computed: true},
+					"value_bool":          schema.BoolAttribute{Computed: true},
+					"value_list": schema.StringAttribute{
+						MarkdownDescription: "JSON encoded list of objects.",
+						Computed:            true,
+					},
 				},
 			},
 		}
 	}
 
+	inputs := mkIoMap()
+	inputs.MarkdownDescription = "Contains all Building Block inputs. Each input has exactly one value attribute set according to its' type."
+
+	outputs := mkIoMap()
+	outputs.MarkdownDescription = "Building Block outputs. Each output has exactly one value attribute set."
+
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Query a single Building Block by UUID.",
+		MarkdownDescription: "Single Building Block by UUID.",
 
 		Attributes: map[string]schema.Attribute{
 			"api_version": schema.StringAttribute{
-				MarkdownDescription: "Building Block datatype version",
+				MarkdownDescription: "Building block datatype version",
 				Computed:            true,
 			},
 
@@ -69,20 +85,40 @@ func (d *buildingBlockDataSource) Schema(ctx context.Context, req datasource.Sch
 			},
 
 			"metadata": schema.SingleNestedAttribute{
-				MarkdownDescription: "Building Block metadata. UUID of the target Building Block must be set here.",
+				MarkdownDescription: "Building Block metadata.",
 				Required:            true,
 				Attributes: map[string]schema.Attribute{
-					"uuid":               schema.StringAttribute{Required: true},
-					"definition_uuid":    schema.StringAttribute{Computed: true},
-					"definition_version": schema.Int64Attribute{Computed: true},
-					"tenant_identifier":  schema.StringAttribute{Computed: true},
-					"force_purge":        schema.BoolAttribute{Computed: true},
-					"created_on":         schema.StringAttribute{Computed: true},
+					"uuid": schema.StringAttribute{
+						MarkdownDescription: "UUID which uniquely identifies the Building Block.",
+						Required:            true,
+					},
+					"definition_uuid": schema.StringAttribute{
+						MarkdownDescription: "UUID of the Building Block Definition this Building Block is based on.",
+						Computed:            true,
+					},
+					"definition_version": schema.Int64Attribute{
+						MarkdownDescription: "Version number of the Building Block Definition this Building Block is based on",
+						Computed:            true,
+					},
+					"tenant_identifier": schema.StringAttribute{
+						MarkdownDescription: "Full tenant identifier of the tenant this Building Block is assigned to.",
+						Computed:            true,
+					},
+					"force_purge": schema.BoolAttribute{
+						MarkdownDescription: "Indicates whether an operator has requested purging of this Building Block.",
+						Computed:            true,
+					},
+					"created_on": schema.StringAttribute{
+						MarkdownDescription: "Timestamp of Building Block creation.",
+						Computed:            true,
+					},
 					"marked_for_deletion_on": schema.StringAttribute{
-						Computed: true,
+						MarkdownDescription: "For deleted Building Blocks: timestamp of deletion.",
+						Computed:            true,
 					},
 					"marked_for_deletion_by": schema.StringAttribute{
-						Computed: true,
+						MarkdownDescription: "For deleted Building Blocks: user who requested deletion.",
+						Computed:            true,
 					},
 				},
 			},
@@ -91,15 +127,27 @@ func (d *buildingBlockDataSource) Schema(ctx context.Context, req datasource.Sch
 				MarkdownDescription: "Building Block specification.",
 				Computed:            true,
 				Attributes: map[string]schema.Attribute{
+					"display_name": schema.StringAttribute{
+						MarkdownDescription: "Display name for the Building Block as shown in meshPanel.",
+						Computed:            true,
+					},
 
-					"display_name": schema.StringAttribute{Computed: true},
-					"inputs":       mkIoList("List of Building Block inputs."),
+					//
+					"inputs": inputs,
+
 					"parent_building_blocks": schema.ListNestedAttribute{
-						Computed: true,
+						MarkdownDescription: "List of parent Building Blocks.",
+						Computed:            true,
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
-								"buildingblock_uuid": schema.StringAttribute{Computed: true},
-								"definition_uuid":    schema.StringAttribute{Computed: true},
+								"buildingblock_uuid": schema.StringAttribute{
+									MarkdownDescription: "UUID of the parent Building Block.",
+									Computed:            true,
+								},
+								"definition_uuid": schema.StringAttribute{
+									MarkdownDescription: "UUID of the parent Building Block definition.",
+									Computed:            true,
+								},
 							},
 						},
 					},
@@ -117,7 +165,7 @@ func (d *buildingBlockDataSource) Schema(ctx context.Context, req datasource.Sch
 							stringvalidator.OneOf([]string{"WAITING_FOR_DEPENDENT_INPUT", "WAITING_FOR_OPERATOR_INPUT", "PENDING", "IN_PROGRESS", "SUCCEEDED", "FAILED"}...),
 						},
 					},
-					"outputs": mkIoList("List of building block outputs."),
+					"outputs": outputs,
 				},
 			},
 		},
@@ -144,104 +192,56 @@ func (d *buildingBlockDataSource) Configure(ctx context.Context, req datasource.
 }
 
 func (d *buildingBlockDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	type io struct {
-		Key         types.String `tfsdk:"key"`
-		ValueString types.String `tfsdk:"value_string"`
-		ValueInt    types.Int64  `tfsdk:"value_int"`
-		ValueBool   types.Bool   `tfsdk:"value_bool"`
-		ValueType   types.String `tfsdk:"value_type"`
-	}
-
-	mkIoList := func(ios *[]client.MeshBuildingBlockIO) (*[]io, error) {
-		result := make([]io, 0)
-		var err error
-		for _, input := range *ios {
-			var valueString *string
-			var valueInt *int64
-			var valueBool *bool
-
-			// TODO: support input type list
-			if input.ValueType == "STRING" || input.ValueType == "SINGLE_SELECT" || input.ValueType == "FILE" {
-				val, ok := input.Value.(string)
-				if !ok {
-					err = errors.Join(err, fmt.Errorf("Unexpected type '%s' for key '%s'.", input.ValueType, input.Key))
-					continue
-				}
-				valueString = &val
-			} else if input.ValueType == "INTEGER" {
-				val, ok := input.Value.(float64)
-				if !ok {
-					err = errors.Join(err, fmt.Errorf("Unexpected type '%s' for key '%s'.", input.ValueType, input.Key))
-					continue
-				}
-				valInt := int64(val)
-				valueInt = &valInt
-			} else if input.ValueType == "BOOLEAN" {
-				val, ok := input.Value.(bool)
-				if !ok {
-					err = errors.Join(err, fmt.Errorf("Unexpected type '%s' for key '%s'.", input.ValueType, input.Key))
-					continue
-				}
-				valueBool = &val
-			}
-
-			if err != nil {
-				continue
-			}
-
-			result = append(result, io{
-				Key:         types.StringValue(input.Key),
-				ValueString: types.StringPointerValue(valueString),
-				ValueInt:    types.Int64PointerValue(valueInt),
-				ValueBool:   types.BoolPointerValue(valueBool),
-				ValueType:   types.StringValue(input.ValueType),
-			})
-		}
-		return &result, err
-	}
-
-	// get UUID for BB we want to query from the request
 	var uuid string
 	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("metadata").AtName("uuid"), &uuid)...)
-	bb, err := d.client.ReadBuildingBlock(uuid)
-	if err != nil {
-		resp.Diagnostics.AddError("Unable to read buildingblock", err.Error())
-	}
-
-	if bb == nil {
-		resp.Diagnostics.AddError("Building block not found", fmt.Sprintf("Can't find building block with identifier '%s'.", uuid))
+	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// must set attributes individually to handle dynamic input/output types
-	resp.State.SetAttribute(ctx, path.Root("api_version"), bb.ApiVersion)
-	resp.State.SetAttribute(ctx, path.Root("kind"), bb.Kind)
-	resp.State.SetAttribute(ctx, path.Root("metadata"), bb.Metadata)
-
-	resp.State.SetAttribute(ctx, path.Root("spec").AtName("display_name"), bb.Spec.DisplayName)
-	resp.State.SetAttribute(ctx, path.Root("spec").AtName("parent_building_blocks"), bb.Spec.ParentBuildingBlocks)
-	if bb.Spec.Inputs != nil {
-		inputs, err := mkIoList(&bb.Spec.Inputs)
-		if err != nil {
-			resp.Diagnostics.AddError(
-				"Error(s) while reading inputs/outputs",
-				err.Error(),
-			)
-			return
-		}
-		resp.State.SetAttribute(ctx, path.Root("spec").AtName("inputs"), inputs)
+	bb, err := d.client.ReadBuildingBlock(uuid)
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to read building block", err.Error())
 	}
 
-	resp.State.SetAttribute(ctx, path.Root("status").AtName("status"), bb.Status.Status)
-	if bb.Status.Outputs != nil {
-		outputs, err := mkIoList(&bb.Status.Outputs)
+	if bb == nil {
+		resp.State.RemoveResource(ctx)
+		return
+	}
+
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("api_version"), bb.ApiVersion)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("kind"), bb.Kind)...)
+
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("metadata"), bb.Metadata)...)
+
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("spec").AtName("display_name"), bb.Spec.DisplayName)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("spec").AtName("parent_building_blocks"), bb.Spec.ParentBuildingBlocks)...)
+
+	inputs := make(map[string]buildingBlockIoModel)
+	for _, input := range bb.Spec.Inputs {
+		value, err := toResourceModel(&input)
+
 		if err != nil {
-			resp.Diagnostics.AddError(
-				"Error(s) while reading inputs/outputs",
-				err.Error(),
-			)
+			resp.Diagnostics.AddError("Error processing input", err.Error())
 			return
 		}
-		resp.State.SetAttribute(ctx, path.Root("status").AtName("outputs"), outputs)
+
+		inputs[input.Key] = *value
 	}
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("spec").AtName("inputs"), inputs)...)
+
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("status").AtName("status"), bb.Status.Status)...)
+
+	outputs := make(map[string]buildingBlockIoModel)
+	for _, output := range bb.Status.Outputs {
+		value, err := toResourceModel(&output)
+
+		if err != nil {
+			resp.Diagnostics.AddError("Error processing output", err.Error())
+			return
+		}
+
+		outputs[output.Key] = *value
+	}
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("status").AtName("outputs"), outputs)...)
+
 }
