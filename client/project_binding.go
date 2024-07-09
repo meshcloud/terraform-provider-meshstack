@@ -105,8 +105,8 @@ func (c *MeshStackProviderClient) createProjectBinding(binding *MeshProjectBindi
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Content-Type", CONTENT_TYPE_PROJECT_GROUP_BINDING)
-	req.Header.Set("Accept", CONTENT_TYPE_PROJECT_GROUP_BINDING)
+	req.Header.Set("Content-Type", contentType)
+	req.Header.Set("Accept", contentType)
 
 	res, err := c.doAuthenticatedRequest(req)
 	if err != nil {
