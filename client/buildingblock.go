@@ -80,10 +80,12 @@ func (c *MeshStackProviderClient) urlForBuildingBlock(uuid string) *url.URL {
 
 func (c *MeshStackProviderClient) ReadBuildingBlock(uuid string) (*MeshBuildingBlock, error) {
 	targetUrl := c.urlForBuildingBlock(uuid)
+
 	req, err := http.NewRequest("GET", targetUrl.String(), nil)
 	if err != nil {
 		return nil, err
 	}
+	req.Header.Set("Accept", CONTENT_TYPE_BUILDING_BLOCK)
 
 	res, err := c.doAuthenticatedRequest(req)
 	if err != nil {
