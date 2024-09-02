@@ -9,7 +9,6 @@ description: |-
 
 The meshStack terraform provider is an open-source tool, licensed under the MPL-2.0, and is actively maintained by meshcloud GmbH. The provider leverages external APIs of meshStack to manage resources as code.
 
-
 ## Example Usage
 
 ```terraform
