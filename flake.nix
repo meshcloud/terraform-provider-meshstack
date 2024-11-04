@@ -31,6 +31,13 @@
             # https://github.com/golangci/golangci-lint
             golangci-lint
           ];
+
+          # make tfplugindocs available in the shell, see https://github.com/hashicorp/terraform-plugin-docs?tab=readme-ov-file#installation
+          shellHook = ''
+            export GOBIN=$PWD/bin
+            export PATH=$GOBIN:$PATH
+            go install github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs
+          '';
         };
       });
     };

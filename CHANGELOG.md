@@ -1,3 +1,8 @@
+## v0.6.0
+
+FEATURES:
+- Added `meshstack_tag_definitions` data source.
+
 ## v0.5.5
 
 FIXES:
