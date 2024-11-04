@@ -92,6 +92,7 @@ func (p *MeshStackProvider) DataSources(ctx context.Context) []func() datasource
 		NewProjectUserBindingDataSource,
 		NewProjectGroupBindingDataSource,
 		NewTenantDataSource,
+		NewTagDefinitionsDataSource,
 	}
 }
 
