@@ -146,7 +146,9 @@ func (c *MeshStackProviderClient) ReadTagDefinition(name string) (*MeshTagDefini
 		return nil, err
 	}
 
-	resp, err := c.httpClient.Do(req)
+	req.Header.Set("Accept", CONTENT_TYPE_TAG_DEFINITION)
+
+	resp, err := c.doAuthenticatedRequest(req)
 	if err != nil {
 		return nil, err
 	}
