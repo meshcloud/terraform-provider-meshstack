@@ -9,6 +9,7 @@ FIXES:
 - HTTP response code for tenant creation is now 201.
 - HTTP response code for project creation is now 201.
 
+
 ## v0.5.4
 
 FIXES:

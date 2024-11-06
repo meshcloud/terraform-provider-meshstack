@@ -43,7 +43,7 @@ resource "meshstack_project" "example" {
 ### Read-Only
 
 - `api_version` (String) Project datatype version
-- `kind` (String) meshObject type, always `meshBuildingBlock`.
+- `kind` (String) meshObject type, always `meshProject`.
 
 <a id="nestedatt--metadata"></a>
 ### Nested Schema for `metadata`
