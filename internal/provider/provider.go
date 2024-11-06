@@ -81,6 +81,7 @@ func (p *MeshStackProvider) Resources(ctx context.Context) []func() resource.Res
 		NewProjectUserBindingResource,
 		NewProjectGroupBindingResource,
 		NewBuildingBlockResource,
+		NewTagDefinitionResource,
 	}
 }
 
