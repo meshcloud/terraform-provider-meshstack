@@ -6,6 +6,7 @@ import (
 	"regexp"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
+	"github.com/meshcloud/terraform-provider-meshstack/internal/modifiers/tagdefinitionmodifier"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -177,9 +178,12 @@ func (r *tagDefinitionResource) Schema(_ context.Context, _ resource.SchemaReque
 						PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 					},
 					"value_type": schema.SingleNestedAttribute{
-						// TODO: this should not require a replace if fields of a value type are changed (e.g. if string.default_value is changed)
-						PlanModifiers: []planmodifier.Object{objectplanmodifier.RequiresReplace()},
-						Required:      true,
+						PlanModifiers: []planmodifier.Object{objectplanmodifier.RequiresReplaceIf(
+							tagdefinitionmodifier.ReplaceIfValueTypeKeyChanges,
+							"resource will be replaced if value_type key changes, but not when key values change",
+							"resource will be replaced if value_type key changes, but not when key values change",
+						)},
+						Required: true,
 						Attributes: map[string]schema.Attribute{
 							"string": schema.SingleNestedAttribute{
 								Optional: true,
