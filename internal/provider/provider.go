@@ -78,6 +78,7 @@ func (p *MeshStackProvider) Resources(ctx context.Context) []func() resource.Res
 	return []func() resource.Resource{
 		NewProjectResource,
 		NewTenantResource,
+		NewTenantResourceV4,
 		NewProjectUserBindingResource,
 		NewProjectGroupBindingResource,
 		NewBuildingBlockResource,
