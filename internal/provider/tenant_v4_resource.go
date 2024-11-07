@@ -18,24 +18,24 @@ import (
 )
 
 var (
-	_ resource.Resource                = &tenantResourceV4{}
-	_ resource.ResourceWithConfigure   = &tenantResourceV4{}
-	_ resource.ResourceWithImportState = &tenantResourceV4{}
+	_ resource.Resource                = &tenantV4Resource{}
+	_ resource.ResourceWithConfigure   = &tenantV4Resource{}
+	_ resource.ResourceWithImportState = &tenantV4Resource{}
 )
 
-func NewTenantResourceV4() resource.Resource {
-	return &tenantResourceV4{}
+func NewTenantV4Resource() resource.Resource {
+	return &tenantV4Resource{}
 }
 
-type tenantResourceV4 struct {
+type tenantV4Resource struct {
 	client *client.MeshStackProviderClient
 }
 
-func (r *tenantResourceV4) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+func (r *tenantV4Resource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_tenant_v4"
 }
 
-func (r *tenantResourceV4) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+func (r *tenantV4Resource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
 	}
@@ -54,7 +54,7 @@ func (r *tenantResourceV4) Configure(_ context.Context, req resource.ConfigureRe
 	r.client = client
 }
 
-func (r *tenantResourceV4) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *tenantV4Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Single tenant by workspace, project, and platform (v4).",
 
@@ -158,7 +158,7 @@ func (r *tenantResourceV4) Schema(_ context.Context, _ resource.SchemaRequest, r
 	}
 }
 
-func (r *tenantResourceV4) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+func (r *tenantV4Resource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var metadata client.MeshTenantCreateMetadataV4
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("metadata"), &metadata)...)
 
@@ -186,7 +186,7 @@ func (r *tenantResourceV4) Create(ctx context.Context, req resource.CreateReques
 	resp.Diagnostics.Append(resp.State.Set(ctx, tenant)...)
 }
 
-func (r *tenantResourceV4) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+func (r *tenantV4Resource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var uuid string
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("metadata").AtName("uuid"), &uuid)...)
 
@@ -211,7 +211,7 @@ func (r *tenantResourceV4) Read(ctx context.Context, req resource.ReadRequest, r
 	resp.Diagnostics.Append(resp.State.Set(ctx, tenant)...)
 }
 
-func (r *tenantResourceV4) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+func (r *tenantV4Resource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var metadata client.MeshTenantCreateMetadataV4
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("metadata"), &metadata)...)
 
@@ -239,7 +239,7 @@ func (r *tenantResourceV4) Update(ctx context.Context, req resource.UpdateReques
 	resp.Diagnostics.Append(resp.State.Set(ctx, tenant)...)
 }
 
-func (r *tenantResourceV4) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+func (r *tenantV4Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var uuid string
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("metadata").AtName("uuid"), &uuid)...)
 
@@ -257,7 +257,7 @@ func (r *tenantResourceV4) Delete(ctx context.Context, req resource.DeleteReques
 	}
 }
 
-func (r *tenantResourceV4) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+func (r *tenantV4Resource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	uuid := req.ID
 
 	tenant, err := r.client.ReadTenantV4(uuid)
