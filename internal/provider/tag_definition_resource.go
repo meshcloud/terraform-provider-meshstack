@@ -83,12 +83,11 @@ func (r *tagDefinitionResource) ValidateConfig(ctx context.Context, req resource
 		return
 	}
 
-	// Validate that metadata.name is equal to spec.target_kind.spec.key
 	expectedName := fmt.Sprintf("%s.%s", config.Spec.TargetKind.ValueString(), config.Spec.Key.ValueString())
 	if config.Metadata.Name.ValueString() != expectedName {
 		resp.Diagnostics.AddError(
 			"Invalid Name",
-			fmt.Sprintf("metadata.name must be equal to spec.target_kind.spec.key. Expected: %s, Got: %s", expectedName, config.Metadata.Name.ValueString()),
+			fmt.Sprintf("<metadata.name> must be equal to <spec.target_kind>.<spec.key>. Expected: %s, Got: %s", expectedName, config.Metadata.Name.ValueString()),
 		)
 		return
 	}
@@ -179,9 +178,9 @@ func (r *tagDefinitionResource) Schema(_ context.Context, _ resource.SchemaReque
 					},
 					"value_type": schema.SingleNestedAttribute{
 						PlanModifiers: []planmodifier.Object{objectplanmodifier.RequiresReplaceIf(
-							tagdefinitionmodifier.ReplaceIfValueTypeKeyChanges,
-							"resource will be replaced if value_type key changes, but not when key values change",
-							"resource will be replaced if value_type key changes, but not when key values change",
+							tagdefinitionmodifier.ReplaceIfValueTypeChanges,
+							"resource will be replaced if value_type changes (e.g. integer to string), but not when key values change (e.g. integer.default_value = 3 to integer.default_value = 5)",
+							"resource will be replaced if value_type changes (e.g. integer to string), but not when key values change (e.g. integer.default_value = 3 to integer.default_value = 5)",
 						)},
 						Required: true,
 						Attributes: map[string]schema.Attribute{
@@ -455,16 +454,6 @@ func (r *tagDefinitionResource) Update(ctx context.Context, req resource.UpdateR
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	// Validate that metadata.name is equal to spec.target_kind.spec.key
-	expectedName := fmt.Sprintf("%s.%s", plan.Spec.TargetKind.ValueString(), plan.Spec.Key.ValueString())
-	if plan.Metadata.Name.ValueString() != expectedName {
-		resp.Diagnostics.AddError(
-			"Invalid Name",
-			fmt.Sprintf("metadata.name must be equal to spec.target_kind.spec.key. Expected: %s, Got: %s", expectedName, plan.Metadata.Name.ValueString()),
-		)
 		return
 	}
 
