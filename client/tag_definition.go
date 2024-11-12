@@ -9,6 +9,7 @@ import (
 	"net/url"
 )
 
+const API_VERSION_TAG_DEFINITION = "v1"
 const CONTENT_TYPE_TAG_DEFINITION = "application/vnd.meshcloud.api.meshtagdefinition.v1.hal+json"
 
 type MeshTagDefinition struct {

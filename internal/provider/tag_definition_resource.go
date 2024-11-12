@@ -3,12 +3,12 @@ package provider
 import (
 	"context"
 	"fmt"
-	"regexp"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/modifiers/tagdefinitionmodifier"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
@@ -74,26 +74,17 @@ func (r *tagDefinitionResource) Configure(_ context.Context, req resource.Config
 }
 
 func (r *tagDefinitionResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
-	var config tagDefinitionCreate
+	var spec tagDefinitionSpec
 
-	diags := req.Config.Get(ctx, &config)
+	diags := req.Config.GetAttribute(ctx, path.Root("spec"), &spec)
 
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	expectedName := fmt.Sprintf("%s.%s", config.Spec.TargetKind.ValueString(), config.Spec.Key.ValueString())
-	if config.Metadata.Name.ValueString() != expectedName {
-		resp.Diagnostics.AddError(
-			"Invalid Name",
-			fmt.Sprintf("<metadata.name> must be equal to <spec.target_kind>.<spec.key>. Expected: %s, Got: %s", expectedName, config.Metadata.Name.ValueString()),
-		)
-		return
-	}
-
 	// Validate that value_type only contains one of the value types
-	valueType := config.Spec.ValueType
+	valueType := spec.ValueType
 	count := 0
 	if valueType.String != nil {
 		count++
@@ -145,18 +136,12 @@ func (r *tagDefinitionResource) Schema(_ context.Context, _ resource.SchemaReque
 			},
 
 			"metadata": schema.SingleNestedAttribute{
-				MarkdownDescription: "Tag definition metadata. Name of the target tag definition must be set here.",
-				Required:            true,
+				MarkdownDescription: "Tag definition metadata. Name of the target tag definition must be `target_kind.key` and will be set automatically.",
+				Computed:            true,
 				Attributes: map[string]schema.Attribute{
 					"name": schema.StringAttribute{
-						Required:      true,
+						Computed:      true,
 						PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
-						Validators: []validator.String{
-							stringvalidator.RegexMatches(
-								regexp.MustCompile(`^[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+$`),
-								"Name must be in the format 'target_kind.key'",
-							),
-						},
 					},
 				},
 			},
@@ -266,17 +251,6 @@ func (r *tagDefinitionResource) Schema(_ context.Context, _ resource.SchemaReque
 }
 
 // These structs use Terraform types so that we can read the plan and check for unknown/null values.
-type tagDefinitionCreate struct {
-	ApiVersion types.String          `json:"apiVersion" tfsdk:"api_version"`
-	Kind       types.String          `json:"kind" tfsdk:"kind"`
-	Metadata   tagDefinitionMetadata `json:"metadata" tfsdk:"metadata"`
-	Spec       tagDefinitionSpec     `json:"spec" tfsdk:"spec"`
-}
-
-type tagDefinitionMetadata struct {
-	Name types.String `json:"name" tfsdk:"name"`
-}
-
 type tagDefinitionSpec struct {
 	TargetKind  types.String           `json:"targetKind" tfsdk:"target_kind"`
 	Key         types.String           `json:"key" tfsdk:"key"`
@@ -328,32 +302,34 @@ type tagValueMultiSelect struct {
 
 // Create creates the resource and sets the initial Terraform state.
 func (r *tagDefinitionResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var plan tagDefinitionCreate
+	var spec tagDefinitionSpec
 
-	diags := req.Plan.Get(ctx, &plan)
+	diags := req.Plan.GetAttribute(ctx, path.Root("spec"), &spec)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	valueType := buildValueType(plan.Spec.ValueType)
+	valueType := buildValueType(spec.ValueType)
+
+	name := spec.TargetKind.ValueString() + "." + spec.Key.ValueString()
 
 	create := client.MeshTagDefinition{
-		ApiVersion: plan.ApiVersion.ValueString(),
+		ApiVersion: client.API_VERSION_TAG_DEFINITION,
 		Kind:       "meshTagDefinition",
 		Metadata: client.MeshTagDefinitionMetadata{
-			Name: plan.Metadata.Name.ValueString(),
+			Name: name,
 		},
 		Spec: client.MeshTagDefinitionSpec{
-			TargetKind:  plan.Spec.TargetKind.ValueString(),
-			Key:         plan.Spec.Key.ValueString(),
+			TargetKind:  spec.TargetKind.ValueString(),
+			Key:         spec.Key.ValueString(),
 			ValueType:   valueType,
-			Description: plan.Spec.Description.ValueString(),
-			DisplayName: plan.Spec.DisplayName.ValueString(),
-			SortOrder:   plan.Spec.SortOrder.ValueInt64(),
-			Mandatory:   plan.Spec.Mandatory.ValueBool(),
-			Immutable:   plan.Spec.Immutable.ValueBool(),
-			Restricted:  plan.Spec.Restricted.ValueBool(),
+			Description: spec.Description.ValueString(),
+			DisplayName: spec.DisplayName.ValueString(),
+			SortOrder:   spec.SortOrder.ValueInt64(),
+			Mandatory:   spec.Mandatory.ValueBool(),
+			Immutable:   spec.Immutable.ValueBool(),
+			Restricted:  spec.Restricted.ValueBool(),
 		},
 	}
 
@@ -426,15 +402,16 @@ func buildValueType(valueType tagDefinitionValueType) client.MeshTagDefinitionVa
 
 // Read refreshes the Terraform state with the latest data.
 func (r *tagDefinitionResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var state client.MeshTagDefinition
+	var spec tagDefinitionSpec
 
-	diags := req.State.Get(ctx, &state)
+	diags := req.State.GetAttribute(ctx, path.Root("spec"), &spec)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	tagDefinition, err := r.client.ReadTagDefinition(state.Metadata.Name)
+	name := spec.TargetKind.ValueString() + "." + spec.Key.ValueString()
+	tagDefinition, err := r.client.ReadTagDefinition(name)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read tag definition", err.Error())
 	}
@@ -449,32 +426,33 @@ func (r *tagDefinitionResource) Read(ctx context.Context, req resource.ReadReque
 
 // Update updates the resource and sets the updated Terraform state on success.
 func (r *tagDefinitionResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var plan tagDefinitionCreate
+	var spec tagDefinitionSpec
 
-	diags := req.Plan.Get(ctx, &plan)
+	diags := req.Plan.GetAttribute(ctx, path.Root("spec"), &spec)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	valueType := buildValueType(plan.Spec.ValueType)
+	valueType := buildValueType(spec.ValueType)
+	name := spec.TargetKind.ValueString() + "." + spec.Key.ValueString()
 
 	update := client.MeshTagDefinition{
-		ApiVersion: plan.ApiVersion.ValueString(),
+		ApiVersion: client.API_VERSION_TAG_DEFINITION,
 		Kind:       "meshTagDefinition",
 		Metadata: client.MeshTagDefinitionMetadata{
-			Name: plan.Metadata.Name.ValueString(),
+			Name: name,
 		},
 		Spec: client.MeshTagDefinitionSpec{
-			TargetKind:  plan.Spec.TargetKind.ValueString(),
-			Key:         plan.Spec.Key.ValueString(),
+			TargetKind:  spec.TargetKind.ValueString(),
+			Key:         spec.Key.ValueString(),
 			ValueType:   valueType,
-			Description: plan.Spec.Description.ValueString(),
-			DisplayName: plan.Spec.DisplayName.ValueString(),
-			SortOrder:   plan.Spec.SortOrder.ValueInt64(),
-			Mandatory:   plan.Spec.Mandatory.ValueBool(),
-			Immutable:   plan.Spec.Immutable.ValueBool(),
-			Restricted:  plan.Spec.Restricted.ValueBool(),
+			Description: spec.Description.ValueString(),
+			DisplayName: spec.DisplayName.ValueString(),
+			SortOrder:   spec.SortOrder.ValueInt64(),
+			Mandatory:   spec.Mandatory.ValueBool(),
+			Immutable:   spec.Immutable.ValueBool(),
+			Restricted:  spec.Restricted.ValueBool(),
 		},
 	}
 
