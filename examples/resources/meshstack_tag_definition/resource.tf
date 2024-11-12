@@ -1,8 +1,4 @@
 resource "meshstack_tag_definition" "example" {
-  metadata = {
-    name = "meshProject.example-key"
-  }
-
   spec = {
     target_kind = "meshProject"
     key         = "example-key"

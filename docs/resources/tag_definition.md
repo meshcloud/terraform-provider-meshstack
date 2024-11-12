@@ -14,10 +14,6 @@ Manage tag definitions
 
 ```terraform
 resource "meshstack_tag_definition" "example" {
-  metadata = {
-    name = "meshProject.example-key"
-  }
-
   spec = {
     target_kind = "meshProject"
     key         = "example-key"
@@ -44,21 +40,13 @@ resource "meshstack_tag_definition" "example" {
 
 ### Required
 
-- `metadata` (Attributes) Tag definition metadata. Name of the target tag definition must be set here. (see [below for nested schema](#nestedatt--metadata))
 - `spec` (Attributes) Tag definition specification. (see [below for nested schema](#nestedatt--spec))
 
 ### Read-Only
 
 - `api_version` (String) Tag definition datatype version
 - `kind` (String) meshObject type, always `meshTagDefinition`.
-
-<a id="nestedatt--metadata"></a>
-### Nested Schema for `metadata`
-
-Required:
-
-- `name` (String)
-
+- `metadata` (Attributes) Tag definition metadata. Name of the target tag definition must be `target_kind.key` and will be set automatically. (see [below for nested schema](#nestedatt--metadata))
 
 <a id="nestedatt--spec"></a>
 ### Nested Schema for `spec`
@@ -140,6 +128,16 @@ Optional:
 
 - `default_value` (String)
 - `validation_regex` (String)
+
+
+
+
+<a id="nestedatt--metadata"></a>
+### Nested Schema for `metadata`
+
+Read-Only:
+
+- `name` (String)
 
 ## Import
 
