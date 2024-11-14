@@ -141,7 +141,7 @@ func (c *MeshStackProviderClient) CreateBuildingBlock(bb *MeshBuildingBlockCreat
 		return nil, err
 	}
 
-	if res.StatusCode != 200 {
+	if res.StatusCode != 201 {
 		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
 	}
 

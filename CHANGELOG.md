@@ -1,3 +1,3 @@
-## 0.1.0 (Unreleased)
+## 0.5.4
 
-FEATURES:
+fix: http response code for building block creation is now 201
