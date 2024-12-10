@@ -83,7 +83,7 @@ func (c *MeshStackProviderClient) ReadTenant(workspace string, project string, p
 		return nil, nil
 	}
 
-	if res.StatusCode != 200 {
+	if !isSuccessHTTPStatus(res) {
 		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
 	}
 
@@ -121,7 +121,7 @@ func (c *MeshStackProviderClient) CreateTenant(tenant *MeshTenantCreate) (*MeshT
 		return nil, err
 	}
 
-	if res.StatusCode != 201 {
+	if !isSuccessHTTPStatus(res) {
 		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
 	}
 

@@ -1,3 +1,7 @@
+## v0.6.1
+REFACTOR:
+- Validate success responses by checking for HTTP status codes in the 2xx range
+
 ## v0.6.0
 
 FEATURES:

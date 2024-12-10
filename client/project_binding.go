@@ -70,7 +70,7 @@ func (c *MeshStackProviderClient) readProjectBinding(name string, contentType st
 		return nil, nil
 	}
 
-	if res.StatusCode != 200 {
+	if !isSuccessHTTPStatus(res) {
 		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
 	}
 
@@ -120,7 +120,7 @@ func (c *MeshStackProviderClient) createProjectBinding(binding *MeshProjectBindi
 		return nil, err
 	}
 
-	if res.StatusCode != 200 {
+	if !isSuccessHTTPStatus(res) {
 		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
 	}
 
