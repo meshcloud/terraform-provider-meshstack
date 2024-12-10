@@ -107,7 +107,7 @@ func (c *MeshStackProviderClient) ReadTagDefinitions() (*[]MeshTagDefinition, er
 			return nil, fmt.Errorf("failed to read response body: %w", err)
 		}
 
-		if res.StatusCode != http.StatusOK {
+		if !isSuccessHTTPStatus(res) {
 			return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
 		}
 
@@ -156,7 +156,7 @@ func (c *MeshStackProviderClient) ReadTagDefinition(name string) (*MeshTagDefini
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
+	if !isSuccessHTTPStatus(resp) {
 		return nil, fmt.Errorf("failed to read tag definition: %s", resp.Status)
 	}
 
@@ -191,7 +191,7 @@ func (c *MeshStackProviderClient) CreateTagDefinition(tagDefinition *MeshTagDefi
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusCreated {
+	if !isSuccessHTTPStatus(resp) {
 		return nil, fmt.Errorf("failed to create tag definition: %s", resp.Status)
 	}
 
@@ -224,7 +224,7 @@ func (c *MeshStackProviderClient) UpdateTagDefinition(tagDefinition *MeshTagDefi
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
+	if !isSuccessHTTPStatus(resp) {
 		return nil, fmt.Errorf("failed to update tag definition: %s", resp.Status)
 	}
 

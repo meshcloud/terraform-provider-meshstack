@@ -71,7 +71,7 @@ func (c *MeshStackProviderClient) ReadProject(workspace string, name string) (*M
 		return nil, nil
 	}
 
-	if res.StatusCode != 200 {
+	if !isSuccessHTTPStatus(res) {
 		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
 	}
 
@@ -119,7 +119,7 @@ func (c *MeshStackProviderClient) ReadProjects(workspaceIdentifier string, payme
 			return nil, fmt.Errorf("failed to read response body: %w", err)
 		}
 
-		if res.StatusCode != http.StatusOK {
+		if !isSuccessHTTPStatus(res) {
 			return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
 		}
 
@@ -178,7 +178,7 @@ func (c *MeshStackProviderClient) CreateProject(project *MeshProjectCreate) (*Me
 		return nil, err
 	}
 
-	if res.StatusCode != 201 {
+	if !isSuccessHTTPStatus(res) {
 		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
 	}
 
@@ -219,7 +219,7 @@ func (c *MeshStackProviderClient) UpdateProject(project *MeshProjectCreate) (*Me
 		return nil, err
 	}
 
-	if res.StatusCode != 200 {
+	if !isSuccessHTTPStatus(res) {
 		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
 	}
 
