@@ -92,6 +92,10 @@ func (r *tenantResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 						MarkdownDescription: "Identifier of the target platform.",
 						Required:            true,
 					},
+						"tenant_identifier": schema.StringAttribute{
+						MarkdownDescription: "Unique identifier for the tenant.",
+						Required:            true,
+					},
 					"deleted_on": schema.StringAttribute{
 						MarkdownDescription: "If the tenant has been submitted for deletion by a workspace manager, the date is shown here (e.g. 2020-12-22T09:37:43Z).",
 						Computed:            true,
@@ -143,6 +147,7 @@ type tenantCreateMetadata struct {
 	PlatformIdentifier types.String `json:"platformIdentifier" tfsdk:"platform_identifier"`
 	AssignedTags       types.Map    `json:"assignedTags" tfsdk:"assigned_tags"`
 	DeletedOn          types.String `json:"deletedOn" tfsdk:"deleted_on"`
+	TenantIdentifier   types.String `json:"tenantIdentifier" tfsdk:"tenant_identifier"`
 }
 
 type tenantCreateSpec struct {
@@ -182,6 +187,7 @@ func (r *tenantResource) Create(ctx context.Context, req resource.CreateRequest,
 			OwnedByProject:     metadata.OwnedByProject.ValueString(),
 			OwnedByWorkspace:   metadata.OwnedByWorkspace.ValueString(),
 			PlatformIdentifier: metadata.PlatformIdentifier.ValueString(),
+			TenantIdentifier:   metadata.TenantIdentifier.ValueString(),
 		},
 		Spec: client.MeshTenantCreateSpec{
 			LocalId:               local_id,
@@ -209,6 +215,8 @@ func (r *tenantResource) Read(ctx context.Context, req resource.ReadRequest, res
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("metadata").AtName("owned_by_workspace"), &workspace)...)
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("metadata").AtName("owned_by_project"), &project)...)
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("metadata").AtName("platform_identifier"), &platform)...)
+	var tenantIdentifier string
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("metadata").AtName("tenant_identifier"), &tenantIdentifier)...)
 
 	if resp.Diagnostics.HasError() {
 		return
@@ -242,7 +250,7 @@ func (r *tenantResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		return
 	}
 
-	err := r.client.DeleteTenant(state.Metadata.OwnedByWorkspace, state.Metadata.OwnedByProject, state.Metadata.PlatformIdentifier)
+	err := r.client.DeleteTenant(state.Metadata.OwnedByWorkspace, state.Metadata.OwnedByProject, state.Metadata.PlatformIdentifier, state.Metadata.TenantIdentifier)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error deleting tenant",
@@ -265,10 +273,10 @@ func (r *tenantResource) ImportState(ctx context.Context, req resource.ImportSta
 		}
 	}
 
-	if len(identifier) != 4 {
+	if len(identifier) != 5 {
 		resp.Diagnostics.AddError(
 			"Unexpected Import Identifier",
-			fmt.Sprintf("Expected import identifier with format: workspace.project.location.platform Got: %q", req.ID),
+			fmt.Sprintf("Expected import identifier with format: workspace.project.location.platform.tenant_identifier Got: %q", req.ID),
 		)
 		return
 	}
@@ -278,4 +286,5 @@ func (r *tenantResource) ImportState(ctx context.Context, req resource.ImportSta
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("metadata").AtName("owned_by_workspace"), identifier[0])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("metadata").AtName("owned_by_project"), identifier[1])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("metadata").AtName("platform_identifier"), platform)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("metadata").AtName("tenant_identifier"), identifier[4])...)
 }
