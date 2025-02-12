@@ -111,7 +111,7 @@ func (r *tenantResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				PlanModifiers:       []planmodifier.Object{objectplanmodifier.RequiresReplace()},
 				Attributes: map[string]schema.Attribute{
 					"local_id": schema.StringAttribute{
-						MarkdownDescription: "Tenant ID local to the platform (e.g. GCP project ID, Azure subscription ID). Setting the local ID means that a tenant with this ID should be imported into meshStack. Not setting a local ID means that a new tenant should be created. Field will be empty until a successful replication has run.",
+						MarkdownDescription: "Tenant ID local to the platform (e.g. GCP project ID, Azure subscription ID). Setting the local ID means that a tenant with this ID should be imported into meshStack. Not setting a local ID means that a new tenant should be created. Field will be empty until a successful replication has run. **Note:** Importing is a high-privileged operation and setting this field is possible only when using API Keys with admin permissions for saving tenants.",
 						Optional:            true,
 						Computed:            true,
 					},
