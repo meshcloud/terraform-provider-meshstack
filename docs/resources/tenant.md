@@ -66,7 +66,7 @@ Read-Only:
 
 Optional:
 
-- `landing_zone_identifier` (String) Identifier of landing zone to assign to this tenant.
+- `landing_zone_identifier` (String) Identifier of landing zone to assign to this tenant. **Note:** This field is only optional for platform type SERVICEREGISTRY, otherwise it is required.
 - `local_id` (String) Tenant ID local to the platform (e.g. GCP project ID, Azure subscription ID). Setting the local ID means that a tenant with this ID should be imported into meshStack. Not setting a local ID means that a new tenant should be created. Field will be empty until a successful replication has run. **Note:** Importing is a high-privileged operation and setting this field is possible only when using API Keys with admin permissions for saving tenants.
 - `quotas` (Attributes List) Set of applied tenant quotas. By default the landing zone quotas are applied to new tenants. (see [below for nested schema](#nestedatt--spec--quotas))
 
