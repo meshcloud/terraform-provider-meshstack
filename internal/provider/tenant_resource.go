@@ -116,7 +116,7 @@ func (r *tenantResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 						Computed:            true,
 					},
 					"landing_zone_identifier": schema.StringAttribute{
-						MarkdownDescription: "Identifier of landing zone to assign to this tenant.",
+						MarkdownDescription: "Identifier of landing zone to assign to this tenant. **Note:** This field is only optional for platform type SERVICEREGISTRY, otherwise it is required.",
 						Optional:            true,
 						Computed:            true,
 					},
