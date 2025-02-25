@@ -81,6 +81,7 @@ func (p *MeshStackProvider) Resources(ctx context.Context) []func() resource.Res
 		NewProjectUserBindingResource,
 		NewProjectGroupBindingResource,
 		NewBuildingBlockResource,
+		NewBuildingBlockV2Resource,
 		NewTagDefinitionResource,
 	}
 }
@@ -88,6 +89,7 @@ func (p *MeshStackProvider) Resources(ctx context.Context) []func() resource.Res
 func (p *MeshStackProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		NewBuildingBlockDataSource,
+		NewBuildingBlockV2DataSource,
 		NewProjectDataSource,
 		NewProjectsDataSource,
 		NewProjectUserBindingDataSource,
