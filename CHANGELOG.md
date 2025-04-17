@@ -1,4 +1,16 @@
+## v0.7.1
+
+FEATURES:
+- Source provider configuration from environment variables.
+
+## v0.7.0
+
+FEATURES:
+- Added `meshstack_building_block_v2` data source.
+- Added `meshstack_building_block_v2` resource.
+
 ## v0.6.1
+
 REFACTOR:
 - Validate success responses by checking for HTTP status codes in the 2xx range
 

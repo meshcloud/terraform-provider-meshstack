@@ -86,7 +86,9 @@ func (c *MeshStackProviderClient) login() error {
 
 	res, err := c.httpClient.Do(req)
 
-	if err != nil || res.StatusCode != 200 {
+	if err != nil {
+		return err
+	} else if res.StatusCode != 200 {
 		return errors.New(ERROR_AUTHENTICATION_FAILURE)
 	}
 
@@ -174,8 +176,9 @@ func (c *MeshStackProviderClient) doAuthenticatedRequest(req *http.Request) (*ht
 	log.Println(req)
 
 	// add authentication
-	if c.ensureValidToken() != nil {
-		return nil, errors.New(ERROR_AUTHENTICATION_FAILURE)
+	err := c.ensureValidToken()
+	if err != nil {
+		return nil, err
 	}
 	req.Header.Set("Authorization", c.token)
 

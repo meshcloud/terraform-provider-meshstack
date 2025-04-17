@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"net/url"
+	"os"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
 
@@ -39,15 +40,15 @@ func (p *MeshStackProvider) Schema(ctx context.Context, req provider.SchemaReque
 		Attributes: map[string]schema.Attribute{
 			"endpoint": schema.StringAttribute{
 				MarkdownDescription: "URl of meshStack API, e.g. `https://api.my.meshstack.io`",
-				Required:            true,
+				Optional:            true,
 			},
 			"apikey": schema.StringAttribute{
 				MarkdownDescription: "API Key to authenticate against the meshStack API",
-				Required:            true,
+				Optional:            true,
 			},
 			"apisecret": schema.StringAttribute{
 				MarkdownDescription: "API Secret to authenticate against the meshStack API",
-				Required:            true,
+				Optional:            true,
 			},
 		},
 	}
@@ -57,21 +58,47 @@ func (p *MeshStackProvider) Configure(ctx context.Context, req provider.Configur
 	var data MeshStackProviderModel
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
 
-	url, err := url.Parse(data.Endpoint.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError("Provider endpoint not valid.", "The value provided as the providers endpoint is not a valid URL.")
-	} else {
-		client, err := client.NewClient(url, data.ApiKey.ValueString(), data.ApiSecret.ValueString()) // TODO handle err
-		if err != nil {
-			resp.Diagnostics.AddError("Failed to create client.", err.Error())
+	endpoint, ok := os.LookupEnv("MESHSTACK_ENDPOINT")
+	if !ok {
+		if data.Endpoint.IsNull() || data.Endpoint.IsUnknown() {
+			resp.Diagnostics.AddError("Provider endpoint missing.", "Set provider.meshstack.endpoint or use MESHSTACK_ENDPOINT environment variable.")
+			return
 		}
-		resp.DataSourceData = client
-		resp.ResourceData = client
+		endpoint = data.Endpoint.ValueString()
 	}
 
-	if resp.Diagnostics.HasError() {
+	url, err := url.Parse(endpoint)
+	if err != nil {
+		resp.Diagnostics.AddError("Provider endpoint not valid.", "The value provided as the providers endpoint is not a valid URL.")
 		return
 	}
+
+	apiKey, ok := os.LookupEnv("MESHSTACK_API_KEY")
+	if !ok {
+		if data.ApiKey.IsNull() || data.ApiKey.IsUnknown() {
+			resp.Diagnostics.AddError("Provider API key missing.", "Set provider.meshstack.apikey or use MESHSTACK_API_KEY environment variable.")
+			return
+		}
+		apiKey = data.ApiKey.ValueString()
+	}
+
+	apiSecret, ok := os.LookupEnv("MESHSTACK_API_SECRET")
+	if !ok {
+		if data.ApiSecret.IsNull() || data.ApiSecret.IsUnknown() {
+			resp.Diagnostics.AddError("Provider API secret missing.", "Set provider.meshstack.apisecret or use MESHSTACK_API_SECRET environment variable.")
+			return
+		}
+		apiSecret = data.ApiSecret.ValueString()
+	}
+
+	client, err := client.NewClient(url, apiKey, apiSecret)
+	if err != nil {
+		resp.Diagnostics.AddError("Failed to create client.", err.Error())
+		return
+	}
+	resp.DataSourceData = client
+	resp.ResourceData = client
+
 }
 
 func (p *MeshStackProvider) Resources(ctx context.Context) []func() resource.Resource {
