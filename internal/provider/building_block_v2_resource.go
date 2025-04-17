@@ -183,7 +183,7 @@ func (r *buildingBlockV2Resource) Schema(ctx context.Context, req resource.Schem
 						Required:            true,
 						Attributes: map[string]schema.Attribute{
 							"uuid": schema.StringAttribute{
-								MarkdownDescription: "UUID of the building block definition.",
+								MarkdownDescription: "UUID of the building block definition version.",
 								Required:            true,
 							},
 						},

@@ -52,7 +52,7 @@ Read-Only:
 
 Required:
 
-- `uuid` (String) UUID of the building block definition.
+- `uuid` (String) UUID of the building block definition version.
 
 
 <a id="nestedatt--spec--target_ref"></a>
