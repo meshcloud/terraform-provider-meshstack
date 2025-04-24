@@ -1,3 +1,8 @@
+## v0.7.2
+
+FIXES:
+- Documentation.
+
 ## v0.7.1
 
 FEATURES:

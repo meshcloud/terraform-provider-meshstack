@@ -23,4 +23,4 @@ provider "meshstack" {
 
 - `apikey` (String) API Key to authenticate against the meshStack API. Can be sourced from `MESHSTACK_API_KEY`.
 - `apisecret` (String) API Secret to authenticate against the meshStack API. Can be sourced from `MESHSTACK_API_SECRET`.
-- `endpoint` (String) URl of meshStack API, e.g. `https://api.my.meshstack.io`. Can be sourced from `MESHTACK_ENDPOINT`.
+- `endpoint` (String) URl of meshStack API, e.g. `https://api.my.meshstack.io`. Can be sourced from `MESHSTACK_ENDPOINT`.
