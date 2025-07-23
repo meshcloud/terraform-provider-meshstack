@@ -35,7 +35,7 @@ func (d *workspaceDataSource) Metadata(_ context.Context, req datasource.Metadat
 // Schema defines the schema for the data source.
 func (d *workspaceDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Read a single workspace by name.",
+		MarkdownDescription: "Read a single workspace by identifier.",
 
 		Attributes: map[string]schema.Attribute{
 			"api_version": schema.StringAttribute{
@@ -51,18 +51,23 @@ func (d *workspaceDataSource) Schema(_ context.Context, _ datasource.SchemaReque
 			},
 
 			"metadata": schema.SingleNestedAttribute{
-				Computed: true,
+				Required: true,
 				Attributes: map[string]schema.Attribute{
 					"name": schema.StringAttribute{
-						MarkdownDescription: "Name of the workspace. Is used to identify the workspace.",
+						MarkdownDescription: "Workspace identifier.",
 						Required:            true,
 					},
 					"created_on": schema.StringAttribute{
-						MarkdownDescription: "Creation date of the Workspace.",
+						MarkdownDescription: "Creation date of the workspace.",
 						Computed:            true,
 					},
 					"deleted_on": schema.StringAttribute{
-						MarkdownDescription: "Deletion date of the Workspace.",
+						MarkdownDescription: "Deletion date of the workspace.",
+						Computed:            true,
+					},
+					"tags": schema.MapAttribute{
+						MarkdownDescription: "Tags of the workspace.",
+						ElementType:         types.ListType{ElemType: types.StringType},
 						Computed:            true,
 					},
 				},
@@ -72,12 +77,11 @@ func (d *workspaceDataSource) Schema(_ context.Context, _ datasource.SchemaReque
 				Computed: true,
 				Attributes: map[string]schema.Attribute{
 					"display_name": schema.StringAttribute{
-						MarkdownDescription: "Display name of the Workspace.",
+						MarkdownDescription: "Display name of the workspace.",
 						Computed:            true,
 					},
-					"tags": schema.MapAttribute{
-						MarkdownDescription: "Tags of the Workspace.",
-						ElementType:         types.ListType{ElemType: types.StringType},
+					"platform_builder_access_enabled": schema.BoolAttribute{
+						MarkdownDescription: "Whether platform builder access is enabled for the workspace.",
 						Computed:            true,
 					},
 				},
