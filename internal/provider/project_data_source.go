@@ -43,7 +43,7 @@ func (d *projectDataSource) Schema(ctx context.Context, req datasource.SchemaReq
 			},
 
 			"kind": schema.StringAttribute{
-				MarkdownDescription: "meshObject type, always `meshBuildingBlock`.",
+				MarkdownDescription: "meshObject type, always `meshProject`.",
 				Computed:            true,
 				Validators: []validator.String{
 					stringvalidator.OneOf([]string{"meshProject"}...),

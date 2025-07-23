@@ -31,7 +31,7 @@ data "meshstack_project" "example" {
 ### Read-Only
 
 - `api_version` (String) Project datatype version
-- `kind` (String) meshObject type, always `meshBuildingBlock`.
+- `kind` (String) meshObject type, always `meshProject`.
 - `spec` (Attributes) Project specification. (see [below for nested schema](#nestedatt--spec))
 
 <a id="nestedatt--metadata"></a>

@@ -37,6 +37,7 @@ type endpoints struct {
 	Projects             *url.URL `json:"meshprojects"`
 	ProjectUserBindings  *url.URL `json:"meshprojectuserbindings"`
 	ProjectGroupBindings *url.URL `json:"meshprojectgroupbindings"`
+	Workspaces           *url.URL `json:"meshworkspaces"`
 	Tenants              *url.URL `json:"meshtenants"`
 	TagDefinitions       *url.URL `json:"meshtagdefinitions"`
 }
@@ -63,6 +64,7 @@ func NewClient(rootUrl *url.URL, apiKey string, apiSecret string) (*MeshStackPro
 		Projects:             rootUrl.JoinPath(apiMeshObjectsRoot, "meshprojects"),
 		ProjectUserBindings:  rootUrl.JoinPath(apiMeshObjectsRoot, "meshprojectbindings", "userbindings"),
 		ProjectGroupBindings: rootUrl.JoinPath(apiMeshObjectsRoot, "meshprojectbindings", "groupbindings"),
+		Workspaces:           rootUrl.JoinPath(apiMeshObjectsRoot, "meshworkspaces"),
 		Tenants:              rootUrl.JoinPath(apiMeshObjectsRoot, "meshtenants"),
 		TagDefinitions:       rootUrl.JoinPath(apiMeshObjectsRoot, "meshtagdefinitions"),
 	}
