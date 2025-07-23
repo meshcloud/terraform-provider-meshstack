@@ -67,7 +67,7 @@ func (c *MeshStackProviderClient) ReadProject(workspace string, name string) (*M
 		return nil, err
 	}
 
-	if res.StatusCode == 404 {
+	if res.StatusCode == http.StatusNotFound {
 		return nil, nil
 	}
 
