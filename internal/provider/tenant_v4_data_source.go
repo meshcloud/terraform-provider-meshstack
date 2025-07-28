@@ -6,9 +6,11 @@ import (
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -48,22 +50,39 @@ func (d *tenantV4DataSource) Configure(_ context.Context, req datasource.Configu
 
 func (d *tenantV4DataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Fetches details of a single tenant by UUID (v4).",
+		MarkdownDescription: "Fetches details of a single tenant by UUID.\n\n~> **Note:** This resource is in preview and may change in the near future.",
 		Attributes: map[string]schema.Attribute{
-			"uuid": schema.StringAttribute{
-				MarkdownDescription: "UUID of the tenant.",
-				Required:            true,
+			"api_version": schema.StringAttribute{
+				MarkdownDescription: "Tenant datatype version",
+				Computed:            true,
 			},
+
+			"kind": schema.StringAttribute{
+				MarkdownDescription: "meshObject type, always `meshTenant`.",
+				Computed:            true,
+				Validators: []validator.String{
+					stringvalidator.OneOf([]string{"meshTenant"}...),
+				},
+			},
+
 			"metadata": schema.SingleNestedAttribute{
 				MarkdownDescription: "Tenant metadata.",
-				Computed:            true,
+				Required:            true,
 				Attributes: map[string]schema.Attribute{
+					"uuid": schema.StringAttribute{
+						MarkdownDescription: "UUID of the tenant.",
+						Required:            true,
+					},
 					"owned_by_workspace": schema.StringAttribute{
 						MarkdownDescription: "Identifier of the workspace the tenant belongs to.",
 						Computed:            true,
 					},
 					"owned_by_project": schema.StringAttribute{
 						MarkdownDescription: "Identifier of the project the tenant belongs to.",
+						Computed:            true,
+					},
+					"marked_for_deletion_on": schema.StringAttribute{
+						MarkdownDescription: "Date when the tenant was marked for deletion.",
 						Computed:            true,
 					},
 					"deleted_on": schema.StringAttribute{
@@ -84,8 +103,8 @@ func (d *tenantV4DataSource) Schema(_ context.Context, _ datasource.SchemaReques
 						MarkdownDescription: "Identifier of the target platform.",
 						Computed:            true,
 					},
-					"local_id": schema.StringAttribute{
-						MarkdownDescription: "Tenant ID local to the platform.",
+					"platform_tenant_id": schema.StringAttribute{
+						MarkdownDescription: "Platform-specific tenant ID.",
 						Computed:            true,
 					},
 					"landing_zone_identifier": schema.StringAttribute{
@@ -108,17 +127,21 @@ func (d *tenantV4DataSource) Schema(_ context.Context, _ datasource.SchemaReques
 				MarkdownDescription: "Tenant status.",
 				Computed:            true,
 				Attributes: map[string]schema.Attribute{
+					"tenant_name": schema.StringAttribute{
+						MarkdownDescription: "Name of the tenant.",
+						Computed:            true,
+					},
+					"platform_type_identifier": schema.StringAttribute{
+						MarkdownDescription: "Identifier of the platform type.",
+						Computed:            true,
+					},
+					"platform_workspace_identifier": schema.StringAttribute{
+						MarkdownDescription: "Identifier of the platform workspace.",
+						Computed:            true,
+					},
 					"tags": schema.MapAttribute{
 						MarkdownDescription: "Tags assigned to this tenant.",
 						ElementType:         types.ListType{ElemType: types.StringType},
-						Computed:            true,
-					},
-					"last_replicated": schema.StringAttribute{
-						MarkdownDescription: "The last time the tenant was replicated.",
-						Computed:            true,
-					},
-					"current_replication_status": schema.StringAttribute{
-						MarkdownDescription: "The current replication status of the tenant.",
 						Computed:            true,
 					},
 				},
@@ -129,7 +152,7 @@ func (d *tenantV4DataSource) Schema(_ context.Context, _ datasource.SchemaReques
 
 func (d *tenantV4DataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var uuid string
-	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("uuid"), &uuid)...)
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("metadata").AtName("uuid"), &uuid)...)
 
 	if resp.Diagnostics.HasError() {
 		return

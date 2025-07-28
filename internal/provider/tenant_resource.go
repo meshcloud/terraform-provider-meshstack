@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
@@ -255,14 +256,12 @@ func (r *tenantResource) Delete(ctx context.Context, req resource.DeleteRequest,
 func (r *tenantResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	identifier := strings.Split(req.ID, ".")
 
-	for _, s := range identifier {
-		if s == "" {
-			resp.Diagnostics.AddError(
-				"Incomplete Import Identifier",
-				fmt.Sprintf("Encountered empty import identifier field. Got: %q", req.ID),
-			)
-			return
-		}
+	if slices.Contains(identifier, "") {
+		resp.Diagnostics.AddError(
+			"Incomplete Import Identifier",
+			fmt.Sprintf("Encountered empty import identifier field. Got: %q", req.ID),
+		)
+		return
 	}
 
 	if len(identifier) != 4 {

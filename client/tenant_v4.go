@@ -87,7 +87,7 @@ func (c *MeshStackProviderClient) ReadTenantV4(uuid string) (*MeshTenantV4, erro
 		return nil, nil
 	}
 
-	if res.StatusCode != 200 {
+	if !isSuccessHTTPStatus(res) {
 		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
 	}
 

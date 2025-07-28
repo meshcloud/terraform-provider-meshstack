@@ -3,6 +3,8 @@
 FEATURES:
 - Added `meshstack_workspace` resource.
 - Added `meshstack_workspace` data source.
+- Added `meshstack_tenant_v4` resource.
+- Added `meshstack_tenant_v4` data source.
 
 FIXES:
 - Allow `value_code` in `meshstack_building_block_v2` and `meshstack_building_block` resources.

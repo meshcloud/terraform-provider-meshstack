@@ -366,7 +366,7 @@ func (r *buildingBlockResource) Create(ctx context.Context, req resource.CreateR
 		)
 		return
 	}
-	resp.Diagnostics.Append(setStateFromResponse(&ctx, &resp.State, created)...)
+	resp.Diagnostics.Append(r.setStateFromResponse(&ctx, &resp.State, created)...)
 
 	// ensure that user inputs are passed along
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("spec").AtName("inputs"), plan.Spec.Inputs)...)
@@ -389,7 +389,7 @@ func (r *buildingBlockResource) Read(ctx context.Context, req resource.ReadReque
 		return
 	}
 
-	resp.Diagnostics.Append(setStateFromResponse(&ctx, &resp.State, bb)...)
+	resp.Diagnostics.Append(r.setStateFromResponse(&ctx, &resp.State, bb)...)
 }
 
 func (r *buildingBlockResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -489,7 +489,7 @@ func toResourceModel(io *client.MeshBuildingBlockIO) (*buildingBlockIoModel, err
 	return nil, fmt.Errorf("Input '%s' with value type '%s' does not match actual value.", io.Key, io.ValueType)
 }
 
-func setStateFromResponse(ctx *context.Context, state *tfsdk.State, bb *client.MeshBuildingBlock) diag.Diagnostics {
+func (r *buildingBlockResource) setStateFromResponse(ctx *context.Context, state *tfsdk.State, bb *client.MeshBuildingBlock) diag.Diagnostics {
 	diags := make(diag.Diagnostics, 0)
 
 	diags.Append(state.SetAttribute(*ctx, path.Root("api_version"), bb.ApiVersion)...)

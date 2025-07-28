@@ -3,12 +3,15 @@
 page_title: "meshstack_tenant_v4 Resource - terraform-provider-meshstack"
 subcategory: ""
 description: |-
-  Single tenant by workspace, project, and platform (v4).
+  Manages a meshTenant with API version 4.
+  ~> Note: This resource is in preview and may change in the near future.
 ---
 
 # meshstack_tenant_v4 (Resource)
 
-Single tenant by workspace, project, and platform (v4).
+Manages a `meshTenant` with API version 4.
+
+~> **Note:** This resource is in preview and may change in the near future.
 
 ## Example Usage
 
@@ -22,7 +25,6 @@ data "meshstack_project" "example" {
 
 resource "meshstack_tenant_v4" "example" {
   metadata = {
-    uuid               = "1234-5345234-213123-123123"
     owned_by_workspace = data.meshstack_project.example.metadata.owned_by_workspace
     owned_by_project   = data.meshstack_project.example.metadata.name
   }
@@ -39,13 +41,13 @@ resource "meshstack_tenant_v4" "example" {
 
 ### Required
 
-- `metadata` (Attributes) Tenant metadata. Workspace, project and platform of the target tenant must be set here. (see [below for nested schema](#nestedatt--metadata))
+- `metadata` (Attributes) Metadata of the tenant. The `owned_by_workspace` and `owned_by_project` attributes must be set here. (see [below for nested schema](#nestedatt--metadata))
 - `spec` (Attributes) Tenant specification. (see [below for nested schema](#nestedatt--spec))
 
 ### Read-Only
 
-- `api_version` (String) Tenant datatype version
-- `kind` (String) meshObject type, always `meshTenant`.
+- `api_version` (String) API version of the tenant resource.
+- `kind` (String) The kind of the meshObject, always `meshTenant`.
 - `status` (Attributes) Tenant status. (see [below for nested schema](#nestedatt--status))
 
 <a id="nestedatt--metadata"></a>
@@ -53,14 +55,15 @@ resource "meshstack_tenant_v4" "example" {
 
 Required:
 
-- `owned_by_project` (String) Identifier of the project the tenant belongs to.
-- `owned_by_workspace` (String) Identifier of the workspace the tenant belongs to.
-- `uuid` (String) UUID of the tenant.
+- `owned_by_project` (String) The identifier of the project that the tenant belongs to.
+- `owned_by_workspace` (String) The identifier of the workspace that the tenant belongs to.
 
 Read-Only:
 
-- `created_on` (String) The date the tenant was created (e.g. 2020-12-22T09:37:43Z).
-- `deleted_on` (String) If the tenant has been submitted for deletion by a workspace manager, the date is shown here (e.g. 2020-12-22T09:37:43Z).
+- `created_on` (String) The creation timestamp of the meshTenant (e.g. `2020-12-22T09:37:43Z`).
+- `deleted_on` (String) The deletion timestamp of the tenant (e.g. `2020-12-22T09:37:43Z`).
+- `marked_for_deletion_on` (String) The timestamp when the tenant was marked for deletion (e.g. `2020-12-22T09:37:43Z`).
+- `uuid` (String) The unique identifier (UUID) of the tenant.
 
 
 <a id="nestedatt--spec"></a>
@@ -72,14 +75,14 @@ Required:
 
 Optional:
 
-- `landing_zone_identifier` (String) Identifier of landing zone to assign to this tenant.
-- `local_id` (String) Tenant ID local to the platform (e.g. GCP project ID, Azure subscription ID). Setting the local ID means that a tenant with this ID should be imported into meshStack. Not setting a local ID means that a new tenant should be created. Field will be empty until a successful replication has run.
-- `quotas` (Attributes List) Set of applied tenant quotas. By default the landing zone quotas are applied to new tenants. (see [below for nested schema](#nestedatt--spec--quotas))
+- `landing_zone_identifier` (String) The identifier of the landing zone to assign to this tenant.
+- `platform_tenant_id` (String) The identifier of the tenant on the platform (e.g. GCP project ID or Azure subscription ID). If this is not set, a new tenant will be created. If this is set, an existing tenant will be imported. Otherwise, this field will be empty until a successful replication has run.
+- `quotas` (Attributes Set) Landing zone quota settings will be applied by default but can be changed here. (see [below for nested schema](#nestedatt--spec--quotas))
 
 <a id="nestedatt--spec--quotas"></a>
 ### Nested Schema for `spec.quotas`
 
-Read-Only:
+Required:
 
 - `key` (String)
 - `value` (Number)
@@ -91,9 +94,19 @@ Read-Only:
 
 Read-Only:
 
-- `current_replication_status` (String) The current replication status of the tenant.
-- `last_replicated` (String) The last time the tenant was replicated (e.g. 2020-12-22T09:37:43Z).
+- `platform_type_identifier` (String) Identifier of the platform type.
+- `platform_workspace_identifier` (String) Some platforms create representations of workspaces, in such cases this will contain the identifier of the workspace on the platform.
+- `quotas` (Attributes Set) The effective quotas applied to the tenant. (see [below for nested schema](#nestedatt--status--quotas))
 - `tags` (Map of List of String) Tags assigned to this tenant.
+- `tenant_name` (String) The full tenant name, a concatenation of the workspace identifier, project identifier and platform identifier.
+
+<a id="nestedatt--status--quotas"></a>
+### Nested Schema for `status.quotas`
+
+Read-Only:
+
+- `key` (String)
+- `value` (Number)
 
 ## Import
 
@@ -101,5 +114,5 @@ Import is supported using the following syntax:
 
 ```shell
 # import via uuid
-terraform import 'meshstack_tenant.example' '00000000-0000-0000-0000-000000000000'
+terraform import 'meshstack_tenant_v4.example' '00000000-0000-0000-0000-000000000000'
 ```
