@@ -159,17 +159,17 @@ func (r *tenantV4Resource) Schema(_ context.Context, _ resource.SchemaRequest, r
 }
 
 func (r *tenantV4Resource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var metadata client.MeshTenantCreateMetadataV4
+	var metadata client.MeshTenantV4CreateMetadata
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("metadata"), &metadata)...)
 
-	var spec client.MeshTenantCreateSpecV4
+	var spec client.MeshTenantV4CreateSpec
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec"), &spec)...)
 
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	create := client.MeshTenantCreateV4{
+	create := client.MeshTenantV4Create{
 		Metadata: metadata,
 		Spec:     spec,
 	}
@@ -212,17 +212,17 @@ func (r *tenantV4Resource) Read(ctx context.Context, req resource.ReadRequest, r
 }
 
 func (r *tenantV4Resource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var metadata client.MeshTenantCreateMetadataV4
+	var metadata client.MeshTenantV4CreateMetadata
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("metadata"), &metadata)...)
 
-	var spec client.MeshTenantCreateSpecV4
+	var spec client.MeshTenantV4CreateSpec
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec"), &spec)...)
 
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	update := client.MeshTenantCreateV4{
+	update := client.MeshTenantV4Create{
 		Metadata: metadata,
 		Spec:     spec,
 	}
