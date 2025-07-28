@@ -9,53 +9,54 @@ import (
 	"net/url"
 )
 
-const CONTENT_TYPE_TENANT_V4 = "application/vnd.meshcloud.api.meshtenant.v4.hal+json"
+const CONTENT_TYPE_TENANT_V4 = "application/vnd.meshcloud.api.meshtenant.v4-preview.hal+json"
 
 type MeshTenantV4 struct {
 	ApiVersion string               `json:"apiVersion" tfsdk:"api_version"`
 	Kind       string               `json:"kind" tfsdk:"kind"`
-	Metadata   MeshTenantMetadataV4 `json:"metadata" tfsdk:"metadata"`
-	Spec       MeshTenantSpecV4     `json:"spec" tfsdk:"spec"`
-	Status     MeshTenantStatusV4   `json:"status" tfsdk:"status"`
+	Metadata   MeshTenantV4Metadata `json:"metadata" tfsdk:"metadata"`
+	Spec       MeshTenantV4Spec     `json:"spec" tfsdk:"spec"`
+	Status     MeshTenantV4Status   `json:"status" tfsdk:"status"`
 }
 
-type MeshTenantMetadataV4 struct {
-	UUID             string  `json:"uuid" tfsdk:"uuid"`
-	OwnedByProject   string  `json:"ownedByProject" tfsdk:"owned_by_project"`
-	OwnedByWorkspace string  `json:"ownedByWorkspace" tfsdk:"owned_by_workspace"`
-	DeletedOn        *string `json:"deletedOn" tfsdk:"deleted_on"`
-	CreatedOn        *string `json:"createdOn" tfsdk:"created_on"`
+type MeshTenantV4Metadata struct {
+	Uuid                string  `json:"uuid" tfsdk:"uuid"`
+	OwnedByProject      string  `json:"ownedByProject" tfsdk:"owned_by_project"`
+	OwnedByWorkspace    string  `json:"ownedByWorkspace" tfsdk:"owned_by_workspace"`
+	CreatedOn           string  `json:"createdOn" tfsdk:"created_on"`
+	MarkedForDeletionOn *string `json:"markedForDeletionOn" tfsdk:"marked_for_deletion_on"`
+	DeletedOn           *string `json:"deletedOn" tfsdk:"deleted_on"`
 }
 
-type MeshTenantSpecV4 struct {
-	PlatformIdentifier    string            `json:"platformIdentifier" tfsdk:"platform_identifier"`
-	LocalId               *string           `json:"localId" tfsdk:"local_id"`
-	LandingZoneIdentifier string            `json:"landingZoneIdentifier" tfsdk:"landing_zone_identifier"`
-	Quotas                []MeshTenantQuota `json:"quotas" tfsdk:"quotas"`
+type MeshTenantV4Spec struct {
+	PlatformIdentifier    string             `json:"platformIdentifier" tfsdk:"platform_identifier"`
+	PlatformTenantId      *string            `json:"platformTenantId" tfsdk:"platform_tenant_id"`
+	LandingZoneIdentifier *string            `json:"landingZoneIdentifier" tfsdk:"landing_zone_identifier"`
+	Quotas                *[]MeshTenantQuota `json:"quotas" tfsdk:"quotas"`
 }
 
-type MeshTenantStatusV4 struct {
-	Tags                     map[string][]string `json:"tags" tfsdk:"tags"`
-	LastReplicated           *string             `json:"lastReplicated" tfsdk:"last_replicated"`
-	CurrentReplicationStatus string              `json:"currentReplicationStatus" tfsdk:"current_replication_status"`
+type MeshTenantV4Status struct {
+	TenantName                  string              `json:"tenantName" tfsdk:"tenant_name"`
+	PlatformTypeIdentifier      string              `json:"platformTypeIdentifier" tfsdk:"platform_type_identifier"`
+	PlatformWorkspaceIdentifier *string             `json:"platformWorkspaceIdentifier" tfsdk:"platform_workspace_identifier"`
+	Tags                        map[string][]string `json:"tags" tfsdk:"tags"`
 }
 
-type MeshTenantCreateV4 struct {
-	Metadata MeshTenantCreateMetadataV4 `json:"metadata" tfsdk:"metadata"`
-	Spec     MeshTenantCreateSpecV4     `json:"spec" tfsdk:"spec"`
+type MeshTenantV4Create struct {
+	Metadata MeshTenantV4CreateMetadata `json:"metadata" tfsdk:"metadata"`
+	Spec     MeshTenantV4CreateSpec     `json:"spec" tfsdk:"spec"`
 }
 
-type MeshTenantCreateMetadataV4 struct {
-	UUID             string `json:"uuid" tfsdk:"uuid"`
+type MeshTenantV4CreateMetadata struct {
 	OwnedByProject   string `json:"ownedByProject" tfsdk:"owned_by_project"`
 	OwnedByWorkspace string `json:"ownedByWorkspace" tfsdk:"owned_by_workspace"`
 }
 
-type MeshTenantCreateSpecV4 struct {
-	PlatformIdentifier    string            `json:"platformIdentifier" tfsdk:"platform_identifier"`
-	LocalId               *string           `json:"localId" tfsdk:"local_id"`
-	LandingZoneIdentifier string            `json:"landingZoneIdentifier" tfsdk:"landing_zone_identifier"`
-	Quotas                []MeshTenantQuota `json:"quotas" tfsdk:"quotas"`
+type MeshTenantV4CreateSpec struct {
+	PlatformIdentifier    string             `json:"platformIdentifier" tfsdk:"platform_identifier"`
+	LandingZoneIdentifier *string            `json:"landingZoneIdentifier" tfsdk:"landing_zone_identifier"`
+	PlatformTenantId      *string            `json:"platformTenantId" tfsdk:"platform_tenant_id"`
+	Quotas                *[]MeshTenantQuota `json:"quotas" tfsdk:"quotas"`
 }
 
 func (c *MeshStackProviderClient) urlForTenantV4(uuid string) *url.URL {
@@ -99,7 +100,7 @@ func (c *MeshStackProviderClient) ReadTenantV4(uuid string) (*MeshTenantV4, erro
 	return &tenant, nil
 }
 
-func (c *MeshStackProviderClient) CreateTenantV4(tenant *MeshTenantCreateV4) (*MeshTenantV4, error) {
+func (c *MeshStackProviderClient) CreateTenantV4(tenant *MeshTenantV4Create) (*MeshTenantV4, error) {
 	payload, err := json.Marshal(tenant)
 	if err != nil {
 		return nil, err
@@ -124,7 +125,7 @@ func (c *MeshStackProviderClient) CreateTenantV4(tenant *MeshTenantCreateV4) (*M
 		return nil, err
 	}
 
-	if res.StatusCode != 200 {
+	if !isSuccessHTTPStatus(res) {
 		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
 	}
 
