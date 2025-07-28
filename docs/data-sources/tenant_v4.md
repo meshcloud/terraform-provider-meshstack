@@ -3,18 +3,23 @@
 page_title: "meshstack_tenant_v4 Data Source - terraform-provider-meshstack"
 subcategory: ""
 description: |-
-  Fetches details of a single tenant by UUID (v4).
+  Fetches details of a single tenant by UUID.
+  ~> Note: This resource is in preview and may change in the near future.
 ---
 
 # meshstack_tenant_v4 (Data Source)
 
-Fetches details of a single tenant by UUID (v4).
+Fetches details of a single tenant by UUID.
+
+~> **Note:** This resource is in preview and may change in the near future.
 
 ## Example Usage
 
 ```terraform
 data "meshstack_tenant_v4" "example" {
-  uuid = "00000000-0000-0000-0000-000000000000"
+  metadata = {
+    uuid = "00000000-0000-0000-0000-000000000000" # Tenant UUID
+  }
 }
 ```
 
@@ -23,21 +28,27 @@ data "meshstack_tenant_v4" "example" {
 
 ### Required
 
-- `uuid` (String) UUID of the tenant.
+- `metadata` (Attributes) Tenant metadata. (see [below for nested schema](#nestedatt--metadata))
 
 ### Read-Only
 
-- `metadata` (Attributes) Tenant metadata. (see [below for nested schema](#nestedatt--metadata))
+- `api_version` (String) Tenant datatype version
+- `kind` (String) meshObject type, always `meshTenant`.
 - `spec` (Attributes) Tenant specification. (see [below for nested schema](#nestedatt--spec))
 - `status` (Attributes) Tenant status. (see [below for nested schema](#nestedatt--status))
 
 <a id="nestedatt--metadata"></a>
 ### Nested Schema for `metadata`
 
+Required:
+
+- `uuid` (String) UUID of the tenant.
+
 Read-Only:
 
 - `created_on` (String) The date the tenant was created.
 - `deleted_on` (String) If the tenant has been submitted for deletion by a workspace manager, the date is shown here.
+- `marked_for_deletion_on` (String) Date when the tenant was marked for deletion.
 - `owned_by_project` (String) Identifier of the project the tenant belongs to.
 - `owned_by_workspace` (String) Identifier of the workspace the tenant belongs to.
 
@@ -48,8 +59,8 @@ Read-Only:
 Read-Only:
 
 - `landing_zone_identifier` (String) Identifier of landing zone to assign to this tenant.
-- `local_id` (String) Tenant ID local to the platform.
 - `platform_identifier` (String) Identifier of the target platform.
+- `platform_tenant_id` (String) Platform-specific tenant ID.
 - `quotas` (Attributes List) Set of applied tenant quotas. (see [below for nested schema](#nestedatt--spec--quotas))
 
 <a id="nestedatt--spec--quotas"></a>
@@ -67,6 +78,7 @@ Read-Only:
 
 Read-Only:
 
-- `current_replication_status` (String) The current replication status of the tenant.
-- `last_replicated` (String) The last time the tenant was replicated.
+- `platform_type_identifier` (String) Identifier of the platform type.
+- `platform_workspace_identifier` (String) Identifier of the platform workspace.
 - `tags` (Map of List of String) Tags assigned to this tenant.
+- `tenant_name` (String) Name of the tenant.

@@ -7,7 +7,6 @@ data "meshstack_project" "example" {
 
 resource "meshstack_tenant_v4" "example" {
   metadata = {
-    uuid               = "1234-5345234-213123-123123"
     owned_by_workspace = data.meshstack_project.example.metadata.owned_by_workspace
     owned_by_project   = data.meshstack_project.example.metadata.name
   }
