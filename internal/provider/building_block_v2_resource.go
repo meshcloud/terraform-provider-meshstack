@@ -77,6 +77,7 @@ func (r *buildingBlockV2Resource) Schema(ctx context.Context, req resource.Schem
 							path.MatchRelative().AtParent().AtName("value_int"),
 							path.MatchRelative().AtParent().AtName("value_bool"),
 							path.MatchRelative().AtParent().AtName("value_list"),
+							path.MatchRelative().AtParent().AtName("value_code"),
 						)},
 					},
 					"value_single_select": schema.StringAttribute{Optional: isUserInput, Computed: !isUserInput},
@@ -85,6 +86,11 @@ func (r *buildingBlockV2Resource) Schema(ctx context.Context, req resource.Schem
 					"value_bool":          schema.BoolAttribute{Optional: isUserInput, Computed: !isUserInput},
 					"value_list": schema.StringAttribute{
 						MarkdownDescription: "JSON encoded list of objects.",
+						Optional:            isUserInput,
+						Computed:            !isUserInput,
+					},
+					"value_code": schema.StringAttribute{
+						MarkdownDescription: "Code value.",
 						Optional:            isUserInput,
 						Computed:            !isUserInput,
 					},
@@ -106,6 +112,7 @@ func (r *buildingBlockV2Resource) Schema(ctx context.Context, req resource.Schem
 					"value_int":           types.Int64Type,
 					"value_bool":          types.BoolType,
 					"value_list":          types.StringType,
+					"value_code":          types.StringType,
 				},
 			},
 			map[string]attr.Value{},

@@ -1,6 +1,7 @@
 ## v0.7.2
 
 FIXES:
+- Allow `value_code` in `meshstack_building_block_v2` and `meshstack_building_block` resources.
 - Documentation.
 
 ## v0.7.1

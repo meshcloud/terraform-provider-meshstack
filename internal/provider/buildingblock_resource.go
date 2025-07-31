@@ -80,6 +80,7 @@ func (r *buildingBlockResource) Schema(ctx context.Context, req resource.SchemaR
 							path.MatchRelative().AtParent().AtName("value_int"),
 							path.MatchRelative().AtParent().AtName("value_bool"),
 							path.MatchRelative().AtParent().AtName("value_list"),
+							path.MatchRelative().AtParent().AtName("value_code"),
 						)},
 					},
 					"value_single_select": schema.StringAttribute{Optional: isUserInput, Computed: !isUserInput},
@@ -88,6 +89,11 @@ func (r *buildingBlockResource) Schema(ctx context.Context, req resource.SchemaR
 					"value_bool":          schema.BoolAttribute{Optional: isUserInput, Computed: !isUserInput},
 					"value_list": schema.StringAttribute{
 						MarkdownDescription: "JSON encoded list of objects.",
+						Optional:            isUserInput,
+						Computed:            !isUserInput,
+					},
+					"value_code": schema.StringAttribute{
+						MarkdownDescription: "Code value.",
 						Optional:            isUserInput,
 						Computed:            !isUserInput,
 					},
@@ -109,6 +115,7 @@ func (r *buildingBlockResource) Schema(ctx context.Context, req resource.SchemaR
 					"value_int":           types.Int64Type,
 					"value_bool":          types.BoolType,
 					"value_list":          types.StringType,
+					"value_code":          types.StringType,
 				},
 			},
 			map[string]attr.Value{},
@@ -287,6 +294,7 @@ type buildingBlockIoModel struct {
 	ValueInt          types.Int64  `tfsdk:"value_int"`
 	ValueBool         types.Bool   `tfsdk:"value_bool"`
 	ValueList         types.String `tfsdk:"value_list"`
+	ValueCode         types.String `tfsdk:"value_code"`
 }
 
 func (io *buildingBlockIoModel) extractIoValue() (interface{}, string) {
@@ -301,6 +309,9 @@ func (io *buildingBlockIoModel) extractIoValue() (interface{}, string) {
 	}
 	if !(io.ValueString.IsNull() || io.ValueString.IsUnknown()) {
 		return io.ValueString.ValueString(), client.MESH_BUILDING_BLOCK_IO_TYPE_STRING
+	}
+	if !(io.ValueCode.IsNull() || io.ValueCode.IsUnknown()) {
+		return io.ValueCode.ValueString(), client.MESH_BUILDING_BLOCK_IO_TYPE_CODE
 	}
 	return nil, "No value present."
 }
@@ -442,6 +453,13 @@ func toResourceModel(io *client.MeshBuildingBlockIO) (*buildingBlockIoModel, err
 		value, ok := io.Value.(string)
 		if ok {
 			resourceIo.ValueString = types.StringValue(value)
+			foundValue = true
+		}
+
+	case client.MESH_BUILDING_BLOCK_IO_TYPE_CODE:
+		value, ok := io.Value.(string)
+		if ok {
+			resourceIo.ValueCode = types.StringValue(value)
 			foundValue = true
 		}
 

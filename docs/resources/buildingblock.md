@@ -85,6 +85,7 @@ Read-Only:
 Optional:
 
 - `value_bool` (Boolean)
+- `value_code` (String) Code value.
 - `value_file` (String)
 - `value_int` (Number)
 - `value_list` (String) JSON encoded list of objects.
@@ -107,6 +108,7 @@ Required:
 Read-Only:
 
 - `value_bool` (Boolean)
+- `value_code` (String) Code value.
 - `value_file` (String)
 - `value_int` (Number)
 - `value_list` (String) JSON encoded list of objects.
@@ -129,6 +131,7 @@ Read-Only:
 Read-Only:
 
 - `value_bool` (Boolean)
+- `value_code` (String) Code value.
 - `value_file` (String)
 - `value_int` (Number)
 - `value_list` (String) JSON encoded list of objects.
