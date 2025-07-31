@@ -46,6 +46,7 @@ func (d *buildingBlockV2DataSource) Schema(ctx context.Context, req datasource.S
 							path.MatchRelative().AtParent().AtName("value_int"),
 							path.MatchRelative().AtParent().AtName("value_bool"),
 							path.MatchRelative().AtParent().AtName("value_list"),
+							path.MatchRelative().AtParent().AtName("value_code"),
 						)},
 					},
 					"value_single_select": schema.StringAttribute{Computed: true},
@@ -54,6 +55,10 @@ func (d *buildingBlockV2DataSource) Schema(ctx context.Context, req datasource.S
 					"value_bool":          schema.BoolAttribute{Computed: true},
 					"value_list": schema.StringAttribute{
 						MarkdownDescription: "JSON encoded list of objects.",
+						Computed:            true,
+					},
+					"value_code": schema.StringAttribute{
+						MarkdownDescription: "Code value.",
 						Computed:            true,
 					},
 				},

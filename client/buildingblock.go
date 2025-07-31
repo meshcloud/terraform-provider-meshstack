@@ -16,6 +16,7 @@ const (
 	MESH_BUILDING_BLOCK_IO_TYPE_SINGLE_SELECT = "SINGLE_SELECT"
 	MESH_BUILDING_BLOCK_IO_TYPE_FILE          = "FILE"
 	MESH_BUILDING_BLOCK_IO_TYPE_LIST          = "LIST"
+	MESH_BUILDING_BLOCK_IO_TYPE_CODE          = "CODE"
 
 	CONTENT_TYPE_BUILDING_BLOCK = "application/vnd.meshcloud.api.meshbuildingblock.v1.hal+json"
 )
