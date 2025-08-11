@@ -22,6 +22,10 @@ Manage a workspace or tenant building block.
 
 - `spec` (Attributes) Building block specification. (see [below for nested schema](#nestedatt--spec))
 
+### Optional
+
+- `wait_for_completion` (Boolean) Whether to wait for the Building Block to reach a terminal state (SUCCEEDED or FAILED) before completing the resource creation. If false, the resource creation completes immediately after the Building Block is created. (Defaults to `true`)
+
 ### Read-Only
 
 - `api_version` (String) Building block datatype version
