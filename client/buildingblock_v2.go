@@ -2,10 +2,14 @@ package client
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"time"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 )
 
 const (
@@ -138,4 +142,73 @@ func (c *MeshStackProviderClient) CreateBuildingBlockV2(bb *MeshBuildingBlockV2C
 func (c *MeshStackProviderClient) DeleteBuildingBlockV2(uuid string) error {
 	targetUrl := c.urlForBuildingBlock(uuid)
 	return c.deleteMeshObject(*targetUrl, 202)
+}
+
+// PollBuildingBlockV2UntilCompletion polls a building block v2 until it reaches a terminal state (SUCCEEDED or FAILED)
+// Returns the final building block state or an error if polling fails or times out
+func (c *MeshStackProviderClient) PollBuildingBlockV2UntilCompletion(ctx context.Context, uuid string) (*MeshBuildingBlockV2, error) {
+	var result *MeshBuildingBlockV2
+
+	err := retry.RetryContext(ctx, 30*time.Minute, c.waitForBuildingBlockV2CompletionFunc(ctx, uuid, &result))
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+// waitForBuildingBlockV2CompletionFunc returns a RetryFunc that checks building block completion status
+func (c *MeshStackProviderClient) waitForBuildingBlockV2CompletionFunc(ctx context.Context, uuid string, result **MeshBuildingBlockV2) retry.RetryFunc {
+	return func() *retry.RetryError {
+		current, err := c.ReadBuildingBlockV2(uuid)
+		if err != nil {
+			return retry.NonRetryableError(fmt.Errorf("could not read building block status while waiting for completion: %w", err))
+		}
+
+		if current == nil {
+			return retry.NonRetryableError(fmt.Errorf("building block was not found while waiting for completion"))
+		}
+
+		// Check if we've reached a terminal state
+		status := current.Status.Status
+		switch status {
+		case "SUCCEEDED":
+			*result = current
+			return nil // Success, stop retrying
+		case "FAILED":
+			return retry.NonRetryableError(fmt.Errorf("building block %s reached FAILED state", uuid))
+		}
+
+		// Not done yet, continue polling
+		return retry.RetryableError(fmt.Errorf("waiting for building block %s to complete: currently in %s state", uuid, status))
+	}
+}
+
+// PollBuildingBlockV2UntilDeletion polls a building block v2 until it is deleted (not found)
+// Returns nil on successful deletion or an error if polling fails or times out
+func (c *MeshStackProviderClient) PollBuildingBlockV2UntilDeletion(ctx context.Context, uuid string) error {
+	return retry.RetryContext(ctx, 30*time.Minute, c.waitForBuildingBlockV2DeletionFunc(uuid))
+}
+
+// waitForBuildingBlockV2DeletionFunc returns a RetryFunc that checks building block deletion status
+func (c *MeshStackProviderClient) waitForBuildingBlockV2DeletionFunc(uuid string) retry.RetryFunc {
+	return func() *retry.RetryError {
+		current, err := c.ReadBuildingBlockV2(uuid)
+		if err != nil {
+			return retry.NonRetryableError(fmt.Errorf("could not read building block status while waiting for deletion: %w", err))
+		}
+
+		// If building block is not found, deletion is complete
+		if current == nil {
+			return nil // Success, stop retrying
+		}
+
+		// If building block is in FAILED state during deletion, consider it a terminal state
+		if current.Status.Status == "FAILED" {
+			return retry.NonRetryableError(fmt.Errorf("building block %s reached FAILED state during deletion", uuid))
+		}
+
+		// Not done yet, continue polling
+		return retry.RetryableError(fmt.Errorf("waiting for building block %s to be deleted: currently in %s state", uuid, current.Status.Status))
+	}
 }

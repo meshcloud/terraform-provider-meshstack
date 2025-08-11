@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
@@ -277,13 +278,20 @@ func (r *buildingBlockV2Resource) Schema(ctx context.Context, req resource.Schem
 					"outputs": outputs,
 				},
 			},
+			"wait_for_completion": schema.BoolAttribute{
+				MarkdownDescription: "Whether to wait for the Building Block to reach a terminal state (SUCCEEDED or FAILED) before completing the resource creation. If false, the resource creation completes immediately after the Building Block is created. (Defaults to `true`)",
+				Optional:            true,
+				Computed:            true,
+				Default:             booldefault.StaticBool(true),
+			},
 		},
 	}
 }
 
 type buildingBlockV2ResourceModel struct {
-	ApiVersion types.String `tfsdk:"api_version"`
-	Kind       types.String `tfsdk:"kind"`
+	WaitForCompletion types.Bool   `tfsdk:"wait_for_completion"`
+	ApiVersion        types.String `tfsdk:"api_version"`
+	Kind              types.String `tfsdk:"kind"`
 
 	Spec struct {
 		DisplayName                       types.String                                     `tfsdk:"display_name"`
@@ -361,15 +369,38 @@ func (r *buildingBlockV2Resource) Create(ctx context.Context, req resource.Creat
 		)
 		return
 	}
+
+	// Poll for completion if wait_for_completion is true
+	if !plan.WaitForCompletion.IsNull() && plan.WaitForCompletion.ValueBool() {
+		uuid := created.Metadata.Uuid
+		polled, err := r.client.PollBuildingBlockV2UntilCompletion(ctx, uuid)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error waiting for building block completion",
+				err.Error(),
+			)
+			return
+		}
+		created = polled
+	}
+
 	resp.Diagnostics.Append(setStateFromResponseV2(&ctx, &resp.State, created)...)
 
-	// ensure that user inputs are passed along
+	// ensure that user inputs and wait_for_completion are passed along from the plan
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("spec").AtName("inputs"), plan.Spec.Inputs)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("wait_for_completion"), plan.WaitForCompletion)...)
 }
 
 func (r *buildingBlockV2Resource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var uuid string
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("metadata").AtName("uuid"), &uuid)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Preserve the wait_for_completion value from the current state since it's not returned by the API
+	var currentWaitForCompletion types.Bool
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("wait_for_completion"), &currentWaitForCompletion)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -385,6 +416,9 @@ func (r *buildingBlockV2Resource) Read(ctx context.Context, req resource.ReadReq
 	}
 
 	resp.Diagnostics.Append(setStateFromResponseV2(&ctx, &resp.State, bb)...)
+
+	// Restore the wait_for_completion value from the previous state since it's provider configuration, not API data
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("wait_for_completion"), currentWaitForCompletion)...)
 }
 
 func (r *buildingBlockV2Resource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -398,6 +432,13 @@ func (r *buildingBlockV2Resource) Delete(ctx context.Context, req resource.Delet
 		return
 	}
 
+	// Get the wait_for_completion setting from the current state
+	var waitForCompletion types.Bool
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("wait_for_completion"), &waitForCompletion)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	err := r.client.DeleteBuildingBlockV2(uuid)
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -405,6 +446,18 @@ func (r *buildingBlockV2Resource) Delete(ctx context.Context, req resource.Delet
 			"Could not delete building block, unexpected error: "+err.Error(),
 		)
 		return
+	}
+
+	// Poll for completion if wait_for_completion is true
+	if !waitForCompletion.IsNull() && waitForCompletion.ValueBool() {
+		err := r.client.PollBuildingBlockV2UntilDeletion(ctx, uuid)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error waiting for building block deletion completion",
+				err.Error(),
+			)
+			return
+		}
 	}
 }
 
