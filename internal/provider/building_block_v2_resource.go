@@ -157,6 +157,7 @@ func (r *buildingBlockV2Resource) Schema(ctx context.Context, req resource.Schem
 					"uuid": schema.StringAttribute{
 						MarkdownDescription: "UUID which uniquely identifies the building block.",
 						Computed:            true,
+						PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()}, // update is not supported, so we need to replace.
 					},
 					"owned_by_workspace": schema.StringAttribute{
 						MarkdownDescription: "The workspace containing this building block.",
