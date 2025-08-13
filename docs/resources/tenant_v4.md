@@ -44,6 +44,10 @@ resource "meshstack_tenant_v4" "example" {
 - `metadata` (Attributes) Metadata of the tenant. The `owned_by_workspace` and `owned_by_project` attributes must be set here. (see [below for nested schema](#nestedatt--metadata))
 - `spec` (Attributes) Tenant specification. (see [below for nested schema](#nestedatt--spec))
 
+### Optional
+
+- `wait_for_completion` (Boolean) Wait for tenant creation/deletion to complete before considering the resource created. Defaults to `true`.
+
 ### Read-Only
 
 - `api_version` (String) API version of the tenant resource.

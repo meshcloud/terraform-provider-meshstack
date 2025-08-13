@@ -144,12 +144,12 @@ func (c *MeshStackProviderClient) DeleteBuildingBlockV2(uuid string) error {
 	return c.deleteMeshObject(*targetUrl, 202)
 }
 
-// PollBuildingBlockV2UntilCompletion polls a building block v2 until it reaches a terminal state (SUCCEEDED or FAILED)
+// PollBuildingBlockV2UntilCompletion polls a building block until it reaches a terminal state (SUCCEEDED or FAILED)
 // Returns the final building block state or an error if polling fails or times out
 func (c *MeshStackProviderClient) PollBuildingBlockV2UntilCompletion(ctx context.Context, uuid string) (*MeshBuildingBlockV2, error) {
 	var result *MeshBuildingBlockV2
 
-	err := retry.RetryContext(ctx, 30*time.Minute, c.waitForBuildingBlockV2CompletionFunc(ctx, uuid, &result))
+	err := retry.RetryContext(ctx, 30*time.Minute, c.waitForBuildingBlockV2CompletionFunc(uuid, &result))
 	if err != nil {
 		return nil, err
 	}
@@ -158,7 +158,7 @@ func (c *MeshStackProviderClient) PollBuildingBlockV2UntilCompletion(ctx context
 }
 
 // waitForBuildingBlockV2CompletionFunc returns a RetryFunc that checks building block completion status
-func (c *MeshStackProviderClient) waitForBuildingBlockV2CompletionFunc(ctx context.Context, uuid string, result **MeshBuildingBlockV2) retry.RetryFunc {
+func (c *MeshStackProviderClient) waitForBuildingBlockV2CompletionFunc(uuid string, result **MeshBuildingBlockV2) retry.RetryFunc {
 	return func() *retry.RetryError {
 		current, err := c.ReadBuildingBlockV2(uuid)
 		if err != nil {
@@ -184,7 +184,7 @@ func (c *MeshStackProviderClient) waitForBuildingBlockV2CompletionFunc(ctx conte
 	}
 }
 
-// PollBuildingBlockV2UntilDeletion polls a building block v2 until it is deleted (not found)
+// PollBuildingBlockV2UntilDeletion polls a building block until it is deleted (not found)
 // Returns nil on successful deletion or an error if polling fails or times out
 func (c *MeshStackProviderClient) PollBuildingBlockV2UntilDeletion(ctx context.Context, uuid string) error {
 	return retry.RetryContext(ctx, 30*time.Minute, c.waitForBuildingBlockV2DeletionFunc(uuid))
