@@ -1,3 +1,8 @@
+## v0.9.0
+
+FEATURES:
+- Added polling for building block (v2) and tenant (v4) resources until creation and deletion are complete.
+
 ## v0.8.0
 
 FEATURES:
