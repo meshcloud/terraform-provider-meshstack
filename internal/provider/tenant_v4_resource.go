@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -27,11 +28,12 @@ var (
 )
 
 type tenantV4ResourceModel struct {
-	ApiVersion types.String                  `tfsdk:"api_version"`
-	Kind       types.String                  `tfsdk:"kind"`
-	Metadata   tenantV4ResourceMetadataModel `tfsdk:"metadata"`
-	Spec       tenantV4ResourceSpecModel     `tfsdk:"spec"`
-	Status     types.Object                  `tfsdk:"status"`
+	ApiVersion        types.String                  `tfsdk:"api_version"`
+	Kind              types.String                  `tfsdk:"kind"`
+	Metadata          tenantV4ResourceMetadataModel `tfsdk:"metadata"`
+	Spec              tenantV4ResourceSpecModel     `tfsdk:"spec"`
+	Status            types.Object                  `tfsdk:"status"`
+	WaitForCompletion types.Bool                    `tfsdk:"wait_for_completion"`
 }
 
 type tenantV4ResourceMetadataModel struct {
@@ -209,6 +211,13 @@ func (r *tenantV4Resource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					},
 				},
 			},
+
+			"wait_for_completion": schema.BoolAttribute{
+				MarkdownDescription: "Wait for tenant creation/deletion to complete before considering the resource created. Defaults to `true`.",
+				Optional:            true,
+				Computed:            true,
+				Default:             booldefault.StaticBool(true),
+			},
 		},
 	}
 }
@@ -292,7 +301,22 @@ func (r *tenantV4Resource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
+	// Poll for completion if wait_for_completion is true
+	if !plan.WaitForCompletion.IsNull() && plan.WaitForCompletion.ValueBool() {
+		tenant, err = r.client.PollTenantV4UntilCreation(ctx, tenant.Metadata.Uuid)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error waiting for tenant creation",
+				fmt.Sprintf("Could not wait for tenant creation to complete, unexpected error: %s", err.Error()),
+			)
+			return
+		}
+	}
+
 	r.setStateFromResponse(ctx, tenant, plan.Spec.Quotas, &resp.State, &resp.Diagnostics)
+
+	// Ensure that wait_for_completion is passed along from the plan
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("wait_for_completion"), plan.WaitForCompletion)...)
 }
 
 func (r *tenantV4Resource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -305,6 +329,10 @@ func (r *tenantV4Resource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	var quotas types.Set
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("spec").AtName("quotas"), &quotas)...)
+
+	// Preserve the wait_for_completion value from the current state since it's not returned by the API
+	var currentWaitForCompletion types.Bool
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("wait_for_completion"), &currentWaitForCompletion)...)
 
 	if resp.Diagnostics.HasError() {
 		return
@@ -325,6 +353,9 @@ func (r *tenantV4Resource) Read(ctx context.Context, req resource.ReadRequest, r
 	}
 
 	r.setStateFromResponse(ctx, tenant, quotas, &resp.State, &resp.Diagnostics)
+
+	// Restore the wait_for_completion value from the previous state since it's provider configuration, not API data
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("wait_for_completion"), currentWaitForCompletion)...)
 }
 
 func (r *tenantV4Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -344,6 +375,18 @@ func (r *tenantV4Resource) Delete(ctx context.Context, req resource.DeleteReques
 			fmt.Sprintf("Could not delete tenant with uuid %s, unexpected error: %s", uuid, err.Error()),
 		)
 		return
+	}
+
+	// Poll for deletion completion if wait_for_completion is true
+	if !state.WaitForCompletion.IsNull() && state.WaitForCompletion.ValueBool() {
+		err = r.client.PollTenantV4UntilDeletion(ctx, uuid)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error waiting for tenant deletion",
+				fmt.Sprintf("Could not wait for tenant deletion to complete, unexpected error: %s", err.Error()),
+			)
+			return
+		}
 	}
 }
 
