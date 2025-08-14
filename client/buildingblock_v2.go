@@ -205,7 +205,7 @@ func (c *MeshStackProviderClient) waitForBuildingBlockV2DeletionFunc(uuid string
 
 		// If building block is in FAILED state during deletion, consider it a terminal state
 		if current.Status.Status == "FAILED" {
-			return retry.NonRetryableError(fmt.Errorf("building block %s reached FAILED state during deletion", uuid))
+			return retry.NonRetryableError(fmt.Errorf("building block %s reached FAILED state during deletion. For more details, check the building block run logs in meshStack", uuid))
 		}
 
 		// Not done yet, continue polling
