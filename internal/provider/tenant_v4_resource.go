@@ -28,12 +28,14 @@ var (
 )
 
 type tenantV4ResourceModel struct {
-	ApiVersion        types.String                  `tfsdk:"api_version"`
-	Kind              types.String                  `tfsdk:"kind"`
-	Metadata          tenantV4ResourceMetadataModel `tfsdk:"metadata"`
-	Spec              tenantV4ResourceSpecModel     `tfsdk:"spec"`
-	Status            types.Object                  `tfsdk:"status"`
-	WaitForCompletion types.Bool                    `tfsdk:"wait_for_completion"`
+	ApiVersion types.String                  `tfsdk:"api_version"`
+	Kind       types.String                  `tfsdk:"kind"`
+	Metadata   tenantV4ResourceMetadataModel `tfsdk:"metadata"`
+	Spec       tenantV4ResourceSpecModel     `tfsdk:"spec"`
+	Status     types.Object                  `tfsdk:"status"`
+
+	// additional attributes not part of the API
+	WaitForCompletion types.Bool `tfsdk:"wait_for_completion"`
 }
 
 type tenantV4ResourceMetadataModel struct {
@@ -213,7 +215,7 @@ func (r *tenantV4Resource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			},
 
 			"wait_for_completion": schema.BoolAttribute{
-				MarkdownDescription: "Wait for tenant creation/deletion to complete before considering the resource created. Defaults to `true`.",
+				MarkdownDescription: "Wait for tenant creation/deletion to complete. Note that tenant creation is considered complete when `spec.platformTenantId` is set and not necessarily when replication is finished. Defaults to `true`.",
 				Optional:            true,
 				Computed:            true,
 				Default:             booldefault.StaticBool(true),

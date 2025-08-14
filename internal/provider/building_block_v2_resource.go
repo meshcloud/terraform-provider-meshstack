@@ -280,7 +280,7 @@ func (r *buildingBlockV2Resource) Schema(ctx context.Context, req resource.Schem
 				},
 			},
 			"wait_for_completion": schema.BoolAttribute{
-				MarkdownDescription: "Whether to wait for the Building Block to reach a terminal state (SUCCEEDED or FAILED) before completing the resource creation. If false, the resource creation completes immediately after the Building Block is created. (Defaults to `true`)",
+				MarkdownDescription: "Whether to wait for the Building Block to reach a terminal state (SUCCEEDED or FAILED) before completing the resource creation or deletion. If false, the resource creation completes immediately after the Building Block is created. (Defaults to `true`)",
 				Optional:            true,
 				Computed:            true,
 				Default:             booldefault.StaticBool(true),
@@ -290,9 +290,8 @@ func (r *buildingBlockV2Resource) Schema(ctx context.Context, req resource.Schem
 }
 
 type buildingBlockV2ResourceModel struct {
-	WaitForCompletion types.Bool   `tfsdk:"wait_for_completion"`
-	ApiVersion        types.String `tfsdk:"api_version"`
-	Kind              types.String `tfsdk:"kind"`
+	ApiVersion types.String `tfsdk:"api_version"`
+	Kind       types.String `tfsdk:"kind"`
 
 	Spec struct {
 		DisplayName                       types.String                                     `tfsdk:"display_name"`
@@ -306,6 +305,9 @@ type buildingBlockV2ResourceModel struct {
 	// Metadata and Status are unused when creating the resource
 	Metadata types.Object `tfsdk:"metadata"`
 	Status   types.Object `tfsdk:"status"`
+
+	// additional attributes not part of the API
+	WaitForCompletion types.Bool `tfsdk:"wait_for_completion"`
 }
 
 type buildingBlockV2DefinitionVersionRefResourceModel struct {

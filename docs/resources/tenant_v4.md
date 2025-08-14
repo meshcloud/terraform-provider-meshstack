@@ -46,7 +46,7 @@ resource "meshstack_tenant_v4" "example" {
 
 ### Optional
 
-- `wait_for_completion` (Boolean) Wait for tenant creation/deletion to complete before considering the resource created. Defaults to `true`.
+- `wait_for_completion` (Boolean) Wait for tenant creation/deletion to complete. Note that tenant creation is considered complete when `spec.platformTenantId` is set and not necessarily when replication is finished. Defaults to `true`.
 
 ### Read-Only
 
