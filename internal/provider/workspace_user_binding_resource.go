@@ -201,6 +201,6 @@ func (r *workspaceUserBindingResource) Delete(ctx context.Context, req resource.
 	}
 }
 
-func (r *projectWorkspaceBindingResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+func (r *workspaceUserBindingResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("metadata").AtName("name"), req.ID)...)
 }
