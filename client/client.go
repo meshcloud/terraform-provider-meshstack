@@ -38,6 +38,7 @@ type endpoints struct {
 	ProjectUserBindings  *url.URL `json:"meshprojectuserbindings"`
 	ProjectGroupBindings *url.URL `json:"meshprojectgroupbindings"`
 	Workspaces           *url.URL `json:"meshworkspaces"`
+	WorkspaceUserBindings *url.URL `json:"meshworkspaceuserbindings"`
 	WorkspaceGroupBindings *url.URL `json:"meshworkspacegroupbindings"`
 	Tenants              *url.URL `json:"meshtenants"`
 	TagDefinitions       *url.URL `json:"meshtagdefinitions"`

@@ -123,7 +123,7 @@ func (c *MeshStackProviderClient) createWorkspaceBinding(binding *MeshWorkspaceB
 		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
 	}
 
-	var createdBinding MeshProjectBinding
+	var createdBinding MeshWorkspaceBinding
 	err = json.Unmarshal(data, &createdBinding)
 	if err != nil {
 		return nil, err

@@ -6,7 +6,7 @@ import (
 
 const CONTENT_TYPE_WORKSPACE_USER_BINDING = "application/vnd.meshcloud.api.meshworkspaceuserbinding.v2.hal+json"
 
-type MeshWorkspaceUserBinding = MeshProjectBinding
+type MeshWorkspaceUserBinding = MeshWorkspaceBinding
 
 func (c *MeshStackProviderClient) urlForWorkspaceUserBinding(name string) *url.URL {
 	return c.endpoints.WorkspaceUserBindings.JoinPath(name)
