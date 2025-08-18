@@ -12,7 +12,7 @@ func (c *MeshStackProviderClient) urlForWorkspaceGroupBinding(name string) *url.
 	return c.endpoints.WorkspaceGroupBindings.JoinPath(name)
 }
 
-func (c *MeshStackProviderClient) ReadPWorkspaceGroupBinding(name string) (*MeshWorkspaceGroupBinding, error) {
+func (c *MeshStackProviderClient) ReadWorkspaceGroupBinding(name string) (*MeshWorkspaceGroupBinding, error) {
 	return c.readWorkspaceBinding(name, CONTENT_TYPE_WORKSPACE_GROUP_BINDING)
 }
 
