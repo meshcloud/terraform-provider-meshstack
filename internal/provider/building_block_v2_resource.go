@@ -266,10 +266,23 @@ func (r *buildingBlockV2Resource) Schema(ctx context.Context, req resource.Schem
 				PlanModifiers:       []planmodifier.Object{objectplanmodifier.UseStateForUnknown()},
 				Attributes: map[string]schema.Attribute{
 					"status": schema.StringAttribute{
-						MarkdownDescription: "Execution status. One of `WAITING_FOR_DEPENDENT_INPUT`, `WAITING_FOR_OPERATOR_INPUT`, `PENDING`, `IN_PROGRESS`, `SUCCEEDED`, `FAILED`.",
-						Computed:            true,
+						MarkdownDescription: fmt.Sprintf("Execution status. One of `%s`, `%s`, `%s`, `%s`, `%s`, `%s`.",
+							client.BUILDING_BLOCK_STATUS_WAITING_FOR_DEPENDENT_INPUT,
+							client.BUILDING_BLOCK_STATUS_WAITING_FOR_OPERATOR_INPUT,
+							client.BUILDING_BLOCK_STATUS_PENDING,
+							client.BUILDING_BLOCK_STATUS_IN_PROGRESS,
+							client.BUILDING_BLOCK_STATUS_SUCCEEDED,
+							client.BUILDING_BLOCK_STATUS_FAILED),
+						Computed: true,
 						Validators: []validator.String{
-							stringvalidator.OneOf([]string{"WAITING_FOR_DEPENDENT_INPUT", "WAITING_FOR_OPERATOR_INPUT", "PENDING", "IN_PROGRESS", "SUCCEEDED", "FAILED"}...),
+							stringvalidator.OneOf([]string{
+								client.BUILDING_BLOCK_STATUS_WAITING_FOR_DEPENDENT_INPUT,
+								client.BUILDING_BLOCK_STATUS_WAITING_FOR_OPERATOR_INPUT,
+								client.BUILDING_BLOCK_STATUS_PENDING,
+								client.BUILDING_BLOCK_STATUS_IN_PROGRESS,
+								client.BUILDING_BLOCK_STATUS_SUCCEEDED,
+								client.BUILDING_BLOCK_STATUS_FAILED,
+							}...),
 						},
 					},
 					"force_purge": schema.BoolAttribute{
@@ -381,7 +394,7 @@ func (r *buildingBlockV2Resource) Create(ctx context.Context, req resource.Creat
 			// Always store the initial state, even if the building block was created in a failed state
 			// This allows Terraform to track the resource and handle recreates appropriately
 			resp.Diagnostics.Append(setStateFromResponseV2(&ctx, &resp.State, created)...)
-			resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("status").AtName("status"), "FAILED")...)
+			resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("status").AtName("status"), client.BUILDING_BLOCK_STATUS_FAILED)...)
 			resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("spec").AtName("inputs"), plan.Spec.Inputs)...)
 			resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("wait_for_completion"), plan.WaitForCompletion)...)
 
