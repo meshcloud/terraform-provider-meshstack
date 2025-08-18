@@ -378,6 +378,13 @@ func (r *buildingBlockV2Resource) Create(ctx context.Context, req resource.Creat
 		uuid := created.Metadata.Uuid
 		polled, err := r.client.PollBuildingBlockV2UntilCompletion(ctx, uuid)
 		if err != nil {
+			// Always store the initial state, even if the building block was created in a failed state
+			// This allows Terraform to track the resource and handle recreates appropriately
+			resp.Diagnostics.Append(setStateFromResponseV2(&ctx, &resp.State, created)...)
+			resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("status").AtName("status"), "FAILED")...)
+			resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("spec").AtName("inputs"), plan.Spec.Inputs)...)
+			resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("wait_for_completion"), plan.WaitForCompletion)...)
+
 			resp.Diagnostics.AddError(
 				"Error waiting for building block completion",
 				err.Error(),
