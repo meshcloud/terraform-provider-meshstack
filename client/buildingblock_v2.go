@@ -14,6 +14,14 @@ import (
 
 const (
 	CONTENT_TYPE_BUILDING_BLOCK_V2 = "application/vnd.meshcloud.api.meshbuildingblock.v2-preview.hal+json"
+
+	// Building Block Status Constants
+	BUILDING_BLOCK_STATUS_WAITING_FOR_DEPENDENT_INPUT = "WAITING_FOR_DEPENDENT_INPUT"
+	BUILDING_BLOCK_STATUS_WAITING_FOR_OPERATOR_INPUT  = "WAITING_FOR_OPERATOR_INPUT"
+	BUILDING_BLOCK_STATUS_PENDING                     = "PENDING"
+	BUILDING_BLOCK_STATUS_IN_PROGRESS                 = "IN_PROGRESS"
+	BUILDING_BLOCK_STATUS_SUCCEEDED                   = "SUCCEEDED"
+	BUILDING_BLOCK_STATUS_FAILED                      = "FAILED"
 )
 
 type MeshBuildingBlockV2 struct {
@@ -172,10 +180,10 @@ func (c *MeshStackProviderClient) waitForBuildingBlockV2CompletionFunc(uuid stri
 		// Check if we've reached a terminal state
 		status := current.Status.Status
 		switch status {
-		case "SUCCEEDED":
+		case BUILDING_BLOCK_STATUS_SUCCEEDED:
 			*result = current
 			return nil // Success, stop retrying
-		case "FAILED":
+		case BUILDING_BLOCK_STATUS_FAILED:
 			return retry.NonRetryableError(fmt.Errorf("building block %s reached FAILED state", uuid))
 		}
 
@@ -204,7 +212,7 @@ func (c *MeshStackProviderClient) waitForBuildingBlockV2DeletionFunc(uuid string
 		}
 
 		// If building block is in FAILED state during deletion, consider it a terminal state
-		if current.Status.Status == "FAILED" {
+		if current.Status.Status == BUILDING_BLOCK_STATUS_FAILED {
 			return retry.NonRetryableError(fmt.Errorf("building block %s reached FAILED state during deletion. For more details, check the building block run logs in meshStack", uuid))
 		}
 

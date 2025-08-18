@@ -188,10 +188,23 @@ func (d *buildingBlockV2DataSource) Schema(ctx context.Context, req datasource.S
 				Computed:            true,
 				Attributes: map[string]schema.Attribute{
 					"status": schema.StringAttribute{
-						MarkdownDescription: "Execution status. One of `WAITING_FOR_DEPENDENT_INPUT`, `WAITING_FOR_OPERATOR_INPUT`, `PENDING`, `IN_PROGRESS`, `SUCCEEDED`, `FAILED`.",
-						Computed:            true,
+						MarkdownDescription: fmt.Sprintf("Execution status. One of `%s`, `%s`, `%s`, `%s`, `%s`, `%s`.",
+							client.BUILDING_BLOCK_STATUS_WAITING_FOR_DEPENDENT_INPUT,
+							client.BUILDING_BLOCK_STATUS_WAITING_FOR_OPERATOR_INPUT,
+							client.BUILDING_BLOCK_STATUS_PENDING,
+							client.BUILDING_BLOCK_STATUS_IN_PROGRESS,
+							client.BUILDING_BLOCK_STATUS_SUCCEEDED,
+							client.BUILDING_BLOCK_STATUS_FAILED),
+						Computed: true,
 						Validators: []validator.String{
-							stringvalidator.OneOf([]string{"WAITING_FOR_DEPENDENT_INPUT", "WAITING_FOR_OPERATOR_INPUT", "PENDING", "IN_PROGRESS", "SUCCEEDED", "FAILED"}...),
+							stringvalidator.OneOf([]string{
+								client.BUILDING_BLOCK_STATUS_WAITING_FOR_DEPENDENT_INPUT,
+								client.BUILDING_BLOCK_STATUS_WAITING_FOR_OPERATOR_INPUT,
+								client.BUILDING_BLOCK_STATUS_PENDING,
+								client.BUILDING_BLOCK_STATUS_IN_PROGRESS,
+								client.BUILDING_BLOCK_STATUS_SUCCEEDED,
+								client.BUILDING_BLOCK_STATUS_FAILED,
+							}...),
 						},
 					},
 					"force_purge": schema.BoolAttribute{
