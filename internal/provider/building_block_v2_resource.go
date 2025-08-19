@@ -385,18 +385,19 @@ func (r *buildingBlockV2Resource) Create(ctx context.Context, req resource.Creat
 		)
 		return
 	}
+	resp.Diagnostics.Append(setStateFromResponseV2(&ctx, &resp.State, created)...)
+
+	// ensure that user inputs and wait_for_completion are passed along from the plan
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("spec").AtName("inputs"), plan.Spec.Inputs)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("wait_for_completion"), plan.WaitForCompletion)...)
 
 	// Poll for completion if wait_for_completion is true
 	if !plan.WaitForCompletion.IsNull() && plan.WaitForCompletion.ValueBool() {
 		uuid := created.Metadata.Uuid
 		polled, err := r.client.PollBuildingBlockV2UntilCompletion(ctx, uuid)
 		if err != nil {
-			// Always store the initial state, even if the building block was created in a failed state
-			// This allows Terraform to track the resource and handle recreates appropriately
-			resp.Diagnostics.Append(setStateFromResponseV2(&ctx, &resp.State, created)...)
-			resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("status").AtName("status"), client.BUILDING_BLOCK_STATUS_FAILED)...)
-			resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("spec").AtName("inputs"), plan.Spec.Inputs)...)
-			resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("wait_for_completion"), plan.WaitForCompletion)...)
+			// If building block failed during or after polling, we still want to set the state to the last known state
+			resp.Diagnostics.Append(setStateFromResponseV2(&ctx, &resp.State, polled)...)
 
 			resp.Diagnostics.AddError(
 				"Error waiting for building block completion",
@@ -404,14 +405,7 @@ func (r *buildingBlockV2Resource) Create(ctx context.Context, req resource.Creat
 			)
 			return
 		}
-		created = polled
 	}
-
-	resp.Diagnostics.Append(setStateFromResponseV2(&ctx, &resp.State, created)...)
-
-	// ensure that user inputs and wait_for_completion are passed along from the plan
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("spec").AtName("inputs"), plan.Spec.Inputs)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("wait_for_completion"), plan.WaitForCompletion)...)
 }
 
 func (r *buildingBlockV2Resource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
