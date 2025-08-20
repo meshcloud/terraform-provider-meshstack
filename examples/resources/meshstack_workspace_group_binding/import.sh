@@ -1,2 +1,2 @@
-# import via project binding name
-terraform import 'meshstack_project_user_binding.example' 'my-binding-name'
+# import via workspace binding name
+terraform import 'meshstack_workspace_group_binding.example' 'my-binding-name'
