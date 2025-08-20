@@ -4,7 +4,7 @@ resource "meshstack_workspace_user_binding" "example" {
   }
 
   role_ref = {
-    name = "Workspace Reader"
+    name = "Workspace Member"
   }
 
   target_ref = {
