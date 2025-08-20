@@ -4,11 +4,11 @@ resource "meshstack_workspace_user_binding" "example" {
   }
 
   role_ref = {
-    name = "Project Reader"
+    name = "Workspace Reader"
   }
 
   target_ref = {
-    name = "my-project"
+    name = "my-workspace"
   }
 
   subject = {

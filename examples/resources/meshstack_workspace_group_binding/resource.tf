@@ -8,7 +8,7 @@ resource "meshstack_workspace_group_binding" "example" {
   }
 
   target_ref = {
-    name = "my-project"
+    name = "my-workspace"
   }
 
   subject = {

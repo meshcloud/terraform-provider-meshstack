@@ -61,13 +61,13 @@ func (r *workspaceGroupBindingResource) Configure(_ context.Context, req resourc
 // Schema defines the schema for the resource.
 func (r *workspaceGroupBindingResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Workspace group binding assigns a group with a specific role to a project.",
+		MarkdownDescription: "Workspace group binding assigns a group with a specific role to a workspace.",
 
 		Attributes: map[string]schema.Attribute{
 			"api_version": schema.StringAttribute{
 				MarkdownDescription: "Workspace group binding datatype version",
 				Computed:            true,
-				Default:             stringdefault.StaticString("v3"),
+				Default:             stringdefault.StaticString("v2"),
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 
@@ -108,11 +108,11 @@ func (r *workspaceGroupBindingResource) Schema(_ context.Context, _ resource.Sch
 			},
 
 			"target_ref": schema.SingleNestedAttribute{
-				MarkdownDescription: "Selects the project to which this binding applies.",
+				MarkdownDescription: "Selects the workspace to which this binding applies.",
 				Required:            true,
 				Attributes: map[string]schema.Attribute{
 					"name": schema.StringAttribute{
-						MarkdownDescription: "Project identifier.",
+						MarkdownDescription: "Workspace identifier.",
 						Required:            true,
 						PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 					},

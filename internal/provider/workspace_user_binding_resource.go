@@ -67,7 +67,7 @@ func (r *workspaceUserBindingResource) Schema(_ context.Context, _ resource.Sche
 			"api_version": schema.StringAttribute{
 				MarkdownDescription: "Workspace user binding datatype version",
 				Computed:            true,
-				Default:             stringdefault.StaticString("v3"),
+				Default:             stringdefault.StaticString("v2"),
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 
