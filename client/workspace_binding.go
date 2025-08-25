@@ -27,7 +27,7 @@ type MeshWorkspaceRoleRef struct {
 }
 
 type MeshWorkspaceTargetRef struct {
-	Name             string `json:"name" tfsdk:"name"`
+	Name string `json:"name" tfsdk:"name"`
 }
 
 type MeshWorkspaceSubject struct {

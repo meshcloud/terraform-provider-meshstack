@@ -114,6 +114,7 @@ func (p *MeshStackProvider) Resources(ctx context.Context) []func() resource.Res
 		NewBuildingBlockResource,
 		NewBuildingBlockV2Resource,
 		NewTagDefinitionResource,
+		NewPlatformResource,
 	}
 }
 
@@ -130,6 +131,7 @@ func (p *MeshStackProvider) DataSources(ctx context.Context) []func() datasource
 		NewTagDefinitionDataSource,
 		NewTagDefinitionsDataSource,
 		NewTenantV4DataSource,
+		NewPlatformDataSource,
 	}
 }
 
