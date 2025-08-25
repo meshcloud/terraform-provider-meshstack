@@ -108,7 +108,7 @@ func (r *platformResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						MarkdownDescription: "Type of the platform (e.g., 'azure', 'aws', 'gcp').",
 						Required:            true,
 					},
-					"configuration": schema.MapAttribute{
+					"config": schema.MapAttribute{
 						MarkdownDescription: "Platform-specific configuration parameters.",
 						ElementType:         types.StringType,
 						Optional:            true,
@@ -143,10 +143,10 @@ type platformMetadata struct {
 }
 
 type platformSpec struct {
-	DisplayName   types.String `json:"displayName" tfsdk:"display_name"`
-	PlatformType  types.String `json:"platformType" tfsdk:"platform_type"`
-	Configuration types.Map    `json:"configuration" tfsdk:"configuration"`
-	Tags          types.Map    `json:"tags" tfsdk:"tags"`
+	DisplayName  types.String `json:"displayName" tfsdk:"display_name"`
+	PlatformType types.String `json:"platformType" tfsdk:"platform_type"`
+	Config       types.Map    `json:"config" tfsdk:"config"`
+	Tags         types.Map    `json:"tags" tfsdk:"tags"`
 }
 
 // Create creates the resource and sets the initial Terraform state.
@@ -160,9 +160,9 @@ func (r *platformResource) Create(ctx context.Context, req resource.CreateReques
 	}
 
 	configuration := make(map[string]interface{})
-	if !plan.Spec.Configuration.IsNull() {
+	if !plan.Spec.Config.IsNull() {
 		var configMap map[string]string
-		diags = plan.Spec.Configuration.ElementsAs(ctx, &configMap, false)
+		diags = plan.Spec.Config.ElementsAs(ctx, &configMap, false)
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
@@ -186,10 +186,10 @@ func (r *platformResource) Create(ctx context.Context, req resource.CreateReques
 			Name: plan.Metadata.Name.ValueString(),
 		},
 		Spec: client.MeshPlatformSpec{
-			DisplayName:   plan.Spec.DisplayName.ValueString(),
-			PlatformType:  plan.Spec.PlatformType.ValueString(),
-			Configuration: configuration,
-			Tags:          tags,
+			DisplayName:  plan.Spec.DisplayName.ValueString(),
+			PlatformType: plan.Spec.PlatformType.ValueString(),
+			Config:       configuration,
+			Tags:         tags,
 		},
 	}
 
@@ -204,7 +204,7 @@ func (r *platformResource) Create(ctx context.Context, req resource.CreateReques
 
 	// Convert configuration back to string map for state
 	configurationMap := make(map[string]string)
-	for k, v := range platform.Spec.Configuration {
+	for k, v := range platform.Spec.Config {
 		if strVal, ok := v.(string); ok {
 			configurationMap[k] = strVal
 		} else {
@@ -232,9 +232,9 @@ func (r *platformResource) Create(ctx context.Context, req resource.CreateReques
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		planResult.Spec.Configuration = configMap
+		planResult.Spec.Config = configMap
 	} else {
-		planResult.Spec.Configuration = types.MapNull(types.StringType)
+		planResult.Spec.Config = types.MapNull(types.StringType)
 	}
 
 	if len(platform.Spec.Tags) > 0 {
@@ -285,7 +285,7 @@ func (r *platformResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	// Convert configuration back to string map for state
 	configurationMap := make(map[string]string)
-	for k, v := range platform.Spec.Configuration {
+	for k, v := range platform.Spec.Config {
 		if strVal, ok := v.(string); ok {
 			configurationMap[k] = strVal
 		} else {
@@ -313,9 +313,9 @@ func (r *platformResource) Read(ctx context.Context, req resource.ReadRequest, r
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		updatedState.Spec.Configuration = configMap
+		updatedState.Spec.Config = configMap
 	} else {
-		updatedState.Spec.Configuration = types.MapNull(types.StringType)
+		updatedState.Spec.Config = types.MapNull(types.StringType)
 	}
 
 	if len(platform.Spec.Tags) > 0 {
@@ -351,9 +351,9 @@ func (r *platformResource) Update(ctx context.Context, req resource.UpdateReques
 	}
 
 	configuration := make(map[string]interface{})
-	if !plan.Spec.Configuration.IsNull() {
+	if !plan.Spec.Config.IsNull() {
 		var configMap map[string]string
-		diags = plan.Spec.Configuration.ElementsAs(ctx, &configMap, false)
+		diags = plan.Spec.Config.ElementsAs(ctx, &configMap, false)
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
@@ -377,10 +377,10 @@ func (r *platformResource) Update(ctx context.Context, req resource.UpdateReques
 			Name: plan.Metadata.Name.ValueString(),
 		},
 		Spec: client.MeshPlatformSpec{
-			DisplayName:   plan.Spec.DisplayName.ValueString(),
-			PlatformType:  plan.Spec.PlatformType.ValueString(),
-			Configuration: configuration,
-			Tags:          tags,
+			DisplayName:  plan.Spec.DisplayName.ValueString(),
+			PlatformType: plan.Spec.PlatformType.ValueString(),
+			Config:       configuration,
+			Tags:         tags,
 		},
 	}
 
@@ -395,7 +395,7 @@ func (r *platformResource) Update(ctx context.Context, req resource.UpdateReques
 
 	// Convert configuration back to string map for state
 	configurationMap := make(map[string]string)
-	for k, v := range platform.Spec.Configuration {
+	for k, v := range platform.Spec.Config {
 		if strVal, ok := v.(string); ok {
 			configurationMap[k] = strVal
 		} else {
@@ -423,9 +423,9 @@ func (r *platformResource) Update(ctx context.Context, req resource.UpdateReques
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		planResult.Spec.Configuration = configMap
+		planResult.Spec.Config = configMap
 	} else {
-		planResult.Spec.Configuration = types.MapNull(types.StringType)
+		planResult.Spec.Config = types.MapNull(types.StringType)
 	}
 
 	if len(platform.Spec.Tags) > 0 {

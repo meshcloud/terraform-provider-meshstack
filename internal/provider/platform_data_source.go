@@ -78,7 +78,7 @@ func (d *platformDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 						MarkdownDescription: "Type of the platform.",
 						Computed:            true,
 					},
-					"configuration": schema.MapAttribute{
+					"config": schema.MapAttribute{
 						MarkdownDescription: "Platform configuration.",
 						ElementType:         types.StringType,
 						Computed:            true,
@@ -128,10 +128,10 @@ type platformDataSourceMetadata struct {
 }
 
 type platformDataSourceSpec struct {
-	DisplayName   types.String `tfsdk:"display_name"`
-	PlatformType  types.String `tfsdk:"platform_type"`
-	Configuration types.Map    `tfsdk:"configuration"`
-	Tags          types.Map    `tfsdk:"tags"`
+	DisplayName  types.String `tfsdk:"display_name"`
+	PlatformType types.String `tfsdk:"platform_type"`
+	Config       types.Map    `tfsdk:"config"`
+	Tags         types.Map    `tfsdk:"tags"`
 }
 
 func (d *platformDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
@@ -163,7 +163,7 @@ func (d *platformDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 	// Convert configuration to string map for data source
 	configurationMap := make(map[string]string)
-	for k, v := range platform.Spec.Configuration {
+	for k, v := range platform.Spec.Config {
 		if strVal, ok := v.(string); ok {
 			configurationMap[k] = strVal
 		} else {
@@ -190,9 +190,9 @@ func (d *platformDataSource) Read(ctx context.Context, req datasource.ReadReques
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		data.Spec.Configuration = configMap
+		data.Spec.Config = configMap
 	} else {
-		data.Spec.Configuration = types.MapNull(types.StringType)
+		data.Spec.Config = types.MapNull(types.StringType)
 	}
 
 	if len(platform.Spec.Tags) > 0 {

@@ -25,10 +25,10 @@ type MeshPlatformMetadata struct {
 }
 
 type MeshPlatformSpec struct {
-	DisplayName   string                 `json:"displayName" tfsdk:"display_name"`
-	PlatformType  string                 `json:"platformType" tfsdk:"platform_type"`
-	Configuration map[string]interface{} `json:"configuration,omitempty" tfsdk:"configuration"`
-	Tags          map[string][]string    `json:"tags,omitempty" tfsdk:"tags"`
+	DisplayName  string                 `json:"displayName" tfsdk:"display_name"`
+	PlatformType string                 `json:"platformType" tfsdk:"platform_type"`
+	Config       map[string]interface{} `json:"config,omitempty" tfsdk:"config"`
+	Tags         map[string][]string    `json:"tags,omitempty" tfsdk:"tags"`
 }
 
 type MeshPlatformCreate struct {
