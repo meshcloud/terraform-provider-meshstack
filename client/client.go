@@ -33,16 +33,16 @@ type MeshStackProviderClient struct {
 }
 
 type endpoints struct {
-	BuildingBlocks			*url.URL `json:"meshbuildingblocks"`
-	Projects				*url.URL `json:"meshprojects"`
-	ProjectUserBindings		*url.URL `json:"meshprojectuserbindings"`
-	ProjectGroupBindings	*url.URL `json:"meshprojectgroupbindings"`
-	Workspaces				*url.URL `json:"meshworkspaces"`
-	WorkspaceUserBindings	*url.URL `json:"meshworkspaceuserbindings"`
-	WorkspaceGroupBindings	*url.URL `json:"meshworkspacegroupbindings"`
-	Tenants					*url.URL `json:"meshtenants"`
-	TagDefinitions			*url.URL `json:"meshtagdefinitions"`
-	Platforms				*url.URL `json:"meshplatforms"`
+	BuildingBlocks         *url.URL `json:"meshbuildingblocks"`
+	Projects               *url.URL `json:"meshprojects"`
+	ProjectUserBindings    *url.URL `json:"meshprojectuserbindings"`
+	ProjectGroupBindings   *url.URL `json:"meshprojectgroupbindings"`
+	Workspaces             *url.URL `json:"meshworkspaces"`
+	WorkspaceUserBindings  *url.URL `json:"meshworkspaceuserbindings"`
+	WorkspaceGroupBindings *url.URL `json:"meshworkspacegroupbindings"`
+	Tenants                *url.URL `json:"meshtenants"`
+	TagDefinitions         *url.URL `json:"meshtagdefinitions"`
+	Platforms              *url.URL `json:"meshplatforms"`
 }
 
 type loginResponse struct {
@@ -63,16 +63,16 @@ func NewClient(rootUrl *url.URL, apiKey string, apiSecret string) (*MeshStackPro
 
 	// TODO: lookup endpoints
 	client.endpoints = endpoints{
-		BuildingBlocks:			rootUrl.JoinPath(apiMeshObjectsRoot, "meshbuildingblocks"),
-		Projects:				rootUrl.JoinPath(apiMeshObjectsRoot, "meshprojects"),
-		ProjectUserBindings:	rootUrl.JoinPath(apiMeshObjectsRoot, "meshprojectbindings", "userbindings"),
-		ProjectGroupBindings:	rootUrl.JoinPath(apiMeshObjectsRoot, "meshprojectbindings", "groupbindings"),
-		Workspaces:				rootUrl.JoinPath(apiMeshObjectsRoot, "meshworkspaces"),
-		WorkspaceUserBindings:	rootUrl.JoinPath(apiMeshObjectsRoot, "meshworkspacebindings", "userbindings"),
-		WorkspaceGroupBindings:	rootUrl.JoinPath(apiMeshObjectsRoot, "meshworkspacebindings", "groupbindings"),
-		Tenants:				rootUrl.JoinPath(apiMeshObjectsRoot, "meshtenants"),
-		TagDefinitions:			rootUrl.JoinPath(apiMeshObjectsRoot, "meshtagdefinitions"),
-		Platforms:				rootUrl.JoinPath(apiMeshObjectsRoot, "meshplatforms"),
+		BuildingBlocks:         rootUrl.JoinPath(apiMeshObjectsRoot, "meshbuildingblocks"),
+		Projects:               rootUrl.JoinPath(apiMeshObjectsRoot, "meshprojects"),
+		ProjectUserBindings:    rootUrl.JoinPath(apiMeshObjectsRoot, "meshprojectbindings", "userbindings"),
+		ProjectGroupBindings:   rootUrl.JoinPath(apiMeshObjectsRoot, "meshprojectbindings", "groupbindings"),
+		Workspaces:             rootUrl.JoinPath(apiMeshObjectsRoot, "meshworkspaces"),
+		WorkspaceUserBindings:  rootUrl.JoinPath(apiMeshObjectsRoot, "meshworkspacebindings", "userbindings"),
+		WorkspaceGroupBindings: rootUrl.JoinPath(apiMeshObjectsRoot, "meshworkspacebindings", "groupbindings"),
+		Tenants:                rootUrl.JoinPath(apiMeshObjectsRoot, "meshtenants"),
+		TagDefinitions:         rootUrl.JoinPath(apiMeshObjectsRoot, "meshtagdefinitions"),
+		Platforms:              rootUrl.JoinPath(apiMeshObjectsRoot, "meshplatforms"),
 	}
 
 	return client, nil

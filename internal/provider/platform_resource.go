@@ -130,10 +130,10 @@ func (r *platformResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 
 // These structs use Terraform types so that we can read the plan and check for unknown/null values.
 type platformCreate struct {
-	ApiVersion types.String       `json:"apiVersion" tfsdk:"api_version"`
-	Kind       types.String       `json:"kind" tfsdk:"kind"`
-	Metadata   platformMetadata   `json:"metadata" tfsdk:"metadata"`
-	Spec       platformSpec       `json:"spec" tfsdk:"spec"`
+	ApiVersion types.String     `json:"apiVersion" tfsdk:"api_version"`
+	Kind       types.String     `json:"kind" tfsdk:"kind"`
+	Metadata   platformMetadata `json:"metadata" tfsdk:"metadata"`
+	Spec       platformSpec     `json:"spec" tfsdk:"spec"`
 }
 
 type platformMetadata struct {
