@@ -25,11 +25,41 @@ type MeshPlatformMetadata struct {
 }
 
 type MeshPlatformSpec struct {
-	DisplayName  string                 `json:"displayName" tfsdk:"display_name"`
-	PlatformType string                 `json:"platformType" tfsdk:"platform_type"`
-	Description  *string                `json:"description,omitempty" tfsdk:"description"`
-	Tags         map[string][]string    `json:"tags,omitempty" tfsdk:"tags"`
-	Config       map[string]interface{} `json:"config,omitempty" tfsdk:"config"`
+	DisplayName  string              `json:"displayName" tfsdk:"display_name"`
+	PlatformType string              `json:"platformType" tfsdk:"platform_type"`
+	Description  *string             `json:"description,omitempty" tfsdk:"description"`
+	Tags         map[string][]string `json:"tags,omitempty" tfsdk:"tags"`
+	Config       *PlatformConfig     `json:"config,omitempty" tfsdk:"config"`
+}
+
+// PlatformConfig holds configuration for different platform types
+type PlatformConfig struct {
+	AWS *AWSPlatformConfig `json:"aws,omitempty" tfsdk:"aws"`
+	// Future platform types can be added here:
+	// Azure    *AzurePlatformConfig    `json:"azure,omitempty" tfsdk:"azure"`
+	// OpenStack *OpenStackPlatformConfig `json:"openstack,omitempty" tfsdk:"openstack"`
+}
+
+// AWSPlatformConfig represents AWS platform configuration
+// Based on the meshStack API documentation for AWS platforms
+type AWSPlatformConfig struct {
+	// AWS Account ID
+	AccountId string `json:"accountId" tfsdk:"account_id"`
+	
+	// AWS Region  
+	Region string `json:"region" tfsdk:"region"`
+	
+	// AWS API endpoint URL (optional, defaults to standard AWS endpoints)
+	EndpointUrl *string `json:"endpointUrl,omitempty" tfsdk:"endpoint_url"`
+	
+	// IAM Role ARN for cross-account access (optional)
+	RoleArn *string `json:"roleArn,omitempty" tfsdk:"role_arn"`
+	
+	// External ID for role assumption (optional, used with RoleArn)
+	ExternalId *string `json:"externalId,omitempty" tfsdk:"external_id"`
+	
+	// Additional AWS-specific configuration options
+	AssumeRoleSessionName *string `json:"assumeRoleSessionName,omitempty" tfsdk:"assume_role_session_name"`
 }
 
 type MeshPlatformCreate struct {

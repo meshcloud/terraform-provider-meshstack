@@ -132,12 +132,41 @@ func (r *meshPlatformResource) Schema(_ context.Context, _ resource.SchemaReques
 						Computed:            true,
 						Default:             mapdefault.StaticValue(types.MapValueMust(types.ListType{ElemType: types.StringType}, map[string]attr.Value{})),
 					},
-					"config": schema.MapAttribute{
+					"config": schema.SingleNestedAttribute{
 						MarkdownDescription: "Platform-specific configuration options.",
-						ElementType:         types.StringType,
 						Optional:            true,
-						Computed:            true,
-						Default:             mapdefault.StaticValue(types.MapValueMust(types.StringType, map[string]attr.Value{})),
+						Attributes: map[string]schema.Attribute{
+							"aws": schema.SingleNestedAttribute{
+								MarkdownDescription: "AWS platform configuration.",
+								Optional:            true,
+								Attributes: map[string]schema.Attribute{
+									"account_id": schema.StringAttribute{
+										MarkdownDescription: "AWS Account ID.",
+										Required:            true,
+									},
+									"region": schema.StringAttribute{
+										MarkdownDescription: "AWS Region.",
+										Required:            true,
+									},
+									"endpoint_url": schema.StringAttribute{
+										MarkdownDescription: "AWS API endpoint URL (optional, defaults to standard AWS endpoints).",
+										Optional:            true,
+									},
+									"role_arn": schema.StringAttribute{
+										MarkdownDescription: "IAM Role ARN for cross-account access.",
+										Optional:            true,
+									},
+									"external_id": schema.StringAttribute{
+										MarkdownDescription: "External ID for role assumption (used with role_arn).",
+										Optional:            true,
+									},
+									"assume_role_session_name": schema.StringAttribute{
+										MarkdownDescription: "Session name for role assumption.",
+										Optional:            true,
+									},
+								},
+							},
+						},
 					},
 				},
 			},
