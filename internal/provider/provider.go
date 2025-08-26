@@ -114,6 +114,7 @@ func (p *MeshStackProvider) Resources(ctx context.Context) []func() resource.Res
 		NewBuildingBlockResource,
 		NewBuildingBlockV2Resource,
 		NewTagDefinitionResource,
+		NewMeshPlatformResource,
 	}
 }
 
