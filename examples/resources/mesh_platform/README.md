@@ -12,16 +12,22 @@ The `meshstack_mesh_platform` resource allows you to manage meshStack platforms 
 resource "meshstack_mesh_platform" "example" {
   metadata = {
     name = "my-platform"
-    tags = {
-      environment = ["production"]
-      team        = ["platform-team"]
-    }
   }
 
   spec = {
     display_name   = "My Platform"
     platform_type  = "OpenStack"
     description    = "Platform for production workloads"
+    
+    tags = {
+      environment = ["production"]
+      team        = ["platform-team"]
+    }
+    
+    config = {
+      auth_url = "https://keystone.example.com:5000/v3"
+      region   = "RegionOne"
+    }
   }
 }
 ```
@@ -30,7 +36,6 @@ resource "meshstack_mesh_platform" "example" {
 
 ### `metadata`
 - `name` (Required) - Platform identifier. Must be unique and follow naming conventions.
-- `tags` (Optional) - Key-value pairs for organizing platforms. Values must be lists of strings.
 - `created_on` (Computed) - Timestamp when the platform was created
 - `deleted_on` (Computed) - Timestamp when the platform was deleted (if applicable)
 
@@ -38,7 +43,8 @@ resource "meshstack_mesh_platform" "example" {
 - `display_name` (Required) - Human-readable name for the platform
 - `platform_type` (Required) - Type of platform (e.g., "OpenStack", "Azure", "AWS", "GCP")
 - `description` (Optional) - Description of the platform
-- `tags` (Optional) - Additional platform-specific tags
+- `tags` (Optional) - Key-value pairs for organizing platforms. Values must be lists of strings.
+- `config` (Optional) - Platform-specific configuration options as key-value pairs
 
 ## Import
 

@@ -20,11 +20,6 @@ provider "meshstack" {
 resource "meshstack_mesh_platform" "example" {
   metadata = {
     name = "my-openstack-platform"
-    tags = {
-      environment = ["production"]
-      team        = ["platform-team"]
-      region      = ["eu-west-1"]
-    }
   }
 
   spec = {
@@ -35,6 +30,14 @@ resource "meshstack_mesh_platform" "example" {
     tags = {
       tier       = ["production"]
       capability = ["compute", "storage"]
+      environment = ["production"]
+      team        = ["platform-team"]
+      region      = ["eu-west-1"]
+    }
+    
+    config = {
+      auth_url = "https://keystone.example.com:5000/v3"
+      region   = "RegionOne"
     }
   }
 }
@@ -43,15 +46,23 @@ resource "meshstack_mesh_platform" "example" {
 resource "meshstack_mesh_platform" "azure_example" {
   metadata = {
     name = "my-azure-platform"
-    tags = {
-      environment = ["staging"]
-    }
   }
 
   spec = {
     display_name   = "Staging Azure Platform"
     platform_type  = "Azure"
     description    = "Azure platform for development and staging workloads"
+    
+    tags = {
+      environment = ["staging"]
+      team        = ["dev-team"]
+    }
+    
+    config = {
+      tenant_id       = "12345678-1234-1234-1234-123456789abc"
+      subscription_id = "87654321-4321-4321-4321-cba987654321"
+      location        = "West Europe"
+    }
   }
 }
 

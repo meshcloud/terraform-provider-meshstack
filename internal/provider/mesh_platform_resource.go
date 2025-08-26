@@ -107,13 +107,6 @@ func (r *meshPlatformResource) Schema(_ context.Context, _ resource.SchemaReques
 						Computed:            true,
 						PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 					},
-					"tags": schema.MapAttribute{
-						MarkdownDescription: "Tags of the platform.",
-						ElementType:         types.ListType{ElemType: types.StringType},
-						Optional:            true,
-						Computed:            true,
-						Default:             mapdefault.StaticValue(types.MapValueMust(types.ListType{ElemType: types.StringType}, map[string]attr.Value{})),
-					},
 				},
 			},
 
@@ -139,6 +132,13 @@ func (r *meshPlatformResource) Schema(_ context.Context, _ resource.SchemaReques
 						Computed:            true,
 						Default:             mapdefault.StaticValue(types.MapValueMust(types.ListType{ElemType: types.StringType}, map[string]attr.Value{})),
 					},
+					"config": schema.MapAttribute{
+						MarkdownDescription: "Platform-specific configuration options.",
+						ElementType:         types.StringType,
+						Optional:            true,
+						Computed:            true,
+						Default:             mapdefault.StaticValue(types.MapValueMust(types.StringType, map[string]attr.Value{})),
+					},
 				},
 			},
 		},
@@ -154,7 +154,6 @@ func (r *meshPlatformResource) Create(ctx context.Context, req resource.CreateRe
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("api_version"), &platform.ApiVersion)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec"), &platform.Spec)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("metadata").AtName("name"), &platform.Metadata.Name)...)
-	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("metadata").AtName("tags"), &platform.Metadata.Tags)...)
 
 	if resp.Diagnostics.HasError() {
 		return
@@ -210,7 +209,6 @@ func (r *meshPlatformResource) Update(ctx context.Context, req resource.UpdateRe
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("api_version"), &platform.ApiVersion)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec"), &platform.Spec)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("metadata").AtName("name"), &platform.Metadata.Name)...)
-	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("metadata").AtName("tags"), &platform.Metadata.Tags)...)
 
 	if resp.Diagnostics.HasError() {
 		return

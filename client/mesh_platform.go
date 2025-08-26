@@ -19,17 +19,17 @@ type MeshPlatform struct {
 }
 
 type MeshPlatformMetadata struct {
-	Name      string              `json:"name" tfsdk:"name"`
-	CreatedOn string              `json:"createdOn" tfsdk:"created_on"`
-	DeletedOn *string             `json:"deletedOn" tfsdk:"deleted_on"`
-	Tags      map[string][]string `json:"tags" tfsdk:"tags"`
+	Name      string  `json:"name" tfsdk:"name"`
+	CreatedOn string  `json:"createdOn" tfsdk:"created_on"`
+	DeletedOn *string `json:"deletedOn" tfsdk:"deleted_on"`
 }
 
 type MeshPlatformSpec struct {
-	DisplayName  string              `json:"displayName" tfsdk:"display_name"`
-	PlatformType string              `json:"platformType" tfsdk:"platform_type"`
-	Description  *string             `json:"description,omitempty" tfsdk:"description"`
-	Tags         map[string][]string `json:"tags,omitempty" tfsdk:"tags"`
+	DisplayName  string                 `json:"displayName" tfsdk:"display_name"`
+	PlatformType string                 `json:"platformType" tfsdk:"platform_type"`
+	Description  *string                `json:"description,omitempty" tfsdk:"description"`
+	Tags         map[string][]string    `json:"tags,omitempty" tfsdk:"tags"`
+	Config       map[string]interface{} `json:"config,omitempty" tfsdk:"config"`
 }
 
 type MeshPlatformCreate struct {
@@ -39,8 +39,7 @@ type MeshPlatformCreate struct {
 }
 
 type MeshPlatformCreateMetadata struct {
-	Name string              `json:"name" tfsdk:"name"`
-	Tags map[string][]string `json:"tags,omitempty" tfsdk:"tags"`
+	Name string `json:"name" tfsdk:"name"`
 }
 
 func (c *MeshStackProviderClient) urlForPlatform(identifier string) *url.URL {
