@@ -19,57 +19,56 @@ type MeshPlatform struct {
 }
 
 type MeshPlatformMetadata struct {
-	Name      string  `json:"name" tfsdk:"name"`
-	CreatedOn string  `json:"createdOn" tfsdk:"created_on"`
-	DeletedOn *string `json:"deletedOn" tfsdk:"deleted_on"`
+	Name             string  `json:"name" tfsdk:"name"`
+	OwnedByWorkspace string  `json:"ownedByWorkspace" tfsdk:"owned_by_workspace"`
+	CreatedOn        string  `json:"createdOn" tfsdk:"created_on"`
+	DeletedOn        *string `json:"deletedOn" tfsdk:"deleted_on"`
 }
 
 type MeshPlatformSpec struct {
-	DisplayName  string              `json:"displayName" tfsdk:"display_name"`
-	PlatformType string              `json:"platformType" tfsdk:"platform_type"`
-	Description  *string             `json:"description,omitempty" tfsdk:"description"`
-	Tags         map[string][]string `json:"tags,omitempty" tfsdk:"tags"`
-	Config       *PlatformConfig     `json:"config,omitempty" tfsdk:"config"`
+	DisplayName            string                    `json:"displayName" tfsdk:"display_name"`
+	LocationRef            *LocationRef              `json:"locationRef,omitempty" tfsdk:"location_ref"`
+	Description            *string                   `json:"description,omitempty" tfsdk:"description"`
+	Endpoint               string                    `json:"endpoint" tfsdk:"endpoint"`
+	SupportUrl             *string                   `json:"supportUrl,omitempty" tfsdk:"support_url"`
+	DocumentationUrl       *string                   `json:"documentationUrl,omitempty" tfsdk:"documentation_url"`
+	Availability           *MeshPlatformAvailability `json:"availability,omitempty" tfsdk:"availability"`
+	Config                 *PlatformConfig           `json:"config,omitempty" tfsdk:"config"`
+	ContributingWorkspaces []string                  `json:"contributingWorkspaces,omitempty" tfsdk:"contributing_workspaces"`
+}
+
+type MeshPlatformAvailability struct {
+	Restriction            string   `json:"restriction" tfsdk:"restriction"`
+	RestrictedToWorkspaces []string `json:"restrictedToWorkspaces,omitempty" tfsdk:"restricted_to_workspaces"`
+	MarketplaceStatus      string   `json:"marketplaceStatus" tfsdk:"marketplace_status"`
+}
+
+type LocationRef struct {
+	Kind       string `json:"kind" tfsdk:"kind"`
+	Identifier string `json:"identifier" tfsdk:"identifier"`
 }
 
 // PlatformConfig holds configuration for different platform types
 type PlatformConfig struct {
-	AWS *AWSPlatformConfig `json:"aws,omitempty" tfsdk:"aws"`
-	// Future platform types can be added here:
-	// Azure    *AzurePlatformConfig    `json:"azure,omitempty" tfsdk:"azure"`
-	// OpenStack *OpenStackPlatformConfig `json:"openstack,omitempty" tfsdk:"openstack"`
+	Type       string                    `json:"type" tfsdk:"type"`
+	AWS        *AWSPlatformConfig        `json:"aws,omitempty" tfsdk:"aws"`
+	AKS        *AKSPlatformConfig        `json:"aks,omitempty" tfsdk:"aks"`
+	Azure      *AzurePlatformConfig      `json:"azure,omitempty" tfsdk:"azure"`
+	AzureRG    *AzureRGPlatformConfig    `json:"azurerg,omitempty" tfsdk:"azurerg"`
+	GCP        *GCPPlatformConfig        `json:"gcp,omitempty" tfsdk:"gcp"`
+	Kubernetes *KubernetesPlatformConfig `json:"kubernetes,omitempty" tfsdk:"kubernetes"`
+	OpenShift  *OpenShiftPlatformConfig  `json:"openshift,omitempty" tfsdk:"openshift"`
 }
 
-// AWSPlatformConfig represents AWS platform configuration
-// Based on the meshStack API documentation for AWS platforms
-type AWSPlatformConfig struct {
-	// AWS Account ID
-	AccountId string `json:"accountId" tfsdk:"account_id"`
-	
-	// AWS Region  
-	Region string `json:"region" tfsdk:"region"`
-	
-	// AWS API endpoint URL (optional, defaults to standard AWS endpoints)
-	EndpointUrl *string `json:"endpointUrl,omitempty" tfsdk:"endpoint_url"`
-	
-	// IAM Role ARN for cross-account access (optional)
-	RoleArn *string `json:"roleArn,omitempty" tfsdk:"role_arn"`
-	
-	// External ID for role assumption (optional, used with RoleArn)
-	ExternalId *string `json:"externalId,omitempty" tfsdk:"external_id"`
-	
-	// Additional AWS-specific configuration options
-	AssumeRoleSessionName *string `json:"assumeRoleSessionName,omitempty" tfsdk:"assume_role_session_name"`
+type PlatformCreate struct {
+	ApiVersion string                 `json:"apiVersion" tfsdk:"api_version"`
+	Metadata   PlatformCreateMetadata `json:"metadata" tfsdk:"metadata"`
+	Spec       MeshPlatformSpec       `json:"spec" tfsdk:"spec"`
 }
 
-type MeshPlatformCreate struct {
-	ApiVersion string                     `json:"apiVersion" tfsdk:"api_version"`
-	Metadata   MeshPlatformCreateMetadata `json:"metadata" tfsdk:"metadata"`
-	Spec       MeshPlatformSpec           `json:"spec" tfsdk:"spec"`
-}
-
-type MeshPlatformCreateMetadata struct {
-	Name string `json:"name" tfsdk:"name"`
+type PlatformCreateMetadata struct {
+	Name             string `json:"name" tfsdk:"name"`
+	OwnedByWorkspace string `json:"ownedByWorkspace" tfsdk:"owned_by_workspace"`
 }
 
 func (c *MeshStackProviderClient) urlForPlatform(identifier string) *url.URL {
@@ -112,7 +111,7 @@ func (c *MeshStackProviderClient) ReadPlatform(identifier string) (*MeshPlatform
 	return &platform, nil
 }
 
-func (c *MeshStackProviderClient) CreatePlatform(platform *MeshPlatformCreate) (*MeshPlatform, error) {
+func (c *MeshStackProviderClient) CreatePlatform(platform *PlatformCreate) (*MeshPlatform, error) {
 	payload, err := json.Marshal(platform)
 	if err != nil {
 		return nil, err
@@ -148,7 +147,7 @@ func (c *MeshStackProviderClient) CreatePlatform(platform *MeshPlatformCreate) (
 	return &createdPlatform, nil
 }
 
-func (c *MeshStackProviderClient) UpdatePlatform(identifier string, platform *MeshPlatformCreate) (*MeshPlatform, error) {
+func (c *MeshStackProviderClient) UpdatePlatform(identifier string, platform *PlatformCreate) (*MeshPlatform, error) {
 	targetUrl := c.urlForPlatform(identifier)
 
 	payload, err := json.Marshal(platform)
