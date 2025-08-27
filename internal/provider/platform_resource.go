@@ -9,9 +9,11 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -62,6 +64,7 @@ func (r *platformResource) Configure(_ context.Context, req resource.ConfigureRe
 }
 
 func (r *platformResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Represents a meshStack platform.\n\n~> **Note:** Managing platforms requires an API key with sufficient admin permissions.",
 
@@ -81,7 +84,8 @@ func (r *platformResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			},
 
 			"metadata": schema.SingleNestedAttribute{
-				Required: true,
+				Required:      true,
+				PlanModifiers: []planmodifier.Object{objectplanmodifier.RequiresReplace()},
 				Attributes: map[string]schema.Attribute{
 					"name": schema.StringAttribute{
 						MarkdownDescription: "Platform identifier.",
@@ -95,6 +99,11 @@ func (r *platformResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 								"must be alphanumeric with dots, dashes or underscores",
 							),
 						},
+					},
+					"uuid": schema.StringAttribute{
+						MarkdownDescription: "Platform UUID (calculated by the backend).",
+						Computed:            true,
+						PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 					},
 					"owned_by_workspace": schema.StringAttribute{
 						MarkdownDescription: "Workspace identifier that owns this platform.",
@@ -154,6 +163,7 @@ func (r *platformResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					"availability": schema.SingleNestedAttribute{
 						MarkdownDescription: "Platform availability configuration.",
 						Optional:            true,
+						Computed:            true,
 						Attributes: map[string]schema.Attribute{
 							"restriction": schema.StringAttribute{
 								MarkdownDescription: "Platform access restriction ('PUBLIC', 'PRIVATE', 'RESTRICTED').",
@@ -162,10 +172,11 @@ func (r *platformResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 									stringvalidator.OneOf("PUBLIC", "PRIVATE", "RESTRICTED"),
 								},
 							},
-							"restricted_to_workspaces": schema.ListAttribute{
-								MarkdownDescription: "List of workspace identifiers that have access to this platform (only relevant for RESTRICTED platforms).",
+							"restricted_to_workspaces": schema.SetAttribute{
+								MarkdownDescription: "Set of workspace identifiers that have access to this platform (only relevant for RESTRICTED platforms).",
 								ElementType:         types.StringType,
 								Optional:            true,
+								Computed:            true,
 							},
 							"marketplace_status": schema.StringAttribute{
 								MarkdownDescription: "Platform marketplace publication status ('UNPUBLISHED', 'PUBLISHED', 'REQUESTED', 'REJECTED').",
@@ -176,14 +187,18 @@ func (r *platformResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 							},
 						},
 					},
-					"contributing_workspaces": schema.ListAttribute{
-						MarkdownDescription: "List of workspace identifiers that contribute to this platform.",
+					"contributing_workspaces": schema.SetAttribute{
+						MarkdownDescription: "Set of workspace identifiers that contribute to this platform. May be recalculated by the backend.",
 						ElementType:         types.StringType,
 						Optional:            true,
+						Computed:            true,
 					},
+
 					"config": schema.SingleNestedAttribute{
 						MarkdownDescription: "Platform-specific configuration options.",
 						Optional:            true,
+						Computed:            true,
+						Sensitive:           true,
 						Attributes: map[string]schema.Attribute{
 							"aws":        awsPlatformConfigSchema(),
 							"aks":        aksPlatformConfigSchema(),
@@ -196,6 +211,7 @@ func (r *platformResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 								MarkdownDescription: "Type of the platform (e.g., 'aks', 'aws', 'azure', 'azurerg', 'gcp', 'kubernetes', 'openshift').",
 								Required:            true,
 							},
+							// TODO validator that type matches the selected platform config
 						},
 					},
 				},
@@ -228,14 +244,37 @@ func (r *platformResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, createdPlatform)...)
+	diags := make(diag.Diagnostics, 0)
+
+	diags.Append(resp.State.SetAttribute(ctx, path.Root("api_version"), createdPlatform.ApiVersion)...)
+	diags.Append(resp.State.SetAttribute(ctx, path.Root("kind"), createdPlatform.Kind)...)
+	diags.Append(resp.State.SetAttribute(ctx, path.Root("metadata"), createdPlatform.Metadata)...)
+	diags.Append(resp.State.SetAttribute(ctx, path.Root("spec").AtName("display_name"), createdPlatform.Spec.DisplayName)...)
+	diags.Append(resp.State.SetAttribute(ctx, path.Root("spec").AtName("location_ref"), createdPlatform.Spec.LocationRef)...)
+	diags.Append(resp.State.SetAttribute(ctx, path.Root("spec").AtName("description"), createdPlatform.Spec.Description)...)
+	diags.Append(resp.State.SetAttribute(ctx, path.Root("spec").AtName("endpoint"), createdPlatform.Spec.Endpoint)...)
+	diags.Append(resp.State.SetAttribute(ctx, path.Root("spec").AtName("support_url"), createdPlatform.Spec.SupportUrl)...)
+	diags.Append(resp.State.SetAttribute(ctx, path.Root("spec").AtName("documentation_url"), createdPlatform.Spec.DocumentationUrl)...)
+	//diags.Append(resp.State.SetAttribute(ctx, path.Root("spec").AtName("availability"), createdPlatform.Spec.Availability)...)
+	diags.Append(resp.State.SetAttribute(ctx, path.Root("spec").AtName("contributing_workspaces"), createdPlatform.Spec.ContributingWorkspaces)...)
+
+	resp.Diagnostics.Append(diags...)
+
+	// ensure that config is passed along from the plan, because the API does obfuscate secrets
+	var c PlatformConfigModel
+	req.Plan.GetAttribute(ctx, path.Root("spec").AtName("config"), &c)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("spec").AtName("config"), c)...)
+
+	var a MeshPlatformAvailabilityModel
+	req.Plan.GetAttribute(ctx, path.Root("spec").AtName("availability"), &a)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("spec").AtName("availability"), a)...)
 }
 
 func (r *platformResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var identifier string
 
 	// Read Terraform state data into the model
-	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("metadata").AtName("name"), &identifier)...)
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("metadata").AtName("uuid"), &identifier)...)
 
 	if resp.Diagnostics.HasError() {
 		return
@@ -269,13 +308,14 @@ func (r *platformResource) Update(ctx context.Context, req resource.UpdateReques
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("api_version"), &platform.ApiVersion)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec"), &platform.Spec)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("metadata").AtName("name"), &platform.Metadata.Name)...)
+	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("metadata").AtName("uuid"), &platform.Metadata.UUID)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("metadata").AtName("owned_by_workspace"), &platform.Metadata.OwnedByWorkspace)...)
 
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	updatedPlatform, err := r.client.UpdatePlatform(platform.Metadata.Name, &platform)
+	updatedPlatform, err := r.client.UpdatePlatform(*platform.Metadata.UUID, &platform)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Updating Platform",
@@ -290,7 +330,7 @@ func (r *platformResource) Update(ctx context.Context, req resource.UpdateReques
 func (r *platformResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var identifier string
 
-	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("metadata").AtName("name"), &identifier)...)
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("metadata").AtName("uuid"), &identifier)...)
 
 	if resp.Diagnostics.HasError() {
 		return

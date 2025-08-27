@@ -20,6 +20,7 @@ type MeshPlatform struct {
 
 type MeshPlatformMetadata struct {
 	Name             string  `json:"name" tfsdk:"name"`
+	UUID             *string `json:"uuid,omitempty" tfsdk:"uuid"`
 	OwnedByWorkspace string  `json:"ownedByWorkspace" tfsdk:"owned_by_workspace"`
 	CreatedOn        string  `json:"createdOn" tfsdk:"created_on"`
 	DeletedOn        *string `json:"deletedOn" tfsdk:"deleted_on"`
@@ -34,7 +35,7 @@ type MeshPlatformSpec struct {
 	DocumentationUrl       *string                   `json:"documentationUrl,omitempty" tfsdk:"documentation_url"`
 	Availability           *MeshPlatformAvailability `json:"availability,omitempty" tfsdk:"availability"`
 	Config                 *PlatformConfig           `json:"config,omitempty" tfsdk:"config"`
-	ContributingWorkspaces []string                  `json:"contributingWorkspaces,omitempty" tfsdk:"contributing_workspaces"`
+	ContributingWorkspaces []string                  `json:"contributingWorkspaces" tfsdk:"contributing_workspaces"`
 }
 
 type MeshPlatformAvailability struct {
@@ -63,12 +64,25 @@ type PlatformConfig struct {
 type PlatformCreate struct {
 	ApiVersion string                 `json:"apiVersion" tfsdk:"api_version"`
 	Metadata   PlatformCreateMetadata `json:"metadata" tfsdk:"metadata"`
-	Spec       MeshPlatformSpec       `json:"spec" tfsdk:"spec"`
+	Spec       MeshPlatformCreateSpec `json:"spec" tfsdk:"spec"`
 }
 
 type PlatformCreateMetadata struct {
-	Name             string `json:"name" tfsdk:"name"`
-	OwnedByWorkspace string `json:"ownedByWorkspace" tfsdk:"owned_by_workspace"`
+	Name             string  `json:"name" tfsdk:"name"`
+	UUID             *string `json:"uuid,omitempty" tfsdk:"uuid"`
+	OwnedByWorkspace string  `json:"ownedByWorkspace" tfsdk:"owned_by_workspace"`
+}
+
+type MeshPlatformCreateSpec struct {
+	DisplayName            string                    `json:"displayName" tfsdk:"display_name"`
+	LocationRef            *LocationRef              `json:"locationRef,omitempty" tfsdk:"location_ref"`
+	Description            *string                   `json:"description,omitempty" tfsdk:"description"`
+	Endpoint               string                    `json:"endpoint" tfsdk:"endpoint"`
+	SupportUrl             *string                   `json:"supportUrl,omitempty" tfsdk:"support_url"`
+	DocumentationUrl       *string                   `json:"documentationUrl,omitempty" tfsdk:"documentation_url"`
+	Availability           *MeshPlatformAvailability `json:"availability,omitempty" tfsdk:"availability"`
+	Config                 *PlatformConfig           `json:"config,omitempty" tfsdk:"config"`
+	ContributingWorkspaces []string                  `json:"contributingWorkspaces" tfsdk:"contributing_workspaces"`
 }
 
 func (c *MeshStackProviderClient) urlForPlatform(identifier string) *url.URL {
