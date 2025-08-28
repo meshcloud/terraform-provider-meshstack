@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/meshcloud/terraform-provider-meshstack/client"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -111,7 +112,7 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 						ElementType: types.ListType{ElemType: types.StringType},
 						Optional:    true,
 						Computed:    true,
-						Default:     mapdefault.StaticValue(types.MapNull(types.ListType{ElemType: types.StringType})),
+						Default:     mapdefault.StaticValue(types.MapValueMust(types.ListType{ElemType: types.StringType}, map[string]attr.Value{})),
 					},
 					// These can have defaults set upon creation
 					"payment_method_identifier": schema.StringAttribute{
@@ -202,6 +203,8 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
+	project.Spec.Tags = tags
+
 	diags = resp.State.Set(ctx, project)
 	resp.Diagnostics.Append(diags...)
 }
@@ -282,6 +285,8 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 		)
 		return
 	}
+
+	project.Spec.Tags = tags
 
 	diags = resp.State.Set(ctx, project)
 	resp.Diagnostics.Append(diags...)
