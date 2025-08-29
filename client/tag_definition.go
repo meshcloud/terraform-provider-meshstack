@@ -45,31 +45,31 @@ type MeshTagDefinitionValueType struct {
 }
 
 type TagValueString struct {
-	DefaultValue    string `json:"defaultValue,omitempty" tfsdk:"default_value"`
-	ValidationRegex string `json:"validationRegex,omitempty" tfsdk:"validation_regex"`
+	DefaultValue    *string `json:"defaultValue,omitempty" tfsdk:"default_value"`
+	ValidationRegex *string `json:"validationRegex,omitempty" tfsdk:"validation_regex"`
 }
 
 type TagValueEmail struct {
-	DefaultValue    string `json:"defaultValue,omitempty" tfsdk:"default_value"`
-	ValidationRegex string `json:"validationRegex,omitempty" tfsdk:"validation_regex"`
+	DefaultValue    *string `json:"defaultValue,omitempty" tfsdk:"default_value"`
+	ValidationRegex *string `json:"validationRegex,omitempty" tfsdk:"validation_regex"`
 }
 
 type TagValueInteger struct {
-	DefaultValue int64 `json:"defaultValue,omitempty" tfsdk:"default_value"`
+	DefaultValue *int64 `json:"defaultValue,omitempty" tfsdk:"default_value"`
 }
 
 type TagValueNumber struct {
-	DefaultValue float64 `json:"defaultValue,omitempty" tfsdk:"default_value"`
+	DefaultValue *float64 `json:"defaultValue,omitempty" tfsdk:"default_value"`
 }
 
 type TagValueSingleSelect struct {
 	Options      []string `json:"options,omitempty" tfsdk:"options"`
-	DefaultValue string   `json:"defaultValue,omitempty" tfsdk:"default_value"`
+	DefaultValue *string  `json:"defaultValue,omitempty" tfsdk:"default_value"`
 }
 
 type TagValueMultiSelect struct {
-	Options      []string `json:"options,omitempty" tfsdk:"options"`
-	DefaultValue []string `json:"defaultValue,omitempty" tfsdk:"default_value"`
+	Options      []string  `json:"options,omitempty" tfsdk:"options"`
+	DefaultValue *[]string `json:"defaultValue,omitempty" tfsdk:"default_value"`
 }
 
 func (c *MeshStackProviderClient) urlForTagDefinition(name string) *url.URL {

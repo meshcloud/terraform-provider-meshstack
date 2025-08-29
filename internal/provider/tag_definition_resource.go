@@ -115,7 +115,7 @@ func (r *tagDefinitionResource) ValidateConfig(ctx context.Context, req resource
 		)
 	}
 
-	if valueType.SingleSelect != nil && valueType.SingleSelect.DefaultValue.ValueString() != "" {
+	if valueType.SingleSelect != nil && !valueType.SingleSelect.DefaultValue.IsNull() && !valueType.SingleSelect.DefaultValue.IsUnknown() {
 		defaultValue := valueType.SingleSelect.DefaultValue.ValueString()
 		options := extractStringValues(valueType.SingleSelect.Options)
 		if !slices.Contains(options, defaultValue) {
@@ -138,7 +138,6 @@ func (r *tagDefinitionResource) ValidateConfig(ctx context.Context, req resource
 					"Invalid default value",
 					fmt.Sprintf("All default values %v must be from the available options: %v", defaultValues, options),
 				)
-				break
 			}
 		}
 	}
@@ -146,14 +145,6 @@ func (r *tagDefinitionResource) ValidateConfig(ctx context.Context, req resource
 
 // Schema defines the schema for the resource.
 func (r *tagDefinitionResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	stringEmptyDefault := func() schema.StringAttribute {
-		return schema.StringAttribute{
-			Optional: true,
-			Computed: true,
-			Default:  stringdefault.StaticString(""),
-		}
-	}
-
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Manage tag definitions",
 
@@ -210,31 +201,27 @@ func (r *tagDefinitionResource) Schema(_ context.Context, _ resource.SchemaReque
 							"string": schema.SingleNestedAttribute{
 								Optional: true,
 								Attributes: map[string]schema.Attribute{
-									"default_value":    stringEmptyDefault(),
-									"validation_regex": stringEmptyDefault(),
+									"default_value":    schema.StringAttribute{Optional: true},
+									"validation_regex": schema.StringAttribute{Optional: true},
 								},
 							},
 							"email": schema.SingleNestedAttribute{
 								Optional: true,
 								Attributes: map[string]schema.Attribute{
-									"default_value":    stringEmptyDefault(),
-									"validation_regex": stringEmptyDefault(),
+									"default_value":    schema.StringAttribute{Optional: true},
+									"validation_regex": schema.StringAttribute{Optional: true},
 								},
 							},
 							"integer": schema.SingleNestedAttribute{
 								Optional: true,
 								Attributes: map[string]schema.Attribute{
-									"default_value": schema.Int64Attribute{
-										Optional: true,
-									},
+									"default_value": schema.Int64Attribute{Optional: true},
 								},
 							},
 							"number": schema.SingleNestedAttribute{
 								Optional: true,
 								Attributes: map[string]schema.Attribute{
-									"default_value": schema.Float64Attribute{
-										Optional: true,
-									},
+									"default_value": schema.Float64Attribute{Optional: true},
 								},
 							},
 							"single_select": schema.SingleNestedAttribute{
@@ -247,7 +234,7 @@ func (r *tagDefinitionResource) Schema(_ context.Context, _ resource.SchemaReque
 											listvalidator.SizeAtLeast(1),
 										},
 									},
-									"default_value": stringEmptyDefault(),
+									"default_value": schema.StringAttribute{Optional: true},
 								},
 							},
 							"multi_select": schema.SingleNestedAttribute{
@@ -274,10 +261,25 @@ func (r *tagDefinitionResource) Schema(_ context.Context, _ resource.SchemaReque
 						Computed: true,
 						Default:  stringdefault.StaticString(""),
 					},
-					"sort_order": schema.Int64Attribute{Optional: true, Computed: true, Default: int64default.StaticInt64(0)},
-					"mandatory":  schema.BoolAttribute{Optional: true, Computed: true, Default: booldefault.StaticBool(false)},
-					"immutable":  schema.BoolAttribute{Optional: true, Computed: true, Default: booldefault.StaticBool(false)},
-					"restricted": schema.BoolAttribute{Optional: true, Computed: true, Default: booldefault.StaticBool(false)},
+					"sort_order": schema.Int64Attribute{
+						Optional: true,
+						Computed: true,
+						Default:  int64default.StaticInt64(0),
+					},
+					"mandatory": schema.BoolAttribute{
+						Optional: true,
+						Computed: true,
+						Default:  booldefault.StaticBool(false),
+					},
+					"immutable": schema.BoolAttribute{
+						Optional: true, Computed: true,
+						Default: booldefault.StaticBool(false),
+					},
+					"restricted": schema.BoolAttribute{
+						Optional: true,
+						Computed: true,
+						Default:  booldefault.StaticBool(false),
+					},
 				},
 			},
 		},
@@ -393,41 +395,44 @@ func buildValueType(valueType tagDefinitionValueType) client.MeshTagDefinitionVa
 
 	if valueType.String != nil {
 		result.String = &client.TagValueString{
-			DefaultValue:    valueType.String.DefaultValue.ValueString(),
-			ValidationRegex: valueType.String.ValidationRegex.ValueString(),
+			ValidationRegex: valueType.String.ValidationRegex.ValueStringPointer(),
+			DefaultValue:    valueType.String.DefaultValue.ValueStringPointer(),
 		}
 	}
 
 	if valueType.Email != nil {
 		result.Email = &client.TagValueEmail{
-			DefaultValue:    valueType.Email.DefaultValue.ValueString(),
-			ValidationRegex: valueType.Email.ValidationRegex.ValueString(),
+			ValidationRegex: valueType.Email.ValidationRegex.ValueStringPointer(),
+			DefaultValue:    valueType.Email.DefaultValue.ValueStringPointer(),
 		}
 	}
 
 	if valueType.Integer != nil {
 		result.Integer = &client.TagValueInteger{
-			DefaultValue: valueType.Integer.DefaultValue.ValueInt64(),
+			DefaultValue: valueType.Integer.DefaultValue.ValueInt64Pointer(),
 		}
 	}
 
 	if valueType.Number != nil {
 		result.Number = &client.TagValueNumber{
-			DefaultValue: valueType.Number.DefaultValue.ValueFloat64(),
+			DefaultValue: valueType.Number.DefaultValue.ValueFloat64Pointer(),
 		}
 	}
 
 	if valueType.SingleSelect != nil {
 		result.SingleSelect = &client.TagValueSingleSelect{
 			Options:      extractStringValues(valueType.SingleSelect.Options),
-			DefaultValue: valueType.SingleSelect.DefaultValue.ValueString(),
+			DefaultValue: valueType.SingleSelect.DefaultValue.ValueStringPointer(),
 		}
 	}
 
 	if valueType.MultiSelect != nil {
 		result.MultiSelect = &client.TagValueMultiSelect{
-			Options:      extractStringValues(valueType.MultiSelect.Options),
-			DefaultValue: extractStringValues(valueType.MultiSelect.DefaultValue),
+			Options: extractStringValues(valueType.MultiSelect.Options),
+		}
+		if valueType.MultiSelect.DefaultValue != nil {
+			v := extractStringValues(valueType.MultiSelect.DefaultValue)
+			result.MultiSelect.DefaultValue = &v
 		}
 	}
 
