@@ -83,6 +83,18 @@ func (c *MeshStackProviderClient) ReadTagDefinitions() (*[]MeshTagDefinition, er
 	targetUrl := c.endpoints.TagDefinitions
 	query := targetUrl.Query()
 
+	type tagsResponse struct {
+		Embedded struct {
+			MeshTagDefinitions []MeshTagDefinition `json:"meshTagDefinitions"`
+		} `json:"_embedded"`
+		Page struct {
+			Size          int `json:"size"`
+			TotalElements int `json:"totalElements"`
+			TotalPages    int `json:"totalPages"`
+			Number        int `json:"number"`
+		} `json:"page"`
+	}
+
 	for {
 		query.Set("page", fmt.Sprintf("%d", pageNumber))
 
@@ -111,18 +123,7 @@ func (c *MeshStackProviderClient) ReadTagDefinitions() (*[]MeshTagDefinition, er
 			return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
 		}
 
-		var response struct {
-			Embedded struct {
-				MeshTagDefinitions []MeshTagDefinition `json:"meshTagDefinitions"`
-			} `json:"_embedded"`
-			Page struct {
-				Size          int `json:"size"`
-				TotalElements int `json:"totalElements"`
-				TotalPages    int `json:"totalPages"`
-				Number        int `json:"number"`
-			} `json:"page"`
-		}
-
+		var response tagsResponse
 		err = json.Unmarshal(data, &response)
 		if err != nil {
 			return nil, err
