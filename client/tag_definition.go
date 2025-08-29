@@ -24,15 +24,16 @@ type MeshTagDefinitionMetadata struct {
 }
 
 type MeshTagDefinitionSpec struct {
-	TargetKind  string                     `json:"targetKind" tfsdk:"target_kind"`
-	Key         string                     `json:"key" tfsdk:"key"`
-	ValueType   MeshTagDefinitionValueType `json:"valueType" tfsdk:"value_type"`
-	Description string                     `json:"description" tfsdk:"description"`
-	DisplayName string                     `json:"displayName" tfsdk:"display_name"`
-	SortOrder   int64                      `json:"sortOrder" tfsdk:"sort_order"`
-	Mandatory   bool                       `json:"mandatory" tfsdk:"mandatory"`
-	Immutable   bool                       `json:"immutable" tfsdk:"immutable"`
-	Restricted  bool                       `json:"restricted" tfsdk:"restricted"`
+	TargetKind     string                     `json:"targetKind" tfsdk:"target_kind"`
+	Key            string                     `json:"key" tfsdk:"key"`
+	ValueType      MeshTagDefinitionValueType `json:"valueType" tfsdk:"value_type"`
+	Description    string                     `json:"description" tfsdk:"description"`
+	DisplayName    string                     `json:"displayName" tfsdk:"display_name"`
+	SortOrder      int64                      `json:"sortOrder" tfsdk:"sort_order"`
+	Mandatory      bool                       `json:"mandatory" tfsdk:"mandatory"`
+	Immutable      bool                       `json:"immutable" tfsdk:"immutable"`
+	Restricted     bool                       `json:"restricted" tfsdk:"restricted"`
+	ReplicationKey *string                    `json:"replicationKey,omitempty" tfsdk:"replication_key"`
 }
 
 type MeshTagDefinitionValueType struct {
