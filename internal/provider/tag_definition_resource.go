@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/modifiers/tagdefinitionmodifier"
@@ -114,24 +115,30 @@ func (r *tagDefinitionResource) ValidateConfig(ctx context.Context, req resource
 		)
 	}
 
-	if valueType.SingleSelect != nil {
-		defaultValue := valueType.SingleSelect.DefaultValue
-		if !defaultValue.IsNull() && !defaultValue.IsUnknown() && defaultValue.ValueString() != "" {
-			options := valueType.SingleSelect.Options
-			found := false
-			for _, option := range options {
-				if option.ValueString() == defaultValue.ValueString() {
-					found = true
-					break
-				}
-			}
-			if !found {
-				optionStrings := extractStringValues(options)
+	if valueType.SingleSelect != nil && valueType.SingleSelect.DefaultValue.ValueString() != "" {
+		defaultValue := valueType.SingleSelect.DefaultValue.ValueString()
+		options := extractStringValues(valueType.SingleSelect.Options)
+		if !slices.Contains(options, defaultValue) {
+			resp.Diagnostics.AddAttributeError(
+				path.Root("spec").AtName("value_type").AtName("single_select").AtName("default_value"),
+				"Invalid default value",
+				fmt.Sprintf("Default value %v must be one of the available options: %v", defaultValue, options),
+			)
+		}
+	}
+
+	if valueType.MultiSelect != nil && valueType.MultiSelect.DefaultValue != nil && len(valueType.MultiSelect.DefaultValue) > 0 {
+		defaultValues := extractStringValues(valueType.MultiSelect.DefaultValue)
+		options := extractStringValues(valueType.MultiSelect.Options)
+
+		for _, dv := range defaultValues {
+			if !slices.Contains(options, dv) {
 				resp.Diagnostics.AddAttributeError(
-					path.Root("spec").AtName("value_type").AtName("single_select").AtName("default_value"),
+					path.Root("spec").AtName("value_type").AtName("multi_select").AtName("default_value"),
 					"Invalid default value",
-					fmt.Sprintf("Default value %q must be one of the available options: %v", defaultValue.ValueString(), optionStrings),
+					fmt.Sprintf("All default values %v must be from the available options: %v", defaultValues, options),
 				)
+				break
 			}
 		}
 	}
@@ -248,7 +255,10 @@ func (r *tagDefinitionResource) Schema(_ context.Context, _ resource.SchemaReque
 								Attributes: map[string]schema.Attribute{
 									"options": schema.ListAttribute{
 										ElementType: types.StringType,
-										Optional:    true,
+										Required:    true,
+										Validators: []validator.List{
+											listvalidator.SizeAtLeast(1),
+										},
 									},
 									"default_value": schema.ListAttribute{
 										ElementType: types.StringType,
@@ -426,16 +436,15 @@ func buildValueType(valueType tagDefinitionValueType) client.MeshTagDefinitionVa
 
 // Read refreshes the Terraform state with the latest data.
 func (r *tagDefinitionResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var spec tagDefinitionSpec
+	var name types.String
 
-	diags := req.State.GetAttribute(ctx, path.Root("spec"), &spec)
+	diags := req.State.GetAttribute(ctx, path.Root("metadata").AtName("name"), &name)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	name := spec.TargetKind.ValueString() + "." + spec.Key.ValueString()
-	tagDefinition, err := r.client.ReadTagDefinition(name)
+	tagDefinition, err := r.client.ReadTagDefinition(name.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read tag definition", err.Error())
 	}
