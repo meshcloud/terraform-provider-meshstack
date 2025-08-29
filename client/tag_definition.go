@@ -24,15 +24,16 @@ type MeshTagDefinitionMetadata struct {
 }
 
 type MeshTagDefinitionSpec struct {
-	TargetKind  string                     `json:"targetKind" tfsdk:"target_kind"`
-	Key         string                     `json:"key" tfsdk:"key"`
-	ValueType   MeshTagDefinitionValueType `json:"valueType" tfsdk:"value_type"`
-	Description string                     `json:"description" tfsdk:"description"`
-	DisplayName string                     `json:"displayName" tfsdk:"display_name"`
-	SortOrder   int64                      `json:"sortOrder" tfsdk:"sort_order"`
-	Mandatory   bool                       `json:"mandatory" tfsdk:"mandatory"`
-	Immutable   bool                       `json:"immutable" tfsdk:"immutable"`
-	Restricted  bool                       `json:"restricted" tfsdk:"restricted"`
+	TargetKind     string                     `json:"targetKind" tfsdk:"target_kind"`
+	Key            string                     `json:"key" tfsdk:"key"`
+	ValueType      MeshTagDefinitionValueType `json:"valueType" tfsdk:"value_type"`
+	Description    string                     `json:"description" tfsdk:"description"`
+	DisplayName    string                     `json:"displayName" tfsdk:"display_name"`
+	SortOrder      int64                      `json:"sortOrder" tfsdk:"sort_order"`
+	Mandatory      bool                       `json:"mandatory" tfsdk:"mandatory"`
+	Immutable      bool                       `json:"immutable" tfsdk:"immutable"`
+	Restricted     bool                       `json:"restricted" tfsdk:"restricted"`
+	ReplicationKey *string                    `json:"replicationKey,omitempty" tfsdk:"replication_key"`
 }
 
 type MeshTagDefinitionValueType struct {
@@ -45,31 +46,31 @@ type MeshTagDefinitionValueType struct {
 }
 
 type TagValueString struct {
-	DefaultValue    string `json:"defaultValue,omitempty" tfsdk:"default_value"`
-	ValidationRegex string `json:"validationRegex,omitempty" tfsdk:"validation_regex"`
+	DefaultValue    *string `json:"defaultValue,omitempty" tfsdk:"default_value"`
+	ValidationRegex *string `json:"validationRegex,omitempty" tfsdk:"validation_regex"`
 }
 
 type TagValueEmail struct {
-	DefaultValue    string `json:"defaultValue,omitempty" tfsdk:"default_value"`
-	ValidationRegex string `json:"validationRegex,omitempty" tfsdk:"validation_regex"`
+	DefaultValue    *string `json:"defaultValue,omitempty" tfsdk:"default_value"`
+	ValidationRegex *string `json:"validationRegex,omitempty" tfsdk:"validation_regex"`
 }
 
 type TagValueInteger struct {
-	DefaultValue int64 `json:"defaultValue,omitempty" tfsdk:"default_value"`
+	DefaultValue *int64 `json:"defaultValue,omitempty" tfsdk:"default_value"`
 }
 
 type TagValueNumber struct {
-	DefaultValue float64 `json:"defaultValue,omitempty" tfsdk:"default_value"`
+	DefaultValue *float64 `json:"defaultValue,omitempty" tfsdk:"default_value"`
 }
 
 type TagValueSingleSelect struct {
 	Options      []string `json:"options,omitempty" tfsdk:"options"`
-	DefaultValue string   `json:"defaultValue,omitempty" tfsdk:"default_value"`
+	DefaultValue *string  `json:"defaultValue,omitempty" tfsdk:"default_value"`
 }
 
 type TagValueMultiSelect struct {
-	Options      []string `json:"options,omitempty" tfsdk:"options"`
-	DefaultValue []string `json:"defaultValue,omitempty" tfsdk:"default_value"`
+	Options      []string  `json:"options,omitempty" tfsdk:"options"`
+	DefaultValue *[]string `json:"defaultValue,omitempty" tfsdk:"default_value"`
 }
 
 func (c *MeshStackProviderClient) urlForTagDefinition(name string) *url.URL {
@@ -82,6 +83,18 @@ func (c *MeshStackProviderClient) ReadTagDefinitions() (*[]MeshTagDefinition, er
 	pageNumber := 0
 	targetUrl := c.endpoints.TagDefinitions
 	query := targetUrl.Query()
+
+	type tagsResponse struct {
+		Embedded struct {
+			MeshTagDefinitions []MeshTagDefinition `json:"meshTagDefinitions"`
+		} `json:"_embedded"`
+		Page struct {
+			Size          int `json:"size"`
+			TotalElements int `json:"totalElements"`
+			TotalPages    int `json:"totalPages"`
+			Number        int `json:"number"`
+		} `json:"page"`
+	}
 
 	for {
 		query.Set("page", fmt.Sprintf("%d", pageNumber))
@@ -111,18 +124,7 @@ func (c *MeshStackProviderClient) ReadTagDefinitions() (*[]MeshTagDefinition, er
 			return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
 		}
 
-		var response struct {
-			Embedded struct {
-				MeshTagDefinitions []MeshTagDefinition `json:"meshTagDefinitions"`
-			} `json:"_embedded"`
-			Page struct {
-				Size          int `json:"size"`
-				TotalElements int `json:"totalElements"`
-				TotalPages    int `json:"totalPages"`
-				Number        int `json:"number"`
-			} `json:"page"`
-		}
-
+		var response tagsResponse
 		err = json.Unmarshal(data, &response)
 		if err != nil {
 			return nil, err

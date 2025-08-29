@@ -3,10 +3,12 @@ package provider
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/modifiers/tagdefinitionmodifier"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -112,6 +114,33 @@ func (r *tagDefinitionResource) ValidateConfig(ctx context.Context, req resource
 			"Exactly one value type must be specified: string, email, integer, number, single_select, multi_select",
 		)
 	}
+
+	if valueType.SingleSelect != nil && !valueType.SingleSelect.DefaultValue.IsNull() && !valueType.SingleSelect.DefaultValue.IsUnknown() {
+		defaultValue := valueType.SingleSelect.DefaultValue.ValueString()
+		options := extractStringValues(valueType.SingleSelect.Options)
+		if !slices.Contains(options, defaultValue) {
+			resp.Diagnostics.AddAttributeError(
+				path.Root("spec").AtName("value_type").AtName("single_select").AtName("default_value"),
+				"Invalid default value",
+				fmt.Sprintf("Default value %q must be one of the available options: %v", defaultValue, options),
+			)
+		}
+	}
+
+	if valueType.MultiSelect != nil && valueType.MultiSelect.DefaultValue != nil && len(valueType.MultiSelect.DefaultValue) > 0 {
+		defaultValues := extractStringValues(valueType.MultiSelect.DefaultValue)
+		options := extractStringValues(valueType.MultiSelect.Options)
+
+		for _, dv := range defaultValues {
+			if !slices.Contains(options, dv) {
+				resp.Diagnostics.AddAttributeError(
+					path.Root("spec").AtName("value_type").AtName("multi_select").AtName("default_value"),
+					"Invalid default value",
+					fmt.Sprintf("All default values %v must be from the available options: %v", defaultValues, options),
+				)
+			}
+		}
+	}
 }
 
 // Schema defines the schema for the resource.
@@ -172,39 +201,27 @@ func (r *tagDefinitionResource) Schema(_ context.Context, _ resource.SchemaReque
 							"string": schema.SingleNestedAttribute{
 								Optional: true,
 								Attributes: map[string]schema.Attribute{
-									"default_value": schema.StringAttribute{
-										Optional: true,
-									},
-									"validation_regex": schema.StringAttribute{
-										Optional: true,
-									},
+									"default_value":    schema.StringAttribute{Optional: true},
+									"validation_regex": schema.StringAttribute{Optional: true},
 								},
 							},
 							"email": schema.SingleNestedAttribute{
 								Optional: true,
 								Attributes: map[string]schema.Attribute{
-									"default_value": schema.StringAttribute{
-										Optional: true,
-									},
-									"validation_regex": schema.StringAttribute{
-										Optional: true,
-									},
+									"default_value":    schema.StringAttribute{Optional: true},
+									"validation_regex": schema.StringAttribute{Optional: true},
 								},
 							},
 							"integer": schema.SingleNestedAttribute{
 								Optional: true,
 								Attributes: map[string]schema.Attribute{
-									"default_value": schema.Int64Attribute{
-										Optional: true,
-									},
+									"default_value": schema.Int64Attribute{Optional: true},
 								},
 							},
 							"number": schema.SingleNestedAttribute{
 								Optional: true,
 								Attributes: map[string]schema.Attribute{
-									"default_value": schema.Float64Attribute{
-										Optional: true,
-									},
+									"default_value": schema.Float64Attribute{Optional: true},
 								},
 							},
 							"single_select": schema.SingleNestedAttribute{
@@ -212,11 +229,12 @@ func (r *tagDefinitionResource) Schema(_ context.Context, _ resource.SchemaReque
 								Attributes: map[string]schema.Attribute{
 									"options": schema.ListAttribute{
 										ElementType: types.StringType,
-										Optional:    true,
+										Required:    true,
+										Validators: []validator.List{
+											listvalidator.SizeAtLeast(1),
+										},
 									},
-									"default_value": schema.StringAttribute{
-										Optional: true,
-									},
+									"default_value": schema.StringAttribute{Optional: true},
 								},
 							},
 							"multi_select": schema.SingleNestedAttribute{
@@ -224,7 +242,10 @@ func (r *tagDefinitionResource) Schema(_ context.Context, _ resource.SchemaReque
 								Attributes: map[string]schema.Attribute{
 									"options": schema.ListAttribute{
 										ElementType: types.StringType,
-										Optional:    true,
+										Required:    true,
+										Validators: []validator.List{
+											listvalidator.SizeAtLeast(1),
+										},
 									},
 									"default_value": schema.ListAttribute{
 										ElementType: types.StringType,
@@ -240,10 +261,28 @@ func (r *tagDefinitionResource) Schema(_ context.Context, _ resource.SchemaReque
 						Computed: true,
 						Default:  stringdefault.StaticString(""),
 					},
-					"sort_order": schema.Int64Attribute{Optional: true, Computed: true, Default: int64default.StaticInt64(0)},
-					"mandatory":  schema.BoolAttribute{Optional: true, Computed: true, Default: booldefault.StaticBool(false)},
-					"immutable":  schema.BoolAttribute{Optional: true, Computed: true, Default: booldefault.StaticBool(false)},
-					"restricted": schema.BoolAttribute{Optional: true, Computed: true, Default: booldefault.StaticBool(false)},
+					"sort_order": schema.Int64Attribute{
+						Optional: true,
+						Computed: true,
+						Default:  int64default.StaticInt64(0),
+					},
+					"mandatory": schema.BoolAttribute{
+						Optional: true,
+						Computed: true,
+						Default:  booldefault.StaticBool(false),
+					},
+					"immutable": schema.BoolAttribute{
+						Optional: true, Computed: true,
+						Default: booldefault.StaticBool(false),
+					},
+					"restricted": schema.BoolAttribute{
+						Optional: true,
+						Computed: true,
+						Default:  booldefault.StaticBool(false),
+					},
+					"replication_key": schema.StringAttribute{
+						Optional: true,
+					},
 				},
 			},
 		},
@@ -252,15 +291,16 @@ func (r *tagDefinitionResource) Schema(_ context.Context, _ resource.SchemaReque
 
 // These structs use Terraform types so that we can read the plan and check for unknown/null values.
 type tagDefinitionSpec struct {
-	TargetKind  types.String           `json:"targetKind" tfsdk:"target_kind"`
-	Key         types.String           `json:"key" tfsdk:"key"`
-	ValueType   tagDefinitionValueType `json:"valueType" tfsdk:"value_type"`
-	Description types.String           `json:"description" tfsdk:"description"`
-	DisplayName types.String           `json:"displayName" tfsdk:"display_name"`
-	SortOrder   types.Int64            `json:"sortOrder" tfsdk:"sort_order"`
-	Mandatory   types.Bool             `json:"mandatory" tfsdk:"mandatory"`
-	Immutable   types.Bool             `json:"immutable" tfsdk:"immutable"`
-	Restricted  types.Bool             `json:"restricted" tfsdk:"restricted"`
+	TargetKind     types.String           `json:"targetKind" tfsdk:"target_kind"`
+	Key            types.String           `json:"key" tfsdk:"key"`
+	ValueType      tagDefinitionValueType `json:"valueType" tfsdk:"value_type"`
+	Description    types.String           `json:"description" tfsdk:"description"`
+	DisplayName    types.String           `json:"displayName" tfsdk:"display_name"`
+	SortOrder      types.Int64            `json:"sortOrder" tfsdk:"sort_order"`
+	Mandatory      types.Bool             `json:"mandatory" tfsdk:"mandatory"`
+	Immutable      types.Bool             `json:"immutable" tfsdk:"immutable"`
+	Restricted     types.Bool             `json:"restricted" tfsdk:"restricted"`
+	ReplicationKey types.String           `json:"replicationKey" tfsdk:"replication_key"`
 }
 
 type tagDefinitionValueType struct {
@@ -321,15 +361,16 @@ func (r *tagDefinitionResource) Create(ctx context.Context, req resource.CreateR
 			Name: name,
 		},
 		Spec: client.MeshTagDefinitionSpec{
-			TargetKind:  spec.TargetKind.ValueString(),
-			Key:         spec.Key.ValueString(),
-			ValueType:   valueType,
-			Description: spec.Description.ValueString(),
-			DisplayName: spec.DisplayName.ValueString(),
-			SortOrder:   spec.SortOrder.ValueInt64(),
-			Mandatory:   spec.Mandatory.ValueBool(),
-			Immutable:   spec.Immutable.ValueBool(),
-			Restricted:  spec.Restricted.ValueBool(),
+			TargetKind:     spec.TargetKind.ValueString(),
+			Key:            spec.Key.ValueString(),
+			ValueType:      valueType,
+			Description:    spec.Description.ValueString(),
+			DisplayName:    spec.DisplayName.ValueString(),
+			SortOrder:      spec.SortOrder.ValueInt64(),
+			Mandatory:      spec.Mandatory.ValueBool(),
+			Immutable:      spec.Immutable.ValueBool(),
+			Restricted:     spec.Restricted.ValueBool(),
+			ReplicationKey: spec.ReplicationKey.ValueStringPointer(),
 		},
 	}
 
@@ -359,41 +400,44 @@ func buildValueType(valueType tagDefinitionValueType) client.MeshTagDefinitionVa
 
 	if valueType.String != nil {
 		result.String = &client.TagValueString{
-			DefaultValue:    valueType.String.DefaultValue.ValueString(),
-			ValidationRegex: valueType.String.ValidationRegex.ValueString(),
+			ValidationRegex: valueType.String.ValidationRegex.ValueStringPointer(),
+			DefaultValue:    valueType.String.DefaultValue.ValueStringPointer(),
 		}
 	}
 
 	if valueType.Email != nil {
 		result.Email = &client.TagValueEmail{
-			DefaultValue:    valueType.Email.DefaultValue.ValueString(),
-			ValidationRegex: valueType.Email.ValidationRegex.ValueString(),
+			ValidationRegex: valueType.Email.ValidationRegex.ValueStringPointer(),
+			DefaultValue:    valueType.Email.DefaultValue.ValueStringPointer(),
 		}
 	}
 
 	if valueType.Integer != nil {
 		result.Integer = &client.TagValueInteger{
-			DefaultValue: valueType.Integer.DefaultValue.ValueInt64(),
+			DefaultValue: valueType.Integer.DefaultValue.ValueInt64Pointer(),
 		}
 	}
 
 	if valueType.Number != nil {
 		result.Number = &client.TagValueNumber{
-			DefaultValue: valueType.Number.DefaultValue.ValueFloat64(),
+			DefaultValue: valueType.Number.DefaultValue.ValueFloat64Pointer(),
 		}
 	}
 
 	if valueType.SingleSelect != nil {
 		result.SingleSelect = &client.TagValueSingleSelect{
 			Options:      extractStringValues(valueType.SingleSelect.Options),
-			DefaultValue: valueType.SingleSelect.DefaultValue.ValueString(),
+			DefaultValue: valueType.SingleSelect.DefaultValue.ValueStringPointer(),
 		}
 	}
 
 	if valueType.MultiSelect != nil {
 		result.MultiSelect = &client.TagValueMultiSelect{
-			Options:      extractStringValues(valueType.MultiSelect.Options),
-			DefaultValue: extractStringValues(valueType.MultiSelect.DefaultValue),
+			Options: extractStringValues(valueType.MultiSelect.Options),
+		}
+		if valueType.MultiSelect.DefaultValue != nil {
+			v := extractStringValues(valueType.MultiSelect.DefaultValue)
+			result.MultiSelect.DefaultValue = &v
 		}
 	}
 
@@ -402,16 +446,15 @@ func buildValueType(valueType tagDefinitionValueType) client.MeshTagDefinitionVa
 
 // Read refreshes the Terraform state with the latest data.
 func (r *tagDefinitionResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var spec tagDefinitionSpec
+	var name types.String
 
-	diags := req.State.GetAttribute(ctx, path.Root("spec"), &spec)
+	diags := req.State.GetAttribute(ctx, path.Root("metadata").AtName("name"), &name)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	name := spec.TargetKind.ValueString() + "." + spec.Key.ValueString()
-	tagDefinition, err := r.client.ReadTagDefinition(name)
+	tagDefinition, err := r.client.ReadTagDefinition(name.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read tag definition", err.Error())
 	}
@@ -444,15 +487,16 @@ func (r *tagDefinitionResource) Update(ctx context.Context, req resource.UpdateR
 			Name: name,
 		},
 		Spec: client.MeshTagDefinitionSpec{
-			TargetKind:  spec.TargetKind.ValueString(),
-			Key:         spec.Key.ValueString(),
-			ValueType:   valueType,
-			Description: spec.Description.ValueString(),
-			DisplayName: spec.DisplayName.ValueString(),
-			SortOrder:   spec.SortOrder.ValueInt64(),
-			Mandatory:   spec.Mandatory.ValueBool(),
-			Immutable:   spec.Immutable.ValueBool(),
-			Restricted:  spec.Restricted.ValueBool(),
+			TargetKind:     spec.TargetKind.ValueString(),
+			Key:            spec.Key.ValueString(),
+			ValueType:      valueType,
+			Description:    spec.Description.ValueString(),
+			DisplayName:    spec.DisplayName.ValueString(),
+			SortOrder:      spec.SortOrder.ValueInt64(),
+			Mandatory:      spec.Mandatory.ValueBool(),
+			Immutable:      spec.Immutable.ValueBool(),
+			Restricted:     spec.Restricted.ValueBool(),
+			ReplicationKey: spec.ReplicationKey.ValueStringPointer(),
 		},
 	}
 
