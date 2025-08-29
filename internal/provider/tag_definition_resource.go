@@ -7,6 +7,7 @@ import (
 	"github.com/meshcloud/terraform-provider-meshstack/client"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/modifiers/tagdefinitionmodifier"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -112,10 +113,40 @@ func (r *tagDefinitionResource) ValidateConfig(ctx context.Context, req resource
 			"Exactly one value type must be specified: string, email, integer, number, single_select, multi_select",
 		)
 	}
+
+	if valueType.SingleSelect != nil {
+		defaultValue := valueType.SingleSelect.DefaultValue
+		if !defaultValue.IsNull() && !defaultValue.IsUnknown() && defaultValue.ValueString() != "" {
+			options := valueType.SingleSelect.Options
+			found := false
+			for _, option := range options {
+				if option.ValueString() == defaultValue.ValueString() {
+					found = true
+					break
+				}
+			}
+			if !found {
+				optionStrings := extractStringValues(options)
+				resp.Diagnostics.AddAttributeError(
+					path.Root("spec").AtName("value_type").AtName("single_select").AtName("default_value"),
+					"Invalid default value",
+					fmt.Sprintf("Default value %q must be one of the available options: %v", defaultValue.ValueString(), optionStrings),
+				)
+			}
+		}
+	}
 }
 
 // Schema defines the schema for the resource.
 func (r *tagDefinitionResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+	stringEmptyDefault := func() schema.StringAttribute {
+		return schema.StringAttribute{
+			Optional: true,
+			Computed: true,
+			Default:  stringdefault.StaticString(""),
+		}
+	}
+
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Manage tag definitions",
 
@@ -172,23 +203,15 @@ func (r *tagDefinitionResource) Schema(_ context.Context, _ resource.SchemaReque
 							"string": schema.SingleNestedAttribute{
 								Optional: true,
 								Attributes: map[string]schema.Attribute{
-									"default_value": schema.StringAttribute{
-										Optional: true,
-									},
-									"validation_regex": schema.StringAttribute{
-										Optional: true,
-									},
+									"default_value":    stringEmptyDefault(),
+									"validation_regex": stringEmptyDefault(),
 								},
 							},
 							"email": schema.SingleNestedAttribute{
 								Optional: true,
 								Attributes: map[string]schema.Attribute{
-									"default_value": schema.StringAttribute{
-										Optional: true,
-									},
-									"validation_regex": schema.StringAttribute{
-										Optional: true,
-									},
+									"default_value":    stringEmptyDefault(),
+									"validation_regex": stringEmptyDefault(),
 								},
 							},
 							"integer": schema.SingleNestedAttribute{
@@ -212,11 +235,12 @@ func (r *tagDefinitionResource) Schema(_ context.Context, _ resource.SchemaReque
 								Attributes: map[string]schema.Attribute{
 									"options": schema.ListAttribute{
 										ElementType: types.StringType,
-										Optional:    true,
+										Required:    true,
+										Validators: []validator.List{
+											listvalidator.SizeAtLeast(1),
+										},
 									},
-									"default_value": schema.StringAttribute{
-										Optional: true,
-									},
+									"default_value": stringEmptyDefault(),
 								},
 							},
 							"multi_select": schema.SingleNestedAttribute{
