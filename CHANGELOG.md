@@ -4,6 +4,7 @@ FIXES:
 - Correctly handle external changes to `meshstack_project` tags.
 - Prefer explicit provider configuration over environment variables.
 - Fix issues with optional `value_type` attributes for `meshstack_tag_definition`.
+- Add missing replication key field to `meshstack_tag_definition`.
 
 ## v0.10.0
 

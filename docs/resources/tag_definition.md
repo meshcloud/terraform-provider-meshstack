@@ -63,6 +63,7 @@ Optional:
 - `description` (String)
 - `immutable` (Boolean)
 - `mandatory` (Boolean)
+- `replication_key` (String)
 - `restricted` (Boolean)
 - `sort_order` (Number)
 

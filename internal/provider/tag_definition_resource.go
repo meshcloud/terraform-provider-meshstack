@@ -280,6 +280,9 @@ func (r *tagDefinitionResource) Schema(_ context.Context, _ resource.SchemaReque
 						Computed: true,
 						Default:  booldefault.StaticBool(false),
 					},
+					"replication_key": schema.StringAttribute{
+						Optional: true,
+					},
 				},
 			},
 		},
@@ -288,15 +291,16 @@ func (r *tagDefinitionResource) Schema(_ context.Context, _ resource.SchemaReque
 
 // These structs use Terraform types so that we can read the plan and check for unknown/null values.
 type tagDefinitionSpec struct {
-	TargetKind  types.String           `json:"targetKind" tfsdk:"target_kind"`
-	Key         types.String           `json:"key" tfsdk:"key"`
-	ValueType   tagDefinitionValueType `json:"valueType" tfsdk:"value_type"`
-	Description types.String           `json:"description" tfsdk:"description"`
-	DisplayName types.String           `json:"displayName" tfsdk:"display_name"`
-	SortOrder   types.Int64            `json:"sortOrder" tfsdk:"sort_order"`
-	Mandatory   types.Bool             `json:"mandatory" tfsdk:"mandatory"`
-	Immutable   types.Bool             `json:"immutable" tfsdk:"immutable"`
-	Restricted  types.Bool             `json:"restricted" tfsdk:"restricted"`
+	TargetKind     types.String           `json:"targetKind" tfsdk:"target_kind"`
+	Key            types.String           `json:"key" tfsdk:"key"`
+	ValueType      tagDefinitionValueType `json:"valueType" tfsdk:"value_type"`
+	Description    types.String           `json:"description" tfsdk:"description"`
+	DisplayName    types.String           `json:"displayName" tfsdk:"display_name"`
+	SortOrder      types.Int64            `json:"sortOrder" tfsdk:"sort_order"`
+	Mandatory      types.Bool             `json:"mandatory" tfsdk:"mandatory"`
+	Immutable      types.Bool             `json:"immutable" tfsdk:"immutable"`
+	Restricted     types.Bool             `json:"restricted" tfsdk:"restricted"`
+	ReplicationKey types.String           `json:"replicationKey" tfsdk:"replication_key"`
 }
 
 type tagDefinitionValueType struct {
@@ -357,15 +361,16 @@ func (r *tagDefinitionResource) Create(ctx context.Context, req resource.CreateR
 			Name: name,
 		},
 		Spec: client.MeshTagDefinitionSpec{
-			TargetKind:  spec.TargetKind.ValueString(),
-			Key:         spec.Key.ValueString(),
-			ValueType:   valueType,
-			Description: spec.Description.ValueString(),
-			DisplayName: spec.DisplayName.ValueString(),
-			SortOrder:   spec.SortOrder.ValueInt64(),
-			Mandatory:   spec.Mandatory.ValueBool(),
-			Immutable:   spec.Immutable.ValueBool(),
-			Restricted:  spec.Restricted.ValueBool(),
+			TargetKind:     spec.TargetKind.ValueString(),
+			Key:            spec.Key.ValueString(),
+			ValueType:      valueType,
+			Description:    spec.Description.ValueString(),
+			DisplayName:    spec.DisplayName.ValueString(),
+			SortOrder:      spec.SortOrder.ValueInt64(),
+			Mandatory:      spec.Mandatory.ValueBool(),
+			Immutable:      spec.Immutable.ValueBool(),
+			Restricted:     spec.Restricted.ValueBool(),
+			ReplicationKey: spec.ReplicationKey.ValueStringPointer(),
 		},
 	}
 
@@ -482,15 +487,16 @@ func (r *tagDefinitionResource) Update(ctx context.Context, req resource.UpdateR
 			Name: name,
 		},
 		Spec: client.MeshTagDefinitionSpec{
-			TargetKind:  spec.TargetKind.ValueString(),
-			Key:         spec.Key.ValueString(),
-			ValueType:   valueType,
-			Description: spec.Description.ValueString(),
-			DisplayName: spec.DisplayName.ValueString(),
-			SortOrder:   spec.SortOrder.ValueInt64(),
-			Mandatory:   spec.Mandatory.ValueBool(),
-			Immutable:   spec.Immutable.ValueBool(),
-			Restricted:  spec.Restricted.ValueBool(),
+			TargetKind:     spec.TargetKind.ValueString(),
+			Key:            spec.Key.ValueString(),
+			ValueType:      valueType,
+			Description:    spec.Description.ValueString(),
+			DisplayName:    spec.DisplayName.ValueString(),
+			SortOrder:      spec.SortOrder.ValueInt64(),
+			Mandatory:      spec.Mandatory.ValueBool(),
+			Immutable:      spec.Immutable.ValueBool(),
+			Restricted:     spec.Restricted.ValueBool(),
+			ReplicationKey: spec.ReplicationKey.ValueStringPointer(),
 		},
 	}
 
