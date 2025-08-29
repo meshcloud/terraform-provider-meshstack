@@ -58,13 +58,16 @@ func (p *MeshStackProvider) Configure(ctx context.Context, req provider.Configur
 	var data MeshStackProviderModel
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
 
-	endpoint, ok := os.LookupEnv("MESHSTACK_ENDPOINT")
-	if !ok {
-		if data.Endpoint.IsNull() || data.Endpoint.IsUnknown() {
+	var endpoint string
+	if !data.Endpoint.IsNull() && !data.Endpoint.IsUnknown() {
+		endpoint = data.Endpoint.ValueString()
+	} else {
+		var ok bool
+		endpoint, ok = os.LookupEnv("MESHSTACK_ENDPOINT")
+		if !ok {
 			resp.Diagnostics.AddError("Provider endpoint missing.", "Set provider.meshstack.endpoint or use MESHSTACK_ENDPOINT environment variable.")
 			return
 		}
-		endpoint = data.Endpoint.ValueString()
 	}
 
 	url, err := url.Parse(endpoint)
@@ -73,22 +76,28 @@ func (p *MeshStackProvider) Configure(ctx context.Context, req provider.Configur
 		return
 	}
 
-	apiKey, ok := os.LookupEnv("MESHSTACK_API_KEY")
-	if !ok {
-		if data.ApiKey.IsNull() || data.ApiKey.IsUnknown() {
+	var apiKey string
+	if !data.ApiKey.IsNull() && !data.ApiKey.IsUnknown() {
+		apiKey = data.ApiKey.ValueString()
+	} else {
+		var ok bool
+		apiKey, ok = os.LookupEnv("MESHSTACK_API_KEY")
+		if !ok {
 			resp.Diagnostics.AddError("Provider API key missing.", "Set provider.meshstack.apikey or use MESHSTACK_API_KEY environment variable.")
 			return
 		}
-		apiKey = data.ApiKey.ValueString()
 	}
 
-	apiSecret, ok := os.LookupEnv("MESHSTACK_API_SECRET")
-	if !ok {
-		if data.ApiSecret.IsNull() || data.ApiSecret.IsUnknown() {
+	var apiSecret string
+	if !data.ApiSecret.IsNull() && !data.ApiSecret.IsUnknown() {
+		apiSecret = data.ApiSecret.ValueString()
+	} else {
+		var ok bool
+		apiSecret, ok = os.LookupEnv("MESHSTACK_API_SECRET")
+		if !ok {
 			resp.Diagnostics.AddError("Provider API secret missing.", "Set provider.meshstack.apisecret or use MESHSTACK_API_SECRET environment variable.")
 			return
 		}
-		apiSecret = data.ApiSecret.ValueString()
 	}
 
 	client, err := client.NewClient(url, apiKey, apiSecret)
