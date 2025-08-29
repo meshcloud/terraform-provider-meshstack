@@ -98,10 +98,13 @@ Optional:
 <a id="nestedatt--spec--value_type--multi_select"></a>
 ### Nested Schema for `spec.value_type.multi_select`
 
+Required:
+
+- `options` (List of String)
+
 Optional:
 
 - `default_value` (List of String)
-- `options` (List of String)
 
 
 <a id="nestedatt--spec--value_type--number"></a>
@@ -115,10 +118,13 @@ Optional:
 <a id="nestedatt--spec--value_type--single_select"></a>
 ### Nested Schema for `spec.value_type.single_select`
 
+Required:
+
+- `options` (List of String)
+
 Optional:
 
 - `default_value` (String)
-- `options` (List of String)
 
 
 <a id="nestedatt--spec--value_type--string"></a>

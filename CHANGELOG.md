@@ -1,3 +1,16 @@
+## v0.10.1
+
+FIXES:
+- Correctly handle external changes to `meshstack_project` tags.
+- Prefer explicit provider configuration over environment variables.
+- Fix issues with optional `value_type` attributes for `meshstack_tag_definition`.
+
+## v0.10.0
+
+FEATURES:
+- Added `meshstack_workspace_user_binding` resource.
+- Added `meshstack_workspace_group_binding` resource.
+
 ## v0.9.0
 
 FEATURES:
