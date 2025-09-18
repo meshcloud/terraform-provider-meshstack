@@ -81,12 +81,12 @@ func (c *MeshStackProviderClient) ReadWorkspace(name string) (*MeshWorkspace, er
 }
 
 func (c *MeshStackProviderClient) CreateWorkspace(workspace *MeshWorkspaceCreate) (*MeshWorkspace, error) {
-	paylod, err := json.Marshal(workspace)
+	payload, err := json.Marshal(workspace)
 	if err != nil {
 		return nil, err
 	}
 
-	req, err := http.NewRequest("POST", c.endpoints.Workspaces.String(), bytes.NewBuffer(paylod))
+	req, err := http.NewRequest("POST", c.endpoints.Workspaces.String(), bytes.NewBuffer(payload))
 	if err != nil {
 		return nil, err
 	}
@@ -119,12 +119,12 @@ func (c *MeshStackProviderClient) CreateWorkspace(workspace *MeshWorkspaceCreate
 func (c *MeshStackProviderClient) UpdateWorkspace(name string, workspace *MeshWorkspaceCreate) (*MeshWorkspace, error) {
 	targetUrl := c.urlForWorkspace(name)
 
-	paylod, err := json.Marshal(workspace)
+	payload, err := json.Marshal(workspace)
 	if err != nil {
 		return nil, err
 	}
 
-	req, err := http.NewRequest("PUT", targetUrl.String(), bytes.NewBuffer(paylod))
+	req, err := http.NewRequest("PUT", targetUrl.String(), bytes.NewBuffer(payload))
 	if err != nil {
 		return nil, err
 	}
