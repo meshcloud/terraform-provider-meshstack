@@ -27,11 +27,6 @@ func (m platformTypeModifier) MarkdownDescription(_ context.Context) string {
 
 // PlanModifyString implements the plan modification logic.
 func (m platformTypeModifier) PlanModifyString(ctx context.Context, req planmodifier.StringRequest, resp *planmodifier.StringResponse) {
-	// If the type is already set explicitly, don't override it
-	if !req.PlanValue.IsNull() && !req.PlanValue.IsUnknown() {
-		return
-	}
-
 	// Get the parent object (platform_properties)
 	platformPropsPath := req.Path.ParentPath()
 	var platformProps types.Object
@@ -51,7 +46,7 @@ func (m platformTypeModifier) PlanModifyString(ctx context.Context, req planmodi
 		attrValue := platformProps.Attributes()[platformType]
 		if attrValue != nil && !attrValue.IsNull() {
 			resp.PlanValue = types.StringValue(platformType)
-			// early-return is okay here: if more than one platform-property is set, the singlePlatformValidator
+			// Early return is okay here: if more than one platform-property is set, the singlePlatformValidator
 			// will catch this.
 			return
 		}
