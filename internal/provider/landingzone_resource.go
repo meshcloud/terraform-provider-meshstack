@@ -65,9 +65,7 @@ func (r *landingZoneResource) Configure(_ context.Context, req resource.Configur
 
 func (r *landingZoneResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Represents a meshStack landing zone." +
-			"\n\n~> **Note:** Managing landing zones requires an API key with sufficient admin permissions.",
-
+		MarkdownDescription: "Represents a meshStack landing zone.",
 		Attributes: map[string]schema.Attribute{
 			"api_version": schema.StringAttribute{
 				MarkdownDescription: "Landing zone datatype version",
