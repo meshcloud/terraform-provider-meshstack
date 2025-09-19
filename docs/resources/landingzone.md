@@ -4,14 +4,11 @@ page_title: "meshstack_landingzone Resource - terraform-provider-meshstack"
 subcategory: ""
 description: |-
   Represents a meshStack landing zone.
-  ~> Note: Managing landing zones requires an API key with sufficient admin permissions.
 ---
 
 # meshstack_landingzone (Resource)
 
 Represents a meshStack landing zone.
-
-~> **Note:** Managing landing zones requires an API key with sufficient admin permissions.
 
 
 
@@ -27,6 +24,7 @@ Represents a meshStack landing zone.
 
 - `api_version` (String) Landing zone datatype version
 - `kind` (String) meshObject type, always `meshLandingZone`.
+- `status` (Attributes) Current Landing Zone status. (see [below for nested schema](#nestedatt--status))
 
 <a id="nestedatt--metadata"></a>
 ### Nested Schema for `metadata`
@@ -59,10 +57,6 @@ Optional:
 <a id="nestedatt--spec--platform_properties"></a>
 ### Nested Schema for `spec.platform_properties`
 
-Required:
-
-- `type` (String) Type of the platform. Must be one of: `aws`, `aks`, `azure`, `azurerg`, `gcp`, `kubernetes`, `openshift`.
-
 Optional:
 
 - `aks` (Attributes) AKS platform properties. Must be present if `type` is `aks` (see [below for nested schema](#nestedatt--spec--platform_properties--aks))
@@ -72,6 +66,7 @@ Optional:
 - `gcp` (Attributes) GCP platform properties. Must be present if `type` is `gcp` (see [below for nested schema](#nestedatt--spec--platform_properties--gcp))
 - `kubernetes` (Attributes) Kubernetes platform properties. Must be present if `type` is `kubernetes` (see [below for nested schema](#nestedatt--spec--platform_properties--kubernetes))
 - `openshift` (Attributes) OpenShift platform properties. Must be present if `type` is `openshift` (see [below for nested schema](#nestedatt--spec--platform_properties--openshift))
+- `type` (String) Type of the platform. Can be one of: `aws`, `aks`, `azure`, `azurerg`, `gcp`, `kubernetes`, `openshift`. If not specified, it will be automatically inferred from which platform configuration is provided.
 
 <a id="nestedatt--spec--platform_properties--aks"></a>
 ### Nested Schema for `spec.platform_properties.aks`
@@ -304,3 +299,13 @@ Required:
 
 - `kind` (String) Must always be set to meshPlatform
 - `uuid` (String) UUID of the platform.
+
+
+
+<a id="nestedatt--status"></a>
+### Nested Schema for `status`
+
+Read-Only:
+
+- `disabled` (Boolean) True if the landing zone is disabled.
+- `restricted` (Boolean) If true, users will be unable to select this landing zone in meshPanel. Only Platform teams can create tenants using restricted landing zones with the meshObject API.

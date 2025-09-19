@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/meshcloud/terraform-provider-meshstack/client"
+	"github.com/meshcloud/terraform-provider-meshstack/internal/modifiers/platformtypemodifier"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -155,6 +156,9 @@ func (r *landingZoneResource) Schema(_ context.Context, _ resource.SchemaRequest
 						MarkdownDescription: "Platform-specific configuration options.",
 						Required:            true,
 						Sensitive:           false,
+						PlanModifiers: []planmodifier.Object{
+							platformtypemodifier.ValidateSinglePlatform(),
+						},
 						Attributes: map[string]schema.Attribute{
 							"aws":        awsPlatformConfigSchema(),
 							"aks":        aksPlatformConfigSchema(),
@@ -164,9 +168,13 @@ func (r *landingZoneResource) Schema(_ context.Context, _ resource.SchemaRequest
 							"kubernetes": kubernetesPlatformConfigSchema(),
 							"openshift":  openShiftPlatformConfigSchema(),
 							"type": schema.StringAttribute{
-								MarkdownDescription: "Type of the platform. Must be one of: `aws`, `aks`, `azure`, `azurerg`, `gcp`, `kubernetes`, `openshift`.",
-								Required:            true,
-								PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
+								MarkdownDescription: "Type of the platform. Can be one of: `aws`, `aks`, `azure`, `azurerg`, `gcp`, `kubernetes`, `openshift`. If not specified, it will be automatically inferred from which platform configuration is provided.",
+								Optional:            true,
+								Computed:            true,
+								PlanModifiers: []planmodifier.String{
+									stringplanmodifier.RequiresReplace(),
+									platformtypemodifier.SetTypeFromPlatform(),
+								},
 							},
 						},
 					},
