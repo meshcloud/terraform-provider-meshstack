@@ -168,8 +168,7 @@ func (r *landingZoneResource) Schema(_ context.Context, _ resource.SchemaRequest
 							"kubernetes": kubernetesPlatformConfigSchema(),
 							"openshift":  openShiftPlatformConfigSchema(),
 							"type": schema.StringAttribute{
-								MarkdownDescription: "Type of the platform. Can be one of: `aws`, `aks`, `azure`, `azurerg`, `gcp`, `kubernetes`, `openshift`. If not specified, it will be automatically inferred from which platform configuration is provided.",
-								Optional:            true,
+								MarkdownDescription: "Type of the platform. This field is automatically inferred from which platform configuration is provided and cannot be set manually.",
 								Computed:            true,
 								PlanModifiers: []planmodifier.String{
 									stringplanmodifier.RequiresReplace(),
