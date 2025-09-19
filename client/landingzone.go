@@ -40,11 +40,11 @@ type PlatformRef struct {
 
 type PlatformProperties struct {
 	Type       string                        `json:"type" tfsdk:"type"`
-	AWS        *AwsPlatformProperties        `json:"aws" tfsdk:"aws"`
-	AKS        *AksPlatformProperties        `json:"aks" tfsdk:"aks"`
+	Aws        *AwsPlatformProperties        `json:"aws" tfsdk:"aws"`
+	Aks        *AksPlatformProperties        `json:"aks" tfsdk:"aks"`
 	Azure      *AzurePlatformProperties      `json:"azure" tfsdk:"azure"`
-	AzureRG    *AzureRgPlatformProperties    `json:"azurerg" tfsdk:"azurerg"`
-	GCP        *GcpPlatformProperties        `json:"gcp" tfsdk:"gcp"`
+	AzureRg    *AzureRgPlatformProperties    `json:"azurerg" tfsdk:"azurerg"`
+	Gcp        *GcpPlatformProperties        `json:"gcp" tfsdk:"gcp"`
 	Kubernetes *KubernetesPlatformProperties `json:"kubernetes" tfsdk:"kubernetes"`
 	OpenShift  *OpenShiftPlatformProperties  `json:"openshift" tfsdk:"openshift"`
 }
