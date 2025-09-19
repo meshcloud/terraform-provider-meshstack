@@ -42,6 +42,7 @@ type endpoints struct {
 	WorkspaceGroupBindings *url.URL `json:"meshworkspacegroupbindings"`
 	Tenants                *url.URL `json:"meshtenants"`
 	TagDefinitions         *url.URL `json:"meshtagdefinitions"`
+	LandingZones           *url.URL `json:"meshlandingzones"`
 }
 
 type loginResponse struct {
@@ -71,6 +72,7 @@ func NewClient(rootUrl *url.URL, apiKey string, apiSecret string) (*MeshStackPro
 		WorkspaceGroupBindings: rootUrl.JoinPath(apiMeshObjectsRoot, "meshworkspacebindings", "groupbindings"),
 		Tenants:                rootUrl.JoinPath(apiMeshObjectsRoot, "meshtenants"),
 		TagDefinitions:         rootUrl.JoinPath(apiMeshObjectsRoot, "meshtagdefinitions"),
+		LandingZones:           rootUrl.JoinPath(apiMeshObjectsRoot, "meshlandingzones"),
 	}
 
 	return client, nil
