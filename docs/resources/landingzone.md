@@ -59,13 +59,13 @@ Optional:
 
 Optional:
 
-- `aks` (Attributes) AKS platform properties. Must be present if `type` is `aks` (see [below for nested schema](#nestedatt--spec--platform_properties--aks))
-- `aws` (Attributes) AWS platform properties. Must be present if `type` is `aws` (see [below for nested schema](#nestedatt--spec--platform_properties--aws))
-- `azure` (Attributes) Azure platform properties. Must be present if `type` is `azure` (see [below for nested schema](#nestedatt--spec--platform_properties--azure))
-- `azurerg` (Attributes) Azure Resource Group platform properties. Must be present if `type` is `azurerg` (see [below for nested schema](#nestedatt--spec--platform_properties--azurerg))
-- `gcp` (Attributes) GCP platform properties. Must be present if `type` is `gcp` (see [below for nested schema](#nestedatt--spec--platform_properties--gcp))
-- `kubernetes` (Attributes) Kubernetes platform properties. Must be present if `type` is `kubernetes` (see [below for nested schema](#nestedatt--spec--platform_properties--kubernetes))
-- `openshift` (Attributes) OpenShift platform properties. Must be present if `type` is `openshift` (see [below for nested schema](#nestedatt--spec--platform_properties--openshift))
+- `aks` (Attributes) AKS platform properties. (see [below for nested schema](#nestedatt--spec--platform_properties--aks))
+- `aws` (Attributes) AWS platform properties. (see [below for nested schema](#nestedatt--spec--platform_properties--aws))
+- `azure` (Attributes) Azure platform properties. (see [below for nested schema](#nestedatt--spec--platform_properties--azure))
+- `azurerg` (Attributes) Azure Resource Group platform properties. (see [below for nested schema](#nestedatt--spec--platform_properties--azurerg))
+- `gcp` (Attributes) GCP platform properties. (see [below for nested schema](#nestedatt--spec--platform_properties--gcp))
+- `kubernetes` (Attributes) Kubernetes platform properties. (see [below for nested schema](#nestedatt--spec--platform_properties--kubernetes))
+- `openshift` (Attributes) OpenShift platform properties. (see [below for nested schema](#nestedatt--spec--platform_properties--openshift))
 - `type` (String) Type of the platform. Can be one of: `aws`, `aks`, `azure`, `azurerg`, `gcp`, `kubernetes`, `openshift`. If not specified, it will be automatically inferred from which platform configuration is provided.
 
 <a id="nestedatt--spec--platform_properties--aks"></a>

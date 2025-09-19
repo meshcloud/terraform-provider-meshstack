@@ -203,7 +203,7 @@ func (r *landingZoneResource) Schema(_ context.Context, _ resource.SchemaRequest
 
 func awsPlatformConfigSchema() schema.Attribute {
 	return schema.SingleNestedAttribute{
-		MarkdownDescription: "AWS platform properties. Must be present if `type` is `aws`",
+		MarkdownDescription: "AWS platform properties.",
 		Optional:            true,
 		Attributes: map[string]schema.Attribute{
 			"aws_target_org_unit_id": schema.StringAttribute{
@@ -245,7 +245,7 @@ func awsPlatformConfigSchema() schema.Attribute {
 
 func aksPlatformConfigSchema() schema.Attribute {
 	return schema.SingleNestedAttribute{
-		MarkdownDescription: "AKS platform properties. Must be present if `type` is `aks`",
+		MarkdownDescription: "AKS platform properties.",
 		Optional:            true,
 		Attributes: map[string]schema.Attribute{
 			"kubernetes_role_mappings": schema.ListNestedAttribute{
@@ -270,7 +270,7 @@ func aksPlatformConfigSchema() schema.Attribute {
 
 func azurePlatformConfigSchema() schema.Attribute {
 	return schema.SingleNestedAttribute{
-		MarkdownDescription: "Azure platform properties. Must be present if `type` is `azure`",
+		MarkdownDescription: "Azure platform properties.",
 		Optional:            true,
 		Attributes: map[string]schema.Attribute{
 			"azure_management_group_id": schema.StringAttribute{
@@ -317,7 +317,7 @@ func azurePlatformConfigSchema() schema.Attribute {
 
 func gcpPlatformConfigSchema() schema.Attribute {
 	return schema.SingleNestedAttribute{
-		MarkdownDescription: "GCP platform properties. Must be present if `type` is `gcp`",
+		MarkdownDescription: "GCP platform properties.",
 		Optional:            true,
 		Attributes: map[string]schema.Attribute{
 			"gcp_cloud_function_url": schema.StringAttribute{
@@ -352,7 +352,7 @@ func gcpPlatformConfigSchema() schema.Attribute {
 
 func azureRgPlatformConfigSchema() schema.Attribute {
 	return schema.SingleNestedAttribute{
-		MarkdownDescription: "Azure Resource Group platform properties. Must be present if `type` is `azurerg`",
+		MarkdownDescription: "Azure Resource Group platform properties.",
 		Optional:            true,
 		Attributes: map[string]schema.Attribute{
 			"azure_rg_location": schema.StringAttribute{
@@ -403,7 +403,7 @@ func azureRgPlatformConfigSchema() schema.Attribute {
 
 func kubernetesPlatformConfigSchema() schema.Attribute {
 	return schema.SingleNestedAttribute{
-		MarkdownDescription: "Kubernetes platform properties. Must be present if `type` is `kubernetes`",
+		MarkdownDescription: "Kubernetes platform properties.",
 		Optional:            true,
 		Attributes: map[string]schema.Attribute{
 			"kubernetes_role_mappings": schema.ListNestedAttribute{
@@ -428,7 +428,7 @@ func kubernetesPlatformConfigSchema() schema.Attribute {
 
 func openShiftPlatformConfigSchema() schema.Attribute {
 	return schema.SingleNestedAttribute{
-		MarkdownDescription: "OpenShift platform properties. Must be present if `type` is `openshift`",
+		MarkdownDescription: "OpenShift platform properties.",
 		Optional:            true,
 		Attributes: map[string]schema.Attribute{
 			"openshift_template": schema.StringAttribute{
