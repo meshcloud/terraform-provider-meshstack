@@ -17,7 +17,6 @@ resource "meshstack_landingzone" "example" {
       kind = "meshPlatform"
     }
     platform_properties = {
-      type = "aws"
       aws = {
         aws_target_org_unit_id = "ou-lpzq-kmf17bec"
         aws_enroll_account     = true
