@@ -56,13 +56,9 @@ type PlatformProperties struct {
 }
 
 type MeshLandingZoneCreate struct {
-	ApiVersion string                        `json:"apiVersion" tfsdk:"api_version"`
-	Metadata   MeshLandingZoneCreateMetadata `json:"metadata" tfsdk:"metadata"`
-	Spec       MeshLandingZoneSpec           `json:"spec" tfsdk:"spec"`
-}
-type MeshLandingZoneCreateMetadata struct {
-	Name string              `json:"name" tfsdk:"name"`
-	Tags map[string][]string `json:"tags" tfsdk:"tags"`
+	ApiVersion string                  `json:"apiVersion" tfsdk:"api_version"`
+	Metadata   MeshLandingZoneMetadata `json:"metadata" tfsdk:"metadata"`
+	Spec       MeshLandingZoneSpec     `json:"spec" tfsdk:"spec"`
 }
 
 func (c *MeshStackProviderClient) urlForLandingZone(name string) *url.URL {
