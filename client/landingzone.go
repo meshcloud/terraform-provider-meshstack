@@ -35,8 +35,8 @@ type MeshLandingZoneSpec struct {
 }
 
 type MeshLandingZoneStatus struct {
-	Disabled   string `json:"disabled" tfsdk:"disabled"`
-	Restricted string `json:"restricted" tfsdk:"restricted"`
+	Disabled   bool `json:"disabled" tfsdk:"disabled"`
+	Restricted bool `json:"restricted" tfsdk:"restricted"`
 }
 
 type PlatformRef struct {
