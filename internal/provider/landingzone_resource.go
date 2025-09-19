@@ -439,7 +439,7 @@ func meshProjectRoleAttribute() schema.SingleNestedAttribute {
 
 func (r *landingZoneResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	landingZone := client.MeshLandingZoneCreate{
-		Metadata: client.MeshLandingZoneCreateMetadata{},
+		Metadata: client.MeshLandingZoneMetadata{},
 	}
 
 	// Retrieve values from plan
@@ -495,7 +495,7 @@ func (r *landingZoneResource) Read(ctx context.Context, req resource.ReadRequest
 
 func (r *landingZoneResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	landingZone := client.MeshLandingZoneCreate{
-		Metadata: client.MeshLandingZoneCreateMetadata{},
+		Metadata: client.MeshLandingZoneMetadata{},
 	}
 
 	// Retrieve values from plan
