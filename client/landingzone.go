@@ -16,6 +16,7 @@ type MeshLandingZone struct {
 	Kind       string                  `json:"kind" tfsdk:"kind"`
 	Metadata   MeshLandingZoneMetadata `json:"metadata" tfsdk:"metadata"`
 	Spec       MeshLandingZoneSpec     `json:"spec" tfsdk:"spec"`
+	Status     MeshLandingZoneStatus   `json:"status" tfsdk:"status"`
 }
 
 type MeshLandingZoneMetadata struct {
@@ -31,6 +32,11 @@ type MeshLandingZoneSpec struct {
 	InfoLink                    string              `json:"infoLink" tfsdk:"info_link"`
 	PlatformRef                 PlatformRef         `json:"platformRef" tfsdk:"platform_ref"`
 	PlatformProperties          *PlatformProperties `json:"platformProperties,omitempty" tfsdk:"platform_properties"`
+}
+
+type MeshLandingZoneStatus struct {
+	Disabled   string `json:"disabled" tfsdk:"disabled"`
+	Restricted string `json:"restricted" tfsdk:"restricted"`
 }
 
 type PlatformRef struct {
