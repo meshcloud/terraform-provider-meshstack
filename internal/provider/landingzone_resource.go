@@ -443,8 +443,7 @@ func (r *landingZoneResource) Create(ctx context.Context, req resource.CreateReq
 	// Retrieve values from plan
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("api_version"), &landingZone.ApiVersion)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec"), &landingZone.Spec)...)
-	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("metadata").AtName("name"), &landingZone.Metadata.Name)...)
-	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("metadata").AtName("tags"), &landingZone.Metadata.Tags)...)
+	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("metadata"), &landingZone.Metadata)...)
 
 	if resp.Diagnostics.HasError() {
 		return
@@ -499,8 +498,7 @@ func (r *landingZoneResource) Update(ctx context.Context, req resource.UpdateReq
 	// Retrieve values from plan
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("api_version"), &landingZone.ApiVersion)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec"), &landingZone.Spec)...)
-	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("metadata").AtName("name"), &landingZone.Metadata.Name)...)
-	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("metadata").AtName("tags"), &landingZone.Metadata.Tags)...)
+	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("metadata"), &landingZone.Metadata)...)
 
 	if resp.Diagnostics.HasError() {
 		return
