@@ -6,6 +6,7 @@ import (
 	"regexp"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/meshcloud/terraform-provider-meshstack/client"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -168,6 +169,23 @@ func (r *landingZoneResource) Schema(_ context.Context, _ resource.SchemaRequest
 								PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 							},
 						},
+					},
+				},
+			},
+
+			"status": schema.SingleNestedAttribute{
+				MarkdownDescription: "Current Landing Zone status.",
+				Computed:            true,
+				PlanModifiers:       []planmodifier.Object{objectplanmodifier.UseStateForUnknown()},
+				Attributes: map[string]schema.Attribute{
+					"disabled": schema.BoolAttribute{
+						MarkdownDescription: "True if the landing zone is disabled.",
+						Computed:            true,
+					},
+					"restricted": schema.BoolAttribute{
+						MarkdownDescription: "If true, users will be unable to select this landing zone in meshPanel. " +
+							"Only Platform teams can create tenants using restricted landing zones with the meshObject API.",
+						Computed: true,
 					},
 				},
 			},
