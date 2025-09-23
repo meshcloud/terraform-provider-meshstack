@@ -43,6 +43,7 @@ type endpoints struct {
 	Tenants                *url.URL `json:"meshtenants"`
 	TagDefinitions         *url.URL `json:"meshtagdefinitions"`
 	LandingZones           *url.URL `json:"meshlandingzones"`
+	Platforms              *url.URL `json:"meshplatforms"`
 }
 
 type loginResponse struct {
@@ -73,6 +74,7 @@ func NewClient(rootUrl *url.URL, apiKey string, apiSecret string) (*MeshStackPro
 		Tenants:                rootUrl.JoinPath(apiMeshObjectsRoot, "meshtenants"),
 		TagDefinitions:         rootUrl.JoinPath(apiMeshObjectsRoot, "meshtagdefinitions"),
 		LandingZones:           rootUrl.JoinPath(apiMeshObjectsRoot, "meshlandingzones"),
+		Platforms:              rootUrl.JoinPath(apiMeshObjectsRoot, "meshplatforms"),
 	}
 
 	return client, nil
