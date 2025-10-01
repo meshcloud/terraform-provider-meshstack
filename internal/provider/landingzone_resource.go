@@ -438,28 +438,6 @@ func openShiftPlatformConfigSchema() schema.Attribute {
 	}
 }
 
-func meshProjectRoleAttribute() schema.SingleNestedAttribute {
-	return schema.SingleNestedAttribute{
-		MarkdownDescription: "the meshProject role",
-		Required:            true,
-		Attributes: map[string]schema.Attribute{
-			"name": schema.StringAttribute{
-				Required:            true,
-				MarkdownDescription: "The identifier of the meshProjectRole",
-			},
-			"kind": schema.StringAttribute{
-				MarkdownDescription: "meshObject type, always `meshProjectRole`.",
-				Computed:            true,
-				Default:             stringdefault.StaticString("meshProjectRole"),
-				Validators: []validator.String{
-					stringvalidator.OneOf([]string{"meshProjectRole"}...),
-				},
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-			},
-		},
-	}
-}
-
 func (r *landingZoneResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	landingZone := client.MeshLandingZoneCreate{
 		Metadata: client.MeshLandingZoneMetadata{},
