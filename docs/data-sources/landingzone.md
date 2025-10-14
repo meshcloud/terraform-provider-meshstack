@@ -24,6 +24,7 @@ Read a single landing zone by identifier.
 - `api_version` (String) Landing Zone API version.
 - `kind` (String) meshObject type, always `meshLandingZone`.
 - `spec` (Attributes) (see [below for nested schema](#nestedatt--spec))
+- `status` (Attributes) Current Landing Zone status. (see [below for nested schema](#nestedatt--status))
 
 <a id="nestedatt--metadata"></a>
 ### Nested Schema for `metadata`
@@ -65,7 +66,7 @@ Optional:
 
 Read-Only:
 
-- `type` (String) Type of the platform. One of `aws`, `aks`, `azure`, `azurerg`, `gcp`, `kubernetes`, `openshift`.
+- `type` (String) Type of the platform. This field is automatically inferred from which platform configuration is provided and cannot be set manually.
 
 <a id="nestedatt--spec--platform_properties--aks"></a>
 ### Nested Schema for `spec.platform_properties.aks`
@@ -298,3 +299,13 @@ Read-Only:
 
 - `kind` (String) Must always be set to meshPlatform
 - `uuid` (String) UUID of the platform.
+
+
+
+<a id="nestedatt--status"></a>
+### Nested Schema for `status`
+
+Read-Only:
+
+- `disabled` (Boolean) True if the landing zone is disabled.
+- `restricted` (Boolean) If true, users will be unable to select this landing zone in meshPanel. Only Platform teams can create tenants using restricted landing zones with the meshObject API.

@@ -16,7 +16,6 @@ Represents a meshStack platform.
 data "meshstack_platform" "example" {
   metadata = {
     uuid = "d32951fc-6589-412f-b8bd-50c78fe2cb79"
-    name = "my-platform-identifier"
   }
 }
 ```
@@ -37,13 +36,16 @@ data "meshstack_platform" "example" {
 <a id="nestedatt--metadata"></a>
 ### Nested Schema for `metadata`
 
+Required:
+
+- `uuid` (String) Platform UUID identifier.
+
 Read-Only:
 
 - `created_on` (String) Creation timestamp of the platform (server-generated).
 - `deleted_on` (String) Timestamp when the meshPlatform was deleted, null if not deleted.
 - `name` (String) Platform identifier.
 - `owned_by_workspace` (String) The identifier of the workspace that owns this meshPlatform.
-- `uuid` (String) Platform UUID identifier.
 
 
 <a id="nestedatt--spec"></a>
