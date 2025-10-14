@@ -73,7 +73,7 @@ func (d *platformDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 				Attributes: map[string]schema.Attribute{
 					"uuid": schema.StringAttribute{
 						MarkdownDescription: "Platform UUID identifier.",
-						Computed:            true,
+						Required:            true,
 					},
 					"name": schema.StringAttribute{
 						MarkdownDescription: "Platform identifier.",
