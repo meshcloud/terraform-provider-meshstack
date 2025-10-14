@@ -109,13 +109,6 @@ func (d *landingZoneDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 						MarkdownDescription: "Platform-specific configuration options.",
 						Computed:            true,
 						Attributes: map[string]schema.Attribute{
-							"type": schema.StringAttribute{
-								MarkdownDescription: "Type of the platform. One of `aws`, `aks`, `azure`, `azurerg`, `gcp`, `kubernetes`, `openshift`.",
-								Computed:            true,
-								Validators: []validator.String{
-									stringvalidator.OneOf([]string{"aws", "aks", "azure", "azurerg", "gcp", "kubernetes", "openshift"}...),
-								},
-							},
 							"aws":        awsPlatformConfigSchema(),
 							"aks":        aksPlatformConfigSchema(),
 							"azure":      azurePlatformConfigSchema(),
@@ -123,7 +116,27 @@ func (d *landingZoneDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 							"gcp":        gcpPlatformConfigSchema(),
 							"kubernetes": kubernetesPlatformConfigSchema(),
 							"openshift":  openShiftPlatformConfigSchema(),
+							"type": schema.StringAttribute{
+								MarkdownDescription: "Type of the platform. This field is automatically inferred from which platform configuration is provided and cannot be set manually.",
+								Computed:            true,
+							},
 						},
+					},
+				},
+			},
+
+			"status": schema.SingleNestedAttribute{
+				MarkdownDescription: "Current Landing Zone status.",
+				Computed:            true,
+				Attributes: map[string]schema.Attribute{
+					"disabled": schema.BoolAttribute{
+						MarkdownDescription: "True if the landing zone is disabled.",
+						Computed:            true,
+					},
+					"restricted": schema.BoolAttribute{
+						MarkdownDescription: "If true, users will be unable to select this landing zone in meshPanel. " +
+							"Only Platform teams can create tenants using restricted landing zones with the meshObject API.",
+						Computed: true,
 					},
 				},
 			},
