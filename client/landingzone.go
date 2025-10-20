@@ -29,7 +29,7 @@ type MeshLandingZoneSpec struct {
 	Description                 string              `json:"description" tfsdk:"description"`
 	AutomateDeletionApproval    bool                `json:"automateDeletionApproval" tfsdk:"automate_deletion_approval"`
 	AutomateDeletionReplication bool                `json:"automateDeletionReplication" tfsdk:"automate_deletion_replication"`
-	InfoLink                    string              `json:"infoLink" tfsdk:"info_link"`
+	InfoLink                    *string             `json:"infoLink,omitempty" tfsdk:"info_link"`
 	PlatformRef                 PlatformRef         `json:"platformRef" tfsdk:"platform_ref"`
 	PlatformProperties          *PlatformProperties `json:"platformProperties,omitempty" tfsdk:"platform_properties"`
 }
