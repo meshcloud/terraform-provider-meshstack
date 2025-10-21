@@ -237,7 +237,7 @@ Optional:
 
 Optional:
 
-- `access_token` (String) The Access Token of the service account for replicator access.
+- `access_token` (String, Sensitive) The Access Token of the service account for replicator access.
 - `administrative_unit_id` (String) If you enter an administrative unit ID the replicated (and potentially existing) groups will be put into this AU. This can be used to limit the permission scopes which are required for the replicator principal. If you remove the AU ID again or change it, the groups will not be removed from the old AU.
 - `aks_cluster_name` (String) Name of the AKS cluster.
 - `aks_resource_group` (String) Resource group for the AKS cluster

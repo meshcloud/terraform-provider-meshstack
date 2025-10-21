@@ -350,8 +350,6 @@ func openShiftPlatformSchema() schema.Attribute {
 	}
 }
 
-// TODO review done until here
-
 func aksReplicationConfigSchema() schema.Attribute {
 	return schema.SingleNestedAttribute{
 		MarkdownDescription: "Replication configuration for AKS (optional, but required for replication)",
@@ -360,6 +358,7 @@ func aksReplicationConfigSchema() schema.Attribute {
 			"access_token": schema.StringAttribute{
 				MarkdownDescription: "The Access Token of the service account for replicator access.",
 				Optional:            true,
+				Sensitive:           true,
 			},
 			"namespace_name_pattern": schema.StringAttribute{
 				MarkdownDescription: "Pattern for naming namespaces in AKS",
@@ -812,8 +811,6 @@ func azureReplicationConfigSchema() schema.Attribute {
 	}
 }
 
-// TODO continue here.
-
 func azureRgReplicationConfigSchema() schema.Attribute {
 	return schema.SingleNestedAttribute{
 		MarkdownDescription: "Azure Resource Group-specific replication configuration for the platform.",
@@ -1053,8 +1050,6 @@ func kubernetesReplicationConfigSchema() schema.Attribute {
 	}
 }
 
-// TODO continue here.
-
 func openShiftReplicationConfigSchema() schema.Attribute {
 	return schema.SingleNestedAttribute{
 		MarkdownDescription: "Replication configuration for OpenShift (optional, but required for replication)",
@@ -1155,6 +1150,8 @@ func (r *platformResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
+	handleObfuscatedSecrets(&createdPlatform.Spec.Config, &platform.Spec.Config, resp.Diagnostics)
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, createdPlatform)...)
 }
 
@@ -1163,7 +1160,7 @@ func (r *platformResource) Read(ctx context.Context, req resource.ReadRequest, r
 	var uuid string
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("metadata").AtName("uuid"), &uuid)...)
 
-	platform, err := r.client.ReadPlatform(uuid)
+	readPlatform, err := r.client.ReadPlatform(uuid)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("Could not read platform with UUID '%s'", uuid),
@@ -1172,14 +1169,21 @@ func (r *platformResource) Read(ctx context.Context, req resource.ReadRequest, r
 		return
 	}
 
-	if platform == nil {
+	if readPlatform == nil {
 		// The platform was deleted outside of Terraform, so we remove it from the state
 		resp.State.RemoveResource(ctx)
 		return
 	}
 
-	// client data maps directly to the schema so we just need to set the state
-	resp.Diagnostics.Append(resp.State.Set(ctx, platform)...)
+	statePlatformSpec := client.MeshPlatformSpec{}
+	req.State.GetAttribute(ctx, path.Root("spec"), &statePlatformSpec)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	handleObfuscatedSecrets(&readPlatform.Spec.Config, &statePlatformSpec.Config, resp.Diagnostics)
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, readPlatform)...)
 }
 
 func (r *platformResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -1219,6 +1223,8 @@ func (r *platformResource) Update(ctx context.Context, req resource.UpdateReques
 		)
 		return
 	}
+
+	handleObfuscatedSecrets(&updatedPlatform.Spec.Config, &platform.Spec.Config, resp.Diagnostics)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, updatedPlatform)...)
 }
