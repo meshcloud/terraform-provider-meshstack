@@ -37,6 +37,8 @@ func handleObfuscatedSecrets(obfuscated *client.PlatformConfig, plain *client.Pl
 			// SP client secret
 			if obfuscated.Aks.Replication.ServicePrincipal != nil &&
 				plain.Aks.Replication.ServicePrincipal != nil &&
+				obfuscated.Aks.Replication.ServicePrincipal.CredentialsAuthClientSecret != nil &&
+				plain.Aks.Replication.ServicePrincipal.CredentialsAuthClientSecret != nil &&
 				*obfuscated.Aks.Replication.ServicePrincipal.CredentialsAuthClientSecret == obfuscatedValue {
 				obfuscated.Aks.Replication.ServicePrincipal.CredentialsAuthClientSecret = plain.Aks.Replication.ServicePrincipal.CredentialsAuthClientSecret
 			}
@@ -49,12 +51,16 @@ func handleObfuscatedSecrets(obfuscated *client.PlatformConfig, plain *client.Pl
 				plain.Aws.Replication.AccessConfig != nil &&
 				obfuscated.Aws.Replication.AccessConfig.ServiceUserConfig != nil &&
 				plain.Aws.Replication.AccessConfig.ServiceUserConfig != nil &&
+				obfuscated.Aws.Replication.AccessConfig.ServiceUserConfig.SecretKey != nil &&
+				plain.Aws.Replication.AccessConfig.ServiceUserConfig.SecretKey != nil &&
 				*obfuscated.Aws.Replication.AccessConfig.ServiceUserConfig.SecretKey == obfuscatedValue {
 				obfuscated.Aws.Replication.AccessConfig.ServiceUserConfig.SecretKey = plain.Aws.Replication.AccessConfig.ServiceUserConfig.SecretKey
 			}
 			// replication AWS SSO token
 			if obfuscated.Aws.Replication.AwsSso != nil &&
 				plain.Aws.Replication.AwsSso != nil &&
+				obfuscated.Aws.Replication.AwsSso.SsoAccessToken != nil &&
+				plain.Aws.Replication.AwsSso.SsoAccessToken != nil &&
 				*obfuscated.Aws.Replication.AwsSso.SsoAccessToken == obfuscatedValue {
 				obfuscated.Aws.Replication.AwsSso.SsoAccessToken = plain.Aws.Replication.AwsSso.SsoAccessToken
 			}
@@ -65,6 +71,8 @@ func handleObfuscatedSecrets(obfuscated *client.PlatformConfig, plain *client.Pl
 			// replication SP client secret
 			if obfuscated.Azure.Replication.ServicePrincipal != nil &&
 				plain.Azure.Replication.ServicePrincipal != nil &&
+				obfuscated.Azure.Replication.ServicePrincipal.CredentialsAuthClientSecret != nil &&
+				plain.Azure.Replication.ServicePrincipal.CredentialsAuthClientSecret != nil &&
 				*obfuscated.Azure.Replication.ServicePrincipal.CredentialsAuthClientSecret == obfuscatedValue {
 				obfuscated.Azure.Replication.ServicePrincipal.CredentialsAuthClientSecret = plain.Azure.Replication.ServicePrincipal.CredentialsAuthClientSecret
 			}
@@ -73,6 +81,8 @@ func handleObfuscatedSecrets(obfuscated *client.PlatformConfig, plain *client.Pl
 				plain.Azure.Replication.Provisioning.CustomerAgreement != nil {
 				if obfuscated.Azure.Replication.Provisioning.CustomerAgreement.SourceServicePrincipal != nil &&
 					plain.Azure.Replication.Provisioning.CustomerAgreement.SourceServicePrincipal != nil &&
+					obfuscated.Azure.Replication.Provisioning.CustomerAgreement.SourceServicePrincipal.CredentialsAuthClientSecret != nil &&
+					plain.Azure.Replication.Provisioning.CustomerAgreement.SourceServicePrincipal.CredentialsAuthClientSecret != nil &&
 					*obfuscated.Azure.Replication.Provisioning.CustomerAgreement.SourceServicePrincipal.CredentialsAuthClientSecret == obfuscatedValue {
 					obfuscated.Azure.Replication.Provisioning.CustomerAgreement.SourceServicePrincipal.CredentialsAuthClientSecret = plain.Azure.Replication.Provisioning.CustomerAgreement.SourceServicePrincipal.CredentialsAuthClientSecret
 				}
@@ -84,6 +94,8 @@ func handleObfuscatedSecrets(obfuscated *client.PlatformConfig, plain *client.Pl
 			// replication SP client secret
 			if obfuscated.AzureRg.Replication.ServicePrincipal != nil &&
 				plain.AzureRg.Replication.ServicePrincipal != nil &&
+				obfuscated.AzureRg.Replication.ServicePrincipal.CredentialsAuthClientSecret != nil &&
+				plain.AzureRg.Replication.ServicePrincipal.CredentialsAuthClientSecret != nil &&
 				*obfuscated.AzureRg.Replication.ServicePrincipal.CredentialsAuthClientSecret == obfuscatedValue {
 				obfuscated.AzureRg.Replication.ServicePrincipal.CredentialsAuthClientSecret = plain.AzureRg.Replication.ServicePrincipal.CredentialsAuthClientSecret
 			}
@@ -94,6 +106,8 @@ func handleObfuscatedSecrets(obfuscated *client.PlatformConfig, plain *client.Pl
 			// access token
 			if obfuscated.Kubernetes.Replication.ClientConfig != nil &&
 				plain.Kubernetes.Replication.ClientConfig != nil &&
+				obfuscated.Kubernetes.Replication.ClientConfig.AccessToken != nil &&
+				plain.Kubernetes.Replication.ClientConfig.AccessToken != nil &&
 				*obfuscated.Kubernetes.Replication.ClientConfig.AccessToken == obfuscatedValue {
 				obfuscated.Kubernetes.Replication.ClientConfig.AccessToken = plain.Kubernetes.Replication.ClientConfig.AccessToken
 			}
@@ -106,6 +120,8 @@ func handleObfuscatedSecrets(obfuscated *client.PlatformConfig, plain *client.Pl
 				plain.Gcp.Replication.ServiceAccountConfig != nil &&
 				obfuscated.Gcp.Replication.ServiceAccountConfig.ServiceAccountCredentialsConfig != nil &&
 				plain.Gcp.Replication.ServiceAccountConfig.ServiceAccountCredentialsConfig != nil &&
+				obfuscated.Gcp.Replication.ServiceAccountConfig.ServiceAccountCredentialsConfig.ServiceAccountCredentialsB64 != nil &&
+				plain.Gcp.Replication.ServiceAccountConfig.ServiceAccountCredentialsConfig.ServiceAccountCredentialsB64 != nil &&
 				*obfuscated.Gcp.Replication.ServiceAccountConfig.ServiceAccountCredentialsConfig.ServiceAccountCredentialsB64 == obfuscatedValue {
 				obfuscated.Gcp.Replication.ServiceAccountConfig.ServiceAccountCredentialsConfig = plain.Gcp.Replication.ServiceAccountConfig.ServiceAccountCredentialsConfig
 			}
@@ -116,6 +132,8 @@ func handleObfuscatedSecrets(obfuscated *client.PlatformConfig, plain *client.Pl
 			// access token
 			if obfuscated.OpenShift.Replication.ClientConfig != nil &&
 				plain.OpenShift.Replication.ClientConfig != nil &&
+				obfuscated.OpenShift.Replication.ClientConfig.AccessToken != nil &&
+				plain.OpenShift.Replication.ClientConfig.AccessToken != nil &&
 				*obfuscated.OpenShift.Replication.ClientConfig.AccessToken == obfuscatedValue {
 				obfuscated.OpenShift.Replication.ClientConfig.AccessToken = plain.OpenShift.Replication.ClientConfig.AccessToken
 			}
