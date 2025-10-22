@@ -114,16 +114,16 @@ Optional:
 - `aws_lambda_arn` (String) If provided, it is invoked after each project replication. You can use it to trigger a custom Account Vending Machine to perform several additional provisioning steps.
 
 <a id="nestedatt--spec--platform_properties--aws--aws_role_mappings"></a>
-### Nested Schema for `spec.platform_properties.aws.aws_lambda_arn`
+### Nested Schema for `spec.platform_properties.aws.aws_role_mappings`
 
 Required:
 
 - `platform_role` (String) The AWS platform role
 - `policies` (List of String) List of policies associated with this role mapping
-- `project_role_ref` (Attributes) the meshProject role (see [below for nested schema](#nestedatt--spec--platform_properties--aws--aws_lambda_arn--project_role_ref))
+- `project_role_ref` (Attributes) the meshProject role (see [below for nested schema](#nestedatt--spec--platform_properties--aws--aws_role_mappings--project_role_ref))
 
-<a id="nestedatt--spec--platform_properties--aws--aws_lambda_arn--project_role_ref"></a>
-### Nested Schema for `spec.platform_properties.aws.aws_lambda_arn.project_role_ref`
+<a id="nestedatt--spec--platform_properties--aws--aws_role_mappings--project_role_ref"></a>
+### Nested Schema for `spec.platform_properties.aws.aws_role_mappings.project_role_ref`
 
 Required:
 
@@ -192,16 +192,16 @@ Optional:
 - `azure_function` (Attributes) Assign an Azure function to the Landing Zone configuration to trigger a small piece of code in the cloud. (see [below for nested schema](#nestedatt--spec--platform_properties--azurerg--azure_function))
 
 <a id="nestedatt--spec--platform_properties--azurerg--azure_rg_role_mappings"></a>
-### Nested Schema for `spec.platform_properties.azurerg.azure_function`
+### Nested Schema for `spec.platform_properties.azurerg.azure_rg_role_mappings`
 
 Required:
 
 - `azure_group_suffix` (String) The given role name will be injected into the group name via the group naming pattern configured on the platform instance.
 - `azure_role_definition_ids` (List of String) Role Definitions with the given IDs will be attached to this Azure Role.
-- `project_role_ref` (Attributes) the meshProject role (see [below for nested schema](#nestedatt--spec--platform_properties--azurerg--azure_function--project_role_ref))
+- `project_role_ref` (Attributes) the meshProject role (see [below for nested schema](#nestedatt--spec--platform_properties--azurerg--azure_rg_role_mappings--project_role_ref))
 
-<a id="nestedatt--spec--platform_properties--azurerg--azure_function--project_role_ref"></a>
-### Nested Schema for `spec.platform_properties.azurerg.azure_function.project_role_ref`
+<a id="nestedatt--spec--platform_properties--azurerg--azure_rg_role_mappings--project_role_ref"></a>
+### Nested Schema for `spec.platform_properties.azurerg.azure_rg_role_mappings.project_role_ref`
 
 Required:
 
@@ -236,15 +236,15 @@ Optional:
 - `gcp_folder_id` (String) Google Cloud Projects will be added to this Google Cloud Folder. This allows applying Organization Policies to all projects managed under this Landing Zone.
 
 <a id="nestedatt--spec--platform_properties--gcp--gcp_role_mappings"></a>
-### Nested Schema for `spec.platform_properties.gcp.gcp_folder_id`
+### Nested Schema for `spec.platform_properties.gcp.gcp_role_mappings`
 
 Required:
 
 - `platform_roles` (List of String) Can be empty. List of GCP IAM roles to assign to the meshProject role.
-- `project_role_ref` (Attributes) the meshProject role (see [below for nested schema](#nestedatt--spec--platform_properties--gcp--gcp_folder_id--project_role_ref))
+- `project_role_ref` (Attributes) the meshProject role (see [below for nested schema](#nestedatt--spec--platform_properties--gcp--gcp_role_mappings--project_role_ref))
 
-<a id="nestedatt--spec--platform_properties--gcp--gcp_folder_id--project_role_ref"></a>
-### Nested Schema for `spec.platform_properties.gcp.gcp_folder_id.project_role_ref`
+<a id="nestedatt--spec--platform_properties--gcp--gcp_role_mappings--project_role_ref"></a>
+### Nested Schema for `spec.platform_properties.gcp.gcp_role_mappings.project_role_ref`
 
 Required:
 

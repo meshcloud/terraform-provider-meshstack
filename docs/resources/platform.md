@@ -308,7 +308,7 @@ Optional:
 - `workload_identity_config` (Attributes) Workload identity configuration (alternative to `service_user_config`) (see [below for nested schema](#nestedatt--spec--config--aws--replication--access_config--workload_identity_config))
 
 <a id="nestedatt--spec--config--aws--replication--access_config--service_user_config"></a>
-### Nested Schema for `spec.config.aws.replication.access_config.workload_identity_config`
+### Nested Schema for `spec.config.aws.replication.access_config.service_user_config`
 
 Required:
 
@@ -344,19 +344,19 @@ Optional:
 - `sso_access_token` (String, Sensitive) The AWS IAM Identity Center SCIM Access Token that was generated via the Automatic provisioning config in AWS IAM Identity Center.
 
 <a id="nestedatt--spec--config--aws--replication--aws_sso--aws_role_mappings"></a>
-### Nested Schema for `spec.config.aws.replication.aws_sso.sso_access_token`
+### Nested Schema for `spec.config.aws.replication.aws_sso.aws_role_mappings`
 
 Required:
 
 - `aws_role` (String) The AWS role name
-- `project_role_ref` (Attributes) the meshProject role (see [below for nested schema](#nestedatt--spec--config--aws--replication--aws_sso--sso_access_token--project_role_ref))
+- `project_role_ref` (Attributes) the meshProject role (see [below for nested schema](#nestedatt--spec--config--aws--replication--aws_sso--aws_role_mappings--project_role_ref))
 
 Optional:
 
 - `permission_set_arns` (List of String) List of permission set ARNs associated with this role mapping
 
-<a id="nestedatt--spec--config--aws--replication--aws_sso--sso_access_token--project_role_ref"></a>
-### Nested Schema for `spec.config.aws.replication.aws_sso.sso_access_token.permission_set_arns`
+<a id="nestedatt--spec--config--aws--replication--aws_sso--aws_role_mappings--project_role_ref"></a>
+### Nested Schema for `spec.config.aws.replication.aws_sso.aws_role_mappings.project_role_ref`
 
 Required:
 
@@ -437,7 +437,7 @@ Required:
 - `project_role_ref` (Attributes) the meshProject role (see [below for nested schema](#nestedatt--spec--config--azure--replication--azure_role_mappings--project_role_ref))
 
 <a id="nestedatt--spec--config--azure--replication--azure_role_mappings--azure_role"></a>
-### Nested Schema for `spec.config.azure.replication.azure_role_mappings.project_role_ref`
+### Nested Schema for `spec.config.azure.replication.azure_role_mappings.azure_role`
 
 Required:
 
@@ -478,7 +478,7 @@ Optional:
 - `subscription_owner_object_ids` (List of String) One or more principals Object IDs (e.g. user groups, SPNs) that meshStack will ensure have an 'Owner' role assignment on the managed subscriptions. This can be useful to satisfy Azure’s constraint of at least one direct 'Owner' role assignment per Subscription. If you want to use a Service Principal please use the Enterprise Application Object ID. You can not use the replicator object ID here, because meshStack always removes its high privilege access after a Subscription creation.
 
 <a id="nestedatt--spec--config--azure--replication--provisioning--customer_agreement"></a>
-### Nested Schema for `spec.config.azure.replication.provisioning.subscription_owner_object_ids`
+### Nested Schema for `spec.config.azure.replication.provisioning.customer_agreement`
 
 Required:
 
@@ -488,11 +488,11 @@ Required:
 
 Optional:
 
-- `source_service_principal` (Attributes) Configure the SPN used by meshStack to create a new Subscription in your MCA billing scope. For more information on the required permissions, see the [Azure docs](https://learn.microsoft.com/en-us/azure/cost-management-billing/manage/programmatically-create-subscription-microsoft-customer-agreement-across-tenants). (see [below for nested schema](#nestedatt--spec--config--azure--replication--provisioning--subscription_owner_object_ids--source_service_principal))
+- `source_service_principal` (Attributes) Configure the SPN used by meshStack to create a new Subscription in your MCA billing scope. For more information on the required permissions, see the [Azure docs](https://learn.microsoft.com/en-us/azure/cost-management-billing/manage/programmatically-create-subscription-microsoft-customer-agreement-across-tenants). (see [below for nested schema](#nestedatt--spec--config--azure--replication--provisioning--customer_agreement--source_service_principal))
 - `subscription_creation_error_cooldown_sec` (Number) This value must be defined in seconds. It is a safety mechanism to avoid duplicate Subscription creation in case of an error on Azure’s MCA API. This delay should be a bit higher than it usually takes to create subscriptions. For big installations this is somewhere between 5-15 minutes. The default of 900s should be fine for most installations.
 
-<a id="nestedatt--spec--config--azure--replication--provisioning--subscription_owner_object_ids--source_service_principal"></a>
-### Nested Schema for `spec.config.azure.replication.provisioning.subscription_owner_object_ids.subscription_creation_error_cooldown_sec`
+<a id="nestedatt--spec--config--azure--replication--provisioning--customer_agreement--source_service_principal"></a>
+### Nested Schema for `spec.config.azure.replication.provisioning.customer_agreement.source_service_principal`
 
 Required:
 
@@ -506,7 +506,7 @@ Optional:
 
 
 <a id="nestedatt--spec--config--azure--replication--provisioning--enterprise_enrollment"></a>
-### Nested Schema for `spec.config.azure.replication.provisioning.subscription_owner_object_ids`
+### Nested Schema for `spec.config.azure.replication.provisioning.enterprise_enrollment`
 
 Required:
 
@@ -520,7 +520,7 @@ Optional:
 
 
 <a id="nestedatt--spec--config--azure--replication--provisioning--pre_provisioned"></a>
-### Nested Schema for `spec.config.azure.replication.provisioning.subscription_owner_object_ids`
+### Nested Schema for `spec.config.azure.replication.provisioning.pre_provisioned`
 
 Required:
 
@@ -690,7 +690,7 @@ Optional:
 - `service_account_workload_identity_config` (Attributes) Service account workload identity configuration (alternative to serviceAccountCredentialsConfig) (see [below for nested schema](#nestedatt--spec--config--gcp--replication--service_account_config--service_account_workload_identity_config))
 
 <a id="nestedatt--spec--config--gcp--replication--service_account_config--service_account_credentials_config"></a>
-### Nested Schema for `spec.config.gcp.replication.service_account_config.service_account_workload_identity_config`
+### Nested Schema for `spec.config.gcp.replication.service_account_config.service_account_credentials_config`
 
 Optional:
 
@@ -846,6 +846,8 @@ Read-Only:
 ## Import
 
 Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
 
 ```shell
 # import via platform uuid (= meshStack Platform ID)

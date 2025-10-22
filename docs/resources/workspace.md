@@ -76,6 +76,8 @@ Optional:
 
 Import is supported using the following syntax:
 
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
 ```shell
 # import via workspace identifier
 terraform import meshstack_workspace.example my-workspace-identifier
