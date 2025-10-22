@@ -82,6 +82,8 @@ Read-Only:
 
 Import is supported using the following syntax:
 
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
 ```shell
 # import via full tenant identifier <workspace-identifier>.<project-identifier>.<full-platform-identifier>
 terraform import 'meshstack_tenant.example' 'my-workspace-identifier.my-project-identifier.my-platform-identifier'

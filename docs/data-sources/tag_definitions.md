@@ -71,7 +71,7 @@ Read-Only:
 - `string` (Attributes) string, represented as JSON string (see [below for nested schema](#nestedatt--tag_definitions--spec--value_type--string))
 
 <a id="nestedatt--tag_definitions--spec--value_type--email"></a>
-### Nested Schema for `tag_definitions.spec.value_type.string`
+### Nested Schema for `tag_definitions.spec.value_type.email`
 
 Read-Only:
 
@@ -80,7 +80,7 @@ Read-Only:
 
 
 <a id="nestedatt--tag_definitions--spec--value_type--integer"></a>
-### Nested Schema for `tag_definitions.spec.value_type.string`
+### Nested Schema for `tag_definitions.spec.value_type.integer`
 
 Read-Only:
 
@@ -88,7 +88,7 @@ Read-Only:
 
 
 <a id="nestedatt--tag_definitions--spec--value_type--multi_select"></a>
-### Nested Schema for `tag_definitions.spec.value_type.string`
+### Nested Schema for `tag_definitions.spec.value_type.multi_select`
 
 Read-Only:
 
@@ -97,7 +97,7 @@ Read-Only:
 
 
 <a id="nestedatt--tag_definitions--spec--value_type--number"></a>
-### Nested Schema for `tag_definitions.spec.value_type.string`
+### Nested Schema for `tag_definitions.spec.value_type.number`
 
 Read-Only:
 
@@ -105,7 +105,7 @@ Read-Only:
 
 
 <a id="nestedatt--tag_definitions--spec--value_type--single_select"></a>
-### Nested Schema for `tag_definitions.spec.value_type.string`
+### Nested Schema for `tag_definitions.spec.value_type.single_select`
 
 Read-Only:
 
