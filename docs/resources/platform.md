@@ -4,11 +4,17 @@ page_title: "meshstack_platform Resource - terraform-provider-meshstack"
 subcategory: ""
 description: |-
   Represents a meshStack platform.
+  Please note that the meshPlatform API endpoints are still in preview state and therefore the following limitations apply:
+  Deleting and re-creating a platform with the same identifier is not possible. Once you have used a platform identifier, you cannot use it again, even if the platform has been deleted. You may run into this issue when you attempt to modify an immutable attribute and terraform therefore attempts to replace (i.e., delete and recreate) the entire platform, which will result in an error with a status code of 409 due to the identifier already being used by a deleted platform.Changing the owning workspace of a platform (metadata.owned_by_workspace) is not possible. To transfer the ownership of a platform, you must use meshPanel.
 ---
 
 # meshstack_platform (Resource)
 
 Represents a meshStack platform.
+
+Please note that the meshPlatform API endpoints are still in preview state and therefore the following limitations apply:
+* Deleting and re-creating a platform with the same identifier is not possible. Once you have used a platform identifier, you cannot use it again, even if the platform has been deleted. You may run into this issue when you attempt to modify an immutable attribute and terraform therefore attempts to replace (i.e., delete and recreate) the entire platform, which will result in an error with a status code of `409` due to the identifier already being used by a deleted platform.
+* Changing the owning workspace of a platform (`metadata.owned_by_workspace`) is not possible. To transfer the ownership of a platform, you must use meshPanel.
 
 ## Example Usage
 
