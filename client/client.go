@@ -1,6 +1,7 @@
 package client
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -8,7 +9,6 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
 )
 
@@ -44,6 +44,11 @@ type endpoints struct {
 	TagDefinitions         *url.URL `json:"meshtagdefinitions"`
 	LandingZones           *url.URL `json:"meshlandingzones"`
 	Platforms              *url.URL `json:"meshplatforms"`
+}
+
+type loginRequest struct {
+	ClientId     string `json:"clientId"`
+	ClientSecret string `json:"clientSecret"`
 }
 
 type loginResponse struct {
@@ -86,20 +91,25 @@ func (c *MeshStackProviderClient) login() error {
 		return err
 	}
 
-	formData := url.Values{}
-	formData.Set("client_id", c.apiKey)
-	formData.Set("client_secret", c.apiSecret)
-	formData.Set("grant_type", "client_credentials")
+	loginRequest := loginRequest{
+		ClientId:     c.apiKey,
+		ClientSecret: c.apiSecret,
+	}
 
-	req, _ := http.NewRequest(http.MethodPost, loginPath, strings.NewReader(formData.Encode()))
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	payload, err := json.Marshal(loginRequest)
+	if err != nil {
+		return err
+	}
+
+	req, _ := http.NewRequest(http.MethodPost, loginPath, bytes.NewBuffer(payload))
+	req.Header.Add("Content-Type", "application/json")
 
 	res, err := c.httpClient.Do(req)
 
 	if err != nil {
 		return err
 	} else if res.StatusCode != 200 {
-		return errors.New(ERROR_AUTHENTICATION_FAILURE)
+		return errors.New(fmt.Sprintf("Status %d: %s", res.StatusCode, ERROR_AUTHENTICATION_FAILURE))
 	}
 
 	defer res.Body.Close()
