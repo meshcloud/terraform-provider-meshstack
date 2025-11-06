@@ -41,6 +41,8 @@ resource "meshstack_platform" "example" {
       restricted_to_workspaces = []
     }
 
+    quota_definitions = []
+
     config = {
       azure = {
         entra_tenant = "dev-mycompany.onmicrosoft.com"
@@ -189,6 +191,7 @@ Required:
 - `display_name` (String) The human-readable display name of the meshPlatform.
 - `endpoint` (String) The web console URL endpoint of the platform.
 - `location_ref` (Attributes) Reference to the location where this platform is situated. (see [below for nested schema](#nestedatt--spec--location_ref))
+- `quota_definitions` (List of Object) List of quota definitions for the platform. (see [below for nested schema](#nestedatt--spec--quota_definitions))
 
 Optional:
 
@@ -848,6 +851,20 @@ Required:
 Read-Only:
 
 - `kind` (String) meshObject type, always `meshLocation`.
+
+
+<a id="nestedatt--spec--quota_definitions"></a>
+### Nested Schema for `spec.quota_definitions`
+
+Required:
+
+- `auto_approval_threshold` (Number)
+- `description` (String)
+- `label` (String)
+- `max_value` (Number)
+- `min_value` (Number)
+- `quota_key` (String)
+- `unit` (String)
 
 ## Import
 

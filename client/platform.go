@@ -36,6 +36,17 @@ type MeshPlatformSpec struct {
 	ContributingWorkspaces []string             `json:"contributingWorkspaces" tfsdk:"contributing_workspaces"`
 	Availability           PlatformAvailability `json:"availability" tfsdk:"availability"`
 	Config                 PlatformConfig       `json:"config" tfsdk:"config"`
+	QuotaDefinitions       []QuotaDefinition    `json:"quotaDefinitions" tfsdk:"quota_definitions"`
+}
+
+type QuotaDefinition struct {
+	QuotaKey              string `json:"quotaKey" tfsdk:"quota_key"`
+	MinValue              int    `json:"minValue" tfsdk:"min_value"`
+	MaxValue              int    `json:"maxValue" tfsdk:"max_value"`
+	Unit                  string `json:"unit" tfsdk:"unit"`
+	AutoApprovalThreshold int    `json:"autoApprovalThreshold" tfsdk:"auto_approval_threshold"`
+	Description           string `json:"description" tfsdk:"description"`
+	Label                 string `json:"label" tfsdk:"label"`
 }
 
 type LocationRef struct {

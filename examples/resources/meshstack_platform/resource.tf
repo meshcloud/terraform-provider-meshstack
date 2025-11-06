@@ -20,6 +20,8 @@ resource "meshstack_platform" "example" {
       restricted_to_workspaces = []
     }
 
+    quota_definitions = []
+
     config = {
       azure = {
         entra_tenant = "dev-mycompany.onmicrosoft.com"

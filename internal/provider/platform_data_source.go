@@ -7,6 +7,7 @@ import (
 	"github.com/meshcloud/terraform-provider-meshstack/client"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -161,6 +162,22 @@ func (d *platformDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 								MarkdownDescription: "If the restriction is set to `RESTRICTED`, you can specify the workspace identifiers this meshPlatform is restricted to.",
 								ElementType:         types.StringType,
 								Computed:            true,
+							},
+						},
+					},
+					"quota_definitions": schema.ListAttribute{
+						MarkdownDescription: "List of quota definitions for the platform.",
+						Required:            true,
+						Sensitive:           false,
+						ElementType: types.ObjectType{
+							AttrTypes: map[string]attr.Type{
+								"quota_key":               types.StringType,
+								"label":                   types.StringType,
+								"description":             types.StringType,
+								"unit":                    types.StringType,
+								"min_value":               types.Int64Type,
+								"max_value":               types.Int64Type,
+								"auto_approval_threshold": types.Int64Type,
 							},
 						},
 					},
