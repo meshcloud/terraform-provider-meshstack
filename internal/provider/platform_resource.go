@@ -212,6 +212,22 @@ func (r *platformResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 							},
 						},
 					},
+					"quota_definitions": schema.ListAttribute{
+						MarkdownDescription: "List of quota definitions for the platform.",
+						Required:            true,
+						Sensitive:           false,
+						ElementType: types.ObjectType{
+							AttrTypes: map[string]attr.Type{
+								"quota_key":               types.StringType,
+								"label":                   types.StringType,
+								"description":             types.StringType,
+								"unit":                    types.StringType,
+								"min_value":               types.Int64Type,
+								"max_value":               types.Int64Type,
+								"auto_approval_threshold": types.Int64Type,
+							},
+						},
+					},
 					"config": schema.SingleNestedAttribute{
 						MarkdownDescription: "Platform-specific configuration settings.",
 						Required:            true,

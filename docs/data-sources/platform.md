@@ -51,6 +51,10 @@ Read-Only:
 <a id="nestedatt--spec"></a>
 ### Nested Schema for `spec`
 
+Required:
+
+- `quota_definitions` (List of Object) List of quota definitions for the platform. (see [below for nested schema](#nestedatt--spec--quota_definitions))
+
 Read-Only:
 
 - `availability` (Attributes) Availability configuration for the meshPlatform. (see [below for nested schema](#nestedatt--spec--availability))
@@ -62,6 +66,20 @@ Read-Only:
 - `endpoint` (String) The web console URL endpoint of the platform.
 - `location_ref` (Attributes) Reference to the location where this platform is situated. (see [below for nested schema](#nestedatt--spec--location_ref))
 - `support_url` (String) URL for platform support documentation.
+
+<a id="nestedatt--spec--quota_definitions"></a>
+### Nested Schema for `spec.quota_definitions`
+
+Read-Only:
+
+- `auto_approval_threshold` (Number)
+- `description` (String)
+- `label` (String)
+- `max_value` (Number)
+- `min_value` (Number)
+- `quota_key` (String)
+- `unit` (String)
+
 
 <a id="nestedatt--spec--availability"></a>
 ### Nested Schema for `spec.availability`
