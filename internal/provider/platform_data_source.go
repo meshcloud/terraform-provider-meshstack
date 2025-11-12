@@ -288,6 +288,7 @@ func kubernetesPlatformDataSourceSchema() schema.Attribute {
 				Computed:            true,
 			},
 			"replication": kubernetesReplicationConfigDataSourceSchema(),
+			"metering":    kubernetesMeteringConfigDataSourceSchema(),
 		},
 	}
 }
@@ -306,6 +307,7 @@ func openShiftPlatformDataSourceSchema() schema.Attribute {
 				Computed:            true,
 			},
 			"replication": openShiftReplicationConfigDataSourceSchema(),
+			"metering":    openShiftMeteringConfigDataSourceSchema(),
 		},
 	}
 }
@@ -983,26 +985,60 @@ func gcpReplicationConfigDataSourceSchema() schema.Attribute {
 	}
 }
 
+// Helper function for client config schema (shared by Kubernetes and OpenShift)
+func kubernetesClientConfigDataSourceSchema(description string) schema.Attribute {
+	return schema.SingleNestedAttribute{
+		MarkdownDescription: description,
+		Computed:            true,
+		Attributes: map[string]schema.Attribute{
+			"access_token": schema.StringAttribute{
+				MarkdownDescription: "The Access Token of the service account for replicator access.",
+				Computed:            true,
+				Sensitive:           true,
+			},
+		},
+	}
+}
+
+// Helper function for metering processing config schema (shared by Kubernetes and OpenShift)
+func meteringProcessingConfigDataSourceSchema() schema.Attribute {
+	return schema.SingleNestedAttribute{
+		MarkdownDescription: "Processing configuration for metering",
+		Computed:            true,
+		Attributes: map[string]schema.Attribute{
+			"compact_timelines_after_days": schema.Int64Attribute{
+				MarkdownDescription: "Number of days after which timelines should be compacted.",
+				Computed:            true,
+			},
+			"delete_raw_data_after_days": schema.Int64Attribute{
+				MarkdownDescription: "Number of days after which raw data should be deleted.",
+				Computed:            true,
+			},
+		},
+	}
+}
+
 func kubernetesReplicationConfigDataSourceSchema() schema.Attribute {
 	return schema.SingleNestedAttribute{
 		MarkdownDescription: "Replication configuration for Kubernetes (optional, but required for replication)",
 		Computed:            true,
 		Attributes: map[string]schema.Attribute{
-			"client_config": schema.SingleNestedAttribute{
-				MarkdownDescription: "Client configuration for Kubernetes",
-				Computed:            true,
-				Attributes: map[string]schema.Attribute{
-					"access_token": schema.StringAttribute{
-						MarkdownDescription: "The Access Token of the service account for replicator access.",
-						Computed:            true,
-						Sensitive:           true,
-					},
-				},
-			},
+			"client_config": kubernetesClientConfigDataSourceSchema("Client configuration for Kubernetes"),
 			"namespace_name_pattern": schema.StringAttribute{
 				MarkdownDescription: "All the commonly available replicator string template properties are available. Kubernetes Namespace Names must be no longer than 63 characters, must start and end with a lowercase letter or number, and may contain lowercase letters, numbers, and hyphens.",
 				Computed:            true,
 			},
+		},
+	}
+}
+
+func kubernetesMeteringConfigDataSourceSchema() schema.Attribute {
+	return schema.SingleNestedAttribute{
+		MarkdownDescription: "Metering configuration for Kubernetes (optional, but required for metering)",
+		Computed:            true,
+		Attributes: map[string]schema.Attribute{
+			"client_config": kubernetesClientConfigDataSourceSchema("Client configuration for Kubernetes metering"),
+			"processing":    meteringProcessingConfigDataSourceSchema(),
 		},
 	}
 }
@@ -1014,17 +1050,7 @@ func openShiftReplicationConfigDataSourceSchema() schema.Attribute {
 		MarkdownDescription: "Replication configuration for OpenShift (optional, but required for replication)",
 		Computed:            true,
 		Attributes: map[string]schema.Attribute{
-			"client_config": schema.SingleNestedAttribute{
-				MarkdownDescription: "Client configuration for OpenShift",
-				Computed:            true,
-				Attributes: map[string]schema.Attribute{
-					"access_token": schema.StringAttribute{
-						MarkdownDescription: "The Access Token of the service account for replicator access.",
-						Computed:            true,
-						Sensitive:           true,
-					},
-				},
-			},
+			"client_config": kubernetesClientConfigDataSourceSchema("Client configuration for OpenShift"),
 			"web_console_url": schema.StringAttribute{
 				MarkdownDescription: "The Web Console URL that is used to redirect the user to the cloud platform. An example Web Console URL is https://console-openshift-console.apps.okd4.dev.eu-de-central.msh.host",
 				Computed:            true,
@@ -1080,6 +1106,17 @@ func openShiftReplicationConfigDataSourceSchema() schema.Attribute {
 					},
 				},
 			},
+		},
+	}
+}
+
+func openShiftMeteringConfigDataSourceSchema() schema.Attribute {
+	return schema.SingleNestedAttribute{
+		MarkdownDescription: "Metering configuration for OpenShift (optional, but required for metering)",
+		Computed:            true,
+		Attributes: map[string]schema.Attribute{
+			"client_config": kubernetesClientConfigDataSourceSchema("Client configuration for OpenShift metering"),
+			"processing":    meteringProcessingConfigDataSourceSchema(),
 		},
 	}
 }
