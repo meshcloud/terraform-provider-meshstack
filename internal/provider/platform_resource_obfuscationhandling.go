@@ -102,14 +102,26 @@ func handleObfuscatedSecrets(obfuscated *client.PlatformConfig, plain *client.Pl
 		}
 
 	case "kubernetes":
-		if obfuscated.Kubernetes != nil && obfuscated.Kubernetes.Replication != nil && plain.Kubernetes != nil && plain.Kubernetes.Replication != nil {
-			// access token
-			if obfuscated.Kubernetes.Replication.ClientConfig != nil &&
-				plain.Kubernetes.Replication.ClientConfig != nil &&
-				obfuscated.Kubernetes.Replication.ClientConfig.AccessToken != nil &&
-				plain.Kubernetes.Replication.ClientConfig.AccessToken != nil &&
-				*obfuscated.Kubernetes.Replication.ClientConfig.AccessToken == obfuscatedValue {
-				obfuscated.Kubernetes.Replication.ClientConfig.AccessToken = plain.Kubernetes.Replication.ClientConfig.AccessToken
+		if obfuscated.Kubernetes != nil && plain.Kubernetes != nil {
+			// replication access token
+			if obfuscated.Kubernetes.Replication != nil && plain.Kubernetes.Replication != nil {
+				if obfuscated.Kubernetes.Replication.ClientConfig != nil &&
+					plain.Kubernetes.Replication.ClientConfig != nil &&
+					obfuscated.Kubernetes.Replication.ClientConfig.AccessToken != nil &&
+					plain.Kubernetes.Replication.ClientConfig.AccessToken != nil &&
+					*obfuscated.Kubernetes.Replication.ClientConfig.AccessToken == obfuscatedValue {
+					obfuscated.Kubernetes.Replication.ClientConfig.AccessToken = plain.Kubernetes.Replication.ClientConfig.AccessToken
+				}
+			}
+			// metering access token
+			if obfuscated.Kubernetes.Metering != nil && plain.Kubernetes.Metering != nil {
+				if obfuscated.Kubernetes.Metering.ClientConfig != nil &&
+					plain.Kubernetes.Metering.ClientConfig != nil &&
+					obfuscated.Kubernetes.Metering.ClientConfig.AccessToken != nil &&
+					plain.Kubernetes.Metering.ClientConfig.AccessToken != nil &&
+					*obfuscated.Kubernetes.Metering.ClientConfig.AccessToken == obfuscatedValue {
+					obfuscated.Kubernetes.Metering.ClientConfig.AccessToken = plain.Kubernetes.Metering.ClientConfig.AccessToken
+				}
 			}
 		}
 
@@ -128,14 +140,26 @@ func handleObfuscatedSecrets(obfuscated *client.PlatformConfig, plain *client.Pl
 		}
 
 	case "openshift":
-		if obfuscated.OpenShift != nil && obfuscated.OpenShift.Replication != nil && plain.OpenShift != nil && plain.OpenShift.Replication != nil {
-			// access token
-			if obfuscated.OpenShift.Replication.ClientConfig != nil &&
-				plain.OpenShift.Replication.ClientConfig != nil &&
-				obfuscated.OpenShift.Replication.ClientConfig.AccessToken != nil &&
-				plain.OpenShift.Replication.ClientConfig.AccessToken != nil &&
-				*obfuscated.OpenShift.Replication.ClientConfig.AccessToken == obfuscatedValue {
-				obfuscated.OpenShift.Replication.ClientConfig.AccessToken = plain.OpenShift.Replication.ClientConfig.AccessToken
+		if obfuscated.OpenShift != nil && plain.OpenShift != nil {
+			// replication access token
+			if obfuscated.OpenShift.Replication != nil && plain.OpenShift.Replication != nil {
+				if obfuscated.OpenShift.Replication.ClientConfig != nil &&
+					plain.OpenShift.Replication.ClientConfig != nil &&
+					obfuscated.OpenShift.Replication.ClientConfig.AccessToken != nil &&
+					plain.OpenShift.Replication.ClientConfig.AccessToken != nil &&
+					*obfuscated.OpenShift.Replication.ClientConfig.AccessToken == obfuscatedValue {
+					obfuscated.OpenShift.Replication.ClientConfig.AccessToken = plain.OpenShift.Replication.ClientConfig.AccessToken
+				}
+			}
+			// metering access token
+			if obfuscated.OpenShift.Metering != nil && plain.OpenShift.Metering != nil {
+				if obfuscated.OpenShift.Metering.ClientConfig != nil &&
+					plain.OpenShift.Metering.ClientConfig != nil &&
+					obfuscated.OpenShift.Metering.ClientConfig.AccessToken != nil &&
+					plain.OpenShift.Metering.ClientConfig.AccessToken != nil &&
+					*obfuscated.OpenShift.Metering.ClientConfig.AccessToken == obfuscatedValue {
+					obfuscated.OpenShift.Metering.ClientConfig.AccessToken = plain.OpenShift.Metering.ClientConfig.AccessToken
+				}
 			}
 		}
 
