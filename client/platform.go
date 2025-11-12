@@ -100,12 +100,14 @@ type KubernetesPlatformConfig struct {
 	BaseUrl              string                       `json:"baseUrl" tfsdk:"base_url"`
 	DisableSslValidation bool                         `json:"disableSslValidation" tfsdk:"disable_ssl_validation"`
 	Replication          *KubernetesReplicationConfig `json:"replication" tfsdk:"replication"`
+	Metering             *KubernetesMeteringConfig    `json:"metering,omitempty" tfsdk:"metering"`
 }
 
 type OpenShiftPlatformConfig struct {
 	BaseUrl              string                      `json:"baseUrl" tfsdk:"base_url"`
 	DisableSslValidation bool                        `json:"disableSslValidation" tfsdk:"disable_ssl_validation"`
 	Replication          *OpenShiftReplicationConfig `json:"replication" tfsdk:"replication"`
+	Metering             *OpenShiftMeteringConfig    `json:"metering,omitempty" tfsdk:"metering"`
 }
 
 type AzureRgReplicationConfig struct {
@@ -169,6 +171,11 @@ type KubernetesClientConfig struct {
 	AccessToken *string `json:"accessToken,omitempty" tfsdk:"access_token"`
 }
 
+type KubernetesMeteringConfig struct {
+	ClientConfig *KubernetesClientConfig               `json:"clientConfig,omitempty" tfsdk:"client_config"`
+	Processing   *MeshPlatformMeteringProcessingConfig `json:"processing,omitempty" tfsdk:"processing"`
+}
+
 type OpenShiftReplicationConfig struct {
 	ClientConfig                *OpenShiftClientConfig         `json:"clientConfig,omitempty" tfsdk:"client_config"`
 	WebConsoleUrl               *string                        `json:"webConsoleUrl,omitempty" tfsdk:"web_console_url"`
@@ -181,6 +188,11 @@ type OpenShiftReplicationConfig struct {
 
 type OpenShiftClientConfig struct {
 	AccessToken *string `json:"accessToken,omitempty" tfsdk:"access_token"`
+}
+
+type OpenShiftMeteringConfig struct {
+	ClientConfig *OpenShiftClientConfig                `json:"clientConfig,omitempty" tfsdk:"client_config"`
+	Processing   *MeshPlatformMeteringProcessingConfig `json:"processing,omitempty" tfsdk:"processing"`
 }
 
 type OpenShiftTenantTags struct {
@@ -392,6 +404,11 @@ type MeshPlatformUpdateMetadata struct {
 	Name             string `json:"name" tfsdk:"name"`
 	OwnedByWorkspace string `json:"ownedByWorkspace" tfsdk:"owned_by_workspace"`
 	Uuid             string `json:"uuid" tfsdk:"uuid"`
+}
+
+type MeshPlatformMeteringProcessingConfig struct {
+	CompactTimelinesAfterDays int64 `json:"compactTimelinesAfterDays" tfsdk:"compact_timelines_after_days"`
+	DeleteRawDataAfterDays    int64 `json:"deleteRawDataAfterDays" tfsdk:"delete_raw_data_after_days"`
 }
 
 func (c *MeshStackProviderClient) urlForPlatform(uuid string) *url.URL {
