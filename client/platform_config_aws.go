@@ -1,26 +1,26 @@
 package client
 
 type AwsPlatformConfig struct {
-	Region      *string               `json:"region,omitempty" tfsdk:"region"`
+	Region      string                `json:"region,omitempty" tfsdk:"region"`
 	Replication *AwsReplicationConfig `json:"replication,omitempty" tfsdk:"replication"`
 	Metering    *AwsMeteringConfig    `json:"metering,omitempty" tfsdk:"metering"`
 }
 
 type AwsReplicationConfig struct {
-	AccessConfig                                  *AwsAccessConfig            `json:"accessConfig,omitempty" tfsdk:"access_config"`
-	WaitForExternalAvm                            *bool                       `json:"waitForExternalAvm,omitempty" tfsdk:"wait_for_external_avm"`
-	AutomationAccountRole                         *string                     `json:"automationAccountRole,omitempty" tfsdk:"automation_account_role"`
+	AccessConfig                                  AwsAccessConfig             `json:"accessConfig" tfsdk:"access_config"`
+	WaitForExternalAvm                            bool                        `json:"waitForExternalAvm" tfsdk:"wait_for_external_avm"`
+	AutomationAccountRole                         string                      `json:"automationAccountRole" tfsdk:"automation_account_role"`
 	AutomationAccountExternalId                   *string                     `json:"automationAccountExternalId,omitempty" tfsdk:"automation_account_external_id"`
-	AccountAccessRole                             *string                     `json:"accountAccessRole,omitempty" tfsdk:"account_access_role"`
-	AccountAliasPattern                           *string                     `json:"accountAliasPattern,omitempty" tfsdk:"account_alias_pattern"`
-	EnforceAccountAlias                           *bool                       `json:"enforceAccountAlias,omitempty" tfsdk:"enforce_account_alias"`
-	AccountEmailPattern                           *string                     `json:"accountEmailPattern,omitempty" tfsdk:"account_email_pattern"`
+	AccountAccessRole                             string                      `json:"accountAccessRole" tfsdk:"account_access_role"`
+	AccountAliasPattern                           string                      `json:"accountAliasPattern" tfsdk:"account_alias_pattern"`
+	EnforceAccountAlias                           bool                        `json:"enforceAccountAlias" tfsdk:"enforce_account_alias"`
+	AccountEmailPattern                           string                      `json:"accountEmailPattern" tfsdk:"account_email_pattern"`
 	TenantTags                                    *MeshTenantTags             `json:"tenantTags,omitempty" tfsdk:"tenant_tags"`
 	AwsSso                                        *AwsSsoConfig               `json:"awsSso,omitempty" tfsdk:"aws_sso"`
 	EnrollmentConfiguration                       *AwsEnrollmentConfiguration `json:"enrollmentConfiguration,omitempty" tfsdk:"enrollment_configuration"`
-	SelfDowngradeAccessRole                       *bool                       `json:"selfDowngradeAccessRole,omitempty" tfsdk:"self_downgrade_access_role"`
-	SkipUserGroupPermissionCleanup                *bool                       `json:"skipUserGroupPermissionCleanup,omitempty" tfsdk:"skip_user_group_permission_cleanup"`
-	AllowHierarchicalOrganizationalUnitAssignment *bool                       `json:"allowHierarchicalOrganizationalUnitAssignment,omitempty" tfsdk:"allow_hierarchical_organizational_unit_assignment"`
+	SelfDowngradeAccessRole                       bool                        `json:"selfDowngradeAccessRole" tfsdk:"self_downgrade_access_role"`
+	SkipUserGroupPermissionCleanup                bool                        `json:"skipUserGroupPermissionCleanup" tfsdk:"skip_user_group_permission_cleanup"`
+	AllowHierarchicalOrganizationalUnitAssignment bool                        `json:"allowHierarchicalOrganizationalUnitAssignment" tfsdk:"allow_hierarchical_organizational_unit_assignment"`
 }
 
 type AwsAccessConfig struct {
@@ -31,8 +31,8 @@ type AwsAccessConfig struct {
 }
 
 type AwsServiceUserConfig struct {
-	AccessKey string  `json:"accessKey" tfsdk:"access_key"`
-	SecretKey *string `json:"secretKey,omitempty" tfsdk:"secret_key"`
+	AccessKey string `json:"accessKey" tfsdk:"access_key"`
+	SecretKey string `json:"secretKey" tfsdk:"secret_key"`
 }
 
 type AwsWorkloadIdentityConfig struct {
@@ -43,9 +43,9 @@ type AwsSsoConfig struct {
 	ScimEndpoint     string              `json:"scimEndpoint" tfsdk:"scim_endpoint"`
 	Arn              string              `json:"arn" tfsdk:"arn"`
 	GroupNamePattern string              `json:"groupNamePattern" tfsdk:"group_name_pattern"`
-	SsoAccessToken   *string             `json:"ssoAccessToken,omitempty" tfsdk:"sso_access_token"`
+	SsoAccessToken   string              `json:"ssoAccessToken" tfsdk:"sso_access_token"`
 	AwsRoleMappings  []AwsSsoRoleMapping `json:"awsRoleMappings" tfsdk:"aws_role_mappings"`
-	SignInUrl        *string             `json:"signInUrl,omitempty" tfsdk:"sign_in_url"`
+	SignInUrl        string              `json:"signInUrl" tfsdk:"sign_in_url"`
 }
 
 type AwsSsoRoleMapping struct {

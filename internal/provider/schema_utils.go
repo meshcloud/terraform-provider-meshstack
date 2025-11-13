@@ -11,13 +11,14 @@ import (
 
 // meshProjectRoleAttribute returns a schema attribute for meshProject role references.
 // This is used across multiple resources (landingzone, platform) to maintain consistency.
-func meshProjectRoleAttribute() schema.SingleNestedAttribute {
+func meshProjectRoleAttribute(computed bool) schema.SingleNestedAttribute {
 	return schema.SingleNestedAttribute{
 		MarkdownDescription: "the meshProject role",
 		Required:            true,
 		Attributes: map[string]schema.Attribute{
 			"name": schema.StringAttribute{
-				Required:            true,
+				Computed:            computed,
+				Required:            !computed,
 				MarkdownDescription: "The identifier of the meshProjectRole",
 			},
 			"kind": schema.StringAttribute{
