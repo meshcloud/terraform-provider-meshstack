@@ -1,11 +1,11 @@
 package client
 
 type AzurePlatformProperties struct {
-	AzureRoleMappings      []AzureRoleMapping `json:"azureRoleMappings" tfsdk:"azure_role_mappings"`
-	AzureManagementGroupId string             `json:"azureManagementGroupId" tfsdk:"azure_management_group_id"`
+	AzureRoleMappings      []AzureRoleMappingProperty `json:"azureRoleMappings" tfsdk:"azure_role_mappings"`
+	AzureManagementGroupId string                     `json:"azureManagementGroupId" tfsdk:"azure_management_group_id"`
 }
 
-type AzureRoleMapping struct {
+type AzureRoleMappingProperty struct {
 	MeshProjectRoleRef   MeshProjectRoleRefV2  `json:"projectRoleRef" tfsdk:"project_role_ref"`
 	AzureGroupSuffix     string                `json:"azureGroupSuffix" tfsdk:"azure_group_suffix"`
 	AzureRoleDefinitions []AzureRoleDefinition `json:"azureRoleDefinitions" tfsdk:"azure_role_definitions"`

@@ -8,15 +8,15 @@ type KubernetesPlatformConfig struct {
 }
 
 type KubernetesReplicationConfig struct {
-	ClientConfig         *KubernetesClientConfig `json:"clientConfig,omitempty" tfsdk:"client_config"`
-	NamespaceNamePattern *string                 `json:"namespaceNamePattern,omitempty" tfsdk:"namespace_name_pattern"`
+	ClientConfig         KubernetesClientConfig `json:"clientConfig" tfsdk:"client_config"`
+	NamespaceNamePattern string                 `json:"namespaceNamePattern,omitempty" tfsdk:"namespace_name_pattern"`
 }
 
 type KubernetesClientConfig struct {
-	AccessToken *string `json:"accessToken,omitempty" tfsdk:"access_token"`
+	AccessToken string `json:"accessToken" tfsdk:"access_token"`
 }
 
 type KubernetesMeteringConfig struct {
-	ClientConfig *KubernetesClientConfig               `json:"clientConfig,omitempty" tfsdk:"client_config"`
-	Processing   *MeshPlatformMeteringProcessingConfig `json:"processing,omitempty" tfsdk:"processing"`
+	ClientConfig KubernetesClientConfig               `json:"clientConfig" tfsdk:"client_config"`
+	Processing   MeshPlatformMeteringProcessingConfig `json:"processing" tfsdk:"processing"`
 }
