@@ -27,70 +27,86 @@ func handleObfuscatedSecrets(obfuscated *client.PlatformConfig, plain *client.Pl
 	switch obfuscated.Type {
 
 	case "aks":
-		if obfuscated.Aks != nil && obfuscated.Aks.Replication != nil && plain.Aks != nil && plain.Aks.Replication != nil {
-			// access token
-			if obfuscated.Aks.Replication.AccessToken == obfuscatedValue {
-				obfuscated.Aks.Replication.AccessToken = plain.Aks.Replication.AccessToken
+		if obfuscated.Aks != nil && plain.Aks != nil {
+			if obfuscated.Aks.Replication != nil && plain.Aks.Replication != nil {
+				// access token
+				if obfuscated.Aks.Replication.AccessToken == obfuscatedValue {
+					obfuscated.Aks.Replication.AccessToken = plain.Aks.Replication.AccessToken
+				}
+				// SP client secret
+				if obfuscated.Aks.Replication.ServicePrincipal.CredentialsAuthClientSecret != nil &&
+					plain.Aks.Replication.ServicePrincipal.CredentialsAuthClientSecret != nil &&
+					*obfuscated.Aks.Replication.ServicePrincipal.CredentialsAuthClientSecret == obfuscatedValue {
+					obfuscated.Aks.Replication.ServicePrincipal.CredentialsAuthClientSecret = plain.Aks.Replication.ServicePrincipal.CredentialsAuthClientSecret
+				}
 			}
-			// SP client secret
-			if obfuscated.Aks.Replication.ServicePrincipal.CredentialsAuthClientSecret != nil &&
-				plain.Aks.Replication.ServicePrincipal.CredentialsAuthClientSecret != nil &&
-				*obfuscated.Aks.Replication.ServicePrincipal.CredentialsAuthClientSecret == obfuscatedValue {
-				obfuscated.Aks.Replication.ServicePrincipal.CredentialsAuthClientSecret = plain.Aks.Replication.ServicePrincipal.CredentialsAuthClientSecret
-			}
-		}
-		// metering access token
-		if obfuscated.Aks != nil && obfuscated.Aks.Metering != nil && plain.Aks != nil && plain.Aks.Metering != nil {
-			if obfuscated.Aks.Metering.ClientConfig.AccessToken == obfuscatedValue {
+			// metering access token
+			if obfuscated.Aks.Metering != nil && plain.Aks.Metering != nil &&
+				obfuscated.Aks.Metering.ClientConfig.AccessToken == obfuscatedValue {
 				obfuscated.Aks.Metering.ClientConfig.AccessToken = plain.Aks.Metering.ClientConfig.AccessToken
 			}
 		}
 
 	case "aws":
-		if obfuscated.Aws != nil && obfuscated.Aws.Replication != nil && plain.Aws != nil && plain.Aws.Replication != nil {
-			// replication access-config service-user secret key
-			if obfuscated.Aws.Replication.AccessConfig != nil &&
-				plain.Aws.Replication.AccessConfig != nil &&
-				obfuscated.Aws.Replication.AccessConfig.ServiceUserConfig != nil &&
-				plain.Aws.Replication.AccessConfig.ServiceUserConfig != nil &&
-				obfuscated.Aws.Replication.AccessConfig.ServiceUserConfig.SecretKey != nil &&
-				plain.Aws.Replication.AccessConfig.ServiceUserConfig.SecretKey != nil &&
-				*obfuscated.Aws.Replication.AccessConfig.ServiceUserConfig.SecretKey == obfuscatedValue {
-				obfuscated.Aws.Replication.AccessConfig.ServiceUserConfig.SecretKey = plain.Aws.Replication.AccessConfig.ServiceUserConfig.SecretKey
+		if obfuscated.Aws != nil && plain.Aws != nil {
+			if obfuscated.Aws.Replication != nil && plain.Aws.Replication != nil {
+				// replication access-config service-user secret key
+				if obfuscated.Aws.Replication.AccessConfig.ServiceUserConfig != nil &&
+					plain.Aws.Replication.AccessConfig.ServiceUserConfig != nil &&
+					obfuscated.Aws.Replication.AccessConfig.ServiceUserConfig.SecretKey == obfuscatedValue {
+					obfuscated.Aws.Replication.AccessConfig.ServiceUserConfig.SecretKey = plain.Aws.Replication.AccessConfig.ServiceUserConfig.SecretKey
+				}
+				// replication AWS SSO token
+				if obfuscated.Aws.Replication.AwsSso != nil &&
+					plain.Aws.Replication.AwsSso != nil &&
+					obfuscated.Aws.Replication.AwsSso.SsoAccessToken == obfuscatedValue {
+					obfuscated.Aws.Replication.AwsSso.SsoAccessToken = plain.Aws.Replication.AwsSso.SsoAccessToken
+				}
 			}
-			// replication AWS SSO token
-			if obfuscated.Aws.Replication.AwsSso != nil &&
-				plain.Aws.Replication.AwsSso != nil &&
-				obfuscated.Aws.Replication.AwsSso.SsoAccessToken != nil &&
-				plain.Aws.Replication.AwsSso.SsoAccessToken != nil &&
-				*obfuscated.Aws.Replication.AwsSso.SsoAccessToken == obfuscatedValue {
-				obfuscated.Aws.Replication.AwsSso.SsoAccessToken = plain.Aws.Replication.AwsSso.SsoAccessToken
+			// metering access-config service-user secret key
+			if obfuscated.Aws.Metering != nil && plain.Aws.Metering != nil &&
+				obfuscated.Aws.Metering.AccessConfig.ServiceUserConfig != nil &&
+				plain.Aws.Metering.AccessConfig.ServiceUserConfig != nil &&
+				obfuscated.Aws.Metering.AccessConfig.ServiceUserConfig.SecretKey == obfuscatedValue {
+				obfuscated.Aws.Metering.AccessConfig.ServiceUserConfig.SecretKey = plain.Aws.Metering.AccessConfig.ServiceUserConfig.SecretKey
 			}
 		}
 
 	case "azure":
-		if obfuscated.Azure != nil && obfuscated.Azure.Replication != nil && plain.Azure != nil && plain.Azure.Replication != nil {
-			// replication SP client secret
-			if obfuscated.Azure.Replication.ServicePrincipal.CredentialsAuthClientSecret != nil &&
-				plain.Azure.Replication.ServicePrincipal.CredentialsAuthClientSecret != nil &&
-				*obfuscated.Azure.Replication.ServicePrincipal.CredentialsAuthClientSecret == obfuscatedValue {
-				obfuscated.Azure.Replication.ServicePrincipal.CredentialsAuthClientSecret = plain.Azure.Replication.ServicePrincipal.CredentialsAuthClientSecret
-			}
-			// replication provisioning customer agreement SP client secret
-			if obfuscated.Azure.Replication.Provisioning.CustomerAgreement != nil &&
-				plain.Azure.Replication.Provisioning.CustomerAgreement != nil {
-				if obfuscated.Azure.Replication.Provisioning.CustomerAgreement.SourceServicePrincipal.CredentialsAuthClientSecret != nil &&
+		if obfuscated.Azure != nil && plain.Azure != nil {
+			if obfuscated.Azure.Replication != nil && plain.Azure.Replication != nil {
+				// replication SP client secret
+				if obfuscated.Azure.Replication.ServicePrincipal.CredentialsAuthClientSecret != nil &&
+					plain.Azure.Replication.ServicePrincipal.CredentialsAuthClientSecret != nil &&
+					*obfuscated.Azure.Replication.ServicePrincipal.CredentialsAuthClientSecret == obfuscatedValue {
+					obfuscated.Azure.Replication.ServicePrincipal.CredentialsAuthClientSecret = plain.Azure.Replication.ServicePrincipal.CredentialsAuthClientSecret
+				}
+				// replication provisioning customer agreement SP client secret
+				if obfuscated.Azure.Replication.Provisioning != nil &&
+					plain.Azure.Replication.Provisioning != nil &&
+					obfuscated.Azure.Replication.Provisioning.CustomerAgreement != nil &&
+					plain.Azure.Replication.Provisioning.CustomerAgreement != nil &&
+					obfuscated.Azure.Replication.Provisioning.CustomerAgreement.SourceServicePrincipal.CredentialsAuthClientSecret != nil &&
 					plain.Azure.Replication.Provisioning.CustomerAgreement.SourceServicePrincipal.CredentialsAuthClientSecret != nil &&
 					*obfuscated.Azure.Replication.Provisioning.CustomerAgreement.SourceServicePrincipal.CredentialsAuthClientSecret == obfuscatedValue {
 					obfuscated.Azure.Replication.Provisioning.CustomerAgreement.SourceServicePrincipal.CredentialsAuthClientSecret = plain.Azure.Replication.Provisioning.CustomerAgreement.SourceServicePrincipal.CredentialsAuthClientSecret
 				}
 			}
+			// metering SP client secret
+			if obfuscated.Azure.Metering != nil && plain.Azure.Metering != nil {
+				if obfuscated.Azure.Metering.ServicePrincipal.CredentialsAuthClientSecret != nil &&
+					plain.Azure.Metering.ServicePrincipal.CredentialsAuthClientSecret != nil &&
+					*obfuscated.Azure.Metering.ServicePrincipal.CredentialsAuthClientSecret == obfuscatedValue {
+					obfuscated.Azure.Metering.ServicePrincipal.CredentialsAuthClientSecret = plain.Azure.Metering.ServicePrincipal.CredentialsAuthClientSecret
+				}
+			}
 		}
 
 	case "azurerg":
-		if obfuscated.AzureRg != nil && obfuscated.AzureRg.Replication != nil && plain.AzureRg != nil && plain.AzureRg.Replication != nil {
+		if obfuscated.AzureRg != nil && plain.AzureRg != nil {
 			// replication SP client secret
-			if obfuscated.AzureRg.Replication.ServicePrincipal.CredentialsAuthClientSecret != nil &&
+			if obfuscated.AzureRg.Replication != nil && plain.AzureRg.Replication != nil &&
+				obfuscated.AzureRg.Replication.ServicePrincipal.CredentialsAuthClientSecret != nil &&
 				plain.AzureRg.Replication.ServicePrincipal.CredentialsAuthClientSecret != nil &&
 				*obfuscated.AzureRg.Replication.ServicePrincipal.CredentialsAuthClientSecret == obfuscatedValue {
 				obfuscated.AzureRg.Replication.ServicePrincipal.CredentialsAuthClientSecret = plain.AzureRg.Replication.ServicePrincipal.CredentialsAuthClientSecret
@@ -100,62 +116,47 @@ func handleObfuscatedSecrets(obfuscated *client.PlatformConfig, plain *client.Pl
 	case "kubernetes":
 		if obfuscated.Kubernetes != nil && plain.Kubernetes != nil {
 			// replication access token
-			if obfuscated.Kubernetes.Replication != nil && plain.Kubernetes.Replication != nil {
-				if obfuscated.Kubernetes.Replication.ClientConfig.AccessToken == obfuscatedValue {
-					obfuscated.Kubernetes.Replication.ClientConfig.AccessToken = plain.Kubernetes.Replication.ClientConfig.AccessToken
-				}
+			if obfuscated.Kubernetes.Replication != nil && plain.Kubernetes.Replication != nil &&
+				obfuscated.Kubernetes.Replication.ClientConfig.AccessToken == obfuscatedValue {
+				obfuscated.Kubernetes.Replication.ClientConfig.AccessToken = plain.Kubernetes.Replication.ClientConfig.AccessToken
 			}
 			// metering access token
-			if obfuscated.Kubernetes.Metering != nil && plain.Kubernetes.Metering != nil {
-				if obfuscated.Kubernetes.Metering.ClientConfig.AccessToken == obfuscatedValue {
-					obfuscated.Kubernetes.Metering.ClientConfig.AccessToken = plain.Kubernetes.Metering.ClientConfig.AccessToken
-				}
+			if obfuscated.Kubernetes.Metering != nil && plain.Kubernetes.Metering != nil &&
+				obfuscated.Kubernetes.Metering.ClientConfig.AccessToken == obfuscatedValue {
+				obfuscated.Kubernetes.Metering.ClientConfig.AccessToken = plain.Kubernetes.Metering.ClientConfig.AccessToken
 			}
 		}
 
 	case "gcp":
 		if obfuscated.Gcp != nil && plain.Gcp != nil {
 			// replication service account credentials
-			if obfuscated.Gcp.Replication != nil && plain.Gcp.Replication != nil {
-				if obfuscated.Gcp.Replication.ServiceAccountConfig.ServiceAccountCredentialsConfig != nil &&
-					plain.Gcp.Replication.ServiceAccountConfig.ServiceAccountCredentialsConfig != nil &&
-					obfuscated.Gcp.Replication.ServiceAccountConfig.ServiceAccountCredentialsConfig.ServiceAccountCredentialsB64 == obfuscatedValue {
-					obfuscated.Gcp.Replication.ServiceAccountConfig.ServiceAccountCredentialsConfig = plain.Gcp.Replication.ServiceAccountConfig.ServiceAccountCredentialsConfig
-				}
+			if obfuscated.Gcp.Replication != nil && plain.Gcp.Replication != nil &&
+				obfuscated.Gcp.Replication.ServiceAccountConfig.ServiceAccountCredentialsConfig != nil &&
+				plain.Gcp.Replication.ServiceAccountConfig.ServiceAccountCredentialsConfig != nil &&
+				obfuscated.Gcp.Replication.ServiceAccountConfig.ServiceAccountCredentialsConfig.ServiceAccountCredentialsB64 == obfuscatedValue {
+				obfuscated.Gcp.Replication.ServiceAccountConfig.ServiceAccountCredentialsConfig = plain.Gcp.Replication.ServiceAccountConfig.ServiceAccountCredentialsConfig
 			}
 			// metering service account credentials
-			if obfuscated.Gcp.Metering != nil && plain.Gcp.Metering != nil {
-				if obfuscated.Gcp.Metering.ServiceAccountConfig.ServiceAccountCredentialsConfig != nil &&
-					plain.Gcp.Metering.ServiceAccountConfig.ServiceAccountCredentialsConfig != nil &&
-					obfuscated.Gcp.Metering.ServiceAccountConfig.ServiceAccountCredentialsConfig.ServiceAccountCredentialsB64 == obfuscatedValue {
-					obfuscated.Gcp.Metering.ServiceAccountConfig.ServiceAccountCredentialsConfig = plain.Gcp.Metering.ServiceAccountConfig.ServiceAccountCredentialsConfig
-				}
+			if obfuscated.Gcp.Metering != nil && plain.Gcp.Metering != nil &&
+				obfuscated.Gcp.Metering.ServiceAccountConfig.ServiceAccountCredentialsConfig != nil &&
+				plain.Gcp.Metering.ServiceAccountConfig.ServiceAccountCredentialsConfig != nil &&
+				obfuscated.Gcp.Metering.ServiceAccountConfig.ServiceAccountCredentialsConfig.ServiceAccountCredentialsB64 == obfuscatedValue {
+				obfuscated.Gcp.Metering.ServiceAccountConfig.ServiceAccountCredentialsConfig = plain.Gcp.Metering.ServiceAccountConfig.ServiceAccountCredentialsConfig
 			}
 		}
 
 	case "openshift":
 		if obfuscated.OpenShift != nil && plain.OpenShift != nil {
 			// replication access token
-			if obfuscated.OpenShift.Replication != nil && plain.OpenShift.Replication != nil {
-				if obfuscated.OpenShift.Replication.ClientConfig != nil &&
-					plain.OpenShift.Replication.ClientConfig != nil &&
-					obfuscated.OpenShift.Replication.ClientConfig.AccessToken != nil &&
-					plain.OpenShift.Replication.ClientConfig.AccessToken != nil &&
-					*obfuscated.OpenShift.Replication.ClientConfig.AccessToken == obfuscatedValue {
-					obfuscated.OpenShift.Replication.ClientConfig.AccessToken = plain.OpenShift.Replication.ClientConfig.AccessToken
-				}
+			if obfuscated.OpenShift.Replication != nil && plain.OpenShift.Replication != nil &&
+				obfuscated.OpenShift.Replication.ClientConfig.AccessToken == obfuscatedValue {
+				obfuscated.OpenShift.Replication.ClientConfig.AccessToken = plain.OpenShift.Replication.ClientConfig.AccessToken
 			}
 			// metering access token
-			if obfuscated.OpenShift.Metering != nil && plain.OpenShift.Metering != nil {
-				if obfuscated.OpenShift.Metering.ClientConfig != nil &&
-					plain.OpenShift.Metering.ClientConfig != nil &&
-					obfuscated.OpenShift.Metering.ClientConfig.AccessToken != nil &&
-					plain.OpenShift.Metering.ClientConfig.AccessToken != nil &&
-					*obfuscated.OpenShift.Metering.ClientConfig.AccessToken == obfuscatedValue {
-					obfuscated.OpenShift.Metering.ClientConfig.AccessToken = plain.OpenShift.Metering.ClientConfig.AccessToken
-				}
+			if obfuscated.OpenShift.Metering != nil && plain.OpenShift.Metering != nil &&
+				obfuscated.OpenShift.Metering.ClientConfig.AccessToken == obfuscatedValue {
+				obfuscated.OpenShift.Metering.ClientConfig.AccessToken = plain.OpenShift.Metering.ClientConfig.AccessToken
 			}
 		}
-
 	}
 }

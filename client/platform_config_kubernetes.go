@@ -9,7 +9,7 @@ type KubernetesPlatformConfig struct {
 
 type KubernetesReplicationConfig struct {
 	ClientConfig         KubernetesClientConfig `json:"clientConfig" tfsdk:"client_config"`
-	NamespaceNamePattern string                 `json:"namespaceNamePattern,omitempty" tfsdk:"namespace_name_pattern"`
+	NamespaceNamePattern string                 `json:"namespaceNamePattern" tfsdk:"namespace_name_pattern"`
 }
 
 type KubernetesClientConfig struct {

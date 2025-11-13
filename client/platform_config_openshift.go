@@ -8,24 +8,19 @@ type OpenShiftPlatformConfig struct {
 }
 
 type OpenShiftReplicationConfig struct {
-	ClientConfig                *OpenShiftClientConfig         `json:"clientConfig,omitempty" tfsdk:"client_config"`
+	ClientConfig                KubernetesClientConfig         `json:"clientConfig" tfsdk:"client_config"`
 	WebConsoleUrl               *string                        `json:"webConsoleUrl,omitempty" tfsdk:"web_console_url"`
-	ProjectNamePattern          *string                        `json:"projectNamePattern,omitempty" tfsdk:"project_name_pattern"`
-	EnableTemplateInstantiation *bool                          `json:"enableTemplateInstantiation,omitempty" tfsdk:"enable_template_instantiation"`
-	OpenShiftRoleMappings       []OpenShiftPlatformRoleMapping `json:"openshiftRoleMappings,omitempty" tfsdk:"openshift_role_mappings"`
-	IdentityProviderName        *string                        `json:"identityProviderName,omitempty" tfsdk:"identity_provider_name"`
+	ProjectNamePattern          string                         `json:"projectNamePattern" tfsdk:"project_name_pattern"`
+	EnableTemplateInstantiation bool                           `json:"enableTemplateInstantiation" tfsdk:"enable_template_instantiation"`
+	OpenShiftRoleMappings       []OpenShiftPlatformRoleMapping `json:"openshiftRoleMappings" tfsdk:"openshift_role_mappings"`
+	IdentityProviderName        string                         `json:"identityProviderName" tfsdk:"identity_provider_name"`
 	TenantTags                  *MeshTenantTags                `json:"tenantTags,omitempty" tfsdk:"tenant_tags"`
 }
 
-type OpenShiftClientConfig struct {
-	AccessToken *string `json:"accessToken,omitempty" tfsdk:"access_token"`
-}
-
 type OpenShiftMeteringConfig struct {
-	ClientConfig *OpenShiftClientConfig                `json:"clientConfig,omitempty" tfsdk:"client_config"`
-	Processing   *MeshPlatformMeteringProcessingConfig `json:"processing,omitempty" tfsdk:"processing"`
+	ClientConfig KubernetesClientConfig               `json:"clientConfig" tfsdk:"client_config"`
+	Processing   MeshPlatformMeteringProcessingConfig `json:"processing" tfsdk:"processing"`
 }
-
 
 type OpenShiftPlatformRoleMapping struct {
 	MeshProjectRoleRef MeshProjectRoleRefV2 `json:"projectRoleRef" tfsdk:"project_role_ref"`

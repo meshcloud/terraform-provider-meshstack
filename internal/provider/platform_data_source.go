@@ -167,7 +167,7 @@ func (d *platformDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 					},
 					"quota_definitions": schema.ListAttribute{
 						MarkdownDescription: "List of quota definitions for the platform.",
-						Required:            true,
+						Computed:            true,
 						Sensitive:           false,
 						ElementType: types.ObjectType{
 							AttrTypes: map[string]attr.Type{
@@ -679,7 +679,7 @@ func awsReplicationConfigDataSourceSchema() schema.Attribute {
 						Computed:            true,
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
-								"project_role_ref": meshProjectRoleAttribute(),
+								"project_role_ref": meshProjectRoleAttribute(true),
 								"aws_role": schema.StringAttribute{
 									MarkdownDescription: "The AWS role name",
 									Computed:            true,
@@ -687,7 +687,7 @@ func awsReplicationConfigDataSourceSchema() schema.Attribute {
 								"permission_set_arns": schema.ListAttribute{
 									MarkdownDescription: "List of permission set ARNs associated with this role mapping",
 									ElementType:         types.StringType,
-									Optional:            true,
+									Computed:            true,
 								},
 							},
 						},
@@ -843,8 +843,7 @@ func azureReplicationConfigDataSourceSchema() schema.Attribute {
 				Computed:            true,
 				Attributes: map[string]schema.Attribute{
 					"redirect_url": schema.StringAttribute{
-						MarkdownDescription: "This is the URL that Azure's consent experience redirects users to after they accept their invitation.",
-						Computed:            true,
+						Computed: true,
 					},
 					"send_azure_invitation_mail": schema.BoolAttribute{
 						MarkdownDescription: "When true, meshStack instructs Azure to send out Invitation mails to invited users. These mails allow users to redeem their invitation to the AAD tenant only using email and Azure Portal.",
@@ -873,7 +872,7 @@ func azureReplicationConfigDataSourceSchema() schema.Attribute {
 				Computed:            true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"project_role_ref": meshProjectRoleAttribute(),
+						"project_role_ref": meshProjectRoleAttribute(true),
 						"azure_role": schema.SingleNestedAttribute{
 							MarkdownDescription: "The Azure role definition.",
 							Computed:            true,
@@ -936,8 +935,6 @@ func azureReplicationConfigDataSourceSchema() schema.Attribute {
 		},
 	}
 }
-
-// TODO continue here.
 
 func azureRgReplicationConfigDataSourceSchema() schema.Attribute {
 	return schema.SingleNestedAttribute{
@@ -1111,7 +1108,7 @@ func gcpReplicationConfigDataSourceSchema() schema.Attribute {
 				Computed:            true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"project_role_ref": meshProjectRoleAttribute(),
+						"project_role_ref": meshProjectRoleAttribute(true),
 						"gcp_role": schema.StringAttribute{
 							MarkdownDescription: "The GCP IAM role",
 							Computed:            true,
@@ -1208,12 +1205,9 @@ func kubernetesMeteringConfigDataSourceSchema() schema.Attribute {
 		Computed:            true,
 		Attributes: map[string]schema.Attribute{
 			"client_config": kubernetesClientConfigDataSourceSchema("Client configuration for Kubernetes metering"),
-			"processing":    meteringProcessingConfigDataSourceSchema(),
 		},
 	}
 }
-
-// TODO continue here.
 
 func openShiftReplicationConfigDataSourceSchema() schema.Attribute {
 	return schema.SingleNestedAttribute{
@@ -1238,7 +1232,7 @@ func openShiftReplicationConfigDataSourceSchema() schema.Attribute {
 				Computed:            true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"project_role_ref": meshProjectRoleAttribute(),
+						"project_role_ref": meshProjectRoleAttribute(true),
 						"openshift_role": schema.StringAttribute{
 							MarkdownDescription: "The OpenShift role name",
 							Computed:            true,

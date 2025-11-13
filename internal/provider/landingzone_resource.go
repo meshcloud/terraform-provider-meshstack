@@ -225,7 +225,7 @@ func awsPlatformConfigSchema() schema.Attribute {
 				Required:            true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"project_role_ref": meshProjectRoleAttribute(),
+						"project_role_ref": meshProjectRoleAttribute(false),
 						"platform_role": schema.StringAttribute{
 							MarkdownDescription: "The AWS platform role",
 							Required:            true,
@@ -254,7 +254,7 @@ func aksPlatformConfigSchema() schema.Attribute {
 				Required: true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"project_role_ref": meshProjectRoleAttribute(),
+						"project_role_ref": meshProjectRoleAttribute(false),
 						"platform_roles": schema.ListAttribute{
 							MarkdownDescription: "List of AKS platform roles to assign to the meshProject role.",
 							ElementType:         types.StringType,
@@ -284,7 +284,7 @@ func azurePlatformConfigSchema() schema.Attribute {
 				Required: true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"project_role_ref": meshProjectRoleAttribute(),
+						"project_role_ref": meshProjectRoleAttribute(false),
 						"azure_group_suffix": schema.StringAttribute{
 							MarkdownDescription: "The given role name will be injected into the" +
 								" group name via the group naming pattern configured on the" +
@@ -336,7 +336,7 @@ func gcpPlatformConfigSchema() schema.Attribute {
 				Required: true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"project_role_ref": meshProjectRoleAttribute(),
+						"project_role_ref": meshProjectRoleAttribute(false),
 						"platform_roles": schema.ListAttribute{
 							MarkdownDescription: "Can be empty. List of GCP IAM roles to assign to the meshProject role.",
 							ElementType:         types.StringType,
@@ -367,7 +367,7 @@ func azureRgPlatformConfigSchema() schema.Attribute {
 				Required: true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"project_role_ref": meshProjectRoleAttribute(),
+						"project_role_ref": meshProjectRoleAttribute(false),
 						"azure_group_suffix": schema.StringAttribute{
 							MarkdownDescription: "The given role name will be injected into the" +
 								" group name via the group naming pattern configured on the" +
@@ -410,7 +410,7 @@ func kubernetesPlatformConfigSchema() schema.Attribute {
 				Required:            true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"project_role_ref": meshProjectRoleAttribute(),
+						"project_role_ref": meshProjectRoleAttribute(false),
 						"platform_roles": schema.ListAttribute{
 							MarkdownDescription: "Roles need to be mapped from the meshRole to" +
 								" the Cluster Role. You can use both built in roles like 'editor' or custom roles that you setup in the Kubernetes Cluster" +

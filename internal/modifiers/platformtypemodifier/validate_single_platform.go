@@ -44,8 +44,8 @@ func (v singlePlatformValidator) PlanModifyObject(ctx context.Context, req planm
 	if len(configuredPlatforms) > 1 {
 		resp.Diagnostics.AddError(
 			"Multiple Platform Configurations",
-			fmt.Sprintf("Only one platform configuration can be specified within "+
-				"platform_properties, but found: %v. Please specify only one platform "+
+			fmt.Sprintf("Only one platform configuration can be specified,"+
+				"but found: %v. Please specify only one platform "+
 				"configuration.", configuredPlatforms),
 		)
 	}
@@ -53,7 +53,7 @@ func (v singlePlatformValidator) PlanModifyObject(ctx context.Context, req planm
 	if len(configuredPlatforms) == 0 {
 		resp.Diagnostics.AddError(
 			"No Platform Configuration",
-			"At least one platform configuration must be specified within platform_properties. "+
+			"At least one platform configuration must be specified. "+
 				"Please specify one of: aws, aks, azure, azurerg, gcp, kubernetes, openshift.",
 		)
 	}
