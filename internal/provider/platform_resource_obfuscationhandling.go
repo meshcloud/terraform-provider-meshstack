@@ -43,6 +43,16 @@ func handleObfuscatedSecrets(obfuscated *client.PlatformConfig, plain *client.Pl
 				obfuscated.Aks.Replication.ServicePrincipal.CredentialsAuthClientSecret = plain.Aks.Replication.ServicePrincipal.CredentialsAuthClientSecret
 			}
 		}
+		// metering access token
+		if obfuscated.Aks != nil && obfuscated.Aks.Metering != nil && plain.Aks != nil && plain.Aks.Metering != nil {
+			if obfuscated.Aks.Metering.ClientConfig != nil &&
+				plain.Aks.Metering.ClientConfig != nil &&
+				obfuscated.Aks.Metering.ClientConfig.AccessToken != nil &&
+				plain.Aks.Metering.ClientConfig.AccessToken != nil &&
+				*obfuscated.Aks.Metering.ClientConfig.AccessToken == obfuscatedValue {
+				obfuscated.Aks.Metering.ClientConfig.AccessToken = plain.Aks.Metering.ClientConfig.AccessToken
+			}
+		}
 
 	case "aws":
 		if obfuscated.Aws != nil && obfuscated.Aws.Replication != nil && plain.Aws != nil && plain.Aws.Replication != nil {

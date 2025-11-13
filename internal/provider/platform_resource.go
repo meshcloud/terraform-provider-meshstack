@@ -290,6 +290,7 @@ func aksPlatformSchema() schema.Attribute {
 				Default:             booldefault.StaticBool(false),
 			},
 			"replication": aksReplicationConfigSchema(),
+			"metering":    aksMeteringConfigSchema(),
 		},
 	}
 }
@@ -447,6 +448,17 @@ func aksReplicationConfigSchema() schema.Attribute {
 				MarkdownDescription: "If you enter an administrative unit ID the replicated (and potentially existing) groups will be put into this AU. This can be used to limit the permission scopes which are required for the replicator principal. If you remove the AU ID again or change it, the groups will not be removed from the old AU.",
 				Optional:            true,
 			},
+		},
+	}
+}
+
+func aksMeteringConfigSchema() schema.Attribute {
+	return schema.SingleNestedAttribute{
+		MarkdownDescription: "Metering configuration for AKS (optional, but required for metering)",
+		Optional:            true,
+		Attributes: map[string]schema.Attribute{
+			"client_config": kubernetesClientConfigSchema("Client configuration for AKS metering"),
+			"processing":    meteringProcessingConfigSchema(),
 		},
 	}
 }
