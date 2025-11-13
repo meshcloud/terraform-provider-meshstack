@@ -99,6 +99,16 @@ type MeshPlatformMeteringProcessingConfig struct {
 	DeleteRawDataAfterDays    int64 `json:"deleteRawDataAfterDays" tfsdk:"delete_raw_data_after_days"`
 }
 
+type MeshTenantTags struct {
+	NamespacePrefix string      `json:"namespacePrefix" tfsdk:"namespace_prefix"`
+	TagMappers      []TagMapper `json:"tagMappers" tfsdk:"tag_mappers"`
+}
+
+type TagMapper struct {
+	Key          string `json:"key" tfsdk:"key"`
+	ValuePattern string `json:"valuePattern" tfsdk:"value_pattern"`
+}
+
 func (c *MeshStackProviderClient) urlForPlatform(uuid string) *url.URL {
 	return c.endpoints.Platforms.JoinPath(uuid)
 }

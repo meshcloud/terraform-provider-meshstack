@@ -12,7 +12,7 @@ type AzureRgReplicationConfig struct {
 	UserGroupNamePattern                       string                       `json:"userGroupNamePattern" tfsdk:"user_group_name_pattern"`
 	B2bUserInvitation                          *AzureInviteB2BUserConfig    `json:"b2bUserInvitation,omitempty" tfsdk:"b2b_user_invitation"`
 	UserLookUpStrategy                         string                       `json:"userLookUpStrategy" tfsdk:"user_look_up_strategy"`
-	TenantTags                                 *AzureTenantTags             `json:"tenantTags,omitempty" tfsdk:"tenant_tags"`
+	TenantTags                                 *MeshTenantTags              `json:"tenantTags,omitempty" tfsdk:"tenant_tags"`
 	SkipUserGroupPermissionCleanup             bool                         `json:"skipUserGroupPermissionCleanup" tfsdk:"skip_user_group_permission_cleanup"`
 	AdministrativeUnitId                       *string                      `json:"administrativeUnitId,omitempty" tfsdk:"administrative_unit_id"`
 	AllowHierarchicalManagementGroupAssignment bool                         `json:"allowHierarchicalManagementGroupAssignment" tfsdk:"allow_hierarchical_management_group_assignment"`
