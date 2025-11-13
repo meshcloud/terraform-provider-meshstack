@@ -15,7 +15,7 @@ type AzureReplicationConfig struct {
 	BlueprintServicePrincipal                  string                               `json:"blueprintServicePrincipal" tfsdk:"blueprint_service_principal"`
 	BlueprintLocation                          string                               `json:"blueprintLocation" tfsdk:"blueprint_location"`
 	AzureRoleMappings                          []AzureRoleMapping                   `json:"azureRoleMappings" tfsdk:"azure_role_mappings"`
-	TenantTags                                 *AzureTenantTags                     `json:"tenantTags,omitempty" tfsdk:"tenant_tags"`
+	TenantTags                                 *MeshTenantTags                      `json:"tenantTags,omitempty" tfsdk:"tenant_tags"`
 	UserLookUpStrategy                         string                               `json:"userLookUpStrategy" tfsdk:"user_look_up_strategy"`
 	SkipUserGroupPermissionCleanup             bool                                 `json:"skipUserGroupPermissionCleanup" tfsdk:"skip_user_group_permission_cleanup"`
 	AdministrativeUnitId                       *string                              `json:"administrativeUnitId,omitempty" tfsdk:"administrative_unit_id"`
@@ -74,16 +74,6 @@ type AzureRoleMapping struct {
 type AzureRole struct {
 	Alias string `json:"alias" tfsdk:"alias"`
 	Id    string `json:"id" tfsdk:"id"`
-}
-
-type AzureTenantTags struct {
-	NamespacePrefix string           `json:"namespacePrefix" tfsdk:"namespace_prefix"`
-	TagMappers      []AzureTagMapper `json:"tagMappers" tfsdk:"tag_mappers"`
-}
-
-type AzureTagMapper struct {
-	Key          string `json:"key" tfsdk:"key"`
-	ValuePattern string `json:"valuePattern" tfsdk:"value_pattern"`
 }
 
 type AzureMeteringConfig struct {

@@ -17,7 +17,7 @@ type GcpReplicationConfig struct {
 	UsedExternalIdType                *string                  `json:"usedExternalIdType,omitempty" tfsdk:"used_external_id_type"`
 	GcpRoleMappings                   []GcpPlatformRoleMapping `json:"gcpRoleMappings" tfsdk:"gcp_role_mappings"`
 	AllowHierarchicalFolderAssignment bool                     `json:"allowHierarchicalFolderAssignment" tfsdk:"allow_hierarchical_folder_assignment"`
-	TenantTags                        *GcpTenantTags           `json:"tenantTags,omitempty" tfsdk:"tenant_tags"`
+	TenantTags                        *MeshTenantTags          `json:"tenantTags,omitempty" tfsdk:"tenant_tags"`
 	SkipUserGroupPermissionCleanup    bool                     `json:"skipUserGroupPermissionCleanup" tfsdk:"skip_user_group_permission_cleanup"`
 }
 
@@ -33,16 +33,6 @@ type GcpServiceAccountCredentialsConfig struct {
 type GcpServiceAccountWorkloadIdentityConfig struct {
 	Audience            string `json:"audience" tfsdk:"audience"`
 	ServiceAccountEmail string `json:"serviceAccountEmail" tfsdk:"service_account_email"`
-}
-
-type GcpTenantTags struct {
-	NamespacePrefix string         `json:"namespacePrefix" tfsdk:"namespace_prefix"`
-	TagMappers      []GcpTagMapper `json:"tagMappers" tfsdk:"tag_mappers"`
-}
-
-type GcpTagMapper struct {
-	Key          string `json:"key" tfsdk:"key"`
-	ValuePattern string `json:"valuePattern" tfsdk:"value_pattern"`
 }
 
 type GcpPlatformRoleMapping struct {

@@ -14,7 +14,7 @@ type OpenShiftReplicationConfig struct {
 	EnableTemplateInstantiation *bool                          `json:"enableTemplateInstantiation,omitempty" tfsdk:"enable_template_instantiation"`
 	OpenShiftRoleMappings       []OpenShiftPlatformRoleMapping `json:"openshiftRoleMappings,omitempty" tfsdk:"openshift_role_mappings"`
 	IdentityProviderName        *string                        `json:"identityProviderName,omitempty" tfsdk:"identity_provider_name"`
-	TenantTags                  *OpenShiftTenantTags           `json:"tenantTags,omitempty" tfsdk:"tenant_tags"`
+	TenantTags                  *MeshTenantTags                `json:"tenantTags,omitempty" tfsdk:"tenant_tags"`
 }
 
 type OpenShiftClientConfig struct {
@@ -26,15 +26,6 @@ type OpenShiftMeteringConfig struct {
 	Processing   *MeshPlatformMeteringProcessingConfig `json:"processing,omitempty" tfsdk:"processing"`
 }
 
-type OpenShiftTenantTags struct {
-	NamespacePrefix string               `json:"namespacePrefix" tfsdk:"namespace_prefix"`
-	TagMappers      []OpenShiftTagMapper `json:"tagMappers" tfsdk:"tag_mappers"`
-}
-
-type OpenShiftTagMapper struct {
-	Key          string `json:"key" tfsdk:"key"`
-	ValuePattern string `json:"valuePattern" tfsdk:"value_pattern"`
-}
 
 type OpenShiftPlatformRoleMapping struct {
 	MeshProjectRoleRef MeshProjectRoleRefV2 `json:"projectRoleRef" tfsdk:"project_role_ref"`

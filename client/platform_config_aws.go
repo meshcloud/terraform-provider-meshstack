@@ -15,7 +15,7 @@ type AwsReplicationConfig struct {
 	AccountAliasPattern                           *string                     `json:"accountAliasPattern,omitempty" tfsdk:"account_alias_pattern"`
 	EnforceAccountAlias                           *bool                       `json:"enforceAccountAlias,omitempty" tfsdk:"enforce_account_alias"`
 	AccountEmailPattern                           *string                     `json:"accountEmailPattern,omitempty" tfsdk:"account_email_pattern"`
-	TenantTags                                    *AwsTenantTags              `json:"tenantTags,omitempty" tfsdk:"tenant_tags"`
+	TenantTags                                    *MeshTenantTags             `json:"tenantTags,omitempty" tfsdk:"tenant_tags"`
 	AwsSso                                        *AwsSsoConfig               `json:"awsSso,omitempty" tfsdk:"aws_sso"`
 	EnrollmentConfiguration                       *AwsEnrollmentConfiguration `json:"enrollmentConfiguration,omitempty" tfsdk:"enrollment_configuration"`
 	SelfDowngradeAccessRole                       *bool                       `json:"selfDowngradeAccessRole,omitempty" tfsdk:"self_downgrade_access_role"`
@@ -37,16 +37,6 @@ type AwsServiceUserConfig struct {
 
 type AwsWorkloadIdentityConfig struct {
 	RoleArn string `json:"roleArn" tfsdk:"role_arn"`
-}
-
-type AwsTenantTags struct {
-	NamespacePrefix string         `json:"namespacePrefix" tfsdk:"namespace_prefix"`
-	TagMappers      []AwsTagMapper `json:"tagMappers" tfsdk:"tag_mappers"`
-}
-
-type AwsTagMapper struct {
-	Key          string `json:"key" tfsdk:"key"`
-	ValuePattern string `json:"valuePattern" tfsdk:"value_pattern"`
 }
 
 type AwsSsoConfig struct {
