@@ -80,6 +80,7 @@ type AksPlatformConfig struct {
 	BaseUrl              string                `json:"baseUrl" tfsdk:"base_url"`
 	DisableSslValidation bool                  `json:"disableSslValidation" tfsdk:"disable_ssl_validation"`
 	Replication          *AksReplicationConfig `json:"replication" tfsdk:"replication"`
+	Metering             *AksMeteringConfig    `json:"metering,omitempty" tfsdk:"metering"`
 }
 
 type AzurePlatformConfig struct {
@@ -225,6 +226,11 @@ type ServicePrincipalConfig struct {
 	CredentialsAuthClientSecret *string `json:"credentialsAuthClientSecret,omitempty" tfsdk:"credentials_auth_client_secret"`
 	EntraTenant                 string  `json:"entraTenant" tfsdk:"entra_tenant"`
 	ObjectId                    string  `json:"objectId" tfsdk:"object_id"`
+}
+
+type AksMeteringConfig struct {
+	ClientConfig *KubernetesClientConfig               `json:"clientConfig,omitempty" tfsdk:"client_config"`
+	Processing   *MeshPlatformMeteringProcessingConfig `json:"processing,omitempty" tfsdk:"processing"`
 }
 
 // Azure-specific service principal configurations

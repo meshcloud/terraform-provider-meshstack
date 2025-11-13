@@ -232,6 +232,7 @@ func aksPlatformDataSourceSchema() schema.Attribute {
 				Computed:            true,
 			},
 			"replication": aksReplicationConfigDataSourceSchema(),
+			"metering":    aksMeteringConfigDataSourceSchema(),
 		},
 	}
 }
@@ -312,7 +313,16 @@ func openShiftPlatformDataSourceSchema() schema.Attribute {
 	}
 }
 
-// TODO review done until here
+func aksMeteringConfigDataSourceSchema() schema.Attribute {
+	return schema.SingleNestedAttribute{
+		MarkdownDescription: "Metering configuration for AKS (optional, but required for metering)",
+		Computed:            true,
+		Attributes: map[string]schema.Attribute{
+			"client_config": kubernetesClientConfigDataSourceSchema("Client configuration for AKS metering"),
+			"processing":    meteringProcessingConfigDataSourceSchema(),
+		},
+	}
+}
 
 func aksReplicationConfigDataSourceSchema() schema.Attribute {
 	return schema.SingleNestedAttribute{
@@ -985,7 +995,6 @@ func gcpReplicationConfigDataSourceSchema() schema.Attribute {
 	}
 }
 
-// Helper function for client config schema (shared by Kubernetes and OpenShift)
 func kubernetesClientConfigDataSourceSchema(description string) schema.Attribute {
 	return schema.SingleNestedAttribute{
 		MarkdownDescription: description,
@@ -1000,7 +1009,6 @@ func kubernetesClientConfigDataSourceSchema(description string) schema.Attribute
 	}
 }
 
-// Helper function for metering processing config schema (shared by Kubernetes and OpenShift)
 func meteringProcessingConfigDataSourceSchema() schema.Attribute {
 	return schema.SingleNestedAttribute{
 		MarkdownDescription: "Processing configuration for metering",
