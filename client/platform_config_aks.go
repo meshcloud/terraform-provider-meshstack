@@ -8,17 +8,17 @@ type AksPlatformConfig struct {
 }
 
 type AksReplicationConfig struct {
-	AccessToken             *string                 `json:"accessToken,omitempty" tfsdk:"access_token"`
-	NamespaceNamePattern    *string                 `json:"namespaceNamePattern,omitempty" tfsdk:"namespace_name_pattern"`
-	GroupNamePattern        *string                 `json:"groupNamePattern,omitempty" tfsdk:"group_name_pattern"`
-	ServicePrincipal        *ServicePrincipalConfig `json:"servicePrincipal,omitempty" tfsdk:"service_principal"`
-	AksSubscriptionId       *string                 `json:"aksSubscriptionId,omitempty" tfsdk:"aks_subscription_id"`
-	AksClusterName          *string                 `json:"aksClusterName,omitempty" tfsdk:"aks_cluster_name"`
-	AksResourceGroup        *string                 `json:"aksResourceGroup,omitempty" tfsdk:"aks_resource_group"`
-	RedirectUrl             *string                 `json:"redirectUrl,omitempty" tfsdk:"redirect_url"`
-	SendAzureInvitationMail *bool                   `json:"sendAzureInvitationMail,omitempty" tfsdk:"send_azure_invitation_mail"`
-	UserLookUpStrategy      *string                 `json:"userLookUpStrategy,omitempty" tfsdk:"user_look_up_strategy"`
-	AdministrativeUnitId    *string                 `json:"administrativeUnitId,omitempty" tfsdk:"administrative_unit_id"`
+	AccessToken             string                 `json:"accessToken" tfsdk:"access_token"`
+	NamespaceNamePattern    string                 `json:"namespaceNamePattern" tfsdk:"namespace_name_pattern"`
+	GroupNamePattern        string                 `json:"groupNamePattern" tfsdk:"group_name_pattern"`
+	ServicePrincipal        ServicePrincipalConfig `json:"servicePrincipal" tfsdk:"service_principal"`
+	AksSubscriptionId       string                 `json:"aksSubscriptionId" tfsdk:"aks_subscription_id"`
+	AksClusterName          string                 `json:"aksClusterName" tfsdk:"aks_cluster_name"`
+	AksResourceGroup        string                 `json:"aksResourceGroup" tfsdk:"aks_resource_group"`
+	RedirectUrl             *string                `json:"redirectUrl,omitempty" tfsdk:"redirect_url"`
+	SendAzureInvitationMail bool                   `json:"sendAzureInvitationMail" tfsdk:"send_azure_invitation_mail"`
+	UserLookUpStrategy      string                 `json:"userLookUpStrategy" tfsdk:"user_look_up_strategy"`
+	AdministrativeUnitId    *string                `json:"administrativeUnitId,omitempty" tfsdk:"administrative_unit_id"`
 }
 
 type ServicePrincipalConfig struct {
@@ -30,6 +30,6 @@ type ServicePrincipalConfig struct {
 }
 
 type AksMeteringConfig struct {
-	ClientConfig *KubernetesClientConfig               `json:"clientConfig,omitempty" tfsdk:"client_config"`
-	Processing   *MeshPlatformMeteringProcessingConfig `json:"processing,omitempty" tfsdk:"processing"`
+	ClientConfig KubernetesClientConfig               `json:"clientConfig" tfsdk:"client_config"`
+	Processing   MeshPlatformMeteringProcessingConfig `json:"processing" tfsdk:"processing"`
 }

@@ -1,22 +1,24 @@
 package client
 
 type GcpPlatformConfig struct {
-	Replication *GcpReplicationConfig `json:"replication" tfsdk:"replication"`
+	Replication *GcpReplicationConfig `json:"replication,omitempty" tfsdk:"replication"`
+	Metering    *GcpMeteringConfig    `json:"metering,omitempty" tfsdk:"metering"`
 }
 
 type GcpReplicationConfig struct {
-	ServiceAccountConfig              *GcpServiceAccountConfig `json:"serviceAccountConfig,omitempty" tfsdk:"service_account_config"`
-	Domain                            *string                  `json:"domain,omitempty" tfsdk:"domain"`
-	CustomerId                        *string                  `json:"customerId,omitempty" tfsdk:"customer_id"`
-	GroupNamePattern                  *string                  `json:"groupNamePattern,omitempty" tfsdk:"group_name_pattern"`
-	ProjectNamePattern                *string                  `json:"projectNamePattern,omitempty" tfsdk:"project_name_pattern"`
-	ProjectIdPattern                  *string                  `json:"projectIdPattern,omitempty" tfsdk:"project_id_pattern"`
-	BillingAccountId                  *string                  `json:"billingAccountId,omitempty" tfsdk:"billing_account_id"`
-	UserLookupStrategy                *string                  `json:"userLookupStrategy,omitempty" tfsdk:"user_lookup_strategy"`
-	GcpRoleMappings                   []GcpPlatformRoleMapping `json:"gcpRoleMappings,omitempty" tfsdk:"gcp_role_mappings"`
-	AllowHierarchicalFolderAssignment *bool                    `json:"allowHierarchicalFolderAssignment,omitempty" tfsdk:"allow_hierarchical_folder_assignment"`
+	ServiceAccountConfig              GcpServiceAccountConfig  `json:"serviceAccountConfig" tfsdk:"service_account_config"`
+	Domain                            string                   `json:"domain" tfsdk:"domain"`
+	CustomerId                        string                   `json:"customerId" tfsdk:"customer_id"`
+	GroupNamePattern                  string                   `json:"groupNamePattern" tfsdk:"group_name_pattern"`
+	ProjectNamePattern                string                   `json:"projectNamePattern" tfsdk:"project_name_pattern"`
+	ProjectIdPattern                  string                   `json:"projectIdPattern" tfsdk:"project_id_pattern"`
+	BillingAccountId                  string                   `json:"billingAccountId" tfsdk:"billing_account_id"`
+	UserLookupStrategy                string                   `json:"userLookupStrategy" tfsdk:"user_lookup_strategy"`
+	UsedExternalIdType                *string                  `json:"usedExternalIdType,omitempty" tfsdk:"used_external_id_type"`
+	GcpRoleMappings                   []GcpPlatformRoleMapping `json:"gcpRoleMappings" tfsdk:"gcp_role_mappings"`
+	AllowHierarchicalFolderAssignment bool                     `json:"allowHierarchicalFolderAssignment" tfsdk:"allow_hierarchical_folder_assignment"`
 	TenantTags                        *GcpTenantTags           `json:"tenantTags,omitempty" tfsdk:"tenant_tags"`
-	SkipUserGroupPermissionCleanup    *bool                    `json:"skipUserGroupPermissionCleanup,omitempty" tfsdk:"skip_user_group_permission_cleanup"`
+	SkipUserGroupPermissionCleanup    bool                     `json:"skipUserGroupPermissionCleanup" tfsdk:"skip_user_group_permission_cleanup"`
 }
 
 type GcpServiceAccountConfig struct {
@@ -25,12 +27,12 @@ type GcpServiceAccountConfig struct {
 }
 
 type GcpServiceAccountCredentialsConfig struct {
-	ServiceAccountCredentialsB64 *string `json:"serviceAccountCredentialsB64,omitempty" tfsdk:"service_account_credentials_b64"`
+	ServiceAccountCredentialsB64 string `json:"serviceAccountCredentialsB64" tfsdk:"service_account_credentials_b64"`
 }
 
 type GcpServiceAccountWorkloadIdentityConfig struct {
-	Audience            *string `json:"audience,omitempty" tfsdk:"audience"`
-	ServiceAccountEmail *string `json:"serviceAccountEmail,omitempty" tfsdk:"service_account_email"`
+	Audience            string `json:"audience" tfsdk:"audience"`
+	ServiceAccountEmail string `json:"serviceAccountEmail" tfsdk:"service_account_email"`
 }
 
 type GcpTenantTags struct {
@@ -46,4 +48,14 @@ type GcpTagMapper struct {
 type GcpPlatformRoleMapping struct {
 	MeshProjectRoleRef MeshProjectRoleRefV2 `json:"projectRoleRef" tfsdk:"project_role_ref"`
 	GcpRole            string               `json:"gcpRole" tfsdk:"gcp_role"`
+}
+
+type GcpMeteringConfig struct {
+	ServiceAccountConfig                    GcpServiceAccountConfig              `json:"serviceAccountConfig" tfsdk:"service_account_config"`
+	BigqueryTable                           string                               `json:"bigqueryTable" tfsdk:"bigquery_table"`
+	BigqueryTableForCarbonFootprint         *string                              `json:"bigqueryTableForCarbonFootprint,omitempty" tfsdk:"bigquery_table_for_carbon_footprint"`
+	CarbonFootprintDataCollectionStartMonth *string                              `json:"carbonFootprintDataCollectionStartMonth,omitempty" tfsdk:"carbon_footprint_data_collection_start_month"`
+	PartitionTimeColumn                     string                               `json:"partitionTimeColumn" tfsdk:"partition_time_column"`
+	AdditionalFilter                        *string                              `json:"additionalFilter,omitempty" tfsdk:"additional_filter"`
+	Processing                              MeshPlatformMeteringProcessingConfig `json:"processing" tfsdk:"processing"`
 }

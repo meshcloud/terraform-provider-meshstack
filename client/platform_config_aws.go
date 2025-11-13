@@ -3,6 +3,7 @@ package client
 type AwsPlatformConfig struct {
 	Region      *string               `json:"region,omitempty" tfsdk:"region"`
 	Replication *AwsReplicationConfig `json:"replication,omitempty" tfsdk:"replication"`
+	Metering    *AwsMeteringConfig    `json:"metering,omitempty" tfsdk:"metering"`
 }
 
 type AwsReplicationConfig struct {
@@ -66,4 +67,12 @@ type AwsSsoRoleMapping struct {
 type AwsEnrollmentConfiguration struct {
 	ManagementAccountId     string `json:"managementAccountId" tfsdk:"management_account_id"`
 	AccountFactoryProductId string `json:"accountFactoryProductId" tfsdk:"account_factory_product_id"`
+}
+
+type AwsMeteringConfig struct {
+	AccessConfig                   AwsAccessConfig                      `json:"accessConfig" tfsdk:"access_config"`
+	Filter                         string                               `json:"filter" tfsdk:"filter"`
+	ReservedInstanceFairChargeback bool                                 `json:"reservedInstanceFairChargeback" tfsdk:"reserved_instance_fair_chargeback"`
+	SavingsPlanFairChargeback      bool                                 `json:"savingsPlanFairChargeback" tfsdk:"savings_plan_fair_chargeback"`
+	Processing                     MeshPlatformMeteringProcessingConfig `json:"processing" tfsdk:"processing"`
 }
