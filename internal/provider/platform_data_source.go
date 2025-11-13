@@ -214,6 +214,7 @@ func awsPlatformDataSourceSchema() schema.Attribute {
 				Computed:            true,
 			},
 			"replication": awsReplicationConfigDataSourceSchema(),
+			"metering":    awsMeteringConfigDataSourceSchema(),
 		},
 	}
 }
@@ -247,6 +248,7 @@ func azurePlatformDataSourceSchema() schema.Attribute {
 				Computed:            true,
 			},
 			"replication": azureReplicationConfigDataSourceSchema(),
+			"metering":    azureMeteringConfigDataSourceSchema(),
 		},
 	}
 }
@@ -271,6 +273,7 @@ func gcpPlatformDataSourceSchema() schema.Attribute {
 		Computed:            true,
 		Attributes: map[string]schema.Attribute{
 			"replication": gcpReplicationConfigDataSourceSchema(),
+			"metering":    gcpMeteringConfigDataSourceSchema(),
 		},
 	}
 }
@@ -320,6 +323,161 @@ func aksMeteringConfigDataSourceSchema() schema.Attribute {
 		Attributes: map[string]schema.Attribute{
 			"client_config": kubernetesClientConfigDataSourceSchema("Client configuration for AKS metering"),
 			"processing":    meteringProcessingConfigDataSourceSchema(),
+		},
+	}
+}
+
+func awsMeteringConfigDataSourceSchema() schema.Attribute {
+	return schema.SingleNestedAttribute{
+		MarkdownDescription: "Metering configuration for AWS (optional, but required for metering)",
+		Computed:            true,
+		Attributes: map[string]schema.Attribute{
+			"access_config": schema.SingleNestedAttribute{
+				MarkdownDescription: "Access configuration for AWS metering",
+				Computed:            true,
+				Attributes: map[string]schema.Attribute{
+					"organization_root_account_role": schema.StringAttribute{
+						MarkdownDescription: "ARN of the Management Account Role",
+						Computed:            true,
+					},
+					"organization_root_account_external_id": schema.StringAttribute{
+						MarkdownDescription: "ExternalId for the organization root account role",
+						Computed:            true,
+					},
+					"service_user_config": schema.SingleNestedAttribute{
+						MarkdownDescription: "Service user configuration",
+						Computed:            true,
+						Attributes: map[string]schema.Attribute{
+							"access_key": schema.StringAttribute{
+								MarkdownDescription: "AWS access key",
+								Computed:            true,
+							},
+							"secret_key": schema.StringAttribute{
+								MarkdownDescription: "AWS secret key",
+								Computed:            true,
+								Sensitive:           true,
+							},
+						},
+					},
+					"workload_identity_config": schema.SingleNestedAttribute{
+						MarkdownDescription: "Workload identity configuration",
+						Computed:            true,
+						Attributes: map[string]schema.Attribute{
+							"role_arn": schema.StringAttribute{
+								MarkdownDescription: "ARN of the role for workload identity",
+								Computed:            true,
+							},
+						},
+					},
+				},
+			},
+			"filter": schema.StringAttribute{
+				MarkdownDescription: "Cost Explorer filter type (NONE or EXCLUDE_TAX)",
+				Computed:            true,
+			},
+			"reserved_instance_fair_chargeback": schema.BoolAttribute{
+				MarkdownDescription: "Enable fair chargeback for reserved instances",
+				Computed:            true,
+			},
+			"savings_plan_fair_chargeback": schema.BoolAttribute{
+				MarkdownDescription: "Enable fair chargeback for savings plans",
+				Computed:            true,
+			},
+			"processing": meteringProcessingConfigDataSourceSchema(),
+		},
+	}
+}
+
+func azureMeteringConfigDataSourceSchema() schema.Attribute {
+	return schema.SingleNestedAttribute{
+		MarkdownDescription: "Metering configuration for Azure (optional, but required for metering)",
+		Computed:            true,
+		Attributes: map[string]schema.Attribute{
+			"service_principal": schema.SingleNestedAttribute{
+				MarkdownDescription: "Service principal configuration for Azure metering",
+				Computed:            true,
+				Attributes: map[string]schema.Attribute{
+					"client_id": schema.StringAttribute{
+						MarkdownDescription: "The Application (Client) ID",
+						Computed:            true,
+					},
+					"auth_type": schema.StringAttribute{
+						MarkdownDescription: "Authentication type (CREDENTIALS or WORKLOAD_IDENTITY)",
+						Computed:            true,
+					},
+					"credentials_auth_client_secret": schema.StringAttribute{
+						MarkdownDescription: "Client secret (if authType is CREDENTIALS)",
+						Computed:            true,
+						Sensitive:           true,
+					},
+					"object_id": schema.StringAttribute{
+						MarkdownDescription: "The Object ID of the Enterprise Application",
+						Computed:            true,
+					},
+				},
+			},
+			"processing": meteringProcessingConfigDataSourceSchema(),
+		},
+	}
+}
+
+func gcpMeteringConfigDataSourceSchema() schema.Attribute {
+	return schema.SingleNestedAttribute{
+		MarkdownDescription: "Metering configuration for GCP (optional, but required for metering)",
+		Computed:            true,
+		Attributes: map[string]schema.Attribute{
+			"service_account_config": schema.SingleNestedAttribute{
+				MarkdownDescription: "Service account configuration for GCP metering",
+				Computed:            true,
+				Attributes: map[string]schema.Attribute{
+					"service_account_credentials_config": schema.SingleNestedAttribute{
+						MarkdownDescription: "Service account credentials configuration",
+						Computed:            true,
+						Attributes: map[string]schema.Attribute{
+							"service_account_credentials_b64": schema.StringAttribute{
+								MarkdownDescription: "Base64 encoded service account credentials",
+								Computed:            true,
+								Sensitive:           true,
+							},
+						},
+					},
+					"service_account_workload_identity_config": schema.SingleNestedAttribute{
+						MarkdownDescription: "Service account workload identity configuration",
+						Computed:            true,
+						Attributes: map[string]schema.Attribute{
+							"audience": schema.StringAttribute{
+								MarkdownDescription: "The audience for workload identity",
+								Computed:            true,
+							},
+							"service_account_email": schema.StringAttribute{
+								MarkdownDescription: "Service account email address",
+								Computed:            true,
+							},
+						},
+					},
+				},
+			},
+			"bigquery_table": schema.StringAttribute{
+				MarkdownDescription: "BigQuery table for metering data",
+				Computed:            true,
+			},
+			"bigquery_table_for_carbon_footprint": schema.StringAttribute{
+				MarkdownDescription: "BigQuery table for carbon footprint data",
+				Computed:            true,
+			},
+			"carbon_footprint_data_collection_start_month": schema.StringAttribute{
+				MarkdownDescription: "Start month for carbon footprint data collection",
+				Computed:            true,
+			},
+			"partition_time_column": schema.StringAttribute{
+				MarkdownDescription: "Partition time column name",
+				Computed:            true,
+			},
+			"additional_filter": schema.StringAttribute{
+				MarkdownDescription: "Additional filter for metering queries",
+				Computed:            true,
+			},
+			"processing": meteringProcessingConfigDataSourceSchema(),
 		},
 	}
 }
@@ -942,6 +1100,10 @@ func gcpReplicationConfigDataSourceSchema() schema.Attribute {
 			},
 			"user_lookup_strategy": schema.StringAttribute{
 				MarkdownDescription: "Users can either be looked up by E-Mail or externalAccountId. This must also be the property that is placed in the external user id (EUID) of your meshUser entity to match. E-Mail is usually a good choice as this is often set up as the EUID throughout all cloud platforms and meshStack. ('email' or 'externalId')",
+				Computed:            true,
+			},
+			"used_external_id_type": schema.StringAttribute{
+				MarkdownDescription: "The type of external ID used for user lookup.",
 				Computed:            true,
 			},
 			"gcp_role_mappings": schema.ListNestedAttribute{
