@@ -70,6 +70,16 @@ func (r *platformResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 		"* Deleting and re-creating a platform with the same identifier is not possible. Once you have used a platform identifier, you cannot use it again, even if the platform has been deleted. You may run into this issue when you attempt to modify an immutable attribute and terraform therefore attempts to replace (i.e., delete and recreate) the entire platform, which will result in an error with a status code of `409` due to the identifier already being used by a deleted platform.\n" +
 		"* Changing the owning workspace of a platform (`metadata.owned_by_workspace`) is not possible. To transfer the ownership of a platform, you must use meshPanel."
 
+	quotaDefinitionAttrTypes := map[string]attr.Type{
+		"quota_key":               types.StringType,
+		"label":                   types.StringType,
+		"description":             types.StringType,
+		"unit":                    types.StringType,
+		"min_value":               types.Int64Type,
+		"max_value":               types.Int64Type,
+		"auto_approval_threshold": types.Int64Type,
+	}
+
 	resp.Schema = schema.Schema{
 		MarkdownDescription: markdownDescription,
 		Attributes: map[string]schema.Attribute{
@@ -214,19 +224,15 @@ func (r *platformResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					},
 					"quota_definitions": schema.ListAttribute{
 						MarkdownDescription: "List of quota definitions for the platform.",
-						Required:            true,
+						Optional:            true,
+						Computed:            true,
 						Sensitive:           false,
 						ElementType: types.ObjectType{
-							AttrTypes: map[string]attr.Type{
-								"quota_key":               types.StringType,
-								"label":                   types.StringType,
-								"description":             types.StringType,
-								"unit":                    types.StringType,
-								"min_value":               types.Int64Type,
-								"max_value":               types.Int64Type,
-								"auto_approval_threshold": types.Int64Type,
-							},
+							AttrTypes: quotaDefinitionAttrTypes,
 						},
+						Default: listdefault.StaticValue(types.ListValueMust(types.ObjectType{
+							AttrTypes: quotaDefinitionAttrTypes,
+						}, []attr.Value{})),
 					},
 					"config": schema.SingleNestedAttribute{
 						MarkdownDescription: "Platform-specific configuration settings.",
