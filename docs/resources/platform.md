@@ -191,12 +191,12 @@ Required:
 - `display_name` (String) The human-readable display name of the meshPlatform.
 - `endpoint` (String) The web console URL endpoint of the platform.
 - `location_ref` (Attributes) Reference to the location where this platform is situated. (see [below for nested schema](#nestedatt--spec--location_ref))
-- `quota_definitions` (List of Object) List of quota definitions for the platform. (see [below for nested schema](#nestedatt--spec--quota_definitions))
 
 Optional:
 
 - `contributing_workspaces` (List of String) A list of workspace identifiers that may contribute to this meshPlatform.
 - `documentation_url` (String) URL for platform documentation.
+- `quota_definitions` (List of Object) List of quota definitions for the platform. (see [below for nested schema](#nestedatt--spec--quota_definitions))
 - `support_url` (String) URL for platform support documentation.
 
 <a id="nestedatt--spec--availability"></a>
