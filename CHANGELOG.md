@@ -1,3 +1,51 @@
+## v0.13.0
+
+FEATURES:
+- Add metering config support to `meshstack_mesh_platform` resource and data source.
+
+FIXES:
+- Correctly model nullable platform config fields.
+
+## v0.12.4
+
+FEATURES:
+- Add quota definitions to meshPlatforms.
+
+## v0.12.3
+
+FIXES:
+- Bump terraform-plugin-docs and fix docs.
+
+## v0.12.2
+
+FIXES:
+- Fix possible nil-pointer issue when handling obfuscated secrets.
+
+## v0.12.1
+
+FIXES:
+- Handle obfuscated secrets in meshPlatform Azure Type.
+
+## v0.12.0
+
+FEATURES:
+- Added `meshstack_mesh_platform` resource.
+- Added `meshstack_mesh_platform` data source.
+
+FIXES:
+- Fix landing zone data source.
+
+## v0.11.0
+
+FEATURES:
+- Added `meshstack_mesh_landing_zone` resource.
+- Added `meshstack_mesh_landing_zone` data source.
+- Automatically set `type` inside platform_properties for landing zones.
+
+FIXES:
+- Fix landing zone status handling.
+- Make `type` a read-only property for landing zones.
+
 ## v0.10.1
 
 FIXES:
