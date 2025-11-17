@@ -51,10 +51,6 @@ Read-Only:
 <a id="nestedatt--spec"></a>
 ### Nested Schema for `spec`
 
-Required:
-
-- `quota_definitions` (List of Object) List of quota definitions for the platform. (see [below for nested schema](#nestedatt--spec--quota_definitions))
-
 Read-Only:
 
 - `availability` (Attributes) Availability configuration for the meshPlatform. (see [below for nested schema](#nestedatt--spec--availability))
@@ -65,21 +61,8 @@ Read-Only:
 - `documentation_url` (String) URL for platform documentation.
 - `endpoint` (String) The web console URL endpoint of the platform.
 - `location_ref` (Attributes) Reference to the location where this platform is situated. (see [below for nested schema](#nestedatt--spec--location_ref))
+- `quota_definitions` (List of Object) List of quota definitions for the platform. (see [below for nested schema](#nestedatt--spec--quota_definitions))
 - `support_url` (String) URL for platform support documentation.
-
-<a id="nestedatt--spec--quota_definitions"></a>
-### Nested Schema for `spec.quota_definitions`
-
-Read-Only:
-
-- `auto_approval_threshold` (Number)
-- `description` (String)
-- `label` (String)
-- `max_value` (Number)
-- `min_value` (Number)
-- `quota_key` (String)
-- `unit` (String)
-
 
 <a id="nestedatt--spec--availability"></a>
 ### Nested Schema for `spec.availability`
@@ -112,7 +95,34 @@ Read-Only:
 
 - `base_url` (String) Base URL of the AKS cluster
 - `disable_ssl_validation` (Boolean) Flag to disable SSL validation for the AKS cluster. (SSL Validation should at best never be disabled, but for integration of some private cloud platforms in an early state, they might not yet be using valid SSL certificates. In that case it can make sense to disable SSL validation here to already test integration of these platforms.)
+- `metering` (Attributes) Metering configuration for AKS (optional, but required for metering) (see [below for nested schema](#nestedatt--spec--config--aks--metering))
 - `replication` (Attributes) Replication configuration for AKS (optional, but required for replication) (see [below for nested schema](#nestedatt--spec--config--aks--replication))
+
+<a id="nestedatt--spec--config--aks--metering"></a>
+### Nested Schema for `spec.config.aks.metering`
+
+Read-Only:
+
+- `client_config` (Attributes) Client configuration for AKS metering (see [below for nested schema](#nestedatt--spec--config--aks--metering--client_config))
+- `processing` (Attributes) Processing configuration for metering (see [below for nested schema](#nestedatt--spec--config--aks--metering--processing))
+
+<a id="nestedatt--spec--config--aks--metering--client_config"></a>
+### Nested Schema for `spec.config.aks.metering.client_config`
+
+Read-Only:
+
+- `access_token` (String, Sensitive) The Access Token of the service account for replicator access.
+
+
+<a id="nestedatt--spec--config--aks--metering--processing"></a>
+### Nested Schema for `spec.config.aks.metering.processing`
+
+Read-Only:
+
+- `compact_timelines_after_days` (Number) Number of days after which timelines should be compacted.
+- `delete_raw_data_after_days` (Number) Number of days after which raw data should be deleted.
+
+
 
 <a id="nestedatt--spec--config--aks--replication"></a>
 ### Nested Schema for `spec.config.aks.replication`
@@ -150,8 +160,58 @@ Read-Only:
 
 Read-Only:
 
+- `metering` (Attributes) Metering configuration for AWS (optional, but required for metering) (see [below for nested schema](#nestedatt--spec--config--aws--metering))
 - `region` (String) AWS region
 - `replication` (Attributes) Replication configuration for AWS (optional, but required for replication) (see [below for nested schema](#nestedatt--spec--config--aws--replication))
+
+<a id="nestedatt--spec--config--aws--metering"></a>
+### Nested Schema for `spec.config.aws.metering`
+
+Read-Only:
+
+- `access_config` (Attributes) Access configuration for AWS metering (see [below for nested schema](#nestedatt--spec--config--aws--metering--access_config))
+- `filter` (String) Cost Explorer filter type (NONE or EXCLUDE_TAX)
+- `processing` (Attributes) Processing configuration for metering (see [below for nested schema](#nestedatt--spec--config--aws--metering--processing))
+- `reserved_instance_fair_chargeback` (Boolean) Enable fair chargeback for reserved instances
+- `savings_plan_fair_chargeback` (Boolean) Enable fair chargeback for savings plans
+
+<a id="nestedatt--spec--config--aws--metering--access_config"></a>
+### Nested Schema for `spec.config.aws.metering.access_config`
+
+Read-Only:
+
+- `organization_root_account_external_id` (String) ExternalId for the organization root account role
+- `organization_root_account_role` (String) ARN of the Management Account Role
+- `service_user_config` (Attributes) Service user configuration (see [below for nested schema](#nestedatt--spec--config--aws--metering--access_config--service_user_config))
+- `workload_identity_config` (Attributes) Workload identity configuration (see [below for nested schema](#nestedatt--spec--config--aws--metering--access_config--workload_identity_config))
+
+<a id="nestedatt--spec--config--aws--metering--access_config--service_user_config"></a>
+### Nested Schema for `spec.config.aws.metering.access_config.service_user_config`
+
+Read-Only:
+
+- `access_key` (String) AWS access key
+- `secret_key` (String, Sensitive) AWS secret key
+
+
+<a id="nestedatt--spec--config--aws--metering--access_config--workload_identity_config"></a>
+### Nested Schema for `spec.config.aws.metering.access_config.workload_identity_config`
+
+Read-Only:
+
+- `role_arn` (String) ARN of the role for workload identity
+
+
+
+<a id="nestedatt--spec--config--aws--metering--processing"></a>
+### Nested Schema for `spec.config.aws.metering.processing`
+
+Read-Only:
+
+- `compact_timelines_after_days` (Number) Number of days after which timelines should be compacted.
+- `delete_raw_data_after_days` (Number) Number of days after which raw data should be deleted.
+
+
 
 <a id="nestedatt--spec--config--aws--replication"></a>
 ### Nested Schema for `spec.config.aws.replication`
@@ -220,24 +280,18 @@ Required:
 
 - `project_role_ref` (Attributes) the meshProject role (see [below for nested schema](#nestedatt--spec--config--aws--replication--aws_sso--aws_role_mappings--project_role_ref))
 
-Optional:
-
-- `permission_set_arns` (List of String) List of permission set ARNs associated with this role mapping
-
 Read-Only:
 
 - `aws_role` (String) The AWS role name
+- `permission_set_arns` (List of String) List of permission set ARNs associated with this role mapping
 
 <a id="nestedatt--spec--config--aws--replication--aws_sso--aws_role_mappings--project_role_ref"></a>
 ### Nested Schema for `spec.config.aws.replication.aws_sso.aws_role_mappings.project_role_ref`
 
-Required:
-
-- `name` (String) The identifier of the meshProjectRole
-
 Read-Only:
 
 - `kind` (String) meshObject type, always `meshProjectRole`.
+- `name` (String) The identifier of the meshProjectRole
 
 
 
@@ -277,7 +331,37 @@ Read-Only:
 Read-Only:
 
 - `entra_tenant` (String) Azure Active Directory (Entra ID) tenant
+- `metering` (Attributes) Metering configuration for Azure (optional, but required for metering) (see [below for nested schema](#nestedatt--spec--config--azure--metering))
 - `replication` (Attributes) Azure-specific replication configuration for the platform. (see [below for nested schema](#nestedatt--spec--config--azure--replication))
+
+<a id="nestedatt--spec--config--azure--metering"></a>
+### Nested Schema for `spec.config.azure.metering`
+
+Read-Only:
+
+- `processing` (Attributes) Processing configuration for metering (see [below for nested schema](#nestedatt--spec--config--azure--metering--processing))
+- `service_principal` (Attributes) Service principal configuration for Azure metering (see [below for nested schema](#nestedatt--spec--config--azure--metering--service_principal))
+
+<a id="nestedatt--spec--config--azure--metering--processing"></a>
+### Nested Schema for `spec.config.azure.metering.processing`
+
+Read-Only:
+
+- `compact_timelines_after_days` (Number) Number of days after which timelines should be compacted.
+- `delete_raw_data_after_days` (Number) Number of days after which raw data should be deleted.
+
+
+<a id="nestedatt--spec--config--azure--metering--service_principal"></a>
+### Nested Schema for `spec.config.azure.metering.service_principal`
+
+Read-Only:
+
+- `auth_type` (String) Authentication type (CREDENTIALS or WORKLOAD_IDENTITY)
+- `client_id` (String) The Application (Client) ID
+- `credentials_auth_client_secret` (String, Sensitive) Client secret (if authType is CREDENTIALS)
+- `object_id` (String) The Object ID of the Enterprise Application
+
+
 
 <a id="nestedatt--spec--config--azure--replication"></a>
 ### Nested Schema for `spec.config.azure.replication`
@@ -312,13 +396,10 @@ Read-Only:
 <a id="nestedatt--spec--config--azure--replication--azure_role_mappings--project_role_ref"></a>
 ### Nested Schema for `spec.config.azure.replication.azure_role_mappings.project_role_ref`
 
-Required:
-
-- `name` (String) The identifier of the meshProjectRole
-
 Read-Only:
 
 - `kind` (String) meshObject type, always `meshProjectRole`.
+- `name` (String) The identifier of the meshProjectRole
 
 
 <a id="nestedatt--spec--config--azure--replication--azure_role_mappings--azure_role"></a>
@@ -336,7 +417,7 @@ Read-Only:
 
 Read-Only:
 
-- `redirect_url` (String) This is the URL that Azure's consent experience redirects users to after they accept their invitation.
+- `redirect_url` (String)
 - `send_azure_invitation_mail` (Boolean) When true, meshStack instructs Azure to send out Invitation mails to invited users. These mails allow users to redeem their invitation to the AAD tenant only using email and Azure Portal.
 
 
@@ -492,7 +573,57 @@ Read-Only:
 
 Read-Only:
 
+- `metering` (Attributes) Metering configuration for GCP (optional, but required for metering) (see [below for nested schema](#nestedatt--spec--config--gcp--metering))
 - `replication` (Attributes) GCP-specific replication configuration for the platform. (see [below for nested schema](#nestedatt--spec--config--gcp--replication))
+
+<a id="nestedatt--spec--config--gcp--metering"></a>
+### Nested Schema for `spec.config.gcp.metering`
+
+Read-Only:
+
+- `additional_filter` (String) Additional filter for metering queries
+- `bigquery_table` (String) BigQuery table for metering data
+- `bigquery_table_for_carbon_footprint` (String) BigQuery table for carbon footprint data
+- `carbon_footprint_data_collection_start_month` (String) Start month for carbon footprint data collection
+- `partition_time_column` (String) Partition time column name
+- `processing` (Attributes) Processing configuration for metering (see [below for nested schema](#nestedatt--spec--config--gcp--metering--processing))
+- `service_account_config` (Attributes) Service account configuration for GCP metering (see [below for nested schema](#nestedatt--spec--config--gcp--metering--service_account_config))
+
+<a id="nestedatt--spec--config--gcp--metering--processing"></a>
+### Nested Schema for `spec.config.gcp.metering.processing`
+
+Read-Only:
+
+- `compact_timelines_after_days` (Number) Number of days after which timelines should be compacted.
+- `delete_raw_data_after_days` (Number) Number of days after which raw data should be deleted.
+
+
+<a id="nestedatt--spec--config--gcp--metering--service_account_config"></a>
+### Nested Schema for `spec.config.gcp.metering.service_account_config`
+
+Read-Only:
+
+- `service_account_credentials_config` (Attributes) Service account credentials configuration (see [below for nested schema](#nestedatt--spec--config--gcp--metering--service_account_config--service_account_credentials_config))
+- `service_account_workload_identity_config` (Attributes) Service account workload identity configuration (see [below for nested schema](#nestedatt--spec--config--gcp--metering--service_account_config--service_account_workload_identity_config))
+
+<a id="nestedatt--spec--config--gcp--metering--service_account_config--service_account_credentials_config"></a>
+### Nested Schema for `spec.config.gcp.metering.service_account_config.service_account_credentials_config`
+
+Read-Only:
+
+- `service_account_credentials_b64` (String, Sensitive) Base64 encoded service account credentials
+
+
+<a id="nestedatt--spec--config--gcp--metering--service_account_config--service_account_workload_identity_config"></a>
+### Nested Schema for `spec.config.gcp.metering.service_account_config.service_account_workload_identity_config`
+
+Read-Only:
+
+- `audience` (String) The audience for workload identity
+- `service_account_email` (String) Service account email address
+
+
+
 
 <a id="nestedatt--spec--config--gcp--replication"></a>
 ### Nested Schema for `spec.config.gcp.replication`
@@ -510,6 +641,7 @@ Read-Only:
 - `service_account_config` (Attributes) Service account configuration. Either `serviceAccountCredentialsConfig` or `serviceAccountWorkloadIdentityConfig` must be provided. (see [below for nested schema](#nestedatt--spec--config--gcp--replication--service_account_config))
 - `skip_user_group_permission_cleanup` (Boolean) For certain use cases you might want to preserve user groups and replicated permission after a tenant was deleted on the GCP platform. Checking this option preserves those permissions. Please keep in mind that the platform operator is then responsible for cleaning them up later.
 - `tenant_tags` (Attributes) Tenant tags configuration (see [below for nested schema](#nestedatt--spec--config--gcp--replication--tenant_tags))
+- `used_external_id_type` (String) The type of external ID used for user lookup.
 - `user_lookup_strategy` (String) Users can either be looked up by E-Mail or externalAccountId. This must also be the property that is placed in the external user id (EUID) of your meshUser entity to match. E-Mail is usually a good choice as this is often set up as the EUID throughout all cloud platforms and meshStack. ('email' or 'externalId')
 
 <a id="nestedatt--spec--config--gcp--replication--gcp_role_mappings"></a>
@@ -526,13 +658,10 @@ Read-Only:
 <a id="nestedatt--spec--config--gcp--replication--gcp_role_mappings--project_role_ref"></a>
 ### Nested Schema for `spec.config.gcp.replication.gcp_role_mappings.project_role_ref`
 
-Required:
-
-- `name` (String) The identifier of the meshProjectRole
-
 Read-Only:
 
 - `kind` (String) meshObject type, always `meshProjectRole`.
+- `name` (String) The identifier of the meshProjectRole
 
 
 
@@ -589,7 +718,24 @@ Read-Only:
 
 - `base_url` (String) This URL is the base URL to your Kubernetes Cluster, which is used to call the APIs to create new Kubernetes projects, get raw data for metering the Kubernetes projects, etc. An example base URL is: https://k8s.dev.eu-de-central.msh.host:6443
 - `disable_ssl_validation` (Boolean) Flag to disable SSL validation for the Kubernetes cluster. SSL Validation should at best never be disabled, but for integration of some private cloud platforms in an early state, they might not yet be using valid SSL certificates. In that case it can make sense to disable SSL validation here to already test integration of these platforms.
+- `metering` (Attributes) Metering configuration for Kubernetes (optional, but required for metering) (see [below for nested schema](#nestedatt--spec--config--kubernetes--metering))
 - `replication` (Attributes) Replication configuration for Kubernetes (optional, but required for replication) (see [below for nested schema](#nestedatt--spec--config--kubernetes--replication))
+
+<a id="nestedatt--spec--config--kubernetes--metering"></a>
+### Nested Schema for `spec.config.kubernetes.metering`
+
+Read-Only:
+
+- `client_config` (Attributes) Client configuration for Kubernetes metering (see [below for nested schema](#nestedatt--spec--config--kubernetes--metering--client_config))
+
+<a id="nestedatt--spec--config--kubernetes--metering--client_config"></a>
+### Nested Schema for `spec.config.kubernetes.metering.client_config`
+
+Read-Only:
+
+- `access_token` (String, Sensitive) The Access Token of the service account for replicator access.
+
+
 
 <a id="nestedatt--spec--config--kubernetes--replication"></a>
 ### Nested Schema for `spec.config.kubernetes.replication`
@@ -616,7 +762,34 @@ Read-Only:
 
 - `base_url` (String) This URL is the base URL to your OpenShift Cluster, which is used to call the APIs to create new OpenShift projects, get raw data for metering the OpenShift projects, etc. An example base URL is: https://api.okd4.dev.eu-de-central.msh.host:6443
 - `disable_ssl_validation` (Boolean) Flag to disable SSL validation for the OpenShift cluster. SSL Validation should at best never be disabled, but for integration of some private cloud platforms in an early state, they might not yet be using valid SSL certificates. In that case it can make sense to disable SSL validation here to already test integration of these platforms.
+- `metering` (Attributes) Metering configuration for OpenShift (optional, but required for metering) (see [below for nested schema](#nestedatt--spec--config--openshift--metering))
 - `replication` (Attributes) Replication configuration for OpenShift (optional, but required for replication) (see [below for nested schema](#nestedatt--spec--config--openshift--replication))
+
+<a id="nestedatt--spec--config--openshift--metering"></a>
+### Nested Schema for `spec.config.openshift.metering`
+
+Read-Only:
+
+- `client_config` (Attributes) Client configuration for OpenShift metering (see [below for nested schema](#nestedatt--spec--config--openshift--metering--client_config))
+- `processing` (Attributes) Processing configuration for metering (see [below for nested schema](#nestedatt--spec--config--openshift--metering--processing))
+
+<a id="nestedatt--spec--config--openshift--metering--client_config"></a>
+### Nested Schema for `spec.config.openshift.metering.client_config`
+
+Read-Only:
+
+- `access_token` (String, Sensitive) The Access Token of the service account for replicator access.
+
+
+<a id="nestedatt--spec--config--openshift--metering--processing"></a>
+### Nested Schema for `spec.config.openshift.metering.processing`
+
+Read-Only:
+
+- `compact_timelines_after_days` (Number) Number of days after which timelines should be compacted.
+- `delete_raw_data_after_days` (Number) Number of days after which raw data should be deleted.
+
+
 
 <a id="nestedatt--spec--config--openshift--replication"></a>
 ### Nested Schema for `spec.config.openshift.replication`
@@ -653,13 +826,10 @@ Read-Only:
 <a id="nestedatt--spec--config--openshift--replication--openshift_role_mappings--project_role_ref"></a>
 ### Nested Schema for `spec.config.openshift.replication.openshift_role_mappings.project_role_ref`
 
-Required:
-
-- `name` (String) The identifier of the meshProjectRole
-
 Read-Only:
 
 - `kind` (String) meshObject type, always `meshProjectRole`.
+- `name` (String) The identifier of the meshProjectRole
 
 
 
@@ -691,3 +861,17 @@ Read-Only:
 
 - `kind` (String) Must always be set to meshLocation
 - `name` (String) Identifier of the Location.
+
+
+<a id="nestedatt--spec--quota_definitions"></a>
+### Nested Schema for `spec.quota_definitions`
+
+Read-Only:
+
+- `auto_approval_threshold` (Number)
+- `description` (String)
+- `label` (String)
+- `max_value` (Number)
+- `min_value` (Number)
+- `quota_key` (String)
+- `unit` (String)

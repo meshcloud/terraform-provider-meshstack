@@ -239,24 +239,54 @@ Required:
 Optional:
 
 - `disable_ssl_validation` (Boolean) Flag to disable SSL validation for the AKS cluster. (SSL Validation should at best never be disabled, but for integration of some private cloud platforms in an early state, they might not yet be using valid SSL certificates. In that case it can make sense to disable SSL validation here to already test integration of these platforms.)
+- `metering` (Attributes) Metering configuration for AKS (optional, but required for metering) (see [below for nested schema](#nestedatt--spec--config--aks--metering))
 - `replication` (Attributes) Replication configuration for AKS (optional, but required for replication) (see [below for nested schema](#nestedatt--spec--config--aks--replication))
+
+<a id="nestedatt--spec--config--aks--metering"></a>
+### Nested Schema for `spec.config.aks.metering`
+
+Required:
+
+- `client_config` (Attributes) Client configuration for AKS metering (see [below for nested schema](#nestedatt--spec--config--aks--metering--client_config))
+- `processing` (Attributes) Processing configuration for metering (see [below for nested schema](#nestedatt--spec--config--aks--metering--processing))
+
+<a id="nestedatt--spec--config--aks--metering--client_config"></a>
+### Nested Schema for `spec.config.aks.metering.client_config`
+
+Required:
+
+- `access_token` (String, Sensitive) The Access Token of the service account for replicator access.
+
+
+<a id="nestedatt--spec--config--aks--metering--processing"></a>
+### Nested Schema for `spec.config.aks.metering.processing`
+
+Optional:
+
+- `compact_timelines_after_days` (Number) Number of days after which timelines should be compacted.
+- `delete_raw_data_after_days` (Number) Number of days after which raw data should be deleted.
+
+
 
 <a id="nestedatt--spec--config--aks--replication"></a>
 ### Nested Schema for `spec.config.aks.replication`
 
-Optional:
+Required:
 
 - `access_token` (String, Sensitive) The Access Token of the service account for replicator access.
-- `administrative_unit_id` (String) If you enter an administrative unit ID the replicated (and potentially existing) groups will be put into this AU. This can be used to limit the permission scopes which are required for the replicator principal. If you remove the AU ID again or change it, the groups will not be removed from the old AU.
 - `aks_cluster_name` (String) Name of the AKS cluster.
 - `aks_resource_group` (String) Resource group for the AKS cluster
 - `aks_subscription_id` (String) Subscription ID for the AKS cluster
 - `group_name_pattern` (String) Pattern for naming groups in AKS
 - `namespace_name_pattern` (String) Pattern for naming namespaces in AKS
-- `redirect_url` (String) This is the URL that Azure’s consent experience redirects users to after they accept their invitation.
 - `send_azure_invitation_mail` (Boolean) Flag to send Azure invitation emails. When true, meshStack instructs Azure to send out Invitation mails to invited users.
 - `service_principal` (Attributes) Service principal configuration for AKS (see [below for nested schema](#nestedatt--spec--config--aks--replication--service_principal))
 - `user_look_up_strategy` (String) Strategy for user lookup in Azure (`userPrincipalName` or `email`)
+
+Optional:
+
+- `administrative_unit_id` (String) If you enter an administrative unit ID the replicated (and potentially existing) groups will be put into this AU. This can be used to limit the permission scopes which are required for the replicator principal. If you remove the AU ID again or change it, the groups will not be removed from the old AU.
+- `redirect_url` (String) This is the URL that Azure's consent experience redirects users to after they accept their invitation.
 
 <a id="nestedatt--spec--config--aks--replication--service_principal"></a>
 ### Nested Schema for `spec.config.aks.replication.service_principal`
@@ -280,28 +310,84 @@ Optional:
 
 Optional:
 
+- `metering` (Attributes) Metering configuration for AWS (optional, but required for metering) (see [below for nested schema](#nestedatt--spec--config--aws--metering))
 - `region` (String) AWS region
 - `replication` (Attributes) Replication configuration for AWS (optional, but required for replication) (see [below for nested schema](#nestedatt--spec--config--aws--replication))
+
+<a id="nestedatt--spec--config--aws--metering"></a>
+### Nested Schema for `spec.config.aws.metering`
+
+Required:
+
+- `access_config` (Attributes) meshStack currently supports 2 types of authentication. Workload Identity Federation (using OIDC) is the one that we recommend as it enables secure access to your AWS account without using long lived credentials. Alternatively, you can use credential based authentication by providing access and secret keys. Either the `service_user_config` or `workload_identity_config` must be provided. (see [below for nested schema](#nestedatt--spec--config--aws--metering--access_config))
+- `filter` (String) Filter for AWS metering data.
+- `processing` (Attributes) Processing configuration for metering (see [below for nested schema](#nestedatt--spec--config--aws--metering--processing))
+- `reserved_instance_fair_chargeback` (Boolean) Flag to enable fair chargeback for reserved instances.
+- `savings_plan_fair_chargeback` (Boolean) Flag to enable fair chargeback for savings plans.
+
+<a id="nestedatt--spec--config--aws--metering--access_config"></a>
+### Nested Schema for `spec.config.aws.metering.access_config`
+
+Required:
+
+- `organization_root_account_role` (String) ARN of the Management Account Role. The Management Account contains your AWS organization. E.g. `arn:aws:iam::123456789:role/MeshfedServiceRole`.
+
+Optional:
+
+- `organization_root_account_external_id` (String) ExternalId to enhance security in a multi account setup when assuming the organization root account role.
+- `service_user_config` (Attributes) Service user configuration (alternative to `workload_identity_config`) (see [below for nested schema](#nestedatt--spec--config--aws--metering--access_config--service_user_config))
+- `workload_identity_config` (Attributes) Workload identity configuration (alternative to `service_user_config`) (see [below for nested schema](#nestedatt--spec--config--aws--metering--access_config--workload_identity_config))
+
+<a id="nestedatt--spec--config--aws--metering--access_config--service_user_config"></a>
+### Nested Schema for `spec.config.aws.metering.access_config.service_user_config`
+
+Required:
+
+- `access_key` (String) AWS access key for service user
+- `secret_key` (String, Sensitive) AWS secret key for service user
+
+
+<a id="nestedatt--spec--config--aws--metering--access_config--workload_identity_config"></a>
+### Nested Schema for `spec.config.aws.metering.access_config.workload_identity_config`
+
+Required:
+
+- `role_arn` (String) ARN of the role that should be used as the entry point for meshStack by assuming it via web identity.
+
+
+
+<a id="nestedatt--spec--config--aws--metering--processing"></a>
+### Nested Schema for `spec.config.aws.metering.processing`
+
+Optional:
+
+- `compact_timelines_after_days` (Number) Number of days after which timelines should be compacted.
+- `delete_raw_data_after_days` (Number) Number of days after which raw data should be deleted.
+
+
 
 <a id="nestedatt--spec--config--aws--replication"></a>
 ### Nested Schema for `spec.config.aws.replication`
 
-Optional:
+Required:
 
 - `access_config` (Attributes) meshStack currently supports 2 types of authentication. Workload Identity Federation (using OIDC) is the one that we recommend as it enables secure access to your AWS account without using long lived credentials. Alternatively, you can use credential based authentication by providing access and secret keys. Either the `service_user_config` or `workload_identity_config` must be provided. (see [below for nested schema](#nestedatt--spec--config--aws--replication--access_config))
 - `account_access_role` (String) The name for the Account Access Role that will be rolled out to all managed accounts. Only a name, not an ARN must be set here, as the ARN must be built dynamically for every managed AWS Account. The replicator service user needs to assume this role in all accounts to manage them.
 - `account_alias_pattern` (String) With a String Pattern you can define how the account alias of the created AWS account will be named. E.g. `#{workspaceIdentifier}-#{projectIdentifier}`. Attention: Account Alias must be globally unique in AWS. So consider defining a unique prefix.
 - `account_email_pattern` (String) With a String Pattern you can define how the account email address of the created AWS account will be set. E.g. `aws+#{workspaceIdentifier}.#{projectIdentifier}@yourcompany.com`. Please consider that this email address is limited to 64 characters! Also have a look at our docs for more information.
 - `allow_hierarchical_organizational_unit_assignment` (Boolean) Configuration flag to enable or disable hierarchical organizational unit assignment in AWS. If set to true: Accounts can be moved to child organizational units of the organizational unit defined in the Landing Zone. This is useful if you want to manage the account location with a deeper and more granular hierarchy. If set to false: Accounts will always be moved directly to the organizational unit defined in the Landing Zone.
-- `automation_account_external_id` (String) ExternalId to enhance security in a multi account setup when assuming the automation account role.
 - `automation_account_role` (String) ARN of the Automation Account Role. The Automation Account contains all AWS StackSets and Lambda Functions that shall be executed via meshLandingZones. E.g. `arn:aws:iam::123456789:role/MeshfedAutomationRole`.
-- `aws_sso` (Attributes) AWS SSO configuration (see [below for nested schema](#nestedatt--spec--config--aws--replication--aws_sso))
 - `enforce_account_alias` (Boolean) Flag to enforce account alias. If set, meshStack will guarantee on every replication that the configured Account Alias is applied. Otherwise it will only set the Account Alias once during tenant creation.
-- `enrollment_configuration` (Attributes) AWS account enrollment configuration. (see [below for nested schema](#nestedatt--spec--config--aws--replication--enrollment_configuration))
 - `self_downgrade_access_role` (Boolean) Flag for self downgrade access role. If set, meshStack will revoke its rights on the managed account that were only needed for initial account creation.
 - `skip_user_group_permission_cleanup` (Boolean) Flag to skip user group permission cleanup. For certain use cases you might want to preserve user groups and replicated permission after a tenant was deleted on the AWS platform. Checking this option preserves those permissions. Please keep in mind that the platform operator is then responsible for cleaning them up later.
-- `tenant_tags` (Attributes) Tenant tags configuration (see [below for nested schema](#nestedatt--spec--config--aws--replication--tenant_tags))
 - `wait_for_external_avm` (Boolean) Flag to wait for external AVM. Please use this setting with care! It is currently very specific to certain tags being present on the account! In general, we recommend not to activate this functionality! In a meshLandingZone an AVM can be triggered via an AWS StackSet or via a Lambda Function. If meshStack shall wait for the AVM to complete when creating a new platform tenant, this flag must be checked. meshStack will identify completion of the AVM by checking the presence of the following tags on the AWS account: 'ProductName' is set to workspace identifier and 'Stage' is set to project identifier.
+
+Optional:
+
+- `automation_account_external_id` (String) ExternalId to enhance security in a multi account setup when assuming the automation account role.
+- `aws_sso` (Attributes) AWS SSO configuration (see [below for nested schema](#nestedatt--spec--config--aws--replication--aws_sso))
+- `enrollment_configuration` (Attributes) AWS account enrollment configuration. (see [below for nested schema](#nestedatt--spec--config--aws--replication--enrollment_configuration))
+- `tenant_tags` (Attributes) Tenant tags configuration (see [below for nested schema](#nestedatt--spec--config--aws--replication--tenant_tags))
 
 <a id="nestedatt--spec--config--aws--replication--access_config"></a>
 ### Nested Schema for `spec.config.aws.replication.access_config`
@@ -322,9 +408,6 @@ Optional:
 Required:
 
 - `access_key` (String) AWS access key for service user
-
-Optional:
-
 - `secret_key` (String, Sensitive) AWS secret key for service user
 
 
@@ -413,29 +496,68 @@ Required:
 <a id="nestedatt--spec--config--azure"></a>
 ### Nested Schema for `spec.config.azure`
 
-Optional:
+Required:
 
 - `entra_tenant` (String) Azure Active Directory (Entra ID) tenant
+
+Optional:
+
+- `metering` (Attributes) Metering configuration for Azure (optional, but required for metering) (see [below for nested schema](#nestedatt--spec--config--azure--metering))
 - `replication` (Attributes) Azure-specific replication configuration for the platform. (see [below for nested schema](#nestedatt--spec--config--azure--replication))
+
+<a id="nestedatt--spec--config--azure--metering"></a>
+### Nested Schema for `spec.config.azure.metering`
+
+Required:
+
+- `processing` (Attributes) Processing configuration for metering (see [below for nested schema](#nestedatt--spec--config--azure--metering--processing))
+- `service_principal` (Attributes) Service principal configuration for Azure metering (see [below for nested schema](#nestedatt--spec--config--azure--metering--service_principal))
+
+<a id="nestedatt--spec--config--azure--metering--processing"></a>
+### Nested Schema for `spec.config.azure.metering.processing`
+
+Optional:
+
+- `compact_timelines_after_days` (Number) Number of days after which timelines should be compacted.
+- `delete_raw_data_after_days` (Number) Number of days after which raw data should be deleted.
+
+
+<a id="nestedatt--spec--config--azure--metering--service_principal"></a>
+### Nested Schema for `spec.config.azure.metering.service_principal`
+
+Required:
+
+- `auth_type` (String) Authentication type (`CREDENTIALS` or `WORKLOAD_IDENTITY`)
+- `client_id` (String) The Application (Client) ID. In Azure Portal, this is the Application ID of the 'Enterprise Application' but can also be retrieved via the 'App Registration' object as 'Application (Client) ID
+- `object_id` (String) The Object ID of the Enterprise Application. You can get this Object ID via the API (e.g. when using our Terraform provider) or from Enterprise applications pane in Microsoft Entra admin center.
+
+Optional:
+
+- `credentials_auth_client_secret` (String, Sensitive) Client secret (if authType is `CREDENTIALS`)
+
+
 
 <a id="nestedatt--spec--config--azure--replication"></a>
 ### Nested Schema for `spec.config.azure.replication`
 
-Optional:
+Required:
 
-- `administrative_unit_id` (String) If you enter an administrative unit ID the replicated (and potentially existing) groups will be put into this AU. This can be used to limit the permission scopes which are required for the replicator principal. If you remove the AU ID again or change it, the groups will not be removed from the old AU.
 - `allow_hierarchical_management_group_assignment` (Boolean) Configuration flag to enable or disable hierarchical management group assignment in Azure. If set to true: Subscriptions can be moved to sub management groups of the management group defined in the Landing Zone. This is useful if you want to manage the subscription location with a deeper and more granular hierarchy. If set to false: Subscriptions will always be moved directly to the management group defined in the Landing Zone.
 - `azure_role_mappings` (Attributes List) Azure role mappings for Azure role definitions. (see [below for nested schema](#nestedatt--spec--config--azure--replication--azure_role_mappings))
-- `b2b_user_invitation` (Attributes) Optional B2B user invitation configuration. When configured, instructs the replicator to create AAD B2B guest invitations for users missing in the AAD tenant managed by this meshPlatform. (see [below for nested schema](#nestedatt--spec--config--azure--replication--b2b_user_invitation))
-- `blueprint_location` (String) The Azure location where replication creates and updates Blueprint Assignments. Note that it’s still possible that the Blueprint creates resources in other locations, this is merely the location where the Blueprint Assignment is managed.
 - `blueprint_service_principal` (String) Object ID of the Enterprise Application belonging to the Microsoft Application 'Azure Blueprints'. meshStack will grant the necessary permissions on managed Subscriptions to this SPN so that it can create System Assigned Managed Identities (SAMI) for Blueprint execution.
 - `group_name_pattern` (String) Configures the pattern that defines the desired name of AAD groups managed by meshStack. It follows the usual replicator string pattern features and provides the additional replacement 'platformGroupAlias', which contains the role name suffix, which is configurable via Role Mappings in this platform config or via a meshLandingZone. Operators must ensure the group names are unique in the managed AAD Tenant.
-- `provisioning` (Attributes) To provide Azure Subscription for your organization’s meshProjects, meshcloud supports using Enterprise Enrollment or allocating from a pool of pre-provisioned subscriptions. One of the subFields enterpriseEnrollment, customerAgreement or preProvisioned must be provided! (see [below for nested schema](#nestedatt--spec--config--azure--replication--provisioning))
 - `service_principal` (Attributes) Service principal configuration for Azure (see [below for nested schema](#nestedatt--spec--config--azure--replication--service_principal))
 - `skip_user_group_permission_cleanup` (Boolean) Flag to skip user group permission cleanup. For certain use cases you might want to preserve user groups and replicated permission after a tenant was deleted on the Azure platform. Checking this option preserves those permissions. Please keep in mind that the platform operator is then responsible for cleaning them up later.
 - `subscription_name_pattern` (String) Configures the pattern that defines the desired name of Azure Subscriptions managed by meshStack.
-- `tenant_tags` (Attributes) Tenant tagging configuration. (see [below for nested schema](#nestedatt--spec--config--azure--replication--tenant_tags))
 - `user_look_up_strategy` (String) User lookup strategy (`userPrincipalName` or `email`). Users can either be looked up in cloud platforms by email or UPN (User Principal Name). In most cases email is the matching way as it is the only identifier that is consistently used throughout all cloud platforms and meshStack.
+
+Optional:
+
+- `administrative_unit_id` (String) If you enter an administrative unit ID the replicated (and potentially existing) groups will be put into this AU. This can be used to limit the permission scopes which are required for the replicator principal. If you remove the AU ID again or change it, the groups will not be removed from the old AU.
+- `b2b_user_invitation` (Attributes) Optional B2B user invitation configuration. When configured, instructs the replicator to create AAD B2B guest invitations for users missing in the AAD tenant managed by this meshPlatform. (see [below for nested schema](#nestedatt--spec--config--azure--replication--b2b_user_invitation))
+- `blueprint_location` (String) The Azure location where replication creates and updates Blueprint Assignments. Note that it's still possible that the Blueprint creates resources in other locations, this is merely the location where the Blueprint Assignment is managed.
+- `provisioning` (Attributes) To provide Azure Subscription for your organization's meshProjects, meshcloud supports using Enterprise Enrollment or allocating from a pool of pre-provisioned subscriptions. One of the subFields enterpriseEnrollment, customerAgreement or preProvisioned must be provided! (see [below for nested schema](#nestedatt--spec--config--azure--replication--provisioning))
+- `tenant_tags` (Attributes) Tenant tagging configuration. (see [below for nested schema](#nestedatt--spec--config--azure--replication--tenant_tags))
 
 <a id="nestedatt--spec--config--azure--replication--azure_role_mappings"></a>
 ### Nested Schema for `spec.config.azure.replication.azure_role_mappings`
@@ -467,12 +589,26 @@ Read-Only:
 
 
 
-<a id="nestedatt--spec--config--azure--replication--b2b_user_invitation"></a>
-### Nested Schema for `spec.config.azure.replication.b2b_user_invitation`
+<a id="nestedatt--spec--config--azure--replication--service_principal"></a>
+### Nested Schema for `spec.config.azure.replication.service_principal`
+
+Required:
+
+- `auth_type` (String) Authentication type (`CREDENTIALS` or `WORKLOAD_IDENTITY`)
+- `client_id` (String) The Application (Client) ID. In Azure Portal, this is the Application ID of the 'Enterprise Application' but can also be retrieved via the 'App Registration' object as 'Application (Client) ID
+- `object_id` (String) The Object ID of the Enterprise Application. You can get this Object ID via the API (e.g. when using our Terraform provider) or from Enterprise applications pane in Microsoft Entra admin center.
 
 Optional:
 
-- `redirect_url` (String) This is the URL that Azure’s consent experience redirects users to after they accept their invitation.
+- `credentials_auth_client_secret` (String, Sensitive) Client secret (if authType is `CREDENTIALS`)
+
+
+<a id="nestedatt--spec--config--azure--replication--b2b_user_invitation"></a>
+### Nested Schema for `spec.config.azure.replication.b2b_user_invitation`
+
+Required:
+
+- `redirect_url` (String) This is the URL that Azure's consent experience redirects users to after they accept their invitation.
 - `send_azure_invitation_mail` (Boolean) When true, meshStack instructs Azure to send out Invitation mails to invited users. These mails allow users to redeem their invitation to the AAD tenant only using email and Azure Portal.
 
 
@@ -483,8 +619,8 @@ Optional:
 
 - `customer_agreement` (Attributes) meshcloud can automatically provision new subscriptions from a Customer Agreement Account owned by your organization. This is suitable for larger organizations that have such a Customer Agreement with Microsoft, and want to provide a large number of subscriptions in a fully automated fashion. (see [below for nested schema](#nestedatt--spec--config--azure--replication--provisioning--customer_agreement))
 - `enterprise_enrollment` (Attributes) meshcloud can automatically provision new subscriptions from an Enterprise Enrollment Account owned by your organization. This is suitable for large organizations that have a Microsoft Enterprise Agreement, Microsoft Customer Agreement or a Microsoft Partner Agreement and want to provide a large number of subscriptions in a fully automated fashion. (see [below for nested schema](#nestedatt--spec--config--azure--replication--provisioning--enterprise_enrollment))
-- `pre_provisioned` (Attributes) If your organization does not have access to an Enterprise Enrollment, you can alternatively configure meshcloud to consume subscriptions from a pool of externally-provisioned subscriptions. This is useful for smaller organizations that wish to use 'Pay-as-you-go' subscriptions or if you’re organization partners with an Azure Cloud Solution Provider to provide your subscriptions. The meshcloud Azure replication detects externally-provisioned subscriptions based on a configurable prefix in the subscription name. Upon assignment to a meshProject, the subscription is inflated with the right Landing Zone configuration and removed from the subscription pool. (see [below for nested schema](#nestedatt--spec--config--azure--replication--provisioning--pre_provisioned))
-- `subscription_owner_object_ids` (List of String) One or more principals Object IDs (e.g. user groups, SPNs) that meshStack will ensure have an 'Owner' role assignment on the managed subscriptions. This can be useful to satisfy Azure’s constraint of at least one direct 'Owner' role assignment per Subscription. If you want to use a Service Principal please use the Enterprise Application Object ID. You can not use the replicator object ID here, because meshStack always removes its high privilege access after a Subscription creation.
+- `pre_provisioned` (Attributes) If your organization does not have access to an Enterprise Enrollment, you can alternatively configure meshcloud to consume subscriptions from a pool of externally-provisioned subscriptions. This is useful for smaller organizations that wish to use 'Pay-as-you-go' subscriptions or if you're organization partners with an Azure Cloud Solution Provider to provide your subscriptions. The meshcloud Azure replication detects externally-provisioned subscriptions based on a configurable prefix in the subscription name. Upon assignment to a meshProject, the subscription is inflated with the right Landing Zone configuration and removed from the subscription pool. (see [below for nested schema](#nestedatt--spec--config--azure--replication--provisioning--pre_provisioned))
+- `subscription_owner_object_ids` (List of String) One or more principals Object IDs (e.g. user groups, SPNs) that meshStack will ensure have an 'Owner' role assignment on the managed subscriptions. This can be useful to satisfy Azure's constraint of at least one direct 'Owner' role assignment per Subscription. If you want to use a Service Principal please use the Enterprise Application Object ID. You can not use the replicator object ID here, because meshStack always removes its high privilege access after a Subscription creation.
 
 <a id="nestedatt--spec--config--azure--replication--provisioning--customer_agreement"></a>
 ### Nested Schema for `spec.config.azure.replication.provisioning.customer_agreement`
@@ -498,7 +634,7 @@ Required:
 Optional:
 
 - `source_service_principal` (Attributes) Configure the SPN used by meshStack to create a new Subscription in your MCA billing scope. For more information on the required permissions, see the [Azure docs](https://learn.microsoft.com/en-us/azure/cost-management-billing/manage/programmatically-create-subscription-microsoft-customer-agreement-across-tenants). (see [below for nested schema](#nestedatt--spec--config--azure--replication--provisioning--customer_agreement--source_service_principal))
-- `subscription_creation_error_cooldown_sec` (Number) This value must be defined in seconds. It is a safety mechanism to avoid duplicate Subscription creation in case of an error on Azure’s MCA API. This delay should be a bit higher than it usually takes to create subscriptions. For big installations this is somewhere between 5-15 minutes. The default of 900s should be fine for most installations.
+- `subscription_creation_error_cooldown_sec` (Number) This value must be defined in seconds. It is a safety mechanism to avoid duplicate Subscription creation in case of an error on Azure's MCA API. This delay should be a bit higher than it usually takes to create subscriptions. For big installations this is somewhere between 5-15 minutes. The default of 900s should be fine for most installations.
 
 <a id="nestedatt--spec--config--azure--replication--provisioning--customer_agreement--source_service_principal"></a>
 ### Nested Schema for `spec.config.azure.replication.provisioning.customer_agreement.source_service_principal`
@@ -524,7 +660,7 @@ Required:
 
 Optional:
 
-- `subscription_creation_error_cooldown_sec` (Number) This value must be defined in seconds. It is a safety mechanism to avoid duplicate Subscription creation in case of an error on Azure’s MCA API. This delay should be a bit higher than it usually takes to create subscriptions. For big installations this is somewhere between 5-15 minutes. The default of 900s should be fine for most installations.
+- `subscription_creation_error_cooldown_sec` (Number) This value must be defined in seconds. It is a safety mechanism to avoid duplicate Subscription creation in case of an error on Azure's MCA API. This delay should be a bit higher than it usually takes to create subscriptions. For big installations this is somewhere between 5-15 minutes. The default of 900s should be fine for most installations.
 - `use_legacy_subscription_enrollment` (Boolean) Deprecated: Uses the old Subscription enrollment API in its preview version. This enrollment is less reliable and should not be used for new Azure Platform Integrations.
 
 
@@ -533,22 +669,8 @@ Optional:
 
 Required:
 
-- `unused_subscription_name_prefix` (String) The prefix that identifies unused subscriptions. Subscriptions will be renamed during meshStack’s project replication, at which point they should no longer carry this prefix.
+- `unused_subscription_name_prefix` (String) The prefix that identifies unused subscriptions. Subscriptions will be renamed during meshStack's project replication, at which point they should no longer carry this prefix.
 
-
-
-<a id="nestedatt--spec--config--azure--replication--service_principal"></a>
-### Nested Schema for `spec.config.azure.replication.service_principal`
-
-Required:
-
-- `auth_type` (String) Authentication type (`CREDENTIALS` or `WORKLOAD_IDENTITY`)
-- `client_id` (String) The Application (Client) ID. In Azure Portal, this is the Application ID of the 'Enterprise Application' but can also be retrieved via the 'App Registration' object as 'Application (Client) ID
-- `object_id` (String) The Object ID of the Enterprise Application. You can get this Object ID via the API (e.g. when using our Terraform provider) or from Enterprise applications pane in Microsoft Entra admin center.
-
-Optional:
-
-- `credentials_auth_client_secret` (String, Sensitive) Client secret (if authType is `CREDENTIALS`)
 
 
 <a id="nestedatt--spec--config--azure--replication--tenant_tags"></a>
@@ -577,35 +699,32 @@ Required:
 <a id="nestedatt--spec--config--azurerg"></a>
 ### Nested Schema for `spec.config.azurerg`
 
-Optional:
+Required:
 
 - `entra_tenant` (String) Azure Active Directory (Entra ID) tenant
+
+Optional:
+
 - `replication` (Attributes) Azure Resource Group-specific replication configuration for the platform. (see [below for nested schema](#nestedatt--spec--config--azurerg--replication))
 
 <a id="nestedatt--spec--config--azurerg--replication"></a>
 ### Nested Schema for `spec.config.azurerg.replication`
 
-Optional:
+Required:
 
-- `administrative_unit_id` (String) If you enter an administrative unit ID the replicated (and potentially existing) groups will be put into this AU. This can be used to limit the permission scopes which are required for the replicator principal. If you remove the AU ID again or change it, the groups will not be removed from the old AU.
 - `allow_hierarchical_management_group_assignment` (Boolean) Configuration flag to enable or disable hierarchical management group assignment in Azure. If set to true: Subscriptions can be moved to child management groups of the management group defined in the Landing Zone. This is useful if you want to manage the subscription location with a deeper and more granular hierarchy. If set to false: Subscriptions will always be moved directly to the management group defined in the Landing Zone.
-- `b2b_user_invitation` (Attributes) Optional B2B user invitation configuration. When configured, instructs the replicator to create AAD B2B guest invitations for users missing in the AAD tenant managed by this meshPlatform. (see [below for nested schema](#nestedatt--spec--config--azurerg--replication--b2b_user_invitation))
 - `resource_group_name_pattern` (String) Configures the pattern that defines the desired name Resource Group managed by meshStack. It follows the usual replicator string pattern features. Operators must ensure the group names are unique within the Subscription.
 - `service_principal` (Attributes) Service principal configuration for Azure Resource Group access. (see [below for nested schema](#nestedatt--spec--config--azurerg--replication--service_principal))
 - `skip_user_group_permission_cleanup` (Boolean) For certain use cases you might want to preserve user groups and replicated permission after a tenant was deleted on the Azure platform. Checking this option preserves those permissions. Please keep in mind that the platform operator is then responsible for cleaning them up later.
 - `subscription` (String) The Subscription that will contain all the created Resource Groups. Once you set the Subscription, you must not change it.
-- `tenant_tags` (Attributes) Tenant tags configuration (see [below for nested schema](#nestedatt--spec--config--azurerg--replication--tenant_tags))
 - `user_group_name_pattern` (String) Configures the pattern that defines the desired name of AAD groups managed by meshStack. It follows the usual replicator string pattern features and provides the additional replacement 'platformGroupAlias', which contains the role name suffix. This suffix is configurable via Role Mappings in this platform config.
 - `user_look_up_strategy` (String) User lookup strategy (`userPrincipalName` or `email`). Users can either be looked up in cloud platforms by email or UPN (User Principal Name). In most cases email is the matching way as it is the only identifier that is consistently used throughout all cloud platforms and meshStack.
 
-<a id="nestedatt--spec--config--azurerg--replication--b2b_user_invitation"></a>
-### Nested Schema for `spec.config.azurerg.replication.b2b_user_invitation`
-
 Optional:
 
-- `redirect_url` (String) This is the URL that Azure’s consent experience redirects users to after they accept their invitation.
-- `send_azure_invitation_mail` (Boolean) When true, meshStack instructs Azure to send out Invitation mails to invited users. These mails allow users to redeem their invitation to the AAD tenant only using email and Azure Portal.
-
+- `administrative_unit_id` (String) If you enter an administrative unit ID the replicated (and potentially existing) groups will be put into this AU. This can be used to limit the permission scopes which are required for the replicator principal. If you remove the AU ID again or change it, the groups will not be removed from the old AU.
+- `b2b_user_invitation` (Attributes) Optional B2B user invitation configuration. When configured, instructs the replicator to create AAD B2B guest invitations for users missing in the AAD tenant managed by this meshPlatform. (see [below for nested schema](#nestedatt--spec--config--azurerg--replication--b2b_user_invitation))
+- `tenant_tags` (Attributes) Tenant tags configuration (see [below for nested schema](#nestedatt--spec--config--azurerg--replication--tenant_tags))
 
 <a id="nestedatt--spec--config--azurerg--replication--service_principal"></a>
 ### Nested Schema for `spec.config.azurerg.replication.service_principal`
@@ -619,6 +738,15 @@ Required:
 Optional:
 
 - `credentials_auth_client_secret` (String, Sensitive) Client secret (if authType is `CREDENTIALS`)
+
+
+<a id="nestedatt--spec--config--azurerg--replication--b2b_user_invitation"></a>
+### Nested Schema for `spec.config.azurerg.replication.b2b_user_invitation`
+
+Required:
+
+- `redirect_url` (String) This is the URL that Azure's consent experience redirects users to after they accept their invitation.
+- `send_azure_invitation_mail` (Boolean) When true, meshStack instructs Azure to send out Invitation mails to invited users. These mails allow users to redeem their invitation to the AAD tenant only using email and Azure Portal.
 
 
 <a id="nestedatt--spec--config--azurerg--replication--tenant_tags"></a>
@@ -649,12 +777,65 @@ Required:
 
 Optional:
 
+- `metering` (Attributes) Metering configuration for GCP (optional, but required for metering) (see [below for nested schema](#nestedatt--spec--config--gcp--metering))
 - `replication` (Attributes) GCP-specific replication configuration for the platform. (see [below for nested schema](#nestedatt--spec--config--gcp--replication))
+
+<a id="nestedatt--spec--config--gcp--metering"></a>
+### Nested Schema for `spec.config.gcp.metering`
+
+Required:
+
+- `bigquery_table` (String) BigQuery table for metering data.
+- `partition_time_column` (String) Partition time column for BigQuery table.
+- `processing` (Attributes) Processing configuration for metering (see [below for nested schema](#nestedatt--spec--config--gcp--metering--processing))
+- `service_account_config` (Attributes) Service account configuration. Either `serviceAccountCredentialsConfig` or `serviceAccountWorkloadIdentityConfig` must be provided. (see [below for nested schema](#nestedatt--spec--config--gcp--metering--service_account_config))
+
+Optional:
+
+- `additional_filter` (String) Additional filter for metering data.
+- `bigquery_table_for_carbon_footprint` (String) BigQuery table for carbon footprint data.
+- `carbon_footprint_data_collection_start_month` (String) Start month for carbon footprint data collection.
+
+<a id="nestedatt--spec--config--gcp--metering--processing"></a>
+### Nested Schema for `spec.config.gcp.metering.processing`
+
+Optional:
+
+- `compact_timelines_after_days` (Number) Number of days after which timelines should be compacted.
+- `delete_raw_data_after_days` (Number) Number of days after which raw data should be deleted.
+
+
+<a id="nestedatt--spec--config--gcp--metering--service_account_config"></a>
+### Nested Schema for `spec.config.gcp.metering.service_account_config`
+
+Optional:
+
+- `service_account_credentials_config` (Attributes) Service account credentials configuration (alternative to serviceAccountWorkloadIdentityConfig) (see [below for nested schema](#nestedatt--spec--config--gcp--metering--service_account_config--service_account_credentials_config))
+- `service_account_workload_identity_config` (Attributes) Service account workload identity configuration (alternative to serviceAccountCredentialsConfig) (see [below for nested schema](#nestedatt--spec--config--gcp--metering--service_account_config--service_account_workload_identity_config))
+
+<a id="nestedatt--spec--config--gcp--metering--service_account_config--service_account_credentials_config"></a>
+### Nested Schema for `spec.config.gcp.metering.service_account_config.service_account_credentials_config`
+
+Required:
+
+- `service_account_credentials_b64` (String, Sensitive) Base64 encoded credentials.json file for a GCP ServiceAccount. The replicator uses this Service Account to automate GCP API operations (IAM, ResourceManager etc.).
+
+
+<a id="nestedatt--spec--config--gcp--metering--service_account_config--service_account_workload_identity_config"></a>
+### Nested Schema for `spec.config.gcp.metering.service_account_config.service_account_workload_identity_config`
+
+Required:
+
+- `audience` (String) The audience associated with your workload identity pool provider.
+- `service_account_email` (String) The email address of the Service Account, that gets impersonated for calling Google APIs via Workload Identity Federation.
+
+
+
 
 <a id="nestedatt--spec--config--gcp--replication"></a>
 ### Nested Schema for `spec.config.gcp.replication`
 
-Optional:
+Required:
 
 - `allow_hierarchical_folder_assignment` (Boolean) Configuration flag to enable or disable hierarchical folder assignment in GCP. If set to true: Projects can be moved to sub folders of the folder defined in the Landing Zone. This is useful if you want to manage the project location with a deeper and more granular hierarchy. If set to false: Projects will always be moved directly to the folder defined in the Landing Zone.
 - `billing_account_id` (String) The ID of the billing account to associate with all GCP projects managed by meshStack
@@ -666,8 +847,12 @@ Optional:
 - `project_name_pattern` (String) All the commonly available replicator string template properties are available. The result must be 4 to 30 characters. Allowed characters are: lowercase and uppercase letters, numbers, hyphen, single-quote, double-quote, space, and exclamation point. When length restrictions are applied, the abbreviation will be in the middle and marked by a single-quote.
 - `service_account_config` (Attributes) Service account configuration. Either `serviceAccountCredentialsConfig` or `serviceAccountWorkloadIdentityConfig` must be provided. (see [below for nested schema](#nestedatt--spec--config--gcp--replication--service_account_config))
 - `skip_user_group_permission_cleanup` (Boolean) For certain use cases you might want to preserve user groups and replicated permission after a tenant was deleted on the GCP platform. Checking this option preserves those permissions. Please keep in mind that the platform operator is then responsible for cleaning them up later.
-- `tenant_tags` (Attributes) Tenant tags configuration (see [below for nested schema](#nestedatt--spec--config--gcp--replication--tenant_tags))
 - `user_lookup_strategy` (String) Users can either be looked up by E-Mail or externalAccountId. This must also be the property that is placed in the external user id (EUID) of your meshUser entity to match. E-Mail is usually a good choice as this is often set up as the EUID throughout all cloud platforms and meshStack. ('email' or 'externalId')
+
+Optional:
+
+- `tenant_tags` (Attributes) Tenant tags configuration (see [below for nested schema](#nestedatt--spec--config--gcp--replication--tenant_tags))
+- `used_external_id_type` (String) Used external ID type for user lookup
 
 <a id="nestedatt--spec--config--gcp--replication--gcp_role_mappings"></a>
 ### Nested Schema for `spec.config.gcp.replication.gcp_role_mappings`
@@ -701,7 +886,7 @@ Optional:
 <a id="nestedatt--spec--config--gcp--replication--service_account_config--service_account_credentials_config"></a>
 ### Nested Schema for `spec.config.gcp.replication.service_account_config.service_account_credentials_config`
 
-Optional:
+Required:
 
 - `service_account_credentials_b64` (String, Sensitive) Base64 encoded credentials.json file for a GCP ServiceAccount. The replicator uses this Service Account to automate GCP API operations (IAM, ResourceManager etc.).
 
@@ -709,7 +894,7 @@ Optional:
 <a id="nestedatt--spec--config--gcp--replication--service_account_config--service_account_workload_identity_config"></a>
 ### Nested Schema for `spec.config.gcp.replication.service_account_config.service_account_workload_identity_config`
 
-Optional:
+Required:
 
 - `audience` (String) The audience associated with your workload identity pool provider.
 - `service_account_email` (String) The email address of the Service Account, that gets impersonated for calling Google APIs via Workload Identity Federation.
@@ -719,9 +904,12 @@ Optional:
 <a id="nestedatt--spec--config--gcp--replication--tenant_tags"></a>
 ### Nested Schema for `spec.config.gcp.replication.tenant_tags`
 
-Optional:
+Required:
 
 - `namespace_prefix` (String) Namespace prefix for tenant tags
+
+Optional:
+
 - `tag_mappers` (Attributes List) List of tag mappers for tenant tags (see [below for nested schema](#nestedatt--spec--config--gcp--replication--tenant_tags--tag_mappers))
 
 <a id="nestedatt--spec--config--gcp--replication--tenant_tags--tag_mappers"></a>
@@ -746,12 +934,39 @@ Required:
 Optional:
 
 - `disable_ssl_validation` (Boolean) Flag to disable SSL validation for the Kubernetes cluster. SSL Validation should at best never be disabled, but for integration of some private cloud platforms in an early state, they might not yet be using valid SSL certificates. In that case it can make sense to disable SSL validation here to already test integration of these platforms.
+- `metering` (Attributes) Metering configuration for Kubernetes (optional, but required for metering) (see [below for nested schema](#nestedatt--spec--config--kubernetes--metering))
 - `replication` (Attributes) Replication configuration for Kubernetes (optional, but required for replication) (see [below for nested schema](#nestedatt--spec--config--kubernetes--replication))
+
+<a id="nestedatt--spec--config--kubernetes--metering"></a>
+### Nested Schema for `spec.config.kubernetes.metering`
+
+Required:
+
+- `client_config` (Attributes) Client configuration for Kubernetes metering (see [below for nested schema](#nestedatt--spec--config--kubernetes--metering--client_config))
+- `processing` (Attributes) Processing configuration for metering (see [below for nested schema](#nestedatt--spec--config--kubernetes--metering--processing))
+
+<a id="nestedatt--spec--config--kubernetes--metering--client_config"></a>
+### Nested Schema for `spec.config.kubernetes.metering.client_config`
+
+Required:
+
+- `access_token` (String, Sensitive) The Access Token of the service account for replicator access.
+
+
+<a id="nestedatt--spec--config--kubernetes--metering--processing"></a>
+### Nested Schema for `spec.config.kubernetes.metering.processing`
+
+Optional:
+
+- `compact_timelines_after_days` (Number) Number of days after which timelines should be compacted.
+- `delete_raw_data_after_days` (Number) Number of days after which raw data should be deleted.
+
+
 
 <a id="nestedatt--spec--config--kubernetes--replication"></a>
 ### Nested Schema for `spec.config.kubernetes.replication`
 
-Optional:
+Required:
 
 - `client_config` (Attributes) Client configuration for Kubernetes (see [below for nested schema](#nestedatt--spec--config--kubernetes--replication--client_config))
 - `namespace_name_pattern` (String) All the commonly available replicator string template properties are available. Kubernetes Namespace Names must be no longer than 63 characters, must start and end with a lowercase letter or number, and may contain lowercase letters, numbers, and hyphens.
@@ -759,7 +974,7 @@ Optional:
 <a id="nestedatt--spec--config--kubernetes--replication--client_config"></a>
 ### Nested Schema for `spec.config.kubernetes.replication.client_config`
 
-Optional:
+Required:
 
 - `access_token` (String, Sensitive) The Access Token of the service account for replicator access.
 
@@ -776,25 +991,55 @@ Required:
 Optional:
 
 - `disable_ssl_validation` (Boolean) Flag to disable SSL validation for the OpenShift cluster. SSL Validation should at best never be disabled, but for integration of some private cloud platforms in an early state, they might not yet be using valid SSL certificates. In that case it can make sense to disable SSL validation here to already test integration of these platforms.
+- `metering` (Attributes) Metering configuration for OpenShift (optional, but required for metering) (see [below for nested schema](#nestedatt--spec--config--openshift--metering))
 - `replication` (Attributes) Replication configuration for OpenShift (optional, but required for replication) (see [below for nested schema](#nestedatt--spec--config--openshift--replication))
+
+<a id="nestedatt--spec--config--openshift--metering"></a>
+### Nested Schema for `spec.config.openshift.metering`
+
+Required:
+
+- `client_config` (Attributes) Client configuration for OpenShift metering (see [below for nested schema](#nestedatt--spec--config--openshift--metering--client_config))
+- `processing` (Attributes) Processing configuration for metering (see [below for nested schema](#nestedatt--spec--config--openshift--metering--processing))
+
+<a id="nestedatt--spec--config--openshift--metering--client_config"></a>
+### Nested Schema for `spec.config.openshift.metering.client_config`
+
+Required:
+
+- `access_token` (String, Sensitive) The Access Token of the service account for replicator access.
+
+
+<a id="nestedatt--spec--config--openshift--metering--processing"></a>
+### Nested Schema for `spec.config.openshift.metering.processing`
+
+Optional:
+
+- `compact_timelines_after_days` (Number) Number of days after which timelines should be compacted.
+- `delete_raw_data_after_days` (Number) Number of days after which raw data should be deleted.
+
+
 
 <a id="nestedatt--spec--config--openshift--replication"></a>
 ### Nested Schema for `spec.config.openshift.replication`
 
-Optional:
+Required:
 
 - `client_config` (Attributes) Client configuration for OpenShift (see [below for nested schema](#nestedatt--spec--config--openshift--replication--client_config))
 - `enable_template_instantiation` (Boolean) Here you can enable templates not only being rolled out to OpenShift but also instantiated during replication. Templates can be configured in meshLandingZones. Please keep in mind that the replication service account needs all the rights that are required to apply the templates that are configured in meshLandingZones.
 - `identity_provider_name` (String) Identity provider name
-- `openshift_role_mappings` (Attributes List) OpenShift role mappings for OpenShift roles. (see [below for nested schema](#nestedatt--spec--config--openshift--replication--openshift_role_mappings))
 - `project_name_pattern` (String) All the commonly available replicator string template properties are available. OpenShift Project Names must be no longer than 63 characters, must start and end with a lowercase letter or number, and may contain lowercase letters, numbers, and hyphens.
+
+Optional:
+
+- `openshift_role_mappings` (Attributes List) OpenShift role mappings for OpenShift roles. (see [below for nested schema](#nestedatt--spec--config--openshift--replication--openshift_role_mappings))
 - `tenant_tags` (Attributes) Tenant tags configuration (see [below for nested schema](#nestedatt--spec--config--openshift--replication--tenant_tags))
 - `web_console_url` (String) The Web Console URL that is used to redirect the user to the cloud platform. An example Web Console URL is https://console-openshift-console.apps.okd4.dev.eu-de-central.msh.host
 
 <a id="nestedatt--spec--config--openshift--replication--client_config"></a>
 ### Nested Schema for `spec.config.openshift.replication.client_config`
 
-Optional:
+Required:
 
 - `access_token` (String, Sensitive) The Access Token of the service account for replicator access.
 
@@ -823,9 +1068,12 @@ Read-Only:
 <a id="nestedatt--spec--config--openshift--replication--tenant_tags"></a>
 ### Nested Schema for `spec.config.openshift.replication.tenant_tags`
 
-Optional:
+Required:
 
 - `namespace_prefix` (String) This is the prefix for all labels created by meshStack. It helps to keep track of which labels are managed by meshStack. It is recommended to let this prefix end with a delimiter like an underscore.
+
+Optional:
+
 - `tag_mappers` (Attributes List) List of tag mappers for tenant tags (see [below for nested schema](#nestedatt--spec--config--openshift--replication--tenant_tags--tag_mappers))
 
 <a id="nestedatt--spec--config--openshift--replication--tenant_tags--tag_mappers"></a>
