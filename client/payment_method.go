@@ -43,12 +43,12 @@ type MeshPaymentMethodCreateMetadata struct {
 	OwnedByWorkspace string `json:"ownedByWorkspace" tfsdk:"owned_by_workspace"`
 }
 
-func (c *MeshStackProviderClient) urlForPaymentMethod(workspace string, identifier string) *url.URL {
-	return c.endpoints.PaymentMethods.JoinPath(workspace, identifier)
+func (c *MeshStackProviderClient) urlForPaymentMethod(identifier string) *url.URL {
+	return c.endpoints.PaymentMethods.JoinPath(identifier)
 }
 
 func (c *MeshStackProviderClient) ReadPaymentMethod(workspace string, identifier string) (*MeshPaymentMethod, error) {
-	targetUrl := c.urlForPaymentMethod(workspace, identifier)
+	targetUrl := c.urlForPaymentMethod(identifier)
 
 	req, err := http.NewRequest("GET", targetUrl.String(), nil)
 	if err != nil {
@@ -123,8 +123,8 @@ func (c *MeshStackProviderClient) CreatePaymentMethod(paymentMethod *MeshPayment
 	return &createdPaymentMethod, nil
 }
 
-func (c *MeshStackProviderClient) UpdatePaymentMethod(workspace string, identifier string, paymentMethod *MeshPaymentMethodCreate) (*MeshPaymentMethod, error) {
-	targetUrl := c.urlForPaymentMethod(workspace, identifier)
+func (c *MeshStackProviderClient) UpdatePaymentMethod(identifier string, paymentMethod *MeshPaymentMethodCreate) (*MeshPaymentMethod, error) {
+	targetUrl := c.urlForPaymentMethod(identifier)
 
 	payload, err := json.Marshal(paymentMethod)
 	if err != nil {
@@ -163,7 +163,7 @@ func (c *MeshStackProviderClient) UpdatePaymentMethod(workspace string, identifi
 	return &updatedPaymentMethod, nil
 }
 
-func (c *MeshStackProviderClient) DeletePaymentMethod(workspace string, identifier string) error {
-	targetUrl := c.urlForPaymentMethod(workspace, identifier)
+func (c *MeshStackProviderClient) DeletePaymentMethod(identifier string) error {
+	targetUrl := c.urlForPaymentMethod(identifier)
 	return c.deleteMeshObject(*targetUrl, 204)
 }

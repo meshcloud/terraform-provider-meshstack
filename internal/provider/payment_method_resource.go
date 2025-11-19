@@ -217,7 +217,7 @@ func (r *paymentMethodResource) Update(ctx context.Context, req resource.UpdateR
 		return
 	}
 
-	updatedPaymentMethod, err := r.client.UpdatePaymentMethod(paymentMethod.Metadata.OwnedByWorkspace, paymentMethod.Metadata.Name, &paymentMethod)
+	updatedPaymentMethod, err := r.client.UpdatePaymentMethod(paymentMethod.Metadata.Name, &paymentMethod)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Updating Payment Method",
@@ -243,7 +243,7 @@ func (r *paymentMethodResource) Delete(ctx context.Context, req resource.DeleteR
 		return
 	}
 
-	err := r.client.DeletePaymentMethod(workspace, name)
+	err := r.client.DeletePaymentMethod(name)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("Could not delete payment method '%s' in workspace '%s'", name, workspace),
