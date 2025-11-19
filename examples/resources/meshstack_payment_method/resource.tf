@@ -6,8 +6,8 @@ data "meshstack_workspace" "example" {
 
 resource "meshstack_payment_method" "example" {
   metadata = {
-    name                = "my-payment-method"
-    owned_by_workspace  = data.meshstack_workspace.example.metadata.name
+    name               = "my-payment-method"
+    owned_by_workspace = data.meshstack_workspace.example.metadata.name
   }
 
   spec = {

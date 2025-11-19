@@ -4,6 +4,7 @@ page_title: "meshstack_payment_method Resource - terraform-provider-meshstack"
 subcategory: ""
 description: |-
   Represents a meshStack payment method.
+  ~> Note: Managing payment methods requires an API key with sufficient admin permissions.
 ---
 
 # meshstack_payment_method (Resource)
@@ -23,8 +24,8 @@ data "meshstack_workspace" "example" {
 
 resource "meshstack_payment_method" "example" {
   metadata = {
-    name                = "my-payment-method"
-    owned_by_workspace  = data.meshstack_workspace.example.metadata.name
+    name               = "my-payment-method"
+    owned_by_workspace = data.meshstack_workspace.example.metadata.name
   }
 
   spec = {
@@ -86,6 +87,7 @@ Import is supported using the following syntax:
 The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
 
 ```shell
+#!/bin/bash
 # import via workspace and payment method identifier <workspace-identifier>.<payment-method-identifier>
 terraform import 'meshstack_payment_method.example' 'my-workspace-identifier.my-payment-method'
 ```

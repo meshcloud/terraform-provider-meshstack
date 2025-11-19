@@ -15,8 +15,8 @@ Read a single payment method by workspace and identifier.
 ```terraform
 data "meshstack_payment_method" "example" {
   metadata = {
-    name                = "my-payment-method"
-    owned_by_workspace  = "my-workspace-identifier"
+    name               = "my-payment-method"
+    owned_by_workspace = "my-workspace-identifier"
   }
 }
 ```
