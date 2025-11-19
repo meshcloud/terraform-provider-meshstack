@@ -44,7 +44,7 @@ type MeshPaymentMethodCreateMetadata struct {
 }
 
 func (c *MeshStackProviderClient) urlForPaymentMethod(workspace string, identifier string) *url.URL {
-	return c.endpoints.PaymentMethods.JoinPath(identifier)
+	return c.endpoints.PaymentMethods.JoinPath(workspace, identifier)
 }
 
 func (c *MeshStackProviderClient) ReadPaymentMethod(workspace string, identifier string) (*MeshPaymentMethod, error) {
