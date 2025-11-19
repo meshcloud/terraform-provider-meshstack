@@ -194,7 +194,7 @@ func (r *landingZoneResource) Schema(_ context.Context, _ resource.SchemaRequest
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
 								"key": schema.StringAttribute{
-									MarkdownDescription: "Quota key identifier.",
+									MarkdownDescription: "Quota key identifier. Must match a quota key that has been defined on the plaform.",
 									Required:            true,
 								},
 								"value": schema.Int64Attribute{
