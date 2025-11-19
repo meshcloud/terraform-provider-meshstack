@@ -6,6 +6,7 @@ import (
 	"regexp"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/meshcloud/terraform-provider-meshstack/client"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/modifiers/platformtypemodifier"
@@ -173,6 +174,32 @@ func (r *landingZoneResource) Schema(_ context.Context, _ resource.SchemaRequest
 								PlanModifiers: []planmodifier.String{
 									stringplanmodifier.RequiresReplace(),
 									platformtypemodifier.SetTypeFromPlatform(),
+								},
+							},
+						},
+					},
+					"quotas": schema.ListNestedAttribute{
+						MarkdownDescription: "Quota definitions for this landing zone.",
+						Optional:            true,
+						Computed:            true,
+						Default: listdefault.StaticValue(types.ListValueMust(
+							types.ObjectType{
+								AttrTypes: map[string]attr.Type{
+									"key":   types.StringType,
+									"value": types.Int64Type,
+								},
+							},
+							[]attr.Value{},
+						)),
+						NestedObject: schema.NestedAttributeObject{
+							Attributes: map[string]schema.Attribute{
+								"key": schema.StringAttribute{
+									MarkdownDescription: "Quota key identifier.",
+									Required:            true,
+								},
+								"value": schema.Int64Attribute{
+									MarkdownDescription: "Quota value.",
+									Required:            true,
 								},
 							},
 						},
