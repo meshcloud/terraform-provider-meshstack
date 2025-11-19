@@ -25,13 +25,14 @@ type MeshLandingZoneMetadata struct {
 }
 
 type MeshLandingZoneSpec struct {
-	DisplayName                 string              `json:"displayName" tfsdk:"display_name"`
-	Description                 string              `json:"description" tfsdk:"description"`
-	AutomateDeletionApproval    bool                `json:"automateDeletionApproval" tfsdk:"automate_deletion_approval"`
-	AutomateDeletionReplication bool                `json:"automateDeletionReplication" tfsdk:"automate_deletion_replication"`
-	InfoLink                    *string             `json:"infoLink,omitempty" tfsdk:"info_link"`
-	PlatformRef                 PlatformRef         `json:"platformRef" tfsdk:"platform_ref"`
-	PlatformProperties          *PlatformProperties `json:"platformProperties,omitempty" tfsdk:"platform_properties"`
+	DisplayName                 string                             `json:"displayName" tfsdk:"display_name"`
+	Description                 string                             `json:"description" tfsdk:"description"`
+	AutomateDeletionApproval    bool                               `json:"automateDeletionApproval" tfsdk:"automate_deletion_approval"`
+	AutomateDeletionReplication bool                               `json:"automateDeletionReplication" tfsdk:"automate_deletion_replication"`
+	InfoLink                    *string                            `json:"infoLink,omitempty" tfsdk:"info_link"`
+	PlatformRef                 MeshLandingZonePlatformRef         `json:"platformRef" tfsdk:"platform_ref"`
+	PlatformProperties          *MeshLandingZonePlatformProperties `json:"platformProperties,omitempty" tfsdk:"platform_properties"`
+	Quotas                      []MeshLandingZoneQuota             `json:"quotas" tfsdk:"quotas"`
 }
 
 type MeshLandingZoneStatus struct {
@@ -39,12 +40,12 @@ type MeshLandingZoneStatus struct {
 	Restricted bool `json:"restricted" tfsdk:"restricted"`
 }
 
-type PlatformRef struct {
+type MeshLandingZonePlatformRef struct {
 	Uuid string `json:"uuid" tfsdk:"uuid"`
 	Kind string `json:"kind" tfsdk:"kind"`
 }
 
-type PlatformProperties struct {
+type MeshLandingZonePlatformProperties struct {
 	Type       string                        `json:"type" tfsdk:"type"`
 	Aws        *AwsPlatformProperties        `json:"aws" tfsdk:"aws"`
 	Aks        *AksPlatformProperties        `json:"aks" tfsdk:"aks"`
@@ -53,6 +54,11 @@ type PlatformProperties struct {
 	Gcp        *GcpPlatformProperties        `json:"gcp" tfsdk:"gcp"`
 	Kubernetes *KubernetesPlatformProperties `json:"kubernetes" tfsdk:"kubernetes"`
 	OpenShift  *OpenShiftPlatformProperties  `json:"openshift" tfsdk:"openshift"`
+}
+
+type MeshLandingZoneQuota struct {
+	Key   string `json:"key" tfsdk:"key"`
+	Value int64  `json:"value" tfsdk:"value"`
 }
 
 type MeshLandingZoneCreate struct {

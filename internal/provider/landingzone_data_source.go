@@ -7,9 +7,11 @@ import (
 	"github.com/meshcloud/terraform-provider-meshstack/client"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
@@ -119,6 +121,22 @@ func (d *landingZoneDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 							"type": schema.StringAttribute{
 								MarkdownDescription: "Type of the platform. This field is automatically inferred from which platform configuration is provided and cannot be set manually.",
 								Computed:            true,
+							},
+						},
+					},
+					"quotas": schema.ListNestedAttribute{
+						MarkdownDescription: "Quota definitions for this landing zone.",
+						Computed:            true,
+						NestedObject: schema.NestedAttributeObject{
+							Attributes: map[string]schema.Attribute{
+								"key": schema.StringAttribute{
+									MarkdownDescription: "Quota key identifier.",
+									Computed:            true,
+								},
+								"value": schema.Int64Attribute{
+									MarkdownDescription: "Quota value.",
+									Computed:            true,
+								},
 							},
 						},
 					},
