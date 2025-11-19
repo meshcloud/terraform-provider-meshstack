@@ -2,6 +2,7 @@
 
 FEATURES:
 - Add metering config support to `meshstack_mesh_platform` resource and data source.
+- Add quotas to `meshstack_landingzone` resource and data source.
 
 FIXES:
 - Correctly model nullable platform config fields.

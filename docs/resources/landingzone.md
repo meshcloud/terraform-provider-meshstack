@@ -53,6 +53,7 @@ Required:
 Optional:
 
 - `info_link` (String) Link to additional information about the landing zone.
+- `quotas` (Attributes List) Quota definitions for this landing zone. (see [below for nested schema](#nestedatt--spec--quotas))
 
 <a id="nestedatt--spec--platform_properties"></a>
 ### Nested Schema for `spec.platform_properties`
@@ -302,6 +303,15 @@ Required:
 
 - `kind` (String) Must always be set to meshPlatform
 - `uuid` (String) UUID of the platform.
+
+
+<a id="nestedatt--spec--quotas"></a>
+### Nested Schema for `spec.quotas`
+
+Required:
+
+- `key` (String) Quota key identifier. Must match a quota key that has been defined on the plaform.
+- `value` (Number) Quota value.
 
 
 

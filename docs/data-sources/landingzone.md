@@ -50,6 +50,7 @@ Read-Only:
 - `info_link` (String) Link to additional information about the landing zone.
 - `platform_properties` (Attributes) Platform-specific configuration options. (see [below for nested schema](#nestedatt--spec--platform_properties))
 - `platform_ref` (Attributes) Reference to the platform this landing zone belongs to. (see [below for nested schema](#nestedatt--spec--platform_ref))
+- `quotas` (Attributes List) Quota definitions for this landing zone. (see [below for nested schema](#nestedatt--spec--quotas))
 
 <a id="nestedatt--spec--platform_properties"></a>
 ### Nested Schema for `spec.platform_properties`
@@ -299,6 +300,15 @@ Read-Only:
 
 - `kind` (String) Must always be set to meshPlatform
 - `uuid` (String) UUID of the platform.
+
+
+<a id="nestedatt--spec--quotas"></a>
+### Nested Schema for `spec.quotas`
+
+Read-Only:
+
+- `key` (String) Quota key identifier.
+- `value` (Number) Quota value.
 
 
 
