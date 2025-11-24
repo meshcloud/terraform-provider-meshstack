@@ -16,7 +16,7 @@ resource "meshstack_payment_method" "example" {
     amount          = 10000
     tags = {
       CostCenter = ["0000"]
-      Type    = ["production"]
+      Type       = ["production"]
     }
   }
 }
