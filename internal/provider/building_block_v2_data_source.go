@@ -32,46 +32,6 @@ func (d *buildingBlockV2DataSource) Metadata(ctx context.Context, req datasource
 }
 
 func (d *buildingBlockV2DataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
-	mkIoMap := func() schema.MapNestedAttribute {
-		return schema.MapNestedAttribute{
-			Computed: true,
-			NestedObject: schema.NestedAttributeObject{
-				Attributes: map[string]schema.Attribute{
-					"value_string": schema.StringAttribute{
-						Computed: true,
-						Validators: []validator.String{stringvalidator.ExactlyOneOf(
-							path.MatchRelative().AtParent().AtName("value_string"),
-							path.MatchRelative().AtParent().AtName("value_single_select"),
-							path.MatchRelative().AtParent().AtName("value_file"),
-							path.MatchRelative().AtParent().AtName("value_int"),
-							path.MatchRelative().AtParent().AtName("value_bool"),
-							path.MatchRelative().AtParent().AtName("value_list"),
-							path.MatchRelative().AtParent().AtName("value_code"),
-						)},
-					},
-					"value_single_select": schema.StringAttribute{Computed: true},
-					"value_file":          schema.StringAttribute{Computed: true},
-					"value_int":           schema.Int64Attribute{Computed: true},
-					"value_bool":          schema.BoolAttribute{Computed: true},
-					"value_list": schema.StringAttribute{
-						MarkdownDescription: "JSON encoded list of objects.",
-						Computed:            true,
-					},
-					"value_code": schema.StringAttribute{
-						MarkdownDescription: "Code value.",
-						Computed:            true,
-					},
-				},
-			},
-		}
-	}
-
-	inputs := mkIoMap()
-	inputs.MarkdownDescription = "Contains all building block inputs. Each input has exactly one value attribute set according to its' type."
-
-	outputs := mkIoMap()
-	outputs.MarkdownDescription = "Building block outputs. Each output has exactly one value attribute set."
-
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Single building block by UUID.\n\n~> **Note:** This resource is in preview. It's incomplete and will change in the near future.",
 
@@ -162,7 +122,7 @@ func (d *buildingBlockV2DataSource) Schema(ctx context.Context, req datasource.S
 						},
 					},
 
-					"inputs": inputs,
+					"inputs": buildingBlockCombinedInputs(),
 
 					"parent_building_blocks": schema.ListNestedAttribute{
 						MarkdownDescription: "List of parent building blocks.",
@@ -211,7 +171,7 @@ func (d *buildingBlockV2DataSource) Schema(ctx context.Context, req datasource.S
 						MarkdownDescription: "Indicates whether an operator has requested purging of this Building Block.",
 						Computed:            true,
 					},
-					"outputs": outputs,
+					"outputs": buildingBlockOutputs(),
 				},
 			},
 		},
@@ -250,7 +210,10 @@ func (d *buildingBlockV2DataSource) Read(ctx context.Context, req datasource.Rea
 	}
 
 	if bb == nil {
-		resp.State.RemoveResource(ctx)
+		resp.Diagnostics.AddError(
+			"Building Block Not Found",
+			fmt.Sprintf("Building block with UUID '%s' was not found", uuid),
+		)
 		return
 	}
 
@@ -284,7 +247,7 @@ func (d *buildingBlockV2DataSource) Read(ctx context.Context, req datasource.Rea
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("status").AtName("force_purge"), bb.Status.ForcePurge)...)
 
 	// Read outputs
-	outputs := make(map[string]buildingBlockIoModel)
+	outputs := make(map[string]buildingBlockOutputModel)
 	for _, output := range bb.Status.Outputs {
 		value, err := toResourceModel(&output)
 
@@ -293,7 +256,7 @@ func (d *buildingBlockV2DataSource) Read(ctx context.Context, req datasource.Rea
 			return
 		}
 
-		outputs[output.Key] = *value
+		outputs[output.Key] = value.toOutputModel()
 	}
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("status").AtName("outputs"), outputs)...)
 }

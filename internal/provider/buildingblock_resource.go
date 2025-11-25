@@ -16,8 +16,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapdefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
@@ -64,72 +62,6 @@ func (r *buildingBlockResource) Configure(ctx context.Context, req resource.Conf
 }
 
 func (r *buildingBlockResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
-	mkIoMap := func(isUserInput bool) schema.MapNestedAttribute {
-		return schema.MapNestedAttribute{
-			Optional: isUserInput,
-			Computed: true,
-			NestedObject: schema.NestedAttributeObject{
-				Attributes: map[string]schema.Attribute{
-					"value_string": schema.StringAttribute{
-						Optional: isUserInput,
-						Computed: !isUserInput,
-						Validators: []validator.String{stringvalidator.ExactlyOneOf(
-							path.MatchRelative().AtParent().AtName("value_string"),
-							path.MatchRelative().AtParent().AtName("value_single_select"),
-							path.MatchRelative().AtParent().AtName("value_file"),
-							path.MatchRelative().AtParent().AtName("value_int"),
-							path.MatchRelative().AtParent().AtName("value_bool"),
-							path.MatchRelative().AtParent().AtName("value_list"),
-							path.MatchRelative().AtParent().AtName("value_code"),
-						)},
-					},
-					"value_single_select": schema.StringAttribute{Optional: isUserInput, Computed: !isUserInput},
-					"value_file":          schema.StringAttribute{Optional: isUserInput, Computed: !isUserInput},
-					"value_int":           schema.Int64Attribute{Optional: isUserInput, Computed: !isUserInput},
-					"value_bool":          schema.BoolAttribute{Optional: isUserInput, Computed: !isUserInput},
-					"value_list": schema.StringAttribute{
-						MarkdownDescription: "JSON encoded list of objects.",
-						Optional:            isUserInput,
-						Computed:            !isUserInput,
-					},
-					"value_code": schema.StringAttribute{
-						MarkdownDescription: "Code value.",
-						Optional:            isUserInput,
-						Computed:            !isUserInput,
-					},
-				},
-			},
-		}
-	}
-
-	inputs := mkIoMap(true)
-	inputs.MarkdownDescription = "Building Block user inputs. Each input has exactly one value. Use the value attribute that corresponds to the desired input type, e.g. `value_int` to set an integer input, and leave the remaining attributes empty."
-	inputs.PlanModifiers = []planmodifier.Map{mapplanmodifier.RequiresReplace()}
-	inputs.Default = mapdefault.StaticValue(
-		types.MapValueMust(
-			types.ObjectType{
-				AttrTypes: map[string]attr.Type{
-					"value_string":        types.StringType,
-					"value_single_select": types.StringType,
-					"value_file":          types.StringType,
-					"value_int":           types.Int64Type,
-					"value_bool":          types.BoolType,
-					"value_list":          types.StringType,
-					"value_code":          types.StringType,
-				},
-			},
-			map[string]attr.Value{},
-		),
-	)
-
-	combinedInputs := mkIoMap(false)
-	combinedInputs.MarkdownDescription = "Contains all Building Block inputs. Each input has exactly one value attribute set according to its' type."
-	combinedInputs.PlanModifiers = []planmodifier.Map{mapplanmodifier.UseStateForUnknown()}
-
-	outputs := mkIoMap(false)
-	outputs.MarkdownDescription = "Building Block outputs. Each output has exactly one value attribute set."
-	outputs.PlanModifiers = []planmodifier.Map{mapplanmodifier.UseStateForUnknown()}
-
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Manage Building Block assignment.",
 
@@ -208,9 +140,8 @@ func (r *buildingBlockResource) Schema(ctx context.Context, req resource.SchemaR
 						PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 					},
 
-					//
-					"inputs":          inputs,
-					"combined_inputs": combinedInputs,
+					"inputs":          buildingBlockUserInputs(),
+					"combined_inputs": buildingBlockCombinedInputs(),
 
 					"parent_building_blocks": schema.ListNestedAttribute{
 						Optional:            true,
@@ -255,7 +186,7 @@ func (r *buildingBlockResource) Schema(ctx context.Context, req resource.SchemaR
 							stringvalidator.OneOf([]string{"WAITING_FOR_DEPENDENT_INPUT", "WAITING_FOR_OPERATOR_INPUT", "PENDING", "IN_PROGRESS", "SUCCEEDED", "FAILED"}...),
 						},
 					},
-					"outputs": outputs,
+					"outputs": buildingBlockOutputs(),
 				},
 			},
 		},
@@ -278,42 +209,13 @@ type buildingBlockResourceModel struct {
 	} `tfsdk:"metadata"`
 
 	Spec struct {
-		DisplayName          types.String                    `tfsdk:"display_name"`
-		ParentBuildingBlocks types.List                      `tfsdk:"parent_building_blocks"`
-		Inputs               map[string]buildingBlockIoModel `tfsdk:"inputs"`
-		CombinedInputs       types.Map                       `tfsdk:"combined_inputs"`
+		DisplayName          types.String                           `tfsdk:"display_name"`
+		ParentBuildingBlocks types.List                             `tfsdk:"parent_building_blocks"`
+		Inputs               map[string]buildingBlockUserInputModel `tfsdk:"inputs"`
+		CombinedInputs       types.Map                              `tfsdk:"combined_inputs"`
 	} `tfsdk:"spec"`
 
 	Status types.Object `tfsdk:"status"`
-}
-
-type buildingBlockIoModel struct {
-	ValueString       types.String `tfsdk:"value_string"`
-	ValueSingleSelect types.String `tfsdk:"value_single_select"`
-	ValueFile         types.String `tfsdk:"value_file"`
-	ValueInt          types.Int64  `tfsdk:"value_int"`
-	ValueBool         types.Bool   `tfsdk:"value_bool"`
-	ValueList         types.String `tfsdk:"value_list"`
-	ValueCode         types.String `tfsdk:"value_code"`
-}
-
-func (io *buildingBlockIoModel) extractIoValue() (interface{}, string) {
-	if !(io.ValueBool.IsNull() || io.ValueBool.IsUnknown()) {
-		return io.ValueBool.ValueBool(), client.MESH_BUILDING_BLOCK_IO_TYPE_BOOLEAN
-	}
-	if !(io.ValueInt.IsNull() || io.ValueInt.IsUnknown()) {
-		return io.ValueInt.ValueInt64(), client.MESH_BUILDING_BLOCK_IO_TYPE_INTEGER
-	}
-	if !(io.ValueSingleSelect.IsNull() || io.ValueSingleSelect.IsUnknown()) {
-		return io.ValueSingleSelect.ValueString(), client.MESH_BUILDING_BLOCK_IO_TYPE_SINGLE_SELECT
-	}
-	if !(io.ValueString.IsNull() || io.ValueString.IsUnknown()) {
-		return io.ValueString.ValueString(), client.MESH_BUILDING_BLOCK_IO_TYPE_STRING
-	}
-	if !(io.ValueCode.IsNull() || io.ValueCode.IsUnknown()) {
-		return io.ValueCode.ValueString(), client.MESH_BUILDING_BLOCK_IO_TYPE_CODE
-	}
-	return nil, "No value present."
 }
 
 func (r *buildingBlockResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -442,6 +344,21 @@ func toResourceModel(io *client.MeshBuildingBlockIO) (*buildingBlockIoModel, err
 			foundValue = true
 		}
 
+	case client.MESH_BUILDING_BLOCK_IO_TYPE_MULTI_SELECT:
+		values, ok := io.Value.([]any)
+		if ok {
+			multiSelect := make([]types.String, len(values))
+			for i, v := range values {
+				if str, ok := v.(string); ok {
+					multiSelect[i] = types.StringValue(str)
+				} else {
+					return nil, fmt.Errorf("multi-select value at index %d is not a string for input '%s'", i, io.Key)
+				}
+			}
+			resourceIo.ValueMultiSelect = multiSelect
+			foundValue = true
+		}
+
 	case client.MESH_BUILDING_BLOCK_IO_TYPE_SINGLE_SELECT:
 		value, ok := io.Value.(string)
 		if ok {
@@ -515,7 +432,7 @@ func (r *buildingBlockResource) setStateFromResponse(ctx *context.Context, state
 
 	diags.Append(state.SetAttribute(*ctx, path.Root("status").AtName("status"), bb.Status.Status)...)
 
-	outputs := make(map[string]buildingBlockIoModel)
+	outputs := make(map[string]buildingBlockOutputModel)
 	for _, output := range bb.Status.Outputs {
 		value, err := toResourceModel(&output)
 
@@ -524,7 +441,7 @@ func (r *buildingBlockResource) setStateFromResponse(ctx *context.Context, state
 			return diags
 		}
 
-		outputs[output.Key] = *value
+		outputs[output.Key] = value.toOutputModel()
 	}
 	diags.Append(state.SetAttribute(*ctx, path.Root("status").AtName("outputs"), outputs)...)
 

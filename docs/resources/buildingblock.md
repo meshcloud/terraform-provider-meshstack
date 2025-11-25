@@ -72,12 +72,12 @@ Required:
 
 Optional:
 
-- `inputs` (Attributes Map) Building Block user inputs. Each input has exactly one value. Use the value attribute that corresponds to the desired input type, e.g. `value_int` to set an integer input, and leave the remaining attributes empty. (see [below for nested schema](#nestedatt--spec--inputs))
+- `inputs` (Attributes Map) Building block user inputs. Each input has exactly one value. Use the value attribute that corresponds to the desired input type, e.g. `value_int` to set an integer input, and leave the remaining attributes empty. (see [below for nested schema](#nestedatt--spec--inputs))
 - `parent_building_blocks` (Attributes List) List of parent Building Blocks. (see [below for nested schema](#nestedatt--spec--parent_building_blocks))
 
 Read-Only:
 
-- `combined_inputs` (Attributes Map) Contains all Building Block inputs. Each input has exactly one value attribute set according to its' type. (see [below for nested schema](#nestedatt--spec--combined_inputs))
+- `combined_inputs` (Attributes Map) Contains all building block inputs. Each input has exactly one value attribute set according to its' type. (see [below for nested schema](#nestedatt--spec--combined_inputs))
 
 <a id="nestedatt--spec--inputs"></a>
 ### Nested Schema for `spec.inputs`
@@ -86,9 +86,8 @@ Optional:
 
 - `value_bool` (Boolean)
 - `value_code` (String) Code value.
-- `value_file` (String)
 - `value_int` (Number)
-- `value_list` (String) JSON encoded list of objects.
+- `value_multi_select` (List of String) Multi-select value (list of strings).
 - `value_single_select` (String)
 - `value_string` (String)
 
@@ -105,14 +104,18 @@ Required:
 <a id="nestedatt--spec--combined_inputs"></a>
 ### Nested Schema for `spec.combined_inputs`
 
+Optional:
+
+- `value_single_select` (String)
+
 Read-Only:
 
 - `value_bool` (Boolean)
 - `value_code` (String) Code value.
 - `value_file` (String)
 - `value_int` (Number)
-- `value_list` (String) JSON encoded list of objects.
-- `value_single_select` (String)
+- `value_list` (String) Deprecated: use `value_code` instead. JSON encoded list of objects.
+- `value_multi_select` (List of String) Multi-select value (list of strings).
 - `value_string` (String)
 
 
@@ -122,7 +125,7 @@ Read-Only:
 
 Read-Only:
 
-- `outputs` (Attributes Map) Building Block outputs. Each output has exactly one value attribute set. (see [below for nested schema](#nestedatt--status--outputs))
+- `outputs` (Attributes Map) Building block outputs. Each output has exactly one value attribute set. (see [below for nested schema](#nestedatt--status--outputs))
 - `status` (String) Execution status. One of `WAITING_FOR_DEPENDENT_INPUT`, `WAITING_FOR_OPERATOR_INPUT`, `PENDING`, `IN_PROGRESS`, `SUCCEEDED`, `FAILED`.
 
 <a id="nestedatt--status--outputs"></a>
@@ -132,8 +135,5 @@ Read-Only:
 
 - `value_bool` (Boolean)
 - `value_code` (String) Code value.
-- `value_file` (String)
 - `value_int` (Number)
-- `value_list` (String) JSON encoded list of objects.
-- `value_single_select` (String)
 - `value_string` (String)
