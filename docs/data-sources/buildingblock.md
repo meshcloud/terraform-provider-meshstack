@@ -64,10 +64,6 @@ Read-Only:
 <a id="nestedatt--spec--inputs"></a>
 ### Nested Schema for `spec.inputs`
 
-Optional:
-
-- `value_single_select` (String)
-
 Read-Only:
 
 - `value_bool` (Boolean)
@@ -76,6 +72,7 @@ Read-Only:
 - `value_int` (Number)
 - `value_list` (String) Deprecated: use `value_code` instead. JSON encoded list of objects.
 - `value_multi_select` (List of String) Multi-select value (list of strings).
+- `value_single_select` (String)
 - `value_string` (String)
 
 
