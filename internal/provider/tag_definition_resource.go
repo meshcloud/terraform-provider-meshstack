@@ -313,26 +313,26 @@ type tagDefinitionValueType struct {
 }
 
 type tagValueString struct {
-	DefaultValue    types.String `json:"defaultValue,omitempty" tfsdk:"default_value"`
-	ValidationRegex types.String `json:"validationRegex,omitempty" tfsdk:"validation_regex"`
+	DefaultValue    types.String `json:"defaultValue" tfsdk:"default_value"`
+	ValidationRegex types.String `json:"validationRegex" tfsdk:"validation_regex"`
 }
 
 type tagValueEmail struct {
-	DefaultValue    types.String `json:"defaultValue,omitempty" tfsdk:"default_value"`
-	ValidationRegex types.String `json:"validationRegex,omitempty" tfsdk:"validation_regex"`
+	DefaultValue    types.String `json:"defaultValue" tfsdk:"default_value"`
+	ValidationRegex types.String `json:"validationRegex" tfsdk:"validation_regex"`
 }
 
 type tagValueInteger struct {
-	DefaultValue types.Int64 `json:"defaultValue,omitempty" tfsdk:"default_value"`
+	DefaultValue types.Int64 `json:"defaultValue" tfsdk:"default_value"`
 }
 
 type tagValueNumber struct {
-	DefaultValue types.Float64 `json:"defaultValue,omitempty" tfsdk:"default_value"`
+	DefaultValue types.Float64 `json:"defaultValue" tfsdk:"default_value"`
 }
 
 type tagValueSingleSelect struct {
 	Options      []types.String `json:"options,omitempty" tfsdk:"options"`
-	DefaultValue types.String   `json:"defaultValue,omitempty" tfsdk:"default_value"`
+	DefaultValue types.String   `json:"defaultValue" tfsdk:"default_value"`
 }
 
 type tagValueMultiSelect struct {
