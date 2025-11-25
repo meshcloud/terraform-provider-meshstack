@@ -153,11 +153,7 @@ func (c *MeshStackProviderClient) PollTenantV4UntilCreation(ctx context.Context,
 	var result *MeshTenantV4
 
 	err := retry.RetryContext(ctx, 30*time.Minute, c.waitForTenantV4CreationFunc(uuid, &result))
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
+	return result, err
 }
 
 // waitForTenantV4CreationFunc returns a RetryFunc that checks tenant creation status

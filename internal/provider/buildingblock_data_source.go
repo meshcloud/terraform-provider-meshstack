@@ -32,46 +32,6 @@ func (d *buildingBlockDataSource) Metadata(ctx context.Context, req datasource.M
 }
 
 func (d *buildingBlockDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
-	mkIoMap := func() schema.MapNestedAttribute {
-		return schema.MapNestedAttribute{
-			Computed: true,
-			NestedObject: schema.NestedAttributeObject{
-				Attributes: map[string]schema.Attribute{
-					"value_string": schema.StringAttribute{
-						Computed: true,
-						Validators: []validator.String{stringvalidator.ExactlyOneOf(
-							path.MatchRelative().AtParent().AtName("value_string"),
-							path.MatchRelative().AtParent().AtName("value_single_select"),
-							path.MatchRelative().AtParent().AtName("value_file"),
-							path.MatchRelative().AtParent().AtName("value_int"),
-							path.MatchRelative().AtParent().AtName("value_bool"),
-							path.MatchRelative().AtParent().AtName("value_list"),
-							path.MatchRelative().AtParent().AtName("value_code"),
-						)},
-					},
-					"value_single_select": schema.StringAttribute{Computed: true},
-					"value_file":          schema.StringAttribute{Computed: true},
-					"value_int":           schema.Int64Attribute{Computed: true},
-					"value_bool":          schema.BoolAttribute{Computed: true},
-					"value_list": schema.StringAttribute{
-						MarkdownDescription: "JSON encoded list of objects.",
-						Computed:            true,
-					},
-					"value_code": schema.StringAttribute{
-						MarkdownDescription: "Code value.",
-						Computed:            true,
-					},
-				},
-			},
-		}
-	}
-
-	inputs := mkIoMap()
-	inputs.MarkdownDescription = "Contains all Building Block inputs. Each input has exactly one value attribute set according to its' type."
-
-	outputs := mkIoMap()
-	outputs.MarkdownDescription = "Building Block outputs. Each output has exactly one value attribute set."
-
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Single Building Block by UUID.",
 
@@ -137,8 +97,7 @@ func (d *buildingBlockDataSource) Schema(ctx context.Context, req datasource.Sch
 						Computed:            true,
 					},
 
-					//
-					"inputs": inputs,
+					"inputs": buildingBlockCombinedInputs(),
 
 					"parent_building_blocks": schema.ListNestedAttribute{
 						MarkdownDescription: "List of parent Building Blocks.",
@@ -170,7 +129,7 @@ func (d *buildingBlockDataSource) Schema(ctx context.Context, req datasource.Sch
 							stringvalidator.OneOf([]string{"WAITING_FOR_DEPENDENT_INPUT", "WAITING_FOR_OPERATOR_INPUT", "PENDING", "IN_PROGRESS", "SUCCEEDED", "FAILED"}...),
 						},
 					},
-					"outputs": outputs,
+					"outputs": buildingBlockOutputs(),
 				},
 			},
 		},
@@ -236,7 +195,7 @@ func (d *buildingBlockDataSource) Read(ctx context.Context, req datasource.ReadR
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("status").AtName("status"), bb.Status.Status)...)
 
-	outputs := make(map[string]buildingBlockIoModel)
+	outputs := make(map[string]buildingBlockOutputModel)
 	for _, output := range bb.Status.Outputs {
 		value, err := toResourceModel(&output)
 
@@ -245,7 +204,7 @@ func (d *buildingBlockDataSource) Read(ctx context.Context, req datasource.ReadR
 			return
 		}
 
-		outputs[output.Key] = *value
+		outputs[output.Key] = value.toOutputModel()
 	}
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("status").AtName("outputs"), outputs)...)
 

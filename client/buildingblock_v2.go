@@ -158,11 +158,7 @@ func (c *MeshStackProviderClient) PollBuildingBlockV2UntilCompletion(ctx context
 	var result *MeshBuildingBlockV2
 
 	err := retry.RetryContext(ctx, 30*time.Minute, c.waitForBuildingBlockV2CompletionFunc(uuid, &result))
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
+	return result, err
 }
 
 // waitForBuildingBlockV2CompletionFunc returns a RetryFunc that checks building block completion status
@@ -176,12 +172,12 @@ func (c *MeshStackProviderClient) waitForBuildingBlockV2CompletionFunc(uuid stri
 		if current == nil {
 			return retry.NonRetryableError(fmt.Errorf("building block was not found while waiting for completion"))
 		}
+		*result = current
 
 		// Check if we've reached a terminal state
 		status := current.Status.Status
 		switch status {
 		case BUILDING_BLOCK_STATUS_SUCCEEDED:
-			*result = current
 			return nil // Success, stop retrying
 		case BUILDING_BLOCK_STATUS_FAILED:
 			return retry.NonRetryableError(fmt.Errorf("building block %s reached FAILED state", uuid))

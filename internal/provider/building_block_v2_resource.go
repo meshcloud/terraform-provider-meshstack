@@ -14,8 +14,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapdefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
@@ -62,72 +60,6 @@ func (r *buildingBlockV2Resource) Configure(ctx context.Context, req resource.Co
 }
 
 func (r *buildingBlockV2Resource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
-	mkIoMap := func(isUserInput bool) schema.MapNestedAttribute {
-		return schema.MapNestedAttribute{
-			Optional: isUserInput,
-			Computed: true,
-			NestedObject: schema.NestedAttributeObject{
-				Attributes: map[string]schema.Attribute{
-					"value_string": schema.StringAttribute{
-						Optional: isUserInput,
-						Computed: !isUserInput,
-						Validators: []validator.String{stringvalidator.ExactlyOneOf(
-							path.MatchRelative().AtParent().AtName("value_string"),
-							path.MatchRelative().AtParent().AtName("value_single_select"),
-							path.MatchRelative().AtParent().AtName("value_file"),
-							path.MatchRelative().AtParent().AtName("value_int"),
-							path.MatchRelative().AtParent().AtName("value_bool"),
-							path.MatchRelative().AtParent().AtName("value_list"),
-							path.MatchRelative().AtParent().AtName("value_code"),
-						)},
-					},
-					"value_single_select": schema.StringAttribute{Optional: isUserInput, Computed: !isUserInput},
-					"value_file":          schema.StringAttribute{Optional: isUserInput, Computed: !isUserInput},
-					"value_int":           schema.Int64Attribute{Optional: isUserInput, Computed: !isUserInput},
-					"value_bool":          schema.BoolAttribute{Optional: isUserInput, Computed: !isUserInput},
-					"value_list": schema.StringAttribute{
-						MarkdownDescription: "JSON encoded list of objects.",
-						Optional:            isUserInput,
-						Computed:            !isUserInput,
-					},
-					"value_code": schema.StringAttribute{
-						MarkdownDescription: "Code value.",
-						Optional:            isUserInput,
-						Computed:            !isUserInput,
-					},
-				},
-			},
-		}
-	}
-
-	inputs := mkIoMap(true)
-	inputs.MarkdownDescription = "Building block user inputs. Each input has exactly one value. Use the value attribute that corresponds to the desired input type, e.g. `value_int` to set an integer input, and leave the remaining attributes empty."
-	inputs.PlanModifiers = []planmodifier.Map{mapplanmodifier.RequiresReplace()}
-	inputs.Default = mapdefault.StaticValue(
-		types.MapValueMust(
-			types.ObjectType{
-				AttrTypes: map[string]attr.Type{
-					"value_string":        types.StringType,
-					"value_single_select": types.StringType,
-					"value_file":          types.StringType,
-					"value_int":           types.Int64Type,
-					"value_bool":          types.BoolType,
-					"value_list":          types.StringType,
-					"value_code":          types.StringType,
-				},
-			},
-			map[string]attr.Value{},
-		),
-	)
-
-	combinedInputs := mkIoMap(false)
-	combinedInputs.MarkdownDescription = "Contains all building block inputs. Each input has exactly one value attribute set according to its' type."
-	combinedInputs.PlanModifiers = []planmodifier.Map{mapplanmodifier.UseStateForUnknown()}
-
-	outputs := mkIoMap(false)
-	outputs.MarkdownDescription = "Building block outputs. Each output has exactly one value attribute set."
-	outputs.PlanModifiers = []planmodifier.Map{mapplanmodifier.UseStateForUnknown()}
-
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Manage a workspace or tenant building block.\n\n~> **Note:** This resource is in preview. It's incomplete and will change in the near future.",
 
@@ -226,8 +158,8 @@ func (r *buildingBlockV2Resource) Schema(ctx context.Context, req resource.Schem
 						},
 					},
 
-					"inputs":          inputs,
-					"combined_inputs": combinedInputs,
+					"inputs":          buildingBlockUserInputs(),
+					"combined_inputs": buildingBlockCombinedInputs(),
 
 					"parent_building_blocks": schema.ListNestedAttribute{
 						Optional:            true,
@@ -289,7 +221,7 @@ func (r *buildingBlockV2Resource) Schema(ctx context.Context, req resource.Schem
 						MarkdownDescription: "Indicates whether an operator has requested purging of this Building Block.",
 						Computed:            true,
 					},
-					"outputs": outputs,
+					"outputs": buildingBlockOutputs(),
 				},
 			},
 			"wait_for_completion": schema.BoolAttribute{
@@ -302,65 +234,29 @@ func (r *buildingBlockV2Resource) Schema(ctx context.Context, req resource.Schem
 	}
 }
 
-type buildingBlockV2ResourceModel struct {
-	ApiVersion types.String `tfsdk:"api_version"`
-	Kind       types.String `tfsdk:"kind"`
-
-	Spec struct {
-		DisplayName                       types.String                                     `tfsdk:"display_name"`
-		BuildingBlockDefinitionVersionRef buildingBlockV2DefinitionVersionRefResourceModel `tfsdk:"building_block_definition_version_ref"`
-		TargetRef                         buildingBlockV2targetRefResourceModel            `tfsdk:"target_ref"`
-		ParentBuildingBlocks              types.List                                       `tfsdk:"parent_building_blocks"`
-		Inputs                            map[string]buildingBlockIoModel                  `tfsdk:"inputs"`
-		CombinedInputs                    types.Map                                        `tfsdk:"combined_inputs"`
-	} `tfsdk:"spec"`
-
-	// Metadata and Status are unused when creating the resource
-	Metadata types.Object `tfsdk:"metadata"`
-	Status   types.Object `tfsdk:"status"`
-
-	// additional attributes not part of the API
-	WaitForCompletion types.Bool `tfsdk:"wait_for_completion"`
-}
-
-type buildingBlockV2DefinitionVersionRefResourceModel struct {
-	Uuid types.String `tfsdk:"uuid"`
-}
-
-type buildingBlockV2targetRefResourceModel struct {
-	Kind       types.String `tfsdk:"kind"`
-	Uuid       types.String `tfsdk:"uuid"`
-	Identifier types.String `tfsdk:"identifier"`
-}
-
 func (r *buildingBlockV2Resource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var plan buildingBlockV2ResourceModel
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
-
 	bb := client.MeshBuildingBlockV2Create{
-		ApiVersion: plan.ApiVersion.ValueString(),
-		Kind:       plan.Kind.ValueString(),
-
 		Spec: client.MeshBuildingBlockV2Spec{
-			DisplayName:          plan.Spec.DisplayName.ValueString(),
-			ParentBuildingBlocks: make([]client.MeshBuildingBlockParent, 0),
-			BuildingBlockDefinitionVersionRef: client.MeshBuildingBlockV2DefinitionVersionRef{
-				Uuid: plan.Spec.BuildingBlockDefinitionVersionRef.Uuid.ValueString(),
-			},
-			TargetRef: client.MeshBuildingBlockV2TargetRef{
-				Kind:       plan.Spec.TargetRef.Kind.ValueString(),
-				Uuid:       plan.Spec.TargetRef.Uuid.ValueStringPointer(),
-				Identifier: plan.Spec.TargetRef.Identifier.ValueStringPointer(),
-			},
+			ParentBuildingBlocks:              make([]client.MeshBuildingBlockParent, 0),
+			BuildingBlockDefinitionVersionRef: client.MeshBuildingBlockV2DefinitionVersionRef{},
+			TargetRef:                         client.MeshBuildingBlockV2TargetRef{},
+			Inputs:                            make([]client.MeshBuildingBlockIO, 0),
 		},
 	}
 
-	// add parent building blocks
-	plan.Spec.ParentBuildingBlocks.ElementsAs(ctx, &bb.Spec.ParentBuildingBlocks, false)
+	// Retrieve values from plan
+	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("api_version"), &bb.ApiVersion)...)
+	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("kind"), &bb.Kind)...)
+	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec").AtName("display_name"), &bb.Spec.DisplayName)...)
+	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec").AtName("building_block_definition_version_ref"), &bb.Spec.BuildingBlockDefinitionVersionRef)...)
+	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec").AtName("parent_building_blocks"), &bb.Spec.ParentBuildingBlocks)...)
+	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec").AtName("target_ref"), &bb.Spec.TargetRef)...)
 
-	// convert inputs
-	bb.Spec.Inputs = make([]client.MeshBuildingBlockIO, 0)
-	for key, values := range plan.Spec.Inputs {
+	// Set user inputs
+	var userInputs map[string]buildingBlockUserInputModel
+	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec").AtName("inputs"), &userInputs)...)
+
+	for key, values := range userInputs {
 		value, valueType := values.extractIoValue()
 		if value == nil {
 			resp.Diagnostics.AddAttributeError(
@@ -377,6 +273,14 @@ func (r *buildingBlockV2Resource) Create(ctx context.Context, req resource.Creat
 		bb.Spec.Inputs = append(bb.Spec.Inputs, input)
 	}
 
+	var waitForCompletion bool
+	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("wait_for_completion"), &waitForCompletion)...)
+
+	// Check errors after reading plan
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	created, err := r.client.CreateBuildingBlockV2(&bb)
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -388,17 +292,24 @@ func (r *buildingBlockV2Resource) Create(ctx context.Context, req resource.Creat
 	resp.Diagnostics.Append(setStateFromResponseV2(&ctx, &resp.State, created)...)
 
 	// ensure that user inputs and wait_for_completion are passed along from the plan
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("spec").AtName("inputs"), plan.Spec.Inputs)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("wait_for_completion"), plan.WaitForCompletion)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("spec").AtName("inputs"), userInputs)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("wait_for_completion"), waitForCompletion)...)
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	// Poll for completion if wait_for_completion is true
-	if !plan.WaitForCompletion.IsNull() && plan.WaitForCompletion.ValueBool() {
+	if waitForCompletion {
 		uuid := created.Metadata.Uuid
 		polled, err := r.client.PollBuildingBlockV2UntilCompletion(ctx, uuid)
-		if err != nil {
-			// If building block failed during or after polling, we still want to set the state to the last known state
-			resp.Diagnostics.Append(setStateFromResponseV2(&ctx, &resp.State, polled)...)
 
+		if polled != nil {
+			// Always set last known building block state
+			resp.Diagnostics.Append(setStateFromResponseV2(&ctx, &resp.State, polled)...)
+		}
+
+		if err != nil {
 			resp.Diagnostics.AddError(
 				"Error waiting for building block completion",
 				err.Error(),
@@ -415,13 +326,6 @@ func (r *buildingBlockV2Resource) Read(ctx context.Context, req resource.ReadReq
 		return
 	}
 
-	// Preserve the wait_for_completion value from the current state since it's not returned by the API
-	var currentWaitForCompletion types.Bool
-	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("wait_for_completion"), &currentWaitForCompletion)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
 	bb, err := r.client.ReadBuildingBlockV2(uuid)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read building block", err.Error())
@@ -433,9 +337,6 @@ func (r *buildingBlockV2Resource) Read(ctx context.Context, req resource.ReadReq
 	}
 
 	resp.Diagnostics.Append(setStateFromResponseV2(&ctx, &resp.State, bb)...)
-
-	// Restore the wait_for_completion value from the previous state since it's provider configuration, not API data
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("wait_for_completion"), currentWaitForCompletion)...)
 }
 
 func (r *buildingBlockV2Resource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -511,7 +412,7 @@ func setStateFromResponseV2(ctx *context.Context, state *tfsdk.State, bb *client
 
 	diags.Append(state.SetAttribute(*ctx, path.Root("status").AtName("status"), bb.Status.Status)...)
 
-	outputs := make(map[string]buildingBlockIoModel)
+	outputs := make(map[string]buildingBlockOutputModel)
 	for _, output := range bb.Status.Outputs {
 		value, err := toResourceModel(&output)
 
@@ -520,7 +421,7 @@ func setStateFromResponseV2(ctx *context.Context, state *tfsdk.State, bb *client
 			return diags
 		}
 
-		outputs[output.Key] = *value
+		outputs[output.Key] = value.toOutputModel()
 	}
 	diags.Append(state.SetAttribute(*ctx, path.Root("status").AtName("outputs"), outputs)...)
 
