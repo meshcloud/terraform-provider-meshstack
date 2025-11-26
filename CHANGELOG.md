@@ -1,13 +1,17 @@
-## v0.14.0
-
+## v0.15.0
 FEATURES:
 
 - Support multi select building block inputs.
-- Payment method resources.
 
 FIXES:
 
 - Restrict allowed value types for building block inputs, combined inputs and outputs.
+
+## v0.14.0
+
+FEATURES:
+
+- Payment method resources.
 
 ## v0.13.0
 
