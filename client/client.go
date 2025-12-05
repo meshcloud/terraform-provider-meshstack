@@ -45,6 +45,7 @@ type endpoints struct {
 	LandingZones           *url.URL `json:"meshlandingzones"`
 	Platforms              *url.URL `json:"meshplatforms"`
 	PaymentMethods         *url.URL `json:"meshpaymentmethods"`
+	Integrations           *url.URL `json:"meshintegrations"`
 }
 
 type loginRequest struct {
@@ -82,6 +83,7 @@ func NewClient(rootUrl *url.URL, apiKey string, apiSecret string) (*MeshStackPro
 		LandingZones:           rootUrl.JoinPath(apiMeshObjectsRoot, "meshlandingzones"),
 		Platforms:              rootUrl.JoinPath(apiMeshObjectsRoot, "meshplatforms"),
 		PaymentMethods:         rootUrl.JoinPath(apiMeshObjectsRoot, "meshpaymentmethods"),
+		Integrations:           rootUrl.JoinPath(apiMeshObjectsRoot, "meshintegrations"),
 	}
 
 	return client, nil
@@ -111,7 +113,7 @@ func (c *MeshStackProviderClient) login() error {
 	if err != nil {
 		return err
 	} else if res.StatusCode != 200 {
-		return errors.New(fmt.Sprintf("Status %d: %s", res.StatusCode, ERROR_AUTHENTICATION_FAILURE))
+		return fmt.Errorf("Status %d: %s", res.StatusCode, ERROR_AUTHENTICATION_FAILURE)
 	}
 
 	defer res.Body.Close()
