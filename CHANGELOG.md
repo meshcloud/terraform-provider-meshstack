@@ -1,4 +1,11 @@
+## v0.15.1
+
+FIXES:
+
+- Changes to meshPlatform API.
+
 ## v0.15.0
+
 FEATURES:
 
 - Support multi select building block inputs.

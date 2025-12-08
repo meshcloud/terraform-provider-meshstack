@@ -39,6 +39,11 @@ type MeshPlatformSpec struct {
 	QuotaDefinitions       []QuotaDefinition    `json:"quotaDefinitions" tfsdk:"quota_definitions"`
 }
 
+type SecretEmbedded struct {
+	Plaintext *string `json:"plaintext,omitempty" tfsdk:"plaintext"`
+	// TODO: add Hash field
+}
+
 type QuotaDefinition struct {
 	QuotaKey              string `json:"quotaKey" tfsdk:"quota_key"`
 	MinValue              int    `json:"minValue" tfsdk:"min_value"`

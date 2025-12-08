@@ -2,6 +2,7 @@ package provider
 
 import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -33,28 +34,35 @@ func awsAccessConfigSchema() schema.Attribute {
 				MarkdownDescription: "ExternalId to enhance security in a multi account setup when assuming the organization root account role.",
 				Optional:            true,
 			},
-			"service_user_config": schema.SingleNestedAttribute{
-				MarkdownDescription: "Service user configuration (alternative to `workload_identity_config`)",
-				Optional:            true,
+			"auth": schema.SingleNestedAttribute{
+				MarkdownDescription: "Authentication configuration",
+				Required:            true,
 				Attributes: map[string]schema.Attribute{
-					"access_key": schema.StringAttribute{
-						MarkdownDescription: "AWS access key for service user",
-						Required:            true,
+					"type": schema.StringAttribute{
+						MarkdownDescription: "Authentication type (credential or workloadIdentity)",
+						Computed:            true,
+						PlanModifiers:       []planmodifier.String{authTypeDefault()},
 					},
-					"secret_key": schema.StringAttribute{
-						MarkdownDescription: "AWS secret key for service user",
-						Required:            true,
-						Sensitive:           true,
+					"credential": schema.SingleNestedAttribute{
+						MarkdownDescription: "Service user credential configuration",
+						Optional:            true,
+						Attributes: map[string]schema.Attribute{
+							"access_key": schema.StringAttribute{
+								MarkdownDescription: "AWS access key for service user",
+								Required:            true,
+							},
+							"secret_key": secretEmbeddedSchema("AWS secret key for service user", false),
+						},
 					},
-				},
-			},
-			"workload_identity_config": schema.SingleNestedAttribute{
-				MarkdownDescription: "Workload identity configuration (alternative to `service_user_config`)",
-				Optional:            true,
-				Attributes: map[string]schema.Attribute{
-					"role_arn": schema.StringAttribute{
-						MarkdownDescription: "ARN of the role that should be used as the entry point for meshStack by assuming it via web identity.",
-						Required:            true,
+					"workload_identity": schema.SingleNestedAttribute{
+						MarkdownDescription: "Workload identity configuration",
+						Optional:            true,
+						Attributes: map[string]schema.Attribute{
+							"role_arn": schema.StringAttribute{
+								MarkdownDescription: "ARN of the role that should be used as the entry point for meshStack by assuming it via web identity.",
+								Computed:            true,
+							},
+						},
 					},
 				},
 			},
@@ -161,11 +169,7 @@ func awsReplicationConfigSchema() schema.Attribute {
 						MarkdownDescription: "Configures the pattern that defines the desired name of AWS IAM Identity Center groups managed by meshStack. It follows the usual replicator string pattern features and provides the additional replacement 'platformGroupAlias', which contains the role name suffix, which is configurable via Role Mappings in this platform config or via a meshLandingZone. Operators must ensure the group names will be unique within the same AWS IAM Identity Center Instance with that configuration. meshStack will additionally prefix the group name with 'mst-' to be able to identify the groups that are managed by meshStack.",
 						Required:            true,
 					},
-					"sso_access_token": schema.StringAttribute{
-						MarkdownDescription: "The AWS IAM Identity Center SCIM Access Token that was generated via the Automatic provisioning config in AWS IAM Identity Center.",
-						Optional:            true,
-						Sensitive:           true,
-					},
+					"sso_access_token": secretEmbeddedSchema("The AWS IAM Identity Center SCIM Access Token that was generated via the Automatic provisioning config in AWS IAM Identity Center.", true),
 					"aws_role_mappings": schema.ListNestedAttribute{
 						MarkdownDescription: "AWS role mappings for AWS SSO",
 						Optional:            true,

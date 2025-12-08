@@ -2,6 +2,7 @@ package provider
 
 import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -35,19 +36,11 @@ func azureReplicationConfigSchema() schema.Attribute {
 						MarkdownDescription: "The Application (Client) ID. In Azure Portal, this is the Application ID of the 'Enterprise Application' but can also be retrieved via the 'App Registration' object as 'Application (Client) ID",
 						Required:            true,
 					},
-					"auth_type": schema.StringAttribute{
-						MarkdownDescription: "Authentication type (`CREDENTIALS` or `WORKLOAD_IDENTITY`)",
-						Required:            true,
-					},
-					"credentials_auth_client_secret": schema.StringAttribute{
-						MarkdownDescription: "Client secret (if authType is `CREDENTIALS`)",
-						Optional:            true,
-						Sensitive:           true,
-					},
 					"object_id": schema.StringAttribute{
 						MarkdownDescription: "The Object ID of the Enterprise Application. You can get this Object ID via the API (e.g. when using our Terraform provider) or from Enterprise applications pane in Microsoft Entra admin center.",
 						Required:            true,
 					},
+					"auth": azureAuthConfigDataSourceSchema(),
 				},
 			},
 			"provisioning": schema.SingleNestedAttribute{
@@ -93,15 +86,7 @@ func azureReplicationConfigSchema() schema.Attribute {
 										MarkdownDescription: "The Application (Client) ID. In Azure Portal, this is the Application ID of the \"Enterprise Application\" but can also be retrieved via the \"App Registration\" object as \"Application (Client) ID\".",
 										Required:            true,
 									},
-									"auth_type": schema.StringAttribute{
-										MarkdownDescription: "Must be one of `CREDENTIALS` or `WORKLOAD_IDENTITY`. Workload Identity Federation is the one that we recommend as it enables the most secure approach to provide access to your Azure tenant without using long lived credentials. Credential Authentication is an alternative approach where you have to provide a clientSecret manually to meshStack and meshStack stores it encrypted.",
-										Required:            true,
-									},
-									"credentials_auth_client_secret": schema.StringAttribute{
-										MarkdownDescription: "Must be set if and only if authType is CREDENTIALS. A valid secret for accessing the application. In Azure Portal, this can be configured on the \"App Registration\" under Certificates & secrets. [How is this information secured?](https://docs.meshcloud.io/operations/security-faq/#how-does-meshstack-securely-handle-my-cloud-platform-credentials)",
-										Optional:            true,
-										Sensitive:           true,
-									},
+									"auth": azureAuthConfigSchema(),
 								},
 							},
 							"destination_entra_id": schema.StringAttribute{
@@ -213,7 +198,8 @@ func azureReplicationConfigSchema() schema.Attribute {
 					},
 				},
 			},
-			"user_look_up_strategy": schema.StringAttribute{
+			// TODO: enforce correct value
+			"user_lookup_strategy": schema.StringAttribute{
 				MarkdownDescription: "User lookup strategy (`userPrincipalName` or `email`). Users can either be looked up in cloud platforms by email or UPN (User Principal Name). In most cases email is the matching way as it is the only identifier that is consistently used throughout all cloud platforms and meshStack.",
 				Required:            true,
 			},
@@ -233,6 +219,21 @@ func azureReplicationConfigSchema() schema.Attribute {
 	}
 }
 
+func azureAuthConfigSchema() schema.Attribute {
+	return schema.SingleNestedAttribute{
+		MarkdownDescription: "Authentication configuration",
+		Required:            true,
+		Attributes: map[string]schema.Attribute{
+			"type": schema.StringAttribute{
+				MarkdownDescription: "Authentication type (credential or workloadIdentity)",
+				Computed:            true,
+				PlanModifiers:       []planmodifier.String{authTypeDefault()},
+			},
+			"credential": secretEmbeddedSchema("Client secret (if type is credential)", true),
+		},
+	}
+}
+
 func azureMeteringConfigSchema() schema.Attribute {
 	return schema.SingleNestedAttribute{
 		MarkdownDescription: "Metering configuration for Azure (optional, but required for metering)",
@@ -246,19 +247,11 @@ func azureMeteringConfigSchema() schema.Attribute {
 						MarkdownDescription: "The Application (Client) ID. In Azure Portal, this is the Application ID of the 'Enterprise Application' but can also be retrieved via the 'App Registration' object as 'Application (Client) ID",
 						Required:            true,
 					},
-					"auth_type": schema.StringAttribute{
-						MarkdownDescription: "Authentication type (`CREDENTIALS` or `WORKLOAD_IDENTITY`)",
-						Required:            true,
-					},
-					"credentials_auth_client_secret": schema.StringAttribute{
-						MarkdownDescription: "Client secret (if authType is `CREDENTIALS`)",
-						Optional:            true,
-						Sensitive:           true,
-					},
 					"object_id": schema.StringAttribute{
 						MarkdownDescription: "The Object ID of the Enterprise Application. You can get this Object ID via the API (e.g. when using our Terraform provider) or from Enterprise applications pane in Microsoft Entra admin center.",
 						Required:            true,
 					},
+					"auth": azureAuthConfigSchema(),
 				},
 			},
 			"processing": meteringProcessingConfigSchema(),
@@ -295,19 +288,11 @@ func azureRgReplicationConfigSchema() schema.Attribute {
 						MarkdownDescription: "The Application (Client) ID. In Azure Portal, this is the Application ID of the 'Enterprise Application' but can also be retrieved via the 'App Registration' object as 'Application (Client) ID",
 						Required:            true,
 					},
-					"auth_type": schema.StringAttribute{
-						MarkdownDescription: "Authentication type (`CREDENTIALS` or `WORKLOAD_IDENTITY`)",
-						Required:            true,
-					},
-					"credentials_auth_client_secret": schema.StringAttribute{
-						MarkdownDescription: "Client secret (if authType is `CREDENTIALS`)",
-						Optional:            true,
-						Sensitive:           true,
-					},
 					"object_id": schema.StringAttribute{
 						MarkdownDescription: "The Object ID of the Enterprise Application. You can get this Object ID via the API (e.g. when using our Terraform provider) or from Enterprise applications pane in Microsoft Entra admin center.",
 						Required:            true,
 					},
+					"auth": azureAuthConfigSchema(),
 				},
 			},
 			"subscription": schema.StringAttribute{
@@ -336,7 +321,8 @@ func azureRgReplicationConfigSchema() schema.Attribute {
 					},
 				},
 			},
-			"user_look_up_strategy": schema.StringAttribute{
+			// TODO: enforce correct value
+			"user_lookup_strategy": schema.StringAttribute{
 				MarkdownDescription: "User lookup strategy (`userPrincipalName` or `email`). Users can either be looked up in cloud platforms by email or UPN (User Principal Name). In most cases email is the matching way as it is the only identifier that is consistently used throughout all cloud platforms and meshStack.",
 				Required:            true,
 			},

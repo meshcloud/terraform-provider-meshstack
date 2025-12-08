@@ -213,6 +213,7 @@ func (r *platformResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 									stringvalidator.OneOf("PUBLISHED", "UNPUBLISHED"),
 								},
 							},
+							// TODO: check this is not empty if set to restricted and that it's set to the owner if private
 							"restricted_to_workspaces": schema.ListAttribute{
 								MarkdownDescription: "If the restriction is set to `RESTRICTED`, you can specify the workspace identifiers this meshPlatform is restricted to.",
 								ElementType:         types.StringType,
@@ -286,6 +287,21 @@ func meteringProcessingConfigSchema() schema.Attribute {
 	}
 }
 
+func secretEmbeddedSchema(description string, optional bool) schema.Attribute {
+	return schema.SingleNestedAttribute{
+		MarkdownDescription: description,
+		Required:            !optional,
+		Optional:            optional,
+		Attributes: map[string]schema.Attribute{
+			"plaintext": schema.StringAttribute{
+				MarkdownDescription: "Plaintext secret value",
+				Required:            true,
+				Sensitive:           true,
+			},
+		},
+	}
+}
+
 func (r *platformResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	platform := client.MeshPlatformCreate{
 		Metadata: client.MeshPlatformCreateMetadata{},
@@ -294,7 +310,6 @@ func (r *platformResource) Create(ctx context.Context, req resource.CreateReques
 	// Retrieve values from plan
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("api_version"), &platform.ApiVersion)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec"), &platform.Spec)...)
-
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("metadata").AtName("name"), &platform.Metadata.Name)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("metadata").AtName("owned_by_workspace"), &platform.Metadata.OwnedByWorkspace)...)
 
@@ -316,7 +331,7 @@ func (r *platformResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, createdPlatform)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &createdPlatform)...)
 }
 
 func (r *platformResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
