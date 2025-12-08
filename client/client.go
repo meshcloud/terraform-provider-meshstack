@@ -111,7 +111,7 @@ func (c *MeshStackProviderClient) login() error {
 	if err != nil {
 		return err
 	} else if res.StatusCode != 200 {
-		return errors.New(fmt.Sprintf("Status %d: %s", res.StatusCode, ERROR_AUTHENTICATION_FAILURE))
+		return fmt.Errorf("Status %d: %s", res.StatusCode, ERROR_AUTHENTICATION_FAILURE)
 	}
 
 	defer res.Body.Close()

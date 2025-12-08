@@ -204,6 +204,21 @@ func (d *platformDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 	}
 }
 
+func secretEmbeddedDataSourceSchema(description string) schema.Attribute {
+	return schema.SingleNestedAttribute{
+		MarkdownDescription: description,
+		Computed:            true,
+		Sensitive:           true,
+		Attributes: map[string]schema.Attribute{
+			"plaintext": schema.StringAttribute{
+				MarkdownDescription: "Plaintext secret value",
+				Computed:            true,
+				Sensitive:           true,
+			},
+		},
+	}
+}
+
 func awsPlatformDataSourceSchema() schema.Attribute {
 	return schema.SingleNestedAttribute{
 		MarkdownDescription: "Configuration for AWS",
@@ -344,28 +359,33 @@ func awsMeteringConfigDataSourceSchema() schema.Attribute {
 						MarkdownDescription: "ExternalId for the organization root account role",
 						Computed:            true,
 					},
-					"service_user_config": schema.SingleNestedAttribute{
-						MarkdownDescription: "Service user configuration",
+					"auth": schema.SingleNestedAttribute{
+						MarkdownDescription: "Authentication configuration",
 						Computed:            true,
 						Attributes: map[string]schema.Attribute{
-							"access_key": schema.StringAttribute{
-								MarkdownDescription: "AWS access key",
+							"type": schema.StringAttribute{
+								MarkdownDescription: "Authentication type (credential or workloadIdentity)",
 								Computed:            true,
 							},
-							"secret_key": schema.StringAttribute{
-								MarkdownDescription: "AWS secret key",
+							"credential": schema.SingleNestedAttribute{
+								MarkdownDescription: "Service user credential configuration (if type is credential)",
 								Computed:            true,
-								Sensitive:           true,
+								Attributes: map[string]schema.Attribute{
+									"access_key": schema.StringAttribute{
+										MarkdownDescription: "AWS access key",
+										Computed:            true,
+									},
+									"secret_key": secretEmbeddedDataSourceSchema("AWS secret key")},
 							},
-						},
-					},
-					"workload_identity_config": schema.SingleNestedAttribute{
-						MarkdownDescription: "Workload identity configuration",
-						Computed:            true,
-						Attributes: map[string]schema.Attribute{
-							"role_arn": schema.StringAttribute{
-								MarkdownDescription: "ARN of the role for workload identity",
+							"workload_identity": schema.SingleNestedAttribute{
+								MarkdownDescription: "Workload identity configuration (if type is workloadIdentity)",
 								Computed:            true,
+								Attributes: map[string]schema.Attribute{
+									"role_arn": schema.StringAttribute{
+										MarkdownDescription: "ARN of the role for workload identity",
+										Computed:            true,
+									},
+								},
 							},
 						},
 					},
@@ -401,19 +421,11 @@ func azureMeteringConfigDataSourceSchema() schema.Attribute {
 						MarkdownDescription: "The Application (Client) ID",
 						Computed:            true,
 					},
-					"auth_type": schema.StringAttribute{
-						MarkdownDescription: "Authentication type (CREDENTIALS or WORKLOAD_IDENTITY)",
-						Computed:            true,
-					},
-					"credentials_auth_client_secret": schema.StringAttribute{
-						MarkdownDescription: "Client secret (if authType is CREDENTIALS)",
-						Computed:            true,
-						Sensitive:           true,
-					},
 					"object_id": schema.StringAttribute{
 						MarkdownDescription: "The Object ID of the Enterprise Application",
 						Computed:            true,
 					},
+					"auth": azureAuthConfigDataSourceSchema(),
 				},
 			},
 			"processing": meteringProcessingConfigDataSourceSchema(),
@@ -426,23 +438,17 @@ func gcpMeteringConfigDataSourceSchema() schema.Attribute {
 		MarkdownDescription: "Metering configuration for GCP (optional, but required for metering)",
 		Computed:            true,
 		Attributes: map[string]schema.Attribute{
-			"service_account_config": schema.SingleNestedAttribute{
+			"service_account": schema.SingleNestedAttribute{
 				MarkdownDescription: "Service account configuration for GCP metering",
 				Computed:            true,
 				Attributes: map[string]schema.Attribute{
-					"service_account_credentials_config": schema.SingleNestedAttribute{
-						MarkdownDescription: "Service account credentials configuration",
+					"type": schema.StringAttribute{
+						MarkdownDescription: "Service account type",
 						Computed:            true,
-						Attributes: map[string]schema.Attribute{
-							"service_account_credentials_b64": schema.StringAttribute{
-								MarkdownDescription: "Base64 encoded service account credentials",
-								Computed:            true,
-								Sensitive:           true,
-							},
-						},
 					},
-					"service_account_workload_identity_config": schema.SingleNestedAttribute{
-						MarkdownDescription: "Service account workload identity configuration",
+					"credential": secretEmbeddedDataSourceSchema("Base64 encoded service account credentials (if type supports it)"),
+					"workload_identity": schema.SingleNestedAttribute{
+						MarkdownDescription: "Workload identity configuration (if type supports it)",
 						Computed:            true,
 						Attributes: map[string]schema.Attribute{
 							"audience": schema.StringAttribute{
@@ -487,10 +493,7 @@ func aksReplicationConfigDataSourceSchema() schema.Attribute {
 		MarkdownDescription: "Replication configuration for AKS (optional, but required for replication)",
 		Computed:            true,
 		Attributes: map[string]schema.Attribute{
-			"access_token": schema.StringAttribute{
-				MarkdownDescription: "The Access Token of the service account for replicator access.",
-				Computed:            true,
-			},
+			"access_token": secretEmbeddedDataSourceSchema("The access token of the service account for replicator access."),
 			"namespace_name_pattern": schema.StringAttribute{
 				MarkdownDescription: "Pattern for naming namespaces in AKS",
 				Computed:            true,
@@ -507,14 +510,7 @@ func aksReplicationConfigDataSourceSchema() schema.Attribute {
 						MarkdownDescription: "The Application (Client) ID. In Azure Portal, this is the Application ID of the 'Enterprise Application' but can also be retrieved via the 'App Registration' object as 'Application (Client) ID'.",
 						Computed:            true,
 					},
-					"auth_type": schema.StringAttribute{
-						MarkdownDescription: "Authentication type for the service principal (`CREDENTIALS` or `WORKLOAD_IDENTITY`)",
-						Computed:            true,
-					},
-					"credentials_auth_client_secret": schema.StringAttribute{
-						MarkdownDescription: "Client secret for the service principal (if `authType` is `CREDENTIALS`)",
-						Computed:            true,
-					},
+					"auth": azureAuthConfigDataSourceSchema(),
 					"entra_tenant": schema.StringAttribute{
 						MarkdownDescription: "Domain name or ID of the Entra Tenant that holds the Service Principal.",
 						Computed:            true,
@@ -545,7 +541,7 @@ func aksReplicationConfigDataSourceSchema() schema.Attribute {
 				MarkdownDescription: "Flag to send Azure invitation emails. When true, meshStack instructs Azure to send out Invitation mails to invited users.",
 				Computed:            true,
 			},
-			"user_look_up_strategy": schema.StringAttribute{
+			"user_lookup_strategy": schema.StringAttribute{
 				MarkdownDescription: "Strategy for user lookup in Azure (`userPrincipalName` or `email`)",
 				Computed:            true,
 			},
@@ -574,27 +570,34 @@ func awsReplicationConfigDataSourceSchema() schema.Attribute {
 						MarkdownDescription: "ExternalId to enhance security in a multi account setup when assuming the organization root account role.",
 						Computed:            true,
 					},
-					"service_user_config": schema.SingleNestedAttribute{
-						MarkdownDescription: "Service user configuration (alternative to `workload_identity_config`)",
+					"auth": schema.SingleNestedAttribute{
+						MarkdownDescription: "Authentication configuration",
 						Computed:            true,
 						Attributes: map[string]schema.Attribute{
-							"access_key": schema.StringAttribute{
-								MarkdownDescription: "AWS access key for service user",
+							"type": schema.StringAttribute{
+								MarkdownDescription: "Authentication type (credential or workloadIdentity)",
 								Computed:            true,
 							},
-							"secret_key": schema.StringAttribute{
-								MarkdownDescription: "AWS secret key for service user",
+							"credential": schema.SingleNestedAttribute{
+								MarkdownDescription: "Service user credential configuration (if type is credential)",
 								Computed:            true,
+								Attributes: map[string]schema.Attribute{
+									"access_key": schema.StringAttribute{
+										MarkdownDescription: "AWS access key for service user",
+										Computed:            true,
+									},
+									"secret_key": secretEmbeddedDataSourceSchema("AWS secret key"),
+								},
 							},
-						},
-					},
-					"workload_identity_config": schema.SingleNestedAttribute{
-						MarkdownDescription: "Workload identity configuration (alternative to `service_user_config`)",
-						Computed:            true,
-						Attributes: map[string]schema.Attribute{
-							"role_arn": schema.StringAttribute{
-								MarkdownDescription: "ARN of the role that should be used as the entry point for meshStack by assuming it via web identity.",
+							"workload_identity": schema.SingleNestedAttribute{
+								MarkdownDescription: "Workload identity configuration (if type is workloadIdentity)",
 								Computed:            true,
+								Attributes: map[string]schema.Attribute{
+									"role_arn": schema.StringAttribute{
+										MarkdownDescription: "ARN of the role that should be used as the entry point for meshStack by assuming it via web identity.",
+										Computed:            true,
+									},
+								},
 							},
 						},
 					},
@@ -670,10 +673,7 @@ func awsReplicationConfigDataSourceSchema() schema.Attribute {
 						MarkdownDescription: "Configures the pattern that defines the desired name of AWS IAM Identity Center groups managed by meshStack. It follows the usual replicator string pattern features and provides the additional replacement 'platformGroupAlias', which contains the role name suffix, which is configurable via Role Mappings in this platform config or via a meshLandingZone. Operators must ensure the group names will be unique within the same AWS IAM Identity Center Instance with that configuration. meshStack will additionally prefix the group name with 'mst-' to be able to identify the groups that are managed by meshStack.",
 						Computed:            true,
 					},
-					"sso_access_token": schema.StringAttribute{
-						MarkdownDescription: "The AWS IAM Identity Center SCIM Access Token that was generated via the Automatic provisioning config in AWS IAM Identity Center.",
-						Computed:            true,
-					},
+					"sso_access_token": secretEmbeddedDataSourceSchema("The AWS IAM Identity Center SCIM Access Token that was generated via the Automatic provisioning config in AWS IAM Identity Center."),
 					"aws_role_mappings": schema.ListNestedAttribute{
 						MarkdownDescription: "AWS role mappings for AWS SSO",
 						Computed:            true,
@@ -741,14 +741,7 @@ func azureReplicationConfigDataSourceSchema() schema.Attribute {
 						MarkdownDescription: "The Application (Client) ID. In Azure Portal, this is the Application ID of the 'Enterprise Application' but can also be retrieved via the 'App Registration' object as 'Application (Client) ID",
 						Computed:            true,
 					},
-					"auth_type": schema.StringAttribute{
-						MarkdownDescription: "Authentication type (`CREDENTIALS` or `WORKLOAD_IDENTITY`)",
-						Computed:            true,
-					},
-					"credentials_auth_client_secret": schema.StringAttribute{
-						MarkdownDescription: "Client secret (if authType is `CREDENTIALS`)",
-						Computed:            true,
-					},
+					"auth": azureAuthConfigDataSourceSchema(),
 					"object_id": schema.StringAttribute{
 						MarkdownDescription: "The Object ID of the Enterprise Application. You can get this Object ID via the API (e.g. when using our Terraform provider) or from Enterprise applications pane in Microsoft Entra admin center.",
 						Computed:            true,
@@ -798,14 +791,7 @@ func azureReplicationConfigDataSourceSchema() schema.Attribute {
 										MarkdownDescription: "The Application (Client) ID. In Azure Portal, this is the Application ID of the \"Enterprise Application\" but can also be retrieved via the \"App Registration\" object as \"Application (Client) ID\".",
 										Computed:            true,
 									},
-									"auth_type": schema.StringAttribute{
-										MarkdownDescription: "Must be one of `CREDENTIALS` or `WORKLOAD_IDENTITY`. Workload Identity Federation is the one that we recommend as it enables the most secure approach to provide access to your Azure tenant without using long lived credentials. Credential Authentication is an alternative approach where you have to provide a clientSecret manually to meshStack and meshStack stores it encrypted.",
-										Computed:            true,
-									},
-									"credentials_auth_client_secret": schema.StringAttribute{
-										MarkdownDescription: "Must be set if and only if authType is CREDENTIALS. A valid secret for accessing the application. In Azure Portal, this can be configured on the \"App Registration\" under Certificates & secrets. [How is this information secured?](https://docs.meshcloud.io/operations/security-faq/#how-does-meshstack-securely-handle-my-cloud-platform-credentials)",
-										Computed:            true,
-									},
+									"auth": azureAuthConfigDataSourceSchema(),
 								},
 							},
 							"destination_entra_id": schema.StringAttribute{
@@ -916,7 +902,7 @@ func azureReplicationConfigDataSourceSchema() schema.Attribute {
 					},
 				},
 			},
-			"user_look_up_strategy": schema.StringAttribute{
+			"user_lookup_strategy": schema.StringAttribute{
 				MarkdownDescription: "User lookup strategy (`userPrincipalName` or `email`). Users can either be looked up in cloud platforms by email or UPN (User Principal Name). In most cases email is the matching way as it is the only identifier that is consistently used throughout all cloud platforms and meshStack.",
 				Computed:            true,
 			},
@@ -936,6 +922,20 @@ func azureReplicationConfigDataSourceSchema() schema.Attribute {
 	}
 }
 
+func azureAuthConfigDataSourceSchema() schema.Attribute {
+	return schema.SingleNestedAttribute{
+		MarkdownDescription: "Authentication configuration",
+		Computed:            true,
+		Attributes: map[string]schema.Attribute{
+			"type": schema.StringAttribute{
+				MarkdownDescription: "Authentication type (credential or workloadIdentity)",
+				Computed:            true,
+			},
+			"credential": secretEmbeddedDataSourceSchema("Client secret (if type is credential)"),
+		},
+	}
+}
+
 func azureRgReplicationConfigDataSourceSchema() schema.Attribute {
 	return schema.SingleNestedAttribute{
 		MarkdownDescription: "Azure Resource Group-specific replication configuration for the platform.",
@@ -949,14 +949,7 @@ func azureRgReplicationConfigDataSourceSchema() schema.Attribute {
 						MarkdownDescription: "The Application (Client) ID. In Azure Portal, this is the Application ID of the 'Enterprise Application' but can also be retrieved via the 'App Registration' object as 'Application (Client) ID",
 						Computed:            true,
 					},
-					"auth_type": schema.StringAttribute{
-						MarkdownDescription: "Authentication type (`CREDENTIALS` or `WORKLOAD_IDENTITY`)",
-						Computed:            true,
-					},
-					"credentials_auth_client_secret": schema.StringAttribute{
-						MarkdownDescription: "Client secret (if authType is `CREDENTIALS`)",
-						Computed:            true,
-					},
+					"auth": azureAuthConfigDataSourceSchema(),
 					"object_id": schema.StringAttribute{
 						MarkdownDescription: "The Object ID of the Enterprise Application. You can get this Object ID via the API (e.g. when using our Terraform provider) or from Enterprise applications pane in Microsoft Entra admin center.",
 						Computed:            true,
@@ -989,7 +982,8 @@ func azureRgReplicationConfigDataSourceSchema() schema.Attribute {
 					},
 				},
 			},
-			"user_look_up_strategy": schema.StringAttribute{
+			// TODO: enforce correct value
+			"user_lookup_strategy": schema.StringAttribute{
 				MarkdownDescription: "User lookup strategy (`userPrincipalName` or `email`). Users can either be looked up in cloud platforms by email or UPN (User Principal Name). In most cases email is the matching way as it is the only identifier that is consistently used throughout all cloud platforms and meshStack.",
 				Computed:            true,
 			},
@@ -1040,23 +1034,17 @@ func gcpReplicationConfigDataSourceSchema() schema.Attribute {
 		MarkdownDescription: "GCP-specific replication configuration for the platform.",
 		Computed:            true,
 		Attributes: map[string]schema.Attribute{
-			"service_account_config": schema.SingleNestedAttribute{
-				MarkdownDescription: "Service account configuration. Either `serviceAccountCredentialsConfig` or `serviceAccountWorkloadIdentityConfig` must be provided.",
+			"service_account": schema.SingleNestedAttribute{
+				MarkdownDescription: "Service account configuration. Either credential or workload_identity must be provided.",
 				Computed:            true,
 				Attributes: map[string]schema.Attribute{
-					"service_account_credentials_config": schema.SingleNestedAttribute{
-						MarkdownDescription: "Service account credentials configuration (alternative to serviceAccountWorkloadIdentityConfig)",
+					"type": schema.StringAttribute{
+						MarkdownDescription: "Service account type",
 						Computed:            true,
-						Attributes: map[string]schema.Attribute{
-							"service_account_credentials_b64": schema.StringAttribute{
-								MarkdownDescription: "Base64 encoded credentials.json file for a GCP ServiceAccount. The replicator uses this Service Account to automate GCP API operations (IAM, ResourceManager etc.).",
-								Computed:            true,
-								Sensitive:           true,
-							},
-						},
 					},
-					"service_account_workload_identity_config": schema.SingleNestedAttribute{
-						MarkdownDescription: "Service account workload identity configuration (alternative to serviceAccountCredentialsConfig)",
+					"credential": secretEmbeddedDataSourceSchema("Base64 encoded credentials.json file for a GCP ServiceAccount (if type supports it). The replicator uses this Service Account to automate GCP API operations (IAM, ResourceManager etc.)."),
+					"workload_identity": schema.SingleNestedAttribute{
+						MarkdownDescription: "Workload identity configuration (if type supports it)",
 						Computed:            true,
 						Attributes: map[string]schema.Attribute{
 							"audience": schema.StringAttribute{
@@ -1159,11 +1147,7 @@ func kubernetesClientConfigDataSourceSchema(description string) schema.Attribute
 		MarkdownDescription: description,
 		Computed:            true,
 		Attributes: map[string]schema.Attribute{
-			"access_token": schema.StringAttribute{
-				MarkdownDescription: "The Access Token of the service account for replicator access.",
-				Computed:            true,
-				Sensitive:           true,
-			},
+			"access_token": secretEmbeddedDataSourceSchema("The access token of the service account for replicator access."),
 		},
 	}
 }
@@ -1205,6 +1189,7 @@ func kubernetesMeteringConfigDataSourceSchema() schema.Attribute {
 		Computed:            true,
 		Attributes: map[string]schema.Attribute{
 			"client_config": kubernetesClientConfigDataSourceSchema("Client configuration for Kubernetes metering"),
+			"processing":    meteringProcessingConfigDataSourceSchema(),
 		},
 	}
 }

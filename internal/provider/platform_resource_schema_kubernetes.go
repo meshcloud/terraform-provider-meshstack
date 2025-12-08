@@ -33,11 +33,7 @@ func kubernetesClientConfigSchema(description string) schema.Attribute {
 		MarkdownDescription: description,
 		Required:            true,
 		Attributes: map[string]schema.Attribute{
-			"access_token": schema.StringAttribute{
-				MarkdownDescription: "The Access Token of the service account for replicator access.",
-				Required:            true,
-				Sensitive:           true,
-			},
+			"access_token": secretEmbeddedSchema("The Access Token of the service account for replicator access.", false),
 		},
 	}
 }
@@ -193,11 +189,7 @@ func aksReplicationConfigSchema() schema.Attribute {
 		MarkdownDescription: "Replication configuration for AKS (optional, but required for replication)",
 		Optional:            true,
 		Attributes: map[string]schema.Attribute{
-			"access_token": schema.StringAttribute{
-				MarkdownDescription: "The Access Token of the service account for replicator access.",
-				Required:            true,
-				Sensitive:           true,
-			},
+			"access_token": secretEmbeddedSchema("The Access Token of the service account for replicator access.", false),
 			"namespace_name_pattern": schema.StringAttribute{
 				MarkdownDescription: "Pattern for naming namespaces in AKS",
 				Required:            true,
@@ -210,19 +202,6 @@ func aksReplicationConfigSchema() schema.Attribute {
 				MarkdownDescription: "Service principal configuration for AKS",
 				Required:            true,
 				Attributes: map[string]schema.Attribute{
-					"client_id": schema.StringAttribute{
-						MarkdownDescription: "The Application (Client) ID. In Azure Portal, this is the Application ID of the 'Enterprise Application' but can also be retrieved via the 'App Registration' object as 'Application (Client) ID'.",
-						Required:            true,
-					},
-					"auth_type": schema.StringAttribute{
-						MarkdownDescription: "Authentication type for the service principal (`CREDENTIALS` or `WORKLOAD_IDENTITY`)",
-						Required:            true,
-					},
-					"credentials_auth_client_secret": schema.StringAttribute{
-						MarkdownDescription: "Client secret for the service principal (if `authType` is `CREDENTIALS`)",
-						Optional:            true,
-						Sensitive:           true,
-					},
 					"entra_tenant": schema.StringAttribute{
 						MarkdownDescription: "Domain name or ID of the Entra Tenant that holds the Service Principal.",
 						Required:            true,
@@ -231,6 +210,11 @@ func aksReplicationConfigSchema() schema.Attribute {
 						MarkdownDescription: "The Object ID of the Enterprise Application. You can get this Object ID via the API (e.g. when using our Terraform provider) or from Enterprise applications pane in Microsoft Entra admin center.",
 						Required:            true,
 					},
+					"client_id": schema.StringAttribute{
+						MarkdownDescription: "The Application (Client) ID. In Azure Portal, this is the Application ID of the 'Enterprise Application' but can also be retrieved via the 'App Registration' object as 'Application (Client) ID'.",
+						Required:            true,
+					},
+					"auth": azureAuthConfigSchema(),
 				},
 			},
 			"aks_subscription_id": schema.StringAttribute{
@@ -253,7 +237,8 @@ func aksReplicationConfigSchema() schema.Attribute {
 				MarkdownDescription: "Flag to send Azure invitation emails. When true, meshStack instructs Azure to send out Invitation mails to invited users.",
 				Required:            true,
 			},
-			"user_look_up_strategy": schema.StringAttribute{
+			// TODO: enforce correct value
+			"user_lookup_strategy": schema.StringAttribute{
 				MarkdownDescription: "Strategy for user lookup in Azure (`userPrincipalName` or `email`)",
 				Required:            true,
 			},

@@ -139,7 +139,7 @@ Read-Only:
 - `redirect_url` (String) This is the URL that Azure’s consent experience redirects users to after they accept their invitation.
 - `send_azure_invitation_mail` (Boolean) Flag to send Azure invitation emails. When true, meshStack instructs Azure to send out Invitation mails to invited users.
 - `service_principal` (Attributes) Service principal configuration for AKS (see [below for nested schema](#nestedatt--spec--config--aks--replication--service_principal))
-- `user_look_up_strategy` (String) Strategy for user lookup in Azure (`userPrincipalName` or `email`)
+- `user_lookup_strategy` (String) Strategy for user lookup in Azure (`userPrincipalName` or `email`)
 
 <a id="nestedatt--spec--config--aks--replication--service_principal"></a>
 ### Nested Schema for `spec.config.aks.replication.service_principal`
@@ -380,7 +380,7 @@ Read-Only:
 - `skip_user_group_permission_cleanup` (Boolean) Flag to skip user group permission cleanup. For certain use cases you might want to preserve user groups and replicated permission after a tenant was deleted on the Azure platform. Checking this option preserves those permissions. Please keep in mind that the platform operator is then responsible for cleaning them up later.
 - `subscription_name_pattern` (String) Configures the pattern that defines the desired name of Azure Subscriptions managed by meshStack.
 - `tenant_tags` (Attributes) Tenant tagging configuration. (see [below for nested schema](#nestedatt--spec--config--azure--replication--tenant_tags))
-- `user_look_up_strategy` (String) User lookup strategy (`userPrincipalName` or `email`). Users can either be looked up in cloud platforms by email or UPN (User Principal Name). In most cases email is the matching way as it is the only identifier that is consistently used throughout all cloud platforms and meshStack.
+- `user_lookup_strategy` (String) User lookup strategy (`userPrincipalName` or `email`). Users can either be looked up in cloud platforms by email or UPN (User Principal Name). In most cases email is the matching way as it is the only identifier that is consistently used throughout all cloud platforms and meshStack.
 
 <a id="nestedatt--spec--config--azure--replication--azure_role_mappings"></a>
 ### Nested Schema for `spec.config.azure.replication.azure_role_mappings`
@@ -526,7 +526,7 @@ Read-Only:
 - `subscription` (String) The Subscription that will contain all the created Resource Groups. Once you set the Subscription, you must not change it.
 - `tenant_tags` (Attributes) Tenant tags configuration (see [below for nested schema](#nestedatt--spec--config--azurerg--replication--tenant_tags))
 - `user_group_name_pattern` (String) Configures the pattern that defines the desired name of AAD groups managed by meshStack. It follows the usual replicator string pattern features and provides the additional replacement 'platformGroupAlias', which contains the role name suffix. This suffix is configurable via Role Mappings in this platform config.
-- `user_look_up_strategy` (String) User lookup strategy (`userPrincipalName` or `email`). Users can either be looked up in cloud platforms by email or UPN (User Principal Name). In most cases email is the matching way as it is the only identifier that is consistently used throughout all cloud platforms and meshStack.
+- `user_lookup_strategy` (String) User lookup strategy (`userPrincipalName` or `email`). Users can either be looked up in cloud platforms by email or UPN (User Principal Name). In most cases email is the matching way as it is the only identifier that is consistently used throughout all cloud platforms and meshStack.
 
 <a id="nestedatt--spec--config--azurerg--replication--b2b_user_invitation"></a>
 ### Nested Schema for `spec.config.azurerg.replication.b2b_user_invitation`
