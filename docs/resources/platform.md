@@ -49,10 +49,13 @@ resource "meshstack_platform" "example" {
 
         replication = {
           service_principal = {
-            client_id                      = "58d6f907-7b0e-4fd8-b328-3e8342dddc8d"
-            auth_type                      = "CREDENTIALS"
-            credentials_auth_client_secret = "mesh/hidden-secret"
-            object_id                      = "3c305efe-625d-4eaf-9bfa-b981ddbcc99f"
+            client_id = "58d6f907-7b0e-4fd8-b328-3e8342dddc8d"
+            object_id = "3c305efe-625d-4eaf-9bfa-b981ddbcc99f"
+            auth = {
+              credential = {
+                plaintext = "your-client-secret-here"
+              }
+            }
           }
 
           provisioning = {
@@ -255,7 +258,15 @@ Required:
 
 Required:
 
-- `access_token` (String, Sensitive) The Access Token of the service account for replicator access.
+- `access_token` (Attributes) The Access Token of the service account for replicator access. (see [below for nested schema](#nestedatt--spec--config--aks--metering--client_config--access_token))
+
+<a id="nestedatt--spec--config--aks--metering--client_config--access_token"></a>
+### Nested Schema for `spec.config.aks.metering.client_config.access_token`
+
+Required:
+
+- `plaintext` (String, Sensitive) Plaintext secret value
+
 
 
 <a id="nestedatt--spec--config--aks--metering--processing"></a>
@@ -273,7 +284,7 @@ Optional:
 
 Required:
 
-- `access_token` (String, Sensitive) The Access Token of the service account for replicator access.
+- `access_token` (Attributes) The Access Token of the service account for replicator access. (see [below for nested schema](#nestedatt--spec--config--aks--replication--access_token))
 - `aks_cluster_name` (String) Name of the AKS cluster.
 - `aks_resource_group` (String) Resource group for the AKS cluster
 - `aks_subscription_id` (String) Subscription ID for the AKS cluster
@@ -288,19 +299,43 @@ Optional:
 - `administrative_unit_id` (String) If you enter an administrative unit ID the replicated (and potentially existing) groups will be put into this AU. This can be used to limit the permission scopes which are required for the replicator principal. If you remove the AU ID again or change it, the groups will not be removed from the old AU.
 - `redirect_url` (String) This is the URL that Azure's consent experience redirects users to after they accept their invitation.
 
+<a id="nestedatt--spec--config--aks--replication--access_token"></a>
+### Nested Schema for `spec.config.aks.replication.access_token`
+
+Required:
+
+- `plaintext` (String, Sensitive) Plaintext secret value
+
+
 <a id="nestedatt--spec--config--aks--replication--service_principal"></a>
 ### Nested Schema for `spec.config.aks.replication.service_principal`
 
 Required:
 
-- `auth_type` (String) Authentication type for the service principal (`CREDENTIALS` or `WORKLOAD_IDENTITY`)
+- `auth` (Attributes) Authentication configuration (see [below for nested schema](#nestedatt--spec--config--aks--replication--service_principal--auth))
 - `client_id` (String) The Application (Client) ID. In Azure Portal, this is the Application ID of the 'Enterprise Application' but can also be retrieved via the 'App Registration' object as 'Application (Client) ID'.
 - `entra_tenant` (String) Domain name or ID of the Entra Tenant that holds the Service Principal.
 - `object_id` (String) The Object ID of the Enterprise Application. You can get this Object ID via the API (e.g. when using our Terraform provider) or from Enterprise applications pane in Microsoft Entra admin center.
 
+<a id="nestedatt--spec--config--aks--replication--service_principal--auth"></a>
+### Nested Schema for `spec.config.aks.replication.service_principal.auth`
+
 Optional:
 
-- `credentials_auth_client_secret` (String, Sensitive) Client secret for the service principal (if `authType` is `CREDENTIALS`)
+- `credential` (Attributes) Client secret (if type is credential) (see [below for nested schema](#nestedatt--spec--config--aks--replication--service_principal--auth--credential))
+
+Read-Only:
+
+- `type` (String) Authentication type (credential or workloadIdentity)
+
+<a id="nestedatt--spec--config--aks--replication--service_principal--auth--credential"></a>
+### Nested Schema for `spec.config.aks.replication.service_principal.auth.credential`
+
+Required:
+
+- `plaintext` (String, Sensitive) Plaintext secret value
+
+
 
 
 
@@ -330,29 +365,49 @@ Required:
 
 Required:
 
+- `auth` (Attributes) Authentication configuration (see [below for nested schema](#nestedatt--spec--config--aws--metering--access_config--auth))
 - `organization_root_account_role` (String) ARN of the Management Account Role. The Management Account contains your AWS organization. E.g. `arn:aws:iam::123456789:role/MeshfedServiceRole`.
 
 Optional:
 
 - `organization_root_account_external_id` (String) ExternalId to enhance security in a multi account setup when assuming the organization root account role.
-- `service_user_config` (Attributes) Service user configuration (alternative to `workload_identity_config`) (see [below for nested schema](#nestedatt--spec--config--aws--metering--access_config--service_user_config))
-- `workload_identity_config` (Attributes) Workload identity configuration (alternative to `service_user_config`) (see [below for nested schema](#nestedatt--spec--config--aws--metering--access_config--workload_identity_config))
 
-<a id="nestedatt--spec--config--aws--metering--access_config--service_user_config"></a>
-### Nested Schema for `spec.config.aws.metering.access_config.service_user_config`
+<a id="nestedatt--spec--config--aws--metering--access_config--auth"></a>
+### Nested Schema for `spec.config.aws.metering.access_config.auth`
+
+Optional:
+
+- `credential` (Attributes) Service user credential configuration (see [below for nested schema](#nestedatt--spec--config--aws--metering--access_config--auth--credential))
+- `workload_identity` (Attributes) Workload identity configuration (see [below for nested schema](#nestedatt--spec--config--aws--metering--access_config--auth--workload_identity))
+
+Read-Only:
+
+- `type` (String) Authentication type (credential or workloadIdentity)
+
+<a id="nestedatt--spec--config--aws--metering--access_config--auth--credential"></a>
+### Nested Schema for `spec.config.aws.metering.access_config.auth.credential`
 
 Required:
 
 - `access_key` (String) AWS access key for service user
-- `secret_key` (String, Sensitive) AWS secret key for service user
+- `secret_key` (Attributes) AWS secret key for service user (see [below for nested schema](#nestedatt--spec--config--aws--metering--access_config--auth--credential--secret_key))
 
-
-<a id="nestedatt--spec--config--aws--metering--access_config--workload_identity_config"></a>
-### Nested Schema for `spec.config.aws.metering.access_config.workload_identity_config`
+<a id="nestedatt--spec--config--aws--metering--access_config--auth--credential--secret_key"></a>
+### Nested Schema for `spec.config.aws.metering.access_config.auth.credential.secret_key`
 
 Required:
 
+- `plaintext` (String, Sensitive) Plaintext secret value
+
+
+
+<a id="nestedatt--spec--config--aws--metering--access_config--auth--workload_identity"></a>
+### Nested Schema for `spec.config.aws.metering.access_config.auth.workload_identity`
+
+Read-Only:
+
 - `role_arn` (String) ARN of the role that should be used as the entry point for meshStack by assuming it via web identity.
+
 
 
 
@@ -394,29 +449,49 @@ Optional:
 
 Required:
 
+- `auth` (Attributes) Authentication configuration (see [below for nested schema](#nestedatt--spec--config--aws--replication--access_config--auth))
 - `organization_root_account_role` (String) ARN of the Management Account Role. The Management Account contains your AWS organization. E.g. `arn:aws:iam::123456789:role/MeshfedServiceRole`.
 
 Optional:
 
 - `organization_root_account_external_id` (String) ExternalId to enhance security in a multi account setup when assuming the organization root account role.
-- `service_user_config` (Attributes) Service user configuration (alternative to `workload_identity_config`) (see [below for nested schema](#nestedatt--spec--config--aws--replication--access_config--service_user_config))
-- `workload_identity_config` (Attributes) Workload identity configuration (alternative to `service_user_config`) (see [below for nested schema](#nestedatt--spec--config--aws--replication--access_config--workload_identity_config))
 
-<a id="nestedatt--spec--config--aws--replication--access_config--service_user_config"></a>
-### Nested Schema for `spec.config.aws.replication.access_config.service_user_config`
+<a id="nestedatt--spec--config--aws--replication--access_config--auth"></a>
+### Nested Schema for `spec.config.aws.replication.access_config.auth`
+
+Optional:
+
+- `credential` (Attributes) Service user credential configuration (see [below for nested schema](#nestedatt--spec--config--aws--replication--access_config--auth--credential))
+- `workload_identity` (Attributes) Workload identity configuration (see [below for nested schema](#nestedatt--spec--config--aws--replication--access_config--auth--workload_identity))
+
+Read-Only:
+
+- `type` (String) Authentication type (credential or workloadIdentity)
+
+<a id="nestedatt--spec--config--aws--replication--access_config--auth--credential"></a>
+### Nested Schema for `spec.config.aws.replication.access_config.auth.credential`
 
 Required:
 
 - `access_key` (String) AWS access key for service user
-- `secret_key` (String, Sensitive) AWS secret key for service user
+- `secret_key` (Attributes) AWS secret key for service user (see [below for nested schema](#nestedatt--spec--config--aws--replication--access_config--auth--credential--secret_key))
 
-
-<a id="nestedatt--spec--config--aws--replication--access_config--workload_identity_config"></a>
-### Nested Schema for `spec.config.aws.replication.access_config.workload_identity_config`
+<a id="nestedatt--spec--config--aws--replication--access_config--auth--credential--secret_key"></a>
+### Nested Schema for `spec.config.aws.replication.access_config.auth.credential.secret_key`
 
 Required:
 
+- `plaintext` (String, Sensitive) Plaintext secret value
+
+
+
+<a id="nestedatt--spec--config--aws--replication--access_config--auth--workload_identity"></a>
+### Nested Schema for `spec.config.aws.replication.access_config.auth.workload_identity`
+
+Read-Only:
+
 - `role_arn` (String) ARN of the role that should be used as the entry point for meshStack by assuming it via web identity.
+
 
 
 
@@ -433,7 +508,7 @@ Optional:
 
 - `aws_role_mappings` (Attributes List) AWS role mappings for AWS SSO (see [below for nested schema](#nestedatt--spec--config--aws--replication--aws_sso--aws_role_mappings))
 - `sign_in_url` (String) The AWS IAM Identity Center sign in Url, that must be used by end-users to log in via AWS IAM Identity Center to AWS Management Console.
-- `sso_access_token` (String, Sensitive) The AWS IAM Identity Center SCIM Access Token that was generated via the Automatic provisioning config in AWS IAM Identity Center.
+- `sso_access_token` (Attributes) The AWS IAM Identity Center SCIM Access Token that was generated via the Automatic provisioning config in AWS IAM Identity Center. (see [below for nested schema](#nestedatt--spec--config--aws--replication--aws_sso--sso_access_token))
 
 <a id="nestedatt--spec--config--aws--replication--aws_sso--aws_role_mappings"></a>
 ### Nested Schema for `spec.config.aws.replication.aws_sso.aws_role_mappings`
@@ -458,6 +533,14 @@ Read-Only:
 
 - `kind` (String) meshObject type, always `meshProjectRole`.
 
+
+
+<a id="nestedatt--spec--config--aws--replication--aws_sso--sso_access_token"></a>
+### Nested Schema for `spec.config.aws.replication.aws_sso.sso_access_token`
+
+Required:
+
+- `plaintext` (String, Sensitive) Plaintext secret value
 
 
 
@@ -527,13 +610,29 @@ Optional:
 
 Required:
 
-- `auth_type` (String) Authentication type (`CREDENTIALS` or `WORKLOAD_IDENTITY`)
+- `auth` (Attributes) Authentication configuration (see [below for nested schema](#nestedatt--spec--config--azure--metering--service_principal--auth))
 - `client_id` (String) The Application (Client) ID. In Azure Portal, this is the Application ID of the 'Enterprise Application' but can also be retrieved via the 'App Registration' object as 'Application (Client) ID
 - `object_id` (String) The Object ID of the Enterprise Application. You can get this Object ID via the API (e.g. when using our Terraform provider) or from Enterprise applications pane in Microsoft Entra admin center.
 
+<a id="nestedatt--spec--config--azure--metering--service_principal--auth"></a>
+### Nested Schema for `spec.config.azure.metering.service_principal.auth`
+
 Optional:
 
-- `credentials_auth_client_secret` (String, Sensitive) Client secret (if authType is `CREDENTIALS`)
+- `credential` (Attributes) Client secret (if type is credential) (see [below for nested schema](#nestedatt--spec--config--azure--metering--service_principal--auth--credential))
+
+Read-Only:
+
+- `type` (String) Authentication type (credential or workloadIdentity)
+
+<a id="nestedatt--spec--config--azure--metering--service_principal--auth--credential"></a>
+### Nested Schema for `spec.config.azure.metering.service_principal.auth.credential`
+
+Required:
+
+- `plaintext` (String, Sensitive) Plaintext secret value
+
+
 
 
 
@@ -594,13 +693,29 @@ Read-Only:
 
 Required:
 
-- `auth_type` (String) Authentication type (`CREDENTIALS` or `WORKLOAD_IDENTITY`)
 - `client_id` (String) The Application (Client) ID. In Azure Portal, this is the Application ID of the 'Enterprise Application' but can also be retrieved via the 'App Registration' object as 'Application (Client) ID
 - `object_id` (String) The Object ID of the Enterprise Application. You can get this Object ID via the API (e.g. when using our Terraform provider) or from Enterprise applications pane in Microsoft Entra admin center.
 
-Optional:
+Read-Only:
 
-- `credentials_auth_client_secret` (String, Sensitive) Client secret (if authType is `CREDENTIALS`)
+- `auth` (Attributes) Authentication configuration (see [below for nested schema](#nestedatt--spec--config--azure--replication--service_principal--auth))
+
+<a id="nestedatt--spec--config--azure--replication--service_principal--auth"></a>
+### Nested Schema for `spec.config.azure.replication.service_principal.auth`
+
+Read-Only:
+
+- `credential` (Attributes, Sensitive) Client secret (if type is credential) (see [below for nested schema](#nestedatt--spec--config--azure--replication--service_principal--auth--credential))
+- `type` (String) Authentication type (credential or workloadIdentity)
+
+<a id="nestedatt--spec--config--azure--replication--service_principal--auth--credential"></a>
+### Nested Schema for `spec.config.azure.replication.service_principal.auth.credential`
+
+Read-Only:
+
+- `plaintext` (String, Sensitive) Plaintext secret value
+
+
 
 
 <a id="nestedatt--spec--config--azure--replication--b2b_user_invitation"></a>
@@ -641,12 +756,28 @@ Optional:
 
 Required:
 
-- `auth_type` (String) Must be one of `CREDENTIALS` or `WORKLOAD_IDENTITY`. Workload Identity Federation is the one that we recommend as it enables the most secure approach to provide access to your Azure tenant without using long lived credentials. Credential Authentication is an alternative approach where you have to provide a clientSecret manually to meshStack and meshStack stores it encrypted.
+- `auth` (Attributes) Authentication configuration (see [below for nested schema](#nestedatt--spec--config--azure--replication--provisioning--customer_agreement--source_service_principal--auth))
 - `client_id` (String) The Application (Client) ID. In Azure Portal, this is the Application ID of the "Enterprise Application" but can also be retrieved via the "App Registration" object as "Application (Client) ID".
+
+<a id="nestedatt--spec--config--azure--replication--provisioning--customer_agreement--source_service_principal--auth"></a>
+### Nested Schema for `spec.config.azure.replication.provisioning.customer_agreement.source_service_principal.auth`
 
 Optional:
 
-- `credentials_auth_client_secret` (String, Sensitive) Must be set if and only if authType is CREDENTIALS. A valid secret for accessing the application. In Azure Portal, this can be configured on the "App Registration" under Certificates & secrets. [How is this information secured?](https://docs.meshcloud.io/operations/security-faq/#how-does-meshstack-securely-handle-my-cloud-platform-credentials)
+- `credential` (Attributes) Client secret (if type is credential) (see [below for nested schema](#nestedatt--spec--config--azure--replication--provisioning--customer_agreement--source_service_principal--auth--credential))
+
+Read-Only:
+
+- `type` (String) Authentication type (credential or workloadIdentity)
+
+<a id="nestedatt--spec--config--azure--replication--provisioning--customer_agreement--source_service_principal--auth--credential"></a>
+### Nested Schema for `spec.config.azure.replication.provisioning.customer_agreement.source_service_principal.auth.credential`
+
+Required:
+
+- `plaintext` (String, Sensitive) Plaintext secret value
+
+
 
 
 
@@ -731,13 +862,29 @@ Optional:
 
 Required:
 
-- `auth_type` (String) Authentication type (`CREDENTIALS` or `WORKLOAD_IDENTITY`)
+- `auth` (Attributes) Authentication configuration (see [below for nested schema](#nestedatt--spec--config--azurerg--replication--service_principal--auth))
 - `client_id` (String) The Application (Client) ID. In Azure Portal, this is the Application ID of the 'Enterprise Application' but can also be retrieved via the 'App Registration' object as 'Application (Client) ID
 - `object_id` (String) The Object ID of the Enterprise Application. You can get this Object ID via the API (e.g. when using our Terraform provider) or from Enterprise applications pane in Microsoft Entra admin center.
 
+<a id="nestedatt--spec--config--azurerg--replication--service_principal--auth"></a>
+### Nested Schema for `spec.config.azurerg.replication.service_principal.auth`
+
 Optional:
 
-- `credentials_auth_client_secret` (String, Sensitive) Client secret (if authType is `CREDENTIALS`)
+- `credential` (Attributes) Client secret (if type is credential) (see [below for nested schema](#nestedatt--spec--config--azurerg--replication--service_principal--auth--credential))
+
+Read-Only:
+
+- `type` (String) Authentication type (credential or workloadIdentity)
+
+<a id="nestedatt--spec--config--azurerg--replication--service_principal--auth--credential"></a>
+### Nested Schema for `spec.config.azurerg.replication.service_principal.auth.credential`
+
+Required:
+
+- `plaintext` (String, Sensitive) Plaintext secret value
+
+
 
 
 <a id="nestedatt--spec--config--azurerg--replication--b2b_user_invitation"></a>
@@ -788,7 +935,7 @@ Required:
 - `bigquery_table` (String) BigQuery table for metering data.
 - `partition_time_column` (String) Partition time column for BigQuery table.
 - `processing` (Attributes) Processing configuration for metering (see [below for nested schema](#nestedatt--spec--config--gcp--metering--processing))
-- `service_account_config` (Attributes) Service account configuration. Either `serviceAccountCredentialsConfig` or `serviceAccountWorkloadIdentityConfig` must be provided. (see [below for nested schema](#nestedatt--spec--config--gcp--metering--service_account_config))
+- `service_account` (Attributes) Service account configuration. Either credential or workload_identity must be provided. (see [below for nested schema](#nestedatt--spec--config--gcp--metering--service_account))
 
 Optional:
 
@@ -805,24 +952,28 @@ Optional:
 - `delete_raw_data_after_days` (Number) Number of days after which raw data should be deleted.
 
 
-<a id="nestedatt--spec--config--gcp--metering--service_account_config"></a>
-### Nested Schema for `spec.config.gcp.metering.service_account_config`
+<a id="nestedatt--spec--config--gcp--metering--service_account"></a>
+### Nested Schema for `spec.config.gcp.metering.service_account`
 
 Optional:
 
-- `service_account_credentials_config` (Attributes) Service account credentials configuration (alternative to serviceAccountWorkloadIdentityConfig) (see [below for nested schema](#nestedatt--spec--config--gcp--metering--service_account_config--service_account_credentials_config))
-- `service_account_workload_identity_config` (Attributes) Service account workload identity configuration (alternative to serviceAccountCredentialsConfig) (see [below for nested schema](#nestedatt--spec--config--gcp--metering--service_account_config--service_account_workload_identity_config))
+- `credential` (Attributes) Base64 encoded credentials.json file for a GCP ServiceAccount. (see [below for nested schema](#nestedatt--spec--config--gcp--metering--service_account--credential))
+- `workload_identity` (Attributes) Workload identity configuration. (see [below for nested schema](#nestedatt--spec--config--gcp--metering--service_account--workload_identity))
 
-<a id="nestedatt--spec--config--gcp--metering--service_account_config--service_account_credentials_config"></a>
-### Nested Schema for `spec.config.gcp.metering.service_account_config.service_account_credentials_config`
+Read-Only:
+
+- `type` (String) Service account type
+
+<a id="nestedatt--spec--config--gcp--metering--service_account--credential"></a>
+### Nested Schema for `spec.config.gcp.metering.service_account.credential`
 
 Required:
 
-- `service_account_credentials_b64` (String, Sensitive) Base64 encoded credentials.json file for a GCP ServiceAccount. The replicator uses this Service Account to automate GCP API operations (IAM, ResourceManager etc.).
+- `plaintext` (String, Sensitive) Plaintext secret value
 
 
-<a id="nestedatt--spec--config--gcp--metering--service_account_config--service_account_workload_identity_config"></a>
-### Nested Schema for `spec.config.gcp.metering.service_account_config.service_account_workload_identity_config`
+<a id="nestedatt--spec--config--gcp--metering--service_account--workload_identity"></a>
+### Nested Schema for `spec.config.gcp.metering.service_account.workload_identity`
 
 Required:
 
@@ -845,7 +996,7 @@ Required:
 - `group_name_pattern` (String) All the commonly available replicator string template properties are available. Additionally you can also use 'platformGroupAlias' as a placeholder to access the specific project role from the role mappings done in this platform configuration or in the meshLandingZone configuration.
 - `project_id_pattern` (String) All the commonly available replicator string template properties are available. The resulting string must not exceed a total length of 30 characters. Only alphanumeric + hyphen are allowed. We recommend that configuration include at least 3 characters of the random parameter to reduce the chance of naming collisions as the project Ids must be globally unique within GCP.
 - `project_name_pattern` (String) All the commonly available replicator string template properties are available. The result must be 4 to 30 characters. Allowed characters are: lowercase and uppercase letters, numbers, hyphen, single-quote, double-quote, space, and exclamation point. When length restrictions are applied, the abbreviation will be in the middle and marked by a single-quote.
-- `service_account_config` (Attributes) Service account configuration. Either `serviceAccountCredentialsConfig` or `serviceAccountWorkloadIdentityConfig` must be provided. (see [below for nested schema](#nestedatt--spec--config--gcp--replication--service_account_config))
+- `service_account` (Attributes) Service account configuration. Either credential or workload_identity must be provided. (see [below for nested schema](#nestedatt--spec--config--gcp--replication--service_account))
 - `skip_user_group_permission_cleanup` (Boolean) For certain use cases you might want to preserve user groups and replicated permission after a tenant was deleted on the GCP platform. Checking this option preserves those permissions. Please keep in mind that the platform operator is then responsible for cleaning them up later.
 - `user_lookup_strategy` (String) Users can either be looked up by E-Mail or externalAccountId. This must also be the property that is placed in the external user id (EUID) of your meshUser entity to match. E-Mail is usually a good choice as this is often set up as the EUID throughout all cloud platforms and meshStack. ('email' or 'externalId')
 
@@ -875,24 +1026,28 @@ Read-Only:
 
 
 
-<a id="nestedatt--spec--config--gcp--replication--service_account_config"></a>
-### Nested Schema for `spec.config.gcp.replication.service_account_config`
+<a id="nestedatt--spec--config--gcp--replication--service_account"></a>
+### Nested Schema for `spec.config.gcp.replication.service_account`
 
 Optional:
 
-- `service_account_credentials_config` (Attributes) Service account credentials configuration (alternative to serviceAccountWorkloadIdentityConfig) (see [below for nested schema](#nestedatt--spec--config--gcp--replication--service_account_config--service_account_credentials_config))
-- `service_account_workload_identity_config` (Attributes) Service account workload identity configuration (alternative to serviceAccountCredentialsConfig) (see [below for nested schema](#nestedatt--spec--config--gcp--replication--service_account_config--service_account_workload_identity_config))
+- `credential` (Attributes) Base64 encoded credentials.json file for a GCP ServiceAccount. (see [below for nested schema](#nestedatt--spec--config--gcp--replication--service_account--credential))
+- `workload_identity` (Attributes) Workload identity configuration. (see [below for nested schema](#nestedatt--spec--config--gcp--replication--service_account--workload_identity))
 
-<a id="nestedatt--spec--config--gcp--replication--service_account_config--service_account_credentials_config"></a>
-### Nested Schema for `spec.config.gcp.replication.service_account_config.service_account_credentials_config`
+Read-Only:
+
+- `type` (String) Service account type
+
+<a id="nestedatt--spec--config--gcp--replication--service_account--credential"></a>
+### Nested Schema for `spec.config.gcp.replication.service_account.credential`
 
 Required:
 
-- `service_account_credentials_b64` (String, Sensitive) Base64 encoded credentials.json file for a GCP ServiceAccount. The replicator uses this Service Account to automate GCP API operations (IAM, ResourceManager etc.).
+- `plaintext` (String, Sensitive) Plaintext secret value
 
 
-<a id="nestedatt--spec--config--gcp--replication--service_account_config--service_account_workload_identity_config"></a>
-### Nested Schema for `spec.config.gcp.replication.service_account_config.service_account_workload_identity_config`
+<a id="nestedatt--spec--config--gcp--replication--service_account--workload_identity"></a>
+### Nested Schema for `spec.config.gcp.replication.service_account.workload_identity`
 
 Required:
 
@@ -950,7 +1105,15 @@ Required:
 
 Required:
 
-- `access_token` (String, Sensitive) The Access Token of the service account for replicator access.
+- `access_token` (Attributes) The Access Token of the service account for replicator access. (see [below for nested schema](#nestedatt--spec--config--kubernetes--metering--client_config--access_token))
+
+<a id="nestedatt--spec--config--kubernetes--metering--client_config--access_token"></a>
+### Nested Schema for `spec.config.kubernetes.metering.client_config.access_token`
+
+Required:
+
+- `plaintext` (String, Sensitive) Plaintext secret value
+
 
 
 <a id="nestedatt--spec--config--kubernetes--metering--processing"></a>
@@ -976,7 +1139,15 @@ Required:
 
 Required:
 
-- `access_token` (String, Sensitive) The Access Token of the service account for replicator access.
+- `access_token` (Attributes) The Access Token of the service account for replicator access. (see [below for nested schema](#nestedatt--spec--config--kubernetes--replication--client_config--access_token))
+
+<a id="nestedatt--spec--config--kubernetes--replication--client_config--access_token"></a>
+### Nested Schema for `spec.config.kubernetes.replication.client_config.access_token`
+
+Required:
+
+- `plaintext` (String, Sensitive) Plaintext secret value
+
 
 
 
@@ -1007,7 +1178,15 @@ Required:
 
 Required:
 
-- `access_token` (String, Sensitive) The Access Token of the service account for replicator access.
+- `access_token` (Attributes) The Access Token of the service account for replicator access. (see [below for nested schema](#nestedatt--spec--config--openshift--metering--client_config--access_token))
+
+<a id="nestedatt--spec--config--openshift--metering--client_config--access_token"></a>
+### Nested Schema for `spec.config.openshift.metering.client_config.access_token`
+
+Required:
+
+- `plaintext` (String, Sensitive) Plaintext secret value
+
 
 
 <a id="nestedatt--spec--config--openshift--metering--processing"></a>
@@ -1041,7 +1220,15 @@ Optional:
 
 Required:
 
-- `access_token` (String, Sensitive) The Access Token of the service account for replicator access.
+- `access_token` (Attributes) The Access Token of the service account for replicator access. (see [below for nested schema](#nestedatt--spec--config--openshift--replication--client_config--access_token))
+
+<a id="nestedatt--spec--config--openshift--replication--client_config--access_token"></a>
+### Nested Schema for `spec.config.openshift.replication.client_config.access_token`
+
+Required:
+
+- `plaintext` (String, Sensitive) Plaintext secret value
+
 
 
 <a id="nestedatt--spec--config--openshift--replication--openshift_role_mappings"></a>
