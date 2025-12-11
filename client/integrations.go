@@ -36,14 +36,14 @@ type MeshIntegrationStatus struct {
 
 // Integration Config wrapper with type discrimination
 type MeshIntegrationConfig struct {
-	Type        string                                `json:"type" tfsdk:"type"`
-	Github      *MeshGithubIntegrationProperties      `json:"github,omitempty" tfsdk:"github"`
-	Gitlab      *MeshGitlabIntegrationProperties      `json:"gitlab,omitempty" tfsdk:"gitlab"`
-	AzureDevops *MeshAzureDevopsIntegrationProperties `json:"azuredevops,omitempty" tfsdk:"azuredevops"`
+	Type        string                            `json:"type" tfsdk:"type"`
+	Github      *MeshIntegrationGithubConfig      `json:"github,omitempty" tfsdk:"github"`
+	Gitlab      *MeshIntegrationGitlabConfig      `json:"gitlab,omitempty" tfsdk:"gitlab"`
+	AzureDevops *MeshIntegrationAzureDevopsConfig `json:"azuredevops,omitempty" tfsdk:"azuredevops"`
 }
 
 // GitHub Integration
-type MeshGithubIntegrationProperties struct {
+type MeshIntegrationGithubConfig struct {
 	Owner         string                 `json:"owner" tfsdk:"owner"`
 	BaseUrl       string                 `json:"baseUrl" tfsdk:"base_url"`
 	AppId         string                 `json:"appId" tfsdk:"app_id"`
@@ -52,13 +52,13 @@ type MeshGithubIntegrationProperties struct {
 }
 
 // GitLab Integration
-type MeshGitlabIntegrationProperties struct {
+type MeshIntegrationGitlabConfig struct {
 	BaseUrl   string                 `json:"baseUrl" tfsdk:"base_url"`
 	RunnerRef BuildingBlockRunnerRef `json:"runnerRef" tfsdk:"runner_ref"`
 }
 
 // Azure DevOps Integration
-type MeshAzureDevopsIntegrationProperties struct {
+type MeshIntegrationAzureDevopsConfig struct {
 	BaseUrl             string                 `json:"baseUrl" tfsdk:"base_url"`
 	Organization        string                 `json:"organization" tfsdk:"organization"`
 	PersonalAccessToken string                 `json:"personalAccessToken" tfsdk:"personal_access_token"`
@@ -68,7 +68,7 @@ type MeshAzureDevopsIntegrationProperties struct {
 // Building Block Runner Reference
 type BuildingBlockRunnerRef struct {
 	Uuid string `json:"uuid" tfsdk:"uuid"`
-	Kind string `json:"kind,omitempty" tfsdk:"kind"`
+	Kind string `json:"kind" tfsdk:"kind"`
 }
 
 // Workload Identity Federation
@@ -130,13 +130,12 @@ func (c *MeshStackProviderClient) ReadIntegration(workspace string, uuid string)
 	return &integration, nil
 }
 
-func (c *MeshStackProviderClient) ReadIntegrations(workspaceIdentifier string) (*[]MeshIntegration, error) {
+func (c *MeshStackProviderClient) ReadIntegrations() (*[]MeshIntegration, error) {
 	var allIntegrations []MeshIntegration
 
 	pageNumber := 0
 	targetUrl := c.endpoints.Integrations
 	query := targetUrl.Query()
-	query.Set("workspaceIdentifier", workspaceIdentifier)
 
 	for {
 		query.Set("page", fmt.Sprintf("%d", pageNumber))
