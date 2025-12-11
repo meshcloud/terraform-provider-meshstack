@@ -33,3 +33,32 @@ func meshProjectRoleAttribute(computed bool) schema.SingleNestedAttribute {
 		},
 	}
 }
+
+func tenantTagsAttribute() schema.SingleNestedAttribute {
+	return schema.SingleNestedAttribute{
+		MarkdownDescription: "Tenant tags configuration",
+		Optional:            true,
+		Attributes: map[string]schema.Attribute{
+			"namespace_prefix": schema.StringAttribute{
+				MarkdownDescription: "This is the prefix for all labels created by meshStack. It helps to keep track of which labels are managed by meshStack. It is recommended to let this prefix end with a delimiter like an underscore.",
+				Required:            true,
+			},
+			"tag_mappers": schema.ListNestedAttribute{
+				MarkdownDescription: "List of tag mappers for tenant tags",
+				Optional:            true,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"key": schema.StringAttribute{
+							MarkdownDescription: "Key for the tag mapper",
+							Required:            true,
+						},
+						"value_pattern": schema.StringAttribute{
+							MarkdownDescription: "Value pattern for the tag mapper",
+							Required:            true,
+						},
+					},
+				},
+			},
+		},
+	}
+}

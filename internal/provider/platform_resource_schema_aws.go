@@ -60,7 +60,7 @@ func awsAccessConfigSchema() schema.Attribute {
 						Attributes: map[string]schema.Attribute{
 							"role_arn": schema.StringAttribute{
 								MarkdownDescription: "ARN of the role that should be used as the entry point for meshStack by assuming it via web identity.",
-								Computed:            true,
+								Required:            true,
 							},
 						},
 					},
@@ -127,32 +127,7 @@ func awsReplicationConfigSchema() schema.Attribute {
 				MarkdownDescription: "With a String Pattern you can define how the account email address of the created AWS account will be set. E.g. `aws+#{workspaceIdentifier}.#{projectIdentifier}@yourcompany.com`. Please consider that this email address is limited to 64 characters! Also have a look at our docs for more information.",
 				Required:            true,
 			},
-			"tenant_tags": schema.SingleNestedAttribute{
-				MarkdownDescription: "Tenant tags configuration",
-				Optional:            true,
-				Attributes: map[string]schema.Attribute{
-					"namespace_prefix": schema.StringAttribute{
-						MarkdownDescription: "Namespace prefix for tenant tags",
-						Required:            true,
-					},
-					"tag_mappers": schema.ListNestedAttribute{
-						MarkdownDescription: "List of tag mappers for tenant tags",
-						Optional:            true,
-						NestedObject: schema.NestedAttributeObject{
-							Attributes: map[string]schema.Attribute{
-								"key": schema.StringAttribute{
-									MarkdownDescription: "Key for the tag mapper",
-									Required:            true,
-								},
-								"value_pattern": schema.StringAttribute{
-									MarkdownDescription: "Value pattern for the tag mapper",
-									Required:            true,
-								},
-							},
-						},
-					},
-				},
-			},
+			"tenant_tags": tenantTagsAttribute(),
 			"aws_sso": schema.SingleNestedAttribute{
 				MarkdownDescription: "AWS SSO configuration",
 				Optional:            true,

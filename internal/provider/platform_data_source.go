@@ -982,9 +982,8 @@ func azureRgReplicationConfigDataSourceSchema() schema.Attribute {
 					},
 				},
 			},
-			// TODO: enforce correct value
 			"user_lookup_strategy": schema.StringAttribute{
-				MarkdownDescription: "User lookup strategy (`userPrincipalName` or `email`). Users can either be looked up in cloud platforms by email or UPN (User Principal Name). In most cases email is the matching way as it is the only identifier that is consistently used throughout all cloud platforms and meshStack.",
+				MarkdownDescription: "User lookup strategy (`UserByMailLookupStrategy` or `UserByUsernameLookupStrategy`). Users can either be looked up in cloud platforms by email or UPN (User Principal Name). In most cases email is the matching way as it is the only identifier that is consistently used throughout all cloud platforms and meshStack.",
 				Computed:            true,
 			},
 			"tenant_tags": schema.SingleNestedAttribute{
