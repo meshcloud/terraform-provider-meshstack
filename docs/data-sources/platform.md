@@ -648,7 +648,7 @@ Read-Only:
 - `subscription` (String) The Subscription that will contain all the created Resource Groups. Once you set the Subscription, you must not change it.
 - `tenant_tags` (Attributes) Tenant tags configuration (see [below for nested schema](#nestedatt--spec--config--azurerg--replication--tenant_tags))
 - `user_group_name_pattern` (String) Configures the pattern that defines the desired name of AAD groups managed by meshStack. It follows the usual replicator string pattern features and provides the additional replacement 'platformGroupAlias', which contains the role name suffix. This suffix is configurable via Role Mappings in this platform config.
-- `user_lookup_strategy` (String) User lookup strategy (`userPrincipalName` or `email`). Users can either be looked up in cloud platforms by email or UPN (User Principal Name). In most cases email is the matching way as it is the only identifier that is consistently used throughout all cloud platforms and meshStack.
+- `user_lookup_strategy` (String) User lookup strategy (`UserByMailLookupStrategy` or `UserByUsernameLookupStrategy`). Users can either be looked up in cloud platforms by email or UPN (User Principal Name). In most cases email is the matching way as it is the only identifier that is consistently used throughout all cloud platforms and meshStack.
 
 <a id="nestedatt--spec--config--azurerg--replication--b2b_user_invitation"></a>
 ### Nested Schema for `spec.config.azurerg.replication.b2b_user_invitation`

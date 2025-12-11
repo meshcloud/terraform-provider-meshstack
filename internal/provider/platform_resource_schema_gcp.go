@@ -71,32 +71,7 @@ func gcpReplicationConfigSchema() schema.Attribute {
 				MarkdownDescription: "Configuration flag to enable or disable hierarchical folder assignment in GCP. If set to true: Projects can be moved to sub folders of the folder defined in the Landing Zone. This is useful if you want to manage the project location with a deeper and more granular hierarchy. If set to false: Projects will always be moved directly to the folder defined in the Landing Zone.",
 				Required:            true,
 			},
-			"tenant_tags": schema.SingleNestedAttribute{
-				MarkdownDescription: "Tenant tags configuration",
-				Optional:            true,
-				Attributes: map[string]schema.Attribute{
-					"namespace_prefix": schema.StringAttribute{
-						MarkdownDescription: "Namespace prefix for tenant tags",
-						Required:            true,
-					},
-					"tag_mappers": schema.ListNestedAttribute{
-						MarkdownDescription: "List of tag mappers for tenant tags",
-						Optional:            true,
-						NestedObject: schema.NestedAttributeObject{
-							Attributes: map[string]schema.Attribute{
-								"key": schema.StringAttribute{
-									MarkdownDescription: "Key for the tag mapper",
-									Required:            true,
-								},
-								"value_pattern": schema.StringAttribute{
-									MarkdownDescription: "Value pattern for the tag mapper",
-									Required:            true,
-								},
-							},
-						},
-					},
-				},
-			},
+			"tenant_tags": tenantTagsAttribute(),
 			"skip_user_group_permission_cleanup": schema.BoolAttribute{
 				MarkdownDescription: "For certain use cases you might want to preserve user groups and replicated permission after a tenant was deleted on the GCP platform. Checking this option preserves those permissions. Please keep in mind that the platform operator is then responsible for cleaning them up later.",
 				Required:            true,

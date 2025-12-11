@@ -1,8 +1,10 @@
 package provider
 
 import (
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -86,7 +88,7 @@ func azureReplicationConfigSchema() schema.Attribute {
 										MarkdownDescription: "The Application (Client) ID. In Azure Portal, this is the Application ID of the \"Enterprise Application\" but can also be retrieved via the \"App Registration\" object as \"Application (Client) ID\".",
 										Required:            true,
 									},
-									"auth": azureAuthConfigSchema(),
+									"auth": azureAuthSchema(),
 								},
 							},
 							"destination_entra_id": schema.StringAttribute{
@@ -172,37 +174,8 @@ func azureReplicationConfigSchema() schema.Attribute {
 					},
 				},
 			},
-			"tenant_tags": schema.SingleNestedAttribute{
-				MarkdownDescription: "Tenant tagging configuration.",
-				Optional:            true,
-				Attributes: map[string]schema.Attribute{
-					"namespace_prefix": schema.StringAttribute{
-						MarkdownDescription: "This is the prefix for all labels created by meshStack. It helps to keep track of which labels are managed by meshStack. It is recommended to let this prefix end with a delimiter like an underscore.",
-						Required:            true,
-					},
-					"tag_mappers": schema.ListNestedAttribute{
-						MarkdownDescription: "List of tag mappers for tenant tags",
-						Optional:            true,
-						NestedObject: schema.NestedAttributeObject{
-							Attributes: map[string]schema.Attribute{
-								"key": schema.StringAttribute{
-									MarkdownDescription: "Key for the tag mapper",
-									Required:            true,
-								},
-								"value_pattern": schema.StringAttribute{
-									MarkdownDescription: "Value pattern for the tag mapper",
-									Required:            true,
-								},
-							},
-						},
-					},
-				},
-			},
-			// TODO: enforce correct value
-			"user_lookup_strategy": schema.StringAttribute{
-				MarkdownDescription: "User lookup strategy (`userPrincipalName` or `email`). Users can either be looked up in cloud platforms by email or UPN (User Principal Name). In most cases email is the matching way as it is the only identifier that is consistently used throughout all cloud platforms and meshStack.",
-				Required:            true,
-			},
+			"tenant_tags":          tenantTagsAttribute(),
+			"user_lookup_strategy": azureUserLookupStrategySchema(),
 			"skip_user_group_permission_cleanup": schema.BoolAttribute{
 				MarkdownDescription: "Flag to skip user group permission cleanup. For certain use cases you might want to preserve user groups and replicated permission after a tenant was deleted on the Azure platform. Checking this option preserves those permissions. Please keep in mind that the platform operator is then responsible for cleaning them up later.",
 				Required:            true,
@@ -215,21 +188,6 @@ func azureReplicationConfigSchema() schema.Attribute {
 				MarkdownDescription: "Configuration flag to enable or disable hierarchical management group assignment in Azure. If set to true: Subscriptions can be moved to sub management groups of the management group defined in the Landing Zone. This is useful if you want to manage the subscription location with a deeper and more granular hierarchy. If set to false: Subscriptions will always be moved directly to the management group defined in the Landing Zone.",
 				Required:            true,
 			},
-		},
-	}
-}
-
-func azureAuthConfigSchema() schema.Attribute {
-	return schema.SingleNestedAttribute{
-		MarkdownDescription: "Authentication configuration",
-		Required:            true,
-		Attributes: map[string]schema.Attribute{
-			"type": schema.StringAttribute{
-				MarkdownDescription: "Authentication type (credential or workloadIdentity)",
-				Computed:            true,
-				PlanModifiers:       []planmodifier.String{authTypeDefault()},
-			},
-			"credential": secretEmbeddedSchema("Client secret (if type is credential)", true),
 		},
 	}
 }
@@ -251,7 +209,7 @@ func azureMeteringConfigSchema() schema.Attribute {
 						MarkdownDescription: "The Object ID of the Enterprise Application. You can get this Object ID via the API (e.g. when using our Terraform provider) or from Enterprise applications pane in Microsoft Entra admin center.",
 						Required:            true,
 					},
-					"auth": azureAuthConfigSchema(),
+					"auth": azureAuthSchema(),
 				},
 			},
 			"processing": meteringProcessingConfigSchema(),
@@ -292,7 +250,7 @@ func azureRgReplicationConfigSchema() schema.Attribute {
 						MarkdownDescription: "The Object ID of the Enterprise Application. You can get this Object ID via the API (e.g. when using our Terraform provider) or from Enterprise applications pane in Microsoft Entra admin center.",
 						Required:            true,
 					},
-					"auth": azureAuthConfigSchema(),
+					"auth": azureAuthSchema(),
 				},
 			},
 			"subscription": schema.StringAttribute{
@@ -321,37 +279,8 @@ func azureRgReplicationConfigSchema() schema.Attribute {
 					},
 				},
 			},
-			// TODO: enforce correct value
-			"user_lookup_strategy": schema.StringAttribute{
-				MarkdownDescription: "User lookup strategy (`userPrincipalName` or `email`). Users can either be looked up in cloud platforms by email or UPN (User Principal Name). In most cases email is the matching way as it is the only identifier that is consistently used throughout all cloud platforms and meshStack.",
-				Required:            true,
-			},
-			"tenant_tags": schema.SingleNestedAttribute{
-				MarkdownDescription: "Tenant tags configuration",
-				Optional:            true,
-				Attributes: map[string]schema.Attribute{
-					"namespace_prefix": schema.StringAttribute{
-						MarkdownDescription: "This is the prefix for all labels created by meshStack. It helps to keep track of which labels are managed by meshStack. It is recommended to let this prefix end with a delimiter like an underscore.",
-						Required:            true,
-					},
-					"tag_mappers": schema.ListNestedAttribute{
-						MarkdownDescription: "List of tag mappers for tenant tags",
-						Optional:            true,
-						NestedObject: schema.NestedAttributeObject{
-							Attributes: map[string]schema.Attribute{
-								"key": schema.StringAttribute{
-									MarkdownDescription: "Key for the tag mapper",
-									Required:            true,
-								},
-								"value_pattern": schema.StringAttribute{
-									MarkdownDescription: "Value pattern for the tag mapper",
-									Required:            true,
-								},
-							},
-						},
-					},
-				},
-			},
+			"user_lookup_strategy": azureUserLookupStrategySchema(),
+			"tenant_tags":          tenantTagsAttribute(),
 			"skip_user_group_permission_cleanup": schema.BoolAttribute{
 				MarkdownDescription: "For certain use cases you might want to preserve user groups and replicated permission after a tenant was deleted on the Azure platform. Checking this option preserves those permissions. Please keep in mind that the platform operator is then responsible for cleaning them up later.",
 				Required:            true,
@@ -364,6 +293,30 @@ func azureRgReplicationConfigSchema() schema.Attribute {
 				MarkdownDescription: "Configuration flag to enable or disable hierarchical management group assignment in Azure. If set to true: Subscriptions can be moved to child management groups of the management group defined in the Landing Zone. This is useful if you want to manage the subscription location with a deeper and more granular hierarchy. If set to false: Subscriptions will always be moved directly to the management group defined in the Landing Zone.",
 				Required:            true,
 			},
+		},
+	}
+}
+func azureUserLookupStrategySchema() schema.Attribute {
+	return schema.StringAttribute{
+		MarkdownDescription: "Strategy for user lookup in Azure (`UserByMailLookupStrategy` or `UserByUsernameLookupStrategy`)",
+		Required:            true,
+		Validators: []validator.String{
+			stringvalidator.OneOf([]string{"UserByMailLookupStrategy", "UserByUsernameLookupStrategy"}...),
+		},
+	}
+}
+
+func azureAuthSchema() schema.Attribute {
+	return schema.SingleNestedAttribute{
+		MarkdownDescription: "Authentication configuration",
+		Required:            true,
+		Attributes: map[string]schema.Attribute{
+			"type": schema.StringAttribute{
+				MarkdownDescription: "Authentication type (credential or workloadIdentity)",
+				Computed:            true,
+				PlanModifiers:       []planmodifier.String{authTypeDefault()},
+			},
+			"credential": secretEmbeddedSchema("Client secret (if type is credential)", true),
 		},
 	}
 }

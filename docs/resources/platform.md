@@ -237,11 +237,11 @@ Read-Only:
 
 Required:
 
-- `base_url` (String) Base URL of the AKS cluster
+- `base_url` (String) This is the base URL to your AKS cluster, which is used to call the APIs to create new AKS tenants, get raw data for metering the AKS tenants, etc. An example base URL is: https://myaks-dns.westeurope.azmk8s.io:443
 
 Optional:
 
-- `disable_ssl_validation` (Boolean) Flag to disable SSL validation for the AKS cluster. (SSL Validation should at best never be disabled, but for integration of some private cloud platforms in an early state, they might not yet be using valid SSL certificates. In that case it can make sense to disable SSL validation here to already test integration of these platforms.)
+- `disable_ssl_validation` (Boolean) Flag to disable SSL validation for the AKS cluster. SSL Validation should at best never be disabled, but for integration of some private cloud platforms in an early state, they might not yet be using valid SSL certificates. In that case it can make sense to disable SSL validation here to already test integration of these platforms.
 - `metering` (Attributes) Metering configuration for AKS (optional, but required for metering) (see [below for nested schema](#nestedatt--spec--config--aks--metering))
 - `replication` (Attributes) Replication configuration for AKS (optional, but required for replication) (see [below for nested schema](#nestedatt--spec--config--aks--replication))
 
@@ -292,7 +292,7 @@ Required:
 - `namespace_name_pattern` (String) Pattern for naming namespaces in AKS
 - `send_azure_invitation_mail` (Boolean) Flag to send Azure invitation emails. When true, meshStack instructs Azure to send out Invitation mails to invited users.
 - `service_principal` (Attributes) Service principal configuration for AKS (see [below for nested schema](#nestedatt--spec--config--aks--replication--service_principal))
-- `user_lookup_strategy` (String) Strategy for user lookup in Azure (`userPrincipalName` or `email`)
+- `user_lookup_strategy` (String) Strategy for user lookup in Azure (`UserByMailLookupStrategy` or `UserByUsernameLookupStrategy`)
 
 Optional:
 
@@ -404,7 +404,7 @@ Required:
 <a id="nestedatt--spec--config--aws--metering--access_config--auth--workload_identity"></a>
 ### Nested Schema for `spec.config.aws.metering.access_config.auth.workload_identity`
 
-Read-Only:
+Required:
 
 - `role_arn` (String) ARN of the role that should be used as the entry point for meshStack by assuming it via web identity.
 
@@ -488,7 +488,7 @@ Required:
 <a id="nestedatt--spec--config--aws--replication--access_config--auth--workload_identity"></a>
 ### Nested Schema for `spec.config.aws.replication.access_config.auth.workload_identity`
 
-Read-Only:
+Required:
 
 - `role_arn` (String) ARN of the role that should be used as the entry point for meshStack by assuming it via web identity.
 
@@ -558,7 +558,7 @@ Required:
 
 Required:
 
-- `namespace_prefix` (String) Namespace prefix for tenant tags
+- `namespace_prefix` (String) This is the prefix for all labels created by meshStack. It helps to keep track of which labels are managed by meshStack. It is recommended to let this prefix end with a delimiter like an underscore.
 
 Optional:
 
@@ -648,7 +648,7 @@ Required:
 - `service_principal` (Attributes) Service principal configuration for Azure (see [below for nested schema](#nestedatt--spec--config--azure--replication--service_principal))
 - `skip_user_group_permission_cleanup` (Boolean) Flag to skip user group permission cleanup. For certain use cases you might want to preserve user groups and replicated permission after a tenant was deleted on the Azure platform. Checking this option preserves those permissions. Please keep in mind that the platform operator is then responsible for cleaning them up later.
 - `subscription_name_pattern` (String) Configures the pattern that defines the desired name of Azure Subscriptions managed by meshStack.
-- `user_lookup_strategy` (String) User lookup strategy (`userPrincipalName` or `email`). Users can either be looked up in cloud platforms by email or UPN (User Principal Name). In most cases email is the matching way as it is the only identifier that is consistently used throughout all cloud platforms and meshStack.
+- `user_lookup_strategy` (String) Strategy for user lookup in Azure (`UserByMailLookupStrategy` or `UserByUsernameLookupStrategy`)
 
 Optional:
 
@@ -656,7 +656,7 @@ Optional:
 - `b2b_user_invitation` (Attributes) Optional B2B user invitation configuration. When configured, instructs the replicator to create AAD B2B guest invitations for users missing in the AAD tenant managed by this meshPlatform. (see [below for nested schema](#nestedatt--spec--config--azure--replication--b2b_user_invitation))
 - `blueprint_location` (String) The Azure location where replication creates and updates Blueprint Assignments. Note that it's still possible that the Blueprint creates resources in other locations, this is merely the location where the Blueprint Assignment is managed.
 - `provisioning` (Attributes) To provide Azure Subscription for your organization's meshProjects, meshcloud supports using Enterprise Enrollment or allocating from a pool of pre-provisioned subscriptions. One of the subFields enterpriseEnrollment, customerAgreement or preProvisioned must be provided! (see [below for nested schema](#nestedatt--spec--config--azure--replication--provisioning))
-- `tenant_tags` (Attributes) Tenant tagging configuration. (see [below for nested schema](#nestedatt--spec--config--azure--replication--tenant_tags))
+- `tenant_tags` (Attributes) Tenant tags configuration (see [below for nested schema](#nestedatt--spec--config--azure--replication--tenant_tags))
 
 <a id="nestedatt--spec--config--azure--replication--azure_role_mappings"></a>
 ### Nested Schema for `spec.config.azure.replication.azure_role_mappings`
@@ -849,7 +849,7 @@ Required:
 - `skip_user_group_permission_cleanup` (Boolean) For certain use cases you might want to preserve user groups and replicated permission after a tenant was deleted on the Azure platform. Checking this option preserves those permissions. Please keep in mind that the platform operator is then responsible for cleaning them up later.
 - `subscription` (String) The Subscription that will contain all the created Resource Groups. Once you set the Subscription, you must not change it.
 - `user_group_name_pattern` (String) Configures the pattern that defines the desired name of AAD groups managed by meshStack. It follows the usual replicator string pattern features and provides the additional replacement 'platformGroupAlias', which contains the role name suffix. This suffix is configurable via Role Mappings in this platform config.
-- `user_lookup_strategy` (String) User lookup strategy (`userPrincipalName` or `email`). Users can either be looked up in cloud platforms by email or UPN (User Principal Name). In most cases email is the matching way as it is the only identifier that is consistently used throughout all cloud platforms and meshStack.
+- `user_lookup_strategy` (String) Strategy for user lookup in Azure (`UserByMailLookupStrategy` or `UserByUsernameLookupStrategy`)
 
 Optional:
 
@@ -1061,7 +1061,7 @@ Required:
 
 Required:
 
-- `namespace_prefix` (String) Namespace prefix for tenant tags
+- `namespace_prefix` (String) This is the prefix for all labels created by meshStack. It helps to keep track of which labels are managed by meshStack. It is recommended to let this prefix end with a delimiter like an underscore.
 
 Optional:
 
@@ -1084,7 +1084,7 @@ Required:
 
 Required:
 
-- `base_url` (String) This URL is the base URL to your Kubernetes Cluster, which is used to call the APIs to create new Kubernetes projects, get raw data for metering the Kubernetes projects, etc. An example base URL is: https://k8s.dev.eu-de-central.msh.host:6443
+- `base_url` (String) This is the base URL to your Kubernetes cluster, which is used to call the APIs to create new Kubernetes tenants, get raw data for metering the Kubernetes tenants, etc. An example base URL is: https://k8s.dev.eu-de-central.msh.host:6443
 
 Optional:
 
@@ -1157,7 +1157,7 @@ Required:
 
 Required:
 
-- `base_url` (String) This URL is the base URL to your OpenShift Cluster, which is used to call the APIs to create new OpenShift projects, get raw data for metering the OpenShift projects, etc. An example base URL is: https://api.okd4.dev.eu-de-central.msh.host:6443
+- `base_url` (String) This is the base URL to your OpenShift cluster, which is used to call the APIs to create new OpenShift tenants, get raw data for metering the OpenShift tenants, etc. An example base URL is: https://api.okd4.dev.eu-de-central.msh.host:6443
 
 Optional:
 
