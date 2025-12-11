@@ -145,6 +145,7 @@ func (p *MeshStackProvider) DataSources(ctx context.Context) []func() datasource
 		NewLandingZoneDataSource,
 		NewPlatformDataSource,
 		NewPaymentMethodDataSource,
+		NewIntegrationsDataSource,
 	}
 }
 
