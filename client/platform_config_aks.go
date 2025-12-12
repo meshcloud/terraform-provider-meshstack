@@ -8,7 +8,7 @@ type AksPlatformConfig struct {
 }
 
 type AksReplicationConfig struct {
-	AccessToken             string                    `json:"accessToken" tfsdk:"access_token"`
+	AccessToken             SecretEmbedded            `json:"accessToken" tfsdk:"access_token"`
 	NamespaceNamePattern    string                    `json:"namespaceNamePattern" tfsdk:"namespace_name_pattern"`
 	GroupNamePattern        string                    `json:"groupNamePattern" tfsdk:"group_name_pattern"`
 	ServicePrincipal        AksServicePrincipalConfig `json:"servicePrincipal" tfsdk:"service_principal"`
@@ -17,16 +17,15 @@ type AksReplicationConfig struct {
 	AksResourceGroup        string                    `json:"aksResourceGroup" tfsdk:"aks_resource_group"`
 	RedirectUrl             *string                   `json:"redirectUrl,omitempty" tfsdk:"redirect_url"`
 	SendAzureInvitationMail bool                      `json:"sendAzureInvitationMail" tfsdk:"send_azure_invitation_mail"`
-	UserLookUpStrategy      string                    `json:"userLookUpStrategy" tfsdk:"user_look_up_strategy"`
+	UserLookupStrategy      string                    `json:"userLookUpStrategy" tfsdk:"user_lookup_strategy"`
 	AdministrativeUnitId    *string                   `json:"administrativeUnitId,omitempty" tfsdk:"administrative_unit_id"`
 }
 
 type AksServicePrincipalConfig struct {
-	ClientId                    string  `json:"clientId" tfsdk:"client_id"`
-	AuthType                    string  `json:"authType" tfsdk:"auth_type"`
-	CredentialsAuthClientSecret *string `json:"credentialsAuthClientSecret,omitempty" tfsdk:"credentials_auth_client_secret"`
-	EntraTenant                 string  `json:"entraTenant" tfsdk:"entra_tenant"`
-	ObjectId                    string  `json:"objectId" tfsdk:"object_id"`
+	EntraTenant string          `json:"entraTenant" tfsdk:"entra_tenant"`
+	ObjectId    string          `json:"objectId" tfsdk:"object_id"`
+	ClientId    string          `json:"clientId" tfsdk:"client_id"`
+	Auth        AzureAuthConfig `json:"auth" tfsdk:"auth"`
 }
 
 type AksMeteringConfig struct {

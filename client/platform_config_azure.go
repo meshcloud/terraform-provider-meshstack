@@ -16,23 +16,26 @@ type AzureReplicationConfig struct {
 	BlueprintLocation                          string                               `json:"blueprintLocation" tfsdk:"blueprint_location"`
 	AzureRoleMappings                          []AzureRoleMapping                   `json:"azureRoleMappings" tfsdk:"azure_role_mappings"`
 	TenantTags                                 *MeshTenantTags                      `json:"tenantTags,omitempty" tfsdk:"tenant_tags"`
-	UserLookUpStrategy                         string                               `json:"userLookUpStrategy" tfsdk:"user_look_up_strategy"`
+	UserLookUpStrategy                         string                               `json:"userLookUpStrategy" tfsdk:"user_lookup_strategy"`
 	SkipUserGroupPermissionCleanup             bool                                 `json:"skipUserGroupPermissionCleanup" tfsdk:"skip_user_group_permission_cleanup"`
 	AdministrativeUnitId                       *string                              `json:"administrativeUnitId,omitempty" tfsdk:"administrative_unit_id"`
 	AllowHierarchicalManagementGroupAssignment bool                                 `json:"allowHierarchicalManagementGroupAssignment" tfsdk:"allow_hierarchical_management_group_assignment"`
 }
 
 type AzureServicePrincipalConfig struct {
-	ClientId                    string  `json:"clientId" tfsdk:"client_id"`
-	AuthType                    string  `json:"authType" tfsdk:"auth_type"`
-	CredentialsAuthClientSecret *string `json:"credentialsAuthClientSecret,omitempty" tfsdk:"credentials_auth_client_secret"`
-	ObjectId                    string  `json:"objectId" tfsdk:"object_id"`
+	ClientId string          `json:"clientId" tfsdk:"client_id"`
+	ObjectId string          `json:"objectId" tfsdk:"object_id"`
+	Auth     AzureAuthConfig `json:"auth" tfsdk:"auth"`
+}
+
+type AzureAuthConfig struct {
+	Type       string          `json:"type" tfsdk:"type"`
+	Credential *SecretEmbedded `json:"credential,omitempty" tfsdk:"credential"`
 }
 
 type AzureGraphApiCredentials struct {
-	ClientId                    string  `json:"clientId" tfsdk:"client_id"`
-	AuthType                    string  `json:"authType" tfsdk:"auth_type"`
-	CredentialsAuthClientSecret *string `json:"credentialsAuthClientSecret,omitempty" tfsdk:"credentials_auth_client_secret"`
+	ClientId string          `json:"clientId" tfsdk:"client_id"`
+	Auth     AzureAuthConfig `json:"auth" tfsdk:"auth"`
 }
 
 type AzureSubscriptionProvisioningConfig struct {

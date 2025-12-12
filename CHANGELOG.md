@@ -1,4 +1,12 @@
+## v0.15.1
+
+FEATURES:
+
+- Restructured `meshstack_platform` authentication configuration for all platforms.
+- Renamed fields: `user_look_up_strategy` → `user_lookup_strategy`, `service_account_config` → `service_account`.
+- Secrets now use nested `plaintext` field within credential objects.
 ## v0.15.0
+
 FEATURES:
 
 - Support multi select building block inputs.

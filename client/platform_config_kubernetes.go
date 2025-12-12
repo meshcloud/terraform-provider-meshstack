@@ -13,7 +13,7 @@ type KubernetesReplicationConfig struct {
 }
 
 type KubernetesClientConfig struct {
-	AccessToken string `json:"accessToken" tfsdk:"access_token"`
+	AccessToken SecretEmbedded `json:"accessToken" tfsdk:"access_token"`
 }
 
 type KubernetesMeteringConfig struct {

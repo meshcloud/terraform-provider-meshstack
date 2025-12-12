@@ -24,18 +24,23 @@ type AwsReplicationConfig struct {
 }
 
 type AwsAccessConfig struct {
-	OrganizationRootAccountRole       string                     `json:"organizationRootAccountRole" tfsdk:"organization_root_account_role"`
-	OrganizationRootAccountExternalId *string                    `json:"organizationRootAccountExternalId,omitempty" tfsdk:"organization_root_account_external_id"`
-	ServiceUserConfig                 *AwsServiceUserConfig      `json:"serviceUserConfig,omitempty" tfsdk:"service_user_config"`
-	WorkloadIdentityConfig            *AwsWorkloadIdentityConfig `json:"workloadIdentityConfig,omitempty" tfsdk:"workload_identity_config"`
+	OrganizationRootAccountRole       string  `json:"organizationRootAccountRole" tfsdk:"organization_root_account_role"`
+	OrganizationRootAccountExternalId *string `json:"organizationRootAccountExternalId,omitempty" tfsdk:"organization_root_account_external_id"`
+	Auth                              AwsAuth `json:"auth" tfsdk:"auth"`
 }
 
-type AwsServiceUserConfig struct {
-	AccessKey string `json:"accessKey" tfsdk:"access_key"`
-	SecretKey string `json:"secretKey" tfsdk:"secret_key"`
+type AwsAuth struct {
+	Type             string                         `json:"type" tfsdk:"type"`
+	Credential       *AwsServiceUserCredential      `json:"credential,omitempty" tfsdk:"credential"`
+	WorkloadIdentity *AwsWorkloadIdentityCredential `json:"workloadIdentity,omitempty" tfsdk:"workload_identity"`
 }
 
-type AwsWorkloadIdentityConfig struct {
+type AwsServiceUserCredential struct {
+	AccessKey string         `json:"accessKey" tfsdk:"access_key"`
+	SecretKey SecretEmbedded `json:"secretKey" tfsdk:"secret_key"`
+}
+
+type AwsWorkloadIdentityCredential struct {
 	RoleArn string `json:"roleArn" tfsdk:"role_arn"`
 }
 
@@ -43,7 +48,7 @@ type AwsSsoConfig struct {
 	ScimEndpoint     string              `json:"scimEndpoint" tfsdk:"scim_endpoint"`
 	Arn              string              `json:"arn" tfsdk:"arn"`
 	GroupNamePattern string              `json:"groupNamePattern" tfsdk:"group_name_pattern"`
-	SsoAccessToken   string              `json:"ssoAccessToken" tfsdk:"sso_access_token"`
+	SsoAccessToken   SecretEmbedded      `json:"ssoAccessToken" tfsdk:"sso_access_token"`
 	AwsRoleMappings  []AwsSsoRoleMapping `json:"awsRoleMappings" tfsdk:"aws_role_mappings"`
 	SignInUrl        string              `json:"signInUrl" tfsdk:"sign_in_url"`
 }

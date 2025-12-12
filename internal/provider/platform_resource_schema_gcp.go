@@ -2,6 +2,7 @@ package provider
 
 import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 )
 
 func gcpPlatformSchema() schema.Attribute {
@@ -20,7 +21,7 @@ func gcpReplicationConfigSchema() schema.Attribute {
 		MarkdownDescription: "GCP-specific replication configuration for the platform.",
 		Optional:            true,
 		Attributes: map[string]schema.Attribute{
-			"service_account_config": gcpServiceAccountConfigSchema(),
+			"service_account": gcpServiceAccountConfigSchema(),
 			"domain": schema.StringAttribute{
 				MarkdownDescription: "The domain used for cloud identity directory-groups created and managed by meshStack. meshStack maintains separate groups for each meshProject role on each managed GCP project.",
 				Required:            true,
@@ -70,32 +71,7 @@ func gcpReplicationConfigSchema() schema.Attribute {
 				MarkdownDescription: "Configuration flag to enable or disable hierarchical folder assignment in GCP. If set to true: Projects can be moved to sub folders of the folder defined in the Landing Zone. This is useful if you want to manage the project location with a deeper and more granular hierarchy. If set to false: Projects will always be moved directly to the folder defined in the Landing Zone.",
 				Required:            true,
 			},
-			"tenant_tags": schema.SingleNestedAttribute{
-				MarkdownDescription: "Tenant tags configuration",
-				Optional:            true,
-				Attributes: map[string]schema.Attribute{
-					"namespace_prefix": schema.StringAttribute{
-						MarkdownDescription: "Namespace prefix for tenant tags",
-						Required:            true,
-					},
-					"tag_mappers": schema.ListNestedAttribute{
-						MarkdownDescription: "List of tag mappers for tenant tags",
-						Optional:            true,
-						NestedObject: schema.NestedAttributeObject{
-							Attributes: map[string]schema.Attribute{
-								"key": schema.StringAttribute{
-									MarkdownDescription: "Key for the tag mapper",
-									Required:            true,
-								},
-								"value_pattern": schema.StringAttribute{
-									MarkdownDescription: "Value pattern for the tag mapper",
-									Required:            true,
-								},
-							},
-						},
-					},
-				},
-			},
+			"tenant_tags": tenantTagsAttribute(),
 			"skip_user_group_permission_cleanup": schema.BoolAttribute{
 				MarkdownDescription: "For certain use cases you might want to preserve user groups and replicated permission after a tenant was deleted on the GCP platform. Checking this option preserves those permissions. Please keep in mind that the platform operator is then responsible for cleaning them up later.",
 				Required:            true,
@@ -106,22 +82,17 @@ func gcpReplicationConfigSchema() schema.Attribute {
 
 func gcpServiceAccountConfigSchema() schema.Attribute {
 	return schema.SingleNestedAttribute{
-		MarkdownDescription: "Service account configuration. Either `serviceAccountCredentialsConfig` or `serviceAccountWorkloadIdentityConfig` must be provided.",
+		MarkdownDescription: "Service account configuration. Either credential or workload_identity must be provided.",
 		Required:            true,
 		Attributes: map[string]schema.Attribute{
-			"service_account_credentials_config": schema.SingleNestedAttribute{
-				MarkdownDescription: "Service account credentials configuration (alternative to serviceAccountWorkloadIdentityConfig)",
-				Optional:            true,
-				Attributes: map[string]schema.Attribute{
-					"service_account_credentials_b64": schema.StringAttribute{
-						MarkdownDescription: "Base64 encoded credentials.json file for a GCP ServiceAccount. The replicator uses this Service Account to automate GCP API operations (IAM, ResourceManager etc.).",
-						Required:            true,
-						Sensitive:           true,
-					},
-				},
+			"type": schema.StringAttribute{
+				MarkdownDescription: "Service account type",
+				Computed:            true,
+				PlanModifiers:       []planmodifier.String{authTypeDefault()},
 			},
-			"service_account_workload_identity_config": schema.SingleNestedAttribute{
-				MarkdownDescription: "Service account workload identity configuration (alternative to serviceAccountCredentialsConfig)",
+			"credential": secretEmbeddedSchema("Base64 encoded credentials.json file for a GCP ServiceAccount.", true),
+			"workload_identity": schema.SingleNestedAttribute{
+				MarkdownDescription: "Workload identity configuration.",
 				Optional:            true,
 				Attributes: map[string]schema.Attribute{
 					"audience": schema.StringAttribute{
@@ -143,7 +114,7 @@ func gcpMeteringConfigSchema() schema.Attribute {
 		MarkdownDescription: "Metering configuration for GCP (optional, but required for metering)",
 		Optional:            true,
 		Attributes: map[string]schema.Attribute{
-			"service_account_config": gcpServiceAccountConfigSchema(),
+			"service_account": gcpServiceAccountConfigSchema(),
 			"bigquery_table": schema.StringAttribute{
 				MarkdownDescription: "BigQuery table for metering data.",
 				Required:            true,

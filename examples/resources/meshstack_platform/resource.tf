@@ -28,10 +28,13 @@ resource "meshstack_platform" "example" {
 
         replication = {
           service_principal = {
-            client_id                      = "58d6f907-7b0e-4fd8-b328-3e8342dddc8d"
-            auth_type                      = "CREDENTIALS"
-            credentials_auth_client_secret = "mesh/hidden-secret"
-            object_id                      = "3c305efe-625d-4eaf-9bfa-b981ddbcc99f"
+            client_id = "58d6f907-7b0e-4fd8-b328-3e8342dddc8d"
+            object_id = "3c305efe-625d-4eaf-9bfa-b981ddbcc99f"
+            auth = {
+              credential = {
+                plaintext = "your-client-secret-here"
+              }
+            }
           }
 
           provisioning = {
@@ -119,7 +122,7 @@ resource "meshstack_platform" "example" {
             ]
           }
 
-          user_look_up_strategy                          = "UserByMailLookupStrategy"
+          user_lookup_strategy                           = "UserByMailLookupStrategy"
           skip_user_group_permission_cleanup             = false
           allow_hierarchical_management_group_assignment = false
         }

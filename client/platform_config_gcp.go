@@ -6,7 +6,7 @@ type GcpPlatformConfig struct {
 }
 
 type GcpReplicationConfig struct {
-	ServiceAccountConfig              GcpServiceAccountConfig  `json:"serviceAccountConfig" tfsdk:"service_account_config"`
+	ServiceAccount                    GcpServiceAccountConfig  `json:"serviceAccount" tfsdk:"service_account"`
 	Domain                            string                   `json:"domain" tfsdk:"domain"`
 	CustomerId                        string                   `json:"customerId" tfsdk:"customer_id"`
 	GroupNamePattern                  string                   `json:"groupNamePattern" tfsdk:"group_name_pattern"`
@@ -22,12 +22,9 @@ type GcpReplicationConfig struct {
 }
 
 type GcpServiceAccountConfig struct {
-	ServiceAccountCredentialsConfig      *GcpServiceAccountCredentialsConfig      `json:"serviceAccountCredentialsConfig,omitempty" tfsdk:"service_account_credentials_config"`
-	ServiceAccountWorkloadIdentityConfig *GcpServiceAccountWorkloadIdentityConfig `json:"serviceAccountWorkloadIdentityConfig,omitempty" tfsdk:"service_account_workload_identity_config"`
-}
-
-type GcpServiceAccountCredentialsConfig struct {
-	ServiceAccountCredentialsB64 string `json:"serviceAccountCredentialsB64" tfsdk:"service_account_credentials_b64"`
+	Type             string                                   `json:"type" tfsdk:"type"`
+	Credential       *SecretEmbedded                          `json:"credential,omitempty" tfsdk:"credential"`
+	WorkloadIdentity *GcpServiceAccountWorkloadIdentityConfig `json:"workloadIdentity,omitempty" tfsdk:"workload_identity"`
 }
 
 type GcpServiceAccountWorkloadIdentityConfig struct {
@@ -41,7 +38,7 @@ type GcpPlatformRoleMapping struct {
 }
 
 type GcpMeteringConfig struct {
-	ServiceAccountConfig                    GcpServiceAccountConfig              `json:"serviceAccountConfig" tfsdk:"service_account_config"`
+	ServiceAccount                          GcpServiceAccountConfig              `json:"serviceAccount" tfsdk:"service_account"`
 	BigqueryTable                           string                               `json:"bigqueryTable" tfsdk:"bigquery_table"`
 	BigqueryTableForCarbonFootprint         *string                              `json:"bigqueryTableForCarbonFootprint,omitempty" tfsdk:"bigquery_table_for_carbon_footprint"`
 	CarbonFootprintDataCollectionStartMonth *string                              `json:"carbonFootprintDataCollectionStartMonth,omitempty" tfsdk:"carbon_footprint_data_collection_start_month"`
