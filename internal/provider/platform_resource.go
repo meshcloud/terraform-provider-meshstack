@@ -14,8 +14,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -188,12 +188,12 @@ func (r *platformResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 							},
 						},
 					},
-					"contributing_workspaces": schema.ListAttribute{
+					"contributing_workspaces": schema.SetAttribute{
 						MarkdownDescription: "A list of workspace identifiers that may contribute to this meshPlatform.",
 						ElementType:         types.StringType,
 						Optional:            true,
 						Computed:            true,
-						Default:             listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
+						Default:             setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})),
 					},
 					"availability": schema.SingleNestedAttribute{
 						MarkdownDescription: "Availability configuration for the meshPlatform.",
@@ -214,16 +214,16 @@ func (r *platformResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 								},
 							},
 							// TODO: check this is not empty if set to restricted and that it's set to the owner if private
-							"restricted_to_workspaces": schema.ListAttribute{
+							"restricted_to_workspaces": schema.SetAttribute{
 								MarkdownDescription: "If the restriction is set to `RESTRICTED`, you can specify the workspace identifiers this meshPlatform is restricted to.",
 								ElementType:         types.StringType,
 								Optional:            true,
 								Computed:            true,
-								Default:             listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
+								Default:             setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})),
 							},
 						},
 					},
-					"quota_definitions": schema.ListAttribute{
+					"quota_definitions": schema.SetAttribute{
 						MarkdownDescription: "List of quota definitions for the platform.",
 						Optional:            true,
 						Computed:            true,
@@ -231,7 +231,7 @@ func (r *platformResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						ElementType: types.ObjectType{
 							AttrTypes: quotaDefinitionAttrTypes,
 						},
-						Default: listdefault.StaticValue(types.ListValueMust(types.ObjectType{
+						Default: setdefault.StaticValue(types.SetValueMust(types.ObjectType{
 							AttrTypes: quotaDefinitionAttrTypes,
 						}, []attr.Value{})),
 					},

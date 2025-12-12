@@ -197,9 +197,9 @@ Required:
 
 Optional:
 
-- `contributing_workspaces` (List of String) A list of workspace identifiers that may contribute to this meshPlatform.
+- `contributing_workspaces` (Set of String) A list of workspace identifiers that may contribute to this meshPlatform.
 - `documentation_url` (String) URL for platform documentation.
-- `quota_definitions` (List of Object) List of quota definitions for the platform. (see [below for nested schema](#nestedatt--spec--quota_definitions))
+- `quota_definitions` (Set of Object) List of quota definitions for the platform. (see [below for nested schema](#nestedatt--spec--quota_definitions))
 - `support_url` (String) URL for platform support documentation.
 
 <a id="nestedatt--spec--availability"></a>
@@ -212,7 +212,7 @@ Required:
 
 Optional:
 
-- `restricted_to_workspaces` (List of String) If the restriction is set to `RESTRICTED`, you can specify the workspace identifiers this meshPlatform is restricted to.
+- `restricted_to_workspaces` (Set of String) If the restriction is set to `RESTRICTED`, you can specify the workspace identifiers this meshPlatform is restricted to.
 
 
 <a id="nestedatt--spec--config"></a>
