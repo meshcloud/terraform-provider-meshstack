@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -223,7 +224,7 @@ func (r *platformResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 							},
 						},
 					},
-					"quota_definitions": schema.ListAttribute{
+					"quota_definitions": schema.SetAttribute{
 						MarkdownDescription: "List of quota definitions for the platform.",
 						Optional:            true,
 						Computed:            true,
@@ -231,7 +232,7 @@ func (r *platformResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						ElementType: types.ObjectType{
 							AttrTypes: quotaDefinitionAttrTypes,
 						},
-						Default: listdefault.StaticValue(types.ListValueMust(types.ObjectType{
+						Default: setdefault.StaticValue(types.SetValueMust(types.ObjectType{
 							AttrTypes: quotaDefinitionAttrTypes,
 						}, []attr.Value{})),
 					},
