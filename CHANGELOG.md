@@ -1,3 +1,9 @@
+## v0.16.1
+
+FIXES:
+
+- Missing docs for integrations data source.
+
 ## v0.16.0
 
 FEATURES:
