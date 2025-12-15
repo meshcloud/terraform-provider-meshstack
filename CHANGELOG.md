@@ -1,10 +1,15 @@
-## v0.15.1
+## v0.16.0
 
 FEATURES:
 
 - Restructured `meshstack_platform` authentication configuration for all platforms.
-- Renamed fields: `user_look_up_strategy` → `user_lookup_strategy`, `service_account_config` → `service_account`.
 - Secrets now use nested `plaintext` field within credential objects.
+- Integrations data source.
+
+FIXES:
+
+- Renamed fields: `user_look_up_strategy` → `user_lookup_strategy`, `service_account_config` → `service_account`.
+
 ## v0.15.0
 
 FEATURES:
