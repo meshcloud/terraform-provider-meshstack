@@ -6,8 +6,8 @@ import (
 	"regexp"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
 	"github.com/meshcloud/terraform-provider-meshstack/client"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/modifiers/platformtypemodifier"
 
@@ -104,10 +104,10 @@ func (r *landingZoneResource) Schema(_ context.Context, _ resource.SchemaRequest
 					},
 					"tags": schema.MapAttribute{
 						MarkdownDescription: "Tags of the landing zone.",
-						ElementType:         types.ListType{ElemType: types.StringType},
+						ElementType:         types.SetType{ElemType: types.StringType},
 						Optional:            true,
 						Computed:            true,
-						Default:             mapdefault.StaticValue(types.MapValueMust(types.ListType{ElemType: types.StringType}, map[string]attr.Value{})),
+						Default:             mapdefault.StaticValue(types.MapValueMust(types.SetType{ElemType: types.StringType}, map[string]attr.Value{})),
 					},
 				},
 			},
@@ -178,11 +178,11 @@ func (r *landingZoneResource) Schema(_ context.Context, _ resource.SchemaRequest
 							},
 						},
 					},
-					"quotas": schema.ListNestedAttribute{
+					"quotas": schema.SetNestedAttribute{
 						MarkdownDescription: "Quota definitions for this landing zone.",
 						Optional:            true,
 						Computed:            true,
-						Default: listdefault.StaticValue(types.ListValueMust(
+						Default: setdefault.StaticValue(types.SetValueMust(
 							types.ObjectType{
 								AttrTypes: map[string]attr.Type{
 									"key":   types.StringType,
@@ -247,7 +247,7 @@ func awsPlatformConfigSchema() schema.Attribute {
 				MarkdownDescription: "If provided, it is invoked after each project replication. You can use it to trigger a custom Account Vending Machine to perform several additional provisioning steps.",
 				Optional:            true,
 			},
-			"aws_role_mappings": schema.ListNestedAttribute{
+			"aws_role_mappings": schema.SetNestedAttribute{
 				MarkdownDescription: "Roles can be mapped from the meshRole to the AWS Role. The AWS role will be part of the role or group name within AWS. If empty, the default that is configured on platform level will be used.",
 				Required:            true,
 				NestedObject: schema.NestedAttributeObject{
@@ -257,7 +257,7 @@ func awsPlatformConfigSchema() schema.Attribute {
 							MarkdownDescription: "The AWS platform role",
 							Required:            true,
 						},
-						"policies": schema.ListAttribute{
+						"policies": schema.SetAttribute{
 							MarkdownDescription: "List of policies associated with this role mapping",
 							ElementType:         types.StringType,
 							Required:            true,
@@ -274,7 +274,7 @@ func aksPlatformConfigSchema() schema.Attribute {
 		MarkdownDescription: "AKS platform properties.",
 		Optional:            true,
 		Attributes: map[string]schema.Attribute{
-			"kubernetes_role_mappings": schema.ListNestedAttribute{
+			"kubernetes_role_mappings": schema.SetNestedAttribute{
 				MarkdownDescription: "Roles need to be mapped from the meshRole to the Cluster Role. You can use " +
 					"both built in roles like 'editor' or custom roles that you setup in the Kubernetes Cluster " +
 					"before. For more information see [the Landing Zone documentation](https://docs.meshcloud.io/meshstack.kubernetes.landing-zones/).",
@@ -282,7 +282,7 @@ func aksPlatformConfigSchema() schema.Attribute {
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"project_role_ref": meshProjectRoleAttribute(false),
-						"platform_roles": schema.ListAttribute{
+						"platform_roles": schema.SetAttribute{
 							MarkdownDescription: "List of AKS platform roles to assign to the meshProject role.",
 							ElementType:         types.StringType,
 							Required:            true,
@@ -303,7 +303,7 @@ func azurePlatformConfigSchema() schema.Attribute {
 				Required:            true,
 				MarkdownDescription: "Azure Management Group ID where projects will be created.",
 			},
-			"azure_role_mappings": schema.ListNestedAttribute{
+			"azure_role_mappings": schema.SetNestedAttribute{
 				MarkdownDescription: "An array of mappings between the meshRole and the Azure" +
 					" specific access role. " +
 					"For more information see [the Landing Zone documentation](https://docs.meshcloud.io/meshstack.azure.landing-zones#meshrole-to-platform-role-mapping). " +
@@ -318,7 +318,7 @@ func azurePlatformConfigSchema() schema.Attribute {
 								" platform instance.",
 							Required: true,
 						},
-						"azure_role_definitions": schema.ListNestedAttribute{
+						"azure_role_definitions": schema.SetNestedAttribute{
 							MarkdownDescription: "List of Azure role definitions",
 							Required:            true,
 							NestedObject: schema.NestedAttributeObject{
@@ -354,7 +354,7 @@ func gcpPlatformConfigSchema() schema.Attribute {
 				MarkdownDescription: "Google Cloud Projects will be added to this Google Cloud Folder. This allows applying Organization Policies to all projects managed under this Landing Zone.",
 				Optional:            true,
 			},
-			"gcp_role_mappings": schema.ListNestedAttribute{
+			"gcp_role_mappings": schema.SetNestedAttribute{
 				MarkdownDescription: "You can use both built-in roles like 'roles/editor' or" +
 					" custom roles like 'organizations/123123123123/roles/meshstack." +
 					"project_developer'. For more information see " +
@@ -364,7 +364,7 @@ func gcpPlatformConfigSchema() schema.Attribute {
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"project_role_ref": meshProjectRoleAttribute(false),
-						"platform_roles": schema.ListAttribute{
+						"platform_roles": schema.SetAttribute{
 							MarkdownDescription: "Can be empty. List of GCP IAM roles to assign to the meshProject role.",
 							ElementType:         types.StringType,
 							Required:            true,
@@ -386,7 +386,7 @@ func azureRgPlatformConfigSchema() schema.Attribute {
 				Required:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
-			"azure_rg_role_mappings": schema.ListNestedAttribute{
+			"azure_rg_role_mappings": schema.SetNestedAttribute{
 				MarkdownDescription: "An array of mappings between the meshRole and the Azure" +
 					" specific access role. " +
 					"For more information see [the Landing Zone documentation](https://docs.meshcloud.io/meshstack.azure.landing-zones#meshrole-to-platform-role-mapping). " +
@@ -401,7 +401,7 @@ func azureRgPlatformConfigSchema() schema.Attribute {
 								" platform instance.",
 							Required: true,
 						},
-						"azure_role_definition_ids": schema.ListAttribute{
+						"azure_role_definition_ids": schema.SetAttribute{
 							MarkdownDescription: "Role Definitions with the given IDs will be attached to this Azure Role.",
 							ElementType:         types.StringType,
 							Required:            true,
@@ -432,13 +432,13 @@ func kubernetesPlatformConfigSchema() schema.Attribute {
 		MarkdownDescription: "Kubernetes platform properties.",
 		Optional:            true,
 		Attributes: map[string]schema.Attribute{
-			"kubernetes_role_mappings": schema.ListNestedAttribute{
+			"kubernetes_role_mappings": schema.SetNestedAttribute{
 				MarkdownDescription: "Kubernetes role mappings configuration.",
 				Required:            true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"project_role_ref": meshProjectRoleAttribute(false),
-						"platform_roles": schema.ListAttribute{
+						"platform_roles": schema.SetAttribute{
 							MarkdownDescription: "Roles need to be mapped from the meshRole to" +
 								" the Cluster Role. You can use both built in roles like 'editor' or custom roles that you setup in the Kubernetes Cluster" +
 								" before. For more information see [the Landing Zone documentation](https://docs.meshcloud.io/meshstack.kubernetes.landing-zones/).",
