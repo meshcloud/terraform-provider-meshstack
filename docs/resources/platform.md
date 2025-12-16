@@ -503,12 +503,20 @@ Required:
 - `arn` (String) The ARN of your AWS IAM Identity Center Instance. E.g. `arn:aws:sso:::instance/ssoins-123456789abc`.
 - `group_name_pattern` (String) Configures the pattern that defines the desired name of AWS IAM Identity Center groups managed by meshStack. It follows the usual replicator string pattern features and provides the additional replacement 'platformGroupAlias', which contains the role name suffix, which is configurable via Role Mappings in this platform config or via a meshLandingZone. Operators must ensure the group names will be unique within the same AWS IAM Identity Center Instance with that configuration. meshStack will additionally prefix the group name with 'mst-' to be able to identify the groups that are managed by meshStack.
 - `scim_endpoint` (String) The SCIM endpoint you can find in your AWS IAM Identity Center Automatic provisioning config.
+- `sso_access_token` (Attributes) The AWS IAM Identity Center SCIM Access Token that was generated via the Automatic provisioning config in AWS IAM Identity Center. (see [below for nested schema](#nestedatt--spec--config--aws--replication--aws_sso--sso_access_token))
 
 Optional:
 
 - `aws_role_mappings` (Attributes List) AWS role mappings for AWS SSO (see [below for nested schema](#nestedatt--spec--config--aws--replication--aws_sso--aws_role_mappings))
 - `sign_in_url` (String) The AWS IAM Identity Center sign in Url, that must be used by end-users to log in via AWS IAM Identity Center to AWS Management Console.
-- `sso_access_token` (Attributes) The AWS IAM Identity Center SCIM Access Token that was generated via the Automatic provisioning config in AWS IAM Identity Center. (see [below for nested schema](#nestedatt--spec--config--aws--replication--aws_sso--sso_access_token))
+
+<a id="nestedatt--spec--config--aws--replication--aws_sso--sso_access_token"></a>
+### Nested Schema for `spec.config.aws.replication.aws_sso.sso_access_token`
+
+Required:
+
+- `plaintext` (String, Sensitive) Plaintext secret value
+
 
 <a id="nestedatt--spec--config--aws--replication--aws_sso--aws_role_mappings"></a>
 ### Nested Schema for `spec.config.aws.replication.aws_sso.aws_role_mappings`
@@ -533,14 +541,6 @@ Read-Only:
 
 - `kind` (String) meshObject type, always `meshProjectRole`.
 
-
-
-<a id="nestedatt--spec--config--aws--replication--aws_sso--sso_access_token"></a>
-### Nested Schema for `spec.config.aws.replication.aws_sso.sso_access_token`
-
-Required:
-
-- `plaintext` (String, Sensitive) Plaintext secret value
 
 
 

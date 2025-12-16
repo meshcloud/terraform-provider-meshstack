@@ -1,3 +1,9 @@
+## v0.16.2
+
+FIXES:
+
+- AWS SSO access token is required.
+
 ## v0.16.1
 
 FIXES:
