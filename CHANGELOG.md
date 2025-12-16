@@ -1,3 +1,9 @@
+## v0.16.3
+
+FIXES:
+
+- Landing zone: unordered attributes are sets instead of lists.
+
 ## v0.16.2
 
 FIXES:

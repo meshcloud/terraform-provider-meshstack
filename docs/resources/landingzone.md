@@ -35,7 +35,7 @@ Required:
 
 Optional:
 
-- `tags` (Map of List of String) Tags of the landing zone.
+- `tags` (Map of Set of String) Tags of the landing zone.
 
 
 <a id="nestedatt--spec"></a>
@@ -53,7 +53,7 @@ Required:
 Optional:
 
 - `info_link` (String) Link to additional information about the landing zone.
-- `quotas` (Attributes List) Quota definitions for this landing zone. (see [below for nested schema](#nestedatt--spec--quotas))
+- `quotas` (Attributes Set) Quota definitions for this landing zone. (see [below for nested schema](#nestedatt--spec--quotas))
 
 <a id="nestedatt--spec--platform_properties"></a>
 ### Nested Schema for `spec.platform_properties`
@@ -77,14 +77,14 @@ Read-Only:
 
 Required:
 
-- `kubernetes_role_mappings` (Attributes List) Roles need to be mapped from the meshRole to the Cluster Role. You can use both built in roles like 'editor' or custom roles that you setup in the Kubernetes Cluster before. For more information see [the Landing Zone documentation](https://docs.meshcloud.io/meshstack.kubernetes.landing-zones/). (see [below for nested schema](#nestedatt--spec--platform_properties--aks--kubernetes_role_mappings))
+- `kubernetes_role_mappings` (Attributes Set) Roles need to be mapped from the meshRole to the Cluster Role. You can use both built in roles like 'editor' or custom roles that you setup in the Kubernetes Cluster before. For more information see [the Landing Zone documentation](https://docs.meshcloud.io/meshstack.kubernetes.landing-zones/). (see [below for nested schema](#nestedatt--spec--platform_properties--aks--kubernetes_role_mappings))
 
 <a id="nestedatt--spec--platform_properties--aks--kubernetes_role_mappings"></a>
 ### Nested Schema for `spec.platform_properties.aks.kubernetes_role_mappings`
 
 Required:
 
-- `platform_roles` (List of String) List of AKS platform roles to assign to the meshProject role.
+- `platform_roles` (Set of String) List of AKS platform roles to assign to the meshProject role.
 - `project_role_ref` (Attributes) the meshProject role (see [below for nested schema](#nestedatt--spec--platform_properties--aks--kubernetes_role_mappings--project_role_ref))
 
 <a id="nestedatt--spec--platform_properties--aks--kubernetes_role_mappings--project_role_ref"></a>
@@ -107,7 +107,7 @@ Read-Only:
 Required:
 
 - `aws_enroll_account` (Boolean) If true, accounts will be enrolled to AWS control tower. In case an enrollment configuration is provided for the AWS platform AND this value is set to true, created AWS accounts will automatically be enrolled with AWS Control Tower. Automatic account enrollment does also require the Target Organizational Unit to already be enrolled with AWS Control Tower and the corresponding meshfed-service role needs to be in the "IAM Principal" list for the Portfolio access of the Account Factory Product ID you defined in platform settings. Click [here](https://docs.meshcloud.io/integrations/aws/how-to-integrate/#7-integrate-aws-control-tower) to learn more about the Control Tower setup.
-- `aws_role_mappings` (Attributes List) Roles can be mapped from the meshRole to the AWS Role. The AWS role will be part of the role or group name within AWS. If empty, the default that is configured on platform level will be used. (see [below for nested schema](#nestedatt--spec--platform_properties--aws--aws_role_mappings))
+- `aws_role_mappings` (Attributes Set) Roles can be mapped from the meshRole to the AWS Role. The AWS role will be part of the role or group name within AWS. If empty, the default that is configured on platform level will be used. (see [below for nested schema](#nestedatt--spec--platform_properties--aws--aws_role_mappings))
 - `aws_target_org_unit_id` (String) The created AWS account for this Landing Zone will be put under the given Organizational Unit. You can also input a Root ID (starting with 'r-') then the account will be put directly under this root without assigning it to an OU (this is not recommended).
 
 Optional:
@@ -120,7 +120,7 @@ Optional:
 Required:
 
 - `platform_role` (String) The AWS platform role
-- `policies` (List of String) List of policies associated with this role mapping
+- `policies` (Set of String) List of policies associated with this role mapping
 - `project_role_ref` (Attributes) the meshProject role (see [below for nested schema](#nestedatt--spec--platform_properties--aws--aws_role_mappings--project_role_ref))
 
 <a id="nestedatt--spec--platform_properties--aws--aws_role_mappings--project_role_ref"></a>
@@ -143,7 +143,7 @@ Read-Only:
 Required:
 
 - `azure_management_group_id` (String) Azure Management Group ID where projects will be created.
-- `azure_role_mappings` (Attributes List) An array of mappings between the meshRole and the Azure specific access role. For more information see [the Landing Zone documentation](https://docs.meshcloud.io/meshstack.azure.landing-zones#meshrole-to-platform-role-mapping). If empty, the default that is configured on platform level will be used. (see [below for nested schema](#nestedatt--spec--platform_properties--azure--azure_role_mappings))
+- `azure_role_mappings` (Attributes Set) An array of mappings between the meshRole and the Azure specific access role. For more information see [the Landing Zone documentation](https://docs.meshcloud.io/meshstack.azure.landing-zones#meshrole-to-platform-role-mapping). If empty, the default that is configured on platform level will be used. (see [below for nested schema](#nestedatt--spec--platform_properties--azure--azure_role_mappings))
 
 <a id="nestedatt--spec--platform_properties--azure--azure_role_mappings"></a>
 ### Nested Schema for `spec.platform_properties.azure.azure_role_mappings`
@@ -151,7 +151,7 @@ Required:
 Required:
 
 - `azure_group_suffix` (String) The given role name will be injected into the group name via the group naming pattern configured on the platform instance.
-- `azure_role_definitions` (Attributes List) List of Azure role definitions (see [below for nested schema](#nestedatt--spec--platform_properties--azure--azure_role_mappings--azure_role_definitions))
+- `azure_role_definitions` (Attributes Set) List of Azure role definitions (see [below for nested schema](#nestedatt--spec--platform_properties--azure--azure_role_mappings--azure_role_definitions))
 - `project_role_ref` (Attributes) the meshProject role (see [below for nested schema](#nestedatt--spec--platform_properties--azure--azure_role_mappings--project_role_ref))
 
 <a id="nestedatt--spec--platform_properties--azure--azure_role_mappings--azure_role_definitions"></a>
@@ -186,7 +186,7 @@ Read-Only:
 Required:
 
 - `azure_rg_location` (String) The newly created Resource Group for the meshProjects will get assigned to this location. It must be all lower case and without spaces (e.g. `eastus2` for East US 2). In order to list the available locations you can use `az account list-locations --query "[*].name" --out tsv | sort`
-- `azure_rg_role_mappings` (Attributes List) An array of mappings between the meshRole and the Azure specific access role. For more information see [the Landing Zone documentation](https://docs.meshcloud.io/meshstack.azure.landing-zones#meshrole-to-platform-role-mapping). If empty, the default that is configured on platform level will be used. (see [below for nested schema](#nestedatt--spec--platform_properties--azurerg--azure_rg_role_mappings))
+- `azure_rg_role_mappings` (Attributes Set) An array of mappings between the meshRole and the Azure specific access role. For more information see [the Landing Zone documentation](https://docs.meshcloud.io/meshstack.azure.landing-zones#meshrole-to-platform-role-mapping). If empty, the default that is configured on platform level will be used. (see [below for nested schema](#nestedatt--spec--platform_properties--azurerg--azure_rg_role_mappings))
 
 Optional:
 
@@ -198,7 +198,7 @@ Optional:
 Required:
 
 - `azure_group_suffix` (String) The given role name will be injected into the group name via the group naming pattern configured on the platform instance.
-- `azure_role_definition_ids` (List of String) Role Definitions with the given IDs will be attached to this Azure Role.
+- `azure_role_definition_ids` (Set of String) Role Definitions with the given IDs will be attached to this Azure Role.
 - `project_role_ref` (Attributes) the meshProject role (see [below for nested schema](#nestedatt--spec--platform_properties--azurerg--azure_rg_role_mappings--project_role_ref))
 
 <a id="nestedatt--spec--platform_properties--azurerg--azure_rg_role_mappings--project_role_ref"></a>
@@ -229,7 +229,7 @@ Required:
 
 Required:
 
-- `gcp_role_mappings` (Attributes List) You can use both built-in roles like 'roles/editor' or custom roles like 'organizations/123123123123/roles/meshstack.project_developer'. For more information see [the Landing Zone documentation](https://docs.meshcloud.io/meshstack.gcp.landing-zones/#meshrole-to-platform-role-mapping). Multiple GCP Roles can be assigned to one meshRole. If empty, the default that is configured on platform level will be used. (see [below for nested schema](#nestedatt--spec--platform_properties--gcp--gcp_role_mappings))
+- `gcp_role_mappings` (Attributes Set) You can use both built-in roles like 'roles/editor' or custom roles like 'organizations/123123123123/roles/meshstack.project_developer'. For more information see [the Landing Zone documentation](https://docs.meshcloud.io/meshstack.gcp.landing-zones/#meshrole-to-platform-role-mapping). Multiple GCP Roles can be assigned to one meshRole. If empty, the default that is configured on platform level will be used. (see [below for nested schema](#nestedatt--spec--platform_properties--gcp--gcp_role_mappings))
 
 Optional:
 
@@ -241,7 +241,7 @@ Optional:
 
 Required:
 
-- `platform_roles` (List of String) Can be empty. List of GCP IAM roles to assign to the meshProject role.
+- `platform_roles` (Set of String) Can be empty. List of GCP IAM roles to assign to the meshProject role.
 - `project_role_ref` (Attributes) the meshProject role (see [below for nested schema](#nestedatt--spec--platform_properties--gcp--gcp_role_mappings--project_role_ref))
 
 <a id="nestedatt--spec--platform_properties--gcp--gcp_role_mappings--project_role_ref"></a>
@@ -263,14 +263,14 @@ Read-Only:
 
 Required:
 
-- `kubernetes_role_mappings` (Attributes List) Kubernetes role mappings configuration. (see [below for nested schema](#nestedatt--spec--platform_properties--kubernetes--kubernetes_role_mappings))
+- `kubernetes_role_mappings` (Attributes Set) Kubernetes role mappings configuration. (see [below for nested schema](#nestedatt--spec--platform_properties--kubernetes--kubernetes_role_mappings))
 
 <a id="nestedatt--spec--platform_properties--kubernetes--kubernetes_role_mappings"></a>
 ### Nested Schema for `spec.platform_properties.kubernetes.kubernetes_role_mappings`
 
 Required:
 
-- `platform_roles` (List of String) Roles need to be mapped from the meshRole to the Cluster Role. You can use both built in roles like 'editor' or custom roles that you setup in the Kubernetes Cluster before. For more information see [the Landing Zone documentation](https://docs.meshcloud.io/meshstack.kubernetes.landing-zones/).
+- `platform_roles` (Set of String) Roles need to be mapped from the meshRole to the Cluster Role. You can use both built in roles like 'editor' or custom roles that you setup in the Kubernetes Cluster before. For more information see [the Landing Zone documentation](https://docs.meshcloud.io/meshstack.kubernetes.landing-zones/).
 - `project_role_ref` (Attributes) the meshProject role (see [below for nested schema](#nestedatt--spec--platform_properties--kubernetes--kubernetes_role_mappings--project_role_ref))
 
 <a id="nestedatt--spec--platform_properties--kubernetes--kubernetes_role_mappings--project_role_ref"></a>
