@@ -70,7 +70,7 @@ func (p *MeshStackProvider) Configure(ctx context.Context, req provider.Configur
 		}
 	}
 
-	url, err := url.Parse(endpoint)
+	parsedEndpoint, err := url.Parse(endpoint)
 	if err != nil {
 		resp.Diagnostics.AddError("Provider endpoint not valid.", "The value provided as the providers endpoint is not a valid URL.")
 		return
@@ -100,14 +100,13 @@ func (p *MeshStackProvider) Configure(ctx context.Context, req provider.Configur
 		}
 	}
 
-	client, err := client.NewClient(url, apiKey, apiSecret)
+	meshstackClient, err := client.NewClient(parsedEndpoint, apiKey, apiSecret)
 	if err != nil {
-		resp.Diagnostics.AddError("Failed to create client.", err.Error())
+		resp.Diagnostics.AddError("Failed to create meshStack client.", err.Error())
 		return
 	}
-	resp.DataSourceData = client
-	resp.ResourceData = client
-
+	resp.DataSourceData = meshstackClient
+	resp.ResourceData = meshstackClient
 }
 
 func (p *MeshStackProvider) Resources(ctx context.Context) []func() resource.Resource {
