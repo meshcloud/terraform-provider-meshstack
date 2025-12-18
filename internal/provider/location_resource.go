@@ -1,0 +1,302 @@
+package provider
+
+import (
+	"context"
+	"fmt"
+	"regexp"
+
+	"github.com/meshcloud/terraform-provider-meshstack/client"
+
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+)
+
+var (
+	_ resource.Resource                = &locationResource{}
+	_ resource.ResourceWithConfigure   = &locationResource{}
+	_ resource.ResourceWithImportState = &locationResource{}
+)
+
+func NewLocationResource() resource.Resource {
+	return &locationResource{}
+}
+
+type locationResource struct {
+	client *client.MeshStackProviderClient
+}
+
+type locationResourceModel struct {
+	client.MeshLocation
+	Ref struct {
+		Kind string `tfsdk:"kind"`
+		Name string `tfsdk:"name"`
+	} `tfsdk:"ref"`
+}
+
+func (r *locationResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_location"
+}
+
+func (r *locationResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+	if req.ProviderData == nil {
+		return
+	}
+
+	client, ok := req.ProviderData.(*client.MeshStackProviderClient)
+
+	if !ok {
+		resp.Diagnostics.AddError(
+			"Unexpected Resource Configure Type",
+			fmt.Sprintf("Expected *MeshStackProviderClient, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+		)
+
+		return
+	}
+
+	r.client = client
+}
+
+func (r *locationResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+	resp.Schema = schema.Schema{
+		MarkdownDescription: "Represents a meshStack location.",
+
+		Attributes: map[string]schema.Attribute{
+			"api_version": schema.StringAttribute{
+				MarkdownDescription: "Location datatype version",
+				Computed:            true,
+				Default:             stringdefault.StaticString("v1-preview"),
+				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+			},
+
+			"metadata": schema.SingleNestedAttribute{
+				Required: true,
+				Attributes: map[string]schema.Attribute{
+					"name": schema.StringAttribute{
+						MarkdownDescription: "Location identifier. Must be unique across all locations.",
+						Required:            true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.RequiresReplace(),
+						},
+						Validators: []validator.String{
+							stringvalidator.RegexMatches(
+								regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`),
+								"must be alphanumeric with dashes, must be lowercase, and have no leading, trailing or consecutive dashes",
+							),
+						},
+					},
+					"uuid": schema.StringAttribute{
+						MarkdownDescription: "Unique identifier of the location (server-generated).",
+						Computed:            true,
+						PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+					},
+				},
+			},
+
+			"spec": schema.SingleNestedAttribute{
+				Required: true,
+				Attributes: map[string]schema.Attribute{
+					"display_name": schema.StringAttribute{
+						MarkdownDescription: "The human-readable display name of the location.",
+						Required:            true,
+					},
+					"description": schema.StringAttribute{
+						MarkdownDescription: "The description of the location.",
+						Required:            true,
+					},
+				},
+			},
+
+			"status": schema.SingleNestedAttribute{
+				Computed: true,
+				Attributes: map[string]schema.Attribute{
+					"is_public": schema.BoolAttribute{
+						MarkdownDescription: "Indicates whether the location has any public platform instances associated with it.",
+						Computed:            true,
+					},
+				},
+			},
+
+			"ref": schema.SingleNestedAttribute{
+				MarkdownDescription: "Reference to this location, can be used as input for `location_ref` in platform resources.",
+				Computed:            true,
+				Attributes: map[string]schema.Attribute{
+					"kind": schema.StringAttribute{
+						MarkdownDescription: "meshObject type, always `meshLocation`.",
+						Computed:            true,
+						Default:             stringdefault.StaticString("meshLocation"),
+						PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+					},
+					"name": schema.StringAttribute{
+						MarkdownDescription: "Identifier of the Location.",
+						Computed:            true,
+						PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+					},
+				},
+			},
+		},
+	}
+}
+
+func (r *locationResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var apiVersion string
+	var name string
+	var displayName string
+	var description string
+
+	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("api_version"), &apiVersion)...)
+	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("metadata").AtName("name"), &name)...)
+	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec").AtName("display_name"), &displayName)...)
+	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec").AtName("description"), &description)...)
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	location := client.MeshLocationCreate{
+		ApiVersion: apiVersion,
+		Metadata: client.MeshLocationCreateMetadata{
+			Name: name,
+		},
+		Spec: client.MeshLocationSpec{
+			DisplayName: displayName,
+			Description: description,
+		},
+	}
+
+	createdLocation, err := r.client.CreateLocation(&location)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error Creating Location",
+			"Could not create location, unexpected error: "+err.Error(),
+		)
+		return
+	}
+
+	state := locationResourceModel{
+		MeshLocation: *createdLocation,
+		Ref: struct {
+			Kind string `tfsdk:"kind"`
+			Name string `tfsdk:"name"`
+		}{
+			Kind: "meshLocation",
+			Name: createdLocation.Metadata.Name,
+		},
+	}
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+}
+
+func (r *locationResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	var name string
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("metadata").AtName("name"), &name)...)
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	location, err := r.client.ReadLocation(name)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			fmt.Sprintf("Could not read location '%s'", name),
+			err.Error(),
+		)
+		return
+	}
+
+	if location == nil {
+		resp.State.RemoveResource(ctx)
+		return
+	}
+
+	state := locationResourceModel{
+		MeshLocation: *location,
+		Ref: struct {
+			Kind string `tfsdk:"kind"`
+			Name string `tfsdk:"name"`
+		}{
+			Kind: "meshLocation",
+			Name: location.Metadata.Name,
+		},
+	}
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+}
+
+func (r *locationResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var planApiVersion string
+	var planName string
+	var planDisplayName string
+	var planDescription string
+	var stateName string
+
+	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("api_version"), &planApiVersion)...)
+	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("metadata").AtName("name"), &planName)...)
+	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec").AtName("display_name"), &planDisplayName)...)
+	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec").AtName("description"), &planDescription)...)
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("metadata").AtName("name"), &stateName)...)
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	location := client.MeshLocationCreate{
+		ApiVersion: planApiVersion,
+		Metadata: client.MeshLocationCreateMetadata{
+			Name: planName,
+		},
+		Spec: client.MeshLocationSpec{
+			DisplayName: planDisplayName,
+			Description: planDescription,
+		},
+	}
+
+	updatedLocation, err := r.client.UpdateLocation(stateName, &location)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error Updating Location",
+			"Could not update location, unexpected error: "+err.Error(),
+		)
+		return
+	}
+
+	state := locationResourceModel{
+		MeshLocation: *updatedLocation,
+		Ref: struct {
+			Kind string `tfsdk:"kind"`
+			Name string `tfsdk:"name"`
+		}{
+			Kind: "meshLocation",
+			Name: updatedLocation.Metadata.Name,
+		},
+	}
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+}
+
+func (r *locationResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	var name string
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("metadata").AtName("name"), &name)...)
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	err := r.client.DeleteLocation(name)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			fmt.Sprintf("Could not delete location '%s'", name),
+			err.Error(),
+		)
+		return
+	}
+}
+
+func (r *locationResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resource.ImportStatePassthroughID(ctx, path.Root("metadata").AtName("name"), req, resp)
+}
