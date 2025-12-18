@@ -40,6 +40,7 @@ type endpoints struct {
 	Platforms              *url.URL `json:"meshplatforms"`
 	PaymentMethods         *url.URL `json:"meshpaymentmethods"`
 	Integrations           *url.URL `json:"meshintegrations"`
+	Locations              *url.URL `json:"meshlocations"`
 }
 
 type loginRequest struct {
@@ -78,6 +79,7 @@ func NewClient(rootUrl *url.URL, apiKey string, apiSecret string) (*MeshStackPro
 		Platforms:              rootUrl.JoinPath(apiMeshObjectsRoot, "meshplatforms"),
 		PaymentMethods:         rootUrl.JoinPath(apiMeshObjectsRoot, "meshpaymentmethods"),
 		Integrations:           rootUrl.JoinPath(apiMeshObjectsRoot, "meshintegrations"),
+		Locations:              rootUrl.JoinPath(apiMeshObjectsRoot, "meshlocations"),
 	}
 
 	return client, nil

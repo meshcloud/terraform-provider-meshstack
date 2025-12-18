@@ -1,3 +1,9 @@
+## Unreleased
+
+FEATURES:
+
+- New resource: `meshstack_location` for managing meshStack locations.
+
 ## v0.16.3
 
 FIXES:

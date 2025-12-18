@@ -125,6 +125,7 @@ func (p *MeshStackProvider) Resources(ctx context.Context) []func() resource.Res
 		NewLandingZoneResource,
 		NewPlatformResource,
 		NewPaymentMethodResource,
+		NewLocationResource,
 	}
 }
 
