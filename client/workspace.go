@@ -57,7 +57,7 @@ func (c *MeshStackProviderClient) ReadWorkspace(name string) (*MeshWorkspace, er
 		return nil, err
 	}
 
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 
 	if res.StatusCode == http.StatusNotFound {
 		return nil, nil // Not found is not an error
@@ -97,7 +97,9 @@ func (c *MeshStackProviderClient) CreateWorkspace(workspace *MeshWorkspaceCreate
 	if err != nil {
 		return nil, err
 	}
-	defer res.Body.Close()
+	defer func() {
+		_ = res.Body.Close()
+	}()
 
 	data, err := io.ReadAll(res.Body)
 	if err != nil {
@@ -135,7 +137,9 @@ func (c *MeshStackProviderClient) UpdateWorkspace(name string, workspace *MeshWo
 	if err != nil {
 		return nil, err
 	}
-	defer res.Body.Close()
+	defer func() {
+		_ = res.Body.Close()
+	}()
 
 	data, err := io.ReadAll(res.Body)
 	if err != nil {

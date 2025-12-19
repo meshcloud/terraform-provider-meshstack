@@ -15,7 +15,7 @@ import (
 const (
 	CONTENT_TYPE_BUILDING_BLOCK_V2 = "application/vnd.meshcloud.api.meshbuildingblock.v2-preview.hal+json"
 
-	// Building Block Status Constants
+	// Building Block Status Constants.
 	BUILDING_BLOCK_STATUS_WAITING_FOR_DEPENDENT_INPUT = "WAITING_FOR_DEPENDENT_INPUT"
 	BUILDING_BLOCK_STATUS_WAITING_FOR_OPERATOR_INPUT  = "WAITING_FOR_OPERATOR_INPUT"
 	BUILDING_BLOCK_STATUS_PENDING                     = "PENDING"
@@ -85,7 +85,9 @@ func (c *MeshStackProviderClient) ReadBuildingBlockV2(uuid string) (*MeshBuildin
 		return nil, err
 	}
 
-	defer res.Body.Close()
+	defer func() {
+		_ = res.Body.Close()
+	}()
 
 	data, err := io.ReadAll(res.Body)
 	if err != nil {
@@ -127,7 +129,9 @@ func (c *MeshStackProviderClient) CreateBuildingBlockV2(bb *MeshBuildingBlockV2C
 		return nil, err
 	}
 
-	defer res.Body.Close()
+	defer func() {
+		_ = res.Body.Close()
+	}()
 
 	data, err := io.ReadAll(res.Body)
 	if err != nil {
@@ -153,7 +157,7 @@ func (c *MeshStackProviderClient) DeleteBuildingBlockV2(uuid string) error {
 }
 
 // PollBuildingBlockV2UntilCompletion polls a building block until it reaches a terminal state (SUCCEEDED or FAILED)
-// Returns the final building block state or an error if polling fails or times out
+// Returns the final building block state or an error if polling fails or times out.
 func (c *MeshStackProviderClient) PollBuildingBlockV2UntilCompletion(ctx context.Context, uuid string) (*MeshBuildingBlockV2, error) {
 	var result *MeshBuildingBlockV2
 
@@ -161,7 +165,7 @@ func (c *MeshStackProviderClient) PollBuildingBlockV2UntilCompletion(ctx context
 	return result, err
 }
 
-// waitForBuildingBlockV2CompletionFunc returns a RetryFunc that checks building block completion status
+// waitForBuildingBlockV2CompletionFunc returns a RetryFunc that checks building block completion status.
 func (c *MeshStackProviderClient) waitForBuildingBlockV2CompletionFunc(uuid string, result **MeshBuildingBlockV2) retry.RetryFunc {
 	return func() *retry.RetryError {
 		current, err := c.ReadBuildingBlockV2(uuid)
@@ -189,12 +193,12 @@ func (c *MeshStackProviderClient) waitForBuildingBlockV2CompletionFunc(uuid stri
 }
 
 // PollBuildingBlockV2UntilDeletion polls a building block until it is deleted (not found)
-// Returns nil on successful deletion or an error if polling fails or times out
+// Returns nil on successful deletion or an error if polling fails or times out.
 func (c *MeshStackProviderClient) PollBuildingBlockV2UntilDeletion(ctx context.Context, uuid string) error {
 	return retry.RetryContext(ctx, 30*time.Minute, c.waitForBuildingBlockV2DeletionFunc(uuid))
 }
 
-// waitForBuildingBlockV2DeletionFunc returns a RetryFunc that checks building block deletion status
+// waitForBuildingBlockV2DeletionFunc returns a RetryFunc that checks building block deletion status.
 func (c *MeshStackProviderClient) waitForBuildingBlockV2DeletionFunc(uuid string) retry.RetryFunc {
 	return func() *retry.RetryError {
 		current, err := c.ReadBuildingBlockV2(uuid)
