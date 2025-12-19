@@ -3,7 +3,6 @@ package client
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -15,11 +14,6 @@ import (
 const (
 	apiMeshObjectsRoot = "/api/meshobjects"
 	loginEndpoint      = "/api/login"
-
-	ERROR_GENERIC_CLIENT_ERROR   = "client error"
-	ERROR_GENERIC_API_ERROR      = "api error"
-	ERROR_AUTHENTICATION_FAILURE = "Not authorized. Check api key and secret."
-	ERROR_ENDPOINT_LOOKUP        = "Could not fetch endpoints for meshStack."
 )
 
 type MeshStackProviderClient struct {
@@ -109,14 +103,16 @@ func (c *MeshStackProviderClient) login() error {
 	req.Header.Add("Content-Type", "application/json")
 
 	res, err := c.httpClient.Do(req)
-
 	if err != nil {
 		return err
-	} else if res.StatusCode != 200 {
-		return fmt.Errorf("Status %d: %s", res.StatusCode, ERROR_AUTHENTICATION_FAILURE)
 	}
+	defer func() {
+		_ = res.Body.Close()
+	}()
 
-	defer res.Body.Close()
+	if res.StatusCode != 200 {
+		return fmt.Errorf("login failed with status %d, check api key and secret", res.StatusCode)
+	}
 
 	data, err := io.ReadAll(res.Body)
 	if err != nil {
@@ -139,53 +135,6 @@ func (c *MeshStackProviderClient) ensureValidToken() error {
 	if c.token == "" || time.Now().Add(time.Second*30).After(c.tokenExpiry) {
 		return c.login()
 	}
-	return nil
-}
-
-// nolint: unused
-func (c *MeshStackProviderClient) lookUpEndpoints() error {
-	if c.ensureValidToken() != nil {
-		return errors.New(ERROR_AUTHENTICATION_FAILURE)
-	}
-
-	meshObjectsPath, err := url.JoinPath(c.url.String(), apiMeshObjectsRoot)
-	if err != nil {
-		return err
-	}
-	meshObjects, _ := url.Parse(meshObjectsPath)
-
-	res, err := c.httpClient.Do(
-		&http.Request{
-			URL:    meshObjects,
-			Method: "GET",
-			Header: http.Header{
-				"Authorization": {c.token},
-			},
-		},
-	)
-
-	if err != nil {
-		return errors.New(ERROR_GENERIC_CLIENT_ERROR)
-	}
-
-	defer res.Body.Close()
-
-	if res.StatusCode != 200 {
-		return errors.New(ERROR_AUTHENTICATION_FAILURE)
-	}
-
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		return err
-	}
-
-	var endpoints endpoints
-	err = json.Unmarshal(data, &endpoints)
-	if err != nil {
-		return err
-	}
-
-	c.endpoints = endpoints
 	return nil
 }
 
@@ -224,10 +173,12 @@ func (c *MeshStackProviderClient) deleteMeshObject(targetUrl url.URL, expectedSt
 	res, err := c.doAuthenticatedRequest(req)
 
 	if err != nil {
-		return errors.New(ERROR_GENERIC_CLIENT_ERROR)
+		return fmt.Errorf("cannot authenticate for delete request: %w ", err)
 	}
 
-	defer res.Body.Close()
+	defer func() {
+		_ = res.Body.Close()
+	}()
 
 	data, err := io.ReadAll(res.Body)
 	if err != nil {
@@ -235,7 +186,7 @@ func (c *MeshStackProviderClient) deleteMeshObject(targetUrl url.URL, expectedSt
 	}
 
 	if res.StatusCode != expectedStatus {
-		return fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
+		return fmt.Errorf("expected status code %d, but got %d, body: '%s'", expectedStatus, res.StatusCode, string(data))
 	}
 
 	return nil

@@ -34,7 +34,7 @@ type MeshIntegrationStatus struct {
 	WorkloadIdentityFederation *MeshWorkloadIdentityFederation `json:"workloadIdentityFederation,omitempty" tfsdk:"workload_identity_federation"`
 }
 
-// Integration Config wrapper with type discrimination
+// Integration Config wrapper with type discrimination.
 type MeshIntegrationConfig struct {
 	Type        string                            `json:"type" tfsdk:"type"`
 	Github      *MeshIntegrationGithubConfig      `json:"github,omitempty" tfsdk:"github"`
@@ -42,7 +42,7 @@ type MeshIntegrationConfig struct {
 	AzureDevops *MeshIntegrationAzureDevopsConfig `json:"azuredevops,omitempty" tfsdk:"azuredevops"`
 }
 
-// GitHub Integration
+// GitHub Integration.
 type MeshIntegrationGithubConfig struct {
 	Owner         string                 `json:"owner" tfsdk:"owner"`
 	BaseUrl       string                 `json:"baseUrl" tfsdk:"base_url"`
@@ -51,13 +51,13 @@ type MeshIntegrationGithubConfig struct {
 	RunnerRef     BuildingBlockRunnerRef `json:"runnerRef" tfsdk:"runner_ref"`
 }
 
-// GitLab Integration
+// GitLab Integration.
 type MeshIntegrationGitlabConfig struct {
 	BaseUrl   string                 `json:"baseUrl" tfsdk:"base_url"`
 	RunnerRef BuildingBlockRunnerRef `json:"runnerRef" tfsdk:"runner_ref"`
 }
 
-// Azure DevOps Integration
+// Azure DevOps Integration.
 type MeshIntegrationAzureDevopsConfig struct {
 	BaseUrl             string                 `json:"baseUrl" tfsdk:"base_url"`
 	Organization        string                 `json:"organization" tfsdk:"organization"`
@@ -65,13 +65,13 @@ type MeshIntegrationAzureDevopsConfig struct {
 	RunnerRef           BuildingBlockRunnerRef `json:"runnerRef" tfsdk:"runner_ref"`
 }
 
-// Building Block Runner Reference
+// Building Block Runner Reference.
 type BuildingBlockRunnerRef struct {
 	Uuid string `json:"uuid" tfsdk:"uuid"`
 	Kind string `json:"kind" tfsdk:"kind"`
 }
 
-// Workload Identity Federation
+// Workload Identity Federation.
 type MeshWorkloadIdentityFederation struct {
 	Issuer  string              `json:"issuer" tfsdk:"issuer"`
 	Subject string              `json:"subject" tfsdk:"subject"`
@@ -106,7 +106,7 @@ func (c *MeshStackProviderClient) ReadIntegration(workspace string, uuid string)
 		return nil, err
 	}
 
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 
 	data, err := io.ReadAll(res.Body)
 	if err != nil {
@@ -153,7 +153,9 @@ func (c *MeshStackProviderClient) ReadIntegrations() (*[]MeshIntegration, error)
 			return nil, err
 		}
 
-		defer res.Body.Close()
+		defer func() {
+			_ = res.Body.Close()
+		}()
 
 		data, err := io.ReadAll(res.Body)
 		if err != nil {

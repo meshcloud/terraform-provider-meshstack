@@ -60,7 +60,9 @@ func (c *MeshStackProviderClient) ReadProject(workspace string, name string) (*M
 		return nil, err
 	}
 
-	defer res.Body.Close()
+	defer func() {
+		_ = res.Body.Close()
+	}()
 
 	data, err := io.ReadAll(res.Body)
 	if err != nil {
@@ -112,7 +114,7 @@ func (c *MeshStackProviderClient) ReadProjects(workspaceIdentifier string, payme
 			return nil, err
 		}
 
-		defer res.Body.Close()
+		defer func() { _ = res.Body.Close() }()
 
 		data, err := io.ReadAll(res.Body)
 		if err != nil {
@@ -171,7 +173,9 @@ func (c *MeshStackProviderClient) CreateProject(project *MeshProjectCreate) (*Me
 		return nil, err
 	}
 
-	defer res.Body.Close()
+	defer func() {
+		_ = res.Body.Close()
+	}()
 
 	data, err := io.ReadAll(res.Body)
 	if err != nil {
@@ -212,7 +216,9 @@ func (c *MeshStackProviderClient) UpdateProject(project *MeshProjectCreate) (*Me
 		return nil, err
 	}
 
-	defer res.Body.Close()
+	defer func() {
+		_ = res.Body.Close()
+	}()
 
 	data, err := io.ReadAll(res.Body)
 	if err != nil {

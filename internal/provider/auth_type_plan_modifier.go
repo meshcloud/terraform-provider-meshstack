@@ -7,7 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-// authTypeModifier sets the auth type based on which credential field is populated
+// authTypeModifier sets the auth type based on which credential field is populated.
 type authTypeModifier struct{}
 
 func (m authTypeModifier) Description(ctx context.Context) string {

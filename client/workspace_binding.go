@@ -44,7 +44,7 @@ func (c *MeshStackProviderClient) readWorkspaceBinding(name string, contentType 
 		targetUrl = c.urlForWorkspaceGroupBinding(name)
 
 	default:
-		return nil, fmt.Errorf("Unexpected content type: %s", contentType)
+		return nil, fmt.Errorf("unexpected content type '%s'", contentType)
 	}
 
 	req, err := http.NewRequest("GET", targetUrl.String(), nil)
@@ -58,7 +58,9 @@ func (c *MeshStackProviderClient) readWorkspaceBinding(name string, contentType 
 		return nil, err
 	}
 
-	defer res.Body.Close()
+	defer func() {
+		_ = res.Body.Close()
+	}()
 
 	data, err := io.ReadAll(res.Body)
 	if err != nil {
@@ -87,12 +89,10 @@ func (c *MeshStackProviderClient) createWorkspaceBinding(binding *MeshWorkspaceB
 	switch contentType {
 	case CONTENT_TYPE_WORKSPACE_USER_BINDING:
 		targetUrl = c.endpoints.WorkspaceUserBindings
-
 	case CONTENT_TYPE_WORKSPACE_GROUP_BINDING:
 		targetUrl = c.endpoints.WorkspaceGroupBindings
-
 	default:
-		return nil, fmt.Errorf("Unexpected content type: %s", contentType)
+		return nil, fmt.Errorf("unexpected content type '%s'", contentType)
 	}
 
 	payload, err := json.Marshal(binding)
@@ -112,7 +112,9 @@ func (c *MeshStackProviderClient) createWorkspaceBinding(binding *MeshWorkspaceB
 		return nil, err
 	}
 
-	defer res.Body.Close()
+	defer func() {
+		_ = res.Body.Close()
+	}()
 
 	data, err := io.ReadAll(res.Body)
 	if err != nil {
