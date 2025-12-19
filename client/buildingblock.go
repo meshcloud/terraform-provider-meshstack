@@ -94,7 +94,9 @@ func (c *MeshStackProviderClient) ReadBuildingBlock(uuid string) (*MeshBuildingB
 		return nil, err
 	}
 
-	defer res.Body.Close()
+	defer func() {
+		_ = res.Body.Close()
+	}()
 
 	data, err := io.ReadAll(res.Body)
 	if err != nil {
@@ -135,8 +137,9 @@ func (c *MeshStackProviderClient) CreateBuildingBlock(bb *MeshBuildingBlockCreat
 	if err != nil {
 		return nil, err
 	}
-
-	defer res.Body.Close()
+	defer func() {
+		_ = res.Body.Close()
+	}()
 
 	data, err := io.ReadAll(res.Body)
 	if err != nil {

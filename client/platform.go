@@ -131,7 +131,7 @@ func (c *MeshStackProviderClient) ReadPlatform(uuid string) (*MeshPlatform, erro
 		return nil, err
 	}
 
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 
 	if res.StatusCode == http.StatusNotFound {
 		return nil, nil // Not found is not an error
@@ -171,7 +171,9 @@ func (c *MeshStackProviderClient) CreatePlatform(platform *MeshPlatformCreate) (
 	if err != nil {
 		return nil, err
 	}
-	defer res.Body.Close()
+	defer func() {
+		_ = res.Body.Close()
+	}()
 
 	data, err := io.ReadAll(res.Body)
 	if err != nil {
@@ -214,7 +216,9 @@ func (c *MeshStackProviderClient) UpdatePlatform(uuid string, platform *MeshPlat
 	if err != nil {
 		return nil, err
 	}
-	defer res.Body.Close()
+	defer func() {
+		_ = res.Body.Close()
+	}()
 
 	data, err := io.ReadAll(res.Body)
 	if err != nil {

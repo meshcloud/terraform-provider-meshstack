@@ -80,7 +80,9 @@ func (c *MeshStackProviderClient) ReadTenantV4(uuid string) (*MeshTenantV4, erro
 		return nil, err
 	}
 
-	defer res.Body.Close()
+	defer func() {
+		_ = res.Body.Close()
+	}()
 
 	data, err := io.ReadAll(res.Body)
 	if err != nil {
@@ -122,7 +124,9 @@ func (c *MeshStackProviderClient) CreateTenantV4(tenant *MeshTenantV4Create) (*M
 		return nil, err
 	}
 
-	defer res.Body.Close()
+	defer func() {
+		_ = res.Body.Close()
+	}()
 
 	data, err := io.ReadAll(res.Body)
 	if err != nil {
@@ -148,7 +152,7 @@ func (c *MeshStackProviderClient) DeleteTenantV4(uuid string) error {
 }
 
 // PollTenantV4UntilCreation polls a tenant until creation completes (platformTenantId is set)
-// Returns the final tenant state or an error if polling fails or times out
+// Returns the final tenant state or an error if polling fails or times out.
 func (c *MeshStackProviderClient) PollTenantV4UntilCreation(ctx context.Context, uuid string) (*MeshTenantV4, error) {
 	var result *MeshTenantV4
 
@@ -156,7 +160,7 @@ func (c *MeshStackProviderClient) PollTenantV4UntilCreation(ctx context.Context,
 	return result, err
 }
 
-// waitForTenantV4CreationFunc returns a RetryFunc that checks tenant creation status
+// waitForTenantV4CreationFunc returns a RetryFunc that checks tenant creation status.
 func (c *MeshStackProviderClient) waitForTenantV4CreationFunc(uuid string, result **MeshTenantV4) retry.RetryFunc {
 	return func() *retry.RetryError {
 		current, err := c.ReadTenantV4(uuid)
@@ -180,12 +184,12 @@ func (c *MeshStackProviderClient) waitForTenantV4CreationFunc(uuid string, resul
 }
 
 // PollTenantV4UntilDeletion polls a tenant until it is deleted (not found)
-// Returns nil on successful deletion or an error if polling fails or times out
+// Returns nil on successful deletion or an error if polling fails or times out.
 func (c *MeshStackProviderClient) PollTenantV4UntilDeletion(ctx context.Context, uuid string) error {
 	return retry.RetryContext(ctx, 30*time.Minute, c.waitForTenantV4DeletionFunc(uuid))
 }
 
-// waitForTenantV4DeletionFunc returns a RetryFunc that checks tenant deletion status
+// waitForTenantV4DeletionFunc returns a RetryFunc that checks tenant deletion status.
 func (c *MeshStackProviderClient) waitForTenantV4DeletionFunc(uuid string) retry.RetryFunc {
 	return func() *retry.RetryError {
 		current, err := c.ReadTenantV4(uuid)

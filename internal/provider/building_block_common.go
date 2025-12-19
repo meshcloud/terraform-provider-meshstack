@@ -15,7 +15,7 @@ import (
 )
 
 // Schema helpers
-// Contains IO types which are allowed for both inputs and outputs
+// Contains IO types which are allowed for both inputs and outputs.
 func buildingBlockIoMapBase(optional bool) schema.MapNestedAttribute {
 	return schema.MapNestedAttribute{
 		Optional: optional,
@@ -31,7 +31,7 @@ func buildingBlockIoMapBase(optional bool) schema.MapNestedAttribute {
 	}
 }
 
-// Contains IO types which are allowed for both user and combined inputs
+// Contains IO types which are allowed for both user and combined inputs.
 func buildingBlockInputBase(optional bool) schema.MapNestedAttribute {
 	base := buildingBlockIoMapBase(optional)
 
@@ -153,13 +153,13 @@ func (input *buildingBlockIoModel) toOutputModel() buildingBlockOutputModel {
 }
 
 func (io *buildingBlockUserInputModel) extractIoValue() (any, string) {
-	if !(io.ValueBool.IsNull() || io.ValueBool.IsUnknown()) {
+	if !io.ValueBool.IsNull() && !io.ValueBool.IsUnknown() {
 		return io.ValueBool.ValueBool(), client.MESH_BUILDING_BLOCK_IO_TYPE_BOOLEAN
 	}
-	if !(io.ValueInt.IsNull() || io.ValueInt.IsUnknown()) {
+	if !io.ValueInt.IsNull() && !io.ValueInt.IsUnknown() {
 		return io.ValueInt.ValueInt64(), client.MESH_BUILDING_BLOCK_IO_TYPE_INTEGER
 	}
-	if !(io.ValueSingleSelect.IsNull() || io.ValueSingleSelect.IsUnknown()) {
+	if !io.ValueSingleSelect.IsNull() && !io.ValueSingleSelect.IsUnknown() {
 		return io.ValueSingleSelect.ValueString(), client.MESH_BUILDING_BLOCK_IO_TYPE_SINGLE_SELECT
 	}
 	// Note: this only works as long as we don't allow empty lists
@@ -170,10 +170,10 @@ func (io *buildingBlockUserInputModel) extractIoValue() (any, string) {
 		}
 		return values, client.MESH_BUILDING_BLOCK_IO_TYPE_MULTI_SELECT
 	}
-	if !(io.ValueString.IsNull() || io.ValueString.IsUnknown()) {
+	if !io.ValueString.IsNull() && !io.ValueString.IsUnknown() {
 		return io.ValueString.ValueString(), client.MESH_BUILDING_BLOCK_IO_TYPE_STRING
 	}
-	if !(io.ValueCode.IsNull() || io.ValueCode.IsUnknown()) {
+	if !io.ValueCode.IsNull() && !io.ValueCode.IsUnknown() {
 		return io.ValueCode.ValueString(), client.MESH_BUILDING_BLOCK_IO_TYPE_CODE
 	}
 	return nil, "No value present."

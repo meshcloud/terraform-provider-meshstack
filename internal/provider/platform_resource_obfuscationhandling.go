@@ -10,7 +10,7 @@ import (
 // As a result we keep those from the plan/state and re-apply them to the object read from the API.
 //
 // MUST NOT PASS ANY NIL VALUES
-// MUST PASS compatible types
+// MUST PASS compatible types.
 func handleObfuscatedSecrets(target *client.PlatformConfig, input *client.PlatformConfig, d diag.Diagnostics) {
 	if target == nil || input == nil || target.Type != input.Type {
 		d.AddError(

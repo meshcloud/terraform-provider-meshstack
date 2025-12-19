@@ -113,7 +113,9 @@ func (c *MeshStackProviderClient) ReadTagDefinitions() (*[]MeshTagDefinition, er
 			return nil, err
 		}
 
-		defer res.Body.Close()
+		defer func() {
+			_ = res.Body.Close()
+		}()
 
 		data, err := io.ReadAll(res.Body)
 		if err != nil {
@@ -156,7 +158,10 @@ func (c *MeshStackProviderClient) ReadTagDefinition(name string) (*MeshTagDefini
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if !isSuccessHTTPStatus(resp) {
 		return nil, fmt.Errorf("failed to read tag definition: %s", resp.Status)
@@ -191,7 +196,9 @@ func (c *MeshStackProviderClient) CreateTagDefinition(tagDefinition *MeshTagDefi
 	if err != nil {
 		return nil, fmt.Errorf("failed to do authenticated request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if !isSuccessHTTPStatus(resp) {
 		return nil, fmt.Errorf("failed to create tag definition: %s", resp.Status)
@@ -224,7 +231,10 @@ func (c *MeshStackProviderClient) UpdateTagDefinition(tagDefinition *MeshTagDefi
 	if err != nil {
 		return nil, fmt.Errorf("failed to do authenticated request: %w", err)
 	}
-	defer resp.Body.Close()
+
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if !isSuccessHTTPStatus(resp) {
 		return nil, fmt.Errorf("failed to update tag definition: %s", resp.Status)
@@ -251,7 +261,10 @@ func (c *MeshStackProviderClient) DeleteTagDefinition(name string) error {
 	if err != nil {
 		return fmt.Errorf("failed to do authenticated request: %w", err)
 	}
-	defer resp.Body.Close()
+
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusNoContent {
 		return fmt.Errorf("failed to delete tag definition: %s", resp.Status)
