@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"os"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/meshcloud/terraform-provider-meshstack/client"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -54,25 +55,37 @@ func (p *MeshStackProvider) Schema(ctx context.Context, req provider.SchemaReque
 	}
 }
 
+const (
+	envKeyMeshstackEndpoint  = "MESHSTACK_ENDPOINT"
+	envKeyMeshstackApiKey    = "MESHSTACK_API_KEY"
+	envKeyMeshstackApiSecret = "MESHSTACK_API_SECRET"
+)
+
 func (p *MeshStackProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
 	var data MeshStackProviderModel
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
+	meshStackClient, diags := newMeshStackProviderClient(data)
+	resp.Diagnostics.Append(diags...)
+	resp.DataSourceData = meshStackClient
+	resp.ResourceData = meshStackClient
+}
 
+func newMeshStackProviderClient(data MeshStackProviderModel) (meshStackClient *client.MeshStackProviderClient, diags diag.Diagnostics) {
 	var endpoint string
 	if !data.Endpoint.IsNull() && !data.Endpoint.IsUnknown() {
 		endpoint = data.Endpoint.ValueString()
 	} else {
 		var ok bool
-		endpoint, ok = os.LookupEnv("MESHSTACK_ENDPOINT")
+		endpoint, ok = os.LookupEnv(envKeyMeshstackEndpoint)
 		if !ok {
-			resp.Diagnostics.AddError("Provider endpoint missing.", "Set provider.meshstack.endpoint or use MESHSTACK_ENDPOINT environment variable.")
+			diags.AddError("Provider endpoint missing.", "Set provider.meshstack.endpoint or use MESHSTACK_ENDPOINT environment variable.")
 			return
 		}
 	}
 
 	parsedEndpoint, err := url.Parse(endpoint)
 	if err != nil {
-		resp.Diagnostics.AddError("Provider endpoint not valid.", "The value provided as the providers endpoint is not a valid URL.")
+		diags.AddError("Provider endpoint not valid.", "The value provided as the providers endpoint is not a valid URL.")
 		return
 	}
 
@@ -81,9 +94,9 @@ func (p *MeshStackProvider) Configure(ctx context.Context, req provider.Configur
 		apiKey = data.ApiKey.ValueString()
 	} else {
 		var ok bool
-		apiKey, ok = os.LookupEnv("MESHSTACK_API_KEY")
+		apiKey, ok = os.LookupEnv(envKeyMeshstackApiKey)
 		if !ok {
-			resp.Diagnostics.AddError("Provider API key missing.", "Set provider.meshstack.apikey or use MESHSTACK_API_KEY environment variable.")
+			diags.AddError("Provider API key missing.", "Set provider.meshstack.apikey or use MESHSTACK_API_KEY environment variable.")
 			return
 		}
 	}
@@ -93,20 +106,19 @@ func (p *MeshStackProvider) Configure(ctx context.Context, req provider.Configur
 		apiSecret = data.ApiSecret.ValueString()
 	} else {
 		var ok bool
-		apiSecret, ok = os.LookupEnv("MESHSTACK_API_SECRET")
+		apiSecret, ok = os.LookupEnv(envKeyMeshstackApiSecret)
 		if !ok {
-			resp.Diagnostics.AddError("Provider API secret missing.", "Set provider.meshstack.apisecret or use MESHSTACK_API_SECRET environment variable.")
+			diags.AddError("Provider API secret missing.", "Set provider.meshstack.apisecret or use MESHSTACK_API_SECRET environment variable.")
 			return
 		}
 	}
 
-	meshstackClient, err := client.NewClient(parsedEndpoint, apiKey, apiSecret)
+	meshStackClient, err = client.NewClient(parsedEndpoint, apiKey, apiSecret)
 	if err != nil {
-		resp.Diagnostics.AddError("Failed to create meshStack client.", err.Error())
+		diags.AddError("Failed to create meshStack client.", err.Error())
 		return
 	}
-	resp.DataSourceData = meshstackClient
-	resp.ResourceData = meshstackClient
+	return
 }
 
 func (p *MeshStackProvider) Resources(ctx context.Context) []func() resource.Resource {

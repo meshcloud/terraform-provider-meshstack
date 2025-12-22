@@ -19,3 +19,5 @@
 .terraform-bin/
 providers-schema.json
 .nix-go/
+
+.env
