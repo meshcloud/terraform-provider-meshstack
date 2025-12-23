@@ -396,14 +396,14 @@ func toResourceModel(io *client.MeshBuildingBlockIO) (*buildingBlockIoModel, err
 		foundValue = true
 
 	default:
-		return nil, fmt.Errorf("Input type '%s' is not supported.", io.ValueType)
+		return nil, fmt.Errorf("input type '%s' is not supported", io.ValueType)
 	}
 
 	if foundValue {
 		return &resourceIo, nil
 	}
 
-	return nil, fmt.Errorf("Input '%s' with value type '%s' does not match actual value.", io.Key, io.ValueType)
+	return nil, fmt.Errorf("input '%s' with value type '%s' does not match actual value", io.Key, io.ValueType)
 }
 
 func (r *buildingBlockResource) setStateFromResponse(ctx *context.Context, state *tfsdk.State, bb *client.MeshBuildingBlock) diag.Diagnostics {

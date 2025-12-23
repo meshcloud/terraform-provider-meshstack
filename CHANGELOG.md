@@ -1,3 +1,10 @@
+## Unreleased
+
+FEATURES:
+
+- New resource: `meshstack_location` for managing meshStack locations.
+- Start implementing acceptance tests running against local meshStack
+
 ## v0.16.3
 
 FIXES:

@@ -52,7 +52,7 @@ func (c *MeshStackProviderClient) readProjectBinding(name string, contentType st
 		targetUrl = c.urlForPojectGroupBinding(name)
 
 	default:
-		return nil, fmt.Errorf("Unexpected content type: %s", contentType)
+		return nil, fmt.Errorf("unexpected content type '%s'", contentType)
 	}
 
 	req, err := http.NewRequest("GET", targetUrl.String(), nil)
@@ -66,7 +66,9 @@ func (c *MeshStackProviderClient) readProjectBinding(name string, contentType st
 		return nil, err
 	}
 
-	defer res.Body.Close()
+	defer func() {
+		_ = res.Body.Close()
+	}()
 
 	data, err := io.ReadAll(res.Body)
 	if err != nil {
@@ -100,7 +102,7 @@ func (c *MeshStackProviderClient) createProjectBinding(binding *MeshProjectBindi
 		targetUrl = c.endpoints.ProjectGroupBindings
 
 	default:
-		return nil, fmt.Errorf("Unexpected content type: %s", contentType)
+		return nil, fmt.Errorf("unexpected content type '%s'", contentType)
 	}
 
 	payload, err := json.Marshal(binding)
@@ -120,7 +122,9 @@ func (c *MeshStackProviderClient) createProjectBinding(binding *MeshProjectBindi
 		return nil, err
 	}
 
-	defer res.Body.Close()
+	defer func() {
+		_ = res.Body.Close()
+	}()
 
 	data, err := io.ReadAll(res.Body)
 	if err != nil {

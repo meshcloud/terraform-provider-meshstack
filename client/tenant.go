@@ -72,7 +72,9 @@ func (c *MeshStackProviderClient) ReadTenant(workspace string, project string, p
 		return nil, err
 	}
 
-	defer res.Body.Close()
+	defer func() {
+		_ = res.Body.Close()
+	}()
 
 	data, err := io.ReadAll(res.Body)
 	if err != nil {
@@ -114,7 +116,9 @@ func (c *MeshStackProviderClient) CreateTenant(tenant *MeshTenantCreate) (*MeshT
 		return nil, err
 	}
 
-	defer res.Body.Close()
+	defer func() {
+		_ = res.Body.Close()
+	}()
 
 	data, err := io.ReadAll(res.Body)
 	if err != nil {

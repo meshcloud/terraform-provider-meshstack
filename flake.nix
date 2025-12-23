@@ -8,35 +8,48 @@
 
   outputs = { self, nixpkgs }:
     let
-      goVersion = 22; # Change this to update the whole stack
-      
-      # use an overlay to pin default go version
-      overlays = [ (final: prev: { go = prev."go_1_${toString goVersion}"; }) ]; 
-
       supportedSystems = [ "x86_64-linux" "x86_64-darwin" "aarch64-darwin" ];
       forEachSupportedSystem = f: nixpkgs.lib.genAttrs supportedSystems (system: f {
-        pkgs = import nixpkgs { inherit overlays system; };
+        pkgs = import nixpkgs { 
+          inherit system; 
+          config.allowUnfreePredicate = pkg: builtins.elem (nixpkgs.lib.getName pkg) [
+            "terraform"
+          ];
+        };
       });
     in
     {
       devShells = forEachSupportedSystem ({ pkgs }: {
         default = pkgs.mkShell {
           packages = with pkgs; [
-            # go 1.22 (specified by overlay)
-            go_1_22
+            # go 1.25 (pinned)
+            go_1_25
             
             # goimports, godoc, etc.
             gotools
 
             # https://github.com/golangci/golangci-lint
             golangci-lint
+
+            # https://github.com/hashicorp/terraform-plugin-docs
+            terraform-plugin-docs
+
+            # https://github.com/hashicorp/terraform
+            terraform
           ];
 
-          # make tfplugindocs available in the shell, see https://github.com/hashicorp/terraform-plugin-docs?tab=readme-ov-file#installation
           shellHook = ''
-            export GOBIN=$PWD/bin
-            export PATH=$GOBIN:$PATH
-            go install github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs
+            # Explicitly set GOROOT to Nix-installed Go
+            export GOROOT="${pkgs.go_1_25}/share/go"
+            
+            # Isolate Go environment from system
+            export GOPATH="$PWD/.nix-go"
+            export GOCACHE="$PWD/.nix-go/cache"
+            export GOMODCACHE="$PWD/.nix-go/mod"
+            export GOBIN="$PWD/.nix-go/bin"
+            export PATH="$GOBIN:$PATH"
+            
+            mkdir -p "$GOPATH" "$GOCACHE" "$GOMODCACHE" "$GOBIN"
           '';
         };
       });
