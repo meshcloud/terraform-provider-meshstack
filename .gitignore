@@ -1,38 +1,21 @@
-*.dll
-*.exe
-.DS_Store
-example.tf
-terraform.tfplan
-terraform.tfstate
-bin/
-dist/
-modules-dev/
-/pkg/
-website/.vagrant
-website/.bundle
-website/build
-website/node_modules
-.vagrant/
-*.backup
-./*.tfstate
+*.tfstate
+*.tfplan
 .terraform/
+
+*.backup
 *.log
 *.bak
 *~
 .*.swp
-.idea
-*.iml
-*.test
-*.iml
+.DS_Store
+*.dll
+*.exe
+
+.idea/
+.vscode/
+
 /terraform-provider-meshstack
 
-website/vendor
-
-# Test exclusions
-!command/test-fixtures/**/*.tfstate
-!command/test-fixtures/**/.terraform/
-
-# Keep windows files with windows line endings
-*.winfile eol=crlf
 .terraform-bin/
 providers-schema.json
+.nix-go/
