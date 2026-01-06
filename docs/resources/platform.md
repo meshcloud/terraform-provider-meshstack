@@ -693,25 +693,25 @@ Read-Only:
 
 Required:
 
+- `auth` (Attributes) Authentication configuration (see [below for nested schema](#nestedatt--spec--config--azure--replication--service_principal--auth))
 - `client_id` (String) The Application (Client) ID. In Azure Portal, this is the Application ID of the 'Enterprise Application' but can also be retrieved via the 'App Registration' object as 'Application (Client) ID
 - `object_id` (String) The Object ID of the Enterprise Application. You can get this Object ID via the API (e.g. when using our Terraform provider) or from Enterprise applications pane in Microsoft Entra admin center.
-
-Read-Only:
-
-- `auth` (Attributes) Authentication configuration (see [below for nested schema](#nestedatt--spec--config--azure--replication--service_principal--auth))
 
 <a id="nestedatt--spec--config--azure--replication--service_principal--auth"></a>
 ### Nested Schema for `spec.config.azure.replication.service_principal.auth`
 
+Optional:
+
+- `credential` (Attributes) Client secret (if type is credential) (see [below for nested schema](#nestedatt--spec--config--azure--replication--service_principal--auth--credential))
+
 Read-Only:
 
-- `credential` (Attributes, Sensitive) Client secret (if type is credential) (see [below for nested schema](#nestedatt--spec--config--azure--replication--service_principal--auth--credential))
 - `type` (String) Authentication type (credential or workloadIdentity)
 
 <a id="nestedatt--spec--config--azure--replication--service_principal--auth--credential"></a>
 ### Nested Schema for `spec.config.azure.replication.service_principal.auth.credential`
 
-Read-Only:
+Required:
 
 - `plaintext` (String, Sensitive) Plaintext secret value
 
