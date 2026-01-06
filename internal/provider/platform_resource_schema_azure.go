@@ -42,7 +42,7 @@ func azureReplicationConfigSchema() schema.Attribute {
 						MarkdownDescription: "The Object ID of the Enterprise Application. You can get this Object ID via the API (e.g. when using our Terraform provider) or from Enterprise applications pane in Microsoft Entra admin center.",
 						Required:            true,
 					},
-					"auth": azureAuthConfigDataSourceSchema(),
+					"auth": azureAuthSchema(),
 				},
 			},
 			"provisioning": schema.SingleNestedAttribute{
