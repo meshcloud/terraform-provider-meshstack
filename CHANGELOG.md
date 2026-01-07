@@ -1,3 +1,9 @@
+## v0.16.5
+
+BREAKING CHANGES:
+
+- Landing zone: Added required `owned_by_workspace` field to metadata. This field specifies the workspace that owns the landing zone and must be provided when creating or updating landing zones.
+
 ## v0.16.4
 
 FEATURES:

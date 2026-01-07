@@ -15,7 +15,8 @@ Represents a meshStack landing zone.
 ```terraform
 resource "meshstack_landingzone" "example" {
   metadata = {
-    name = "my-landing-zone-identifier"
+    name               = "my-landing-zone-identifier"
+    owned_by_workspace = "my-workspace-identifier"
     tags = {
       "confidentiality" = ["internal"],
       "environment"     = ["dev", "qa", "test"],
@@ -73,6 +74,7 @@ resource "meshstack_landingzone" "example" {
 Required:
 
 - `name` (String) Landing zone identifier.
+- `owned_by_workspace` (String) Identifier of the workspace that owns this landing zone.
 
 Optional:
 

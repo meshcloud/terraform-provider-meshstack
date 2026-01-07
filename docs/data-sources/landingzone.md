@@ -43,6 +43,7 @@ Required:
 
 Read-Only:
 
+- `owned_by_workspace` (String) Identifier of the workspace that owns this landing zone.
 - `tags` (Map of List of String) Tags of the landing zone.
 
 

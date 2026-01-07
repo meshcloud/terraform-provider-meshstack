@@ -1,6 +1,7 @@
 resource "meshstack_landingzone" "example" {
   metadata = {
-    name = "my-landing-zone-identifier"
+    name               = "my-landing-zone-identifier"
+    owned_by_workspace = "my-workspace-identifier"
     tags = {
       "confidentiality" = ["internal"],
       "environment"     = ["dev", "qa", "test"],
