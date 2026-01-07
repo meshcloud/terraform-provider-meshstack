@@ -45,6 +45,22 @@ func meshBuildingBlockDefinitionRefAttribute(computed bool) map[string]schema.At
 	}
 }
 
+// TODO reuse this at all other places where UUID refs.
+func meshUuidRefAttribute(kind string) map[string]schema.Attribute {
+	return map[string]schema.Attribute{
+		"kind": schema.StringAttribute{
+			MarkdownDescription: "meshObject type, always `" + kind + "`.",
+			Computed:            true,
+			Default:             stringdefault.StaticString(kind),
+			PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+		},
+		"uuid": schema.StringAttribute{
+			MarkdownDescription: "UUID of the " + kind + ".",
+			Required:            true,
+		},
+	}
+}
+
 func tenantTagsAttribute() schema.SingleNestedAttribute {
 	return schema.SingleNestedAttribute{
 		MarkdownDescription: "Tenant tags configuration",
