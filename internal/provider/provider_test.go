@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -9,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/stretchr/testify/require"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
@@ -39,4 +41,13 @@ func testAccPreCheck(t *testing.T) {
 		"Env %s='%s' does not start with http://localhost, only locally running meshStacks should be used for tests", envKeyMeshstackEndpoint, endpoint)
 	require.NotEmptyf(t, os.Getenv(envKeyMeshstackApiKey), "Env %s empty, please set before running", envKeyMeshstackApiKey)
 	require.NotEmptyf(t, os.Getenv(envKeyMeshstackApiSecret), "Env %s empty, please set before running", envKeyMeshstackApiSecret)
+}
+
+func knownValueNotEmptyString() knownvalue.Check {
+	return knownvalue.StringFunc(func(v string) error {
+		if strings.TrimSpace(v) == "" {
+			return fmt.Errorf("expected non-empty string after trimming whitespace, but is '%s'", v)
+		}
+		return nil
+	})
 }
