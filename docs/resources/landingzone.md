@@ -342,8 +342,11 @@ Optional:
 
 Required:
 
-- `kind` (String) Must always be set to meshPlatform
 - `uuid` (String) UUID of the platform.
+
+Read-Only:
+
+- `kind` (String) Must always be set to meshPlatform
 
 
 <a id="nestedatt--spec--quotas"></a>

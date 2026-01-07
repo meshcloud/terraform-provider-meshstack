@@ -81,7 +81,7 @@ func (r *landingZoneResource) Schema(_ context.Context, _ resource.SchemaRequest
 				Computed:            true,
 				Default:             stringdefault.StaticString("meshLandingZone"),
 				Validators: []validator.String{
-					stringvalidator.OneOf([]string{"meshLandingZone"}...),
+					stringvalidator.OneOf("meshLandingZone"),
 				},
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
@@ -146,7 +146,9 @@ func (r *landingZoneResource) Schema(_ context.Context, _ resource.SchemaRequest
 							},
 							"kind": schema.StringAttribute{
 								MarkdownDescription: "Must always be set to meshPlatform",
-								Required:            true,
+								Computed:            true,
+								PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+								Default:             stringdefault.StaticString("meshPlatform"),
 								Validators: []validator.String{
 									stringvalidator.OneOf("meshPlatform"),
 								},

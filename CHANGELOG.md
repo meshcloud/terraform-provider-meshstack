@@ -5,6 +5,11 @@ FEATURES:
 - New resource: `meshstack_location` for managing meshStack locations.
 - Start implementing acceptance tests running against local meshStack
 
+FIXES:
+
+- Tenant v4 resource: More granular plan modifiers to reduce unnecessary recreations.
+- Tenant v4 resource: Set `wait_for_completion` during import.
+
 ## v0.16.3
 
 FIXES:
