@@ -108,7 +108,7 @@ func (r *tenantV4Resource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				MarkdownDescription: "The kind of the meshObject, always `meshTenant`.",
 				Computed:            true,
 				Validators: []validator.String{
-					stringvalidator.OneOf([]string{"meshTenant"}...),
+					stringvalidator.OneOf("meshTenant"),
 				},
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
@@ -116,22 +116,21 @@ func (r *tenantV4Resource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			"metadata": schema.SingleNestedAttribute{
 				MarkdownDescription: "Metadata of the tenant. The `owned_by_workspace` and `owned_by_project` attributes must be set here.",
 				Required:            true,
-				PlanModifiers:       []planmodifier.Object{objectplanmodifier.RequiresReplace()},
 				Attributes: map[string]schema.Attribute{
 					"uuid": schema.StringAttribute{
 						MarkdownDescription: "The unique identifier (UUID) of the tenant.",
 						Computed:            true,
-						PlanModifiers: []planmodifier.String{
-							stringplanmodifier.UseStateForUnknown(),
-						},
+						PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 					},
 					"owned_by_workspace": schema.StringAttribute{
 						MarkdownDescription: "The identifier of the workspace that the tenant belongs to.",
 						Required:            true,
+						PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 					},
 					"owned_by_project": schema.StringAttribute{
 						MarkdownDescription: "The identifier of the project that the tenant belongs to.",
 						Required:            true,
+						PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 					},
 					"created_on": schema.StringAttribute{
 						MarkdownDescription: "The creation timestamp of the meshTenant (e.g. `2020-12-22T09:37:43Z`).",
@@ -141,10 +140,12 @@ func (r *tenantV4Resource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					"deleted_on": schema.StringAttribute{
 						MarkdownDescription: "The deletion timestamp of the tenant (e.g. `2020-12-22T09:37:43Z`).",
 						Computed:            true,
+						PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 					},
 					"marked_for_deletion_on": schema.StringAttribute{
 						MarkdownDescription: "The timestamp when the tenant was marked for deletion (e.g. `2020-12-22T09:37:43Z`).",
 						Computed:            true,
+						PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 					},
 				},
 			},
@@ -152,20 +153,22 @@ func (r *tenantV4Resource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			"spec": schema.SingleNestedAttribute{
 				MarkdownDescription: "Tenant specification.",
 				Required:            true,
-				PlanModifiers:       []planmodifier.Object{objectplanmodifier.RequiresReplace()},
 				Attributes: map[string]schema.Attribute{
 					"platform_identifier": schema.StringAttribute{
 						MarkdownDescription: "Identifier of the target platform.",
 						Required:            true,
+						PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 					},
 					"platform_tenant_id": schema.StringAttribute{
 						MarkdownDescription: "The identifier of the tenant on the platform (e.g. GCP project ID or Azure subscription ID). If this is not set, a new tenant will be created. If this is set, an existing tenant will be imported. Otherwise, this field will be empty until a successful replication has run.",
 						Optional:            true,
 						Computed:            true,
+						PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 					},
 					"landing_zone_identifier": schema.StringAttribute{
 						MarkdownDescription: "The identifier of the landing zone to assign to this tenant.",
 						Optional:            true,
+						PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 					},
 					"quotas": schema.SetNestedAttribute{
 						MarkdownDescription: "Landing zone quota settings will be applied by default but can be changed here.",
@@ -183,6 +186,7 @@ func (r *tenantV4Resource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			"status": schema.SingleNestedAttribute{
 				MarkdownDescription: "Tenant status.",
 				Computed:            true,
+				PlanModifiers:       []planmodifier.Object{objectplanmodifier.UseStateForUnknown()},
 				Attributes: map[string]schema.Attribute{
 					"tenant_name": schema.StringAttribute{
 						MarkdownDescription: "The full tenant name, a concatenation of the workspace identifier, project identifier and platform identifier.",
@@ -394,4 +398,7 @@ func (r *tenantV4Resource) Delete(ctx context.Context, req resource.DeleteReques
 
 func (r *tenantV4Resource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughID(ctx, path.Root("metadata").AtName("uuid"), req, resp)
+
+	// Set wait_for_completion to its default value during import
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("wait_for_completion"), types.BoolValue(true))...)
 }
