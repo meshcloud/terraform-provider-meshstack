@@ -65,7 +65,6 @@ Required:
 
 Read-Only:
 
-- `kind` (String) meshObject type, always `meshLocation`.
 - `name` (String) Identifier of the Location.
 
 
