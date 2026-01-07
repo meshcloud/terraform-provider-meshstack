@@ -20,8 +20,9 @@ type MeshLandingZone struct {
 }
 
 type MeshLandingZoneMetadata struct {
-	Name string              `json:"name" tfsdk:"name"`
-	Tags map[string][]string `json:"tags" tfsdk:"tags"`
+	Name             string              `json:"name" tfsdk:"name"`
+	OwnedByWorkspace string              `json:"ownedByWorkspace" tfsdk:"owned_by_workspace"`
+	Tags             map[string][]string `json:"tags" tfsdk:"tags"`
 }
 
 type MeshLandingZoneSpec struct {

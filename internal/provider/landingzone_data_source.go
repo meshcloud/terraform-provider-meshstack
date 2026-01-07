@@ -57,6 +57,10 @@ func (d *landingZoneDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 						MarkdownDescription: "Landing Zone identifier.",
 						Required:            true,
 					},
+					"owned_by_workspace": schema.StringAttribute{
+						MarkdownDescription: "Identifier of the workspace that owns this landing zone.",
+						Computed:            true,
+					},
 					"tags": schema.MapAttribute{
 						MarkdownDescription: "Tags of the landing zone.",
 						ElementType:         types.ListType{ElemType: types.StringType},

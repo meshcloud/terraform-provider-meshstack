@@ -102,6 +102,13 @@ func (r *landingZoneResource) Schema(_ context.Context, _ resource.SchemaRequest
 							),
 						},
 					},
+					"owned_by_workspace": schema.StringAttribute{
+						MarkdownDescription: "Identifier of the workspace that owns this landing zone.",
+						Required:            true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.RequiresReplace(),
+						},
+					},
 					"tags": schema.MapAttribute{
 						MarkdownDescription: "Tags of the landing zone.",
 						ElementType:         types.SetType{ElemType: types.StringType},
