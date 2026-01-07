@@ -94,6 +94,7 @@ linters:
             - $gostd
             - github.com/meshcloud/terraform-provider-meshstack # any packages are included in tests
             - github.com/hashicorp/terraform-plugin-testing
+            - github.com/hashicorp/terraform-plugin-framework/diag
             - github.com/stretchr/testify
         types:
           files:
