@@ -32,3 +32,57 @@ provider_installation {
 Replace `<GOBIN>` with the output of `go env GOBIN` or `go env GOPATH` + `/bin`.
 Run `go install` to update your local provider installation.
 If everything is working correctly Terraform will show a warning that dev overrides are being used.
+
+Note: The `go-task` is also available via `nix`, for example
+```bash
+nix develop --command go-task testacc
+```
+
+## Running Tests
+
+This project uses [Task](https://taskfile.dev) for common development workflows. 
+The available tasks can be found in `Taskfile.yml`.
+
+### Acceptance Tests
+
+Acceptance tests run against a real meshStack API and require environment variables to be configured in a `.env` file:
+
+```bash
+# Run all acceptance tests
+go-task testacc
+
+# Run specific acceptance test(s) by name pattern
+go-task testacc TESTARGS="-run=BuildingBlockDefinition"
+
+# Run multiple specific tests
+go-task testacc TESTARGS="-run=BuildingBlock|Workspace"
+```
+
+### Unit Tests
+
+```bash
+# Run unit tests only (excludes acceptance tests)
+go-task test
+```
+
+### Other Development Tasks
+
+```bash
+# Build the provider
+go-task build
+
+# Install provider locally
+go-task install
+
+# Format code
+go-task fmt
+
+# Run linter
+go-task lint
+
+# Generate documentation
+go-task generate
+
+# Clean build artifacts
+go-task clean
+```
