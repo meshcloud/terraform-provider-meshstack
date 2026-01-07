@@ -36,6 +36,9 @@
 
             # https://github.com/hashicorp/terraform
             terraform
+
+            # https://taskfile.dev
+            go-task
           ];
 
           shellHook = ''
