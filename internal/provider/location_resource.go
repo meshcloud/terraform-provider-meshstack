@@ -31,12 +31,13 @@ type locationResource struct {
 	client *client.MeshStackProviderClient
 }
 
+type locationRef struct {
+	Name string `tfsdk:"name"`
+}
+
 type locationResourceModel struct {
 	client.MeshLocation
-	Ref struct {
-		Kind string `tfsdk:"kind"`
-		Name string `tfsdk:"name"`
-	} `tfsdk:"ref"`
+	Ref locationRef `tfsdk:"ref"`
 }
 
 func (r *locationResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -126,12 +127,6 @@ func (r *locationResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				MarkdownDescription: "Reference to this location, can be used as input for `location_ref` in platform resources.",
 				Computed:            true,
 				Attributes: map[string]schema.Attribute{
-					"kind": schema.StringAttribute{
-						MarkdownDescription: "meshObject type, always `meshLocation`.",
-						Computed:            true,
-						Default:             stringdefault.StaticString("meshLocation"),
-						PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-					},
 					"name": schema.StringAttribute{
 						MarkdownDescription: "Identifier of the Location.",
 						Computed:            true,
@@ -180,11 +175,7 @@ func (r *locationResource) Create(ctx context.Context, req resource.CreateReques
 
 	state := locationResourceModel{
 		MeshLocation: *createdLocation,
-		Ref: struct {
-			Kind string `tfsdk:"kind"`
-			Name string `tfsdk:"name"`
-		}{
-			Kind: "meshLocation",
+		Ref: locationRef{
 			Name: createdLocation.Metadata.Name,
 		},
 	}
@@ -216,11 +207,7 @@ func (r *locationResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	state := locationResourceModel{
 		MeshLocation: *location,
-		Ref: struct {
-			Kind string `tfsdk:"kind"`
-			Name string `tfsdk:"name"`
-		}{
-			Kind: "meshLocation",
+		Ref: locationRef{
 			Name: location.Metadata.Name,
 		},
 	}
@@ -267,11 +254,7 @@ func (r *locationResource) Update(ctx context.Context, req resource.UpdateReques
 
 	state := locationResourceModel{
 		MeshLocation: *updatedLocation,
-		Ref: struct {
-			Kind string `tfsdk:"kind"`
-			Name string `tfsdk:"name"`
-		}{
-			Kind: "meshLocation",
+		Ref: locationRef{
 			Name: updatedLocation.Metadata.Name,
 		},
 	}

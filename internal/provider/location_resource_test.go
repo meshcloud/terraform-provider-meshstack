@@ -32,7 +32,6 @@ func TestAccLocation(t *testing.T) {
 					statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("My Cloud Location")),
 					statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("spec").AtMapKey("description"), knownvalue.StringExact("A location for managing cloud resources")),
 					statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("status").AtMapKey("is_public"), knownvalue.Bool(false)),
-					statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("ref").AtMapKey("kind"), knownvalue.StringExact("meshLocation")),
 					statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("ref").AtMapKey("name"), knownvalue.StringExact(resourceIdentifier)),
 				},
 			},
