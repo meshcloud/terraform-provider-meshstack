@@ -147,6 +147,7 @@ func (p *MeshStackProvider) Resources(ctx context.Context) []func() resource.Res
 		NewWorkspaceResource,
 		NewBuildingBlockResource,
 		NewBuildingBlockV2Resource,
+		NewBuildingBlockDefinitionResource,
 		NewTagDefinitionResource,
 		NewLandingZoneResource,
 		NewPlatformResource,
