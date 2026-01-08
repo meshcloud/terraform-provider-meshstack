@@ -1,4 +1,4 @@
-## Unreleased
+## v0.16.4
 
 FEATURES:
 
@@ -9,6 +9,10 @@ FIXES:
 
 - Tenant v4 resource: More granular plan modifiers to reduce unnecessary recreations.
 - Tenant v4 resource: Set `wait_for_completion` during import.
+
+OTHER:
+- Updated to Go 1.25 including nix environment
+- Fix lint issues and enforce them in CI
 
 ## v0.16.3
 
