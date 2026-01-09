@@ -1,9 +1,6 @@
 package client
 
 import (
-	"bytes"
-	"encoding/json"
-	"net/http"
 	"net/url"
 )
 
@@ -70,51 +67,24 @@ func (c *MeshStackProviderClient) urlForLandingZone(name string) *url.URL {
 }
 
 func (c *MeshStackProviderClient) ReadLandingZone(name string) (*MeshLandingZone, error) {
-	targetUrl := c.urlForLandingZone(name)
-	req, err := http.NewRequest("GET", targetUrl.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Accept", CONTENT_TYPE_LANDINGZONE)
-
-	return unmarshalBodyIfPresent[MeshLandingZone](c.doAuthenticatedRequest(req))
+	return unmarshalBodyIfPresent[MeshLandingZone](c.doAuthenticatedRequest("GET", c.urlForLandingZone(name),
+		withAccept(CONTENT_TYPE_LANDINGZONE),
+	))
 }
 
 func (c *MeshStackProviderClient) CreateLandingZone(landingZone *MeshLandingZoneCreate) (*MeshLandingZone, error) {
-	payload, err := json.Marshal(landingZone)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", c.endpoints.LandingZones.String(), bytes.NewBuffer(payload))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", CONTENT_TYPE_LANDINGZONE)
-	req.Header.Set("Accept", CONTENT_TYPE_LANDINGZONE)
-
-	return unmarshalBody[MeshLandingZone](c.doAuthenticatedRequest(req))
+	return unmarshalBody[MeshLandingZone](c.doAuthenticatedRequest("POST", c.endpoints.LandingZones,
+		withPayload(landingZone, CONTENT_TYPE_LANDINGZONE),
+	))
 }
 
 func (c *MeshStackProviderClient) UpdateLandingZone(name string, landingZone *MeshLandingZoneCreate) (*MeshLandingZone, error) {
-	targetUrl := c.urlForLandingZone(name)
-
-	payload, err := json.Marshal(landingZone)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("PUT", targetUrl.String(), bytes.NewBuffer(payload))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", CONTENT_TYPE_LANDINGZONE)
-	req.Header.Set("Accept", CONTENT_TYPE_LANDINGZONE)
-
-	return unmarshalBody[MeshLandingZone](c.doAuthenticatedRequest(req))
+	return unmarshalBody[MeshLandingZone](c.doAuthenticatedRequest("PUT", c.urlForLandingZone(name),
+		withPayload(landingZone, CONTENT_TYPE_LANDINGZONE),
+	))
 }
 
 func (c *MeshStackProviderClient) DeleteLandingZone(name string) error {
 	targetUrl := c.urlForLandingZone(name)
-	return c.deleteMeshObject(*targetUrl, 204)
+	return c.deleteMeshObject(targetUrl, 204)
 }

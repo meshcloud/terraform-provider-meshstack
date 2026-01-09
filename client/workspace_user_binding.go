@@ -22,5 +22,5 @@ func (c *MeshStackProviderClient) CreateWorkspaceUserBinding(binding *MeshWorksp
 
 func (c *MeshStackProviderClient) DeleteWorkspaceUserBinding(name string) error {
 	targetUrl := c.urlForWorkspaceUserBinding(name)
-	return c.deleteMeshObject(*targetUrl, 204)
+	return c.deleteMeshObject(targetUrl, 204)
 }

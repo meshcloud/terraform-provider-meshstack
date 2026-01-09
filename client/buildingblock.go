@@ -1,9 +1,6 @@
 package client
 
 import (
-	"bytes"
-	"encoding/json"
-	"net/http"
 	"net/url"
 )
 
@@ -79,34 +76,18 @@ func (c *MeshStackProviderClient) urlForBuildingBlock(uuid string) *url.URL {
 }
 
 func (c *MeshStackProviderClient) ReadBuildingBlock(uuid string) (*MeshBuildingBlock, error) {
-	targetUrl := c.urlForBuildingBlock(uuid)
-
-	req, err := http.NewRequest("GET", targetUrl.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Accept", CONTENT_TYPE_BUILDING_BLOCK)
-
-	return unmarshalBodyIfPresent[MeshBuildingBlock](c.doAuthenticatedRequest(req))
+	return unmarshalBodyIfPresent[MeshBuildingBlock](c.doAuthenticatedRequest("GET", c.urlForBuildingBlock(uuid),
+		withAccept(CONTENT_TYPE_BUILDING_BLOCK),
+	))
 }
 
 func (c *MeshStackProviderClient) CreateBuildingBlock(bb *MeshBuildingBlockCreate) (*MeshBuildingBlock, error) {
-	payload, err := json.Marshal(bb)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", c.endpoints.BuildingBlocks.String(), bytes.NewBuffer(payload))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", CONTENT_TYPE_BUILDING_BLOCK)
-	req.Header.Set("Accept", CONTENT_TYPE_BUILDING_BLOCK)
-
-	return unmarshalBody[MeshBuildingBlock](c.doAuthenticatedRequest(req))
+	return unmarshalBody[MeshBuildingBlock](c.doAuthenticatedRequest("POST", c.endpoints.BuildingBlocks,
+		withPayload(bb, CONTENT_TYPE_BUILDING_BLOCK),
+	))
 }
 
 func (c *MeshStackProviderClient) DeleteBuildingBlock(uuid string) error {
 	targetUrl := c.urlForBuildingBlock(uuid)
-	return c.deleteMeshObject(*targetUrl, 202)
+	return c.deleteMeshObject(targetUrl, 202)
 }

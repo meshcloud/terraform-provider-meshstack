@@ -1,9 +1,6 @@
 package client
 
 import (
-	"bytes"
-	"encoding/json"
-	"net/http"
 	"net/url"
 )
 
@@ -45,52 +42,24 @@ func (c *MeshStackProviderClient) urlForLocation(name string) *url.URL {
 }
 
 func (c *MeshStackProviderClient) ReadLocation(name string) (*MeshLocation, error) {
-	targetUrl := c.urlForLocation(name)
-
-	req, err := http.NewRequest("GET", targetUrl.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Accept", CONTENT_TYPE_LOCATION)
-
-	return unmarshalBodyIfPresent[MeshLocation](c.doAuthenticatedRequest(req))
+	return unmarshalBodyIfPresent[MeshLocation](c.doAuthenticatedRequest("GET", c.urlForLocation(name),
+		withAccept(CONTENT_TYPE_LOCATION),
+	))
 }
 
 func (c *MeshStackProviderClient) CreateLocation(location *MeshLocationCreate) (*MeshLocation, error) {
-	payload, err := json.Marshal(location)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", c.endpoints.Locations.String(), bytes.NewBuffer(payload))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", CONTENT_TYPE_LOCATION)
-	req.Header.Set("Accept", CONTENT_TYPE_LOCATION)
-
-	return unmarshalBody[MeshLocation](c.doAuthenticatedRequest(req))
+	return unmarshalBody[MeshLocation](c.doAuthenticatedRequest("POST", c.endpoints.Locations,
+		withPayload(location, CONTENT_TYPE_LOCATION),
+	))
 }
 
 func (c *MeshStackProviderClient) UpdateLocation(name string, location *MeshLocationCreate) (*MeshLocation, error) {
-	targetUrl := c.urlForLocation(name)
-
-	payload, err := json.Marshal(location)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("PUT", targetUrl.String(), bytes.NewBuffer(payload))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", CONTENT_TYPE_LOCATION)
-	req.Header.Set("Accept", CONTENT_TYPE_LOCATION)
-
-	return unmarshalBody[MeshLocation](c.doAuthenticatedRequest(req))
+	return unmarshalBody[MeshLocation](c.doAuthenticatedRequest("PUT", c.urlForLocation(name),
+		withPayload(location, CONTENT_TYPE_LOCATION),
+	))
 }
 
 func (c *MeshStackProviderClient) DeleteLocation(name string) error {
 	targetUrl := c.urlForLocation(name)
-	return c.deleteMeshObject(*targetUrl, 204)
+	return c.deleteMeshObject(targetUrl, 204)
 }

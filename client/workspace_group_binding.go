@@ -22,5 +22,5 @@ func (c *MeshStackProviderClient) CreateWorkspaceGroupBinding(binding *MeshWorks
 
 func (c *MeshStackProviderClient) DeleteWorkspaceGroupBinding(name string) error {
 	targetUrl := c.urlForWorkspaceGroupBinding(name)
-	return c.deleteMeshObject(*targetUrl, 204)
+	return c.deleteMeshObject(targetUrl, 204)
 }
