@@ -1,3 +1,14 @@
+## Unreleased
+
+FIXES:
+
+- DELETE endpoints now properly include versioning Accept header.
+- Context is now correctly propagated through client HTTP transport.
+
+OTHER:
+- Large internal refactoring disentangling client package from provider implementation.
+
+
 ## v0.16.6
 
 FIXES:
