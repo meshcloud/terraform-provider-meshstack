@@ -64,13 +64,13 @@ const (
 func (p *MeshStackProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
 	var data MeshStackProviderModel
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
-	meshStackClient, diags := newMeshStackProviderClient(data)
+	meshStackProviderClient, diags := newMeshStackProviderClient(data, p.version)
 	resp.Diagnostics.Append(diags...)
-	resp.DataSourceData = meshStackClient
-	resp.ResourceData = meshStackClient
+	resp.DataSourceData = meshStackProviderClient
+	resp.ResourceData = meshStackProviderClient
 }
 
-func newMeshStackProviderClient(data MeshStackProviderModel) (meshStackClient client.MeshStackProviderClient, diags diag.Diagnostics) {
+func newMeshStackProviderClient(data MeshStackProviderModel, providerVersion string) (meshStackClient client.MeshStackProviderClient, diags diag.Diagnostics) {
 	var endpoint string
 	if !data.Endpoint.IsNull() && !data.Endpoint.IsUnknown() {
 		endpoint = data.Endpoint.ValueString()
@@ -113,7 +113,7 @@ func newMeshStackProviderClient(data MeshStackProviderModel) (meshStackClient cl
 		}
 	}
 
-	meshStackClient = client.NewClient(parsedEndpoint, apiKey, apiSecret)
+	meshStackClient = client.NewClient(parsedEndpoint, providerVersion, apiKey, apiSecret)
 	return
 }
 

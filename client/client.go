@@ -37,13 +37,14 @@ type MeshStackProviderClient struct {
 	WorkspaceUserBinding  MeshWorkspaceUserBindingClient
 }
 
-func NewClient(rootUrl *url.URL, apiKey string, apiSecret string) MeshStackProviderClient {
+func NewClient(rootUrl *url.URL, providerVersion, apiKey, apiSecret string) MeshStackProviderClient {
 	// Initialize httpClient for typed clients
 	c := &httpClient{
-		Client:    http.Client{Timeout: 5 * time.Minute},
-		RootUrl:   rootUrl,
-		ApiKey:    apiKey,
-		ApiSecret: apiSecret,
+		Client:          http.Client{Timeout: 5 * time.Minute},
+		RootUrl:         rootUrl,
+		ProviderVersion: providerVersion,
+		ApiKey:          apiKey,
+		ApiSecret:       apiSecret,
 	}
 	return MeshStackProviderClient{
 		MeshBuildingBlockClient{newMeshObjectClient[MeshBuildingBlock](c, "meshBuildingBlock", "v1")},
@@ -67,7 +68,9 @@ func NewClient(rootUrl *url.URL, apiKey string, apiSecret string) MeshStackProvi
 
 type httpClient struct {
 	http.Client
-	RootUrl     *url.URL
+	RootUrl         *url.URL
+	ProviderVersion string
+
 	ApiKey      string
 	ApiSecret   string
 	Token       string
@@ -244,7 +247,7 @@ func withPayload(payload any, contentType string) doRequestOption {
 func (c *httpClient) doRequest(method string, url *url.URL, options ...doRequestOption) ([]byte, error) {
 	// prepend (aka insert at 0) some default options such that given options may be overridden by caller
 	options = slices.Insert(options, 0,
-		withHeader("User-Agent", "meshStack Terraform Provider"),
+		withHeader("User-Agent", fmt.Sprintf("terraform-provider-meshstack/%s", c.ProviderVersion)),
 	)
 	opts := doRequestOptions{}
 	for _, option := range options {
