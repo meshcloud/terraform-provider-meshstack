@@ -88,6 +88,8 @@ func (c *MeshStackProviderClient) UpdateLandingZone(name string, landingZone *Me
 }
 
 func (c *MeshStackProviderClient) DeleteLandingZone(name string) error {
-	_, err := c.doAuthenticatedRequest("DELETE", c.urlForLandingZone(name))
+	_, err := c.doAuthenticatedRequest("DELETE", c.urlForLandingZone(name),
+		withAccept(CONTENT_TYPE_LANDINGZONE),
+	)
 	return err
 }

@@ -25,6 +25,8 @@ func (c *MeshStackProviderClient) CreateWorkspaceUserBinding(binding *MeshWorksp
 }
 
 func (c *MeshStackProviderClient) DeleteWorkspaceUserBinding(name string) error {
-	_, err := c.doAuthenticatedRequest("DELETE", c.urlForWorkspaceUserBinding(name))
+	_, err := c.doAuthenticatedRequest("DELETE", c.urlForWorkspaceUserBinding(name),
+		withAccept(CONTENT_TYPE_WORKSPACE_USER_BINDING),
+	)
 	return err
 }
