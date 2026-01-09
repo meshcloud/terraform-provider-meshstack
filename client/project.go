@@ -98,6 +98,6 @@ func (c *MeshStackProviderClient) UpdateProject(project *MeshProjectCreate) (*Me
 }
 
 func (c *MeshStackProviderClient) DeleteProject(workspace string, name string) error {
-	targetUrl := c.urlForProject(workspace, name)
-	return c.deleteMeshObject(targetUrl, 202)
+	_, err := c.doAuthenticatedRequest("DELETE", c.urlForProject(workspace, name))
+	return err
 }

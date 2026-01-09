@@ -112,33 +112,20 @@ func (c *MeshStackProviderClient) ReadTagDefinition(name string) (*MeshTagDefini
 }
 
 func (c *MeshStackProviderClient) CreateTagDefinition(tagDefinition *MeshTagDefinition) (*MeshTagDefinition, error) {
-	result, err := unmarshalBody[MeshTagDefinition](c.doAuthenticatedRequest("POST", c.endpoints.TagDefinitions,
+	return unmarshalBody[MeshTagDefinition](c.doAuthenticatedRequest("POST", c.endpoints.TagDefinitions,
 		withPayload(tagDefinition, CONTENT_TYPE_TAG_DEFINITION),
 	))
-	if err != nil {
-		return nil, fmt.Errorf("failed to do authenticated request: %w", err)
-	}
-	return result, nil
 }
 
 func (c *MeshStackProviderClient) UpdateTagDefinition(tagDefinition *MeshTagDefinition) (*MeshTagDefinition, error) {
-	result, err := unmarshalBody[MeshTagDefinition](c.doAuthenticatedRequest("PUT", c.urlForTagDefinition(tagDefinition.Metadata.Name),
+	return unmarshalBody[MeshTagDefinition](c.doAuthenticatedRequest("PUT", c.urlForTagDefinition(tagDefinition.Metadata.Name),
 		withPayload(tagDefinition, CONTENT_TYPE_TAG_DEFINITION),
 	))
-	if err != nil {
-		return nil, fmt.Errorf("failed to do authenticated request: %w", err)
-	}
-	return result, nil
 }
 
 func (c *MeshStackProviderClient) DeleteTagDefinition(name string) error {
 	_, err := c.doAuthenticatedRequest("DELETE", c.urlForTagDefinition(name),
 		withAccept(CONTENT_TYPE_TAG_DEFINITION),
-		withExpectedStatusCode(204),
 	)
-	if err != nil {
-		return fmt.Errorf("failed to do authenticated request: %w", err)
-	}
-
-	return nil
+	return err
 }
