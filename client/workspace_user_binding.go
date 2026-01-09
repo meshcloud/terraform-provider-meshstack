@@ -13,11 +13,15 @@ func (c *MeshStackProviderClient) urlForWorkspaceUserBinding(name string) *url.U
 }
 
 func (c *MeshStackProviderClient) ReadWorkspaceUserBinding(name string) (*MeshWorkspaceUserBinding, error) {
-	return c.readWorkspaceBinding(name, CONTENT_TYPE_WORKSPACE_USER_BINDING)
+	return unmarshalBodyIfPresent[MeshWorkspaceBinding](c.doAuthenticatedRequest("GET", c.urlForWorkspaceUserBinding(name),
+		withAccept(CONTENT_TYPE_WORKSPACE_USER_BINDING),
+	))
 }
 
 func (c *MeshStackProviderClient) CreateWorkspaceUserBinding(binding *MeshWorkspaceUserBinding) (*MeshWorkspaceUserBinding, error) {
-	return c.createWorkspaceBinding(binding, CONTENT_TYPE_WORKSPACE_USER_BINDING)
+	return unmarshalBody[MeshWorkspaceBinding](c.doAuthenticatedRequest("POST", c.endpoints.WorkspaceUserBindings,
+		withPayload(binding, CONTENT_TYPE_WORKSPACE_USER_BINDING),
+	))
 }
 
 func (c *MeshStackProviderClient) DeleteWorkspaceUserBinding(name string) error {
