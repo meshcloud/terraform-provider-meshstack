@@ -47,18 +47,18 @@ type MeshTenantClient struct {
 	meshObjectClient[MeshTenant]
 }
 
-func (c *MeshTenantClient) tenantId(workspace string, project string, platform string) string {
+func (c MeshTenantClient) tenantId(workspace string, project string, platform string) string {
 	return workspace + "." + project + "." + platform
 }
 
-func (c *MeshTenantClient) Read(workspace string, project string, platform string) (*MeshTenant, error) {
+func (c MeshTenantClient) Read(workspace string, project string, platform string) (*MeshTenant, error) {
 	return c.get(c.tenantId(workspace, project, platform))
 }
 
-func (c *MeshTenantClient) Create(tenant *MeshTenantCreate) (*MeshTenant, error) {
+func (c MeshTenantClient) Create(tenant *MeshTenantCreate) (*MeshTenant, error) {
 	return c.post(tenant)
 }
 
-func (c *MeshTenantClient) Delete(workspace string, project string, platform string) error {
+func (c MeshTenantClient) Delete(workspace string, project string, platform string) error {
 	return c.delete(c.tenantId(workspace, project, platform))
 }

@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"iter"
 	"log"
 	"net/http"
 	"net/url"
@@ -97,29 +96,64 @@ func pluralizeName(name string) string {
 	return fmt.Sprintf("%ss", name)
 }
 
-func (o meshObjectClient[M]) mediaType() string {
-	return fmt.Sprintf("application/vnd.meshcloud.api.%s.%s.hal+json", o.Name, o.ApiVersion)
+func (c meshObjectClient[M]) meshObjectMimeType() string {
+	return fmt.Sprintf("application/vnd.meshcloud.api.%s.%s.hal+json", c.Name, c.ApiVersion)
 }
 
 func (c meshObjectClient[M]) get(id string) (*M, error) {
-	return unmarshalBodyIfPresent[M](c.doAuthenticatedRequest(http.MethodGet, c.ApiUrl.JoinPath(id), withAccept(c.mediaType())))
-}
-
-func (c meshObjectClient[M]) list(options ...doRequestOption) ([]M, error) {
-	return unmarshalBodyPages[M](pluralizeName(c.Name), c.doPaginatedRequest(c.ApiUrl, append(options, withAccept(c.mediaType()))...))
+	body, err := c.doAuthenticatedRequest(http.MethodGet, c.ApiUrl.JoinPath(id), withAccept(c.meshObjectMimeType()))
+	if errors.Is(err, errNotFound) {
+		return nil, nil
+	}
+	return unmarshalBody[M](body, err)
 }
 
 func (c meshObjectClient[M]) post(payload any) (*M, error) {
-	return unmarshalBody[M](c.doAuthenticatedRequest(http.MethodPost, c.ApiUrl, withPayload(payload, c.mediaType())))
+	return unmarshalBody[M](c.doAuthenticatedRequest(http.MethodPost, c.ApiUrl, withPayload(payload, c.meshObjectMimeType())))
 }
 
 func (c meshObjectClient[M]) put(id string, payload any) (*M, error) {
-	return unmarshalBody[M](c.doAuthenticatedRequest(http.MethodPut, c.ApiUrl.JoinPath(id), withPayload(payload, c.mediaType())))
+	return unmarshalBody[M](c.doAuthenticatedRequest(http.MethodPut, c.ApiUrl.JoinPath(id), withPayload(payload, c.meshObjectMimeType())))
 }
 
 func (c meshObjectClient[M]) delete(id string) (err error) {
-	_, err = c.doAuthenticatedRequest(http.MethodDelete, c.ApiUrl.JoinPath(id), withAccept(c.mediaType()))
+	_, err = c.doAuthenticatedRequest(http.MethodDelete, c.ApiUrl.JoinPath(id), withAccept(c.meshObjectMimeType()))
 	return
+}
+
+func (c meshObjectClient[M]) list(options ...doRequestOption) ([]M, error) {
+	var result []M
+	embeddedKey := pluralizeName(c.Name)
+	pageNumber := 0
+	for {
+		body, err := c.doAuthenticatedRequest(http.MethodGet, c.ApiUrl, append(options,
+			withAccept(c.meshObjectMimeType()),
+			withUrlQuery("page", pageNumber),
+		)...)
+		if err != nil {
+			return result, fmt.Errorf("cannot fetch page %d: %w", pageNumber, err)
+		}
+		type paginatedResponse struct {
+			Embedded map[string][]M `json:"_embedded"`
+			Page     struct {
+				TotalPages int `json:"totalPages"`
+				Number     int `json:"number"`
+			} `json:"page"`
+		}
+		response, err := unmarshalBody[paginatedResponse](body, err)
+		if err != nil {
+			return result, fmt.Errorf("cannot unmarshal paginated response, page %d: %w", pageNumber, err)
+		} else if items, ok := response.Embedded[embeddedKey]; !ok {
+			return result, fmt.Errorf("embedded key %s not found in paginated response", embeddedKey)
+		} else {
+			result = append(result, items...)
+		}
+		// check if we've reached the end of pagination
+		if response.Page.Number >= response.Page.TotalPages-1 {
+			return result, nil
+		}
+		pageNumber++
+	}
 }
 
 func (c *httpClient) login() error {
@@ -156,20 +190,12 @@ func (c *httpClient) ensureValidToken() error {
 
 type doRequestOption func(opts *doRequestOptions)
 
-type urlModifier func(url *url.URL)
-
 type requestModifier func(req *http.Request)
 
 type doRequestOptions struct {
-	urlModifiers     []urlModifier
+	urlQueryParams   map[string]string
 	requestPayload   any
 	requestModifiers []requestModifier
-}
-
-func appendUrlModifier(modifier urlModifier) doRequestOption {
-	return func(opts *doRequestOptions) {
-		opts.urlModifiers = append(opts.urlModifiers, modifier)
-	}
 }
 
 func appendRequestModifier(modifier requestModifier) doRequestOption {
@@ -179,17 +205,19 @@ func appendRequestModifier(modifier requestModifier) doRequestOption {
 }
 
 func withUrlQuery(key string, value any) doRequestOption {
-	return appendUrlModifier(func(url *url.URL) {
+	return func(opts *doRequestOptions) {
 		var valueStr string
 		if stringerValue, ok := value.(fmt.Stringer); ok {
 			valueStr = stringerValue.String()
 		} else {
 			valueStr = fmt.Sprintf("%v", value)
 		}
-		query := url.Query()
-		query.Set(key, valueStr)
-		url.RawQuery = query.Encode()
-	})
+		if opts.urlQueryParams == nil {
+			opts.urlQueryParams = map[string]string{key: valueStr}
+		} else {
+			opts.urlQueryParams[key] = valueStr
+		}
+	}
 }
 
 func withAccept(accept string) doRequestOption {
@@ -222,32 +250,10 @@ func (c *httpClient) doRequest(method string, url *url.URL, options ...doRequest
 	for _, option := range options {
 		option(&opts)
 	}
-
-	if len(opts.urlModifiers) > 0 {
-		// clone url to prevent modifiers edit the given URL (it's sad that this is a pointer actually)
-		// ignoring the error is fine as this always succeeds parsing from String()
-		url, _ = url.Parse(url.String())
-		for _, modifier := range opts.urlModifiers {
-			modifier(url)
-		}
-	}
-
-	var requestBody io.ReadWriter
-	if opts.requestPayload != nil {
-		requestBody = new(bytes.Buffer)
-		if err := json.NewEncoder(requestBody).Encode(opts.requestPayload); err != nil {
-			return nil, fmt.Errorf("failed to encode request body payload: %w", err)
-		}
-	}
-
-	req, err := http.NewRequest(method, url.String(), requestBody)
+	req, err := c.buildRequest(method, *url, opts)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
+		return nil, err
 	}
-	for _, requestModifier := range opts.requestModifiers {
-		requestModifier(req)
-	}
-
 	res, err := c.Do(req)
 	if err != nil {
 		return nil, err
@@ -256,7 +262,10 @@ func (c *httpClient) doRequest(method string, url *url.URL, options ...doRequest
 		_ = res.Body.Close()
 	}()
 	log.Println(res)
+	return c.readBodyAndCheckSuccess(res)
+}
 
+func (c *httpClient) readBodyAndCheckSuccess(res *http.Response) ([]byte, error) {
 	responseBody, err := io.ReadAll(res.Body)
 	if err != nil {
 		return nil, fmt.Errorf("cannot read response body, status code %d: %w", res.StatusCode, err)
@@ -279,6 +288,35 @@ func (c *httpClient) doRequest(method string, url *url.URL, options ...doRequest
 	return responseBody, errors.Join(errs...)
 }
 
+func (c *httpClient) buildRequest(method string, url url.URL, opts doRequestOptions) (*http.Request, error) {
+	if len(opts.urlQueryParams) > 0 {
+		query := url.Query()
+		for k, v := range opts.urlQueryParams {
+			query.Set(k, v)
+		}
+		// Note: url is not a pointer here,
+		// so we can safely update that struct field without propagating such change to the caller!
+		url.RawQuery = query.Encode()
+	}
+
+	var requestBody io.ReadWriter
+	if opts.requestPayload != nil {
+		requestBody = new(bytes.Buffer)
+		if err := json.NewEncoder(requestBody).Encode(opts.requestPayload); err != nil {
+			return nil, fmt.Errorf("failed to encode request body payload: %w", err)
+		}
+	}
+
+	req, err := http.NewRequest(method, url.String(), requestBody)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+	for _, requestModifier := range opts.requestModifiers {
+		requestModifier(req)
+	}
+	return req, err
+}
+
 func (c *httpClient) doAuthenticatedRequest(method string, url *url.URL, options ...doRequestOption) ([]byte, error) {
 	if err := c.ensureValidToken(); err != nil {
 		return nil, err
@@ -292,39 +330,6 @@ func (c *httpClient) doAuthenticatedRequest(method string, url *url.URL, options
 	)...)
 }
 
-func (c *httpClient) doPaginatedRequest(url *url.URL, options ...doRequestOption) iter.Seq2[[]byte, error] {
-	return func(yield func([]byte, error) bool) {
-		pageNumber := 0
-		for {
-			body, err := c.doAuthenticatedRequest(http.MethodGet, url, append(options, withUrlQuery("page", pageNumber))...)
-			if err != nil {
-				yield(body, fmt.Errorf("cannot fetch page %d: %w", pageNumber, err))
-				return
-			}
-			if !yield(body, nil) {
-				// consumer wants to stop
-				return
-			}
-			// Check if there are more pages to fetch
-			type paginatedResponse struct {
-				Page struct {
-					TotalPages int `json:"totalPages"`
-					Number     int `json:"number"`
-				} `json:"page"`
-			}
-			response, err := unmarshalBody[paginatedResponse](body, err)
-			if err != nil {
-				yield(body, fmt.Errorf("cannot unmarshal paginated response, page %d: %w", pageNumber, err))
-				return
-			}
-			if response.Page.Number >= response.Page.TotalPages-1 {
-				return
-			}
-			pageNumber++
-		}
-	}
-}
-
 func unmarshalBody[T any](body []byte, err error) (*T, error) {
 	if err != nil {
 		return nil, err
@@ -334,28 +339,4 @@ func unmarshalBody[T any](body []byte, err error) (*T, error) {
 		return nil, err
 	}
 	return &target, nil
-}
-
-func unmarshalBodyIfPresent[T any](body []byte, err error) (*T, error) {
-	if errors.Is(err, errNotFound) {
-		return nil, nil
-	}
-	return unmarshalBody[T](body, err)
-}
-
-func unmarshalBodyPages[T any](embeddedKey string, bodyPages iter.Seq2[[]byte, error]) ([]T, error) {
-	var result []T
-	for bodyPage, pageErr := range bodyPages {
-		type embeddedResponse[T any] struct {
-			Embedded map[string][]T `json:"_embedded"`
-		}
-		if response, err := unmarshalBody[embeddedResponse[T]](bodyPage, pageErr); err != nil {
-			return result, err
-		} else if items, ok := response.Embedded[embeddedKey]; !ok {
-			return result, fmt.Errorf("embedded key %s not found in paginated response", embeddedKey)
-		} else {
-			result = append(result, items...)
-		}
-	}
-	return result, nil
 }
