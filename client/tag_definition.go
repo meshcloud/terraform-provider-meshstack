@@ -1,10 +1,7 @@
 package client
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
-	"net/http"
 	"net/url"
 )
 
@@ -87,14 +84,9 @@ func (c *MeshStackProviderClient) ReadTagDefinitions() (*[]MeshTagDefinition, er
 		query.Set("page", fmt.Sprintf("%d", pageNumber))
 		targetUrl.RawQuery = query.Encode()
 
-		req, err := http.NewRequest("GET", targetUrl.String(), nil)
-		if err != nil {
-			return nil, err
-		}
-
-		req.Header.Set("Accept", CONTENT_TYPE_TAG_DEFINITION)
-
-		body, err := c.doAuthenticatedRequest(req)
+		body, err := c.doAuthenticatedRequest("GET", targetUrl,
+			withAccept(CONTENT_TYPE_TAG_DEFINITION),
+		)
 		items, response, err := unmarshalPaginatedBody[MeshTagDefinition](body, err, "meshTagDefinitions")
 		if err != nil {
 			return nil, err
@@ -114,35 +106,15 @@ func (c *MeshStackProviderClient) ReadTagDefinitions() (*[]MeshTagDefinition, er
 }
 
 func (c *MeshStackProviderClient) ReadTagDefinition(name string) (*MeshTagDefinition, error) {
-	targetUrl := c.urlForTagDefinition(name)
-	req, err := http.NewRequest("GET", targetUrl.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Set("Accept", CONTENT_TYPE_TAG_DEFINITION)
-
-	return unmarshalBody[MeshTagDefinition](c.doAuthenticatedRequest(req))
+	return unmarshalBody[MeshTagDefinition](c.doAuthenticatedRequest("GET", c.urlForTagDefinition(name),
+		withAccept(CONTENT_TYPE_TAG_DEFINITION),
+	))
 }
 
 func (c *MeshStackProviderClient) CreateTagDefinition(tagDefinition *MeshTagDefinition) (*MeshTagDefinition, error) {
-	targetUrl := c.endpoints.TagDefinitions
-	data, err := json.Marshal(tagDefinition)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal tag definition: %w", err)
-	}
-
-	fmt.Printf("JSON Payload: %s\n", string(data))
-
-	req, err := http.NewRequest("POST", targetUrl.String(), bytes.NewBuffer(data))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-
-	req.Header.Set("Content-Type", CONTENT_TYPE_TAG_DEFINITION)
-	req.Header.Set("Accept", CONTENT_TYPE_TAG_DEFINITION)
-
-	result, err := unmarshalBody[MeshTagDefinition](c.doAuthenticatedRequest(req))
+	result, err := unmarshalBody[MeshTagDefinition](c.doAuthenticatedRequest("POST", c.endpoints.TagDefinitions,
+		withPayload(tagDefinition, CONTENT_TYPE_TAG_DEFINITION),
+	))
 	if err != nil {
 		return nil, fmt.Errorf("failed to do authenticated request: %w", err)
 	}
@@ -150,21 +122,9 @@ func (c *MeshStackProviderClient) CreateTagDefinition(tagDefinition *MeshTagDefi
 }
 
 func (c *MeshStackProviderClient) UpdateTagDefinition(tagDefinition *MeshTagDefinition) (*MeshTagDefinition, error) {
-	targetUrl := c.urlForTagDefinition(tagDefinition.Metadata.Name)
-	data, err := json.Marshal(tagDefinition)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal tag definition: %w", err)
-	}
-
-	req, err := http.NewRequest("PUT", targetUrl.String(), bytes.NewBuffer(data))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-
-	req.Header.Set("Content-Type", CONTENT_TYPE_TAG_DEFINITION)
-	req.Header.Set("Accept", CONTENT_TYPE_TAG_DEFINITION)
-
-	result, err := unmarshalBody[MeshTagDefinition](c.doAuthenticatedRequest(req))
+	result, err := unmarshalBody[MeshTagDefinition](c.doAuthenticatedRequest("PUT", c.urlForTagDefinition(tagDefinition.Metadata.Name),
+		withPayload(tagDefinition, CONTENT_TYPE_TAG_DEFINITION),
+	))
 	if err != nil {
 		return nil, fmt.Errorf("failed to do authenticated request: %w", err)
 	}
@@ -172,15 +132,10 @@ func (c *MeshStackProviderClient) UpdateTagDefinition(tagDefinition *MeshTagDefi
 }
 
 func (c *MeshStackProviderClient) DeleteTagDefinition(name string) error {
-	targetUrl := c.urlForTagDefinition(name)
-	req, err := http.NewRequest("DELETE", targetUrl.String(), nil)
-	if err != nil {
-		return fmt.Errorf("failed to create request: %w", err)
-	}
-
-	req.Header.Set("Accept", CONTENT_TYPE_TAG_DEFINITION)
-
-	_, err = c.doAuthenticatedRequest(req, withExpectedStatusCode(http.StatusNoContent))
+	_, err := c.doAuthenticatedRequest("DELETE", c.urlForTagDefinition(name),
+		withAccept(CONTENT_TYPE_TAG_DEFINITION),
+		withExpectedStatusCode(204),
+	)
 	if err != nil {
 		return fmt.Errorf("failed to do authenticated request: %w", err)
 	}

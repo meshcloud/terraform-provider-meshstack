@@ -1,10 +1,7 @@
 package client
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
-	"net/http"
 	"net/url"
 )
 
@@ -54,13 +51,9 @@ func (c *MeshStackProviderClient) readProjectBinding(name string, contentType st
 		return nil, fmt.Errorf("unexpected content type '%s'", contentType)
 	}
 
-	req, err := http.NewRequest("GET", targetUrl.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Accept", contentType)
-
-	return unmarshalBodyIfPresent[MeshProjectBinding](c.doAuthenticatedRequest(req))
+	return unmarshalBodyIfPresent[MeshProjectBinding](c.doAuthenticatedRequest("GET", targetUrl,
+		withAccept(contentType),
+	))
 }
 
 func (c *MeshStackProviderClient) createProjectBinding(binding *MeshProjectBinding, contentType string) (*MeshProjectBinding, error) {
@@ -76,17 +69,7 @@ func (c *MeshStackProviderClient) createProjectBinding(binding *MeshProjectBindi
 		return nil, fmt.Errorf("unexpected content type '%s'", contentType)
 	}
 
-	payload, err := json.Marshal(binding)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", targetUrl.String(), bytes.NewBuffer(payload))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", contentType)
-	req.Header.Set("Accept", contentType)
-
-	return unmarshalBody[MeshProjectBinding](c.doAuthenticatedRequest(req))
+	return unmarshalBody[MeshProjectBinding](c.doAuthenticatedRequest("POST", targetUrl,
+		withPayload(binding, contentType),
+	))
 }

@@ -1,10 +1,7 @@
 package client
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
-	"net/http"
 	"net/url"
 )
 
@@ -46,13 +43,9 @@ func (c *MeshStackProviderClient) readWorkspaceBinding(name string, contentType 
 		return nil, fmt.Errorf("unexpected content type '%s'", contentType)
 	}
 
-	req, err := http.NewRequest("GET", targetUrl.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Accept", contentType)
-
-	return unmarshalBodyIfPresent[MeshWorkspaceBinding](c.doAuthenticatedRequest(req))
+	return unmarshalBodyIfPresent[MeshWorkspaceBinding](c.doAuthenticatedRequest("GET", targetUrl,
+		withAccept(contentType),
+	))
 }
 
 func (c *MeshStackProviderClient) createWorkspaceBinding(binding *MeshWorkspaceBinding, contentType string) (*MeshWorkspaceBinding, error) {
@@ -66,17 +59,7 @@ func (c *MeshStackProviderClient) createWorkspaceBinding(binding *MeshWorkspaceB
 		return nil, fmt.Errorf("unexpected content type '%s'", contentType)
 	}
 
-	payload, err := json.Marshal(binding)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", targetUrl.String(), bytes.NewBuffer(payload))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", contentType)
-	req.Header.Set("Accept", contentType)
-
-	return unmarshalBody[MeshWorkspaceBinding](c.doAuthenticatedRequest(req))
+	return unmarshalBody[MeshWorkspaceBinding](c.doAuthenticatedRequest("POST", targetUrl,
+		withPayload(binding, contentType),
+	))
 }

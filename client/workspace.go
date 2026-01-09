@@ -1,9 +1,6 @@
 package client
 
 import (
-	"bytes"
-	"encoding/json"
-	"net/http"
 	"net/url"
 )
 
@@ -43,51 +40,24 @@ func (c *MeshStackProviderClient) urlForWorkspace(name string) *url.URL {
 }
 
 func (c *MeshStackProviderClient) ReadWorkspace(name string) (*MeshWorkspace, error) {
-	targetUrl := c.urlForWorkspace(name)
-	req, err := http.NewRequest("GET", targetUrl.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Accept", CONTENT_TYPE_WORKSPACE)
-
-	return unmarshalBodyIfPresent[MeshWorkspace](c.doAuthenticatedRequest(req))
+	return unmarshalBodyIfPresent[MeshWorkspace](c.doAuthenticatedRequest("GET", c.urlForWorkspace(name),
+		withAccept(CONTENT_TYPE_WORKSPACE),
+	))
 }
 
 func (c *MeshStackProviderClient) CreateWorkspace(workspace *MeshWorkspaceCreate) (*MeshWorkspace, error) {
-	payload, err := json.Marshal(workspace)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", c.endpoints.Workspaces.String(), bytes.NewBuffer(payload))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", CONTENT_TYPE_WORKSPACE)
-	req.Header.Set("Accept", CONTENT_TYPE_WORKSPACE)
-
-	return unmarshalBody[MeshWorkspace](c.doAuthenticatedRequest(req))
+	return unmarshalBody[MeshWorkspace](c.doAuthenticatedRequest("POST", c.endpoints.Workspaces,
+		withPayload(workspace, CONTENT_TYPE_WORKSPACE),
+	))
 }
 
 func (c *MeshStackProviderClient) UpdateWorkspace(name string, workspace *MeshWorkspaceCreate) (*MeshWorkspace, error) {
-	targetUrl := c.urlForWorkspace(name)
-
-	payload, err := json.Marshal(workspace)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("PUT", targetUrl.String(), bytes.NewBuffer(payload))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", CONTENT_TYPE_WORKSPACE)
-	req.Header.Set("Accept", CONTENT_TYPE_WORKSPACE)
-
-	return unmarshalBody[MeshWorkspace](c.doAuthenticatedRequest(req))
+	return unmarshalBody[MeshWorkspace](c.doAuthenticatedRequest("PUT", c.urlForWorkspace(name),
+		withPayload(workspace, CONTENT_TYPE_WORKSPACE),
+	))
 }
 
 func (c *MeshStackProviderClient) DeleteWorkspace(name string) error {
 	targetUrl := c.urlForWorkspace(name)
-	return c.deleteMeshObject(*targetUrl, 204)
+	return c.deleteMeshObject(targetUrl, 204)
 }

@@ -1,9 +1,6 @@
 package client
 
 import (
-	"bytes"
-	"encoding/json"
-	"net/http"
 	"net/url"
 )
 
@@ -58,33 +55,18 @@ func (c *MeshStackProviderClient) urlForTenant(workspace string, project string,
 }
 
 func (c *MeshStackProviderClient) ReadTenant(workspace string, project string, platform string) (*MeshTenant, error) {
-	targetUrl := c.urlForTenant(workspace, project, platform)
-	req, err := http.NewRequest("GET", targetUrl.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Accept", CONTENT_TYPE_TENANT)
-
-	return unmarshalBodyIfPresent[MeshTenant](c.doAuthenticatedRequest(req))
+	return unmarshalBodyIfPresent[MeshTenant](c.doAuthenticatedRequest("GET", c.urlForTenant(workspace, project, platform),
+		withAccept(CONTENT_TYPE_TENANT),
+	))
 }
 
 func (c *MeshStackProviderClient) CreateTenant(tenant *MeshTenantCreate) (*MeshTenant, error) {
-	payload, err := json.Marshal(tenant)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", c.endpoints.Tenants.String(), bytes.NewBuffer(payload))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", CONTENT_TYPE_TENANT)
-	req.Header.Set("Accept", CONTENT_TYPE_TENANT)
-
-	return unmarshalBody[MeshTenant](c.doAuthenticatedRequest(req))
+	return unmarshalBody[MeshTenant](c.doAuthenticatedRequest("POST", c.endpoints.Tenants,
+		withPayload(tenant, CONTENT_TYPE_TENANT),
+	))
 }
 
 func (c *MeshStackProviderClient) DeleteTenant(workspace string, project string, platform string) error {
 	targetUrl := c.urlForTenant(workspace, project, platform)
-	return c.deleteMeshObject(*targetUrl, 202)
+	return c.deleteMeshObject(targetUrl, 202)
 }

@@ -1,10 +1,7 @@
 package client
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
-	"net/http"
 	"net/url"
 )
 
@@ -47,14 +44,9 @@ func (c *MeshStackProviderClient) urlForProject(workspace string, name string) *
 }
 
 func (c *MeshStackProviderClient) ReadProject(workspace string, name string) (*MeshProject, error) {
-	targetUrl := c.urlForProject(workspace, name)
-	req, err := http.NewRequest("GET", targetUrl.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Accept", CONTENT_TYPE_PROJECT)
-
-	return unmarshalBodyIfPresent[MeshProject](c.doAuthenticatedRequest(req))
+	return unmarshalBodyIfPresent[MeshProject](c.doAuthenticatedRequest("GET", c.urlForProject(workspace, name),
+		withAccept(CONTENT_TYPE_PROJECT),
+	))
 }
 
 func (c *MeshStackProviderClient) ReadProjects(workspaceIdentifier string, paymentMethodIdentifier *string) (*[]MeshProject, error) {
@@ -72,14 +64,9 @@ func (c *MeshStackProviderClient) ReadProjects(workspaceIdentifier string, payme
 		query.Set("page", fmt.Sprintf("%d", pageNumber))
 		targetUrl.RawQuery = query.Encode()
 
-		req, err := http.NewRequest("GET", targetUrl.String(), nil)
-		if err != nil {
-			return nil, err
-		}
-
-		req.Header.Set("Accept", CONTENT_TYPE_PROJECT)
-
-		body, err := c.doAuthenticatedRequest(req)
+		body, err := c.doAuthenticatedRequest("GET", targetUrl,
+			withAccept(CONTENT_TYPE_PROJECT),
+		)
 		items, response, err := unmarshalPaginatedBody[MeshProject](body, err, "meshProjects")
 		if err != nil {
 			return nil, err
@@ -99,40 +86,18 @@ func (c *MeshStackProviderClient) ReadProjects(workspaceIdentifier string, payme
 }
 
 func (c *MeshStackProviderClient) CreateProject(project *MeshProjectCreate) (*MeshProject, error) {
-	payload, err := json.Marshal(project)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", c.endpoints.Projects.String(), bytes.NewBuffer(payload))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", CONTENT_TYPE_PROJECT)
-	req.Header.Set("Accept", CONTENT_TYPE_PROJECT)
-
-	return unmarshalBody[MeshProject](c.doAuthenticatedRequest(req))
+	return unmarshalBody[MeshProject](c.doAuthenticatedRequest("POST", c.endpoints.Projects,
+		withPayload(project, CONTENT_TYPE_PROJECT),
+	))
 }
 
 func (c *MeshStackProviderClient) UpdateProject(project *MeshProjectCreate) (*MeshProject, error) {
-	targetUrl := c.urlForProject(project.Metadata.OwnedByWorkspace, project.Metadata.Name)
-
-	payload, err := json.Marshal(project)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("PUT", targetUrl.String(), bytes.NewBuffer(payload))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", CONTENT_TYPE_PROJECT)
-	req.Header.Set("Accept", CONTENT_TYPE_PROJECT)
-
-	return unmarshalBody[MeshProject](c.doAuthenticatedRequest(req))
+	return unmarshalBody[MeshProject](c.doAuthenticatedRequest("PUT", c.urlForProject(project.Metadata.OwnedByWorkspace, project.Metadata.Name),
+		withPayload(project, CONTENT_TYPE_PROJECT),
+	))
 }
 
 func (c *MeshStackProviderClient) DeleteProject(workspace string, name string) error {
 	targetUrl := c.urlForProject(workspace, name)
-	return c.deleteMeshObject(*targetUrl, 202)
+	return c.deleteMeshObject(targetUrl, 202)
 }
