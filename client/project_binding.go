@@ -3,7 +3,6 @@ package client
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -61,21 +60,7 @@ func (c *MeshStackProviderClient) readProjectBinding(name string, contentType st
 	}
 	req.Header.Set("Accept", contentType)
 
-	body, err := c.doAuthenticatedRequest(req)
-	if errors.Is(err, errNotFound) {
-		return nil, nil // Not found
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	var binding MeshProjectBinding
-	err = json.Unmarshal(body, &binding)
-	if err != nil {
-		return nil, err
-	}
-
-	return &binding, nil
+	return unmarshalBodyIfPresent[MeshProjectBinding](c.doAuthenticatedRequest(req))
 }
 
 func (c *MeshStackProviderClient) createProjectBinding(binding *MeshProjectBinding, contentType string) (*MeshProjectBinding, error) {
@@ -103,16 +88,5 @@ func (c *MeshStackProviderClient) createProjectBinding(binding *MeshProjectBindi
 	req.Header.Set("Content-Type", contentType)
 	req.Header.Set("Accept", contentType)
 
-	body, err := c.doAuthenticatedRequest(req)
-	if err != nil {
-		return nil, err
-	}
-
-	var createdBinding MeshProjectBinding
-	err = json.Unmarshal(body, &createdBinding)
-	if err != nil {
-		return nil, err
-	}
-
-	return &createdBinding, nil
+	return unmarshalBody[MeshProjectBinding](c.doAuthenticatedRequest(req))
 }

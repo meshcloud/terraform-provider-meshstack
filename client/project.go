@@ -3,7 +3,6 @@ package client
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -55,21 +54,7 @@ func (c *MeshStackProviderClient) ReadProject(workspace string, name string) (*M
 	}
 	req.Header.Set("Accept", CONTENT_TYPE_PROJECT)
 
-	body, err := c.doAuthenticatedRequest(req)
-	if errors.Is(err, errNotFound) {
-		return nil, nil // Not found
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	var project MeshProject
-	err = json.Unmarshal(body, &project)
-	if err != nil {
-		return nil, err
-	}
-
-	return &project, nil
+	return unmarshalBodyIfPresent[MeshProject](c.doAuthenticatedRequest(req))
 }
 
 func (c *MeshStackProviderClient) ReadProjects(workspaceIdentifier string, paymentMethodIdentifier *string) (*[]MeshProject, error) {
@@ -85,7 +70,6 @@ func (c *MeshStackProviderClient) ReadProjects(workspaceIdentifier string, payme
 
 	for {
 		query.Set("page", fmt.Sprintf("%d", pageNumber))
-
 		targetUrl.RawQuery = query.Encode()
 
 		req, err := http.NewRequest("GET", targetUrl.String(), nil)
@@ -96,28 +80,12 @@ func (c *MeshStackProviderClient) ReadProjects(workspaceIdentifier string, payme
 		req.Header.Set("Accept", CONTENT_TYPE_PROJECT)
 
 		body, err := c.doAuthenticatedRequest(req)
+		items, response, err := unmarshalPaginatedBody[MeshProject](body, err, "meshProjects")
 		if err != nil {
 			return nil, err
 		}
 
-		var response struct {
-			Embedded struct {
-				MeshProjects []MeshProject `json:"meshProjects"`
-			} `json:"_embedded"`
-			Page struct {
-				Size          int `json:"size"`
-				TotalElements int `json:"totalElements"`
-				TotalPages    int `json:"totalPages"`
-				Number        int `json:"number"`
-			} `json:"page"`
-		}
-
-		err = json.Unmarshal(body, &response)
-		if err != nil {
-			return nil, err
-		}
-
-		allProjects = append(allProjects, response.Embedded.MeshProjects...)
+		allProjects = append(allProjects, items...)
 
 		// Check if there are more pages
 		if response.Page.Number >= response.Page.TotalPages-1 {
@@ -143,18 +111,7 @@ func (c *MeshStackProviderClient) CreateProject(project *MeshProjectCreate) (*Me
 	req.Header.Set("Content-Type", CONTENT_TYPE_PROJECT)
 	req.Header.Set("Accept", CONTENT_TYPE_PROJECT)
 
-	body, err := c.doAuthenticatedRequest(req)
-	if err != nil {
-		return nil, err
-	}
-
-	var createdProject MeshProject
-	err = json.Unmarshal(body, &createdProject)
-	if err != nil {
-		return nil, err
-	}
-
-	return &createdProject, nil
+	return unmarshalBody[MeshProject](c.doAuthenticatedRequest(req))
 }
 
 func (c *MeshStackProviderClient) UpdateProject(project *MeshProjectCreate) (*MeshProject, error) {
@@ -172,19 +129,7 @@ func (c *MeshStackProviderClient) UpdateProject(project *MeshProjectCreate) (*Me
 	req.Header.Set("Content-Type", CONTENT_TYPE_PROJECT)
 	req.Header.Set("Accept", CONTENT_TYPE_PROJECT)
 
-	body, err := c.doAuthenticatedRequest(req)
-
-	if err != nil {
-		return nil, err
-	}
-
-	var updatedProject MeshProject
-	err = json.Unmarshal(body, &updatedProject)
-	if err != nil {
-		return nil, err
-	}
-
-	return &updatedProject, nil
+	return unmarshalBody[MeshProject](c.doAuthenticatedRequest(req))
 }
 
 func (c *MeshStackProviderClient) DeleteProject(workspace string, name string) error {

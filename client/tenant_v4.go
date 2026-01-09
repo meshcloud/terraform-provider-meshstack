@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -75,21 +74,7 @@ func (c *MeshStackProviderClient) ReadTenantV4(uuid string) (*MeshTenantV4, erro
 	}
 	req.Header.Set("Accept", CONTENT_TYPE_TENANT_V4)
 
-	body, err := c.doAuthenticatedRequest(req)
-	if errors.Is(err, errNotFound) {
-		return nil, nil // Not found
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	var tenant MeshTenantV4
-	err = json.Unmarshal(body, &tenant)
-	if err != nil {
-		return nil, err
-	}
-
-	return &tenant, nil
+	return unmarshalBodyIfPresent[MeshTenantV4](c.doAuthenticatedRequest(req))
 }
 
 func (c *MeshStackProviderClient) CreateTenantV4(tenant *MeshTenantV4Create) (*MeshTenantV4, error) {
@@ -105,18 +90,7 @@ func (c *MeshStackProviderClient) CreateTenantV4(tenant *MeshTenantV4Create) (*M
 	req.Header.Set("Content-Type", CONTENT_TYPE_TENANT_V4)
 	req.Header.Set("Accept", CONTENT_TYPE_TENANT_V4)
 
-	body, err := c.doAuthenticatedRequest(req)
-	if err != nil {
-		return nil, err
-	}
-
-	var createdTenant MeshTenantV4
-	err = json.Unmarshal(body, &createdTenant)
-	if err != nil {
-		return nil, err
-	}
-
-	return &createdTenant, nil
+	return unmarshalBody[MeshTenantV4](c.doAuthenticatedRequest(req))
 }
 
 func (c *MeshStackProviderClient) DeleteTenantV4(uuid string) error {
