@@ -35,15 +35,15 @@ type MeshProjectClient struct {
 	meshObjectClient[MeshProject]
 }
 
-func (c *MeshProjectClient) projectId(workspace string, name string) string {
+func (c MeshProjectClient) projectId(workspace string, name string) string {
 	return workspace + "." + name
 }
 
-func (c *MeshProjectClient) Read(workspace string, name string) (*MeshProject, error) {
+func (c MeshProjectClient) Read(workspace string, name string) (*MeshProject, error) {
 	return c.get(c.projectId(workspace, name))
 }
 
-func (c *MeshProjectClient) List(workspaceIdentifier string, paymentMethodIdentifier *string) ([]MeshProject, error) {
+func (c MeshProjectClient) List(workspaceIdentifier string, paymentMethodIdentifier *string) ([]MeshProject, error) {
 	options := []doRequestOption{
 		withUrlQuery("workspaceIdentifier", workspaceIdentifier),
 	}
@@ -53,14 +53,14 @@ func (c *MeshProjectClient) List(workspaceIdentifier string, paymentMethodIdenti
 	return c.list(options...)
 }
 
-func (c *MeshProjectClient) Create(project *MeshProjectCreate) (*MeshProject, error) {
+func (c MeshProjectClient) Create(project *MeshProjectCreate) (*MeshProject, error) {
 	return c.post(project)
 }
 
-func (c *MeshProjectClient) Update(project *MeshProjectCreate) (*MeshProject, error) {
+func (c MeshProjectClient) Update(project *MeshProjectCreate) (*MeshProject, error) {
 	return c.put(c.projectId(project.Metadata.OwnedByWorkspace, project.Metadata.Name), project)
 }
 
-func (c *MeshProjectClient) Delete(workspace string, name string) error {
+func (c MeshProjectClient) Delete(workspace string, name string) error {
 	return c.delete(c.projectId(workspace, name))
 }
