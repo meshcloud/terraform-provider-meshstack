@@ -1,7 +1,6 @@
 package client
 
 import (
-	"fmt"
 	"net/url"
 )
 
@@ -49,40 +48,15 @@ func (c *MeshStackProviderClient) ReadProject(workspace string, name string) (*M
 	))
 }
 
-func (c *MeshStackProviderClient) ReadProjects(workspaceIdentifier string, paymentMethodIdentifier *string) (*[]MeshProject, error) {
-	var allProjects []MeshProject
-
-	pageNumber := 0
-	targetUrl := c.endpoints.Projects
-	query := targetUrl.Query()
-	query.Set("workspaceIdentifier", workspaceIdentifier)
+func (c *MeshStackProviderClient) ReadProjects(workspaceIdentifier string, paymentMethodIdentifier *string) ([]MeshProject, error) {
+	options := []doRequestOption{
+		withAccept(CONTENT_TYPE_PROJECT),
+		withUrlQuery("workspaceIdentifier", workspaceIdentifier),
+	}
 	if paymentMethodIdentifier != nil {
-		query.Set("paymentIdentifier", *paymentMethodIdentifier)
+		options = append(options, withUrlQuery("paymentIdentifier", *paymentMethodIdentifier))
 	}
-
-	for {
-		query.Set("page", fmt.Sprintf("%d", pageNumber))
-		targetUrl.RawQuery = query.Encode()
-
-		body, err := c.doAuthenticatedRequest("GET", targetUrl,
-			withAccept(CONTENT_TYPE_PROJECT),
-		)
-		items, response, err := unmarshalPaginatedBody[MeshProject](body, err, "meshProjects")
-		if err != nil {
-			return nil, err
-		}
-
-		allProjects = append(allProjects, items...)
-
-		// Check if there are more pages
-		if response.Page.Number >= response.Page.TotalPages-1 {
-			break
-		}
-
-		pageNumber++
-	}
-
-	return &allProjects, nil
+	return unmarshalBodyPages[MeshProject]("meshProjects", c.doPaginatedRequest(c.endpoints.Projects, options...))
 }
 
 func (c *MeshStackProviderClient) CreateProject(project *MeshProjectCreate) (*MeshProject, error) {

@@ -1,7 +1,6 @@
 package client
 
 import (
-	"fmt"
 	"net/url"
 )
 
@@ -73,36 +72,8 @@ func (c *MeshStackProviderClient) urlForTagDefinition(name string) *url.URL {
 	return c.endpoints.TagDefinitions.JoinPath(name)
 }
 
-func (c *MeshStackProviderClient) ReadTagDefinitions() (*[]MeshTagDefinition, error) {
-	var all []MeshTagDefinition
-
-	pageNumber := 0
-	targetUrl := c.endpoints.TagDefinitions
-	query := targetUrl.Query()
-
-	for {
-		query.Set("page", fmt.Sprintf("%d", pageNumber))
-		targetUrl.RawQuery = query.Encode()
-
-		body, err := c.doAuthenticatedRequest("GET", targetUrl,
-			withAccept(CONTENT_TYPE_TAG_DEFINITION),
-		)
-		items, response, err := unmarshalPaginatedBody[MeshTagDefinition](body, err, "meshTagDefinitions")
-		if err != nil {
-			return nil, err
-		}
-
-		all = append(all, items...)
-
-		// Check if there are more pages
-		if response.Page.Number >= response.Page.TotalPages-1 {
-			break
-		}
-
-		pageNumber++
-	}
-
-	return &all, nil
+func (c *MeshStackProviderClient) ReadTagDefinitions() ([]MeshTagDefinition, error) {
+	return unmarshalBodyPages[MeshTagDefinition]("meshTagDefinitions", c.doPaginatedRequest(c.endpoints.TagDefinitions, withAccept(CONTENT_TYPE_TAG_DEFINITION)))
 }
 
 func (c *MeshStackProviderClient) ReadTagDefinition(name string) (*MeshTagDefinition, error) {
