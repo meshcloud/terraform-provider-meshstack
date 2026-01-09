@@ -231,3 +231,45 @@ func (c *MeshStackProviderClient) deleteMeshObject(targetUrl url.URL, expectedSt
 	_, err = c.doAuthenticatedRequest(req, withExpectedStatusCode(expectedStatus))
 	return
 }
+
+func unmarshalBody[T any](body []byte, err error) (*T, error) {
+	if err != nil {
+		return nil, err
+	}
+	var target T
+	if err := json.Unmarshal(body, &target); err != nil {
+		return nil, err
+	}
+	return &target, nil
+}
+
+func unmarshalBodyIfPresent[T any](body []byte, err error) (*T, error) {
+	if errors.Is(err, errNotFound) {
+		return nil, nil
+	}
+	return unmarshalBody[T](body, err)
+}
+
+// paginatedResponse is a generic structure for HAL paginated responses
+type paginatedResponse[T any] struct {
+	Embedded map[string][]T `json:"_embedded"`
+	Page     struct {
+		Size          int `json:"size"`
+		TotalElements int `json:"totalElements"`
+		TotalPages    int `json:"totalPages"`
+		Number        int `json:"number"`
+	} `json:"page"`
+}
+
+// unmarshalPaginatedBody unmarshals a paginated HAL response and extracts items using the provided key
+func unmarshalPaginatedBody[T any](body []byte, err error, embeddedKey string) ([]T, *paginatedResponse[T], error) {
+	if err != nil {
+		return nil, nil, err
+	}
+	var response paginatedResponse[T]
+	if err := json.Unmarshal(body, &response); err != nil {
+		return nil, nil, err
+	}
+	items := response.Embedded[embeddedKey]
+	return items, &response, nil
+}

@@ -3,7 +3,6 @@ package client
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"net/url"
 )
@@ -54,21 +53,7 @@ func (c *MeshStackProviderClient) ReadLocation(name string) (*MeshLocation, erro
 	}
 	req.Header.Set("Accept", CONTENT_TYPE_LOCATION)
 
-	body, err := c.doAuthenticatedRequest(req)
-	if errors.Is(err, errNotFound) {
-		return nil, nil // Not found
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	var location MeshLocation
-	err = json.Unmarshal(body, &location)
-	if err != nil {
-		return nil, err
-	}
-
-	return &location, nil
+	return unmarshalBodyIfPresent[MeshLocation](c.doAuthenticatedRequest(req))
 }
 
 func (c *MeshStackProviderClient) CreateLocation(location *MeshLocationCreate) (*MeshLocation, error) {
@@ -84,18 +69,7 @@ func (c *MeshStackProviderClient) CreateLocation(location *MeshLocationCreate) (
 	req.Header.Set("Content-Type", CONTENT_TYPE_LOCATION)
 	req.Header.Set("Accept", CONTENT_TYPE_LOCATION)
 
-	body, err := c.doAuthenticatedRequest(req)
-	if err != nil {
-		return nil, err
-	}
-
-	var createdLocation MeshLocation
-	err = json.Unmarshal(body, &createdLocation)
-	if err != nil {
-		return nil, err
-	}
-
-	return &createdLocation, nil
+	return unmarshalBody[MeshLocation](c.doAuthenticatedRequest(req))
 }
 
 func (c *MeshStackProviderClient) UpdateLocation(name string, location *MeshLocationCreate) (*MeshLocation, error) {
@@ -113,18 +87,7 @@ func (c *MeshStackProviderClient) UpdateLocation(name string, location *MeshLoca
 	req.Header.Set("Content-Type", CONTENT_TYPE_LOCATION)
 	req.Header.Set("Accept", CONTENT_TYPE_LOCATION)
 
-	body, err := c.doAuthenticatedRequest(req)
-	if err != nil {
-		return nil, err
-	}
-
-	var updatedLocation MeshLocation
-	err = json.Unmarshal(body, &updatedLocation)
-	if err != nil {
-		return nil, err
-	}
-
-	return &updatedLocation, nil
+	return unmarshalBody[MeshLocation](c.doAuthenticatedRequest(req))
 }
 
 func (c *MeshStackProviderClient) DeleteLocation(name string) error {

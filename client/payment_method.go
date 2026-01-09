@@ -3,7 +3,6 @@ package client
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"net/url"
 )
@@ -55,21 +54,7 @@ func (c *MeshStackProviderClient) ReadPaymentMethod(workspace string, identifier
 	}
 	req.Header.Set("Accept", CONTENT_TYPE_PAYMENT_METHOD)
 
-	body, err := c.doAuthenticatedRequest(req)
-	if errors.Is(err, errNotFound) {
-		return nil, nil // Not found
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	var paymentMethod MeshPaymentMethod
-	err = json.Unmarshal(body, &paymentMethod)
-	if err != nil {
-		return nil, err
-	}
-
-	return &paymentMethod, nil
+	return unmarshalBodyIfPresent[MeshPaymentMethod](c.doAuthenticatedRequest(req))
 }
 
 func (c *MeshStackProviderClient) CreatePaymentMethod(paymentMethod *MeshPaymentMethodCreate) (*MeshPaymentMethod, error) {
@@ -85,18 +70,7 @@ func (c *MeshStackProviderClient) CreatePaymentMethod(paymentMethod *MeshPayment
 	req.Header.Set("Content-Type", CONTENT_TYPE_PAYMENT_METHOD)
 	req.Header.Set("Accept", CONTENT_TYPE_PAYMENT_METHOD)
 
-	body, err := c.doAuthenticatedRequest(req)
-	if err != nil {
-		return nil, err
-	}
-
-	var createdPaymentMethod MeshPaymentMethod
-	err = json.Unmarshal(body, &createdPaymentMethod)
-	if err != nil {
-		return nil, err
-	}
-
-	return &createdPaymentMethod, nil
+	return unmarshalBody[MeshPaymentMethod](c.doAuthenticatedRequest(req))
 }
 
 func (c *MeshStackProviderClient) UpdatePaymentMethod(identifier string, paymentMethod *MeshPaymentMethodCreate) (*MeshPaymentMethod, error) {
@@ -114,18 +88,7 @@ func (c *MeshStackProviderClient) UpdatePaymentMethod(identifier string, payment
 	req.Header.Set("Content-Type", CONTENT_TYPE_PAYMENT_METHOD)
 	req.Header.Set("Accept", CONTENT_TYPE_PAYMENT_METHOD)
 
-	body, err := c.doAuthenticatedRequest(req)
-	if err != nil {
-		return nil, err
-	}
-
-	var updatedPaymentMethod MeshPaymentMethod
-	err = json.Unmarshal(body, &updatedPaymentMethod)
-	if err != nil {
-		return nil, err
-	}
-
-	return &updatedPaymentMethod, nil
+	return unmarshalBody[MeshPaymentMethod](c.doAuthenticatedRequest(req))
 }
 
 func (c *MeshStackProviderClient) DeletePaymentMethod(identifier string) error {

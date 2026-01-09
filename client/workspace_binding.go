@@ -3,7 +3,6 @@ package client
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -53,21 +52,7 @@ func (c *MeshStackProviderClient) readWorkspaceBinding(name string, contentType 
 	}
 	req.Header.Set("Accept", contentType)
 
-	body, err := c.doAuthenticatedRequest(req)
-	if errors.Is(err, errNotFound) {
-		return nil, nil // Not found
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	var binding MeshWorkspaceBinding
-	err = json.Unmarshal(body, &binding)
-	if err != nil {
-		return nil, err
-	}
-
-	return &binding, nil
+	return unmarshalBodyIfPresent[MeshWorkspaceBinding](c.doAuthenticatedRequest(req))
 }
 
 func (c *MeshStackProviderClient) createWorkspaceBinding(binding *MeshWorkspaceBinding, contentType string) (*MeshWorkspaceBinding, error) {
@@ -93,16 +78,5 @@ func (c *MeshStackProviderClient) createWorkspaceBinding(binding *MeshWorkspaceB
 	req.Header.Set("Content-Type", contentType)
 	req.Header.Set("Accept", contentType)
 
-	body, err := c.doAuthenticatedRequest(req)
-	if err != nil {
-		return nil, err
-	}
-
-	var createdBinding MeshWorkspaceBinding
-	err = json.Unmarshal(body, &createdBinding)
-	if err != nil {
-		return nil, err
-	}
-
-	return &createdBinding, nil
+	return unmarshalBody[MeshWorkspaceBinding](c.doAuthenticatedRequest(req))
 }
