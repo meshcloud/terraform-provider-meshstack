@@ -3,8 +3,7 @@ package client
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
-	"io"
+	"errors"
 	"net/http"
 	"net/url"
 )
@@ -82,28 +81,16 @@ func (c *MeshStackProviderClient) ReadLandingZone(name string) (*MeshLandingZone
 	}
 	req.Header.Set("Accept", CONTENT_TYPE_LANDINGZONE)
 
-	res, err := c.doAuthenticatedRequest(req)
+	body, err := c.doAuthenticatedRequest(req)
+	if errors.Is(err, errNotFound) {
+		return nil, nil // Not found
+	}
 	if err != nil {
 		return nil, err
-	}
-
-	defer func() { _ = res.Body.Close() }()
-
-	if res.StatusCode == http.StatusNotFound {
-		return nil, nil // Not found is not an error
-	}
-
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if !isSuccessHTTPStatus(res) {
-		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
 	}
 
 	var landingZone MeshLandingZone
-	err = json.Unmarshal(data, &landingZone)
+	err = json.Unmarshal(body, &landingZone)
 	if err != nil {
 		return nil, err
 	}
@@ -123,25 +110,13 @@ func (c *MeshStackProviderClient) CreateLandingZone(landingZone *MeshLandingZone
 	req.Header.Set("Content-Type", CONTENT_TYPE_LANDINGZONE)
 	req.Header.Set("Accept", CONTENT_TYPE_LANDINGZONE)
 
-	res, err := c.doAuthenticatedRequest(req)
+	body, err := c.doAuthenticatedRequest(req)
 	if err != nil {
 		return nil, err
-	}
-	defer func() {
-		_ = res.Body.Close()
-	}()
-
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if !isSuccessHTTPStatus(res) {
-		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
 	}
 
 	var createdLandingZone MeshLandingZone
-	err = json.Unmarshal(data, &createdLandingZone)
+	err = json.Unmarshal(body, &createdLandingZone)
 	if err != nil {
 		return nil, err
 	}
@@ -163,25 +138,13 @@ func (c *MeshStackProviderClient) UpdateLandingZone(name string, landingZone *Me
 	req.Header.Set("Content-Type", CONTENT_TYPE_LANDINGZONE)
 	req.Header.Set("Accept", CONTENT_TYPE_LANDINGZONE)
 
-	res, err := c.doAuthenticatedRequest(req)
+	body, err := c.doAuthenticatedRequest(req)
 	if err != nil {
 		return nil, err
-	}
-	defer func() {
-		_ = res.Body.Close()
-	}()
-
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if !isSuccessHTTPStatus(res) {
-		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
 	}
 
 	var updatedLandingZone MeshLandingZone
-	err = json.Unmarshal(data, &updatedLandingZone)
+	err = json.Unmarshal(body, &updatedLandingZone)
 	if err != nil {
 		return nil, err
 	}

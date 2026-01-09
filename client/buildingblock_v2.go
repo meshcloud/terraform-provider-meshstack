@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"time"
 
@@ -80,30 +80,16 @@ func (c *MeshStackProviderClient) ReadBuildingBlockV2(uuid string) (*MeshBuildin
 	}
 	req.Header.Set("Accept", CONTENT_TYPE_BUILDING_BLOCK_V2)
 
-	res, err := c.doAuthenticatedRequest(req)
+	body, err := c.doAuthenticatedRequest(req)
+	if errors.Is(err, errNotFound) {
+		return nil, nil // Not found
+	}
 	if err != nil {
 		return nil, err
-	}
-
-	defer func() {
-		_ = res.Body.Close()
-	}()
-
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if res.StatusCode == 404 {
-		return nil, nil
-	}
-
-	if !isSuccessHTTPStatus(res) {
-		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
 	}
 
 	var bb MeshBuildingBlockV2
-	err = json.Unmarshal(data, &bb)
+	err = json.Unmarshal(body, &bb)
 	if err != nil {
 		return nil, err
 	}
@@ -124,26 +110,13 @@ func (c *MeshStackProviderClient) CreateBuildingBlockV2(bb *MeshBuildingBlockV2C
 	req.Header.Set("Content-Type", CONTENT_TYPE_BUILDING_BLOCK_V2)
 	req.Header.Set("Accept", CONTENT_TYPE_BUILDING_BLOCK_V2)
 
-	res, err := c.doAuthenticatedRequest(req)
+	body, err := c.doAuthenticatedRequest(req)
 	if err != nil {
 		return nil, err
-	}
-
-	defer func() {
-		_ = res.Body.Close()
-	}()
-
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if !isSuccessHTTPStatus(res) {
-		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
 	}
 
 	var createdBb MeshBuildingBlockV2
-	err = json.Unmarshal(data, &createdBb)
+	err = json.Unmarshal(body, &createdBb)
 	if err != nil {
 		return nil, err
 	}
