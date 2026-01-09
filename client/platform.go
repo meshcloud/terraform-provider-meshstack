@@ -3,8 +3,7 @@ package client
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
-	"io"
+	"errors"
 	"net/http"
 	"net/url"
 )
@@ -126,28 +125,16 @@ func (c *MeshStackProviderClient) ReadPlatform(uuid string) (*MeshPlatform, erro
 	}
 	req.Header.Set("Accept", CONTENT_TYPE_PLATFORM)
 
-	res, err := c.doAuthenticatedRequest(req)
+	body, err := c.doAuthenticatedRequest(req)
+	if errors.Is(err, errNotFound) {
+		return nil, nil // Not found
+	}
 	if err != nil {
 		return nil, err
-	}
-
-	defer func() { _ = res.Body.Close() }()
-
-	if res.StatusCode == http.StatusNotFound {
-		return nil, nil // Not found is not an error
-	}
-
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if !isSuccessHTTPStatus(res) {
-		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
 	}
 
 	var platform MeshPlatform
-	err = json.Unmarshal(data, &platform)
+	err = json.Unmarshal(body, &platform)
 	if err != nil {
 		return nil, err
 	}
@@ -167,25 +154,13 @@ func (c *MeshStackProviderClient) CreatePlatform(platform *MeshPlatformCreate) (
 	req.Header.Set("Content-Type", CONTENT_TYPE_PLATFORM)
 	req.Header.Set("Accept", CONTENT_TYPE_PLATFORM)
 
-	res, err := c.doAuthenticatedRequest(req)
+	body, err := c.doAuthenticatedRequest(req)
 	if err != nil {
 		return nil, err
-	}
-	defer func() {
-		_ = res.Body.Close()
-	}()
-
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if !isSuccessHTTPStatus(res) {
-		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
 	}
 
 	var createdPlatform MeshPlatform
-	err = json.Unmarshal(data, &createdPlatform)
+	err = json.Unmarshal(body, &createdPlatform)
 	if err != nil {
 		return nil, err
 	}
@@ -212,25 +187,13 @@ func (c *MeshStackProviderClient) UpdatePlatform(uuid string, platform *MeshPlat
 	req.Header.Set("Content-Type", CONTENT_TYPE_PLATFORM)
 	req.Header.Set("Accept", CONTENT_TYPE_PLATFORM)
 
-	res, err := c.doAuthenticatedRequest(req)
+	body, err := c.doAuthenticatedRequest(req)
 	if err != nil {
 		return nil, err
-	}
-	defer func() {
-		_ = res.Body.Close()
-	}()
-
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if !isSuccessHTTPStatus(res) {
-		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
 	}
 
 	var updatedPlatform MeshPlatform
-	err = json.Unmarshal(data, &updatedPlatform)
+	err = json.Unmarshal(body, &updatedPlatform)
 	if err != nil {
 		return nil, err
 	}
