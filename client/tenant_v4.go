@@ -76,7 +76,9 @@ func (c *MeshStackProviderClient) CreateTenantV4(tenant *MeshTenantV4Create) (*M
 }
 
 func (c *MeshStackProviderClient) DeleteTenantV4(uuid string) error {
-	_, err := c.doAuthenticatedRequest("DELETE", c.urlForTenantV4(uuid))
+	_, err := c.doAuthenticatedRequest("DELETE", c.urlForTenantV4(uuid),
+		withAccept(CONTENT_TYPE_TENANT_V4),
+	)
 	return err
 }
 

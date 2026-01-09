@@ -126,7 +126,9 @@ func (c *MeshStackProviderClient) CreatePlatform(platform *MeshPlatformCreate) (
 }
 
 func (c *MeshStackProviderClient) DeletePlatform(uuid string) error {
-	_, err := c.doAuthenticatedRequest("DELETE", c.urlForPlatform(uuid))
+	_, err := c.doAuthenticatedRequest("DELETE", c.urlForPlatform(uuid),
+		withAccept(CONTENT_TYPE_PLATFORM),
+	)
 	return err
 }
 

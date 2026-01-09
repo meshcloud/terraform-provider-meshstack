@@ -61,6 +61,8 @@ func (c *MeshStackProviderClient) UpdatePaymentMethod(identifier string, payment
 }
 
 func (c *MeshStackProviderClient) DeletePaymentMethod(identifier string) error {
-	_, err := c.doAuthenticatedRequest("DELETE", c.urlForPaymentMethod(identifier))
+	_, err := c.doAuthenticatedRequest("DELETE", c.urlForPaymentMethod(identifier),
+		withAccept(CONTENT_TYPE_PAYMENT_METHOD),
+	)
 	return err
 }

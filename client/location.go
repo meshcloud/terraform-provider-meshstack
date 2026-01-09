@@ -60,6 +60,8 @@ func (c *MeshStackProviderClient) UpdateLocation(name string, location *MeshLoca
 }
 
 func (c *MeshStackProviderClient) DeleteLocation(name string) error {
-	_, err := c.doAuthenticatedRequest("DELETE", c.urlForLocation(name))
+	_, err := c.doAuthenticatedRequest("DELETE", c.urlForLocation(name),
+		withAccept(CONTENT_TYPE_LOCATION),
+	)
 	return err
 }

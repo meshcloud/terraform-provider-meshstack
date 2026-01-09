@@ -58,6 +58,8 @@ func (c *MeshStackProviderClient) UpdateWorkspace(name string, workspace *MeshWo
 }
 
 func (c *MeshStackProviderClient) DeleteWorkspace(name string) error {
-	_, err := c.doAuthenticatedRequest("DELETE", c.urlForWorkspace(name))
+	_, err := c.doAuthenticatedRequest("DELETE", c.urlForWorkspace(name),
+		withAccept(CONTENT_TYPE_WORKSPACE),
+	)
 	return err
 }

@@ -67,6 +67,8 @@ func (c *MeshStackProviderClient) CreateTenant(tenant *MeshTenantCreate) (*MeshT
 }
 
 func (c *MeshStackProviderClient) DeleteTenant(workspace string, project string, platform string) error {
-	_, err := c.doAuthenticatedRequest("DELETE", c.urlForTenant(workspace, project, platform))
+	_, err := c.doAuthenticatedRequest("DELETE", c.urlForTenant(workspace, project, platform),
+		withAccept(CONTENT_TYPE_TENANT),
+	)
 	return err
 }
