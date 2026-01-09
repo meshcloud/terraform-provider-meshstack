@@ -3,8 +3,7 @@ package client
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
-	"io"
+	"errors"
 	"net/http"
 	"net/url"
 )
@@ -55,30 +54,16 @@ func (c *MeshStackProviderClient) ReadLocation(name string) (*MeshLocation, erro
 	}
 	req.Header.Set("Accept", CONTENT_TYPE_LOCATION)
 
-	res, err := c.doAuthenticatedRequest(req)
+	body, err := c.doAuthenticatedRequest(req)
+	if errors.Is(err, errNotFound) {
+		return nil, nil // Not found
+	}
 	if err != nil {
 		return nil, err
-	}
-
-	defer func() {
-		_ = res.Body.Close()
-	}()
-
-	if res.StatusCode == http.StatusNotFound {
-		return nil, nil
-	}
-
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if !isSuccessHTTPStatus(res) {
-		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
 	}
 
 	var location MeshLocation
-	err = json.Unmarshal(data, &location)
+	err = json.Unmarshal(body, &location)
 	if err != nil {
 		return nil, err
 	}
@@ -99,26 +84,13 @@ func (c *MeshStackProviderClient) CreateLocation(location *MeshLocationCreate) (
 	req.Header.Set("Content-Type", CONTENT_TYPE_LOCATION)
 	req.Header.Set("Accept", CONTENT_TYPE_LOCATION)
 
-	res, err := c.doAuthenticatedRequest(req)
+	body, err := c.doAuthenticatedRequest(req)
 	if err != nil {
 		return nil, err
-	}
-
-	defer func() {
-		_ = res.Body.Close()
-	}()
-
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if !isSuccessHTTPStatus(res) {
-		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
 	}
 
 	var createdLocation MeshLocation
-	err = json.Unmarshal(data, &createdLocation)
+	err = json.Unmarshal(body, &createdLocation)
 	if err != nil {
 		return nil, err
 	}
@@ -141,26 +113,13 @@ func (c *MeshStackProviderClient) UpdateLocation(name string, location *MeshLoca
 	req.Header.Set("Content-Type", CONTENT_TYPE_LOCATION)
 	req.Header.Set("Accept", CONTENT_TYPE_LOCATION)
 
-	res, err := c.doAuthenticatedRequest(req)
+	body, err := c.doAuthenticatedRequest(req)
 	if err != nil {
 		return nil, err
-	}
-
-	defer func() {
-		_ = res.Body.Close()
-	}()
-
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if !isSuccessHTTPStatus(res) {
-		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
 	}
 
 	var updatedLocation MeshLocation
-	err = json.Unmarshal(data, &updatedLocation)
+	err = json.Unmarshal(body, &updatedLocation)
 	if err != nil {
 		return nil, err
 	}

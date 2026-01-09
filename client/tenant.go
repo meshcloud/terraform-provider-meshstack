@@ -3,8 +3,7 @@ package client
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
-	"io"
+	"errors"
 	"net/http"
 	"net/url"
 )
@@ -67,30 +66,16 @@ func (c *MeshStackProviderClient) ReadTenant(workspace string, project string, p
 	}
 	req.Header.Set("Accept", CONTENT_TYPE_TENANT)
 
-	res, err := c.doAuthenticatedRequest(req)
+	body, err := c.doAuthenticatedRequest(req)
+	if errors.Is(err, errNotFound) {
+		return nil, nil // Not found
+	}
 	if err != nil {
 		return nil, err
-	}
-
-	defer func() {
-		_ = res.Body.Close()
-	}()
-
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if res.StatusCode == 404 {
-		return nil, nil
-	}
-
-	if !isSuccessHTTPStatus(res) {
-		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
 	}
 
 	var tenant MeshTenant
-	err = json.Unmarshal(data, &tenant)
+	err = json.Unmarshal(body, &tenant)
 	if err != nil {
 		return nil, err
 	}
@@ -111,26 +96,13 @@ func (c *MeshStackProviderClient) CreateTenant(tenant *MeshTenantCreate) (*MeshT
 	req.Header.Set("Content-Type", CONTENT_TYPE_TENANT)
 	req.Header.Set("Accept", CONTENT_TYPE_TENANT)
 
-	res, err := c.doAuthenticatedRequest(req)
+	body, err := c.doAuthenticatedRequest(req)
 	if err != nil {
 		return nil, err
-	}
-
-	defer func() {
-		_ = res.Body.Close()
-	}()
-
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if !isSuccessHTTPStatus(res) {
-		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
 	}
 
 	var createdTenant MeshTenant
-	err = json.Unmarshal(data, &createdTenant)
+	err = json.Unmarshal(body, &createdTenant)
 	if err != nil {
 		return nil, err
 	}

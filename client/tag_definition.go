@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 )
@@ -108,26 +107,13 @@ func (c *MeshStackProviderClient) ReadTagDefinitions() (*[]MeshTagDefinition, er
 
 		req.Header.Set("Accept", CONTENT_TYPE_TAG_DEFINITION)
 
-		res, err := c.doAuthenticatedRequest(req)
+		body, err := c.doAuthenticatedRequest(req)
 		if err != nil {
 			return nil, err
 		}
 
-		defer func() {
-			_ = res.Body.Close()
-		}()
-
-		data, err := io.ReadAll(res.Body)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read response body: %w", err)
-		}
-
-		if !isSuccessHTTPStatus(res) {
-			return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
-		}
-
 		var response tagsResponse
-		err = json.Unmarshal(data, &response)
+		err = json.Unmarshal(body, &response)
 		if err != nil {
 			return nil, err
 		}
@@ -154,21 +140,13 @@ func (c *MeshStackProviderClient) ReadTagDefinition(name string) (*MeshTagDefini
 
 	req.Header.Set("Accept", CONTENT_TYPE_TAG_DEFINITION)
 
-	resp, err := c.doAuthenticatedRequest(req)
+	body, err := c.doAuthenticatedRequest(req)
 	if err != nil {
 		return nil, err
 	}
 
-	defer func() {
-		_ = resp.Body.Close()
-	}()
-
-	if !isSuccessHTTPStatus(resp) {
-		return nil, fmt.Errorf("failed to read tag definition: %s", resp.Status)
-	}
-
 	var tagDefinition MeshTagDefinition
-	if err := json.NewDecoder(resp.Body).Decode(&tagDefinition); err != nil {
+	if err := json.Unmarshal(body, &tagDefinition); err != nil {
 		return nil, err
 	}
 
@@ -192,20 +170,13 @@ func (c *MeshStackProviderClient) CreateTagDefinition(tagDefinition *MeshTagDefi
 	req.Header.Set("Content-Type", CONTENT_TYPE_TAG_DEFINITION)
 	req.Header.Set("Accept", CONTENT_TYPE_TAG_DEFINITION)
 
-	resp, err := c.doAuthenticatedRequest(req)
+	body, err := c.doAuthenticatedRequest(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to do authenticated request: %w", err)
 	}
-	defer func() {
-		_ = resp.Body.Close()
-	}()
-
-	if !isSuccessHTTPStatus(resp) {
-		return nil, fmt.Errorf("failed to create tag definition: %s", resp.Status)
-	}
 
 	var createdTagDefinition MeshTagDefinition
-	if err := json.NewDecoder(resp.Body).Decode(&createdTagDefinition); err != nil {
+	if err := json.Unmarshal(body, &createdTagDefinition); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 
@@ -227,21 +198,13 @@ func (c *MeshStackProviderClient) UpdateTagDefinition(tagDefinition *MeshTagDefi
 	req.Header.Set("Content-Type", CONTENT_TYPE_TAG_DEFINITION)
 	req.Header.Set("Accept", CONTENT_TYPE_TAG_DEFINITION)
 
-	resp, err := c.doAuthenticatedRequest(req)
+	body, err := c.doAuthenticatedRequest(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to do authenticated request: %w", err)
 	}
 
-	defer func() {
-		_ = resp.Body.Close()
-	}()
-
-	if !isSuccessHTTPStatus(resp) {
-		return nil, fmt.Errorf("failed to update tag definition: %s", resp.Status)
-	}
-
 	var updatedTagDefinition MeshTagDefinition
-	if err := json.NewDecoder(resp.Body).Decode(&updatedTagDefinition); err != nil {
+	if err := json.Unmarshal(body, &updatedTagDefinition); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 
@@ -257,17 +220,9 @@ func (c *MeshStackProviderClient) DeleteTagDefinition(name string) error {
 
 	req.Header.Set("Accept", CONTENT_TYPE_TAG_DEFINITION)
 
-	resp, err := c.doAuthenticatedRequest(req)
+	_, err = c.doAuthenticatedRequest(req, withExpectedStatusCode(http.StatusNoContent))
 	if err != nil {
 		return fmt.Errorf("failed to do authenticated request: %w", err)
-	}
-
-	defer func() {
-		_ = resp.Body.Close()
-	}()
-
-	if resp.StatusCode != http.StatusNoContent {
-		return fmt.Errorf("failed to delete tag definition: %s", resp.Status)
 	}
 
 	return nil

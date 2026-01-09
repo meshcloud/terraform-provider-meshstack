@@ -3,8 +3,7 @@ package client
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
-	"io"
+	"errors"
 	"net/http"
 	"net/url"
 )
@@ -56,30 +55,16 @@ func (c *MeshStackProviderClient) ReadPaymentMethod(workspace string, identifier
 	}
 	req.Header.Set("Accept", CONTENT_TYPE_PAYMENT_METHOD)
 
-	res, err := c.doAuthenticatedRequest(req)
+	body, err := c.doAuthenticatedRequest(req)
+	if errors.Is(err, errNotFound) {
+		return nil, nil // Not found
+	}
 	if err != nil {
 		return nil, err
-	}
-
-	defer func() {
-		_ = res.Body.Close()
-	}()
-
-	if res.StatusCode == http.StatusNotFound {
-		return nil, nil
-	}
-
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if !isSuccessHTTPStatus(res) {
-		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
 	}
 
 	var paymentMethod MeshPaymentMethod
-	err = json.Unmarshal(data, &paymentMethod)
+	err = json.Unmarshal(body, &paymentMethod)
 	if err != nil {
 		return nil, err
 	}
@@ -100,26 +85,13 @@ func (c *MeshStackProviderClient) CreatePaymentMethod(paymentMethod *MeshPayment
 	req.Header.Set("Content-Type", CONTENT_TYPE_PAYMENT_METHOD)
 	req.Header.Set("Accept", CONTENT_TYPE_PAYMENT_METHOD)
 
-	res, err := c.doAuthenticatedRequest(req)
+	body, err := c.doAuthenticatedRequest(req)
 	if err != nil {
 		return nil, err
-	}
-
-	defer func() {
-		_ = res.Body.Close()
-	}()
-
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if !isSuccessHTTPStatus(res) {
-		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
 	}
 
 	var createdPaymentMethod MeshPaymentMethod
-	err = json.Unmarshal(data, &createdPaymentMethod)
+	err = json.Unmarshal(body, &createdPaymentMethod)
 	if err != nil {
 		return nil, err
 	}
@@ -142,26 +114,13 @@ func (c *MeshStackProviderClient) UpdatePaymentMethod(identifier string, payment
 	req.Header.Set("Content-Type", CONTENT_TYPE_PAYMENT_METHOD)
 	req.Header.Set("Accept", CONTENT_TYPE_PAYMENT_METHOD)
 
-	res, err := c.doAuthenticatedRequest(req)
+	body, err := c.doAuthenticatedRequest(req)
 	if err != nil {
 		return nil, err
-	}
-
-	defer func() {
-		_ = res.Body.Close()
-	}()
-
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if !isSuccessHTTPStatus(res) {
-		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
 	}
 
 	var updatedPaymentMethod MeshPaymentMethod
-	err = json.Unmarshal(data, &updatedPaymentMethod)
+	err = json.Unmarshal(body, &updatedPaymentMethod)
 	if err != nil {
 		return nil, err
 	}

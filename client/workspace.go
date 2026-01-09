@@ -3,8 +3,7 @@ package client
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
-	"io"
+	"errors"
 	"net/http"
 	"net/url"
 )
@@ -52,28 +51,16 @@ func (c *MeshStackProviderClient) ReadWorkspace(name string) (*MeshWorkspace, er
 	}
 	req.Header.Set("Accept", CONTENT_TYPE_WORKSPACE)
 
-	res, err := c.doAuthenticatedRequest(req)
+	body, err := c.doAuthenticatedRequest(req)
+	if errors.Is(err, errNotFound) {
+		return nil, nil // Not found
+	}
 	if err != nil {
 		return nil, err
-	}
-
-	defer func() { _ = res.Body.Close() }()
-
-	if res.StatusCode == http.StatusNotFound {
-		return nil, nil // Not found is not an error
-	}
-
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if !isSuccessHTTPStatus(res) {
-		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
 	}
 
 	var workspace MeshWorkspace
-	err = json.Unmarshal(data, &workspace)
+	err = json.Unmarshal(body, &workspace)
 	if err != nil {
 		return nil, err
 	}
@@ -93,25 +80,13 @@ func (c *MeshStackProviderClient) CreateWorkspace(workspace *MeshWorkspaceCreate
 	req.Header.Set("Content-Type", CONTENT_TYPE_WORKSPACE)
 	req.Header.Set("Accept", CONTENT_TYPE_WORKSPACE)
 
-	res, err := c.doAuthenticatedRequest(req)
+	body, err := c.doAuthenticatedRequest(req)
 	if err != nil {
 		return nil, err
-	}
-	defer func() {
-		_ = res.Body.Close()
-	}()
-
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if !isSuccessHTTPStatus(res) {
-		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
 	}
 
 	var createdWorkspace MeshWorkspace
-	err = json.Unmarshal(data, &createdWorkspace)
+	err = json.Unmarshal(body, &createdWorkspace)
 	if err != nil {
 		return nil, err
 	}
@@ -133,25 +108,13 @@ func (c *MeshStackProviderClient) UpdateWorkspace(name string, workspace *MeshWo
 	req.Header.Set("Content-Type", CONTENT_TYPE_WORKSPACE)
 	req.Header.Set("Accept", CONTENT_TYPE_WORKSPACE)
 
-	res, err := c.doAuthenticatedRequest(req)
+	body, err := c.doAuthenticatedRequest(req)
 	if err != nil {
 		return nil, err
-	}
-	defer func() {
-		_ = res.Body.Close()
-	}()
-
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if !isSuccessHTTPStatus(res) {
-		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
 	}
 
 	var updatedWorkspace MeshWorkspace
-	err = json.Unmarshal(data, &updatedWorkspace)
+	err = json.Unmarshal(body, &updatedWorkspace)
 	if err != nil {
 		return nil, err
 	}

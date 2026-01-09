@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"time"
@@ -75,30 +75,16 @@ func (c *MeshStackProviderClient) ReadTenantV4(uuid string) (*MeshTenantV4, erro
 	}
 	req.Header.Set("Accept", CONTENT_TYPE_TENANT_V4)
 
-	res, err := c.doAuthenticatedRequest(req)
+	body, err := c.doAuthenticatedRequest(req)
+	if errors.Is(err, errNotFound) {
+		return nil, nil // Not found
+	}
 	if err != nil {
 		return nil, err
-	}
-
-	defer func() {
-		_ = res.Body.Close()
-	}()
-
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if res.StatusCode == 404 {
-		return nil, nil
-	}
-
-	if !isSuccessHTTPStatus(res) {
-		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
 	}
 
 	var tenant MeshTenantV4
-	err = json.Unmarshal(data, &tenant)
+	err = json.Unmarshal(body, &tenant)
 	if err != nil {
 		return nil, err
 	}
@@ -119,26 +105,13 @@ func (c *MeshStackProviderClient) CreateTenantV4(tenant *MeshTenantV4Create) (*M
 	req.Header.Set("Content-Type", CONTENT_TYPE_TENANT_V4)
 	req.Header.Set("Accept", CONTENT_TYPE_TENANT_V4)
 
-	res, err := c.doAuthenticatedRequest(req)
+	body, err := c.doAuthenticatedRequest(req)
 	if err != nil {
 		return nil, err
-	}
-
-	defer func() {
-		_ = res.Body.Close()
-	}()
-
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if !isSuccessHTTPStatus(res) {
-		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
 	}
 
 	var createdTenant MeshTenantV4
-	err = json.Unmarshal(data, &createdTenant)
+	err = json.Unmarshal(body, &createdTenant)
 	if err != nil {
 		return nil, err
 	}
