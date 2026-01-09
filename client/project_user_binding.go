@@ -13,11 +13,15 @@ func (c *MeshStackProviderClient) urlForPojectUserBinding(name string) *url.URL 
 }
 
 func (c *MeshStackProviderClient) ReadProjectUserBinding(name string) (*MeshProjectUserBinding, error) {
-	return c.readProjectBinding(name, CONTENT_TYPE_PROJECT_USER_BINDING)
+	return unmarshalBodyIfPresent[MeshProjectBinding](c.doAuthenticatedRequest("GET", c.urlForPojectUserBinding(name),
+		withAccept(CONTENT_TYPE_PROJECT_USER_BINDING),
+	))
 }
 
 func (c *MeshStackProviderClient) CreateProjectUserBinding(binding *MeshProjectUserBinding) (*MeshProjectUserBinding, error) {
-	return c.createProjectBinding(binding, CONTENT_TYPE_PROJECT_USER_BINDING)
+	return unmarshalBody[MeshProjectBinding](c.doAuthenticatedRequest("POST", c.endpoints.ProjectUserBindings,
+		withPayload(binding, CONTENT_TYPE_PROJECT_USER_BINDING),
+	))
 }
 
 func (c *MeshStackProviderClient) DeleteProjecUserBinding(name string) error {

@@ -13,11 +13,15 @@ func (c *MeshStackProviderClient) urlForPojectGroupBinding(name string) *url.URL
 }
 
 func (c *MeshStackProviderClient) ReadProjectGroupBinding(name string) (*MeshProjectGroupBinding, error) {
-	return c.readProjectBinding(name, CONTENT_TYPE_PROJECT_GROUP_BINDING)
+	return unmarshalBodyIfPresent[MeshProjectBinding](c.doAuthenticatedRequest("GET", c.urlForPojectGroupBinding(name),
+		withAccept(CONTENT_TYPE_PROJECT_GROUP_BINDING),
+	))
 }
 
 func (c *MeshStackProviderClient) CreateProjectGroupBinding(binding *MeshProjectGroupBinding) (*MeshProjectGroupBinding, error) {
-	return c.createProjectBinding(binding, CONTENT_TYPE_PROJECT_GROUP_BINDING)
+	return unmarshalBody[MeshProjectBinding](c.doAuthenticatedRequest("POST", c.endpoints.ProjectGroupBindings,
+		withPayload(binding, CONTENT_TYPE_PROJECT_GROUP_BINDING),
+	))
 }
 
 func (c *MeshStackProviderClient) DeleteProjecGroupBinding(name string) error {
