@@ -1,11 +1,5 @@
 package client
 
-import (
-	"net/url"
-)
-
-const CONTENT_TYPE_INTEGRATION = "application/vnd.meshcloud.api.meshintegration.v1-preview.hal+json"
-
 type MeshIntegration struct {
 	ApiVersion string                  `json:"apiVersion" tfsdk:"api_version"`
 	Kind       string                  `json:"kind" tfsdk:"kind"`
@@ -85,16 +79,18 @@ type MeshAwsWifProvider struct {
 	Thumbprint string `json:"thumbprint" tfsdk:"thumbprint"`
 }
 
-func (c *MeshStackProviderClient) urlForIntegration(workspace string, uuid string) *url.URL {
-	return c.endpoints.Integrations.JoinPath(workspace, uuid)
+type MeshIntegrationClient struct {
+	meshObjectClient[MeshIntegration]
 }
 
-func (c *MeshStackProviderClient) ReadIntegration(workspace string, uuid string) (*MeshIntegration, error) {
-	return unmarshalBodyIfPresent[MeshIntegration](c.doAuthenticatedRequest("GET", c.urlForIntegration(workspace, uuid),
-		withAccept(CONTENT_TYPE_INTEGRATION),
-	))
+func (c MeshIntegrationClient) integrationId(workspace string, uuid string) string {
+	return workspace + "/" + uuid
 }
 
-func (c *MeshStackProviderClient) ReadIntegrations() ([]MeshIntegration, error) {
-	return unmarshalBodyPages[MeshIntegration]("meshIntegrations", c.doPaginatedRequest(c.endpoints.Integrations, withAccept(CONTENT_TYPE_INTEGRATION)))
+func (c MeshIntegrationClient) Read(workspace string, uuid string) (*MeshIntegration, error) {
+	return c.get(c.integrationId(workspace, uuid))
+}
+
+func (c MeshIntegrationClient) List() ([]MeshIntegration, error) {
+	return c.list()
 }

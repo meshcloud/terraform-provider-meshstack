@@ -25,7 +25,7 @@ func NewLandingZoneDataSource() datasource.DataSource {
 }
 
 type landingZoneDataSource struct {
-	client *client.MeshStackProviderClient
+	client client.MeshStackProviderClient
 }
 
 func (d *landingZoneDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -166,11 +166,11 @@ func (d *landingZoneDataSource) Configure(_ context.Context, req datasource.Conf
 		return
 	}
 
-	client, ok := req.ProviderData.(*client.MeshStackProviderClient)
+	client, ok := req.ProviderData.(client.MeshStackProviderClient)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Data Source Configure Type",
-			fmt.Sprintf("Expected *client.MeshStackProviderClient, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+			fmt.Sprintf("Expected client.MeshStackProviderClient, got: %T. Please report this issue to the provider developers.", req.ProviderData),
 		)
 		return
 	}
@@ -188,7 +188,7 @@ func (d *landingZoneDataSource) Read(ctx context.Context, req datasource.ReadReq
 		return
 	}
 
-	landingZone, err := d.client.ReadLandingZone(name)
+	landingZone, err := d.client.LandingZone.Read(name)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("Could not read landing zone '%s'", name),

@@ -33,7 +33,7 @@ func NewBuildingBlockV2Resource() resource.Resource {
 }
 
 type buildingBlockV2Resource struct {
-	client *client.MeshStackProviderClient
+	client client.MeshStackProviderClient
 }
 
 func (r *buildingBlockV2Resource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -45,7 +45,7 @@ func (r *buildingBlockV2Resource) Configure(ctx context.Context, req resource.Co
 		return
 	}
 
-	client, ok := req.ProviderData.(*client.MeshStackProviderClient)
+	client, ok := req.ProviderData.(client.MeshStackProviderClient)
 
 	if !ok {
 		resp.Diagnostics.AddError(
@@ -281,7 +281,7 @@ func (r *buildingBlockV2Resource) Create(ctx context.Context, req resource.Creat
 		return
 	}
 
-	created, err := r.client.CreateBuildingBlockV2(&bb)
+	created, err := r.client.BuildingBlockV2.Create(&bb)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating building block",
@@ -302,7 +302,7 @@ func (r *buildingBlockV2Resource) Create(ctx context.Context, req resource.Creat
 	// Poll for completion if wait_for_completion is true
 	if waitForCompletion {
 		uuid := created.Metadata.Uuid
-		polled, err := r.client.PollBuildingBlockV2UntilCompletion(ctx, uuid)
+		polled, err := r.client.BuildingBlockV2.PollUntilCompletion(ctx, uuid)
 
 		if polled != nil {
 			// Always set last known building block state
@@ -326,7 +326,7 @@ func (r *buildingBlockV2Resource) Read(ctx context.Context, req resource.ReadReq
 		return
 	}
 
-	bb, err := r.client.ReadBuildingBlockV2(uuid)
+	bb, err := r.client.BuildingBlockV2.Read(uuid)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read building block", err.Error())
 	}
@@ -357,7 +357,7 @@ func (r *buildingBlockV2Resource) Delete(ctx context.Context, req resource.Delet
 		return
 	}
 
-	err := r.client.DeleteBuildingBlockV2(uuid)
+	err := r.client.BuildingBlockV2.Delete(uuid)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error deleting building block",
@@ -368,7 +368,7 @@ func (r *buildingBlockV2Resource) Delete(ctx context.Context, req resource.Delet
 
 	// Poll for completion if wait_for_completion is true
 	if !waitForCompletion.IsNull() && waitForCompletion.ValueBool() {
-		err := r.client.PollBuildingBlockV2UntilDeletion(ctx, uuid)
+		err := r.client.BuildingBlockV2.PollUntilDeletion(ctx, uuid)
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Error waiting for building block deletion completion",

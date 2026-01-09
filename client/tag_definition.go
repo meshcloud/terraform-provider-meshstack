@@ -1,11 +1,6 @@
 package client
 
-import (
-	"net/url"
-)
-
 const API_VERSION_TAG_DEFINITION = "v1"
-const CONTENT_TYPE_TAG_DEFINITION = "application/vnd.meshcloud.api.meshtagdefinition.v1.hal+json"
 
 type MeshTagDefinition struct {
 	ApiVersion string                    `json:"apiVersion" tfsdk:"api_version"`
@@ -68,35 +63,26 @@ type TagValueMultiSelect struct {
 	DefaultValue *[]string `json:"defaultValue,omitempty" tfsdk:"default_value"`
 }
 
-func (c *MeshStackProviderClient) urlForTagDefinition(name string) *url.URL {
-	return c.endpoints.TagDefinitions.JoinPath(name)
+type MeshTagDefinitionClient struct {
+	meshObjectClient[MeshTagDefinition]
 }
 
-func (c *MeshStackProviderClient) ReadTagDefinitions() ([]MeshTagDefinition, error) {
-	return unmarshalBodyPages[MeshTagDefinition]("meshTagDefinitions", c.doPaginatedRequest(c.endpoints.TagDefinitions, withAccept(CONTENT_TYPE_TAG_DEFINITION)))
+func (c MeshTagDefinitionClient) List() ([]MeshTagDefinition, error) {
+	return c.list()
 }
 
-func (c *MeshStackProviderClient) ReadTagDefinition(name string) (*MeshTagDefinition, error) {
-	return unmarshalBody[MeshTagDefinition](c.doAuthenticatedRequest("GET", c.urlForTagDefinition(name),
-		withAccept(CONTENT_TYPE_TAG_DEFINITION),
-	))
+func (c MeshTagDefinitionClient) Read(name string) (*MeshTagDefinition, error) {
+	return c.get(name)
 }
 
-func (c *MeshStackProviderClient) CreateTagDefinition(tagDefinition *MeshTagDefinition) (*MeshTagDefinition, error) {
-	return unmarshalBody[MeshTagDefinition](c.doAuthenticatedRequest("POST", c.endpoints.TagDefinitions,
-		withPayload(tagDefinition, CONTENT_TYPE_TAG_DEFINITION),
-	))
+func (c MeshTagDefinitionClient) Create(tagDefinition *MeshTagDefinition) (*MeshTagDefinition, error) {
+	return c.post(tagDefinition)
 }
 
-func (c *MeshStackProviderClient) UpdateTagDefinition(tagDefinition *MeshTagDefinition) (*MeshTagDefinition, error) {
-	return unmarshalBody[MeshTagDefinition](c.doAuthenticatedRequest("PUT", c.urlForTagDefinition(tagDefinition.Metadata.Name),
-		withPayload(tagDefinition, CONTENT_TYPE_TAG_DEFINITION),
-	))
+func (c MeshTagDefinitionClient) Update(tagDefinition *MeshTagDefinition) (*MeshTagDefinition, error) {
+	return c.put(tagDefinition.Metadata.Name, tagDefinition)
 }
 
-func (c *MeshStackProviderClient) DeleteTagDefinition(name string) error {
-	_, err := c.doAuthenticatedRequest("DELETE", c.urlForTagDefinition(name),
-		withAccept(CONTENT_TYPE_TAG_DEFINITION),
-	)
-	return err
+func (c MeshTagDefinitionClient) Delete(name string) error {
+	return c.delete(name)
 }

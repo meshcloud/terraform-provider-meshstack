@@ -38,7 +38,7 @@ func NewLandingZoneResource() resource.Resource {
 
 // landingZoneResource is the resource implementation.
 type landingZoneResource struct {
-	client *client.MeshStackProviderClient
+	client client.MeshStackProviderClient
 }
 
 // Metadata returns the resource type name.
@@ -52,7 +52,7 @@ func (r *landingZoneResource) Configure(_ context.Context, req resource.Configur
 		return
 	}
 
-	client, ok := req.ProviderData.(*client.MeshStackProviderClient)
+	client, ok := req.ProviderData.(client.MeshStackProviderClient)
 
 	if !ok {
 		resp.Diagnostics.AddError(
@@ -481,7 +481,7 @@ func (r *landingZoneResource) Create(ctx context.Context, req resource.CreateReq
 		return
 	}
 
-	createdLandingZone, err := r.client.CreateLandingZone(&landingZone)
+	createdLandingZone, err := r.client.LandingZone.Create(&landingZone)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Creating Landing Zone",
@@ -503,7 +503,7 @@ func (r *landingZoneResource) Read(ctx context.Context, req resource.ReadRequest
 		return
 	}
 
-	landingZone, err := r.client.ReadLandingZone(name)
+	landingZone, err := r.client.LandingZone.Read(name)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("Could not read landing zone '%s'", name),
@@ -536,7 +536,7 @@ func (r *landingZoneResource) Update(ctx context.Context, req resource.UpdateReq
 		return
 	}
 
-	updatedLandingZone, err := r.client.UpdateLandingZone(landingZone.Metadata.Name, &landingZone)
+	updatedLandingZone, err := r.client.LandingZone.Update(landingZone.Metadata.Name, &landingZone)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Updating Landing Zone",
@@ -557,7 +557,7 @@ func (r *landingZoneResource) Delete(ctx context.Context, req resource.DeleteReq
 		return
 	}
 
-	err := r.client.DeleteLandingZone(name)
+	err := r.client.LandingZone.Delete(name)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("Could not delete landing zone '%s'", name),
