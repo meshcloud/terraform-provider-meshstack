@@ -3,6 +3,7 @@ package client
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -14,6 +15,10 @@ import (
 const (
 	apiMeshObjectsRoot = "/api/meshobjects"
 	loginEndpoint      = "/api/login"
+)
+
+var (
+	errNotFound = errors.New("request failed with status Not Found (404)")
 )
 
 type MeshStackProviderClient struct {
@@ -140,8 +145,51 @@ func (c *MeshStackProviderClient) ensureValidToken() error {
 	return nil
 }
 
-func (c *MeshStackProviderClient) doAuthenticatedRequest(req *http.Request) (*http.Response, error) {
-	// ensure that headeres are initialized
+type doRequestOption func(opts *doRequestOptions)
+
+type responseVerifier func(res *http.Response, body []byte) error
+
+type doRequestOptions struct {
+	responseVerifier responseVerifier
+}
+
+func ensureSuccessfulRequest(res *http.Response, body []byte) error {
+	if res.StatusCode >= 200 && res.StatusCode <= 299 {
+		return nil
+	}
+	return handleErrWithNotFound(fmt.Errorf("request failed with status %d (not 2XX successful)", res.StatusCode), res.StatusCode, body)
+}
+
+func withExpectedStatusCode(statusCode int) doRequestOption {
+	return func(opts *doRequestOptions) {
+		opts.responseVerifier = func(res *http.Response, body []byte) error {
+			if res.StatusCode == statusCode {
+				return nil
+			}
+			return handleErrWithNotFound(fmt.Errorf("expected status %d, but got %d", statusCode, res.StatusCode), res.StatusCode, body)
+		}
+	}
+}
+
+func handleErrWithNotFound(err error, statusCode int, body []byte) error {
+	errs := []error{err, fmt.Errorf("error body: %s", string(body))}
+	if statusCode == http.StatusNotFound {
+		errs = append([]error{errNotFound}, errs...)
+	}
+	return errors.Join(errs...)
+}
+
+func (c *MeshStackProviderClient) doAuthenticatedRequest(req *http.Request, options ...doRequestOption) ([]byte, error) {
+	opts := doRequestOptions{
+		// by default, verify successful response
+		// can be made more specific with withExpectedStatusCode option
+		responseVerifier: ensureSuccessfulRequest,
+	}
+	for _, option := range options {
+		option(&opts)
+	}
+
+	// ensure that headers are initialized
 	if req.Header == nil {
 		req.Header = map[string][]string{}
 	}
@@ -151,8 +199,7 @@ func (c *MeshStackProviderClient) doAuthenticatedRequest(req *http.Request) (*ht
 	log.Println(req)
 
 	// add authentication
-	err := c.ensureValidToken()
-	if err != nil {
+	if err := c.ensureValidToken(); err != nil {
 		return nil, err
 	}
 	req.Header.Set("Authorization", c.token)
@@ -161,35 +208,26 @@ func (c *MeshStackProviderClient) doAuthenticatedRequest(req *http.Request) (*ht
 	if err != nil {
 		return nil, err
 	}
+	defer func() {
+		_ = res.Body.Close()
+	}()
 	log.Println(res)
 
-	return res, nil
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		return nil, fmt.Errorf("cannot read response body, status code %d: %w", res.StatusCode, err)
+	}
+	log.Printf("Got response body with %d bytes", len(body))
+	// always return body, even if the response is not successfully verified
+	// this allows clients to investigate the body even further if desirable.
+	return body, opts.responseVerifier(res, body)
 }
 
-func (c *MeshStackProviderClient) deleteMeshObject(targetUrl url.URL, expectedStatus int) error {
+func (c *MeshStackProviderClient) deleteMeshObject(targetUrl url.URL, expectedStatus int) (err error) {
 	req, err := http.NewRequest("DELETE", targetUrl.String(), nil)
 	if err != nil {
 		return err
 	}
-
-	res, err := c.doAuthenticatedRequest(req)
-
-	if err != nil {
-		return fmt.Errorf("cannot authenticate for delete request: %w ", err)
-	}
-
-	defer func() {
-		_ = res.Body.Close()
-	}()
-
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		return err
-	}
-
-	if res.StatusCode != expectedStatus {
-		return fmt.Errorf("expected status code %d, but got %d, body: '%s'", expectedStatus, res.StatusCode, string(data))
-	}
-
-	return nil
+	_, err = c.doAuthenticatedRequest(req, withExpectedStatusCode(expectedStatus))
+	return
 }

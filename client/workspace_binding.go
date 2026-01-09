@@ -3,8 +3,8 @@ package client
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 )
@@ -53,30 +53,16 @@ func (c *MeshStackProviderClient) readWorkspaceBinding(name string, contentType 
 	}
 	req.Header.Set("Accept", contentType)
 
-	res, err := c.doAuthenticatedRequest(req)
+	body, err := c.doAuthenticatedRequest(req)
+	if errors.Is(err, errNotFound) {
+		return nil, nil // Not found
+	}
 	if err != nil {
 		return nil, err
-	}
-
-	defer func() {
-		_ = res.Body.Close()
-	}()
-
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if res.StatusCode == 404 {
-		return nil, nil
-	}
-
-	if !isSuccessHTTPStatus(res) {
-		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
 	}
 
 	var binding MeshWorkspaceBinding
-	err = json.Unmarshal(data, &binding)
+	err = json.Unmarshal(body, &binding)
 	if err != nil {
 		return nil, err
 	}
@@ -107,26 +93,13 @@ func (c *MeshStackProviderClient) createWorkspaceBinding(binding *MeshWorkspaceB
 	req.Header.Set("Content-Type", contentType)
 	req.Header.Set("Accept", contentType)
 
-	res, err := c.doAuthenticatedRequest(req)
+	body, err := c.doAuthenticatedRequest(req)
 	if err != nil {
 		return nil, err
-	}
-
-	defer func() {
-		_ = res.Body.Close()
-	}()
-
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if !isSuccessHTTPStatus(res) {
-		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
 	}
 
 	var createdBinding MeshWorkspaceBinding
-	err = json.Unmarshal(data, &createdBinding)
+	err = json.Unmarshal(body, &createdBinding)
 	if err != nil {
 		return nil, err
 	}

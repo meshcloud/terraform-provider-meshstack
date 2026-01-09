@@ -3,8 +3,8 @@ package client
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 )
@@ -55,30 +55,16 @@ func (c *MeshStackProviderClient) ReadProject(workspace string, name string) (*M
 	}
 	req.Header.Set("Accept", CONTENT_TYPE_PROJECT)
 
-	res, err := c.doAuthenticatedRequest(req)
+	body, err := c.doAuthenticatedRequest(req)
+	if errors.Is(err, errNotFound) {
+		return nil, nil // Not found
+	}
 	if err != nil {
 		return nil, err
-	}
-
-	defer func() {
-		_ = res.Body.Close()
-	}()
-
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if res.StatusCode == http.StatusNotFound {
-		return nil, nil
-	}
-
-	if !isSuccessHTTPStatus(res) {
-		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
 	}
 
 	var project MeshProject
-	err = json.Unmarshal(data, &project)
+	err = json.Unmarshal(body, &project)
 	if err != nil {
 		return nil, err
 	}
@@ -109,20 +95,9 @@ func (c *MeshStackProviderClient) ReadProjects(workspaceIdentifier string, payme
 
 		req.Header.Set("Accept", CONTENT_TYPE_PROJECT)
 
-		res, err := c.doAuthenticatedRequest(req)
+		body, err := c.doAuthenticatedRequest(req)
 		if err != nil {
 			return nil, err
-		}
-
-		defer func() { _ = res.Body.Close() }()
-
-		data, err := io.ReadAll(res.Body)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read response body: %w", err)
-		}
-
-		if !isSuccessHTTPStatus(res) {
-			return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
 		}
 
 		var response struct {
@@ -137,7 +112,7 @@ func (c *MeshStackProviderClient) ReadProjects(workspaceIdentifier string, payme
 			} `json:"page"`
 		}
 
-		err = json.Unmarshal(data, &response)
+		err = json.Unmarshal(body, &response)
 		if err != nil {
 			return nil, err
 		}
@@ -168,26 +143,13 @@ func (c *MeshStackProviderClient) CreateProject(project *MeshProjectCreate) (*Me
 	req.Header.Set("Content-Type", CONTENT_TYPE_PROJECT)
 	req.Header.Set("Accept", CONTENT_TYPE_PROJECT)
 
-	res, err := c.doAuthenticatedRequest(req)
+	body, err := c.doAuthenticatedRequest(req)
 	if err != nil {
 		return nil, err
-	}
-
-	defer func() {
-		_ = res.Body.Close()
-	}()
-
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if !isSuccessHTTPStatus(res) {
-		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
 	}
 
 	var createdProject MeshProject
-	err = json.Unmarshal(data, &createdProject)
+	err = json.Unmarshal(body, &createdProject)
 	if err != nil {
 		return nil, err
 	}
@@ -210,27 +172,14 @@ func (c *MeshStackProviderClient) UpdateProject(project *MeshProjectCreate) (*Me
 	req.Header.Set("Content-Type", CONTENT_TYPE_PROJECT)
 	req.Header.Set("Accept", CONTENT_TYPE_PROJECT)
 
-	res, err := c.doAuthenticatedRequest(req)
+	body, err := c.doAuthenticatedRequest(req)
 
 	if err != nil {
 		return nil, err
-	}
-
-	defer func() {
-		_ = res.Body.Close()
-	}()
-
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if !isSuccessHTTPStatus(res) {
-		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
 	}
 
 	var updatedProject MeshProject
-	err = json.Unmarshal(data, &updatedProject)
+	err = json.Unmarshal(body, &updatedProject)
 	if err != nil {
 		return nil, err
 	}
