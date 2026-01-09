@@ -1,11 +1,5 @@
 package client
 
-import (
-	"net/url"
-)
-
-const CONTENT_TYPE_PAYMENT_METHOD = "application/vnd.meshcloud.api.meshpaymentmethod.v2.hal+json"
-
 type MeshPaymentMethod struct {
 	ApiVersion string                    `json:"apiVersion" tfsdk:"api_version"`
 	Kind       string                    `json:"kind" tfsdk:"kind"`
@@ -38,31 +32,22 @@ type MeshPaymentMethodCreateMetadata struct {
 	OwnedByWorkspace string `json:"ownedByWorkspace" tfsdk:"owned_by_workspace"`
 }
 
-func (c *MeshStackProviderClient) urlForPaymentMethod(identifier string) *url.URL {
-	return c.endpoints.PaymentMethods.JoinPath(identifier)
+type MeshPaymentMethodClient struct {
+	meshObjectClient[MeshPaymentMethod]
 }
 
-func (c *MeshStackProviderClient) ReadPaymentMethod(workspace string, identifier string) (*MeshPaymentMethod, error) {
-	return unmarshalBodyIfPresent[MeshPaymentMethod](c.doAuthenticatedRequest("GET", c.urlForPaymentMethod(identifier),
-		withAccept(CONTENT_TYPE_PAYMENT_METHOD),
-	))
+func (c MeshPaymentMethodClient) Read(workspace string, identifier string) (*MeshPaymentMethod, error) {
+	return c.get(identifier)
 }
 
-func (c *MeshStackProviderClient) CreatePaymentMethod(paymentMethod *MeshPaymentMethodCreate) (*MeshPaymentMethod, error) {
-	return unmarshalBody[MeshPaymentMethod](c.doAuthenticatedRequest("POST", c.endpoints.PaymentMethods,
-		withPayload(paymentMethod, CONTENT_TYPE_PAYMENT_METHOD),
-	))
+func (c MeshPaymentMethodClient) Create(paymentMethod *MeshPaymentMethodCreate) (*MeshPaymentMethod, error) {
+	return c.post(paymentMethod)
 }
 
-func (c *MeshStackProviderClient) UpdatePaymentMethod(identifier string, paymentMethod *MeshPaymentMethodCreate) (*MeshPaymentMethod, error) {
-	return unmarshalBody[MeshPaymentMethod](c.doAuthenticatedRequest("PUT", c.urlForPaymentMethod(identifier),
-		withPayload(paymentMethod, CONTENT_TYPE_PAYMENT_METHOD),
-	))
+func (c MeshPaymentMethodClient) Update(identifier string, paymentMethod *MeshPaymentMethodCreate) (*MeshPaymentMethod, error) {
+	return c.put(identifier, paymentMethod)
 }
 
-func (c *MeshStackProviderClient) DeletePaymentMethod(identifier string) error {
-	_, err := c.doAuthenticatedRequest("DELETE", c.urlForPaymentMethod(identifier),
-		withAccept(CONTENT_TYPE_PAYMENT_METHOD),
-	)
-	return err
+func (c MeshPaymentMethodClient) Delete(identifier string) error {
+	return c.delete(identifier)
 }

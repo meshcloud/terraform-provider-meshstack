@@ -1,11 +1,5 @@
 package client
 
-import (
-	"net/url"
-)
-
-const CONTENT_TYPE_LANDINGZONE = "application/vnd.meshcloud.api.meshlandingzone.v1-preview.hal+json"
-
 type MeshLandingZone struct {
 	ApiVersion string                  `json:"apiVersion" tfsdk:"api_version"`
 	Kind       string                  `json:"kind" tfsdk:"kind"`
@@ -65,31 +59,22 @@ type MeshLandingZoneCreate struct {
 	Spec       MeshLandingZoneSpec     `json:"spec" tfsdk:"spec"`
 }
 
-func (c *MeshStackProviderClient) urlForLandingZone(name string) *url.URL {
-	return c.endpoints.LandingZones.JoinPath(name)
+type MeshLandingZoneClient struct {
+	meshObjectClient[MeshLandingZone]
 }
 
-func (c *MeshStackProviderClient) ReadLandingZone(name string) (*MeshLandingZone, error) {
-	return unmarshalBodyIfPresent[MeshLandingZone](c.doAuthenticatedRequest("GET", c.urlForLandingZone(name),
-		withAccept(CONTENT_TYPE_LANDINGZONE),
-	))
+func (c MeshLandingZoneClient) Read(name string) (*MeshLandingZone, error) {
+	return c.get(name)
 }
 
-func (c *MeshStackProviderClient) CreateLandingZone(landingZone *MeshLandingZoneCreate) (*MeshLandingZone, error) {
-	return unmarshalBody[MeshLandingZone](c.doAuthenticatedRequest("POST", c.endpoints.LandingZones,
-		withPayload(landingZone, CONTENT_TYPE_LANDINGZONE),
-	))
+func (c MeshLandingZoneClient) Create(landingZone *MeshLandingZoneCreate) (*MeshLandingZone, error) {
+	return c.post(landingZone)
 }
 
-func (c *MeshStackProviderClient) UpdateLandingZone(name string, landingZone *MeshLandingZoneCreate) (*MeshLandingZone, error) {
-	return unmarshalBody[MeshLandingZone](c.doAuthenticatedRequest("PUT", c.urlForLandingZone(name),
-		withPayload(landingZone, CONTENT_TYPE_LANDINGZONE),
-	))
+func (c MeshLandingZoneClient) Update(name string, landingZone *MeshLandingZoneCreate) (*MeshLandingZone, error) {
+	return c.put(name, landingZone)
 }
 
-func (c *MeshStackProviderClient) DeleteLandingZone(name string) error {
-	_, err := c.doAuthenticatedRequest("DELETE", c.urlForLandingZone(name),
-		withAccept(CONTENT_TYPE_LANDINGZONE),
-	)
-	return err
+func (c MeshLandingZoneClient) Delete(name string) error {
+	return c.delete(name)
 }

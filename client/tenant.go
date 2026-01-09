@@ -1,11 +1,5 @@
 package client
 
-import (
-	"net/url"
-)
-
-const CONTENT_TYPE_TENANT = "application/vnd.meshcloud.api.meshtenant.v3.hal+json"
-
 type MeshTenant struct {
 	ApiVersion string             `json:"apiVersion" tfsdk:"api_version"`
 	Kind       string             `json:"kind" tfsdk:"kind"`
@@ -49,26 +43,22 @@ type MeshTenantCreateSpec struct {
 	Quotas                *[]MeshTenantQuota `json:"quotas" tfsdk:"quotas"`
 }
 
-func (c *MeshStackProviderClient) urlForTenant(workspace string, project string, platform string) *url.URL {
-	identifier := workspace + "." + project + "." + platform
-	return c.endpoints.Tenants.JoinPath(identifier)
+type MeshTenantClient struct {
+	meshObjectClient[MeshTenant]
 }
 
-func (c *MeshStackProviderClient) ReadTenant(workspace string, project string, platform string) (*MeshTenant, error) {
-	return unmarshalBodyIfPresent[MeshTenant](c.doAuthenticatedRequest("GET", c.urlForTenant(workspace, project, platform),
-		withAccept(CONTENT_TYPE_TENANT),
-	))
+func (c *MeshTenantClient) tenantId(workspace string, project string, platform string) string {
+	return workspace + "." + project + "." + platform
 }
 
-func (c *MeshStackProviderClient) CreateTenant(tenant *MeshTenantCreate) (*MeshTenant, error) {
-	return unmarshalBody[MeshTenant](c.doAuthenticatedRequest("POST", c.endpoints.Tenants,
-		withPayload(tenant, CONTENT_TYPE_TENANT),
-	))
+func (c *MeshTenantClient) Read(workspace string, project string, platform string) (*MeshTenant, error) {
+	return c.get(c.tenantId(workspace, project, platform))
 }
 
-func (c *MeshStackProviderClient) DeleteTenant(workspace string, project string, platform string) error {
-	_, err := c.doAuthenticatedRequest("DELETE", c.urlForTenant(workspace, project, platform),
-		withAccept(CONTENT_TYPE_TENANT),
-	)
-	return err
+func (c *MeshTenantClient) Create(tenant *MeshTenantCreate) (*MeshTenant, error) {
+	return c.post(tenant)
+}
+
+func (c *MeshTenantClient) Delete(workspace string, project string, platform string) error {
+	return c.delete(c.tenantId(workspace, project, platform))
 }

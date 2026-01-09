@@ -70,7 +70,7 @@ func (p *MeshStackProvider) Configure(ctx context.Context, req provider.Configur
 	resp.ResourceData = meshStackClient
 }
 
-func newMeshStackProviderClient(data MeshStackProviderModel) (meshStackClient *client.MeshStackProviderClient, diags diag.Diagnostics) {
+func newMeshStackProviderClient(data MeshStackProviderModel) (meshStackClient client.MeshStackProviderClient, diags diag.Diagnostics) {
 	var endpoint string
 	if !data.Endpoint.IsNull() && !data.Endpoint.IsUnknown() {
 		endpoint = data.Endpoint.ValueString()
@@ -113,11 +113,7 @@ func newMeshStackProviderClient(data MeshStackProviderModel) (meshStackClient *c
 		}
 	}
 
-	meshStackClient, err = client.NewClient(parsedEndpoint, apiKey, apiSecret)
-	if err != nil {
-		diags.AddError("Failed to create meshStack client.", err.Error())
-		return
-	}
+	meshStackClient = client.NewClient(parsedEndpoint, apiKey, apiSecret)
 	return
 }
 

@@ -35,7 +35,7 @@ func NewBuildingBlockResource() resource.Resource {
 }
 
 type buildingBlockResource struct {
-	client *client.MeshStackProviderClient
+	client client.MeshStackProviderClient
 }
 
 func (r *buildingBlockResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -47,7 +47,7 @@ func (r *buildingBlockResource) Configure(ctx context.Context, req resource.Conf
 		return
 	}
 
-	client, ok := req.ProviderData.(*client.MeshStackProviderClient)
+	client, ok := req.ProviderData.(client.MeshStackProviderClient)
 
 	if !ok {
 		resp.Diagnostics.AddError(
@@ -260,7 +260,7 @@ func (r *buildingBlockResource) Create(ctx context.Context, req resource.CreateR
 		bb.Spec.Inputs = append(bb.Spec.Inputs, input)
 	}
 
-	created, err := r.client.CreateBuildingBlock(&bb)
+	created, err := r.client.BuildingBlock.Create(&bb)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating building block",
@@ -281,7 +281,7 @@ func (r *buildingBlockResource) Read(ctx context.Context, req resource.ReadReque
 		return
 	}
 
-	bb, err := r.client.ReadBuildingBlock(uuid)
+	bb, err := r.client.BuildingBlock.Read(uuid)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read building block", err.Error())
 	}
@@ -305,7 +305,7 @@ func (r *buildingBlockResource) Delete(ctx context.Context, req resource.DeleteR
 		return
 	}
 
-	err := r.client.DeleteBuildingBlock(uuid)
+	err := r.client.BuildingBlock.Delete(uuid)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error deleting building block",

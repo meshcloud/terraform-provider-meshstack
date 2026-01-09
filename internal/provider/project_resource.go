@@ -33,7 +33,7 @@ func NewProjectResource() resource.Resource {
 
 // projectResource is the resource implementation.
 type projectResource struct {
-	client *client.MeshStackProviderClient
+	client client.MeshStackProviderClient
 }
 
 // Metadata returns the resource type name.
@@ -47,7 +47,7 @@ func (r *projectResource) Configure(_ context.Context, req resource.ConfigureReq
 		return
 	}
 
-	client, ok := req.ProviderData.(*client.MeshStackProviderClient)
+	client, ok := req.ProviderData.(client.MeshStackProviderClient)
 
 	if !ok {
 		resp.Diagnostics.AddError(
@@ -194,7 +194,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		},
 	}
 
-	project, err := r.client.CreateProject(&create)
+	project, err := r.client.Project.Create(&create)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating project",
@@ -220,7 +220,7 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	project, err := r.client.ReadProject(workspace, name)
+	project, err := r.client.Project.Read(workspace, name)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read project", err.Error())
 	}
@@ -277,7 +277,7 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 		},
 	}
 
-	project, err := r.client.UpdateProject(&create)
+	project, err := r.client.Project.Update(&create)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error updating project",
@@ -302,7 +302,7 @@ func (r *projectResource) Delete(ctx context.Context, req resource.DeleteRequest
 		return
 	}
 
-	err := r.client.DeleteProject(state.Metadata.OwnedByWorkspace, state.Metadata.Name)
+	err := r.client.Project.Delete(state.Metadata.OwnedByWorkspace, state.Metadata.Name)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error deleting project",

@@ -30,7 +30,7 @@ func NewWorkspaceGroupBindingResource() resource.Resource {
 
 // workspaceGroupBindingResource is the resource implementation.
 type workspaceGroupBindingResource struct {
-	client *client.MeshStackProviderClient
+	client client.MeshStackProviderClient
 }
 
 // Metadata returns the resource type name.
@@ -44,7 +44,7 @@ func (r *workspaceGroupBindingResource) Configure(_ context.Context, req resourc
 		return
 	}
 
-	client, ok := req.ProviderData.(*client.MeshStackProviderClient)
+	client, ok := req.ProviderData.(client.MeshStackProviderClient)
 
 	if !ok {
 		resp.Diagnostics.AddError(
@@ -144,7 +144,7 @@ func (r *workspaceGroupBindingResource) Create(ctx context.Context, req resource
 		return
 	}
 
-	binding, err := r.client.CreateWorkspaceGroupBinding(&plan)
+	binding, err := r.client.WorkspaceGroupBinding.Create(&plan)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating workspace group binding",
@@ -165,7 +165,7 @@ func (r *workspaceGroupBindingResource) Read(ctx context.Context, req resource.R
 		return
 	}
 
-	binding, err := r.client.ReadWorkspaceGroupBinding(name)
+	binding, err := r.client.WorkspaceGroupBinding.Read(name)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read workspace group binding", err.Error())
 	}
@@ -191,7 +191,7 @@ func (r *workspaceGroupBindingResource) Delete(ctx context.Context, req resource
 		return
 	}
 
-	err := r.client.DeleteWorkspaceGroupBinding(name)
+	err := r.client.WorkspaceGroupBinding.Delete(name)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error deleting workspace group binding",
