@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"iter"
 	"log"
 	"net/http"
 	"net/url"
@@ -113,17 +114,40 @@ func (c *MeshStackProviderClient) ensureValidToken() error {
 
 type doRequestOption func(opts *doRequestOptions)
 
+type urlModifier func(url *url.URL)
+
 type requestModifier func(req *http.Request)
 
 type doRequestOptions struct {
+	urlModifiers     []urlModifier
 	requestPayload   any
 	requestModifiers []requestModifier
+}
+
+func appendUrlModifier(modifier urlModifier) doRequestOption {
+	return func(opts *doRequestOptions) {
+		opts.urlModifiers = append(opts.urlModifiers, modifier)
+	}
 }
 
 func appendRequestModifier(modifier requestModifier) doRequestOption {
 	return func(opts *doRequestOptions) {
 		opts.requestModifiers = append(opts.requestModifiers, modifier)
 	}
+}
+
+func withUrlQuery(key string, value any) doRequestOption {
+	return appendUrlModifier(func(url *url.URL) {
+		var valueStr string
+		if stringerValue, ok := value.(fmt.Stringer); ok {
+			valueStr = stringerValue.String()
+		} else {
+			valueStr = fmt.Sprintf("%v", value)
+		}
+		query := url.Query()
+		query.Set(key, valueStr)
+		url.RawQuery = query.Encode()
+	})
 }
 
 func withAccept(accept string) doRequestOption {
@@ -155,6 +179,18 @@ func (c *MeshStackProviderClient) doRequest(method string, url *url.URL, options
 	opts := doRequestOptions{}
 	for _, option := range options {
 		option(&opts)
+	}
+
+	if len(opts.urlModifiers) > 0 {
+		// clone url to prevent modifiers edit the given URL (it's sad that this is a pointer actually)
+		var err error
+		url, err = url.Parse(url.String())
+		if err != nil {
+			panic("cloning URL failed: " + err.Error())
+		}
+		for _, modifier := range opts.urlModifiers {
+			modifier(url)
+		}
 	}
 
 	var requestBody io.ReadWriter
@@ -217,6 +253,39 @@ func (c *MeshStackProviderClient) doAuthenticatedRequest(method string, url *url
 	)...)
 }
 
+func (c *MeshStackProviderClient) doPaginatedRequest(url *url.URL, options ...doRequestOption) iter.Seq2[[]byte, error] {
+	return func(yield func([]byte, error) bool) {
+		pageNumber := 0
+		for {
+			body, err := c.doAuthenticatedRequest("GET", url, append(options, withUrlQuery("page", pageNumber))...)
+			if err != nil {
+				yield(body, fmt.Errorf("cannot fetch page %d: %w", pageNumber, err))
+				return
+			}
+			if !yield(body, nil) {
+				// consumer wants to stop
+				return
+			}
+			// Check if there are more pages to fetch
+			type paginatedResponse struct {
+				Page struct {
+					TotalPages int `json:"totalPages"`
+					Number     int `json:"number"`
+				} `json:"page"`
+			}
+			response, err := unmarshalBody[paginatedResponse](body, err)
+			if err != nil {
+				yield(body, fmt.Errorf("cannot unmarshal paginated response, page %d: %w", pageNumber, err))
+				return
+			}
+			if response.Page.Number >= response.Page.TotalPages-1 {
+				return
+			}
+			pageNumber++
+		}
+	}
+}
+
 func unmarshalBody[T any](body []byte, err error) (*T, error) {
 	if err != nil {
 		return nil, err
@@ -235,26 +304,18 @@ func unmarshalBodyIfPresent[T any](body []byte, err error) (*T, error) {
 	return unmarshalBody[T](body, err)
 }
 
-// paginatedResponse is a generic structure for HAL paginated responses
-type paginatedResponse[T any] struct {
-	Embedded map[string][]T `json:"_embedded"`
-	Page     struct {
-		Size          int `json:"size"`
-		TotalElements int `json:"totalElements"`
-		TotalPages    int `json:"totalPages"`
-		Number        int `json:"number"`
-	} `json:"page"`
-}
-
-// unmarshalPaginatedBody unmarshalls a paginated HAL response and extracts items using the provided key
-func unmarshalPaginatedBody[T any](body []byte, err error, embeddedKey string) ([]T, *paginatedResponse[T], error) {
-	if err != nil {
-		return nil, nil, err
+func unmarshalBodyPages[T any](embeddedKey string, bodyPages iter.Seq2[[]byte, error]) (result []T, err error) {
+	for bodyPage, err := range bodyPages {
+		type embeddedResponse[T any] struct {
+			Embedded map[string][]T `json:"_embedded"`
+		}
+		if response, err := unmarshalBody[embeddedResponse[T]](bodyPage, err); err != nil {
+			return result, err
+		} else if items, ok := response.Embedded[embeddedKey]; !ok {
+			return result, fmt.Errorf("embedded key %s not found in paginated response", embeddedKey)
+		} else {
+			result = append(result, items...)
+		}
 	}
-	var response paginatedResponse[T]
-	if err := json.Unmarshal(body, &response); err != nil {
-		return nil, nil, err
-	}
-	items := response.Embedded[embeddedKey]
-	return items, &response, nil
+	return result, nil
 }

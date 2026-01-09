@@ -1,7 +1,6 @@
 package client
 
 import (
-	"fmt"
 	"net/url"
 )
 
@@ -96,34 +95,6 @@ func (c *MeshStackProviderClient) ReadIntegration(workspace string, uuid string)
 	))
 }
 
-func (c *MeshStackProviderClient) ReadIntegrations() (*[]MeshIntegration, error) {
-	var allIntegrations []MeshIntegration
-
-	pageNumber := 0
-	targetUrl := c.endpoints.Integrations
-	query := targetUrl.Query()
-
-	for {
-		query.Set("page", fmt.Sprintf("%d", pageNumber))
-		targetUrl.RawQuery = query.Encode()
-
-		body, err := c.doAuthenticatedRequest("GET", targetUrl,
-			withAccept(CONTENT_TYPE_INTEGRATION),
-		)
-		items, response, err := unmarshalPaginatedBody[MeshIntegration](body, err, "meshIntegrations")
-		if err != nil {
-			return nil, err
-		}
-
-		allIntegrations = append(allIntegrations, items...)
-
-		// Check if there are more pages
-		if response.Page.Number >= response.Page.TotalPages-1 {
-			break
-		}
-
-		pageNumber++
-	}
-
-	return &allIntegrations, nil
+func (c *MeshStackProviderClient) ReadIntegrations() ([]MeshIntegration, error) {
+	return unmarshalBodyPages[MeshIntegration]("meshIntegrations", c.doPaginatedRequest(c.endpoints.Integrations, withAccept(CONTENT_TYPE_INTEGRATION)))
 }
