@@ -1,11 +1,8 @@
 package client
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
-	"net/http"
 	"net/url"
 	"time"
 
@@ -67,35 +64,20 @@ func (c *MeshStackProviderClient) urlForTenantV4(uuid string) *url.URL {
 }
 
 func (c *MeshStackProviderClient) ReadTenantV4(uuid string) (*MeshTenantV4, error) {
-	targetUrl := c.urlForTenantV4(uuid)
-	req, err := http.NewRequest("GET", targetUrl.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Accept", CONTENT_TYPE_TENANT_V4)
-
-	return unmarshalBodyIfPresent[MeshTenantV4](c.doAuthenticatedRequest(req))
+	return unmarshalBodyIfPresent[MeshTenantV4](c.doAuthenticatedRequest("GET", c.urlForTenantV4(uuid),
+		withAccept(CONTENT_TYPE_TENANT_V4),
+	))
 }
 
 func (c *MeshStackProviderClient) CreateTenantV4(tenant *MeshTenantV4Create) (*MeshTenantV4, error) {
-	payload, err := json.Marshal(tenant)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", c.endpoints.Tenants.String(), bytes.NewBuffer(payload))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", CONTENT_TYPE_TENANT_V4)
-	req.Header.Set("Accept", CONTENT_TYPE_TENANT_V4)
-
-	return unmarshalBody[MeshTenantV4](c.doAuthenticatedRequest(req))
+	return unmarshalBody[MeshTenantV4](c.doAuthenticatedRequest("POST", c.endpoints.Tenants,
+		withPayload(tenant, CONTENT_TYPE_TENANT_V4),
+	))
 }
 
 func (c *MeshStackProviderClient) DeleteTenantV4(uuid string) error {
 	targetUrl := c.urlForTenantV4(uuid)
-	return c.deleteMeshObject(*targetUrl, 202)
+	return c.deleteMeshObject(targetUrl, 202)
 }
 
 // PollTenantV4UntilCreation polls a tenant until creation completes (platformTenantId is set)

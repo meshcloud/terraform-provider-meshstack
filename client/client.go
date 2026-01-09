@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"slices"
 	"time"
 )
 
@@ -147,17 +148,14 @@ func (c *MeshStackProviderClient) ensureValidToken() error {
 
 type doRequestOption func(opts *doRequestOptions)
 
+type requestModifier func(req *http.Request)
+
 type responseVerifier func(res *http.Response, body []byte) error
 
 type doRequestOptions struct {
+	requestPayload   any
+	requestModifiers []requestModifier
 	responseVerifier responseVerifier
-}
-
-func ensureSuccessfulRequest(res *http.Response, body []byte) error {
-	if res.StatusCode >= 200 && res.StatusCode <= 299 {
-		return nil
-	}
-	return handleErrWithNotFound(fmt.Errorf("request failed with status %d (not 2XX successful)", res.StatusCode), res.StatusCode, body)
 }
 
 func withExpectedStatusCode(statusCode int) doRequestOption {
@@ -171,6 +169,38 @@ func withExpectedStatusCode(statusCode int) doRequestOption {
 	}
 }
 
+func withAccept(accept string) doRequestOption {
+	return withHeader("Accept", accept)
+}
+
+func withHeader(key, value string) doRequestOption {
+	return func(opts *doRequestOptions) {
+		opts.requestModifiers = append(opts.requestModifiers, func(req *http.Request) {
+			req.Header.Set(key, value)
+		})
+	}
+}
+
+func withPayload(payload any, contentType string) doRequestOption {
+	return func(opts *doRequestOptions) {
+		// always provide Accept header with the same value as content-type,
+		// as meshObject API currently does not version that differently.
+		// that convention can still be overridden/broken by a later withAccept option
+		withAccept(contentType)(opts)
+		withHeader("Content-Type", contentType)(opts)
+		opts.requestPayload = payload
+	}
+}
+
+func ensureSuccessfulRequest(opts *doRequestOptions) {
+	opts.responseVerifier = func(res *http.Response, body []byte) error {
+		if res.StatusCode >= 200 && res.StatusCode <= 299 {
+			return nil
+		}
+		return handleErrWithNotFound(fmt.Errorf("request failed with status %d (not 2XX successful)", res.StatusCode), res.StatusCode, body)
+	}
+}
+
 func handleErrWithNotFound(err error, statusCode int, body []byte) error {
 	errs := []error{err, fmt.Errorf("error body: %s", string(body))}
 	if statusCode == http.StatusNotFound {
@@ -179,22 +209,34 @@ func handleErrWithNotFound(err error, statusCode int, body []byte) error {
 	return errors.Join(errs...)
 }
 
-func (c *MeshStackProviderClient) doAuthenticatedRequest(req *http.Request, options ...doRequestOption) ([]byte, error) {
-	opts := doRequestOptions{
+func (c *MeshStackProviderClient) doAuthenticatedRequest(method string, url *url.URL, options ...doRequestOption) ([]byte, error) {
+	// prepend (aka insert at 0) some default options such that given options may be overridden by caller
+	options = slices.Insert(options, 0,
+		withHeader("User-Agent", "meshStack Terraform Provider"),
 		// by default, verify successful response
 		// can be made more specific with withExpectedStatusCode option
-		responseVerifier: ensureSuccessfulRequest,
-	}
+		ensureSuccessfulRequest,
+	)
+	opts := doRequestOptions{}
 	for _, option := range options {
 		option(&opts)
 	}
 
-	// ensure that headers are initialized
-	if req.Header == nil {
-		req.Header = map[string][]string{}
+	var requestBody io.ReadWriter
+	if opts.requestPayload != nil {
+		requestBody = new(bytes.Buffer)
+		if err := json.NewEncoder(requestBody).Encode(opts.requestPayload); err != nil {
+			return nil, fmt.Errorf("failed to encode request body payload: %w", err)
+		}
 	}
-	req.Header.Set("User-Agent", "meshStack Terraform Provider")
 
+	req, err := http.NewRequest(method, url.String(), requestBody)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+	for _, requestModifier := range opts.requestModifiers {
+		requestModifier(req)
+	}
 	// log request before adding auth
 	log.Println(req)
 
@@ -213,22 +255,18 @@ func (c *MeshStackProviderClient) doAuthenticatedRequest(req *http.Request, opti
 	}()
 	log.Println(res)
 
-	body, err := io.ReadAll(res.Body)
+	responseBody, err := io.ReadAll(res.Body)
 	if err != nil {
 		return nil, fmt.Errorf("cannot read response body, status code %d: %w", res.StatusCode, err)
 	}
-	log.Printf("Got response body with %d bytes", len(body))
-	// always return body, even if the response is not successfully verified
-	// this allows clients to investigate the body even further if desirable.
-	return body, opts.responseVerifier(res, body)
+	log.Printf("Got response body with %d bytes", len(responseBody))
+	// always return responseBody, even if the response is not successfully verified
+	// this allows clients to investigate the responseBody even further if desirable.
+	return responseBody, opts.responseVerifier(res, responseBody)
 }
 
-func (c *MeshStackProviderClient) deleteMeshObject(targetUrl url.URL, expectedStatus int) (err error) {
-	req, err := http.NewRequest("DELETE", targetUrl.String(), nil)
-	if err != nil {
-		return err
-	}
-	_, err = c.doAuthenticatedRequest(req, withExpectedStatusCode(expectedStatus))
+func (c *MeshStackProviderClient) deleteMeshObject(targetUrl *url.URL, expectedStatus int) (err error) {
+	_, err = c.doAuthenticatedRequest("DELETE", targetUrl, withExpectedStatusCode(expectedStatus))
 	return
 }
 
@@ -261,7 +299,7 @@ type paginatedResponse[T any] struct {
 	} `json:"page"`
 }
 
-// unmarshalPaginatedBody unmarshals a paginated HAL response and extracts items using the provided key
+// unmarshalPaginatedBody unmarshalls a paginated HAL response and extracts items using the provided key
 func unmarshalPaginatedBody[T any](body []byte, err error, embeddedKey string) ([]T, *paginatedResponse[T], error) {
 	if err != nil {
 		return nil, nil, err

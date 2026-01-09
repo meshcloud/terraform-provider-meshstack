@@ -2,7 +2,6 @@ package client
 
 import (
 	"fmt"
-	"net/http"
 	"net/url"
 )
 
@@ -92,14 +91,9 @@ func (c *MeshStackProviderClient) urlForIntegration(workspace string, uuid strin
 }
 
 func (c *MeshStackProviderClient) ReadIntegration(workspace string, uuid string) (*MeshIntegration, error) {
-	targetUrl := c.urlForIntegration(workspace, uuid)
-	req, err := http.NewRequest("GET", targetUrl.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Accept", CONTENT_TYPE_INTEGRATION)
-
-	return unmarshalBodyIfPresent[MeshIntegration](c.doAuthenticatedRequest(req))
+	return unmarshalBodyIfPresent[MeshIntegration](c.doAuthenticatedRequest("GET", c.urlForIntegration(workspace, uuid),
+		withAccept(CONTENT_TYPE_INTEGRATION),
+	))
 }
 
 func (c *MeshStackProviderClient) ReadIntegrations() (*[]MeshIntegration, error) {
@@ -113,14 +107,9 @@ func (c *MeshStackProviderClient) ReadIntegrations() (*[]MeshIntegration, error)
 		query.Set("page", fmt.Sprintf("%d", pageNumber))
 		targetUrl.RawQuery = query.Encode()
 
-		req, err := http.NewRequest("GET", targetUrl.String(), nil)
-		if err != nil {
-			return nil, err
-		}
-
-		req.Header.Set("Accept", CONTENT_TYPE_INTEGRATION)
-
-		body, err := c.doAuthenticatedRequest(req)
+		body, err := c.doAuthenticatedRequest("GET", targetUrl,
+			withAccept(CONTENT_TYPE_INTEGRATION),
+		)
 		items, response, err := unmarshalPaginatedBody[MeshIntegration](body, err, "meshIntegrations")
 		if err != nil {
 			return nil, err

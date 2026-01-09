@@ -1,11 +1,8 @@
 package client
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
-	"net/http"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
@@ -71,36 +68,20 @@ type MeshBuildingBlockV2Status struct {
 }
 
 func (c *MeshStackProviderClient) ReadBuildingBlockV2(uuid string) (*MeshBuildingBlockV2, error) {
-	targetUrl := c.urlForBuildingBlock(uuid)
-
-	req, err := http.NewRequest("GET", targetUrl.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Accept", CONTENT_TYPE_BUILDING_BLOCK_V2)
-
-	return unmarshalBodyIfPresent[MeshBuildingBlockV2](c.doAuthenticatedRequest(req))
+	return unmarshalBodyIfPresent[MeshBuildingBlockV2](c.doAuthenticatedRequest("GET", c.urlForBuildingBlock(uuid),
+		withAccept(CONTENT_TYPE_BUILDING_BLOCK_V2),
+	))
 }
 
 func (c *MeshStackProviderClient) CreateBuildingBlockV2(bb *MeshBuildingBlockV2Create) (*MeshBuildingBlockV2, error) {
-	payload, err := json.Marshal(bb)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", c.endpoints.BuildingBlocks.String(), bytes.NewBuffer(payload))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", CONTENT_TYPE_BUILDING_BLOCK_V2)
-	req.Header.Set("Accept", CONTENT_TYPE_BUILDING_BLOCK_V2)
-
-	return unmarshalBody[MeshBuildingBlockV2](c.doAuthenticatedRequest(req))
+	return unmarshalBody[MeshBuildingBlockV2](c.doAuthenticatedRequest("POST", c.endpoints.BuildingBlocks,
+		withPayload(bb, CONTENT_TYPE_BUILDING_BLOCK_V2),
+	))
 }
 
 func (c *MeshStackProviderClient) DeleteBuildingBlockV2(uuid string) error {
 	targetUrl := c.urlForBuildingBlock(uuid)
-	return c.deleteMeshObject(*targetUrl, 202)
+	return c.deleteMeshObject(targetUrl, 202)
 }
 
 // PollBuildingBlockV2UntilCompletion polls a building block until it reaches a terminal state (SUCCEEDED or FAILED)
