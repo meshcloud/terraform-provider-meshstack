@@ -25,6 +25,8 @@ func (c *MeshStackProviderClient) CreateProjectGroupBinding(binding *MeshProject
 }
 
 func (c *MeshStackProviderClient) DeleteProjecGroupBinding(name string) error {
-	_, err := c.doAuthenticatedRequest("DELETE", c.urlForPojectGroupBinding(name))
+	_, err := c.doAuthenticatedRequest("DELETE", c.urlForPojectGroupBinding(name),
+		withAccept(CONTENT_TYPE_PROJECT_GROUP_BINDING),
+	)
 	return err
 }

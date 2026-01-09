@@ -93,6 +93,8 @@ func (c *MeshStackProviderClient) CreateBuildingBlock(bb *MeshBuildingBlockCreat
 }
 
 func (c *MeshStackProviderClient) DeleteBuildingBlock(uuid string) error {
-	_, err := c.doAuthenticatedRequest("DELETE", c.urlForBuildingBlock(uuid))
+	_, err := c.doAuthenticatedRequest("DELETE", c.urlForBuildingBlock(uuid),
+		withAccept(CONTENT_TYPE_BUILDING_BLOCK),
+	)
 	return err
 }
