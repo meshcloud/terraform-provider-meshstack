@@ -30,7 +30,7 @@ func NewProjectGroupBindingResource() resource.Resource {
 
 // projectGroupBindingResource is the resource implementation.
 type projectGroupBindingResource struct {
-	client *client.MeshStackProviderClient
+	client client.MeshStackProviderClient
 }
 
 // Metadata returns the resource type name.
@@ -44,7 +44,7 @@ func (r *projectGroupBindingResource) Configure(_ context.Context, req resource.
 		return
 	}
 
-	client, ok := req.ProviderData.(*client.MeshStackProviderClient)
+	client, ok := req.ProviderData.(client.MeshStackProviderClient)
 
 	if !ok {
 		resp.Diagnostics.AddError(
@@ -149,7 +149,7 @@ func (r *projectGroupBindingResource) Create(ctx context.Context, req resource.C
 		return
 	}
 
-	binding, err := r.client.CreateProjectGroupBinding(&plan)
+	binding, err := r.client.ProjectGroupBinding.Create(&plan)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating project group binding",
@@ -170,7 +170,7 @@ func (r *projectGroupBindingResource) Read(ctx context.Context, req resource.Rea
 		return
 	}
 
-	binding, err := r.client.ReadProjectGroupBinding(name)
+	binding, err := r.client.ProjectGroupBinding.Read(name)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read project group binding", err.Error())
 	}
@@ -196,7 +196,7 @@ func (r *projectGroupBindingResource) Delete(ctx context.Context, req resource.D
 		return
 	}
 
-	err := r.client.DeleteProjecGroupBinding(name)
+	err := r.client.ProjectGroupBinding.Delete(name)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error deleting project group binding",

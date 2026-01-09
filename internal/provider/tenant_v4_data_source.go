@@ -24,7 +24,7 @@ func NewTenantV4DataSource() datasource.DataSource {
 }
 
 type tenantV4DataSource struct {
-	client *client.MeshStackProviderClient
+	client client.MeshStackProviderClient
 }
 
 func (d *tenantV4DataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -36,11 +36,11 @@ func (d *tenantV4DataSource) Configure(_ context.Context, req datasource.Configu
 		return
 	}
 
-	client, ok := req.ProviderData.(*client.MeshStackProviderClient)
+	client, ok := req.ProviderData.(client.MeshStackProviderClient)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Data Source Configure Type",
-			fmt.Sprintf("Expected *client.MeshStackProviderClient, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+			fmt.Sprintf("Expected client.MeshStackProviderClient, got: %T. Please report this issue to the provider developers.", req.ProviderData),
 		)
 		return
 	}
@@ -158,7 +158,7 @@ func (d *tenantV4DataSource) Read(ctx context.Context, req datasource.ReadReques
 		return
 	}
 
-	tenant, err := d.client.ReadTenantV4(uuid)
+	tenant, err := d.client.TenantV4.Read(uuid)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading tenant",

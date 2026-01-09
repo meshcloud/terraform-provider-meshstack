@@ -1,32 +1,19 @@
 package client
 
-import (
-	"net/url"
-)
-
-const CONTENT_TYPE_PROJECT_GROUP_BINDING = "application/vnd.meshcloud.api.meshprojectgroupbinding.v3.hal+json"
-
 type MeshProjectGroupBinding = MeshProjectBinding
 
-func (c *MeshStackProviderClient) urlForPojectGroupBinding(name string) *url.URL {
-	return c.endpoints.ProjectGroupBindings.JoinPath(name)
+type MeshProjectGroupBindingClient struct {
+	meshObjectClient[MeshProjectBinding]
 }
 
-func (c *MeshStackProviderClient) ReadProjectGroupBinding(name string) (*MeshProjectGroupBinding, error) {
-	return unmarshalBodyIfPresent[MeshProjectBinding](c.doAuthenticatedRequest("GET", c.urlForPojectGroupBinding(name),
-		withAccept(CONTENT_TYPE_PROJECT_GROUP_BINDING),
-	))
+func (c MeshProjectGroupBindingClient) Read(name string) (*MeshProjectGroupBinding, error) {
+	return c.get(name)
 }
 
-func (c *MeshStackProviderClient) CreateProjectGroupBinding(binding *MeshProjectGroupBinding) (*MeshProjectGroupBinding, error) {
-	return unmarshalBody[MeshProjectBinding](c.doAuthenticatedRequest("POST", c.endpoints.ProjectGroupBindings,
-		withPayload(binding, CONTENT_TYPE_PROJECT_GROUP_BINDING),
-	))
+func (c MeshProjectGroupBindingClient) Create(binding *MeshProjectGroupBinding) (*MeshProjectGroupBinding, error) {
+	return c.post(binding)
 }
 
-func (c *MeshStackProviderClient) DeleteProjecGroupBinding(name string) error {
-	_, err := c.doAuthenticatedRequest("DELETE", c.urlForPojectGroupBinding(name),
-		withAccept(CONTENT_TYPE_PROJECT_GROUP_BINDING),
-	)
-	return err
+func (c MeshProjectGroupBindingClient) Delete(name string) error {
+	return c.delete(name)
 }

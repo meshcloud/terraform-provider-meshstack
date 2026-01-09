@@ -67,7 +67,7 @@ func NewTenantV4Resource() resource.Resource {
 }
 
 type tenantV4Resource struct {
-	client *client.MeshStackProviderClient
+	client client.MeshStackProviderClient
 }
 
 func (r *tenantV4Resource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -79,7 +79,7 @@ func (r *tenantV4Resource) Configure(_ context.Context, req resource.ConfigureRe
 		return
 	}
 
-	client, ok := req.ProviderData.(*client.MeshStackProviderClient)
+	client, ok := req.ProviderData.(client.MeshStackProviderClient)
 
 	if !ok {
 		resp.Diagnostics.AddError(
@@ -298,7 +298,7 @@ func (r *tenantV4Resource) Create(ctx context.Context, req resource.CreateReques
 		},
 	}
 
-	tenant, err := r.client.CreateTenantV4(&createRequest)
+	tenant, err := r.client.TenantV4.Create(&createRequest)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating tenant",
@@ -309,7 +309,7 @@ func (r *tenantV4Resource) Create(ctx context.Context, req resource.CreateReques
 
 	// Poll for completion if wait_for_completion is true
 	if !plan.WaitForCompletion.IsNull() && plan.WaitForCompletion.ValueBool() {
-		tenant, err = r.client.PollTenantV4UntilCreation(ctx, tenant.Metadata.Uuid)
+		tenant, err = r.client.TenantV4.PollUntilCreation(ctx, tenant.Metadata.Uuid)
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Error waiting for tenant creation",
@@ -344,7 +344,7 @@ func (r *tenantV4Resource) Read(ctx context.Context, req resource.ReadRequest, r
 		return
 	}
 
-	tenant, err := r.client.ReadTenantV4(uuid.ValueString())
+	tenant, err := r.client.TenantV4.Read(uuid.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading tenant",
@@ -374,7 +374,7 @@ func (r *tenantV4Resource) Delete(ctx context.Context, req resource.DeleteReques
 
 	uuid := state.Metadata.Uuid.ValueString()
 
-	err := r.client.DeleteTenantV4(uuid)
+	err := r.client.TenantV4.Delete(uuid)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error deleting tenant",
@@ -385,7 +385,7 @@ func (r *tenantV4Resource) Delete(ctx context.Context, req resource.DeleteReques
 
 	// Poll for deletion completion if wait_for_completion is true
 	if !state.WaitForCompletion.IsNull() && state.WaitForCompletion.ValueBool() {
-		err = r.client.PollTenantV4UntilDeletion(ctx, uuid)
+		err = r.client.TenantV4.PollUntilDeletion(ctx, uuid)
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Error waiting for tenant deletion",

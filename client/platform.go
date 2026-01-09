@@ -1,11 +1,5 @@
 package client
 
-import (
-	"net/url"
-)
-
-const CONTENT_TYPE_PLATFORM = "application/vnd.meshcloud.api.meshplatform.v2-preview.hal+json"
-
 type MeshPlatform struct {
 	ApiVersion string               `json:"apiVersion" tfsdk:"api_version"`
 	Kind       string               `json:"kind" tfsdk:"kind"`
@@ -109,31 +103,22 @@ type TagMapper struct {
 	ValuePattern string `json:"valuePattern" tfsdk:"value_pattern"`
 }
 
-func (c *MeshStackProviderClient) urlForPlatform(uuid string) *url.URL {
-	return c.endpoints.Platforms.JoinPath(uuid)
+type MeshPlatformClient struct {
+	meshObjectClient[MeshPlatform]
 }
 
-func (c *MeshStackProviderClient) ReadPlatform(uuid string) (*MeshPlatform, error) {
-	return unmarshalBodyIfPresent[MeshPlatform](c.doAuthenticatedRequest("GET", c.urlForPlatform(uuid),
-		withAccept(CONTENT_TYPE_PLATFORM),
-	))
+func (c MeshPlatformClient) Read(uuid string) (*MeshPlatform, error) {
+	return c.get(uuid)
 }
 
-func (c *MeshStackProviderClient) CreatePlatform(platform *MeshPlatformCreate) (*MeshPlatform, error) {
-	return unmarshalBody[MeshPlatform](c.doAuthenticatedRequest("POST", c.endpoints.Platforms,
-		withPayload(platform, CONTENT_TYPE_PLATFORM),
-	))
+func (c MeshPlatformClient) Create(platform *MeshPlatformCreate) (*MeshPlatform, error) {
+	return c.post(platform)
 }
 
-func (c *MeshStackProviderClient) DeletePlatform(uuid string) error {
-	_, err := c.doAuthenticatedRequest("DELETE", c.urlForPlatform(uuid),
-		withAccept(CONTENT_TYPE_PLATFORM),
-	)
-	return err
+func (c MeshPlatformClient) Update(uuid string, platform *MeshPlatformUpdate) (*MeshPlatform, error) {
+	return c.put(uuid, platform)
 }
 
-func (c *MeshStackProviderClient) UpdatePlatform(uuid string, platform *MeshPlatformUpdate) (*MeshPlatform, error) {
-	return unmarshalBody[MeshPlatform](c.doAuthenticatedRequest("PUT", c.urlForPlatform(uuid),
-		withPayload(platform, CONTENT_TYPE_PLATFORM),
-	))
+func (c MeshPlatformClient) Delete(uuid string) error {
+	return c.delete(uuid)
 }

@@ -32,7 +32,7 @@ func NewPaymentMethodResource() resource.Resource {
 }
 
 type paymentMethodResource struct {
-	client *client.MeshStackProviderClient
+	client client.MeshStackProviderClient
 }
 
 func (r *paymentMethodResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -44,7 +44,7 @@ func (r *paymentMethodResource) Configure(_ context.Context, req resource.Config
 		return
 	}
 
-	client, ok := req.ProviderData.(*client.MeshStackProviderClient)
+	client, ok := req.ProviderData.(client.MeshStackProviderClient)
 
 	if !ok {
 		resp.Diagnostics.AddError(
@@ -155,7 +155,7 @@ func (r *paymentMethodResource) Create(ctx context.Context, req resource.CreateR
 		return
 	}
 
-	createdPaymentMethod, err := r.client.CreatePaymentMethod(&paymentMethod)
+	createdPaymentMethod, err := r.client.PaymentMethod.Create(&paymentMethod)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Creating Payment Method",
@@ -181,7 +181,7 @@ func (r *paymentMethodResource) Read(ctx context.Context, req resource.ReadReque
 		return
 	}
 
-	paymentMethod, err := r.client.ReadPaymentMethod(workspace, name)
+	paymentMethod, err := r.client.PaymentMethod.Read(workspace, name)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("Could not read payment method '%s' in workspace '%s'", name, workspace),
@@ -217,7 +217,7 @@ func (r *paymentMethodResource) Update(ctx context.Context, req resource.UpdateR
 		return
 	}
 
-	updatedPaymentMethod, err := r.client.UpdatePaymentMethod(paymentMethod.Metadata.Name, &paymentMethod)
+	updatedPaymentMethod, err := r.client.PaymentMethod.Update(paymentMethod.Metadata.Name, &paymentMethod)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Updating Payment Method",
@@ -243,7 +243,7 @@ func (r *paymentMethodResource) Delete(ctx context.Context, req resource.DeleteR
 		return
 	}
 
-	err := r.client.DeletePaymentMethod(name)
+	err := r.client.PaymentMethod.Delete(name)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("Could not delete payment method '%s' in workspace '%s'", name, workspace),

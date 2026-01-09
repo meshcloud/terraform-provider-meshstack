@@ -1,11 +1,5 @@
 package client
 
-import (
-	"net/url"
-)
-
-const CONTENT_TYPE_WORKSPACE = "application/vnd.meshcloud.api.meshworkspace.v2.hal+json"
-
 type MeshWorkspace struct {
 	ApiVersion string                `json:"apiVersion" tfsdk:"api_version"`
 	Kind       string                `json:"kind" tfsdk:"kind"`
@@ -35,31 +29,22 @@ type MeshWorkspaceCreateMetadata struct {
 	Tags map[string][]string `json:"tags" tfsdk:"tags"`
 }
 
-func (c *MeshStackProviderClient) urlForWorkspace(name string) *url.URL {
-	return c.endpoints.Workspaces.JoinPath(name)
+type MeshWorkspaceClient struct {
+	meshObjectClient[MeshWorkspace]
 }
 
-func (c *MeshStackProviderClient) ReadWorkspace(name string) (*MeshWorkspace, error) {
-	return unmarshalBodyIfPresent[MeshWorkspace](c.doAuthenticatedRequest("GET", c.urlForWorkspace(name),
-		withAccept(CONTENT_TYPE_WORKSPACE),
-	))
+func (c MeshWorkspaceClient) Read(name string) (*MeshWorkspace, error) {
+	return c.get(name)
 }
 
-func (c *MeshStackProviderClient) CreateWorkspace(workspace *MeshWorkspaceCreate) (*MeshWorkspace, error) {
-	return unmarshalBody[MeshWorkspace](c.doAuthenticatedRequest("POST", c.endpoints.Workspaces,
-		withPayload(workspace, CONTENT_TYPE_WORKSPACE),
-	))
+func (c MeshWorkspaceClient) Create(workspace *MeshWorkspaceCreate) (*MeshWorkspace, error) {
+	return c.post(workspace)
 }
 
-func (c *MeshStackProviderClient) UpdateWorkspace(name string, workspace *MeshWorkspaceCreate) (*MeshWorkspace, error) {
-	return unmarshalBody[MeshWorkspace](c.doAuthenticatedRequest("PUT", c.urlForWorkspace(name),
-		withPayload(workspace, CONTENT_TYPE_WORKSPACE),
-	))
+func (c MeshWorkspaceClient) Update(name string, workspace *MeshWorkspaceCreate) (*MeshWorkspace, error) {
+	return c.put(name, workspace)
 }
 
-func (c *MeshStackProviderClient) DeleteWorkspace(name string) error {
-	_, err := c.doAuthenticatedRequest("DELETE", c.urlForWorkspace(name),
-		withAccept(CONTENT_TYPE_WORKSPACE),
-	)
-	return err
+func (c MeshWorkspaceClient) Delete(name string) error {
+	return c.delete(name)
 }

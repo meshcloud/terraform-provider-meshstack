@@ -30,7 +30,7 @@ func NewTenantResource() resource.Resource {
 }
 
 type tenantResource struct {
-	client *client.MeshStackProviderClient
+	client client.MeshStackProviderClient
 }
 
 func (r *tenantResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -42,7 +42,7 @@ func (r *tenantResource) Configure(_ context.Context, req resource.ConfigureRequ
 		return
 	}
 
-	client, ok := req.ProviderData.(*client.MeshStackProviderClient)
+	client, ok := req.ProviderData.(client.MeshStackProviderClient)
 
 	if !ok {
 		resp.Diagnostics.AddError(
@@ -191,7 +191,7 @@ func (r *tenantResource) Create(ctx context.Context, req resource.CreateRequest,
 		},
 	}
 
-	tenant, err := r.client.CreateTenant(&create)
+	tenant, err := r.client.Tenant.Create(&create)
 
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -215,7 +215,7 @@ func (r *tenantResource) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
-	tenant, err := r.client.ReadTenant(workspace, project, platform)
+	tenant, err := r.client.Tenant.Read(workspace, project, platform)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read tenant", err.Error())
 		return
@@ -243,7 +243,7 @@ func (r *tenantResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		return
 	}
 
-	err := r.client.DeleteTenant(state.Metadata.OwnedByWorkspace, state.Metadata.OwnedByProject, state.Metadata.PlatformIdentifier)
+	err := r.client.Tenant.Delete(state.Metadata.OwnedByWorkspace, state.Metadata.OwnedByProject, state.Metadata.PlatformIdentifier)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error deleting tenant",

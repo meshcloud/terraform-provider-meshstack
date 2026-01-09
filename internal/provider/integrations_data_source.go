@@ -23,7 +23,7 @@ func NewIntegrationsDataSource() datasource.DataSource {
 
 // integrationsDataSource is the data source implementation.
 type integrationsDataSource struct {
-	client *client.MeshStackProviderClient
+	client client.MeshStackProviderClient
 }
 
 // Metadata returns the data source type name.
@@ -223,11 +223,11 @@ func (d *integrationsDataSource) Configure(_ context.Context, req datasource.Con
 		return
 	}
 
-	client, ok := req.ProviderData.(*client.MeshStackProviderClient)
+	client, ok := req.ProviderData.(client.MeshStackProviderClient)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Data Source Configure Type",
-			fmt.Sprintf("Expected *client.MeshStackProviderClient, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+			fmt.Sprintf("Expected client.MeshStackProviderClient, got: %T. Please report this issue to the provider developers.", req.ProviderData),
 		)
 		return
 	}
@@ -236,7 +236,7 @@ func (d *integrationsDataSource) Configure(_ context.Context, req datasource.Con
 
 // Read refreshes the Terraform state with the latest data.
 func (d *integrationsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	integrations, err := d.client.ReadIntegrations()
+	integrations, err := d.client.Integration.List()
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read integrations, got error: %s", err))
 		return

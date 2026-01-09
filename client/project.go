@@ -1,11 +1,5 @@
 package client
 
-import (
-	"net/url"
-)
-
-const CONTENT_TYPE_PROJECT = "application/vnd.meshcloud.api.meshproject.v2.hal+json"
-
 type MeshProject struct {
 	ApiVersion string              `json:"apiVersion" tfsdk:"api_version"`
 	Kind       string              `json:"kind" tfsdk:"kind"`
@@ -37,43 +31,36 @@ type MeshProjectCreateMetadata struct {
 	OwnedByWorkspace string `json:"ownedByWorkspace" tfsdk:"owned_by_workspace"`
 }
 
-func (c *MeshStackProviderClient) urlForProject(workspace string, name string) *url.URL {
-	identifier := workspace + "." + name
-	return c.endpoints.Projects.JoinPath(identifier)
+type MeshProjectClient struct {
+	meshObjectClient[MeshProject]
 }
 
-func (c *MeshStackProviderClient) ReadProject(workspace string, name string) (*MeshProject, error) {
-	return unmarshalBodyIfPresent[MeshProject](c.doAuthenticatedRequest("GET", c.urlForProject(workspace, name),
-		withAccept(CONTENT_TYPE_PROJECT),
-	))
+func (c *MeshProjectClient) projectId(workspace string, name string) string {
+	return workspace + "." + name
 }
 
-func (c *MeshStackProviderClient) ReadProjects(workspaceIdentifier string, paymentMethodIdentifier *string) ([]MeshProject, error) {
+func (c *MeshProjectClient) Read(workspace string, name string) (*MeshProject, error) {
+	return c.get(c.projectId(workspace, name))
+}
+
+func (c *MeshProjectClient) List(workspaceIdentifier string, paymentMethodIdentifier *string) ([]MeshProject, error) {
 	options := []doRequestOption{
-		withAccept(CONTENT_TYPE_PROJECT),
 		withUrlQuery("workspaceIdentifier", workspaceIdentifier),
 	}
 	if paymentMethodIdentifier != nil {
 		options = append(options, withUrlQuery("paymentIdentifier", *paymentMethodIdentifier))
 	}
-	return unmarshalBodyPages[MeshProject]("meshProjects", c.doPaginatedRequest(c.endpoints.Projects, options...))
+	return c.list(options...)
 }
 
-func (c *MeshStackProviderClient) CreateProject(project *MeshProjectCreate) (*MeshProject, error) {
-	return unmarshalBody[MeshProject](c.doAuthenticatedRequest("POST", c.endpoints.Projects,
-		withPayload(project, CONTENT_TYPE_PROJECT),
-	))
+func (c *MeshProjectClient) Create(project *MeshProjectCreate) (*MeshProject, error) {
+	return c.post(project)
 }
 
-func (c *MeshStackProviderClient) UpdateProject(project *MeshProjectCreate) (*MeshProject, error) {
-	return unmarshalBody[MeshProject](c.doAuthenticatedRequest("PUT", c.urlForProject(project.Metadata.OwnedByWorkspace, project.Metadata.Name),
-		withPayload(project, CONTENT_TYPE_PROJECT),
-	))
+func (c *MeshProjectClient) Update(project *MeshProjectCreate) (*MeshProject, error) {
+	return c.put(c.projectId(project.Metadata.OwnedByWorkspace, project.Metadata.Name), project)
 }
 
-func (c *MeshStackProviderClient) DeleteProject(workspace string, name string) error {
-	_, err := c.doAuthenticatedRequest("DELETE", c.urlForProject(workspace, name),
-		withAccept(CONTENT_TYPE_PROJECT),
-	)
-	return err
+func (c *MeshProjectClient) Delete(workspace string, name string) error {
+	return c.delete(c.projectId(workspace, name))
 }

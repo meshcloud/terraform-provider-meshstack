@@ -25,7 +25,7 @@ func NewWorkspaceDataSource() datasource.DataSource {
 }
 
 type workspaceDataSource struct {
-	client *client.MeshStackProviderClient
+	client client.MeshStackProviderClient
 }
 
 func (d *workspaceDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -96,11 +96,11 @@ func (d *workspaceDataSource) Configure(_ context.Context, req datasource.Config
 		return
 	}
 
-	client, ok := req.ProviderData.(*client.MeshStackProviderClient)
+	client, ok := req.ProviderData.(client.MeshStackProviderClient)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Data Source Configure Type",
-			fmt.Sprintf("Expected *client.MeshStackProviderClient, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+			fmt.Sprintf("Expected client.MeshStackProviderClient, got: %T. Please report this issue to the provider developers.", req.ProviderData),
 		)
 		return
 	}
@@ -118,7 +118,7 @@ func (d *workspaceDataSource) Read(ctx context.Context, req datasource.ReadReque
 		return
 	}
 
-	workspace, err := d.client.ReadWorkspace(name)
+	workspace, err := d.client.Workspace.Read(name)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("Could not read workspace '%s'", name),
