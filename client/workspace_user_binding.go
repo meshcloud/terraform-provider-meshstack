@@ -1,9 +1,15 @@
 package client
 
-type MeshWorkspaceUserBinding = MeshWorkspaceBinding
+type MeshWorkspaceUserBinding struct {
+	MeshWorkspaceBinding
+}
 
 type MeshWorkspaceUserBindingClient struct {
-	meshObjectClient[MeshWorkspaceBinding]
+	meshObjectClient[MeshWorkspaceUserBinding]
+}
+
+func newWorkspaceUserBindingClient(c *httpClient) MeshWorkspaceUserBindingClient {
+	return MeshWorkspaceUserBindingClient{newMeshObjectClient[MeshWorkspaceUserBinding](c, "v2", "meshworkspacebindings", "userbindings")}
 }
 
 func (c MeshWorkspaceUserBindingClient) Read(name string) (*MeshWorkspaceUserBinding, error) {

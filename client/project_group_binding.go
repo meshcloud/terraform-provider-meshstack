@@ -1,9 +1,15 @@
 package client
 
-type MeshProjectGroupBinding = MeshProjectBinding
+type MeshProjectGroupBinding struct {
+	MeshProjectBinding
+}
 
 type MeshProjectGroupBindingClient struct {
-	meshObjectClient[MeshProjectBinding]
+	meshObjectClient[MeshProjectGroupBinding]
+}
+
+func newProjectGroupBindingClient(c *httpClient) MeshProjectGroupBindingClient {
+	return MeshProjectGroupBindingClient{newMeshObjectClient[MeshProjectGroupBinding](c, "v3", "meshprojectbindings", "groupbindings")}
 }
 
 func (c MeshProjectGroupBindingClient) Read(name string) (*MeshProjectGroupBinding, error) {

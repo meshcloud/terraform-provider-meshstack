@@ -74,6 +74,10 @@ type MeshBuildingBlockClient struct {
 	meshObjectClient[MeshBuildingBlock]
 }
 
+func newBuildingBlockClient(c *httpClient) MeshBuildingBlockClient {
+	return MeshBuildingBlockClient{newMeshObjectClient[MeshBuildingBlock](c, "v1")}
+}
+
 func (c MeshBuildingBlockClient) Read(uuid string) (*MeshBuildingBlock, error) {
 	return c.get(uuid)
 }

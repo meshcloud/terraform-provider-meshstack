@@ -9,9 +9,11 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"reflect"
 	"slices"
 	"strings"
 	"time"
+	"unicode"
 )
 
 var (
@@ -47,22 +49,22 @@ func NewClient(rootUrl *url.URL, providerVersion, apiKey, apiSecret string) Mesh
 		ApiSecret:       apiSecret,
 	}
 	return MeshStackProviderClient{
-		MeshBuildingBlockClient{newMeshObjectClient[MeshBuildingBlock](c, "meshBuildingBlock", "v1")},
-		MeshBuildingBlockV2Client{newMeshObjectClient[MeshBuildingBlockV2](c, "meshBuildingBlock", "v2-preview")},
-		MeshIntegrationClient{newMeshObjectClient[MeshIntegration](c, "meshIntegration", "v1-preview")},
-		MeshLandingZoneClient{newMeshObjectClient[MeshLandingZone](c, "meshLandingZone", "v1-preview")},
-		MeshLocationClient{newMeshObjectClient[MeshLocation](c, "meshLocation", "v1-preview")},
-		MeshPaymentMethodClient{newMeshObjectClient[MeshPaymentMethod](c, "meshPaymentMethod", "v2")},
-		MeshPlatformClient{newMeshObjectClient[MeshPlatform](c, "meshPlatform", "v2-preview")},
-		MeshProjectClient{newMeshObjectClient[MeshProject](c, "meshProject", "v2")},
-		MeshProjectGroupBindingClient{newMeshObjectClient[MeshProjectBinding](c, "meshProjectGroupBinding", "v3", "meshprojectbindings", "groupbindings")},
-		MeshProjectUserBindingClient{newMeshObjectClient[MeshProjectBinding](c, "meshProjectUserBinding", "v3", "meshprojectbindings", "userbindings")},
-		MeshTagDefinitionClient{newMeshObjectClient[MeshTagDefinition](c, "meshTagDefinition", "v1")},
-		MeshTenantClient{newMeshObjectClient[MeshTenant](c, "meshTenant", "v3")},
-		MeshTenantV4Client{newMeshObjectClient[MeshTenantV4](c, "meshTenant", "v4-preview")},
-		MeshWorkspaceClient{newMeshObjectClient[MeshWorkspace](c, "meshWorkspace", "v2")},
-		MeshWorkspaceGroupBindingClient{newMeshObjectClient[MeshWorkspaceBinding](c, "meshWorkspaceGroupBinding", "v2", "meshworkspacebindings", "groupbindings")},
-		MeshWorkspaceUserBindingClient{newMeshObjectClient[MeshWorkspaceBinding](c, "meshWorkspaceUserBinding", "v2", "meshworkspacebindings", "userbindings")},
+		newBuildingBlockClient(c),
+		newBuildingBlockV2Client(c),
+		newIntegrationClient(c),
+		newLandingZoneClient(c),
+		newLocationClient(c),
+		newPaymentMethodClient(c),
+		newPlatformClient(c),
+		newProjectClient(c),
+		newProjectGroupBindingClient(c),
+		newProjectUserBindingClient(c),
+		newTagDefinitionClient(c),
+		newTenantClient(c),
+		newTenantV4Client(c),
+		newWorkspaceClient(c),
+		newWorkspaceGroupBindingClient(c),
+		newWorkspaceUserBindingClient(c),
 	}
 }
 
@@ -83,7 +85,9 @@ type meshObjectClient[M any] struct {
 	ApiUrl           *url.URL
 }
 
-func newMeshObjectClient[M any](client *httpClient, name, apiVersion string, explicitApiPaths ...string) meshObjectClient[M] {
+func newMeshObjectClient[M any](client *httpClient, apiVersion string, explicitApiPaths ...string) meshObjectClient[M] {
+	name := inferMeshObjectName[M]()
+
 	if len(explicitApiPaths) == 0 {
 		// infer API path from meshObject name by default (if nothing explicit is given)
 		explicitApiPaths = []string{strings.ToLower(pluralizeName(name))}
@@ -93,6 +97,23 @@ func newMeshObjectClient[M any](client *httpClient, name, apiVersion string, exp
 	apiUrl := client.RootUrl.JoinPath(explicitApiPaths...)
 	log.Printf("Using API at '%s' for meshObject '%s', version '%s'", apiUrl, name, apiVersion)
 	return meshObjectClient[M]{client, name, apiVersion, apiUrl}
+}
+
+// inferMeshObjectName uses reflection to infer the meshObject name from the type parameter M.
+// It converts the type name to camelCase (e.g., "MeshBuildingBlock" -> "meshBuildingBlock").
+func inferMeshObjectName[M any]() string {
+	var zero M
+	typeName := reflect.TypeOf(zero).Name()
+	return lowercaseFirst(typeName)
+}
+
+func lowercaseFirst(s string) string {
+	if s == "" {
+		return s
+	}
+	runes := []rune(s)
+	runes[0] = unicode.ToLower(runes[0])
+	return string(runes)
 }
 
 func pluralizeName(name string) string {
