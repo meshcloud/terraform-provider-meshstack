@@ -1,3 +1,37 @@
+## Unreleased
+
+FEATURES:
+
+- Added Taskfile.yml for task automation (replaces GNUmakefile).
+- Provider version now included in User-Agent header for API requests.
+- Added data source tests for projects, integrations, and tag_definitions.
+- Examples are now embedded for easier use in acceptance tests.
+
+FIXES:
+
+- DELETE endpoints now properly include versioning Accept header.
+- Fixed URL query parameter mutation (was creating new query object per modification).
+
+REFACTOR:
+
+- Major client refactoring: Introduced generic `meshObjectClient[M]` that replaces 17+ type-specific client implementations.
+- Provides unified CRUD operations (get, post, put, delete, list) eliminating ~1,400 lines of duplicated code.
+- Implemented functional options pattern for composable request configuration (withAccept, withPayload, withUrlQuery, withHeader).
+- Auto-infers API paths from meshObject names with explicit override support.
+- Introduced factory methods for all Mesh*Client types to hide implementation details (API versions, paths).
+- Client name inference using reflection on type parameters to eliminate redundant naming.
+- Converted binding type aliases to embedded structs for proper reflection support.
+- Removed manual tools/tools.go in favor of go tool directive.
+- Simplified paginated response fetching with automatic multi-page handling.
+- Changed return types from `*[]T` to idiomatic `[]T` for list operations.
+- Streamlined provider client configuration in resources/data sources with helper method.
+- Moved MeshObjectClient into client/internal package for better encapsulation.
+
+BREAKING CHANGES:
+
+- Client method signatures changed: `ReadProjects()`, `ReadIntegrations()`, `ReadTagDefinitions()` return `[]T` instead of `*[]T`.
+- Helper methods (projectId, tenantId) now use value receivers instead of pointer receivers.
+
 ## v0.16.5
 
 BREAKING CHANGES:
