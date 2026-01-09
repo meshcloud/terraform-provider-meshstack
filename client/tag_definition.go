@@ -83,21 +83,8 @@ func (c *MeshStackProviderClient) ReadTagDefinitions() (*[]MeshTagDefinition, er
 	targetUrl := c.endpoints.TagDefinitions
 	query := targetUrl.Query()
 
-	type tagsResponse struct {
-		Embedded struct {
-			MeshTagDefinitions []MeshTagDefinition `json:"meshTagDefinitions"`
-		} `json:"_embedded"`
-		Page struct {
-			Size          int `json:"size"`
-			TotalElements int `json:"totalElements"`
-			TotalPages    int `json:"totalPages"`
-			Number        int `json:"number"`
-		} `json:"page"`
-	}
-
 	for {
 		query.Set("page", fmt.Sprintf("%d", pageNumber))
-
 		targetUrl.RawQuery = query.Encode()
 
 		req, err := http.NewRequest("GET", targetUrl.String(), nil)
@@ -108,17 +95,12 @@ func (c *MeshStackProviderClient) ReadTagDefinitions() (*[]MeshTagDefinition, er
 		req.Header.Set("Accept", CONTENT_TYPE_TAG_DEFINITION)
 
 		body, err := c.doAuthenticatedRequest(req)
+		items, response, err := unmarshalPaginatedBody[MeshTagDefinition](body, err, "meshTagDefinitions")
 		if err != nil {
 			return nil, err
 		}
 
-		var response tagsResponse
-		err = json.Unmarshal(body, &response)
-		if err != nil {
-			return nil, err
-		}
-
-		all = append(all, response.Embedded.MeshTagDefinitions...)
+		all = append(all, items...)
 
 		// Check if there are more pages
 		if response.Page.Number >= response.Page.TotalPages-1 {
@@ -140,17 +122,7 @@ func (c *MeshStackProviderClient) ReadTagDefinition(name string) (*MeshTagDefini
 
 	req.Header.Set("Accept", CONTENT_TYPE_TAG_DEFINITION)
 
-	body, err := c.doAuthenticatedRequest(req)
-	if err != nil {
-		return nil, err
-	}
-
-	var tagDefinition MeshTagDefinition
-	if err := json.Unmarshal(body, &tagDefinition); err != nil {
-		return nil, err
-	}
-
-	return &tagDefinition, nil
+	return unmarshalBody[MeshTagDefinition](c.doAuthenticatedRequest(req))
 }
 
 func (c *MeshStackProviderClient) CreateTagDefinition(tagDefinition *MeshTagDefinition) (*MeshTagDefinition, error) {
@@ -170,17 +142,11 @@ func (c *MeshStackProviderClient) CreateTagDefinition(tagDefinition *MeshTagDefi
 	req.Header.Set("Content-Type", CONTENT_TYPE_TAG_DEFINITION)
 	req.Header.Set("Accept", CONTENT_TYPE_TAG_DEFINITION)
 
-	body, err := c.doAuthenticatedRequest(req)
+	result, err := unmarshalBody[MeshTagDefinition](c.doAuthenticatedRequest(req))
 	if err != nil {
 		return nil, fmt.Errorf("failed to do authenticated request: %w", err)
 	}
-
-	var createdTagDefinition MeshTagDefinition
-	if err := json.Unmarshal(body, &createdTagDefinition); err != nil {
-		return nil, fmt.Errorf("failed to decode response: %w", err)
-	}
-
-	return &createdTagDefinition, nil
+	return result, nil
 }
 
 func (c *MeshStackProviderClient) UpdateTagDefinition(tagDefinition *MeshTagDefinition) (*MeshTagDefinition, error) {
@@ -198,17 +164,11 @@ func (c *MeshStackProviderClient) UpdateTagDefinition(tagDefinition *MeshTagDefi
 	req.Header.Set("Content-Type", CONTENT_TYPE_TAG_DEFINITION)
 	req.Header.Set("Accept", CONTENT_TYPE_TAG_DEFINITION)
 
-	body, err := c.doAuthenticatedRequest(req)
+	result, err := unmarshalBody[MeshTagDefinition](c.doAuthenticatedRequest(req))
 	if err != nil {
 		return nil, fmt.Errorf("failed to do authenticated request: %w", err)
 	}
-
-	var updatedTagDefinition MeshTagDefinition
-	if err := json.Unmarshal(body, &updatedTagDefinition); err != nil {
-		return nil, fmt.Errorf("failed to decode response: %w", err)
-	}
-
-	return &updatedTagDefinition, nil
+	return result, nil
 }
 
 func (c *MeshStackProviderClient) DeleteTagDefinition(name string) error {

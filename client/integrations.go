@@ -1,8 +1,6 @@
 package client
 
 import (
-	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -101,21 +99,7 @@ func (c *MeshStackProviderClient) ReadIntegration(workspace string, uuid string)
 	}
 	req.Header.Set("Accept", CONTENT_TYPE_INTEGRATION)
 
-	body, err := c.doAuthenticatedRequest(req)
-	if errors.Is(err, errNotFound) {
-		return nil, nil // Not found
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	var integration MeshIntegration
-	err = json.Unmarshal(body, &integration)
-	if err != nil {
-		return nil, err
-	}
-
-	return &integration, nil
+	return unmarshalBodyIfPresent[MeshIntegration](c.doAuthenticatedRequest(req))
 }
 
 func (c *MeshStackProviderClient) ReadIntegrations() (*[]MeshIntegration, error) {
@@ -137,28 +121,12 @@ func (c *MeshStackProviderClient) ReadIntegrations() (*[]MeshIntegration, error)
 		req.Header.Set("Accept", CONTENT_TYPE_INTEGRATION)
 
 		body, err := c.doAuthenticatedRequest(req)
+		items, response, err := unmarshalPaginatedBody[MeshIntegration](body, err, "meshIntegrations")
 		if err != nil {
 			return nil, err
 		}
 
-		var response struct {
-			Embedded struct {
-				MeshIntegrations []MeshIntegration `json:"meshIntegrations"`
-			} `json:"_embedded"`
-			Page struct {
-				Size          int `json:"size"`
-				TotalElements int `json:"totalElements"`
-				TotalPages    int `json:"totalPages"`
-				Number        int `json:"number"`
-			} `json:"page"`
-		}
-
-		err = json.Unmarshal(body, &response)
-		if err != nil {
-			return nil, err
-		}
-
-		allIntegrations = append(allIntegrations, response.Embedded.MeshIntegrations...)
+		allIntegrations = append(allIntegrations, items...)
 
 		// Check if there are more pages
 		if response.Page.Number >= response.Page.TotalPages-1 {

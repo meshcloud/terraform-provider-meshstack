@@ -3,7 +3,6 @@ package client
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"net/url"
 )
@@ -51,20 +50,7 @@ func (c *MeshStackProviderClient) ReadWorkspace(name string) (*MeshWorkspace, er
 	}
 	req.Header.Set("Accept", CONTENT_TYPE_WORKSPACE)
 
-	body, err := c.doAuthenticatedRequest(req)
-	if errors.Is(err, errNotFound) {
-		return nil, nil // Not found
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	var workspace MeshWorkspace
-	err = json.Unmarshal(body, &workspace)
-	if err != nil {
-		return nil, err
-	}
-	return &workspace, nil
+	return unmarshalBodyIfPresent[MeshWorkspace](c.doAuthenticatedRequest(req))
 }
 
 func (c *MeshStackProviderClient) CreateWorkspace(workspace *MeshWorkspaceCreate) (*MeshWorkspace, error) {
@@ -80,17 +66,7 @@ func (c *MeshStackProviderClient) CreateWorkspace(workspace *MeshWorkspaceCreate
 	req.Header.Set("Content-Type", CONTENT_TYPE_WORKSPACE)
 	req.Header.Set("Accept", CONTENT_TYPE_WORKSPACE)
 
-	body, err := c.doAuthenticatedRequest(req)
-	if err != nil {
-		return nil, err
-	}
-
-	var createdWorkspace MeshWorkspace
-	err = json.Unmarshal(body, &createdWorkspace)
-	if err != nil {
-		return nil, err
-	}
-	return &createdWorkspace, nil
+	return unmarshalBody[MeshWorkspace](c.doAuthenticatedRequest(req))
 }
 
 func (c *MeshStackProviderClient) UpdateWorkspace(name string, workspace *MeshWorkspaceCreate) (*MeshWorkspace, error) {
@@ -108,17 +84,7 @@ func (c *MeshStackProviderClient) UpdateWorkspace(name string, workspace *MeshWo
 	req.Header.Set("Content-Type", CONTENT_TYPE_WORKSPACE)
 	req.Header.Set("Accept", CONTENT_TYPE_WORKSPACE)
 
-	body, err := c.doAuthenticatedRequest(req)
-	if err != nil {
-		return nil, err
-	}
-
-	var updatedWorkspace MeshWorkspace
-	err = json.Unmarshal(body, &updatedWorkspace)
-	if err != nil {
-		return nil, err
-	}
-	return &updatedWorkspace, nil
+	return unmarshalBody[MeshWorkspace](c.doAuthenticatedRequest(req))
 }
 
 func (c *MeshStackProviderClient) DeleteWorkspace(name string) error {

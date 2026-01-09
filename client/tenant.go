@@ -3,7 +3,6 @@ package client
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"net/url"
 )
@@ -66,21 +65,7 @@ func (c *MeshStackProviderClient) ReadTenant(workspace string, project string, p
 	}
 	req.Header.Set("Accept", CONTENT_TYPE_TENANT)
 
-	body, err := c.doAuthenticatedRequest(req)
-	if errors.Is(err, errNotFound) {
-		return nil, nil // Not found
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	var tenant MeshTenant
-	err = json.Unmarshal(body, &tenant)
-	if err != nil {
-		return nil, err
-	}
-
-	return &tenant, nil
+	return unmarshalBodyIfPresent[MeshTenant](c.doAuthenticatedRequest(req))
 }
 
 func (c *MeshStackProviderClient) CreateTenant(tenant *MeshTenantCreate) (*MeshTenant, error) {
@@ -96,18 +81,7 @@ func (c *MeshStackProviderClient) CreateTenant(tenant *MeshTenantCreate) (*MeshT
 	req.Header.Set("Content-Type", CONTENT_TYPE_TENANT)
 	req.Header.Set("Accept", CONTENT_TYPE_TENANT)
 
-	body, err := c.doAuthenticatedRequest(req)
-	if err != nil {
-		return nil, err
-	}
-
-	var createdTenant MeshTenant
-	err = json.Unmarshal(body, &createdTenant)
-	if err != nil {
-		return nil, err
-	}
-
-	return &createdTenant, nil
+	return unmarshalBody[MeshTenant](c.doAuthenticatedRequest(req))
 }
 
 func (c *MeshStackProviderClient) DeleteTenant(workspace string, project string, platform string) error {

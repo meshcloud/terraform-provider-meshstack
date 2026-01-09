@@ -3,7 +3,6 @@ package client
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"net/url"
 )
@@ -88,21 +87,7 @@ func (c *MeshStackProviderClient) ReadBuildingBlock(uuid string) (*MeshBuildingB
 	}
 	req.Header.Set("Accept", CONTENT_TYPE_BUILDING_BLOCK)
 
-	body, err := c.doAuthenticatedRequest(req)
-	if errors.Is(err, errNotFound) {
-		return nil, nil // Not found
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	var bb MeshBuildingBlock
-	err = json.Unmarshal(body, &bb)
-	if err != nil {
-		return nil, err
-	}
-
-	return &bb, nil
+	return unmarshalBodyIfPresent[MeshBuildingBlock](c.doAuthenticatedRequest(req))
 }
 
 func (c *MeshStackProviderClient) CreateBuildingBlock(bb *MeshBuildingBlockCreate) (*MeshBuildingBlock, error) {
@@ -118,18 +103,7 @@ func (c *MeshStackProviderClient) CreateBuildingBlock(bb *MeshBuildingBlockCreat
 	req.Header.Set("Content-Type", CONTENT_TYPE_BUILDING_BLOCK)
 	req.Header.Set("Accept", CONTENT_TYPE_BUILDING_BLOCK)
 
-	body, err := c.doAuthenticatedRequest(req)
-	if err != nil {
-		return nil, err
-	}
-
-	var createdBb MeshBuildingBlock
-	err = json.Unmarshal(body, &createdBb)
-	if err != nil {
-		return nil, err
-	}
-
-	return &createdBb, nil
+	return unmarshalBody[MeshBuildingBlock](c.doAuthenticatedRequest(req))
 }
 
 func (c *MeshStackProviderClient) DeleteBuildingBlock(uuid string) error {
