@@ -69,6 +69,10 @@ type MeshBuildingBlockV2Client struct {
 	meshObjectClient[MeshBuildingBlockV2]
 }
 
+func newBuildingBlockV2Client(c *httpClient) MeshBuildingBlockV2Client {
+	return MeshBuildingBlockV2Client{newMeshObjectClient[MeshBuildingBlockV2](c, "v2-preview")}
+}
+
 func (c MeshBuildingBlockV2Client) Read(uuid string) (*MeshBuildingBlockV2, error) {
 	return c.get(uuid)
 }

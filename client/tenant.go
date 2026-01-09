@@ -47,6 +47,10 @@ type MeshTenantClient struct {
 	meshObjectClient[MeshTenant]
 }
 
+func newTenantClient(c *httpClient) MeshTenantClient {
+	return MeshTenantClient{newMeshObjectClient[MeshTenant](c, "v3")}
+}
+
 func (c MeshTenantClient) tenantId(workspace string, project string, platform string) string {
 	return workspace + "." + project + "." + platform
 }

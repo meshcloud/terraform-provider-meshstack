@@ -33,6 +33,10 @@ type MeshWorkspaceClient struct {
 	meshObjectClient[MeshWorkspace]
 }
 
+func newWorkspaceClient(c *httpClient) MeshWorkspaceClient {
+	return MeshWorkspaceClient{newMeshObjectClient[MeshWorkspace](c, "v2")}
+}
+
 func (c MeshWorkspaceClient) Read(name string) (*MeshWorkspace, error) {
 	return c.get(name)
 }

@@ -35,6 +35,10 @@ type MeshLocationClient struct {
 	meshObjectClient[MeshLocation]
 }
 
+func newLocationClient(c *httpClient) MeshLocationClient {
+	return MeshLocationClient{newMeshObjectClient[MeshLocation](c, "v1-preview")}
+}
+
 func (c MeshLocationClient) Read(name string) (*MeshLocation, error) {
 	return c.get(name)
 }

@@ -36,6 +36,10 @@ type MeshPaymentMethodClient struct {
 	meshObjectClient[MeshPaymentMethod]
 }
 
+func newPaymentMethodClient(c *httpClient) MeshPaymentMethodClient {
+	return MeshPaymentMethodClient{newMeshObjectClient[MeshPaymentMethod](c, "v2")}
+}
+
 func (c MeshPaymentMethodClient) Read(workspace string, identifier string) (*MeshPaymentMethod, error) {
 	return c.get(identifier)
 }

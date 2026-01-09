@@ -67,6 +67,10 @@ type MeshTagDefinitionClient struct {
 	meshObjectClient[MeshTagDefinition]
 }
 
+func newTagDefinitionClient(c *httpClient) MeshTagDefinitionClient {
+	return MeshTagDefinitionClient{newMeshObjectClient[MeshTagDefinition](c, "v1")}
+}
+
 func (c MeshTagDefinitionClient) List() ([]MeshTagDefinition, error) {
 	return c.list()
 }
