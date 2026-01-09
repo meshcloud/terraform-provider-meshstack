@@ -243,9 +243,9 @@ func (d *integrationsDataSource) Read(ctx context.Context, req datasource.ReadRe
 	}
 
 	// Save data into Terraform state
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("integrations"), &integrations)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("integrations"), integrations)...)
 
-	for _, integration := range *integrations {
+	for _, integration := range integrations {
 		if integration.Status != nil && integration.Status.IsBuiltIn {
 			if integration.Spec.Config.Type == "replicator" {
 				resp.Diagnostics.Append(resp.State.SetAttribute(ctx,
