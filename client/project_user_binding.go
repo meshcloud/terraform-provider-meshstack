@@ -21,6 +21,6 @@ func (c *MeshStackProviderClient) CreateProjectUserBinding(binding *MeshProjectU
 }
 
 func (c *MeshStackProviderClient) DeleteProjecUserBinding(name string) error {
-	targetUrl := c.urlForPojectUserBinding(name)
-	return c.deleteMeshObject(targetUrl, 204)
+	_, err := c.doAuthenticatedRequest("DELETE", c.urlForPojectUserBinding(name))
+	return err
 }

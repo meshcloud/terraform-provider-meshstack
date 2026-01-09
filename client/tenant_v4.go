@@ -76,8 +76,8 @@ func (c *MeshStackProviderClient) CreateTenantV4(tenant *MeshTenantV4Create) (*M
 }
 
 func (c *MeshStackProviderClient) DeleteTenantV4(uuid string) error {
-	targetUrl := c.urlForTenantV4(uuid)
-	return c.deleteMeshObject(targetUrl, 202)
+	_, err := c.doAuthenticatedRequest("DELETE", c.urlForTenantV4(uuid))
+	return err
 }
 
 // PollTenantV4UntilCreation polls a tenant until creation completes (platformTenantId is set)
