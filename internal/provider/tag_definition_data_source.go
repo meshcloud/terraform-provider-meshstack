@@ -16,7 +16,7 @@ func NewTagDefinitionDataSource() datasource.DataSource {
 }
 
 type tagDefinitionDataSource struct {
-	client *client.MeshStackProviderClient
+	client client.MeshStackProviderClient
 }
 
 func (d *tagDefinitionDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -188,7 +188,7 @@ func (d *tagDefinitionDataSource) Configure(ctx context.Context, req datasource.
 		return
 	}
 
-	client, ok := req.ProviderData.(*client.MeshStackProviderClient)
+	client, ok := req.ProviderData.(client.MeshStackProviderClient)
 
 	if !ok {
 		resp.Diagnostics.AddError(
@@ -210,7 +210,7 @@ func (d *tagDefinitionDataSource) Read(ctx context.Context, req datasource.ReadR
 		return
 	}
 
-	tag, err := d.client.ReadTagDefinition(name)
+	tag, err := d.client.TagDefinition.Read(name)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read meshTagDefinition", err.Error())
 		return

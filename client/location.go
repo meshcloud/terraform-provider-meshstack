@@ -1,11 +1,5 @@
 package client
 
-import (
-	"net/url"
-)
-
-const CONTENT_TYPE_LOCATION = "application/vnd.meshcloud.api.meshlocation.v1-preview.hal+json"
-
 type MeshLocation struct {
 	ApiVersion string               `json:"apiVersion" tfsdk:"api_version"`
 	Metadata   MeshLocationMetadata `json:"metadata" tfsdk:"metadata"`
@@ -37,31 +31,22 @@ type MeshLocationCreateMetadata struct {
 	Name string `json:"name" tfsdk:"name"`
 }
 
-func (c *MeshStackProviderClient) urlForLocation(name string) *url.URL {
-	return c.endpoints.Locations.JoinPath(name)
+type MeshLocationClient struct {
+	meshObjectClient[MeshLocation]
 }
 
-func (c *MeshStackProviderClient) ReadLocation(name string) (*MeshLocation, error) {
-	return unmarshalBodyIfPresent[MeshLocation](c.doAuthenticatedRequest("GET", c.urlForLocation(name),
-		withAccept(CONTENT_TYPE_LOCATION),
-	))
+func (c MeshLocationClient) Read(name string) (*MeshLocation, error) {
+	return c.get(name)
 }
 
-func (c *MeshStackProviderClient) CreateLocation(location *MeshLocationCreate) (*MeshLocation, error) {
-	return unmarshalBody[MeshLocation](c.doAuthenticatedRequest("POST", c.endpoints.Locations,
-		withPayload(location, CONTENT_TYPE_LOCATION),
-	))
+func (c MeshLocationClient) Create(location *MeshLocationCreate) (*MeshLocation, error) {
+	return c.post(location)
 }
 
-func (c *MeshStackProviderClient) UpdateLocation(name string, location *MeshLocationCreate) (*MeshLocation, error) {
-	return unmarshalBody[MeshLocation](c.doAuthenticatedRequest("PUT", c.urlForLocation(name),
-		withPayload(location, CONTENT_TYPE_LOCATION),
-	))
+func (c MeshLocationClient) Update(name string, location *MeshLocationCreate) (*MeshLocation, error) {
+	return c.put(name, location)
 }
 
-func (c *MeshStackProviderClient) DeleteLocation(name string) error {
-	_, err := c.doAuthenticatedRequest("DELETE", c.urlForLocation(name),
-		withAccept(CONTENT_TYPE_LOCATION),
-	)
-	return err
+func (c MeshLocationClient) Delete(name string) error {
+	return c.delete(name)
 }

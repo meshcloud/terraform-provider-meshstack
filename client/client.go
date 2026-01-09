@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"slices"
+	"strings"
 	"time"
 )
 
@@ -19,69 +20,110 @@ var (
 )
 
 type MeshStackProviderClient struct {
-	url         *url.URL
-	httpClient  *http.Client
-	apiKey      string
-	apiSecret   string
-	token       string
-	tokenExpiry time.Time
-	endpoints   endpoints
+	BuildingBlock         MeshBuildingBlockClient
+	BuildingBlockV2       MeshBuildingBlockV2Client
+	Integration           MeshIntegrationClient
+	LandingZone           MeshLandingZoneClient
+	Location              MeshLocationClient
+	PaymentMethod         MeshPaymentMethodClient
+	Platform              MeshPlatformClient
+	Project               MeshProjectClient
+	ProjectGroupBinding   MeshProjectGroupBindingClient
+	ProjectUserBinding    MeshProjectUserBindingClient
+	TagDefinition         MeshTagDefinitionClient
+	Tenant                MeshTenantClient
+	TenantV4              MeshTenantV4Client
+	Workspace             MeshWorkspaceClient
+	WorkspaceGroupBinding MeshWorkspaceGroupBindingClient
+	WorkspaceUserBinding  MeshWorkspaceUserBindingClient
 }
 
-type endpoints struct {
-	BuildingBlocks         *url.URL `json:"meshbuildingblocks"`
-	Projects               *url.URL `json:"meshprojects"`
-	ProjectUserBindings    *url.URL `json:"meshprojectuserbindings"`
-	ProjectGroupBindings   *url.URL `json:"meshprojectgroupbindings"`
-	Workspaces             *url.URL `json:"meshworkspaces"`
-	WorkspaceUserBindings  *url.URL `json:"meshworkspaceuserbindings"`
-	WorkspaceGroupBindings *url.URL `json:"meshworkspacegroupbindings"`
-	Tenants                *url.URL `json:"meshtenants"`
-	TagDefinitions         *url.URL `json:"meshtagdefinitions"`
-	LandingZones           *url.URL `json:"meshlandingzones"`
-	Platforms              *url.URL `json:"meshplatforms"`
-	PaymentMethods         *url.URL `json:"meshpaymentmethods"`
-	Integrations           *url.URL `json:"meshintegrations"`
-	Locations              *url.URL `json:"meshlocations"`
-}
-
-func NewClient(rootUrl *url.URL, apiKey string, apiSecret string) (*MeshStackProviderClient, error) {
-	client := &MeshStackProviderClient{
-		url: rootUrl,
-		httpClient: &http.Client{
-			Timeout: time.Minute * 5,
-		},
-		apiKey:    apiKey,
-		apiSecret: apiSecret,
-		token:     "",
+func NewClient(rootUrl *url.URL, apiKey string, apiSecret string) MeshStackProviderClient {
+	// Initialize httpClient for typed clients
+	c := &httpClient{
+		Client:    http.Client{Timeout: 5 * time.Minute},
+		RootUrl:   rootUrl,
+		ApiKey:    apiKey,
+		ApiSecret: apiSecret,
 	}
-
-	// TODO: lookup endpoints
-	const (
-		apiMeshObjectsRoot = "/api/meshobjects"
-	)
-	client.endpoints = endpoints{
-		BuildingBlocks:         rootUrl.JoinPath(apiMeshObjectsRoot, "meshbuildingblocks"),
-		Projects:               rootUrl.JoinPath(apiMeshObjectsRoot, "meshprojects"),
-		ProjectUserBindings:    rootUrl.JoinPath(apiMeshObjectsRoot, "meshprojectbindings", "userbindings"),
-		ProjectGroupBindings:   rootUrl.JoinPath(apiMeshObjectsRoot, "meshprojectbindings", "groupbindings"),
-		Workspaces:             rootUrl.JoinPath(apiMeshObjectsRoot, "meshworkspaces"),
-		WorkspaceUserBindings:  rootUrl.JoinPath(apiMeshObjectsRoot, "meshworkspacebindings", "userbindings"),
-		WorkspaceGroupBindings: rootUrl.JoinPath(apiMeshObjectsRoot, "meshworkspacebindings", "groupbindings"),
-		Tenants:                rootUrl.JoinPath(apiMeshObjectsRoot, "meshtenants"),
-		TagDefinitions:         rootUrl.JoinPath(apiMeshObjectsRoot, "meshtagdefinitions"),
-		LandingZones:           rootUrl.JoinPath(apiMeshObjectsRoot, "meshlandingzones"),
-		Platforms:              rootUrl.JoinPath(apiMeshObjectsRoot, "meshplatforms"),
-		PaymentMethods:         rootUrl.JoinPath(apiMeshObjectsRoot, "meshpaymentmethods"),
-		Integrations:           rootUrl.JoinPath(apiMeshObjectsRoot, "meshintegrations"),
-		Locations:              rootUrl.JoinPath(apiMeshObjectsRoot, "meshlocations"),
+	return MeshStackProviderClient{
+		MeshBuildingBlockClient{newMeshObjectClient[MeshBuildingBlock](c, "meshBuildingBlock", "v1")},
+		MeshBuildingBlockV2Client{newMeshObjectClient[MeshBuildingBlockV2](c, "meshBuildingBlock", "v2-preview")},
+		MeshIntegrationClient{newMeshObjectClient[MeshIntegration](c, "meshIntegration", "v1-preview")},
+		MeshLandingZoneClient{newMeshObjectClient[MeshLandingZone](c, "meshLandingZone", "v1-preview")},
+		MeshLocationClient{newMeshObjectClient[MeshLocation](c, "meshLocation", "v1-preview")},
+		MeshPaymentMethodClient{newMeshObjectClient[MeshPaymentMethod](c, "meshPaymentMethod", "v2")},
+		MeshPlatformClient{newMeshObjectClient[MeshPlatform](c, "meshPlatform", "v2-preview")},
+		MeshProjectClient{newMeshObjectClient[MeshProject](c, "meshProject", "v2")},
+		MeshProjectGroupBindingClient{newMeshObjectClient[MeshProjectBinding](c, "meshProjectGroupBinding", "v3", "meshprojectbindings", "groupbindings")},
+		MeshProjectUserBindingClient{newMeshObjectClient[MeshProjectBinding](c, "meshProjectUserBinding", "v3", "meshprojectbindings", "userbindings")},
+		MeshTagDefinitionClient{newMeshObjectClient[MeshTagDefinition](c, "meshTagDefinition", "v1")},
+		MeshTenantClient{newMeshObjectClient[MeshTenant](c, "meshTenant", "v3")},
+		MeshTenantV4Client{newMeshObjectClient[MeshTenantV4](c, "meshTenant", "v4-preview")},
+		MeshWorkspaceClient{newMeshObjectClient[MeshWorkspace](c, "meshWorkspace", "v2")},
+		MeshWorkspaceGroupBindingClient{newMeshObjectClient[MeshWorkspaceBinding](c, "meshWorkspaceGroupBinding", "v2", "meshworkspacebindings", "groupbindings")},
+		MeshWorkspaceUserBindingClient{newMeshObjectClient[MeshWorkspaceBinding](c, "meshWorkspaceUserBinding", "v2", "meshworkspacebindings", "userbindings")},
 	}
-
-	return client, nil
 }
 
-func (c *MeshStackProviderClient) login() error {
-	loginUrl := c.url.JoinPath("/api/login")
+type httpClient struct {
+	http.Client
+	RootUrl     *url.URL
+	ApiKey      string
+	ApiSecret   string
+	Token       string
+	TokenExpiry time.Time
+}
+
+type meshObjectClient[M any] struct {
+	*httpClient
+	Name, ApiVersion string
+	ApiUrl           *url.URL
+}
+
+func newMeshObjectClient[M any](client *httpClient, name, apiVersion string, explicitApiPaths ...string) meshObjectClient[M] {
+	if len(explicitApiPaths) == 0 {
+		// infer API path from meshObject name by default (if nothing explicit is given)
+		explicitApiPaths = []string{strings.ToLower(pluralizeName(name))}
+	}
+	// also prepend the root path for all meshObjects
+	explicitApiPaths = slices.Insert(explicitApiPaths, 0, "/api/meshobjects")
+	apiUrl := client.RootUrl.JoinPath(explicitApiPaths...)
+	log.Printf("Using API at '%s' for meshObject '%s', version '%s'", apiUrl, name, apiVersion)
+	return meshObjectClient[M]{client, name, apiVersion, apiUrl}
+}
+
+func pluralizeName(name string) string {
+	return fmt.Sprintf("%ss", name)
+}
+
+func (o meshObjectClient[M]) mediaType() string {
+	return fmt.Sprintf("application/vnd.meshcloud.api.%s.%s.hal+json", o.Name, o.ApiVersion)
+}
+
+func (c meshObjectClient[M]) get(id string) (*M, error) {
+	return unmarshalBodyIfPresent[M](c.doAuthenticatedRequest(http.MethodGet, c.ApiUrl.JoinPath(id), withAccept(c.mediaType())))
+}
+
+func (c meshObjectClient[M]) list(options ...doRequestOption) ([]M, error) {
+	return unmarshalBodyPages[M](pluralizeName(c.Name), c.doPaginatedRequest(c.ApiUrl, append(options, withAccept(c.mediaType()))...))
+}
+
+func (c meshObjectClient[M]) post(payload any) (*M, error) {
+	return unmarshalBody[M](c.doAuthenticatedRequest(http.MethodPost, c.ApiUrl, withPayload(payload, c.mediaType())))
+}
+
+func (c meshObjectClient[M]) put(id string, payload any) (*M, error) {
+	return unmarshalBody[M](c.doAuthenticatedRequest(http.MethodPut, c.ApiUrl.JoinPath(id), withPayload(payload, c.mediaType())))
+}
+
+func (c meshObjectClient[M]) delete(id string) (err error) {
+	_, err = c.doAuthenticatedRequest(http.MethodDelete, c.ApiUrl.JoinPath(id), withAccept(c.mediaType()))
+	return
+}
+
+func (c *httpClient) login() error {
+	loginApiUrl := c.RootUrl.JoinPath("/api/login")
 
 	type loginRequest struct {
 		ClientId     string `json:"clientId"`
@@ -93,20 +135,20 @@ func (c *MeshStackProviderClient) login() error {
 		ExpireSec int    `json:"expires_in"`
 	}
 
-	loginResult, err := unmarshalBody[loginResponse](c.doRequest("POST", loginUrl,
-		withPayload(loginRequest{ClientId: c.apiKey, ClientSecret: c.apiSecret}, "application/json")),
+	loginResult, err := unmarshalBody[loginResponse](c.doRequest("POST", loginApiUrl,
+		withPayload(loginRequest{ClientId: c.ApiKey, ClientSecret: c.ApiSecret}, "application/json")),
 	)
 	if err != nil {
-		return fmt.Errorf("login request to %s with API Key '%s' failed: %w", loginUrl, c.apiKey, err)
+		return fmt.Errorf("login request to %s with API Key '%s' failed: %w", loginApiUrl, c.ApiKey, err)
 	}
 
-	c.token = fmt.Sprintf("Bearer %s", loginResult.Token)
-	c.tokenExpiry = time.Now().Add(time.Second * time.Duration(loginResult.ExpireSec))
+	c.Token = fmt.Sprintf("Bearer %s", loginResult.Token)
+	c.TokenExpiry = time.Now().Add(time.Second * time.Duration(loginResult.ExpireSec))
 	return nil
 }
 
-func (c *MeshStackProviderClient) ensureValidToken() error {
-	if c.token == "" || time.Now().Add(time.Second*30).After(c.tokenExpiry) {
+func (c *httpClient) ensureValidToken() error {
+	if c.Token == "" || time.Now().Add(30*time.Second).After(c.TokenExpiry) {
 		return c.login()
 	}
 	return nil
@@ -171,7 +213,7 @@ func withPayload(payload any, contentType string) doRequestOption {
 	}
 }
 
-func (c *MeshStackProviderClient) doRequest(method string, url *url.URL, options ...doRequestOption) ([]byte, error) {
+func (c *httpClient) doRequest(method string, url *url.URL, options ...doRequestOption) ([]byte, error) {
 	// prepend (aka insert at 0) some default options such that given options may be overridden by caller
 	options = slices.Insert(options, 0,
 		withHeader("User-Agent", "meshStack Terraform Provider"),
@@ -183,11 +225,8 @@ func (c *MeshStackProviderClient) doRequest(method string, url *url.URL, options
 
 	if len(opts.urlModifiers) > 0 {
 		// clone url to prevent modifiers edit the given URL (it's sad that this is a pointer actually)
-		var err error
-		url, err = url.Parse(url.String())
-		if err != nil {
-			panic("cloning URL failed: " + err.Error())
-		}
+		// ignoring the error is fine as this always succeeds parsing from String()
+		url, _ = url.Parse(url.String())
 		for _, modifier := range opts.urlModifiers {
 			modifier(url)
 		}
@@ -209,7 +248,7 @@ func (c *MeshStackProviderClient) doRequest(method string, url *url.URL, options
 		requestModifier(req)
 	}
 
-	res, err := c.httpClient.Do(req)
+	res, err := c.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -240,7 +279,7 @@ func (c *MeshStackProviderClient) doRequest(method string, url *url.URL, options
 	return responseBody, errors.Join(errs...)
 }
 
-func (c *MeshStackProviderClient) doAuthenticatedRequest(method string, url *url.URL, options ...doRequestOption) ([]byte, error) {
+func (c *httpClient) doAuthenticatedRequest(method string, url *url.URL, options ...doRequestOption) ([]byte, error) {
 	if err := c.ensureValidToken(); err != nil {
 		return nil, err
 	}
@@ -249,15 +288,15 @@ func (c *MeshStackProviderClient) doAuthenticatedRequest(method string, url *url
 			// log request before adding Authorization header below
 			log.Println(req)
 		}),
-		withHeader("Authorization", c.token),
+		withHeader("Authorization", c.Token),
 	)...)
 }
 
-func (c *MeshStackProviderClient) doPaginatedRequest(url *url.URL, options ...doRequestOption) iter.Seq2[[]byte, error] {
+func (c *httpClient) doPaginatedRequest(url *url.URL, options ...doRequestOption) iter.Seq2[[]byte, error] {
 	return func(yield func([]byte, error) bool) {
 		pageNumber := 0
 		for {
-			body, err := c.doAuthenticatedRequest("GET", url, append(options, withUrlQuery("page", pageNumber))...)
+			body, err := c.doAuthenticatedRequest(http.MethodGet, url, append(options, withUrlQuery("page", pageNumber))...)
 			if err != nil {
 				yield(body, fmt.Errorf("cannot fetch page %d: %w", pageNumber, err))
 				return
@@ -304,12 +343,13 @@ func unmarshalBodyIfPresent[T any](body []byte, err error) (*T, error) {
 	return unmarshalBody[T](body, err)
 }
 
-func unmarshalBodyPages[T any](embeddedKey string, bodyPages iter.Seq2[[]byte, error]) (result []T, err error) {
-	for bodyPage, err := range bodyPages {
+func unmarshalBodyPages[T any](embeddedKey string, bodyPages iter.Seq2[[]byte, error]) ([]T, error) {
+	var result []T
+	for bodyPage, pageErr := range bodyPages {
 		type embeddedResponse[T any] struct {
 			Embedded map[string][]T `json:"_embedded"`
 		}
-		if response, err := unmarshalBody[embeddedResponse[T]](bodyPage, err); err != nil {
+		if response, err := unmarshalBody[embeddedResponse[T]](bodyPage, pageErr); err != nil {
 			return result, err
 		} else if items, ok := response.Embedded[embeddedKey]; !ok {
 			return result, fmt.Errorf("embedded key %s not found in paginated response", embeddedKey)

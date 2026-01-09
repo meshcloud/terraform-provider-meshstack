@@ -36,7 +36,7 @@ func NewPlatformResource() resource.Resource {
 
 // platformResource is the resource implementation.
 type platformResource struct {
-	client *client.MeshStackProviderClient
+	client client.MeshStackProviderClient
 }
 
 // Metadata returns the resource type name.
@@ -50,7 +50,7 @@ func (r *platformResource) Configure(_ context.Context, req resource.ConfigureRe
 		return
 	}
 
-	client, ok := req.ProviderData.(*client.MeshStackProviderClient)
+	client, ok := req.ProviderData.(client.MeshStackProviderClient)
 
 	if !ok {
 		resp.Diagnostics.AddError(
@@ -317,7 +317,7 @@ func (r *platformResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	createdPlatform, err := r.client.CreatePlatform(&platform)
+	createdPlatform, err := r.client.Platform.Create(&platform)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Creating Platform",
@@ -339,7 +339,7 @@ func (r *platformResource) Read(ctx context.Context, req resource.ReadRequest, r
 	var uuid string
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("metadata").AtName("uuid"), &uuid)...)
 
-	readPlatform, err := r.client.ReadPlatform(uuid)
+	readPlatform, err := r.client.Platform.Read(uuid)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("Could not read platform with UUID '%s'", uuid),
@@ -397,7 +397,7 @@ func (r *platformResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	updatedPlatform, err := r.client.UpdatePlatform(uuid, &platform)
+	updatedPlatform, err := r.client.Platform.Update(uuid, &platform)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Updating Platform",
@@ -421,7 +421,7 @@ func (r *platformResource) Delete(ctx context.Context, req resource.DeleteReques
 		return
 	}
 
-	err := r.client.DeletePlatform(uuid)
+	err := r.client.Platform.Delete(uuid)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("Could not delete platform with UUID '%s'", uuid),

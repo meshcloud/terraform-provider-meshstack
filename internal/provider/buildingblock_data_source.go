@@ -24,7 +24,7 @@ func NewBuildingBlockDataSource() datasource.DataSource {
 }
 
 type buildingBlockDataSource struct {
-	client *client.MeshStackProviderClient
+	client client.MeshStackProviderClient
 }
 
 func (d *buildingBlockDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -141,7 +141,7 @@ func (d *buildingBlockDataSource) Configure(ctx context.Context, req datasource.
 		return
 	}
 
-	client, ok := req.ProviderData.(*client.MeshStackProviderClient)
+	client, ok := req.ProviderData.(client.MeshStackProviderClient)
 
 	if !ok {
 		resp.Diagnostics.AddError(
@@ -162,7 +162,7 @@ func (d *buildingBlockDataSource) Read(ctx context.Context, req datasource.ReadR
 		return
 	}
 
-	bb, err := d.client.ReadBuildingBlock(uuid)
+	bb, err := d.client.BuildingBlock.Read(uuid)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read building block", err.Error())
 	}

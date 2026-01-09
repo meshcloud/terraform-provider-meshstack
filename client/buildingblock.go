@@ -1,9 +1,5 @@
 package client
 
-import (
-	"net/url"
-)
-
 const (
 	MESH_BUILDING_BLOCK_IO_TYPE_STRING        = "STRING"
 	MESH_BUILDING_BLOCK_IO_TYPE_INTEGER       = "INTEGER"
@@ -13,8 +9,6 @@ const (
 	MESH_BUILDING_BLOCK_IO_TYPE_FILE          = "FILE"
 	MESH_BUILDING_BLOCK_IO_TYPE_LIST          = "LIST"
 	MESH_BUILDING_BLOCK_IO_TYPE_CODE          = "CODE"
-
-	CONTENT_TYPE_BUILDING_BLOCK = "application/vnd.meshcloud.api.meshbuildingblock.v1.hal+json"
 )
 
 type MeshBuildingBlock struct {
@@ -76,25 +70,18 @@ type MeshBuildingBlockDefinitionRef struct {
 	Uuid string `json:"uuid" tfsdk:"uuid"`
 }
 
-func (c *MeshStackProviderClient) urlForBuildingBlock(uuid string) *url.URL {
-	return c.endpoints.BuildingBlocks.JoinPath(uuid)
+type MeshBuildingBlockClient struct {
+	meshObjectClient[MeshBuildingBlock]
 }
 
-func (c *MeshStackProviderClient) ReadBuildingBlock(uuid string) (*MeshBuildingBlock, error) {
-	return unmarshalBodyIfPresent[MeshBuildingBlock](c.doAuthenticatedRequest("GET", c.urlForBuildingBlock(uuid),
-		withAccept(CONTENT_TYPE_BUILDING_BLOCK),
-	))
+func (c MeshBuildingBlockClient) Read(uuid string) (*MeshBuildingBlock, error) {
+	return c.get(uuid)
 }
 
-func (c *MeshStackProviderClient) CreateBuildingBlock(bb *MeshBuildingBlockCreate) (*MeshBuildingBlock, error) {
-	return unmarshalBody[MeshBuildingBlock](c.doAuthenticatedRequest("POST", c.endpoints.BuildingBlocks,
-		withPayload(bb, CONTENT_TYPE_BUILDING_BLOCK),
-	))
+func (c MeshBuildingBlockClient) Create(bb *MeshBuildingBlockCreate) (*MeshBuildingBlock, error) {
+	return c.post(bb)
 }
 
-func (c *MeshStackProviderClient) DeleteBuildingBlock(uuid string) error {
-	_, err := c.doAuthenticatedRequest("DELETE", c.urlForBuildingBlock(uuid),
-		withAccept(CONTENT_TYPE_BUILDING_BLOCK),
-	)
-	return err
+func (c MeshBuildingBlockClient) Delete(uuid string) error {
+	return c.delete(uuid)
 }
