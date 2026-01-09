@@ -25,6 +25,8 @@ func (c *MeshStackProviderClient) CreateWorkspaceGroupBinding(binding *MeshWorks
 }
 
 func (c *MeshStackProviderClient) DeleteWorkspaceGroupBinding(name string) error {
-	_, err := c.doAuthenticatedRequest("DELETE", c.urlForWorkspaceGroupBinding(name))
+	_, err := c.doAuthenticatedRequest("DELETE", c.urlForWorkspaceGroupBinding(name),
+		withAccept(CONTENT_TYPE_WORKSPACE_GROUP_BINDING),
+	)
 	return err
 }
