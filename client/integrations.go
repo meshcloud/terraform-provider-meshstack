@@ -83,6 +83,10 @@ type MeshIntegrationClient struct {
 	meshObjectClient[MeshIntegration]
 }
 
+func newIntegrationClient(c *httpClient) MeshIntegrationClient {
+	return MeshIntegrationClient{newMeshObjectClient[MeshIntegration](c, "v1-preview")}
+}
+
 func (c MeshIntegrationClient) integrationId(workspace string, uuid string) string {
 	return workspace + "/" + uuid
 }

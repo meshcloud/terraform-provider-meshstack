@@ -35,6 +35,10 @@ type MeshProjectClient struct {
 	meshObjectClient[MeshProject]
 }
 
+func newProjectClient(c *httpClient) MeshProjectClient {
+	return MeshProjectClient{newMeshObjectClient[MeshProject](c, "v2")}
+}
+
 func (c MeshProjectClient) projectId(workspace string, name string) string {
 	return workspace + "." + name
 }

@@ -63,6 +63,10 @@ type MeshLandingZoneClient struct {
 	meshObjectClient[MeshLandingZone]
 }
 
+func newLandingZoneClient(c *httpClient) MeshLandingZoneClient {
+	return MeshLandingZoneClient{newMeshObjectClient[MeshLandingZone](c, "v1-preview")}
+}
+
 func (c MeshLandingZoneClient) Read(name string) (*MeshLandingZone, error) {
 	return c.get(name)
 }
