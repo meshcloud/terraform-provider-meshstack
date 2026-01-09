@@ -1,9 +1,6 @@
 package client
 
 import (
-	"bytes"
-	"encoding/json"
-	"net/http"
 	"net/url"
 )
 
@@ -117,51 +114,24 @@ func (c *MeshStackProviderClient) urlForPlatform(uuid string) *url.URL {
 }
 
 func (c *MeshStackProviderClient) ReadPlatform(uuid string) (*MeshPlatform, error) {
-	targetUrl := c.urlForPlatform(uuid)
-	req, err := http.NewRequest("GET", targetUrl.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Accept", CONTENT_TYPE_PLATFORM)
-
-	return unmarshalBodyIfPresent[MeshPlatform](c.doAuthenticatedRequest(req))
+	return unmarshalBodyIfPresent[MeshPlatform](c.doAuthenticatedRequest("GET", c.urlForPlatform(uuid),
+		withAccept(CONTENT_TYPE_PLATFORM),
+	))
 }
 
 func (c *MeshStackProviderClient) CreatePlatform(platform *MeshPlatformCreate) (*MeshPlatform, error) {
-	payload, err := json.Marshal(platform)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", c.endpoints.Platforms.String(), bytes.NewBuffer(payload))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", CONTENT_TYPE_PLATFORM)
-	req.Header.Set("Accept", CONTENT_TYPE_PLATFORM)
-
-	return unmarshalBody[MeshPlatform](c.doAuthenticatedRequest(req))
+	return unmarshalBody[MeshPlatform](c.doAuthenticatedRequest("POST", c.endpoints.Platforms,
+		withPayload(platform, CONTENT_TYPE_PLATFORM),
+	))
 }
 
 func (c *MeshStackProviderClient) DeletePlatform(uuid string) error {
 	targetUrl := c.urlForPlatform(uuid)
-	return c.deleteMeshObject(*targetUrl, 204)
+	return c.deleteMeshObject(targetUrl, 204)
 }
 
 func (c *MeshStackProviderClient) UpdatePlatform(uuid string, platform *MeshPlatformUpdate) (*MeshPlatform, error) {
-	targetUrl := c.urlForPlatform(uuid)
-
-	payload, err := json.Marshal(platform)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("PUT", targetUrl.String(), bytes.NewBuffer(payload))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", CONTENT_TYPE_PLATFORM)
-	req.Header.Set("Accept", CONTENT_TYPE_PLATFORM)
-
-	return unmarshalBody[MeshPlatform](c.doAuthenticatedRequest(req))
+	return unmarshalBody[MeshPlatform](c.doAuthenticatedRequest("PUT", c.urlForPlatform(uuid),
+		withPayload(platform, CONTENT_TYPE_PLATFORM),
+	))
 }

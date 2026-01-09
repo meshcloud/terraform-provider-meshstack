@@ -22,5 +22,5 @@ func (c *MeshStackProviderClient) CreateProjectGroupBinding(binding *MeshProject
 
 func (c *MeshStackProviderClient) DeleteProjecGroupBinding(name string) error {
 	targetUrl := c.urlForPojectGroupBinding(name)
-	return c.deleteMeshObject(*targetUrl, 204)
+	return c.deleteMeshObject(targetUrl, 204)
 }

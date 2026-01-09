@@ -1,9 +1,6 @@
 package client
 
 import (
-	"bytes"
-	"encoding/json"
-	"net/http"
 	"net/url"
 )
 
@@ -46,52 +43,24 @@ func (c *MeshStackProviderClient) urlForPaymentMethod(identifier string) *url.UR
 }
 
 func (c *MeshStackProviderClient) ReadPaymentMethod(workspace string, identifier string) (*MeshPaymentMethod, error) {
-	targetUrl := c.urlForPaymentMethod(identifier)
-
-	req, err := http.NewRequest("GET", targetUrl.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Accept", CONTENT_TYPE_PAYMENT_METHOD)
-
-	return unmarshalBodyIfPresent[MeshPaymentMethod](c.doAuthenticatedRequest(req))
+	return unmarshalBodyIfPresent[MeshPaymentMethod](c.doAuthenticatedRequest("GET", c.urlForPaymentMethod(identifier),
+		withAccept(CONTENT_TYPE_PAYMENT_METHOD),
+	))
 }
 
 func (c *MeshStackProviderClient) CreatePaymentMethod(paymentMethod *MeshPaymentMethodCreate) (*MeshPaymentMethod, error) {
-	payload, err := json.Marshal(paymentMethod)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", c.endpoints.PaymentMethods.String(), bytes.NewBuffer(payload))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", CONTENT_TYPE_PAYMENT_METHOD)
-	req.Header.Set("Accept", CONTENT_TYPE_PAYMENT_METHOD)
-
-	return unmarshalBody[MeshPaymentMethod](c.doAuthenticatedRequest(req))
+	return unmarshalBody[MeshPaymentMethod](c.doAuthenticatedRequest("POST", c.endpoints.PaymentMethods,
+		withPayload(paymentMethod, CONTENT_TYPE_PAYMENT_METHOD),
+	))
 }
 
 func (c *MeshStackProviderClient) UpdatePaymentMethod(identifier string, paymentMethod *MeshPaymentMethodCreate) (*MeshPaymentMethod, error) {
-	targetUrl := c.urlForPaymentMethod(identifier)
-
-	payload, err := json.Marshal(paymentMethod)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("PUT", targetUrl.String(), bytes.NewBuffer(payload))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", CONTENT_TYPE_PAYMENT_METHOD)
-	req.Header.Set("Accept", CONTENT_TYPE_PAYMENT_METHOD)
-
-	return unmarshalBody[MeshPaymentMethod](c.doAuthenticatedRequest(req))
+	return unmarshalBody[MeshPaymentMethod](c.doAuthenticatedRequest("PUT", c.urlForPaymentMethod(identifier),
+		withPayload(paymentMethod, CONTENT_TYPE_PAYMENT_METHOD),
+	))
 }
 
 func (c *MeshStackProviderClient) DeletePaymentMethod(identifier string) error {
 	targetUrl := c.urlForPaymentMethod(identifier)
-	return c.deleteMeshObject(*targetUrl, 204)
+	return c.deleteMeshObject(targetUrl, 204)
 }
