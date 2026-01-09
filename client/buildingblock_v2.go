@@ -80,8 +80,8 @@ func (c *MeshStackProviderClient) CreateBuildingBlockV2(bb *MeshBuildingBlockV2C
 }
 
 func (c *MeshStackProviderClient) DeleteBuildingBlockV2(uuid string) error {
-	targetUrl := c.urlForBuildingBlock(uuid)
-	return c.deleteMeshObject(targetUrl, 202)
+	_, err := c.doAuthenticatedRequest("DELETE", c.urlForBuildingBlock(uuid))
+	return err
 }
 
 // PollBuildingBlockV2UntilCompletion polls a building block until it reaches a terminal state (SUCCEEDED or FAILED)
