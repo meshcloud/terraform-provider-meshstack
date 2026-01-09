@@ -3,7 +3,6 @@ package client
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"net/url"
 )
@@ -81,20 +80,7 @@ func (c *MeshStackProviderClient) ReadLandingZone(name string) (*MeshLandingZone
 	}
 	req.Header.Set("Accept", CONTENT_TYPE_LANDINGZONE)
 
-	body, err := c.doAuthenticatedRequest(req)
-	if errors.Is(err, errNotFound) {
-		return nil, nil // Not found
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	var landingZone MeshLandingZone
-	err = json.Unmarshal(body, &landingZone)
-	if err != nil {
-		return nil, err
-	}
-	return &landingZone, nil
+	return unmarshalBodyIfPresent[MeshLandingZone](c.doAuthenticatedRequest(req))
 }
 
 func (c *MeshStackProviderClient) CreateLandingZone(landingZone *MeshLandingZoneCreate) (*MeshLandingZone, error) {
@@ -110,17 +96,7 @@ func (c *MeshStackProviderClient) CreateLandingZone(landingZone *MeshLandingZone
 	req.Header.Set("Content-Type", CONTENT_TYPE_LANDINGZONE)
 	req.Header.Set("Accept", CONTENT_TYPE_LANDINGZONE)
 
-	body, err := c.doAuthenticatedRequest(req)
-	if err != nil {
-		return nil, err
-	}
-
-	var createdLandingZone MeshLandingZone
-	err = json.Unmarshal(body, &createdLandingZone)
-	if err != nil {
-		return nil, err
-	}
-	return &createdLandingZone, nil
+	return unmarshalBody[MeshLandingZone](c.doAuthenticatedRequest(req))
 }
 
 func (c *MeshStackProviderClient) UpdateLandingZone(name string, landingZone *MeshLandingZoneCreate) (*MeshLandingZone, error) {
@@ -138,17 +114,7 @@ func (c *MeshStackProviderClient) UpdateLandingZone(name string, landingZone *Me
 	req.Header.Set("Content-Type", CONTENT_TYPE_LANDINGZONE)
 	req.Header.Set("Accept", CONTENT_TYPE_LANDINGZONE)
 
-	body, err := c.doAuthenticatedRequest(req)
-	if err != nil {
-		return nil, err
-	}
-
-	var updatedLandingZone MeshLandingZone
-	err = json.Unmarshal(body, &updatedLandingZone)
-	if err != nil {
-		return nil, err
-	}
-	return &updatedLandingZone, nil
+	return unmarshalBody[MeshLandingZone](c.doAuthenticatedRequest(req))
 }
 
 func (c *MeshStackProviderClient) DeleteLandingZone(name string) error {

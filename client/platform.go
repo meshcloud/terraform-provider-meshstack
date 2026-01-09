@@ -3,7 +3,6 @@ package client
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"net/url"
 )
@@ -125,20 +124,7 @@ func (c *MeshStackProviderClient) ReadPlatform(uuid string) (*MeshPlatform, erro
 	}
 	req.Header.Set("Accept", CONTENT_TYPE_PLATFORM)
 
-	body, err := c.doAuthenticatedRequest(req)
-	if errors.Is(err, errNotFound) {
-		return nil, nil // Not found
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	var platform MeshPlatform
-	err = json.Unmarshal(body, &platform)
-	if err != nil {
-		return nil, err
-	}
-	return &platform, nil
+	return unmarshalBodyIfPresent[MeshPlatform](c.doAuthenticatedRequest(req))
 }
 
 func (c *MeshStackProviderClient) CreatePlatform(platform *MeshPlatformCreate) (*MeshPlatform, error) {
@@ -154,17 +140,7 @@ func (c *MeshStackProviderClient) CreatePlatform(platform *MeshPlatformCreate) (
 	req.Header.Set("Content-Type", CONTENT_TYPE_PLATFORM)
 	req.Header.Set("Accept", CONTENT_TYPE_PLATFORM)
 
-	body, err := c.doAuthenticatedRequest(req)
-	if err != nil {
-		return nil, err
-	}
-
-	var createdPlatform MeshPlatform
-	err = json.Unmarshal(body, &createdPlatform)
-	if err != nil {
-		return nil, err
-	}
-	return &createdPlatform, nil
+	return unmarshalBody[MeshPlatform](c.doAuthenticatedRequest(req))
 }
 
 func (c *MeshStackProviderClient) DeletePlatform(uuid string) error {
@@ -187,15 +163,5 @@ func (c *MeshStackProviderClient) UpdatePlatform(uuid string, platform *MeshPlat
 	req.Header.Set("Content-Type", CONTENT_TYPE_PLATFORM)
 	req.Header.Set("Accept", CONTENT_TYPE_PLATFORM)
 
-	body, err := c.doAuthenticatedRequest(req)
-	if err != nil {
-		return nil, err
-	}
-
-	var updatedPlatform MeshPlatform
-	err = json.Unmarshal(body, &updatedPlatform)
-	if err != nil {
-		return nil, err
-	}
-	return &updatedPlatform, nil
+	return unmarshalBody[MeshPlatform](c.doAuthenticatedRequest(req))
 }
