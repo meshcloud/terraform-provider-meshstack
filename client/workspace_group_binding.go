@@ -1,25 +1,31 @@
 package client
 
+import (
+	"github.com/meshcloud/terraform-provider-meshstack/client/internal"
+)
+
 type MeshWorkspaceGroupBinding struct {
 	MeshWorkspaceBinding
 }
 
 type MeshWorkspaceGroupBindingClient struct {
-	meshObjectClient[MeshWorkspaceGroupBinding]
+	meshObject internal.MeshObjectClient[MeshWorkspaceGroupBinding]
 }
 
-func newWorkspaceGroupBindingClient(c *httpClient) MeshWorkspaceGroupBindingClient {
-	return MeshWorkspaceGroupBindingClient{newMeshObjectClient[MeshWorkspaceGroupBinding](c, "v2", "meshworkspacebindings", "groupbindings")}
+func newWorkspaceGroupBindingClient(httpClient *internal.HttpClient) MeshWorkspaceGroupBindingClient {
+	return MeshWorkspaceGroupBindingClient{
+		meshObject: internal.NewMeshObjectClient[MeshWorkspaceGroupBinding](httpClient, "v2", "meshworkspacebindings", "groupbindings"),
+	}
 }
 
 func (c MeshWorkspaceGroupBindingClient) Read(name string) (*MeshWorkspaceGroupBinding, error) {
-	return c.get(name)
+	return c.meshObject.Get(name)
 }
 
 func (c MeshWorkspaceGroupBindingClient) Create(binding *MeshWorkspaceGroupBinding) (*MeshWorkspaceGroupBinding, error) {
-	return c.post(binding)
+	return c.meshObject.Post(binding)
 }
 
 func (c MeshWorkspaceGroupBindingClient) Delete(name string) error {
-	return c.delete(name)
+	return c.meshObject.Delete(name)
 }

@@ -1,5 +1,9 @@
 package client
 
+import (
+	"github.com/meshcloud/terraform-provider-meshstack/client/internal"
+)
+
 type MeshPaymentMethod struct {
 	ApiVersion string                    `json:"apiVersion" tfsdk:"api_version"`
 	Kind       string                    `json:"kind" tfsdk:"kind"`
@@ -33,25 +37,27 @@ type MeshPaymentMethodCreateMetadata struct {
 }
 
 type MeshPaymentMethodClient struct {
-	meshObjectClient[MeshPaymentMethod]
+	meshObject internal.MeshObjectClient[MeshPaymentMethod]
 }
 
-func newPaymentMethodClient(c *httpClient) MeshPaymentMethodClient {
-	return MeshPaymentMethodClient{newMeshObjectClient[MeshPaymentMethod](c, "v2")}
+func newPaymentMethodClient(httpClient *internal.HttpClient) MeshPaymentMethodClient {
+	return MeshPaymentMethodClient{
+		meshObject: internal.NewMeshObjectClient[MeshPaymentMethod](httpClient, "v2"),
+	}
 }
 
 func (c MeshPaymentMethodClient) Read(workspace string, identifier string) (*MeshPaymentMethod, error) {
-	return c.get(identifier)
+	return c.meshObject.Get(identifier)
 }
 
 func (c MeshPaymentMethodClient) Create(paymentMethod *MeshPaymentMethodCreate) (*MeshPaymentMethod, error) {
-	return c.post(paymentMethod)
+	return c.meshObject.Post(paymentMethod)
 }
 
 func (c MeshPaymentMethodClient) Update(identifier string, paymentMethod *MeshPaymentMethodCreate) (*MeshPaymentMethod, error) {
-	return c.put(identifier, paymentMethod)
+	return c.meshObject.Put(identifier, paymentMethod)
 }
 
 func (c MeshPaymentMethodClient) Delete(identifier string) error {
-	return c.delete(identifier)
+	return c.meshObject.Delete(identifier)
 }
