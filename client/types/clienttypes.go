@@ -1,5 +1,9 @@
 package types
 
+import (
+	"github.com/meshcloud/terraform-provider-meshstack/client/types/variant"
+)
+
 type (
 	String = string
 	Number = int64
@@ -9,4 +13,6 @@ type (
 		Plaintext *string `json:"plaintext,omitempty" tfsdk:"plaintext"`
 		Hash      *string `json:"hash,omitempty" tfsdk:"-"`
 	}
+
+	SecretOrAny = variant.Variant[Secret, Any]
 )
