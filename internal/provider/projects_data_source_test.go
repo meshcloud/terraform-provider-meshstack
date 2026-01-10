@@ -15,10 +15,10 @@ func TestAccProjectsDatasource(t *testing.T) {
 		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: examples.ProjectsDataSourceConfig,
+				Config: examples.DataSource{Name: "projects", Suffix: "_all"}.String(),
 			},
 			{
-				Config: examples.ProjectsWithPaymentMethodDataSourceConfig,
+				Config: examples.DataSource{Name: "projects", Suffix: "_payment_method"}.String(),
 			},
 		},
 	})

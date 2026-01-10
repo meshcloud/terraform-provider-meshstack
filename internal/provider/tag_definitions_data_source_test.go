@@ -15,7 +15,7 @@ func TestAccTagDefinitionsDataSource(t *testing.T) {
 		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: examples.TagDefinitionsDataSourceConfig,
+				Config: examples.DataSource{Name: "tag_definitions"}.String(),
 			},
 		},
 	})

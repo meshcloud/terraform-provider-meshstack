@@ -1,16 +1,49 @@
 package examples
 
-import _ "embed"
+import (
+	"embed"
+	"fmt"
+	"io/fs"
+	"path"
+)
 
 var (
-	//go:embed resources/meshstack_location/resource.tf
-	LocationResourceConfig string
-	//go:embed data-sources/meshstack_projects/data-source_all.tf
-	ProjectsDataSourceConfig string
-	//go:embed data-sources/meshstack_projects/data-source_payment_method.tf
-	ProjectsWithPaymentMethodDataSourceConfig string
-	//go:embed data-sources/meshstack_integrations/data-source.tf
-	IntegrationsDataSourceConfig string
-	//go:embed data-sources/meshstack_tag_definitions/data-source.tf
-	TagDefinitionsDataSourceConfig string
+	//go:embed data-sources
+	dataSources embed.FS
+	//go:embed resources
+	resources embed.FS
 )
+
+type Resource struct {
+	// Name is required, Suffix is optional (useful when multiple example files are present).
+	Name, Suffix string
+}
+
+func (r Resource) String() string {
+	return readEmbeddedFile(resources, resourcePrefix, r.Name, r.Suffix)
+}
+
+type DataSource struct {
+	// Name is required, Suffix is optional (useful when multiple example files are present).
+	Name, Suffix string
+}
+
+func (d DataSource) String() string {
+	return readEmbeddedFile(dataSources, dataSourcePrefix, d.Name, d.Suffix)
+}
+
+type embeddedPrefix string
+
+const (
+	dataSourcePrefix embeddedPrefix = "data-source"
+	resourcePrefix   embeddedPrefix = "resource"
+)
+
+func readEmbeddedFile(fsys fs.ReadFileFS, prefix embeddedPrefix, name, fileSuffix string) string {
+	filePath := path.Join(string(prefix)+"s", "meshstack_"+name, fmt.Sprintf("%s%s.tf", prefix, fileSuffix))
+	content, err := fsys.ReadFile(filePath)
+	if err != nil {
+		panic(fmt.Sprintf("cannot open embedded file '%s': %s", filePath, err))
+	}
+	return string(content)
+}
