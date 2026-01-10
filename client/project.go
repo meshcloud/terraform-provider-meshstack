@@ -1,5 +1,9 @@
 package client
 
+import (
+	"github.com/meshcloud/terraform-provider-meshstack/client/internal"
+)
+
 type MeshProject struct {
 	ApiVersion string              `json:"apiVersion" tfsdk:"api_version"`
 	Kind       string              `json:"kind" tfsdk:"kind"`
@@ -32,11 +36,13 @@ type MeshProjectCreateMetadata struct {
 }
 
 type MeshProjectClient struct {
-	meshObjectClient[MeshProject]
+	meshObject internal.MeshObjectClient[MeshProject]
 }
 
-func newProjectClient(c *httpClient) MeshProjectClient {
-	return MeshProjectClient{newMeshObjectClient[MeshProject](c, "v2")}
+func newProjectClient(httpClient *internal.HttpClient) MeshProjectClient {
+	return MeshProjectClient{
+		meshObject: internal.NewMeshObjectClient[MeshProject](httpClient, "v2"),
+	}
 }
 
 func (c MeshProjectClient) projectId(workspace string, name string) string {
@@ -44,27 +50,27 @@ func (c MeshProjectClient) projectId(workspace string, name string) string {
 }
 
 func (c MeshProjectClient) Read(workspace string, name string) (*MeshProject, error) {
-	return c.get(c.projectId(workspace, name))
+	return c.meshObject.Get(c.projectId(workspace, name))
 }
 
 func (c MeshProjectClient) List(workspaceIdentifier string, paymentMethodIdentifier *string) ([]MeshProject, error) {
-	options := []doRequestOption{
-		withUrlQuery("workspaceIdentifier", workspaceIdentifier),
+	options := []internal.RequestOption{
+		internal.WithUrlQuery("workspaceIdentifier", workspaceIdentifier),
 	}
 	if paymentMethodIdentifier != nil {
-		options = append(options, withUrlQuery("paymentIdentifier", *paymentMethodIdentifier))
+		options = append(options, internal.WithUrlQuery("paymentIdentifier", *paymentMethodIdentifier))
 	}
-	return c.list(options...)
+	return c.meshObject.List(options...)
 }
 
 func (c MeshProjectClient) Create(project *MeshProjectCreate) (*MeshProject, error) {
-	return c.post(project)
+	return c.meshObject.Post(project)
 }
 
 func (c MeshProjectClient) Update(project *MeshProjectCreate) (*MeshProject, error) {
-	return c.put(c.projectId(project.Metadata.OwnedByWorkspace, project.Metadata.Name), project)
+	return c.meshObject.Put(c.projectId(project.Metadata.OwnedByWorkspace, project.Metadata.Name), project)
 }
 
 func (c MeshProjectClient) Delete(workspace string, name string) error {
-	return c.delete(c.projectId(workspace, name))
+	return c.meshObject.Delete(c.projectId(workspace, name))
 }

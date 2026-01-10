@@ -1,5 +1,9 @@
 package client
 
+import (
+	"github.com/meshcloud/terraform-provider-meshstack/client/internal"
+)
+
 type MeshWorkspace struct {
 	ApiVersion string                `json:"apiVersion" tfsdk:"api_version"`
 	Kind       string                `json:"kind" tfsdk:"kind"`
@@ -30,25 +34,27 @@ type MeshWorkspaceCreateMetadata struct {
 }
 
 type MeshWorkspaceClient struct {
-	meshObjectClient[MeshWorkspace]
+	meshObject internal.MeshObjectClient[MeshWorkspace]
 }
 
-func newWorkspaceClient(c *httpClient) MeshWorkspaceClient {
-	return MeshWorkspaceClient{newMeshObjectClient[MeshWorkspace](c, "v2")}
+func newWorkspaceClient(httpClient *internal.HttpClient) MeshWorkspaceClient {
+	return MeshWorkspaceClient{
+		meshObject: internal.NewMeshObjectClient[MeshWorkspace](httpClient, "v2"),
+	}
 }
 
 func (c MeshWorkspaceClient) Read(name string) (*MeshWorkspace, error) {
-	return c.get(name)
+	return c.meshObject.Get(name)
 }
 
 func (c MeshWorkspaceClient) Create(workspace *MeshWorkspaceCreate) (*MeshWorkspace, error) {
-	return c.post(workspace)
+	return c.meshObject.Post(workspace)
 }
 
 func (c MeshWorkspaceClient) Update(name string, workspace *MeshWorkspaceCreate) (*MeshWorkspace, error) {
-	return c.put(name, workspace)
+	return c.meshObject.Put(name, workspace)
 }
 
 func (c MeshWorkspaceClient) Delete(name string) error {
-	return c.delete(name)
+	return c.meshObject.Delete(name)
 }

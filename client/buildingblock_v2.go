@@ -3,9 +3,9 @@ package client
 import (
 	"context"
 	"fmt"
-	"time"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
+	"github.com/meshcloud/terraform-provider-meshstack/client/internal"
+	"time"
 )
 
 const (
@@ -66,23 +66,25 @@ type MeshBuildingBlockV2Status struct {
 }
 
 type MeshBuildingBlockV2Client struct {
-	meshObjectClient[MeshBuildingBlockV2]
+	meshObject internal.MeshObjectClient[MeshBuildingBlockV2]
 }
 
-func newBuildingBlockV2Client(c *httpClient) MeshBuildingBlockV2Client {
-	return MeshBuildingBlockV2Client{newMeshObjectClient[MeshBuildingBlockV2](c, "v2-preview")}
+func newBuildingBlockV2Client(httpClient *internal.HttpClient) MeshBuildingBlockV2Client {
+	return MeshBuildingBlockV2Client{
+		meshObject: internal.NewMeshObjectClient[MeshBuildingBlockV2](httpClient, "v2-preview"),
+	}
 }
 
 func (c MeshBuildingBlockV2Client) Read(uuid string) (*MeshBuildingBlockV2, error) {
-	return c.get(uuid)
+	return c.meshObject.Get(uuid)
 }
 
 func (c MeshBuildingBlockV2Client) Create(bb *MeshBuildingBlockV2Create) (*MeshBuildingBlockV2, error) {
-	return c.post(bb)
+	return c.meshObject.Post(bb)
 }
 
 func (c MeshBuildingBlockV2Client) Delete(uuid string) error {
-	return c.delete(uuid)
+	return c.meshObject.Delete(uuid)
 }
 
 // PollUntilCompletion polls a building block until it reaches a terminal state (SUCCEEDED or FAILED)

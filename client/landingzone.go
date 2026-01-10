@@ -1,5 +1,9 @@
 package client
 
+import (
+	"github.com/meshcloud/terraform-provider-meshstack/client/internal"
+)
+
 type MeshLandingZone struct {
 	ApiVersion string                  `json:"apiVersion" tfsdk:"api_version"`
 	Kind       string                  `json:"kind" tfsdk:"kind"`
@@ -60,25 +64,27 @@ type MeshLandingZoneCreate struct {
 }
 
 type MeshLandingZoneClient struct {
-	meshObjectClient[MeshLandingZone]
+	meshObject internal.MeshObjectClient[MeshLandingZone]
 }
 
-func newLandingZoneClient(c *httpClient) MeshLandingZoneClient {
-	return MeshLandingZoneClient{newMeshObjectClient[MeshLandingZone](c, "v1-preview")}
+func newLandingZoneClient(httpClient *internal.HttpClient) MeshLandingZoneClient {
+	return MeshLandingZoneClient{
+		meshObject: internal.NewMeshObjectClient[MeshLandingZone](httpClient, "v1-preview"),
+	}
 }
 
 func (c MeshLandingZoneClient) Read(name string) (*MeshLandingZone, error) {
-	return c.get(name)
+	return c.meshObject.Get(name)
 }
 
 func (c MeshLandingZoneClient) Create(landingZone *MeshLandingZoneCreate) (*MeshLandingZone, error) {
-	return c.post(landingZone)
+	return c.meshObject.Post(landingZone)
 }
 
 func (c MeshLandingZoneClient) Update(name string, landingZone *MeshLandingZoneCreate) (*MeshLandingZone, error) {
-	return c.put(name, landingZone)
+	return c.meshObject.Put(name, landingZone)
 }
 
 func (c MeshLandingZoneClient) Delete(name string) error {
-	return c.delete(name)
+	return c.meshObject.Delete(name)
 }

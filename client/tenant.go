@@ -1,5 +1,9 @@
 package client
 
+import (
+	"github.com/meshcloud/terraform-provider-meshstack/client/internal"
+)
+
 type MeshTenant struct {
 	ApiVersion string             `json:"apiVersion" tfsdk:"api_version"`
 	Kind       string             `json:"kind" tfsdk:"kind"`
@@ -44,11 +48,13 @@ type MeshTenantCreateSpec struct {
 }
 
 type MeshTenantClient struct {
-	meshObjectClient[MeshTenant]
+	meshObject internal.MeshObjectClient[MeshTenant]
 }
 
-func newTenantClient(c *httpClient) MeshTenantClient {
-	return MeshTenantClient{newMeshObjectClient[MeshTenant](c, "v3")}
+func newTenantClient(httpClient *internal.HttpClient) MeshTenantClient {
+	return MeshTenantClient{
+		meshObject: internal.NewMeshObjectClient[MeshTenant](httpClient, "v3"),
+	}
 }
 
 func (c MeshTenantClient) tenantId(workspace string, project string, platform string) string {
@@ -56,13 +62,13 @@ func (c MeshTenantClient) tenantId(workspace string, project string, platform st
 }
 
 func (c MeshTenantClient) Read(workspace string, project string, platform string) (*MeshTenant, error) {
-	return c.get(c.tenantId(workspace, project, platform))
+	return c.meshObject.Get(c.tenantId(workspace, project, platform))
 }
 
 func (c MeshTenantClient) Create(tenant *MeshTenantCreate) (*MeshTenant, error) {
-	return c.post(tenant)
+	return c.meshObject.Post(tenant)
 }
 
 func (c MeshTenantClient) Delete(workspace string, project string, platform string) error {
-	return c.delete(c.tenantId(workspace, project, platform))
+	return c.meshObject.Delete(c.tenantId(workspace, project, platform))
 }

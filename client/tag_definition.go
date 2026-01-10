@@ -1,5 +1,9 @@
 package client
 
+import (
+	"github.com/meshcloud/terraform-provider-meshstack/client/internal"
+)
+
 const API_VERSION_TAG_DEFINITION = "v1"
 
 type MeshTagDefinition struct {
@@ -64,29 +68,31 @@ type TagValueMultiSelect struct {
 }
 
 type MeshTagDefinitionClient struct {
-	meshObjectClient[MeshTagDefinition]
+	meshObject internal.MeshObjectClient[MeshTagDefinition]
 }
 
-func newTagDefinitionClient(c *httpClient) MeshTagDefinitionClient {
-	return MeshTagDefinitionClient{newMeshObjectClient[MeshTagDefinition](c, "v1")}
+func newTagDefinitionClient(httpClient *internal.HttpClient) MeshTagDefinitionClient {
+	return MeshTagDefinitionClient{
+		meshObject: internal.NewMeshObjectClient[MeshTagDefinition](httpClient, "v1"),
+	}
 }
 
 func (c MeshTagDefinitionClient) List() ([]MeshTagDefinition, error) {
-	return c.list()
+	return c.meshObject.List()
 }
 
 func (c MeshTagDefinitionClient) Read(name string) (*MeshTagDefinition, error) {
-	return c.get(name)
+	return c.meshObject.Get(name)
 }
 
 func (c MeshTagDefinitionClient) Create(tagDefinition *MeshTagDefinition) (*MeshTagDefinition, error) {
-	return c.post(tagDefinition)
+	return c.meshObject.Post(tagDefinition)
 }
 
 func (c MeshTagDefinitionClient) Update(tagDefinition *MeshTagDefinition) (*MeshTagDefinition, error) {
-	return c.put(tagDefinition.Metadata.Name, tagDefinition)
+	return c.meshObject.Put(tagDefinition.Metadata.Name, tagDefinition)
 }
 
 func (c MeshTagDefinitionClient) Delete(name string) error {
-	return c.delete(name)
+	return c.meshObject.Delete(name)
 }

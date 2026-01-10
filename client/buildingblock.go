@@ -1,5 +1,9 @@
 package client
 
+import (
+	"github.com/meshcloud/terraform-provider-meshstack/client/internal"
+)
+
 const (
 	MESH_BUILDING_BLOCK_IO_TYPE_STRING        = "STRING"
 	MESH_BUILDING_BLOCK_IO_TYPE_INTEGER       = "INTEGER"
@@ -71,21 +75,23 @@ type MeshBuildingBlockDefinitionRef struct {
 }
 
 type MeshBuildingBlockClient struct {
-	meshObjectClient[MeshBuildingBlock]
+	meshObject internal.MeshObjectClient[MeshBuildingBlock]
 }
 
-func newBuildingBlockClient(c *httpClient) MeshBuildingBlockClient {
-	return MeshBuildingBlockClient{newMeshObjectClient[MeshBuildingBlock](c, "v1")}
+func newBuildingBlockClient(httpClient *internal.HttpClient) MeshBuildingBlockClient {
+	return MeshBuildingBlockClient{
+		meshObject: internal.NewMeshObjectClient[MeshBuildingBlock](httpClient, "v1"),
+	}
 }
 
 func (c MeshBuildingBlockClient) Read(uuid string) (*MeshBuildingBlock, error) {
-	return c.get(uuid)
+	return c.meshObject.Get(uuid)
 }
 
 func (c MeshBuildingBlockClient) Create(bb *MeshBuildingBlockCreate) (*MeshBuildingBlock, error) {
-	return c.post(bb)
+	return c.meshObject.Post(bb)
 }
 
 func (c MeshBuildingBlockClient) Delete(uuid string) error {
-	return c.delete(uuid)
+	return c.meshObject.Delete(uuid)
 }
