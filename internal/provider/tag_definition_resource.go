@@ -47,7 +47,7 @@ func NewTagDefinitionResource() resource.Resource {
 
 // tagDefinitionResource is the resource implementation.
 type tagDefinitionResource struct {
-	client client.MeshStackProviderClient
+	MeshTagDefinition client.MeshTagDefinitionClient
 }
 
 // Metadata returns the resource type name.
@@ -57,22 +57,9 @@ func (r *tagDefinitionResource) Metadata(_ context.Context, req resource.Metadat
 
 // Configure adds the provider configured client to the resource.
 func (r *tagDefinitionResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
-	}
-
-	client, ok := req.ProviderData.(client.MeshStackProviderClient)
-
-	if !ok {
-		resp.Diagnostics.AddError(
-			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *MeshStackProviderClient, got: %T. Please report this issue to the provider developers.", req.ProviderData),
-		)
-
-		return
-	}
-
-	r.client = client
+	resp.Diagnostics.Append(configureProviderClient(req.ProviderData, func(client client.Client) {
+		r.MeshTagDefinition = client.TagDefinition
+	})...)
 }
 
 func (r *tagDefinitionResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
@@ -374,7 +361,7 @@ func (r *tagDefinitionResource) Create(ctx context.Context, req resource.CreateR
 		},
 	}
 
-	tagDefinition, err := r.client.TagDefinition.Create(&create)
+	tagDefinition, err := r.MeshTagDefinition.Create(&create)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating tag definition",
@@ -454,7 +441,7 @@ func (r *tagDefinitionResource) Read(ctx context.Context, req resource.ReadReque
 		return
 	}
 
-	tagDefinition, err := r.client.TagDefinition.Read(name.ValueString())
+	tagDefinition, err := r.MeshTagDefinition.Read(name.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read tag definition", err.Error())
 	}
@@ -500,7 +487,7 @@ func (r *tagDefinitionResource) Update(ctx context.Context, req resource.UpdateR
 		},
 	}
 
-	tagDefinition, err := r.client.TagDefinition.Update(&update)
+	tagDefinition, err := r.MeshTagDefinition.Update(&update)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error updating tag definition",
@@ -523,7 +510,7 @@ func (r *tagDefinitionResource) Delete(ctx context.Context, req resource.DeleteR
 		return
 	}
 
-	err := r.client.TagDefinition.Delete(state.Metadata.Name)
+	err := r.MeshTagDefinition.Delete(state.Metadata.Name)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error deleting tag definition",
@@ -539,7 +526,7 @@ func (r *tagDefinitionResource) ImportState(ctx context.Context, req resource.Im
 	tagDefinitionName := req.ID
 
 	// Read the tag definition from the provider
-	tagDefinition, err := r.client.TagDefinition.Read(tagDefinitionName)
+	tagDefinition, err := r.MeshTagDefinition.Read(tagDefinitionName)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error importing tag definition",

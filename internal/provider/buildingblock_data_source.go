@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
 
@@ -24,7 +23,7 @@ func NewBuildingBlockDataSource() datasource.DataSource {
 }
 
 type buildingBlockDataSource struct {
-	client client.MeshStackProviderClient
+	MeshBuildingBlock client.MeshBuildingBlockClient
 }
 
 func (d *buildingBlockDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -136,23 +135,10 @@ func (d *buildingBlockDataSource) Schema(ctx context.Context, req datasource.Sch
 	}
 }
 
-func (d *buildingBlockDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
-	}
-
-	client, ok := req.ProviderData.(client.MeshStackProviderClient)
-
-	if !ok {
-		resp.Diagnostics.AddError(
-			"Unexpected Data Source Configure Type",
-			fmt.Sprintf("Expected *MeshStackProviderClient, got: %T. Please report this issue to the provider developers.", req.ProviderData),
-		)
-
-		return
-	}
-
-	d.client = client
+func (d *buildingBlockDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+	resp.Diagnostics.Append(configureProviderClient(req.ProviderData, func(client client.Client) {
+		d.MeshBuildingBlock = client.BuildingBlock
+	})...)
 }
 
 func (d *buildingBlockDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
@@ -162,7 +148,7 @@ func (d *buildingBlockDataSource) Read(ctx context.Context, req datasource.ReadR
 		return
 	}
 
-	bb, err := d.client.BuildingBlock.Read(uuid)
+	bb, err := d.MeshBuildingBlock.Read(uuid)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read building block", err.Error())
 	}

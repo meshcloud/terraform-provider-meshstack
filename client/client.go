@@ -1,7 +1,6 @@
 package client
 
 import (
-	"fmt"
 	"net/http"
 	"net/url"
 	"time"
@@ -9,7 +8,7 @@ import (
 	"github.com/meshcloud/terraform-provider-meshstack/client/internal"
 )
 
-type MeshStackProviderClient struct {
+type Client struct {
 	BuildingBlock         MeshBuildingBlockClient
 	BuildingBlockV2       MeshBuildingBlockV2Client
 	Integration           MeshIntegrationClient
@@ -28,18 +27,18 @@ type MeshStackProviderClient struct {
 	WorkspaceUserBinding  MeshWorkspaceUserBindingClient
 }
 
-func NewClient(rootUrl *url.URL, providerVersion, apiKey, apiSecret string) MeshStackProviderClient {
+func New(rootUrl *url.URL, userAgent, apiKey, apiSecret string) Client {
 	httpClient := &internal.HttpClient{
 		Client:    http.Client{Timeout: 5 * time.Minute},
 		RootUrl:   rootUrl,
-		UserAgent: fmt.Sprintf("terraform-provider-meshstack/%s", providerVersion),
+		UserAgent: userAgent,
 
 		// Putting authentication with meshStack API into HttpClient
 		// saves use from passing ApiKey/ApiSecret down to client factory methods below.
 		ApiKey:    apiKey,
 		ApiSecret: apiSecret,
 	}
-	return MeshStackProviderClient{
+	return Client{
 		newBuildingBlockClient(httpClient),
 		newBuildingBlockV2Client(httpClient),
 		newIntegrationClient(httpClient),

@@ -25,7 +25,7 @@ func NewTenantDataSource() datasource.DataSource {
 }
 
 type tenantDataSource struct {
-	client client.MeshStackProviderClient
+	MeshTenant client.MeshTenantClient
 }
 
 func (d *tenantDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -87,23 +87,10 @@ func (d *tenantDataSource) Schema(ctx context.Context, req datasource.SchemaRequ
 	}
 }
 
-func (d *tenantDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
-	}
-
-	client, ok := req.ProviderData.(client.MeshStackProviderClient)
-
-	if !ok {
-		resp.Diagnostics.AddError(
-			"Unexpected Data Source Configure Type",
-			fmt.Sprintf("Expected *MeshStackProviderClient, got: %T. Please report this issue to the provider developers.", req.ProviderData),
-		)
-
-		return
-	}
-
-	d.client = client
+func (d *tenantDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+	resp.Diagnostics.Append(configureProviderClient(req.ProviderData, func(client client.Client) {
+		d.MeshTenant = client.Tenant
+	})...)
 }
 
 func (d *tenantDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
@@ -117,7 +104,7 @@ func (d *tenantDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 		return
 	}
 
-	tenant, err := d.client.Tenant.Read(workspace, project, platform)
+	tenant, err := d.MeshTenant.Read(workspace, project, platform)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read tenant", err.Error())
 		return

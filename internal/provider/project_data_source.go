@@ -25,7 +25,7 @@ func NewProjectDataSource() datasource.DataSource {
 }
 
 type projectDataSource struct {
-	client client.MeshStackProviderClient
+	MeshProject client.MeshProjectClient
 }
 
 func (d *projectDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -79,23 +79,10 @@ func (d *projectDataSource) Schema(ctx context.Context, req datasource.SchemaReq
 	}
 }
 
-func (d *projectDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
-	}
-
-	client, ok := req.ProviderData.(client.MeshStackProviderClient)
-
-	if !ok {
-		resp.Diagnostics.AddError(
-			"Unexpected Data Source Configure Type",
-			fmt.Sprintf("Expected *MeshStackProviderClient, got: %T. Please report this issue to the provider developers.", req.ProviderData),
-		)
-
-		return
-	}
-
-	d.client = client
+func (d *projectDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+	resp.Diagnostics.Append(configureProviderClient(req.ProviderData, func(client client.Client) {
+		d.MeshProject = client.Project
+	})...)
 }
 
 func (d *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
@@ -108,7 +95,7 @@ func (d *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		return
 	}
 
-	project, err := d.client.Project.Read(workspace, name)
+	project, err := d.MeshProject.Read(workspace, name)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read project", err.Error())
 		return

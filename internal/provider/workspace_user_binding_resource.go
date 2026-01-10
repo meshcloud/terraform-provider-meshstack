@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
 
@@ -30,7 +29,7 @@ func NewWorkspaceUserBindingResource() resource.Resource {
 
 // workspaceUserBindingResource is the resource implementation.
 type workspaceUserBindingResource struct {
-	client client.MeshStackProviderClient
+	MeshWorkspaceUserBinding client.MeshWorkspaceUserBindingClient
 }
 
 // Metadata returns the resource type name.
@@ -40,22 +39,9 @@ func (r *workspaceUserBindingResource) Metadata(_ context.Context, req resource.
 
 // Configure adds the provider configured client to the resource.
 func (r *workspaceUserBindingResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
-	}
-
-	client, ok := req.ProviderData.(client.MeshStackProviderClient)
-
-	if !ok {
-		resp.Diagnostics.AddError(
-			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *MeshStackProviderClient, got: %T. Please report this issue to the provider developers.", req.ProviderData),
-		)
-
-		return
-	}
-
-	r.client = client
+	resp.Diagnostics.Append(configureProviderClient(req.ProviderData, func(client client.Client) {
+		r.MeshWorkspaceUserBinding = client.WorkspaceUserBinding
+	})...)
 }
 
 // Schema defines the schema for the resource.
@@ -144,7 +130,7 @@ func (r *workspaceUserBindingResource) Create(ctx context.Context, req resource.
 		return
 	}
 
-	binding, err := r.client.WorkspaceUserBinding.Create(&plan)
+	binding, err := r.MeshWorkspaceUserBinding.Create(&plan)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating workspace user binding",
@@ -165,7 +151,7 @@ func (r *workspaceUserBindingResource) Read(ctx context.Context, req resource.Re
 		return
 	}
 
-	binding, err := r.client.WorkspaceUserBinding.Read(name)
+	binding, err := r.MeshWorkspaceUserBinding.Read(name)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read workspace user binding", err.Error())
 	}
@@ -191,7 +177,7 @@ func (r *workspaceUserBindingResource) Delete(ctx context.Context, req resource.
 		return
 	}
 
-	err := r.client.WorkspaceUserBinding.Delete(name)
+	err := r.MeshWorkspaceUserBinding.Delete(name)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error deleting workspace user binding",

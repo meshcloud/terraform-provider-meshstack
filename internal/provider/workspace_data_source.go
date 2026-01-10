@@ -25,7 +25,7 @@ func NewWorkspaceDataSource() datasource.DataSource {
 }
 
 type workspaceDataSource struct {
-	client client.MeshStackProviderClient
+	MeshWorkspace client.MeshWorkspaceClient
 }
 
 func (d *workspaceDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -92,19 +92,9 @@ func (d *workspaceDataSource) Schema(_ context.Context, _ datasource.SchemaReque
 
 // Configure adds the provider configured client to the data source.
 func (d *workspaceDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
-	}
-
-	client, ok := req.ProviderData.(client.MeshStackProviderClient)
-	if !ok {
-		resp.Diagnostics.AddError(
-			"Unexpected Data Source Configure Type",
-			fmt.Sprintf("Expected client.MeshStackProviderClient, got: %T. Please report this issue to the provider developers.", req.ProviderData),
-		)
-		return
-	}
-	d.client = client
+	resp.Diagnostics.Append(configureProviderClient(req.ProviderData, func(client client.Client) {
+		d.MeshWorkspace = client.Workspace
+	})...)
 }
 
 // Read refreshes the Terraform state with the latest data.
@@ -118,7 +108,7 @@ func (d *workspaceDataSource) Read(ctx context.Context, req datasource.ReadReque
 		return
 	}
 
-	workspace, err := d.client.Workspace.Read(name)
+	workspace, err := d.MeshWorkspace.Read(name)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("Could not read workspace '%s'", name),

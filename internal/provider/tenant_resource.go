@@ -30,7 +30,7 @@ func NewTenantResource() resource.Resource {
 }
 
 type tenantResource struct {
-	client client.MeshStackProviderClient
+	MeshTenant client.MeshTenantClient
 }
 
 func (r *tenantResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -38,22 +38,9 @@ func (r *tenantResource) Metadata(_ context.Context, req resource.MetadataReques
 }
 
 func (r *tenantResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
-	}
-
-	client, ok := req.ProviderData.(client.MeshStackProviderClient)
-
-	if !ok {
-		resp.Diagnostics.AddError(
-			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *MeshStackProviderClient, got: %T. Please report this issue to the provider developers.", req.ProviderData),
-		)
-
-		return
-	}
-
-	r.client = client
+	resp.Diagnostics.Append(configureProviderClient(req.ProviderData, func(client client.Client) {
+		r.MeshTenant = client.Tenant
+	})...)
 }
 
 func (r *tenantResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
@@ -191,7 +178,7 @@ func (r *tenantResource) Create(ctx context.Context, req resource.CreateRequest,
 		},
 	}
 
-	tenant, err := r.client.Tenant.Create(&create)
+	tenant, err := r.MeshTenant.Create(&create)
 
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -215,7 +202,7 @@ func (r *tenantResource) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
-	tenant, err := r.client.Tenant.Read(workspace, project, platform)
+	tenant, err := r.MeshTenant.Read(workspace, project, platform)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read tenant", err.Error())
 		return
@@ -243,7 +230,7 @@ func (r *tenantResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		return
 	}
 
-	err := r.client.Tenant.Delete(state.Metadata.OwnedByWorkspace, state.Metadata.OwnedByProject, state.Metadata.PlatformIdentifier)
+	err := r.MeshTenant.Delete(state.Metadata.OwnedByWorkspace, state.Metadata.OwnedByProject, state.Metadata.PlatformIdentifier)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error deleting tenant",

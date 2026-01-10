@@ -24,7 +24,7 @@ func NewBuildingBlockV2DataSource() datasource.DataSource {
 }
 
 type buildingBlockV2DataSource struct {
-	client client.MeshStackProviderClient
+	MeshBuildingBlockV2 client.MeshBuildingBlockV2Client
 }
 
 func (d *buildingBlockV2DataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -178,23 +178,10 @@ func (d *buildingBlockV2DataSource) Schema(ctx context.Context, req datasource.S
 	}
 }
 
-func (d *buildingBlockV2DataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
-	}
-
-	client, ok := req.ProviderData.(client.MeshStackProviderClient)
-
-	if !ok {
-		resp.Diagnostics.AddError(
-			"Unexpected Data Source Configure Type",
-			fmt.Sprintf("Expected *MeshStackProviderClient, got: %T. Please report this issue to the provider developers.", req.ProviderData),
-		)
-
-		return
-	}
-
-	d.client = client
+func (d *buildingBlockV2DataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+	resp.Diagnostics.Append(configureProviderClient(req.ProviderData, func(client client.Client) {
+		d.MeshBuildingBlockV2 = client.BuildingBlockV2
+	})...)
 }
 
 func (d *buildingBlockV2DataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
@@ -204,7 +191,7 @@ func (d *buildingBlockV2DataSource) Read(ctx context.Context, req datasource.Rea
 		return
 	}
 
-	bb, err := d.client.BuildingBlockV2.Read(uuid)
+	bb, err := d.MeshBuildingBlockV2.Read(uuid)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read building block", err.Error())
 	}
