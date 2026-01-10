@@ -1,5 +1,9 @@
 package client
 
+import (
+	"github.com/meshcloud/terraform-provider-meshstack/client/internal"
+)
+
 type MeshPlatform struct {
 	ApiVersion string               `json:"apiVersion" tfsdk:"api_version"`
 	Kind       string               `json:"kind" tfsdk:"kind"`
@@ -104,25 +108,27 @@ type TagMapper struct {
 }
 
 type MeshPlatformClient struct {
-	meshObjectClient[MeshPlatform]
+	meshObject internal.MeshObjectClient[MeshPlatform]
 }
 
-func newPlatformClient(c *httpClient) MeshPlatformClient {
-	return MeshPlatformClient{newMeshObjectClient[MeshPlatform](c, "v2-preview")}
+func newPlatformClient(httpClient *internal.HttpClient) MeshPlatformClient {
+	return MeshPlatformClient{
+		meshObject: internal.NewMeshObjectClient[MeshPlatform](httpClient, "v2-preview"),
+	}
 }
 
 func (c MeshPlatformClient) Read(uuid string) (*MeshPlatform, error) {
-	return c.get(uuid)
+	return c.meshObject.Get(uuid)
 }
 
 func (c MeshPlatformClient) Create(platform *MeshPlatformCreate) (*MeshPlatform, error) {
-	return c.post(platform)
+	return c.meshObject.Post(platform)
 }
 
 func (c MeshPlatformClient) Update(uuid string, platform *MeshPlatformUpdate) (*MeshPlatform, error) {
-	return c.put(uuid, platform)
+	return c.meshObject.Put(uuid, platform)
 }
 
 func (c MeshPlatformClient) Delete(uuid string) error {
-	return c.delete(uuid)
+	return c.meshObject.Delete(uuid)
 }

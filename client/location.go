@@ -1,5 +1,9 @@
 package client
 
+import (
+	"github.com/meshcloud/terraform-provider-meshstack/client/internal"
+)
+
 type MeshLocation struct {
 	ApiVersion string               `json:"apiVersion" tfsdk:"api_version"`
 	Metadata   MeshLocationMetadata `json:"metadata" tfsdk:"metadata"`
@@ -32,25 +36,27 @@ type MeshLocationCreateMetadata struct {
 }
 
 type MeshLocationClient struct {
-	meshObjectClient[MeshLocation]
+	meshObject internal.MeshObjectClient[MeshLocation]
 }
 
-func newLocationClient(c *httpClient) MeshLocationClient {
-	return MeshLocationClient{newMeshObjectClient[MeshLocation](c, "v1-preview")}
+func newLocationClient(httpClient *internal.HttpClient) MeshLocationClient {
+	return MeshLocationClient{
+		meshObject: internal.NewMeshObjectClient[MeshLocation](httpClient, "v1-preview"),
+	}
 }
 
 func (c MeshLocationClient) Read(name string) (*MeshLocation, error) {
-	return c.get(name)
+	return c.meshObject.Get(name)
 }
 
 func (c MeshLocationClient) Create(location *MeshLocationCreate) (*MeshLocation, error) {
-	return c.post(location)
+	return c.meshObject.Post(location)
 }
 
 func (c MeshLocationClient) Update(name string, location *MeshLocationCreate) (*MeshLocation, error) {
-	return c.put(name, location)
+	return c.meshObject.Put(name, location)
 }
 
 func (c MeshLocationClient) Delete(name string) error {
-	return c.delete(name)
+	return c.meshObject.Delete(name)
 }

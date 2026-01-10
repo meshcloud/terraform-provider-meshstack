@@ -1,11 +1,14 @@
 package client
 
 import (
+	"github.com/meshcloud/terraform-provider-meshstack/client/internal"
+)
+
+import (
 	"context"
 	"fmt"
-	"time"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
+	"time"
 )
 
 type MeshTenantV4 struct {
@@ -57,23 +60,25 @@ type MeshTenantV4CreateSpec struct {
 }
 
 type MeshTenantV4Client struct {
-	meshObjectClient[MeshTenantV4]
+	meshObject internal.MeshObjectClient[MeshTenantV4]
 }
 
-func newTenantV4Client(c *httpClient) MeshTenantV4Client {
-	return MeshTenantV4Client{newMeshObjectClient[MeshTenantV4](c, "v4-preview")}
+func newTenantV4Client(httpClient *internal.HttpClient) MeshTenantV4Client {
+	return MeshTenantV4Client{
+		meshObject: internal.NewMeshObjectClient[MeshTenantV4](httpClient, "v4-preview"),
+	}
 }
 
 func (c MeshTenantV4Client) Read(uuid string) (*MeshTenantV4, error) {
-	return c.get(uuid)
+	return c.meshObject.Get(uuid)
 }
 
 func (c MeshTenantV4Client) Create(tenant *MeshTenantV4Create) (*MeshTenantV4, error) {
-	return c.post(tenant)
+	return c.meshObject.Post(tenant)
 }
 
 func (c MeshTenantV4Client) Delete(uuid string) error {
-	return c.delete(uuid)
+	return c.meshObject.Delete(uuid)
 }
 
 // PollUntilCreation polls a tenant until creation completes (platformTenantId is set)

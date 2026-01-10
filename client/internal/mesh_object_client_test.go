@@ -1,10 +1,24 @@
-package client
+package internal
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
+
+type MeshBuildingBlock struct{}
+type MeshBuildingBlockV2 struct{}
+type MeshProject struct{}
+type MeshWorkspace struct{}
+type MeshProjectBinding struct{}
+type MeshProjectGroupBinding struct {
+	MeshProjectBinding
+}
+type MeshProjectUserBinding struct {
+	MeshProjectBinding
+}
+type MeshWorkspaceGroupBinding struct{}
+type MeshWorkspaceUserBinding struct{}
 
 func TestInferMeshObjectName(t *testing.T) {
 	tests := []struct {

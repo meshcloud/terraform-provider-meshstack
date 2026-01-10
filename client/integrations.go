@@ -1,5 +1,9 @@
 package client
 
+import (
+	"github.com/meshcloud/terraform-provider-meshstack/client/internal"
+)
+
 type MeshIntegration struct {
 	ApiVersion string                  `json:"apiVersion" tfsdk:"api_version"`
 	Kind       string                  `json:"kind" tfsdk:"kind"`
@@ -80,11 +84,13 @@ type MeshAwsWifProvider struct {
 }
 
 type MeshIntegrationClient struct {
-	meshObjectClient[MeshIntegration]
+	meshObject internal.MeshObjectClient[MeshIntegration]
 }
 
-func newIntegrationClient(c *httpClient) MeshIntegrationClient {
-	return MeshIntegrationClient{newMeshObjectClient[MeshIntegration](c, "v1-preview")}
+func newIntegrationClient(httpClient *internal.HttpClient) MeshIntegrationClient {
+	return MeshIntegrationClient{
+		meshObject: internal.NewMeshObjectClient[MeshIntegration](httpClient, "v1-preview"),
+	}
 }
 
 func (c MeshIntegrationClient) integrationId(workspace string, uuid string) string {
@@ -92,9 +98,9 @@ func (c MeshIntegrationClient) integrationId(workspace string, uuid string) stri
 }
 
 func (c MeshIntegrationClient) Read(workspace string, uuid string) (*MeshIntegration, error) {
-	return c.get(c.integrationId(workspace, uuid))
+	return c.meshObject.Get(c.integrationId(workspace, uuid))
 }
 
 func (c MeshIntegrationClient) List() ([]MeshIntegration, error) {
-	return c.list()
+	return c.meshObject.List()
 }
