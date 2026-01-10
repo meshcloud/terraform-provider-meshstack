@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"fmt"
 	"net/url"
 	"os"
 
@@ -64,13 +65,29 @@ const (
 func (p *MeshStackProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
 	var data MeshStackProviderModel
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
-	meshStackClient, diags := newMeshStackProviderClient(data)
+	providerClient, diags := newProviderClient(data, p.version)
 	resp.Diagnostics.Append(diags...)
-	resp.DataSourceData = meshStackClient
-	resp.ResourceData = meshStackClient
+	resp.DataSourceData = providerClient
+	resp.ResourceData = providerClient
 }
 
-func newMeshStackProviderClient(data MeshStackProviderModel) (meshStackClient *client.MeshStackProviderClient, diags diag.Diagnostics) {
+func configureProviderClient(providerData any, consumer func(client client.Client)) (diags diag.Diagnostics) {
+	if providerData == nil {
+		// do nothing as Terraform calls Configure without providerData
+		return
+	}
+	if providerClient, ok := providerData.(client.Client); ok {
+		consumer(providerClient)
+	} else {
+		diags.AddError(
+			"Unexpected Provider Client type",
+			fmt.Sprintf("Expected type client.Client, got: %T. Please report this issue to the provider developers.", providerData),
+		)
+	}
+	return
+}
+
+func newProviderClient(data MeshStackProviderModel, providerVersion string) (providerClient client.Client, diags diag.Diagnostics) {
 	var endpoint string
 	if !data.Endpoint.IsNull() && !data.Endpoint.IsUnknown() {
 		endpoint = data.Endpoint.ValueString()
@@ -113,11 +130,8 @@ func newMeshStackProviderClient(data MeshStackProviderModel) (meshStackClient *c
 		}
 	}
 
-	meshStackClient, err = client.NewClient(parsedEndpoint, apiKey, apiSecret)
-	if err != nil {
-		diags.AddError("Failed to create meshStack client.", err.Error())
-		return
-	}
+	userAgent := fmt.Sprintf("terraform-provider-meshstack/%s", providerVersion)
+	providerClient = client.New(parsedEndpoint, userAgent, apiKey, apiSecret)
 	return
 }
 
@@ -133,6 +147,7 @@ func (p *MeshStackProvider) Resources(ctx context.Context) []func() resource.Res
 		NewWorkspaceResource,
 		NewBuildingBlockResource,
 		NewBuildingBlockV2Resource,
+		NewBuildingBlockDefinitionResource,
 		NewTagDefinitionResource,
 		NewLandingZoneResource,
 		NewPlatformResource,

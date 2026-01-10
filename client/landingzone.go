@@ -1,15 +1,8 @@
 package client
 
 import (
-	"bytes"
-	"encoding/json"
-	"fmt"
-	"io"
-	"net/http"
-	"net/url"
+	"github.com/meshcloud/terraform-provider-meshstack/client/internal"
 )
-
-const CONTENT_TYPE_LANDINGZONE = "application/vnd.meshcloud.api.meshlandingzone.v1-preview.hal+json"
 
 type MeshLandingZone struct {
 	ApiVersion string                  `json:"apiVersion" tfsdk:"api_version"`
@@ -68,125 +61,28 @@ type MeshLandingZoneCreate struct {
 	Spec       MeshLandingZoneSpec     `json:"spec" tfsdk:"spec"`
 }
 
-func (c *MeshStackProviderClient) urlForLandingZone(name string) *url.URL {
-	return c.endpoints.LandingZones.JoinPath(name)
+type MeshLandingZoneClient struct {
+	meshObject internal.MeshObjectClient[MeshLandingZone]
 }
 
-func (c *MeshStackProviderClient) ReadLandingZone(name string) (*MeshLandingZone, error) {
-	targetUrl := c.urlForLandingZone(name)
-	req, err := http.NewRequest("GET", targetUrl.String(), nil)
-	if err != nil {
-		return nil, err
+func newLandingZoneClient(httpClient *internal.HttpClient) MeshLandingZoneClient {
+	return MeshLandingZoneClient{
+		meshObject: internal.NewMeshObjectClient[MeshLandingZone](httpClient, "v1-preview"),
 	}
-	req.Header.Set("Accept", CONTENT_TYPE_LANDINGZONE)
-
-	res, err := c.doAuthenticatedRequest(req)
-	if err != nil {
-		return nil, err
-	}
-
-	defer func() { _ = res.Body.Close() }()
-
-	if res.StatusCode == http.StatusNotFound {
-		return nil, nil // Not found is not an error
-	}
-
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if !isSuccessHTTPStatus(res) {
-		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
-	}
-
-	var landingZone MeshLandingZone
-	err = json.Unmarshal(data, &landingZone)
-	if err != nil {
-		return nil, err
-	}
-	return &landingZone, nil
 }
 
-func (c *MeshStackProviderClient) CreateLandingZone(landingZone *MeshLandingZoneCreate) (*MeshLandingZone, error) {
-	payload, err := json.Marshal(landingZone)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", c.endpoints.LandingZones.String(), bytes.NewBuffer(payload))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", CONTENT_TYPE_LANDINGZONE)
-	req.Header.Set("Accept", CONTENT_TYPE_LANDINGZONE)
-
-	res, err := c.doAuthenticatedRequest(req)
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		_ = res.Body.Close()
-	}()
-
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if !isSuccessHTTPStatus(res) {
-		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
-	}
-
-	var createdLandingZone MeshLandingZone
-	err = json.Unmarshal(data, &createdLandingZone)
-	if err != nil {
-		return nil, err
-	}
-	return &createdLandingZone, nil
+func (c MeshLandingZoneClient) Read(name string) (*MeshLandingZone, error) {
+	return c.meshObject.Get(name)
 }
 
-func (c *MeshStackProviderClient) UpdateLandingZone(name string, landingZone *MeshLandingZoneCreate) (*MeshLandingZone, error) {
-	targetUrl := c.urlForLandingZone(name)
-
-	payload, err := json.Marshal(landingZone)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("PUT", targetUrl.String(), bytes.NewBuffer(payload))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", CONTENT_TYPE_LANDINGZONE)
-	req.Header.Set("Accept", CONTENT_TYPE_LANDINGZONE)
-
-	res, err := c.doAuthenticatedRequest(req)
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		_ = res.Body.Close()
-	}()
-
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if !isSuccessHTTPStatus(res) {
-		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
-	}
-
-	var updatedLandingZone MeshLandingZone
-	err = json.Unmarshal(data, &updatedLandingZone)
-	if err != nil {
-		return nil, err
-	}
-	return &updatedLandingZone, nil
+func (c MeshLandingZoneClient) Create(landingZone *MeshLandingZoneCreate) (*MeshLandingZone, error) {
+	return c.meshObject.Post(landingZone)
 }
 
-func (c *MeshStackProviderClient) DeleteLandingZone(name string) error {
-	targetUrl := c.urlForLandingZone(name)
-	return c.deleteMeshObject(*targetUrl, 204)
+func (c MeshLandingZoneClient) Update(name string, landingZone *MeshLandingZoneCreate) (*MeshLandingZone, error) {
+	return c.meshObject.Put(name, landingZone)
+}
+
+func (c MeshLandingZoneClient) Delete(name string) error {
+	return c.meshObject.Delete(name)
 }

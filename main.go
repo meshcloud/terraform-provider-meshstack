@@ -20,12 +20,12 @@ import (
 
 // Run the docs generation tool, check its repository for more information on how it works and how docs
 // can be customized.
-//go:generate go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs
+//go:generate go tool tfplugindocs
 
 var (
 	// these will be set by the goreleaser configuration
 	// to appropriate values for the compiled binary.
-	version string = "dev"
+	version = "dev"
 
 	// goreleaser can pass other information to the main package, such as the specific commit
 	// https://goreleaser.com/cookbooks/using-main.version/

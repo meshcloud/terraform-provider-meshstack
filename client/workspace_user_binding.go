@@ -1,26 +1,31 @@
 package client
 
 import (
-	"net/url"
+	"github.com/meshcloud/terraform-provider-meshstack/client/internal"
 )
 
-const CONTENT_TYPE_WORKSPACE_USER_BINDING = "application/vnd.meshcloud.api.meshworkspaceuserbinding.v2.hal+json"
-
-type MeshWorkspaceUserBinding = MeshWorkspaceBinding
-
-func (c *MeshStackProviderClient) urlForWorkspaceUserBinding(name string) *url.URL {
-	return c.endpoints.WorkspaceUserBindings.JoinPath(name)
+type MeshWorkspaceUserBinding struct {
+	MeshWorkspaceBinding
 }
 
-func (c *MeshStackProviderClient) ReadWorkspaceUserBinding(name string) (*MeshWorkspaceUserBinding, error) {
-	return c.readWorkspaceBinding(name, CONTENT_TYPE_WORKSPACE_USER_BINDING)
+type MeshWorkspaceUserBindingClient struct {
+	meshObject internal.MeshObjectClient[MeshWorkspaceUserBinding]
 }
 
-func (c *MeshStackProviderClient) CreateWorkspaceUserBinding(binding *MeshWorkspaceUserBinding) (*MeshWorkspaceUserBinding, error) {
-	return c.createWorkspaceBinding(binding, CONTENT_TYPE_WORKSPACE_USER_BINDING)
+func newWorkspaceUserBindingClient(httpClient *internal.HttpClient) MeshWorkspaceUserBindingClient {
+	return MeshWorkspaceUserBindingClient{
+		meshObject: internal.NewMeshObjectClient[MeshWorkspaceUserBinding](httpClient, "v2", "meshworkspacebindings", "userbindings"),
+	}
 }
 
-func (c *MeshStackProviderClient) DeleteWorkspaceUserBinding(name string) error {
-	targetUrl := c.urlForWorkspaceUserBinding(name)
-	return c.deleteMeshObject(*targetUrl, 204)
+func (c MeshWorkspaceUserBindingClient) Read(name string) (*MeshWorkspaceUserBinding, error) {
+	return c.meshObject.Get(name)
+}
+
+func (c MeshWorkspaceUserBindingClient) Create(binding *MeshWorkspaceUserBinding) (*MeshWorkspaceUserBinding, error) {
+	return c.meshObject.Post(binding)
+}
+
+func (c MeshWorkspaceUserBindingClient) Delete(name string) error {
+	return c.meshObject.Delete(name)
 }

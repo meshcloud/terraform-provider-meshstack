@@ -1,15 +1,8 @@
 package client
 
 import (
-	"bytes"
-	"encoding/json"
-	"fmt"
-	"io"
-	"net/http"
-	"net/url"
+	"github.com/meshcloud/terraform-provider-meshstack/client/internal"
 )
-
-const CONTENT_TYPE_PROJECT = "application/vnd.meshcloud.api.meshproject.v2.hal+json"
 
 type MeshProject struct {
 	ApiVersion string              `json:"apiVersion" tfsdk:"api_version"`
@@ -42,203 +35,42 @@ type MeshProjectCreateMetadata struct {
 	OwnedByWorkspace string `json:"ownedByWorkspace" tfsdk:"owned_by_workspace"`
 }
 
-func (c *MeshStackProviderClient) urlForProject(workspace string, name string) *url.URL {
-	identifier := workspace + "." + name
-	return c.endpoints.Projects.JoinPath(identifier)
+type MeshProjectClient struct {
+	meshObject internal.MeshObjectClient[MeshProject]
 }
 
-func (c *MeshStackProviderClient) ReadProject(workspace string, name string) (*MeshProject, error) {
-	targetUrl := c.urlForProject(workspace, name)
-	req, err := http.NewRequest("GET", targetUrl.String(), nil)
-	if err != nil {
-		return nil, err
+func newProjectClient(httpClient *internal.HttpClient) MeshProjectClient {
+	return MeshProjectClient{
+		meshObject: internal.NewMeshObjectClient[MeshProject](httpClient, "v2"),
 	}
-	req.Header.Set("Accept", CONTENT_TYPE_PROJECT)
-
-	res, err := c.doAuthenticatedRequest(req)
-	if err != nil {
-		return nil, err
-	}
-
-	defer func() {
-		_ = res.Body.Close()
-	}()
-
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if res.StatusCode == http.StatusNotFound {
-		return nil, nil
-	}
-
-	if !isSuccessHTTPStatus(res) {
-		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
-	}
-
-	var project MeshProject
-	err = json.Unmarshal(data, &project)
-	if err != nil {
-		return nil, err
-	}
-
-	return &project, nil
 }
 
-func (c *MeshStackProviderClient) ReadProjects(workspaceIdentifier string, paymentMethodIdentifier *string) (*[]MeshProject, error) {
-	var allProjects []MeshProject
+func (c MeshProjectClient) projectId(workspace string, name string) string {
+	return workspace + "." + name
+}
 
-	pageNumber := 0
-	targetUrl := c.endpoints.Projects
-	query := targetUrl.Query()
-	query.Set("workspaceIdentifier", workspaceIdentifier)
+func (c MeshProjectClient) Read(workspace string, name string) (*MeshProject, error) {
+	return c.meshObject.Get(c.projectId(workspace, name))
+}
+
+func (c MeshProjectClient) List(workspaceIdentifier string, paymentMethodIdentifier *string) ([]MeshProject, error) {
+	options := []internal.RequestOption{
+		internal.WithUrlQuery("workspaceIdentifier", workspaceIdentifier),
+	}
 	if paymentMethodIdentifier != nil {
-		query.Set("paymentIdentifier", *paymentMethodIdentifier)
+		options = append(options, internal.WithUrlQuery("paymentIdentifier", *paymentMethodIdentifier))
 	}
-
-	for {
-		query.Set("page", fmt.Sprintf("%d", pageNumber))
-
-		targetUrl.RawQuery = query.Encode()
-
-		req, err := http.NewRequest("GET", targetUrl.String(), nil)
-		if err != nil {
-			return nil, err
-		}
-
-		req.Header.Set("Accept", CONTENT_TYPE_PROJECT)
-
-		res, err := c.doAuthenticatedRequest(req)
-		if err != nil {
-			return nil, err
-		}
-
-		defer func() { _ = res.Body.Close() }()
-
-		data, err := io.ReadAll(res.Body)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read response body: %w", err)
-		}
-
-		if !isSuccessHTTPStatus(res) {
-			return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
-		}
-
-		var response struct {
-			Embedded struct {
-				MeshProjects []MeshProject `json:"meshProjects"`
-			} `json:"_embedded"`
-			Page struct {
-				Size          int `json:"size"`
-				TotalElements int `json:"totalElements"`
-				TotalPages    int `json:"totalPages"`
-				Number        int `json:"number"`
-			} `json:"page"`
-		}
-
-		err = json.Unmarshal(data, &response)
-		if err != nil {
-			return nil, err
-		}
-
-		allProjects = append(allProjects, response.Embedded.MeshProjects...)
-
-		// Check if there are more pages
-		if response.Page.Number >= response.Page.TotalPages-1 {
-			break
-		}
-
-		pageNumber++
-	}
-
-	return &allProjects, nil
+	return c.meshObject.List(options...)
 }
 
-func (c *MeshStackProviderClient) CreateProject(project *MeshProjectCreate) (*MeshProject, error) {
-	payload, err := json.Marshal(project)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", c.endpoints.Projects.String(), bytes.NewBuffer(payload))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", CONTENT_TYPE_PROJECT)
-	req.Header.Set("Accept", CONTENT_TYPE_PROJECT)
-
-	res, err := c.doAuthenticatedRequest(req)
-	if err != nil {
-		return nil, err
-	}
-
-	defer func() {
-		_ = res.Body.Close()
-	}()
-
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if !isSuccessHTTPStatus(res) {
-		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
-	}
-
-	var createdProject MeshProject
-	err = json.Unmarshal(data, &createdProject)
-	if err != nil {
-		return nil, err
-	}
-
-	return &createdProject, nil
+func (c MeshProjectClient) Create(project *MeshProjectCreate) (*MeshProject, error) {
+	return c.meshObject.Post(project)
 }
 
-func (c *MeshStackProviderClient) UpdateProject(project *MeshProjectCreate) (*MeshProject, error) {
-	targetUrl := c.urlForProject(project.Metadata.OwnedByWorkspace, project.Metadata.Name)
-
-	payload, err := json.Marshal(project)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("PUT", targetUrl.String(), bytes.NewBuffer(payload))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", CONTENT_TYPE_PROJECT)
-	req.Header.Set("Accept", CONTENT_TYPE_PROJECT)
-
-	res, err := c.doAuthenticatedRequest(req)
-
-	if err != nil {
-		return nil, err
-	}
-
-	defer func() {
-		_ = res.Body.Close()
-	}()
-
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if !isSuccessHTTPStatus(res) {
-		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
-	}
-
-	var updatedProject MeshProject
-	err = json.Unmarshal(data, &updatedProject)
-	if err != nil {
-		return nil, err
-	}
-
-	return &updatedProject, nil
+func (c MeshProjectClient) Update(project *MeshProjectCreate) (*MeshProject, error) {
+	return c.meshObject.Put(c.projectId(project.Metadata.OwnedByWorkspace, project.Metadata.Name), project)
 }
 
-func (c *MeshStackProviderClient) DeleteProject(workspace string, name string) error {
-	targetUrl := c.urlForProject(workspace, name)
-	return c.deleteMeshObject(*targetUrl, 202)
+func (c MeshProjectClient) Delete(workspace string, name string) error {
+	return c.meshObject.Delete(c.projectId(workspace, name))
 }

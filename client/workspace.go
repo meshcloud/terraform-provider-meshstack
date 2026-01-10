@@ -1,15 +1,8 @@
 package client
 
 import (
-	"bytes"
-	"encoding/json"
-	"fmt"
-	"io"
-	"net/http"
-	"net/url"
+	"github.com/meshcloud/terraform-provider-meshstack/client/internal"
 )
-
-const CONTENT_TYPE_WORKSPACE = "application/vnd.meshcloud.api.meshworkspace.v2.hal+json"
 
 type MeshWorkspace struct {
 	ApiVersion string                `json:"apiVersion" tfsdk:"api_version"`
@@ -40,125 +33,28 @@ type MeshWorkspaceCreateMetadata struct {
 	Tags map[string][]string `json:"tags" tfsdk:"tags"`
 }
 
-func (c *MeshStackProviderClient) urlForWorkspace(name string) *url.URL {
-	return c.endpoints.Workspaces.JoinPath(name)
+type MeshWorkspaceClient struct {
+	meshObject internal.MeshObjectClient[MeshWorkspace]
 }
 
-func (c *MeshStackProviderClient) ReadWorkspace(name string) (*MeshWorkspace, error) {
-	targetUrl := c.urlForWorkspace(name)
-	req, err := http.NewRequest("GET", targetUrl.String(), nil)
-	if err != nil {
-		return nil, err
+func newWorkspaceClient(httpClient *internal.HttpClient) MeshWorkspaceClient {
+	return MeshWorkspaceClient{
+		meshObject: internal.NewMeshObjectClient[MeshWorkspace](httpClient, "v2"),
 	}
-	req.Header.Set("Accept", CONTENT_TYPE_WORKSPACE)
-
-	res, err := c.doAuthenticatedRequest(req)
-	if err != nil {
-		return nil, err
-	}
-
-	defer func() { _ = res.Body.Close() }()
-
-	if res.StatusCode == http.StatusNotFound {
-		return nil, nil // Not found is not an error
-	}
-
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if !isSuccessHTTPStatus(res) {
-		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
-	}
-
-	var workspace MeshWorkspace
-	err = json.Unmarshal(data, &workspace)
-	if err != nil {
-		return nil, err
-	}
-	return &workspace, nil
 }
 
-func (c *MeshStackProviderClient) CreateWorkspace(workspace *MeshWorkspaceCreate) (*MeshWorkspace, error) {
-	payload, err := json.Marshal(workspace)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", c.endpoints.Workspaces.String(), bytes.NewBuffer(payload))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", CONTENT_TYPE_WORKSPACE)
-	req.Header.Set("Accept", CONTENT_TYPE_WORKSPACE)
-
-	res, err := c.doAuthenticatedRequest(req)
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		_ = res.Body.Close()
-	}()
-
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if !isSuccessHTTPStatus(res) {
-		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
-	}
-
-	var createdWorkspace MeshWorkspace
-	err = json.Unmarshal(data, &createdWorkspace)
-	if err != nil {
-		return nil, err
-	}
-	return &createdWorkspace, nil
+func (c MeshWorkspaceClient) Read(name string) (*MeshWorkspace, error) {
+	return c.meshObject.Get(name)
 }
 
-func (c *MeshStackProviderClient) UpdateWorkspace(name string, workspace *MeshWorkspaceCreate) (*MeshWorkspace, error) {
-	targetUrl := c.urlForWorkspace(name)
-
-	payload, err := json.Marshal(workspace)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("PUT", targetUrl.String(), bytes.NewBuffer(payload))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", CONTENT_TYPE_WORKSPACE)
-	req.Header.Set("Accept", CONTENT_TYPE_WORKSPACE)
-
-	res, err := c.doAuthenticatedRequest(req)
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		_ = res.Body.Close()
-	}()
-
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if !isSuccessHTTPStatus(res) {
-		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
-	}
-
-	var updatedWorkspace MeshWorkspace
-	err = json.Unmarshal(data, &updatedWorkspace)
-	if err != nil {
-		return nil, err
-	}
-	return &updatedWorkspace, nil
+func (c MeshWorkspaceClient) Create(workspace *MeshWorkspaceCreate) (*MeshWorkspace, error) {
+	return c.meshObject.Post(workspace)
 }
 
-func (c *MeshStackProviderClient) DeleteWorkspace(name string) error {
-	targetUrl := c.urlForWorkspace(name)
-	return c.deleteMeshObject(*targetUrl, 204)
+func (c MeshWorkspaceClient) Update(name string, workspace *MeshWorkspaceCreate) (*MeshWorkspace, error) {
+	return c.meshObject.Put(name, workspace)
+}
+
+func (c MeshWorkspaceClient) Delete(name string) error {
+	return c.meshObject.Delete(name)
 }

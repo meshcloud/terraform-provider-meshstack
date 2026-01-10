@@ -1,20 +1,14 @@
 package client
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
-	"time"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
+	"github.com/meshcloud/terraform-provider-meshstack/client/internal"
+	"time"
 )
 
 const (
-	CONTENT_TYPE_BUILDING_BLOCK_V2 = "application/vnd.meshcloud.api.meshbuildingblock.v2-preview.hal+json"
-
 	// Building Block Status Constants.
 	BUILDING_BLOCK_STATUS_WAITING_FOR_DEPENDENT_INPUT = "WAITING_FOR_DEPENDENT_INPUT"
 	BUILDING_BLOCK_STATUS_WAITING_FOR_OPERATOR_INPUT  = "WAITING_FOR_OPERATOR_INPUT"
@@ -71,104 +65,41 @@ type MeshBuildingBlockV2Status struct {
 	ForcePurge bool                  `json:"forcePurge" tfsdk:"force_purge"`
 }
 
-func (c *MeshStackProviderClient) ReadBuildingBlockV2(uuid string) (*MeshBuildingBlockV2, error) {
-	targetUrl := c.urlForBuildingBlock(uuid)
-
-	req, err := http.NewRequest("GET", targetUrl.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Accept", CONTENT_TYPE_BUILDING_BLOCK_V2)
-
-	res, err := c.doAuthenticatedRequest(req)
-	if err != nil {
-		return nil, err
-	}
-
-	defer func() {
-		_ = res.Body.Close()
-	}()
-
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if res.StatusCode == 404 {
-		return nil, nil
-	}
-
-	if !isSuccessHTTPStatus(res) {
-		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
-	}
-
-	var bb MeshBuildingBlockV2
-	err = json.Unmarshal(data, &bb)
-	if err != nil {
-		return nil, err
-	}
-
-	return &bb, nil
+type MeshBuildingBlockV2Client struct {
+	meshObject internal.MeshObjectClient[MeshBuildingBlockV2]
 }
 
-func (c *MeshStackProviderClient) CreateBuildingBlockV2(bb *MeshBuildingBlockV2Create) (*MeshBuildingBlockV2, error) {
-	payload, err := json.Marshal(bb)
-	if err != nil {
-		return nil, err
+func newBuildingBlockV2Client(httpClient *internal.HttpClient) MeshBuildingBlockV2Client {
+	return MeshBuildingBlockV2Client{
+		meshObject: internal.NewMeshObjectClient[MeshBuildingBlockV2](httpClient, "v2-preview"),
 	}
-
-	req, err := http.NewRequest("POST", c.endpoints.BuildingBlocks.String(), bytes.NewBuffer(payload))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", CONTENT_TYPE_BUILDING_BLOCK_V2)
-	req.Header.Set("Accept", CONTENT_TYPE_BUILDING_BLOCK_V2)
-
-	res, err := c.doAuthenticatedRequest(req)
-	if err != nil {
-		return nil, err
-	}
-
-	defer func() {
-		_ = res.Body.Close()
-	}()
-
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if !isSuccessHTTPStatus(res) {
-		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
-	}
-
-	var createdBb MeshBuildingBlockV2
-	err = json.Unmarshal(data, &createdBb)
-	if err != nil {
-		return nil, err
-	}
-
-	return &createdBb, nil
 }
 
-func (c *MeshStackProviderClient) DeleteBuildingBlockV2(uuid string) error {
-	targetUrl := c.urlForBuildingBlock(uuid)
-	return c.deleteMeshObject(*targetUrl, 202)
+func (c MeshBuildingBlockV2Client) Read(uuid string) (*MeshBuildingBlockV2, error) {
+	return c.meshObject.Get(uuid)
 }
 
-// PollBuildingBlockV2UntilCompletion polls a building block until it reaches a terminal state (SUCCEEDED or FAILED)
+func (c MeshBuildingBlockV2Client) Create(bb *MeshBuildingBlockV2Create) (*MeshBuildingBlockV2, error) {
+	return c.meshObject.Post(bb)
+}
+
+func (c MeshBuildingBlockV2Client) Delete(uuid string) error {
+	return c.meshObject.Delete(uuid)
+}
+
+// PollUntilCompletion polls a building block until it reaches a terminal state (SUCCEEDED or FAILED)
 // Returns the final building block state or an error if polling fails or times out.
-func (c *MeshStackProviderClient) PollBuildingBlockV2UntilCompletion(ctx context.Context, uuid string) (*MeshBuildingBlockV2, error) {
+func (c MeshBuildingBlockV2Client) PollUntilCompletion(ctx context.Context, uuid string) (*MeshBuildingBlockV2, error) {
 	var result *MeshBuildingBlockV2
 
-	err := retry.RetryContext(ctx, 30*time.Minute, c.waitForBuildingBlockV2CompletionFunc(uuid, &result))
+	err := retry.RetryContext(ctx, 30*time.Minute, c.waitForCompletionFunc(uuid, &result))
 	return result, err
 }
 
-// waitForBuildingBlockV2CompletionFunc returns a RetryFunc that checks building block completion status.
-func (c *MeshStackProviderClient) waitForBuildingBlockV2CompletionFunc(uuid string, result **MeshBuildingBlockV2) retry.RetryFunc {
+// waitForCompletionFunc returns a RetryFunc that checks building block completion status.
+func (c MeshBuildingBlockV2Client) waitForCompletionFunc(uuid string, result **MeshBuildingBlockV2) retry.RetryFunc {
 	return func() *retry.RetryError {
-		current, err := c.ReadBuildingBlockV2(uuid)
+		current, err := c.Read(uuid)
 		if err != nil {
 			return retry.NonRetryableError(fmt.Errorf("could not read building block status while waiting for completion: %w", err))
 		}
@@ -192,16 +123,16 @@ func (c *MeshStackProviderClient) waitForBuildingBlockV2CompletionFunc(uuid stri
 	}
 }
 
-// PollBuildingBlockV2UntilDeletion polls a building block until it is deleted (not found)
+// PollUntilDeletion polls a building block until it is deleted (not found)
 // Returns nil on successful deletion or an error if polling fails or times out.
-func (c *MeshStackProviderClient) PollBuildingBlockV2UntilDeletion(ctx context.Context, uuid string) error {
-	return retry.RetryContext(ctx, 30*time.Minute, c.waitForBuildingBlockV2DeletionFunc(uuid))
+func (c MeshBuildingBlockV2Client) PollUntilDeletion(ctx context.Context, uuid string) error {
+	return retry.RetryContext(ctx, 30*time.Minute, c.waitForDeletionFunc(uuid))
 }
 
-// waitForBuildingBlockV2DeletionFunc returns a RetryFunc that checks building block deletion status.
-func (c *MeshStackProviderClient) waitForBuildingBlockV2DeletionFunc(uuid string) retry.RetryFunc {
+// waitForDeletionFunc returns a RetryFunc that checks building block deletion status.
+func (c MeshBuildingBlockV2Client) waitForDeletionFunc(uuid string) retry.RetryFunc {
 	return func() *retry.RetryError {
-		current, err := c.ReadBuildingBlockV2(uuid)
+		current, err := c.Read(uuid)
 		if err != nil {
 			return retry.NonRetryableError(fmt.Errorf("could not read building block status while waiting for deletion: %w", err))
 		}

@@ -1,26 +1,31 @@
 package client
 
 import (
-	"net/url"
+	"github.com/meshcloud/terraform-provider-meshstack/client/internal"
 )
 
-const CONTENT_TYPE_PROJECT_USER_BINDING = "application/vnd.meshcloud.api.meshprojectuserbinding.v3.hal+json"
-
-type MeshProjectUserBinding = MeshProjectBinding
-
-func (c *MeshStackProviderClient) urlForPojectUserBinding(name string) *url.URL {
-	return c.endpoints.ProjectUserBindings.JoinPath(name)
+type MeshProjectUserBinding struct {
+	MeshProjectBinding
 }
 
-func (c *MeshStackProviderClient) ReadProjectUserBinding(name string) (*MeshProjectUserBinding, error) {
-	return c.readProjectBinding(name, CONTENT_TYPE_PROJECT_USER_BINDING)
+type MeshProjectUserBindingClient struct {
+	meshObject internal.MeshObjectClient[MeshProjectUserBinding]
 }
 
-func (c *MeshStackProviderClient) CreateProjectUserBinding(binding *MeshProjectUserBinding) (*MeshProjectUserBinding, error) {
-	return c.createProjectBinding(binding, CONTENT_TYPE_PROJECT_USER_BINDING)
+func newProjectUserBindingClient(httpClient *internal.HttpClient) MeshProjectUserBindingClient {
+	return MeshProjectUserBindingClient{
+		meshObject: internal.NewMeshObjectClient[MeshProjectUserBinding](httpClient, "v3", "meshprojectbindings", "userbindings"),
+	}
 }
 
-func (c *MeshStackProviderClient) DeleteProjecUserBinding(name string) error {
-	targetUrl := c.urlForPojectUserBinding(name)
-	return c.deleteMeshObject(*targetUrl, 204)
+func (c MeshProjectUserBindingClient) Read(name string) (*MeshProjectUserBinding, error) {
+	return c.meshObject.Get(name)
+}
+
+func (c MeshProjectUserBindingClient) Create(binding *MeshProjectUserBinding) (*MeshProjectUserBinding, error) {
+	return c.meshObject.Post(binding)
+}
+
+func (c MeshProjectUserBindingClient) Delete(name string) error {
+	return c.meshObject.Delete(name)
 }

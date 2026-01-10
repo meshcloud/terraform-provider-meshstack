@@ -1,0 +1,53 @@
+version: '3'
+
+dotenv: ['.env']
+
+tasks:
+  default:
+    desc: Run acceptance tests (default task)
+    cmds:
+      - task: testacc
+
+  testacc:
+    desc: Run acceptance tests
+    env:
+      TF_ACC: 1
+    cmds:
+      - go test ./... -v {{.TESTARGS}} -timeout 120m
+    
+  test:
+    desc: Run unit tests only
+    cmds:
+      - go test ./... -v {{.TESTARGS}} -short
+
+  build:
+    desc: Build the provider
+    cmds:
+      - go build -o terraform-provider-meshstack
+
+  install:
+    desc: Install provider locally for testing
+    cmds:
+      - go install
+
+  fmt:
+    desc: Format Go code
+    cmds:
+      - go fmt ./...
+
+  lint:
+    desc: Run golangci-lint
+    cmds:
+      - golangci-lint run
+
+  generate:
+    desc: Generate documentation
+    cmds:
+      - go generate
+
+  clean:
+    desc: Clean build artifacts
+    cmds:
+      - rm -f terraform-provider-meshstack
+      - rm -rf .terraform
+      - rm -f .terraform.lock.hcl
