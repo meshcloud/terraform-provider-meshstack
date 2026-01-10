@@ -1,14 +1,8 @@
 package client
 
 import (
-	"encoding/json"
-	"fmt"
-	"io"
-	"net/http"
-	"net/url"
+	"github.com/meshcloud/terraform-provider-meshstack/client/internal"
 )
-
-const CONTENT_TYPE_INTEGRATION = "application/vnd.meshcloud.api.meshintegration.v1-preview.hal+json"
 
 type MeshIntegration struct {
 	ApiVersion string                  `json:"apiVersion" tfsdk:"api_version"`
@@ -89,109 +83,24 @@ type MeshAwsWifProvider struct {
 	Thumbprint string `json:"thumbprint" tfsdk:"thumbprint"`
 }
 
-func (c *MeshStackProviderClient) urlForIntegration(workspace string, uuid string) *url.URL {
-	return c.endpoints.Integrations.JoinPath(workspace, uuid)
+type MeshIntegrationClient struct {
+	meshObject internal.MeshObjectClient[MeshIntegration]
 }
 
-func (c *MeshStackProviderClient) ReadIntegration(workspace string, uuid string) (*MeshIntegration, error) {
-	targetUrl := c.urlForIntegration(workspace, uuid)
-	req, err := http.NewRequest("GET", targetUrl.String(), nil)
-	if err != nil {
-		return nil, err
+func newIntegrationClient(httpClient *internal.HttpClient) MeshIntegrationClient {
+	return MeshIntegrationClient{
+		meshObject: internal.NewMeshObjectClient[MeshIntegration](httpClient, "v1-preview"),
 	}
-	req.Header.Set("Accept", CONTENT_TYPE_INTEGRATION)
-
-	res, err := c.doAuthenticatedRequest(req)
-	if err != nil {
-		return nil, err
-	}
-
-	defer func() { _ = res.Body.Close() }()
-
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if res.StatusCode == http.StatusNotFound {
-		return nil, nil
-	}
-
-	if !isSuccessHTTPStatus(res) {
-		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
-	}
-
-	var integration MeshIntegration
-	err = json.Unmarshal(data, &integration)
-	if err != nil {
-		return nil, err
-	}
-
-	return &integration, nil
 }
 
-func (c *MeshStackProviderClient) ReadIntegrations() (*[]MeshIntegration, error) {
-	var allIntegrations []MeshIntegration
+func (c MeshIntegrationClient) integrationId(workspace string, uuid string) string {
+	return workspace + "/" + uuid
+}
 
-	pageNumber := 0
-	targetUrl := c.endpoints.Integrations
-	query := targetUrl.Query()
+func (c MeshIntegrationClient) Read(workspace string, uuid string) (*MeshIntegration, error) {
+	return c.meshObject.Get(c.integrationId(workspace, uuid))
+}
 
-	for {
-		query.Set("page", fmt.Sprintf("%d", pageNumber))
-		targetUrl.RawQuery = query.Encode()
-
-		req, err := http.NewRequest("GET", targetUrl.String(), nil)
-		if err != nil {
-			return nil, err
-		}
-
-		req.Header.Set("Accept", CONTENT_TYPE_INTEGRATION)
-
-		res, err := c.doAuthenticatedRequest(req)
-		if err != nil {
-			return nil, err
-		}
-
-		defer func() {
-			_ = res.Body.Close()
-		}()
-
-		data, err := io.ReadAll(res.Body)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read response body: %w", err)
-		}
-
-		if !isSuccessHTTPStatus(res) {
-			return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
-		}
-
-		var response struct {
-			Embedded struct {
-				MeshIntegrations []MeshIntegration `json:"meshIntegrations"`
-			} `json:"_embedded"`
-			Page struct {
-				Size          int `json:"size"`
-				TotalElements int `json:"totalElements"`
-				TotalPages    int `json:"totalPages"`
-				Number        int `json:"number"`
-			} `json:"page"`
-		}
-
-		err = json.Unmarshal(data, &response)
-		if err != nil {
-			return nil, err
-		}
-
-		allIntegrations = append(allIntegrations, response.Embedded.MeshIntegrations...)
-
-		// Check if there are more pages
-		if response.Page.Number >= response.Page.TotalPages-1 {
-			break
-		}
-
-		pageNumber++
-	}
-
-	return &allIntegrations, nil
+func (c MeshIntegrationClient) List() ([]MeshIntegration, error) {
+	return c.meshObject.List()
 }

@@ -1,15 +1,8 @@
 package client
 
 import (
-	"bytes"
-	"encoding/json"
-	"fmt"
-	"io"
-	"net/http"
-	"net/url"
+	"github.com/meshcloud/terraform-provider-meshstack/client/internal"
 )
-
-const CONTENT_TYPE_PLATFORM = "application/vnd.meshcloud.api.meshplatform.v2-preview.hal+json"
 
 type MeshPlatform struct {
 	ApiVersion string               `json:"apiVersion" tfsdk:"api_version"`
@@ -114,125 +107,28 @@ type TagMapper struct {
 	ValuePattern string `json:"valuePattern" tfsdk:"value_pattern"`
 }
 
-func (c *MeshStackProviderClient) urlForPlatform(uuid string) *url.URL {
-	return c.endpoints.Platforms.JoinPath(uuid)
+type MeshPlatformClient struct {
+	meshObject internal.MeshObjectClient[MeshPlatform]
 }
 
-func (c *MeshStackProviderClient) ReadPlatform(uuid string) (*MeshPlatform, error) {
-	targetUrl := c.urlForPlatform(uuid)
-	req, err := http.NewRequest("GET", targetUrl.String(), nil)
-	if err != nil {
-		return nil, err
+func newPlatformClient(httpClient *internal.HttpClient) MeshPlatformClient {
+	return MeshPlatformClient{
+		meshObject: internal.NewMeshObjectClient[MeshPlatform](httpClient, "v2-preview"),
 	}
-	req.Header.Set("Accept", CONTENT_TYPE_PLATFORM)
-
-	res, err := c.doAuthenticatedRequest(req)
-	if err != nil {
-		return nil, err
-	}
-
-	defer func() { _ = res.Body.Close() }()
-
-	if res.StatusCode == http.StatusNotFound {
-		return nil, nil // Not found is not an error
-	}
-
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if !isSuccessHTTPStatus(res) {
-		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
-	}
-
-	var platform MeshPlatform
-	err = json.Unmarshal(data, &platform)
-	if err != nil {
-		return nil, err
-	}
-	return &platform, nil
 }
 
-func (c *MeshStackProviderClient) CreatePlatform(platform *MeshPlatformCreate) (*MeshPlatform, error) {
-	payload, err := json.Marshal(platform)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", c.endpoints.Platforms.String(), bytes.NewBuffer(payload))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", CONTENT_TYPE_PLATFORM)
-	req.Header.Set("Accept", CONTENT_TYPE_PLATFORM)
-
-	res, err := c.doAuthenticatedRequest(req)
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		_ = res.Body.Close()
-	}()
-
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if !isSuccessHTTPStatus(res) {
-		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
-	}
-
-	var createdPlatform MeshPlatform
-	err = json.Unmarshal(data, &createdPlatform)
-	if err != nil {
-		return nil, err
-	}
-	return &createdPlatform, nil
+func (c MeshPlatformClient) Read(uuid string) (*MeshPlatform, error) {
+	return c.meshObject.Get(uuid)
 }
 
-func (c *MeshStackProviderClient) DeletePlatform(uuid string) error {
-	targetUrl := c.urlForPlatform(uuid)
-	return c.deleteMeshObject(*targetUrl, 204)
+func (c MeshPlatformClient) Create(platform *MeshPlatformCreate) (*MeshPlatform, error) {
+	return c.meshObject.Post(platform)
 }
 
-func (c *MeshStackProviderClient) UpdatePlatform(uuid string, platform *MeshPlatformUpdate) (*MeshPlatform, error) {
-	targetUrl := c.urlForPlatform(uuid)
+func (c MeshPlatformClient) Update(uuid string, platform *MeshPlatformUpdate) (*MeshPlatform, error) {
+	return c.meshObject.Put(uuid, platform)
+}
 
-	payload, err := json.Marshal(platform)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("PUT", targetUrl.String(), bytes.NewBuffer(payload))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", CONTENT_TYPE_PLATFORM)
-	req.Header.Set("Accept", CONTENT_TYPE_PLATFORM)
-
-	res, err := c.doAuthenticatedRequest(req)
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		_ = res.Body.Close()
-	}()
-
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if !isSuccessHTTPStatus(res) {
-		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
-	}
-
-	var updatedPlatform MeshPlatform
-	err = json.Unmarshal(data, &updatedPlatform)
-	if err != nil {
-		return nil, err
-	}
-	return &updatedPlatform, nil
+func (c MeshPlatformClient) Delete(uuid string) error {
+	return c.meshObject.Delete(uuid)
 }

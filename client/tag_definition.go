@@ -1,16 +1,10 @@
 package client
 
 import (
-	"bytes"
-	"encoding/json"
-	"fmt"
-	"io"
-	"net/http"
-	"net/url"
+	"github.com/meshcloud/terraform-provider-meshstack/client/internal"
 )
 
 const API_VERSION_TAG_DEFINITION = "v1"
-const CONTENT_TYPE_TAG_DEFINITION = "application/vnd.meshcloud.api.meshtagdefinition.v1.hal+json"
 
 type MeshTagDefinition struct {
 	ApiVersion string                    `json:"apiVersion" tfsdk:"api_version"`
@@ -73,202 +67,32 @@ type TagValueMultiSelect struct {
 	DefaultValue *[]string `json:"defaultValue,omitempty" tfsdk:"default_value"`
 }
 
-func (c *MeshStackProviderClient) urlForTagDefinition(name string) *url.URL {
-	return c.endpoints.TagDefinitions.JoinPath(name)
+type MeshTagDefinitionClient struct {
+	meshObject internal.MeshObjectClient[MeshTagDefinition]
 }
 
-func (c *MeshStackProviderClient) ReadTagDefinitions() (*[]MeshTagDefinition, error) {
-	var all []MeshTagDefinition
-
-	pageNumber := 0
-	targetUrl := c.endpoints.TagDefinitions
-	query := targetUrl.Query()
-
-	type tagsResponse struct {
-		Embedded struct {
-			MeshTagDefinitions []MeshTagDefinition `json:"meshTagDefinitions"`
-		} `json:"_embedded"`
-		Page struct {
-			Size          int `json:"size"`
-			TotalElements int `json:"totalElements"`
-			TotalPages    int `json:"totalPages"`
-			Number        int `json:"number"`
-		} `json:"page"`
+func newTagDefinitionClient(httpClient *internal.HttpClient) MeshTagDefinitionClient {
+	return MeshTagDefinitionClient{
+		meshObject: internal.NewMeshObjectClient[MeshTagDefinition](httpClient, "v1"),
 	}
-
-	for {
-		query.Set("page", fmt.Sprintf("%d", pageNumber))
-
-		targetUrl.RawQuery = query.Encode()
-
-		req, err := http.NewRequest("GET", targetUrl.String(), nil)
-		if err != nil {
-			return nil, err
-		}
-
-		req.Header.Set("Accept", CONTENT_TYPE_TAG_DEFINITION)
-
-		res, err := c.doAuthenticatedRequest(req)
-		if err != nil {
-			return nil, err
-		}
-
-		defer func() {
-			_ = res.Body.Close()
-		}()
-
-		data, err := io.ReadAll(res.Body)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read response body: %w", err)
-		}
-
-		if !isSuccessHTTPStatus(res) {
-			return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
-		}
-
-		var response tagsResponse
-		err = json.Unmarshal(data, &response)
-		if err != nil {
-			return nil, err
-		}
-
-		all = append(all, response.Embedded.MeshTagDefinitions...)
-
-		// Check if there are more pages
-		if response.Page.Number >= response.Page.TotalPages-1 {
-			break
-		}
-
-		pageNumber++
-	}
-
-	return &all, nil
 }
 
-func (c *MeshStackProviderClient) ReadTagDefinition(name string) (*MeshTagDefinition, error) {
-	targetUrl := c.urlForTagDefinition(name)
-	req, err := http.NewRequest("GET", targetUrl.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Set("Accept", CONTENT_TYPE_TAG_DEFINITION)
-
-	resp, err := c.doAuthenticatedRequest(req)
-	if err != nil {
-		return nil, err
-	}
-
-	defer func() {
-		_ = resp.Body.Close()
-	}()
-
-	if !isSuccessHTTPStatus(resp) {
-		return nil, fmt.Errorf("failed to read tag definition: %s", resp.Status)
-	}
-
-	var tagDefinition MeshTagDefinition
-	if err := json.NewDecoder(resp.Body).Decode(&tagDefinition); err != nil {
-		return nil, err
-	}
-
-	return &tagDefinition, nil
+func (c MeshTagDefinitionClient) List() ([]MeshTagDefinition, error) {
+	return c.meshObject.List()
 }
 
-func (c *MeshStackProviderClient) CreateTagDefinition(tagDefinition *MeshTagDefinition) (*MeshTagDefinition, error) {
-	targetUrl := c.endpoints.TagDefinitions
-	data, err := json.Marshal(tagDefinition)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal tag definition: %w", err)
-	}
-
-	fmt.Printf("JSON Payload: %s\n", string(data))
-
-	req, err := http.NewRequest("POST", targetUrl.String(), bytes.NewBuffer(data))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-
-	req.Header.Set("Content-Type", CONTENT_TYPE_TAG_DEFINITION)
-	req.Header.Set("Accept", CONTENT_TYPE_TAG_DEFINITION)
-
-	resp, err := c.doAuthenticatedRequest(req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to do authenticated request: %w", err)
-	}
-	defer func() {
-		_ = resp.Body.Close()
-	}()
-
-	if !isSuccessHTTPStatus(resp) {
-		return nil, fmt.Errorf("failed to create tag definition: %s", resp.Status)
-	}
-
-	var createdTagDefinition MeshTagDefinition
-	if err := json.NewDecoder(resp.Body).Decode(&createdTagDefinition); err != nil {
-		return nil, fmt.Errorf("failed to decode response: %w", err)
-	}
-
-	return &createdTagDefinition, nil
+func (c MeshTagDefinitionClient) Read(name string) (*MeshTagDefinition, error) {
+	return c.meshObject.Get(name)
 }
 
-func (c *MeshStackProviderClient) UpdateTagDefinition(tagDefinition *MeshTagDefinition) (*MeshTagDefinition, error) {
-	targetUrl := c.urlForTagDefinition(tagDefinition.Metadata.Name)
-	data, err := json.Marshal(tagDefinition)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal tag definition: %w", err)
-	}
-
-	req, err := http.NewRequest("PUT", targetUrl.String(), bytes.NewBuffer(data))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-
-	req.Header.Set("Content-Type", CONTENT_TYPE_TAG_DEFINITION)
-	req.Header.Set("Accept", CONTENT_TYPE_TAG_DEFINITION)
-
-	resp, err := c.doAuthenticatedRequest(req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to do authenticated request: %w", err)
-	}
-
-	defer func() {
-		_ = resp.Body.Close()
-	}()
-
-	if !isSuccessHTTPStatus(resp) {
-		return nil, fmt.Errorf("failed to update tag definition: %s", resp.Status)
-	}
-
-	var updatedTagDefinition MeshTagDefinition
-	if err := json.NewDecoder(resp.Body).Decode(&updatedTagDefinition); err != nil {
-		return nil, fmt.Errorf("failed to decode response: %w", err)
-	}
-
-	return &updatedTagDefinition, nil
+func (c MeshTagDefinitionClient) Create(tagDefinition *MeshTagDefinition) (*MeshTagDefinition, error) {
+	return c.meshObject.Post(tagDefinition)
 }
 
-func (c *MeshStackProviderClient) DeleteTagDefinition(name string) error {
-	targetUrl := c.urlForTagDefinition(name)
-	req, err := http.NewRequest("DELETE", targetUrl.String(), nil)
-	if err != nil {
-		return fmt.Errorf("failed to create request: %w", err)
-	}
+func (c MeshTagDefinitionClient) Update(tagDefinition *MeshTagDefinition) (*MeshTagDefinition, error) {
+	return c.meshObject.Put(tagDefinition.Metadata.Name, tagDefinition)
+}
 
-	req.Header.Set("Accept", CONTENT_TYPE_TAG_DEFINITION)
-
-	resp, err := c.doAuthenticatedRequest(req)
-	if err != nil {
-		return fmt.Errorf("failed to do authenticated request: %w", err)
-	}
-
-	defer func() {
-		_ = resp.Body.Close()
-	}()
-
-	if resp.StatusCode != http.StatusNoContent {
-		return fmt.Errorf("failed to delete tag definition: %s", resp.Status)
-	}
-
-	return nil
+func (c MeshTagDefinitionClient) Delete(name string) error {
+	return c.meshObject.Delete(name)
 }

@@ -1,19 +1,15 @@
 package client
 
 import (
-	"bytes"
-	"context"
-	"encoding/json"
-	"fmt"
-	"io"
-	"net/http"
-	"net/url"
-	"time"
-
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
+	"github.com/meshcloud/terraform-provider-meshstack/client/internal"
 )
 
-const CONTENT_TYPE_TENANT_V4 = "application/vnd.meshcloud.api.meshtenant.v4-preview.hal+json"
+import (
+	"context"
+	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
+	"time"
+)
 
 type MeshTenantV4 struct {
 	ApiVersion string               `json:"apiVersion" tfsdk:"api_version"`
@@ -63,107 +59,41 @@ type MeshTenantV4CreateSpec struct {
 	Quotas                *[]MeshTenantQuota `json:"quotas" tfsdk:"quotas"`
 }
 
-func (c *MeshStackProviderClient) urlForTenantV4(uuid string) *url.URL {
-	return c.endpoints.Tenants.JoinPath(uuid)
+type MeshTenantV4Client struct {
+	meshObject internal.MeshObjectClient[MeshTenantV4]
 }
 
-func (c *MeshStackProviderClient) ReadTenantV4(uuid string) (*MeshTenantV4, error) {
-	targetUrl := c.urlForTenantV4(uuid)
-	req, err := http.NewRequest("GET", targetUrl.String(), nil)
-	if err != nil {
-		return nil, err
+func newTenantV4Client(httpClient *internal.HttpClient) MeshTenantV4Client {
+	return MeshTenantV4Client{
+		meshObject: internal.NewMeshObjectClient[MeshTenantV4](httpClient, "v4-preview"),
 	}
-	req.Header.Set("Accept", CONTENT_TYPE_TENANT_V4)
-
-	res, err := c.doAuthenticatedRequest(req)
-	if err != nil {
-		return nil, err
-	}
-
-	defer func() {
-		_ = res.Body.Close()
-	}()
-
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if res.StatusCode == 404 {
-		return nil, nil
-	}
-
-	if !isSuccessHTTPStatus(res) {
-		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
-	}
-
-	var tenant MeshTenantV4
-	err = json.Unmarshal(data, &tenant)
-	if err != nil {
-		return nil, err
-	}
-
-	return &tenant, nil
 }
 
-func (c *MeshStackProviderClient) CreateTenantV4(tenant *MeshTenantV4Create) (*MeshTenantV4, error) {
-	payload, err := json.Marshal(tenant)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", c.endpoints.Tenants.String(), bytes.NewBuffer(payload))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", CONTENT_TYPE_TENANT_V4)
-	req.Header.Set("Accept", CONTENT_TYPE_TENANT_V4)
-
-	res, err := c.doAuthenticatedRequest(req)
-	if err != nil {
-		return nil, err
-	}
-
-	defer func() {
-		_ = res.Body.Close()
-	}()
-
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if !isSuccessHTTPStatus(res) {
-		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
-	}
-
-	var createdTenant MeshTenantV4
-	err = json.Unmarshal(data, &createdTenant)
-	if err != nil {
-		return nil, err
-	}
-
-	return &createdTenant, nil
+func (c MeshTenantV4Client) Read(uuid string) (*MeshTenantV4, error) {
+	return c.meshObject.Get(uuid)
 }
 
-func (c *MeshStackProviderClient) DeleteTenantV4(uuid string) error {
-	targetUrl := c.urlForTenantV4(uuid)
-	return c.deleteMeshObject(*targetUrl, 202)
+func (c MeshTenantV4Client) Create(tenant *MeshTenantV4Create) (*MeshTenantV4, error) {
+	return c.meshObject.Post(tenant)
 }
 
-// PollTenantV4UntilCreation polls a tenant until creation completes (platformTenantId is set)
+func (c MeshTenantV4Client) Delete(uuid string) error {
+	return c.meshObject.Delete(uuid)
+}
+
+// PollUntilCreation polls a tenant until creation completes (platformTenantId is set)
 // Returns the final tenant state or an error if polling fails or times out.
-func (c *MeshStackProviderClient) PollTenantV4UntilCreation(ctx context.Context, uuid string) (*MeshTenantV4, error) {
+func (c MeshTenantV4Client) PollUntilCreation(ctx context.Context, uuid string) (*MeshTenantV4, error) {
 	var result *MeshTenantV4
 
-	err := retry.RetryContext(ctx, 30*time.Minute, c.waitForTenantV4CreationFunc(uuid, &result))
+	err := retry.RetryContext(ctx, 30*time.Minute, c.waitForCreationFunc(uuid, &result))
 	return result, err
 }
 
-// waitForTenantV4CreationFunc returns a RetryFunc that checks tenant creation status.
-func (c *MeshStackProviderClient) waitForTenantV4CreationFunc(uuid string, result **MeshTenantV4) retry.RetryFunc {
+// waitForCreationFunc returns a RetryFunc that checks tenant creation status.
+func (c MeshTenantV4Client) waitForCreationFunc(uuid string, result **MeshTenantV4) retry.RetryFunc {
 	return func() *retry.RetryError {
-		current, err := c.ReadTenantV4(uuid)
+		current, err := c.Read(uuid)
 		if err != nil {
 			return retry.NonRetryableError(fmt.Errorf("could not read tenant status while waiting for creation: %w", err))
 		}
@@ -183,16 +113,16 @@ func (c *MeshStackProviderClient) waitForTenantV4CreationFunc(uuid string, resul
 	}
 }
 
-// PollTenantV4UntilDeletion polls a tenant until it is deleted (not found)
+// PollUntilDeletion polls a tenant until it is deleted (not found)
 // Returns nil on successful deletion or an error if polling fails or times out.
-func (c *MeshStackProviderClient) PollTenantV4UntilDeletion(ctx context.Context, uuid string) error {
-	return retry.RetryContext(ctx, 30*time.Minute, c.waitForTenantV4DeletionFunc(uuid))
+func (c MeshTenantV4Client) PollUntilDeletion(ctx context.Context, uuid string) error {
+	return retry.RetryContext(ctx, 30*time.Minute, c.waitForDeletionFunc(uuid))
 }
 
-// waitForTenantV4DeletionFunc returns a RetryFunc that checks tenant deletion status.
-func (c *MeshStackProviderClient) waitForTenantV4DeletionFunc(uuid string) retry.RetryFunc {
+// waitForDeletionFunc returns a RetryFunc that checks tenant deletion status.
+func (c MeshTenantV4Client) waitForDeletionFunc(uuid string) retry.RetryFunc {
 	return func() *retry.RetryError {
-		current, err := c.ReadTenantV4(uuid)
+		current, err := c.Read(uuid)
 		if err != nil {
 			return retry.NonRetryableError(fmt.Errorf("could not read tenant status while waiting for deletion: %w", err))
 		}

@@ -1,26 +1,31 @@
 package client
 
 import (
-	"net/url"
+	"github.com/meshcloud/terraform-provider-meshstack/client/internal"
 )
 
-const CONTENT_TYPE_WORKSPACE_GROUP_BINDING = "application/vnd.meshcloud.api.meshworkspacegroupbinding.v2.hal+json"
-
-type MeshWorkspaceGroupBinding = MeshWorkspaceBinding
-
-func (c *MeshStackProviderClient) urlForWorkspaceGroupBinding(name string) *url.URL {
-	return c.endpoints.WorkspaceGroupBindings.JoinPath(name)
+type MeshWorkspaceGroupBinding struct {
+	MeshWorkspaceBinding
 }
 
-func (c *MeshStackProviderClient) ReadWorkspaceGroupBinding(name string) (*MeshWorkspaceGroupBinding, error) {
-	return c.readWorkspaceBinding(name, CONTENT_TYPE_WORKSPACE_GROUP_BINDING)
+type MeshWorkspaceGroupBindingClient struct {
+	meshObject internal.MeshObjectClient[MeshWorkspaceGroupBinding]
 }
 
-func (c *MeshStackProviderClient) CreateWorkspaceGroupBinding(binding *MeshWorkspaceGroupBinding) (*MeshWorkspaceGroupBinding, error) {
-	return c.createWorkspaceBinding(binding, CONTENT_TYPE_WORKSPACE_GROUP_BINDING)
+func newWorkspaceGroupBindingClient(httpClient *internal.HttpClient) MeshWorkspaceGroupBindingClient {
+	return MeshWorkspaceGroupBindingClient{
+		meshObject: internal.NewMeshObjectClient[MeshWorkspaceGroupBinding](httpClient, "v2", "meshworkspacebindings", "groupbindings"),
+	}
 }
 
-func (c *MeshStackProviderClient) DeleteWorkspaceGroupBinding(name string) error {
-	targetUrl := c.urlForWorkspaceGroupBinding(name)
-	return c.deleteMeshObject(*targetUrl, 204)
+func (c MeshWorkspaceGroupBindingClient) Read(name string) (*MeshWorkspaceGroupBinding, error) {
+	return c.meshObject.Get(name)
+}
+
+func (c MeshWorkspaceGroupBindingClient) Create(binding *MeshWorkspaceGroupBinding) (*MeshWorkspaceGroupBinding, error) {
+	return c.meshObject.Post(binding)
+}
+
+func (c MeshWorkspaceGroupBindingClient) Delete(name string) error {
+	return c.meshObject.Delete(name)
 }

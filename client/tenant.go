@@ -1,15 +1,8 @@
 package client
 
 import (
-	"bytes"
-	"encoding/json"
-	"fmt"
-	"io"
-	"net/http"
-	"net/url"
+	"github.com/meshcloud/terraform-provider-meshstack/client/internal"
 )
-
-const CONTENT_TYPE_TENANT = "application/vnd.meshcloud.api.meshtenant.v3.hal+json"
 
 type MeshTenant struct {
 	ApiVersion string             `json:"apiVersion" tfsdk:"api_version"`
@@ -54,91 +47,28 @@ type MeshTenantCreateSpec struct {
 	Quotas                *[]MeshTenantQuota `json:"quotas" tfsdk:"quotas"`
 }
 
-func (c *MeshStackProviderClient) urlForTenant(workspace string, project string, platform string) *url.URL {
-	identifier := workspace + "." + project + "." + platform
-	return c.endpoints.Tenants.JoinPath(identifier)
+type MeshTenantClient struct {
+	meshObject internal.MeshObjectClient[MeshTenant]
 }
 
-func (c *MeshStackProviderClient) ReadTenant(workspace string, project string, platform string) (*MeshTenant, error) {
-	targetUrl := c.urlForTenant(workspace, project, platform)
-	req, err := http.NewRequest("GET", targetUrl.String(), nil)
-	if err != nil {
-		return nil, err
+func newTenantClient(httpClient *internal.HttpClient) MeshTenantClient {
+	return MeshTenantClient{
+		meshObject: internal.NewMeshObjectClient[MeshTenant](httpClient, "v3"),
 	}
-	req.Header.Set("Accept", CONTENT_TYPE_TENANT)
-
-	res, err := c.doAuthenticatedRequest(req)
-	if err != nil {
-		return nil, err
-	}
-
-	defer func() {
-		_ = res.Body.Close()
-	}()
-
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if res.StatusCode == 404 {
-		return nil, nil
-	}
-
-	if !isSuccessHTTPStatus(res) {
-		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
-	}
-
-	var tenant MeshTenant
-	err = json.Unmarshal(data, &tenant)
-	if err != nil {
-		return nil, err
-	}
-
-	return &tenant, nil
 }
 
-func (c *MeshStackProviderClient) CreateTenant(tenant *MeshTenantCreate) (*MeshTenant, error) {
-	payload, err := json.Marshal(tenant)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", c.endpoints.Tenants.String(), bytes.NewBuffer(payload))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", CONTENT_TYPE_TENANT)
-	req.Header.Set("Accept", CONTENT_TYPE_TENANT)
-
-	res, err := c.doAuthenticatedRequest(req)
-	if err != nil {
-		return nil, err
-	}
-
-	defer func() {
-		_ = res.Body.Close()
-	}()
-
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if !isSuccessHTTPStatus(res) {
-		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
-	}
-
-	var createdTenant MeshTenant
-	err = json.Unmarshal(data, &createdTenant)
-	if err != nil {
-		return nil, err
-	}
-
-	return &createdTenant, nil
+func (c MeshTenantClient) tenantId(workspace string, project string, platform string) string {
+	return workspace + "." + project + "." + platform
 }
 
-func (c *MeshStackProviderClient) DeleteTenant(workspace string, project string, platform string) error {
-	targetUrl := c.urlForTenant(workspace, project, platform)
-	return c.deleteMeshObject(*targetUrl, 202)
+func (c MeshTenantClient) Read(workspace string, project string, platform string) (*MeshTenant, error) {
+	return c.meshObject.Get(c.tenantId(workspace, project, platform))
+}
+
+func (c MeshTenantClient) Create(tenant *MeshTenantCreate) (*MeshTenant, error) {
+	return c.meshObject.Post(tenant)
+}
+
+func (c MeshTenantClient) Delete(workspace string, project string, platform string) error {
+	return c.meshObject.Delete(c.tenantId(workspace, project, platform))
 }

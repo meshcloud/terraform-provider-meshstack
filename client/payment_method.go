@@ -1,15 +1,8 @@
 package client
 
 import (
-	"bytes"
-	"encoding/json"
-	"fmt"
-	"io"
-	"net/http"
-	"net/url"
+	"github.com/meshcloud/terraform-provider-meshstack/client/internal"
 )
-
-const CONTENT_TYPE_PAYMENT_METHOD = "application/vnd.meshcloud.api.meshpaymentmethod.v2.hal+json"
 
 type MeshPaymentMethod struct {
 	ApiVersion string                    `json:"apiVersion" tfsdk:"api_version"`
@@ -43,133 +36,28 @@ type MeshPaymentMethodCreateMetadata struct {
 	OwnedByWorkspace string `json:"ownedByWorkspace" tfsdk:"owned_by_workspace"`
 }
 
-func (c *MeshStackProviderClient) urlForPaymentMethod(identifier string) *url.URL {
-	return c.endpoints.PaymentMethods.JoinPath(identifier)
+type MeshPaymentMethodClient struct {
+	meshObject internal.MeshObjectClient[MeshPaymentMethod]
 }
 
-func (c *MeshStackProviderClient) ReadPaymentMethod(workspace string, identifier string) (*MeshPaymentMethod, error) {
-	targetUrl := c.urlForPaymentMethod(identifier)
-
-	req, err := http.NewRequest("GET", targetUrl.String(), nil)
-	if err != nil {
-		return nil, err
+func newPaymentMethodClient(httpClient *internal.HttpClient) MeshPaymentMethodClient {
+	return MeshPaymentMethodClient{
+		meshObject: internal.NewMeshObjectClient[MeshPaymentMethod](httpClient, "v2"),
 	}
-	req.Header.Set("Accept", CONTENT_TYPE_PAYMENT_METHOD)
-
-	res, err := c.doAuthenticatedRequest(req)
-	if err != nil {
-		return nil, err
-	}
-
-	defer func() {
-		_ = res.Body.Close()
-	}()
-
-	if res.StatusCode == http.StatusNotFound {
-		return nil, nil
-	}
-
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if !isSuccessHTTPStatus(res) {
-		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
-	}
-
-	var paymentMethod MeshPaymentMethod
-	err = json.Unmarshal(data, &paymentMethod)
-	if err != nil {
-		return nil, err
-	}
-
-	return &paymentMethod, nil
 }
 
-func (c *MeshStackProviderClient) CreatePaymentMethod(paymentMethod *MeshPaymentMethodCreate) (*MeshPaymentMethod, error) {
-	payload, err := json.Marshal(paymentMethod)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", c.endpoints.PaymentMethods.String(), bytes.NewBuffer(payload))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", CONTENT_TYPE_PAYMENT_METHOD)
-	req.Header.Set("Accept", CONTENT_TYPE_PAYMENT_METHOD)
-
-	res, err := c.doAuthenticatedRequest(req)
-	if err != nil {
-		return nil, err
-	}
-
-	defer func() {
-		_ = res.Body.Close()
-	}()
-
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if !isSuccessHTTPStatus(res) {
-		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
-	}
-
-	var createdPaymentMethod MeshPaymentMethod
-	err = json.Unmarshal(data, &createdPaymentMethod)
-	if err != nil {
-		return nil, err
-	}
-
-	return &createdPaymentMethod, nil
+func (c MeshPaymentMethodClient) Read(workspace string, identifier string) (*MeshPaymentMethod, error) {
+	return c.meshObject.Get(identifier)
 }
 
-func (c *MeshStackProviderClient) UpdatePaymentMethod(identifier string, paymentMethod *MeshPaymentMethodCreate) (*MeshPaymentMethod, error) {
-	targetUrl := c.urlForPaymentMethod(identifier)
-
-	payload, err := json.Marshal(paymentMethod)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("PUT", targetUrl.String(), bytes.NewBuffer(payload))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", CONTENT_TYPE_PAYMENT_METHOD)
-	req.Header.Set("Accept", CONTENT_TYPE_PAYMENT_METHOD)
-
-	res, err := c.doAuthenticatedRequest(req)
-	if err != nil {
-		return nil, err
-	}
-
-	defer func() {
-		_ = res.Body.Close()
-	}()
-
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if !isSuccessHTTPStatus(res) {
-		return nil, fmt.Errorf("unexpected status code: %d, %s", res.StatusCode, data)
-	}
-
-	var updatedPaymentMethod MeshPaymentMethod
-	err = json.Unmarshal(data, &updatedPaymentMethod)
-	if err != nil {
-		return nil, err
-	}
-
-	return &updatedPaymentMethod, nil
+func (c MeshPaymentMethodClient) Create(paymentMethod *MeshPaymentMethodCreate) (*MeshPaymentMethod, error) {
+	return c.meshObject.Post(paymentMethod)
 }
 
-func (c *MeshStackProviderClient) DeletePaymentMethod(identifier string) error {
-	targetUrl := c.urlForPaymentMethod(identifier)
-	return c.deleteMeshObject(*targetUrl, 204)
+func (c MeshPaymentMethodClient) Update(identifier string, paymentMethod *MeshPaymentMethodCreate) (*MeshPaymentMethod, error) {
+	return c.meshObject.Put(identifier, paymentMethod)
+}
+
+func (c MeshPaymentMethodClient) Delete(identifier string) error {
+	return c.meshObject.Delete(identifier)
 }
