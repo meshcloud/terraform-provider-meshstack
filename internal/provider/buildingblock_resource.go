@@ -35,30 +35,17 @@ func NewBuildingBlockResource() resource.Resource {
 }
 
 type buildingBlockResource struct {
-	client client.MeshStackProviderClient
+	MeshBuildingBlock client.MeshBuildingBlockClient
 }
 
 func (r *buildingBlockResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_buildingblock"
 }
 
-func (r *buildingBlockResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
-	}
-
-	client, ok := req.ProviderData.(client.MeshStackProviderClient)
-
-	if !ok {
-		resp.Diagnostics.AddError(
-			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *MeshStackProviderClient, got: %T. Please report this issue to the provider developers.", req.ProviderData),
-		)
-
-		return
-	}
-
-	r.client = client
+func (r *buildingBlockResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+	resp.Diagnostics.Append(configureProviderClient(req.ProviderData, func(client client.Client) {
+		r.MeshBuildingBlock = client.BuildingBlock
+	})...)
 }
 
 func (r *buildingBlockResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
@@ -260,7 +247,7 @@ func (r *buildingBlockResource) Create(ctx context.Context, req resource.CreateR
 		bb.Spec.Inputs = append(bb.Spec.Inputs, input)
 	}
 
-	created, err := r.client.BuildingBlock.Create(&bb)
+	created, err := r.MeshBuildingBlock.Create(&bb)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating building block",
@@ -281,7 +268,7 @@ func (r *buildingBlockResource) Read(ctx context.Context, req resource.ReadReque
 		return
 	}
 
-	bb, err := r.client.BuildingBlock.Read(uuid)
+	bb, err := r.MeshBuildingBlock.Read(uuid)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read building block", err.Error())
 	}
@@ -305,7 +292,7 @@ func (r *buildingBlockResource) Delete(ctx context.Context, req resource.DeleteR
 		return
 	}
 
-	err := r.client.BuildingBlock.Delete(uuid)
+	err := r.MeshBuildingBlock.Delete(uuid)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error deleting building block",

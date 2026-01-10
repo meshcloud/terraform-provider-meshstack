@@ -67,7 +67,7 @@ func NewTenantV4Resource() resource.Resource {
 }
 
 type tenantV4Resource struct {
-	client client.MeshStackProviderClient
+	MeshTenantV4 client.MeshTenantV4Client
 }
 
 func (r *tenantV4Resource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -75,22 +75,9 @@ func (r *tenantV4Resource) Metadata(_ context.Context, req resource.MetadataRequ
 }
 
 func (r *tenantV4Resource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
-	}
-
-	client, ok := req.ProviderData.(client.MeshStackProviderClient)
-
-	if !ok {
-		resp.Diagnostics.AddError(
-			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *MeshStackProviderClient, got: %T. Please report this issue to the provider developers.", req.ProviderData),
-		)
-
-		return
-	}
-
-	r.client = client
+	resp.Diagnostics.Append(configureProviderClient(req.ProviderData, func(client client.Client) {
+		r.MeshTenantV4 = client.TenantV4
+	})...)
 }
 
 func (r *tenantV4Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
@@ -298,7 +285,7 @@ func (r *tenantV4Resource) Create(ctx context.Context, req resource.CreateReques
 		},
 	}
 
-	tenant, err := r.client.TenantV4.Create(&createRequest)
+	tenant, err := r.MeshTenantV4.Create(&createRequest)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating tenant",
@@ -309,7 +296,7 @@ func (r *tenantV4Resource) Create(ctx context.Context, req resource.CreateReques
 
 	// Poll for completion if wait_for_completion is true
 	if !plan.WaitForCompletion.IsNull() && plan.WaitForCompletion.ValueBool() {
-		tenant, err = r.client.TenantV4.PollUntilCreation(ctx, tenant.Metadata.Uuid)
+		tenant, err = r.MeshTenantV4.PollUntilCreation(ctx, tenant.Metadata.Uuid)
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Error waiting for tenant creation",
@@ -344,7 +331,7 @@ func (r *tenantV4Resource) Read(ctx context.Context, req resource.ReadRequest, r
 		return
 	}
 
-	tenant, err := r.client.TenantV4.Read(uuid.ValueString())
+	tenant, err := r.MeshTenantV4.Read(uuid.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading tenant",
@@ -374,7 +361,7 @@ func (r *tenantV4Resource) Delete(ctx context.Context, req resource.DeleteReques
 
 	uuid := state.Metadata.Uuid.ValueString()
 
-	err := r.client.TenantV4.Delete(uuid)
+	err := r.MeshTenantV4.Delete(uuid)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error deleting tenant",
@@ -385,7 +372,7 @@ func (r *tenantV4Resource) Delete(ctx context.Context, req resource.DeleteReques
 
 	// Poll for deletion completion if wait_for_completion is true
 	if !state.WaitForCompletion.IsNull() && state.WaitForCompletion.ValueBool() {
-		err = r.client.TenantV4.PollUntilDeletion(ctx, uuid)
+		err = r.MeshTenantV4.PollUntilDeletion(ctx, uuid)
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Error waiting for tenant deletion",

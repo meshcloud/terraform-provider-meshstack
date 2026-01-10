@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
 
@@ -23,7 +22,7 @@ func NewProjectsDataSource() datasource.DataSource {
 }
 
 type projectsDataSource struct {
-	client client.MeshStackProviderClient
+	MeshProject client.MeshProjectClient
 }
 
 func (d *projectsDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -108,23 +107,10 @@ func (d *projectsDataSource) Schema(ctx context.Context, req datasource.SchemaRe
 	}
 }
 
-func (d *projectsDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
-	}
-
-	client, ok := req.ProviderData.(client.MeshStackProviderClient)
-
-	if !ok {
-		resp.Diagnostics.AddError(
-			"Unexpected Data Source Configure Type",
-			fmt.Sprintf("Expected *MeshStackProviderClient, got: %T. Please report this issue to the provider developers.", req.ProviderData),
-		)
-
-		return
-	}
-
-	d.client = client
+func (d *projectsDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+	resp.Diagnostics.Append(configureProviderClient(req.ProviderData, func(client client.Client) {
+		d.MeshProject = client.Project
+	})...)
 }
 
 func (d *projectsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
@@ -138,7 +124,7 @@ func (d *projectsDataSource) Read(ctx context.Context, req datasource.ReadReques
 		return
 	}
 
-	projects, err := d.client.Project.List(workspaceIdentifier, paymentMethodIdentifier)
+	projects, err := d.MeshProject.List(workspaceIdentifier, paymentMethodIdentifier)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read projects", err.Error())
 		return
