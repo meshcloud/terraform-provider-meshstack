@@ -15,7 +15,7 @@ func TestAccIntegrationsDataSource(t *testing.T) {
 		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: examples.IntegrationsDataSourceConfig,
+				Config: examples.DataSource{Name: "integrations"}.String(),
 			},
 		},
 	})

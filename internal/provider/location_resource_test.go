@@ -21,7 +21,7 @@ func TestAccLocation(t *testing.T) {
 		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: examples.LocationResourceConfig,
+				Config: examples.Resource{Name: "location"}.String(),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectResourceAction(resourceAddress, plancheck.ResourceActionCreate),
@@ -36,7 +36,7 @@ func TestAccLocation(t *testing.T) {
 				},
 			},
 			{
-				Config: strings.ReplaceAll(examples.LocationResourceConfig, `"My Cloud Location"`, `"My Updated Location"`),
+				Config: strings.ReplaceAll(examples.Resource{Name: "location"}.String(), `"My Cloud Location"`, `"My Updated Location"`),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectResourceAction(resourceAddress, plancheck.ResourceActionUpdate),
