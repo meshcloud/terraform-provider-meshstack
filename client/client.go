@@ -9,19 +9,27 @@ import (
 )
 
 type Client struct {
-	BuildingBlock         MeshBuildingBlockClient
-	BuildingBlockV2       MeshBuildingBlockV2Client
-	Integration           MeshIntegrationClient
-	LandingZone           MeshLandingZoneClient
-	Location              MeshLocationClient
-	PaymentMethod         MeshPaymentMethodClient
-	Platform              MeshPlatformClient
-	Project               MeshProjectClient
-	ProjectGroupBinding   MeshProjectGroupBindingClient
-	ProjectUserBinding    MeshProjectUserBindingClient
-	TagDefinition         MeshTagDefinitionClient
-	Tenant                MeshTenantClient
-	TenantV4              MeshTenantV4Client
+	BuildingBlock   MeshBuildingBlockClient
+	BuildingBlockV2 MeshBuildingBlockV2Client
+
+	BuildingBlockDefinition        MeshBuildingBlockDefinitionClient
+	BuildingBlockDefinitionVersion MeshBuildingBlockDefinitionVersionClient
+
+	Integration   MeshIntegrationClient
+	LandingZone   MeshLandingZoneClient
+	Location      MeshLocationClient
+	PaymentMethod MeshPaymentMethodClient
+	Platform      MeshPlatformClient
+
+	Project             MeshProjectClient
+	ProjectGroupBinding MeshProjectGroupBindingClient
+	ProjectUserBinding  MeshProjectUserBindingClient
+
+	TagDefinition MeshTagDefinitionClient
+
+	Tenant   MeshTenantClient
+	TenantV4 MeshTenantV4Client
+
 	Workspace             MeshWorkspaceClient
 	WorkspaceGroupBinding MeshWorkspaceGroupBindingClient
 	WorkspaceUserBinding  MeshWorkspaceUserBindingClient
@@ -41,6 +49,8 @@ func New(rootUrl *url.URL, userAgent, apiKey, apiSecret string) Client {
 	return Client{
 		newBuildingBlockClient(httpClient),
 		newBuildingBlockV2Client(httpClient),
+		newBuildingBlockDefinitionClient(httpClient),
+		newBuildingBlockDefinitionVersionClient(httpClient),
 		newIntegrationClient(httpClient),
 		newLandingZoneClient(httpClient),
 		newLocationClient(httpClient),
