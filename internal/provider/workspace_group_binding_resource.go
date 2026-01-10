@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
 
@@ -30,7 +29,7 @@ func NewWorkspaceGroupBindingResource() resource.Resource {
 
 // workspaceGroupBindingResource is the resource implementation.
 type workspaceGroupBindingResource struct {
-	client client.MeshStackProviderClient
+	MeshWorkspaceGroupBinding client.MeshWorkspaceGroupBindingClient
 }
 
 // Metadata returns the resource type name.
@@ -40,22 +39,9 @@ func (r *workspaceGroupBindingResource) Metadata(_ context.Context, req resource
 
 // Configure adds the provider configured client to the resource.
 func (r *workspaceGroupBindingResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
-	}
-
-	client, ok := req.ProviderData.(client.MeshStackProviderClient)
-
-	if !ok {
-		resp.Diagnostics.AddError(
-			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *MeshStackProviderClient, got: %T. Please report this issue to the provider developers.", req.ProviderData),
-		)
-
-		return
-	}
-
-	r.client = client
+	resp.Diagnostics.Append(configureProviderClient(req.ProviderData, func(client client.Client) {
+		r.MeshWorkspaceGroupBinding = client.WorkspaceGroupBinding
+	})...)
 }
 
 // Schema defines the schema for the resource.
@@ -144,7 +130,7 @@ func (r *workspaceGroupBindingResource) Create(ctx context.Context, req resource
 		return
 	}
 
-	binding, err := r.client.WorkspaceGroupBinding.Create(&plan)
+	binding, err := r.MeshWorkspaceGroupBinding.Create(&plan)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating workspace group binding",
@@ -165,7 +151,7 @@ func (r *workspaceGroupBindingResource) Read(ctx context.Context, req resource.R
 		return
 	}
 
-	binding, err := r.client.WorkspaceGroupBinding.Read(name)
+	binding, err := r.MeshWorkspaceGroupBinding.Read(name)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read workspace group binding", err.Error())
 	}
@@ -191,7 +177,7 @@ func (r *workspaceGroupBindingResource) Delete(ctx context.Context, req resource
 		return
 	}
 
-	err := r.client.WorkspaceGroupBinding.Delete(name)
+	err := r.MeshWorkspaceGroupBinding.Delete(name)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error deleting workspace group binding",

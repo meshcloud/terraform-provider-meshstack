@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
 
@@ -30,7 +29,7 @@ func NewProjectUserBindingResource() resource.Resource {
 
 // projectUserBindingResource is the resource implementation.
 type projectUserBindingResource struct {
-	client client.MeshStackProviderClient
+	MeshProjectUserBinding client.MeshProjectUserBindingClient
 }
 
 // Metadata returns the resource type name.
@@ -40,22 +39,9 @@ func (r *projectUserBindingResource) Metadata(_ context.Context, req resource.Me
 
 // Configure adds the provider configured client to the resource.
 func (r *projectUserBindingResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
-	}
-
-	client, ok := req.ProviderData.(client.MeshStackProviderClient)
-
-	if !ok {
-		resp.Diagnostics.AddError(
-			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *MeshStackProviderClient, got: %T. Please report this issue to the provider developers.", req.ProviderData),
-		)
-
-		return
-	}
-
-	r.client = client
+	resp.Diagnostics.Append(configureProviderClient(req.ProviderData, func(client client.Client) {
+		r.MeshProjectUserBinding = client.ProjectUserBinding
+	})...)
 }
 
 // Schema defines the schema for the resource.
@@ -149,7 +135,7 @@ func (r *projectUserBindingResource) Create(ctx context.Context, req resource.Cr
 		return
 	}
 
-	binding, err := r.client.ProjectUserBinding.Create(&plan)
+	binding, err := r.MeshProjectUserBinding.Create(&plan)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating project user binding",
@@ -170,7 +156,7 @@ func (r *projectUserBindingResource) Read(ctx context.Context, req resource.Read
 		return
 	}
 
-	binding, err := r.client.ProjectUserBinding.Read(name)
+	binding, err := r.MeshProjectUserBinding.Read(name)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read project user binding", err.Error())
 	}
@@ -196,7 +182,7 @@ func (r *projectUserBindingResource) Delete(ctx context.Context, req resource.De
 		return
 	}
 
-	err := r.client.ProjectUserBinding.Delete(name)
+	err := r.MeshProjectUserBinding.Delete(name)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error deleting project user binding",

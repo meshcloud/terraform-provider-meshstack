@@ -23,7 +23,7 @@ func NewProjectGroupBindingDataSource() datasource.DataSource {
 }
 
 type projectGroupBindingDataSource struct {
-	client client.MeshStackProviderClient
+	MeshProjectGroupBinding client.MeshProjectGroupBindingClient
 }
 
 func (d *projectGroupBindingDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -93,23 +93,10 @@ func (d *projectGroupBindingDataSource) Schema(ctx context.Context, req datasour
 	}
 }
 
-func (d *projectGroupBindingDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
-	}
-
-	client, ok := req.ProviderData.(client.MeshStackProviderClient)
-
-	if !ok {
-		resp.Diagnostics.AddError(
-			"Unexpected Data Source Configure Type",
-			fmt.Sprintf("Expected *MeshStackProviderClient, got: %T. Please report this issue to the provider developers.", req.ProviderData),
-		)
-
-		return
-	}
-
-	d.client = client
+func (d *projectGroupBindingDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+	resp.Diagnostics.Append(configureProviderClient(req.ProviderData, func(client client.Client) {
+		d.MeshProjectGroupBinding = client.ProjectGroupBinding
+	})...)
 }
 
 func (d *projectGroupBindingDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
@@ -119,7 +106,7 @@ func (d *projectGroupBindingDataSource) Read(ctx context.Context, req datasource
 		return
 	}
 
-	binding, err := d.client.ProjectGroupBinding.Read(name)
+	binding, err := d.MeshProjectGroupBinding.Read(name)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read project group binding", err.Error())
 	}

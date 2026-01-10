@@ -38,7 +38,7 @@ func NewLandingZoneResource() resource.Resource {
 
 // landingZoneResource is the resource implementation.
 type landingZoneResource struct {
-	client client.MeshStackProviderClient
+	MeshLandingZone client.MeshLandingZoneClient
 }
 
 // Metadata returns the resource type name.
@@ -48,22 +48,9 @@ func (r *landingZoneResource) Metadata(_ context.Context, req resource.MetadataR
 
 // Configure adds the provider configured client to the resource.
 func (r *landingZoneResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
-	}
-
-	client, ok := req.ProviderData.(client.MeshStackProviderClient)
-
-	if !ok {
-		resp.Diagnostics.AddError(
-			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *MeshStackProviderClient, got: %T. Please report this issue to the provider developers.", req.ProviderData),
-		)
-
-		return
-	}
-
-	r.client = client
+	resp.Diagnostics.Append(configureProviderClient(req.ProviderData, func(client client.Client) {
+		r.MeshLandingZone = client.LandingZone
+	})...)
 }
 
 func (r *landingZoneResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
@@ -488,7 +475,7 @@ func (r *landingZoneResource) Create(ctx context.Context, req resource.CreateReq
 		return
 	}
 
-	createdLandingZone, err := r.client.LandingZone.Create(&landingZone)
+	createdLandingZone, err := r.MeshLandingZone.Create(&landingZone)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Creating Landing Zone",
@@ -510,7 +497,7 @@ func (r *landingZoneResource) Read(ctx context.Context, req resource.ReadRequest
 		return
 	}
 
-	landingZone, err := r.client.LandingZone.Read(name)
+	landingZone, err := r.MeshLandingZone.Read(name)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("Could not read landing zone '%s'", name),
@@ -543,7 +530,7 @@ func (r *landingZoneResource) Update(ctx context.Context, req resource.UpdateReq
 		return
 	}
 
-	updatedLandingZone, err := r.client.LandingZone.Update(landingZone.Metadata.Name, &landingZone)
+	updatedLandingZone, err := r.MeshLandingZone.Update(landingZone.Metadata.Name, &landingZone)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Updating Landing Zone",
@@ -564,7 +551,7 @@ func (r *landingZoneResource) Delete(ctx context.Context, req resource.DeleteReq
 		return
 	}
 
-	err := r.client.LandingZone.Delete(name)
+	err := r.MeshLandingZone.Delete(name)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("Could not delete landing zone '%s'", name),

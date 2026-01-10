@@ -33,7 +33,7 @@ func NewProjectResource() resource.Resource {
 
 // projectResource is the resource implementation.
 type projectResource struct {
-	client client.MeshStackProviderClient
+	MeshProject client.MeshProjectClient
 }
 
 // Metadata returns the resource type name.
@@ -43,22 +43,9 @@ func (r *projectResource) Metadata(_ context.Context, req resource.MetadataReque
 
 // Configure adds the provider configured client to the resource.
 func (r *projectResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
-	}
-
-	client, ok := req.ProviderData.(client.MeshStackProviderClient)
-
-	if !ok {
-		resp.Diagnostics.AddError(
-			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *MeshStackProviderClient, got: %T. Please report this issue to the provider developers.", req.ProviderData),
-		)
-
-		return
-	}
-
-	r.client = client
+	resp.Diagnostics.Append(configureProviderClient(req.ProviderData, func(client client.Client) {
+		r.MeshProject = client.Project
+	})...)
 }
 
 // Schema defines the schema for the resource.
@@ -194,7 +181,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		},
 	}
 
-	project, err := r.client.Project.Create(&create)
+	project, err := r.MeshProject.Create(&create)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating project",
@@ -220,7 +207,7 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	project, err := r.client.Project.Read(workspace, name)
+	project, err := r.MeshProject.Read(workspace, name)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read project", err.Error())
 	}
@@ -277,7 +264,7 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 		},
 	}
 
-	project, err := r.client.Project.Update(&create)
+	project, err := r.MeshProject.Update(&create)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error updating project",
@@ -302,7 +289,7 @@ func (r *projectResource) Delete(ctx context.Context, req resource.DeleteRequest
 		return
 	}
 
-	err := r.client.Project.Delete(state.Metadata.OwnedByWorkspace, state.Metadata.Name)
+	err := r.MeshProject.Delete(state.Metadata.OwnedByWorkspace, state.Metadata.Name)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error deleting project",

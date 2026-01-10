@@ -35,7 +35,7 @@ func NewWorkspaceResource() resource.Resource {
 
 // workspaceResource is the resource implementation.
 type workspaceResource struct {
-	client client.MeshStackProviderClient
+	MeshWorkspace client.MeshWorkspaceClient
 }
 
 // Metadata returns the resource type name.
@@ -45,22 +45,9 @@ func (r *workspaceResource) Metadata(_ context.Context, req resource.MetadataReq
 
 // Configure adds the provider configured client to the resource.
 func (r *workspaceResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
-	}
-
-	client, ok := req.ProviderData.(client.MeshStackProviderClient)
-
-	if !ok {
-		resp.Diagnostics.AddError(
-			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *MeshStackProviderClient, got: %T. Please report this issue to the provider developers.", req.ProviderData),
-		)
-
-		return
-	}
-
-	r.client = client
+	resp.Diagnostics.Append(configureProviderClient(req.ProviderData, func(client client.Client) {
+		r.MeshWorkspace = client.Workspace
+	})...)
 }
 
 func (r *workspaceResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
@@ -152,7 +139,7 @@ func (r *workspaceResource) Create(ctx context.Context, req resource.CreateReque
 		return
 	}
 
-	createdWorkspace, err := r.client.Workspace.Create(&workspace)
+	createdWorkspace, err := r.MeshWorkspace.Create(&workspace)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Creating Workspace",
@@ -174,7 +161,7 @@ func (r *workspaceResource) Read(ctx context.Context, req resource.ReadRequest, 
 		return
 	}
 
-	workspace, err := r.client.Workspace.Read(name)
+	workspace, err := r.MeshWorkspace.Read(name)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("Could not read workspace '%s'", name),
@@ -208,7 +195,7 @@ func (r *workspaceResource) Update(ctx context.Context, req resource.UpdateReque
 		return
 	}
 
-	updatedWorkspace, err := r.client.Workspace.Update(workspace.Metadata.Name, &workspace)
+	updatedWorkspace, err := r.MeshWorkspace.Update(workspace.Metadata.Name, &workspace)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Updating Workspace",
@@ -229,7 +216,7 @@ func (r *workspaceResource) Delete(ctx context.Context, req resource.DeleteReque
 		return
 	}
 
-	err := r.client.Workspace.Delete(name)
+	err := r.MeshWorkspace.Delete(name)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("Could not delete workspace '%s'", name),

@@ -24,7 +24,7 @@ func NewPaymentMethodDataSource() datasource.DataSource {
 }
 
 type paymentMethodDataSource struct {
-	client client.MeshStackProviderClient
+	MeshPaymentMethod client.MeshPaymentMethodClient
 }
 
 func (d *paymentMethodDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -97,19 +97,9 @@ func (d *paymentMethodDataSource) Schema(_ context.Context, _ datasource.SchemaR
 }
 
 func (d *paymentMethodDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
-	}
-
-	client, ok := req.ProviderData.(client.MeshStackProviderClient)
-	if !ok {
-		resp.Diagnostics.AddError(
-			"Unexpected Data Source Configure Type",
-			fmt.Sprintf("Expected client.MeshStackProviderClient, got: %T. Please report this issue to the provider developers.", req.ProviderData),
-		)
-		return
-	}
-	d.client = client
+	resp.Diagnostics.Append(configureProviderClient(req.ProviderData, func(client client.Client) {
+		d.MeshPaymentMethod = client.PaymentMethod
+	})...)
 }
 
 func (d *paymentMethodDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
@@ -122,7 +112,7 @@ func (d *paymentMethodDataSource) Read(ctx context.Context, req datasource.ReadR
 		return
 	}
 
-	paymentMethod, err := d.client.PaymentMethod.Read(workspace, name)
+	paymentMethod, err := d.MeshPaymentMethod.Read(workspace, name)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("Could not read payment method '%s' in workspace '%s'", name, workspace),

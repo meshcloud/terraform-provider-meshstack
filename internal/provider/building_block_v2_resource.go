@@ -33,30 +33,17 @@ func NewBuildingBlockV2Resource() resource.Resource {
 }
 
 type buildingBlockV2Resource struct {
-	client client.MeshStackProviderClient
+	MeshBuildingBlockV2 client.MeshBuildingBlockV2Client
 }
 
 func (r *buildingBlockV2Resource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_building_block_v2"
 }
 
-func (r *buildingBlockV2Resource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
-	}
-
-	client, ok := req.ProviderData.(client.MeshStackProviderClient)
-
-	if !ok {
-		resp.Diagnostics.AddError(
-			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *MeshStackProviderClient, got: %T. Please report this issue to the provider developers.", req.ProviderData),
-		)
-
-		return
-	}
-
-	r.client = client
+func (r *buildingBlockV2Resource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+	resp.Diagnostics.Append(configureProviderClient(req.ProviderData, func(client client.Client) {
+		r.MeshBuildingBlockV2 = client.BuildingBlockV2
+	})...)
 }
 
 func (r *buildingBlockV2Resource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
@@ -281,7 +268,7 @@ func (r *buildingBlockV2Resource) Create(ctx context.Context, req resource.Creat
 		return
 	}
 
-	created, err := r.client.BuildingBlockV2.Create(&bb)
+	created, err := r.MeshBuildingBlockV2.Create(&bb)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating building block",
@@ -302,7 +289,7 @@ func (r *buildingBlockV2Resource) Create(ctx context.Context, req resource.Creat
 	// Poll for completion if wait_for_completion is true
 	if waitForCompletion {
 		uuid := created.Metadata.Uuid
-		polled, err := r.client.BuildingBlockV2.PollUntilCompletion(ctx, uuid)
+		polled, err := r.MeshBuildingBlockV2.PollUntilCompletion(ctx, uuid)
 
 		if polled != nil {
 			// Always set last known building block state
@@ -326,7 +313,7 @@ func (r *buildingBlockV2Resource) Read(ctx context.Context, req resource.ReadReq
 		return
 	}
 
-	bb, err := r.client.BuildingBlockV2.Read(uuid)
+	bb, err := r.MeshBuildingBlockV2.Read(uuid)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read building block", err.Error())
 	}
@@ -357,7 +344,7 @@ func (r *buildingBlockV2Resource) Delete(ctx context.Context, req resource.Delet
 		return
 	}
 
-	err := r.client.BuildingBlockV2.Delete(uuid)
+	err := r.MeshBuildingBlockV2.Delete(uuid)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error deleting building block",
@@ -368,7 +355,7 @@ func (r *buildingBlockV2Resource) Delete(ctx context.Context, req resource.Delet
 
 	// Poll for completion if wait_for_completion is true
 	if !waitForCompletion.IsNull() && waitForCompletion.ValueBool() {
-		err := r.client.BuildingBlockV2.PollUntilDeletion(ctx, uuid)
+		err := r.MeshBuildingBlockV2.PollUntilDeletion(ctx, uuid)
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Error waiting for building block deletion completion",

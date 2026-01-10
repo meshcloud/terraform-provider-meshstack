@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -16,7 +15,7 @@ func NewTagDefinitionDataSource() datasource.DataSource {
 }
 
 type tagDefinitionDataSource struct {
-	client client.MeshStackProviderClient
+	MeshTagDefinition client.MeshTagDefinitionClient
 }
 
 func (d *tagDefinitionDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -183,23 +182,10 @@ func (d *tagDefinitionDataSource) Schema(ctx context.Context, req datasource.Sch
 	}
 }
 
-func (d *tagDefinitionDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
-	}
-
-	client, ok := req.ProviderData.(client.MeshStackProviderClient)
-
-	if !ok {
-		resp.Diagnostics.AddError(
-			"Unexpected Data Source Configure Type",
-			fmt.Sprintf("Expected *MeshStackProviderClient, got: %T. Please report this issue to the provider developers.", req.ProviderData),
-		)
-
-		return
-	}
-
-	d.client = client
+func (d *tagDefinitionDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+	resp.Diagnostics.Append(configureProviderClient(req.ProviderData, func(client client.Client) {
+		d.MeshTagDefinition = client.TagDefinition
+	})...)
 }
 
 func (d *tagDefinitionDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
@@ -210,7 +196,7 @@ func (d *tagDefinitionDataSource) Read(ctx context.Context, req datasource.ReadR
 		return
 	}
 
-	tag, err := d.client.TagDefinition.Read(name)
+	tag, err := d.MeshTagDefinition.Read(name)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read meshTagDefinition", err.Error())
 		return
