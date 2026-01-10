@@ -1,0 +1,5 @@
+{
+  "isSensitive": false,
+  "argument": true,
+  "defaultValue": "some-string"
+}
