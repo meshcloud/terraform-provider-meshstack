@@ -1,0 +1,6 @@
+{
+  "isSensitive": false,
+  "argument": {
+    "hash": "some-hash-looks-like-secret"
+  }
+}
