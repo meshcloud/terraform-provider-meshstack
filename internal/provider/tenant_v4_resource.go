@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -19,6 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
+	"github.com/meshcloud/terraform-provider-meshstack/internal/util/poll"
 )
 
 var (
@@ -294,14 +296,12 @@ func (r *tenantV4Resource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	// Poll for completion if wait_for_completion is true
-	if !plan.WaitForCompletion.IsNull() && plan.WaitForCompletion.ValueBool() {
-		tenant, err = r.MeshTenantV4.PollUntilCreation(ctx, tenant.Metadata.Uuid)
+	// Poll for completion if wait_for_completion is true (and not null)
+	if plan.WaitForCompletion.ValueBool() {
+		err := poll.AtMostFor(30*time.Minute, r.MeshTenantV4.ReadFunc(tenant.Metadata.Uuid), poll.WithLastResultTo(&tenant)).
+			Until(ctx, (*client.MeshTenantV4).CreationSuccessful)
 		if err != nil {
-			resp.Diagnostics.AddError(
-				"Error waiting for tenant creation",
-				fmt.Sprintf("Could not wait for tenant creation to complete, unexpected error: %s", err.Error()),
-			)
+			resp.Diagnostics.AddError("Failed to await tenant creation", err.Error())
 			return
 		}
 	}
@@ -371,13 +371,10 @@ func (r *tenantV4Resource) Delete(ctx context.Context, req resource.DeleteReques
 	}
 
 	// Poll for deletion completion if wait_for_completion is true
-	if !state.WaitForCompletion.IsNull() && state.WaitForCompletion.ValueBool() {
-		err = r.MeshTenantV4.PollUntilDeletion(ctx, uuid)
-		if err != nil {
-			resp.Diagnostics.AddError(
-				"Error waiting for tenant deletion",
-				fmt.Sprintf("Could not wait for tenant deletion to complete, unexpected error: %s", err.Error()),
-			)
+	if state.WaitForCompletion.ValueBool() {
+		if err := poll.AtMostFor(30*time.Minute, r.MeshTenantV4.ReadFunc(uuid)).
+			Until(ctx, (*client.MeshTenantV4).DeletionSuccessful); err != nil {
+			resp.Diagnostics.AddError("Failed to await tenant deletion", err.Error())
 			return
 		}
 	}
