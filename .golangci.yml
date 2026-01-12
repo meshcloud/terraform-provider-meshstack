@@ -40,31 +40,51 @@ linters:
   settings:
     depguard:
       rules:
-        main:
+        client:
           files:
+            - "**/client/**/*.go"
             - "!$test"
-          list-mode: lax
-          deny:
-            - pkg: "log"
-              desc: "Always use 'hclog' or SDK logging"
+          list-mode: strict
           allow:
             - $gostd
-            - github.com/hashicorp/terraform-plugin-framework
+            - github.com/meshcloud/terraform-provider-meshstack/client
+        client-test:
+          files:
+            - "**/client/**/*_test.go"
+          list-mode: strict
+          allow:
+            - $gostd
+            - github.com/meshcloud/terraform-provider-meshstack/client
+            - github.com/stretchr/testify
+        provider:
+          files:
+            - "!$test"
+            - "!**/client/**/*.go"
+          list-mode: strict
+          deny:
+            - pkg: log # as $gostd is allowed
+              desc: Always use 'hclog' or SDK logging
+          allow:
+            - $gostd
+            # explicitly specifying 'client' and 'internal' suffixes prevents 'examples' package to be included in non-test files
+            - github.com/meshcloud/terraform-provider-meshstack/client
+            - github.com/meshcloud/terraform-provider-meshstack/internal
+            - github.com/hashicorp/terraform-plugin-framework/
             - github.com/hashicorp/terraform-plugin-framework-validators
             - github.com/hashicorp/terraform-plugin-go
             - github.com/hashicorp/terraform-plugin-sdk
             - github.com/hashicorp/terraform-plugin-log
-            - github.com/meshcloud/terraform-provider-meshstack
-        test:
+        provider-test:
           files:
             - "$test"
-          list-mode: lax
+            - "!**/client/**/*_test.go"
+            - "!**/internal/provider/provider_test.go" # contains common adapters for all tests, using non-testing deps.
+          list-mode: strict
+          deny:
+            - pkg: github.com/meshcloud/terraform-provider-meshstack/client/internal
+              desc: Do not use client/internal in provider tests
           allow:
             - $gostd
-            - github.com/hashicorp/terraform-plugin-framework
-            - github.com/hashicorp/terraform-plugin-framework-validators
-            - github.com/hashicorp/terraform-plugin-go
-            - github.com/hashicorp/terraform-plugin-sdk
+            - github.com/meshcloud/terraform-provider-meshstack # any packages are included in tests
             - github.com/hashicorp/terraform-plugin-testing
-            - github.com/meshcloud/terraform-provider-meshstack
             - github.com/stretchr/testify

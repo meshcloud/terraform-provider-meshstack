@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -21,6 +22,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
+	"github.com/meshcloud/terraform-provider-meshstack/internal/util/poll"
 )
 
 var (
@@ -276,7 +278,7 @@ func (r *buildingBlockV2Resource) Create(ctx context.Context, req resource.Creat
 		)
 		return
 	}
-	resp.Diagnostics.Append(setStateFromResponseV2(&ctx, &resp.State, created)...)
+	resp.Diagnostics.Append(setStateFromResponseV2(ctx, &resp.State, created)...)
 
 	// ensure that user inputs and wait_for_completion are passed along from the plan
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("spec").AtName("inputs"), userInputs)...)
@@ -286,21 +288,17 @@ func (r *buildingBlockV2Resource) Create(ctx context.Context, req resource.Creat
 		return
 	}
 
-	// Poll for completion if wait_for_completion is true
+	// Pollable for completion if wait_for_completion is true
 	if waitForCompletion {
-		uuid := created.Metadata.Uuid
-		polled, err := r.MeshBuildingBlockV2.PollUntilCompletion(ctx, uuid)
-
-		if polled != nil {
-			// Always set last known building block state
-			resp.Diagnostics.Append(setStateFromResponseV2(&ctx, &resp.State, polled)...)
+		var lastPollOutput *client.MeshBuildingBlockV2
+		err := poll.AtMostFor(30*time.Minute, r.MeshBuildingBlockV2.ReadFunc(created.Metadata.Uuid), poll.WithLastResultTo(&lastPollOutput)).
+			Until(ctx, (*client.MeshBuildingBlockV2).CreateSuccessful)
+		if lastPollOutput != nil {
+			// Always set last known building block state, no matter what error!
+			resp.Diagnostics.Append(setStateFromResponseV2(ctx, &resp.State, lastPollOutput)...)
 		}
-
 		if err != nil {
-			resp.Diagnostics.AddError(
-				"Error waiting for building block completion",
-				err.Error(),
-			)
+			resp.Diagnostics.AddError("Failed to await building block creation", err.Error())
 			return
 		}
 	}
@@ -323,7 +321,7 @@ func (r *buildingBlockV2Resource) Read(ctx context.Context, req resource.ReadReq
 		return
 	}
 
-	resp.Diagnostics.Append(setStateFromResponseV2(&ctx, &resp.State, bb)...)
+	resp.Diagnostics.Append(setStateFromResponseV2(ctx, &resp.State, bb)...)
 }
 
 func (r *buildingBlockV2Resource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -353,14 +351,11 @@ func (r *buildingBlockV2Resource) Delete(ctx context.Context, req resource.Delet
 		return
 	}
 
-	// Poll for completion if wait_for_completion is true
-	if !waitForCompletion.IsNull() && waitForCompletion.ValueBool() {
-		err := r.MeshBuildingBlockV2.PollUntilDeletion(ctx, uuid)
-		if err != nil {
-			resp.Diagnostics.AddError(
-				"Error waiting for building block deletion completion",
-				err.Error(),
-			)
+	// Poll for completion if wait_for_completion is true (and not null)
+	if waitForCompletion.ValueBool() {
+		if err := poll.AtMostFor(30*time.Minute, r.MeshBuildingBlockV2.ReadFunc(uuid)).
+			Until(ctx, (*client.MeshBuildingBlockV2).DeletionSuccessful); err != nil {
+			resp.Diagnostics.AddError("Failed to await building block deletion", err.Error())
 			return
 		}
 	}
@@ -371,18 +366,18 @@ func (r *buildingBlockV2Resource) Delete(ctx context.Context, req resource.Delet
 // 	resource.ImportStatePassthroughID(ctx, path.Root("metadata").AtName("uuid"), req, resp)
 // }
 
-func setStateFromResponseV2(ctx *context.Context, state *tfsdk.State, bb *client.MeshBuildingBlockV2) diag.Diagnostics {
+func setStateFromResponseV2(ctx context.Context, state *tfsdk.State, bb *client.MeshBuildingBlockV2) diag.Diagnostics {
 	diags := make(diag.Diagnostics, 0)
 
-	diags.Append(state.SetAttribute(*ctx, path.Root("api_version"), bb.ApiVersion)...)
-	diags.Append(state.SetAttribute(*ctx, path.Root("kind"), bb.Kind)...)
+	diags.Append(state.SetAttribute(ctx, path.Root("api_version"), bb.ApiVersion)...)
+	diags.Append(state.SetAttribute(ctx, path.Root("kind"), bb.Kind)...)
 
-	diags.Append(state.SetAttribute(*ctx, path.Root("metadata"), bb.Metadata)...)
+	diags.Append(state.SetAttribute(ctx, path.Root("metadata"), bb.Metadata)...)
 
-	diags.Append(state.SetAttribute(*ctx, path.Root("spec").AtName("display_name"), bb.Spec.DisplayName)...)
-	diags.Append(state.SetAttribute(*ctx, path.Root("spec").AtName("building_block_definition_version_ref"), bb.Spec.BuildingBlockDefinitionVersionRef)...)
-	diags.Append(state.SetAttribute(*ctx, path.Root("spec").AtName("target_ref"), bb.Spec.TargetRef)...)
-	diags.Append(state.SetAttribute(*ctx, path.Root("spec").AtName("parent_building_blocks"), bb.Spec.ParentBuildingBlocks)...)
+	diags.Append(state.SetAttribute(ctx, path.Root("spec").AtName("display_name"), bb.Spec.DisplayName)...)
+	diags.Append(state.SetAttribute(ctx, path.Root("spec").AtName("building_block_definition_version_ref"), bb.Spec.BuildingBlockDefinitionVersionRef)...)
+	diags.Append(state.SetAttribute(ctx, path.Root("spec").AtName("target_ref"), bb.Spec.TargetRef)...)
+	diags.Append(state.SetAttribute(ctx, path.Root("spec").AtName("parent_building_blocks"), bb.Spec.ParentBuildingBlocks)...)
 
 	combinedInputs := make(map[string]buildingBlockIoModel)
 	for _, input := range bb.Spec.Inputs {
@@ -395,9 +390,9 @@ func setStateFromResponseV2(ctx *context.Context, state *tfsdk.State, bb *client
 
 		combinedInputs[input.Key] = *value
 	}
-	diags.Append(state.SetAttribute(*ctx, path.Root("spec").AtName("combined_inputs"), combinedInputs)...)
+	diags.Append(state.SetAttribute(ctx, path.Root("spec").AtName("combined_inputs"), combinedInputs)...)
 
-	diags.Append(state.SetAttribute(*ctx, path.Root("status").AtName("status"), bb.Status.Status)...)
+	diags.Append(state.SetAttribute(ctx, path.Root("status").AtName("status"), bb.Status.Status)...)
 
 	outputs := make(map[string]buildingBlockOutputModel)
 	for _, output := range bb.Status.Outputs {
@@ -410,7 +405,7 @@ func setStateFromResponseV2(ctx *context.Context, state *tfsdk.State, bb *client
 
 		outputs[output.Key] = value.toOutputModel()
 	}
-	diags.Append(state.SetAttribute(*ctx, path.Root("status").AtName("outputs"), outputs)...)
+	diags.Append(state.SetAttribute(ctx, path.Root("status").AtName("outputs"), outputs)...)
 
 	return diags
 }

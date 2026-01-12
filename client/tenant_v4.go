@@ -3,9 +3,6 @@ package client
 import (
 	"context"
 	"fmt"
-	"time"
-
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client/internal"
 )
@@ -69,7 +66,13 @@ func newTenantV4Client(ctx context.Context, httpClient *internal.HttpClient) Mes
 }
 
 func (c MeshTenantV4Client) Read(ctx context.Context, uuid string) (*MeshTenantV4, error) {
-	return c.meshObject.Get(ctx, uuid)
+	return c.ReadFunc(uuid)(ctx)
+}
+
+func (c MeshTenantV4Client) ReadFunc(uuid string) func(ctx context.Context) (*MeshTenantV4, error) {
+	return func(ctx context.Context) (*MeshTenantV4, error) {
+		return c.meshObject.Get(ctx, uuid)
+	}
 }
 
 func (c MeshTenantV4Client) Create(ctx context.Context, tenant *MeshTenantV4Create) (*MeshTenantV4, error) {
@@ -80,58 +83,17 @@ func (c MeshTenantV4Client) Delete(ctx context.Context, uuid string) error {
 	return c.meshObject.Delete(ctx, uuid)
 }
 
-// PollUntilCreation polls a tenant until creation completes (platformTenantId is set)
-// Returns the final tenant state or an error if polling fails or times out.
-func (c MeshTenantV4Client) PollUntilCreation(ctx context.Context, uuid string) (*MeshTenantV4, error) {
-	var result *MeshTenantV4
-
-	err := retry.RetryContext(ctx, 30*time.Minute, c.waitForCreationFunc(ctx, uuid, &result))
-	return result, err
-}
-
-// waitForCreationFunc returns a RetryFunc that checks tenant creation status.
-func (c MeshTenantV4Client) waitForCreationFunc(ctx context.Context, uuid string, result **MeshTenantV4) retry.RetryFunc {
-	return func() *retry.RetryError {
-		current, err := c.Read(ctx, uuid)
-		if err != nil {
-			return retry.NonRetryableError(fmt.Errorf("could not read tenant status while waiting for creation: %w", err))
-		}
-
-		if current == nil {
-			return retry.NonRetryableError(fmt.Errorf("tenant was not found while waiting for creation"))
-		}
-
-		// Check if creation is complete (platformTenantId is set)
-		if current.Spec.PlatformTenantId != nil && *current.Spec.PlatformTenantId != "" {
-			*result = current
-			return nil // Success, stop retrying
-		}
-
-		// Not done yet, continue polling
-		return retry.RetryableError(fmt.Errorf("waiting for tenant %s creation to complete: platformTenantId not yet set", uuid))
+func (tenant *MeshTenantV4) CreationSuccessful() (done bool, err error) {
+	switch {
+	case tenant == nil:
+		err = fmt.Errorf("tenant not found after creation")
+	case tenant.Spec.PlatformTenantId != nil && *tenant.Spec.PlatformTenantId != "":
+		// Creation is complete (platformTenantId is set and not empty)
+		done = true
 	}
+	return
 }
 
-// PollUntilDeletion polls a tenant until it is deleted (not found)
-// Returns nil on successful deletion or an error if polling fails or times out.
-func (c MeshTenantV4Client) PollUntilDeletion(ctx context.Context, uuid string) error {
-	return retry.RetryContext(ctx, 30*time.Minute, c.waitForDeletionFunc(ctx, uuid))
-}
-
-// waitForDeletionFunc returns a RetryFunc that checks tenant deletion status.
-func (c MeshTenantV4Client) waitForDeletionFunc(ctx context.Context, uuid string) retry.RetryFunc {
-	return func() *retry.RetryError {
-		current, err := c.Read(ctx, uuid)
-		if err != nil {
-			return retry.NonRetryableError(fmt.Errorf("could not read tenant status while waiting for deletion: %w", err))
-		}
-
-		// If tenant is not found, deletion is complete
-		if current == nil {
-			return nil // Success, stop retrying
-		}
-
-		// Not done yet, continue polling
-		return retry.RetryableError(fmt.Errorf("waiting for tenant %s to be deleted: still present", uuid))
-	}
+func (tenant *MeshTenantV4) DeletionSuccessful() (done bool, err error) {
+	return tenant == nil, nil
 }
