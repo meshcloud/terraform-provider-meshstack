@@ -1,14 +1,13 @@
 package client
 
 import (
-	"github.com/meshcloud/terraform-provider-meshstack/client/internal"
-)
-
-import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"time"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
+
+	"github.com/meshcloud/terraform-provider-meshstack/client/internal"
 )
 
 type MeshTenantV4 struct {

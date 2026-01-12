@@ -1,8 +1,6 @@
 package provider
 
 import (
-	"github.com/meshcloud/terraform-provider-meshstack/client"
-
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -12,6 +10,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"github.com/meshcloud/terraform-provider-meshstack/client"
 )
 
 // Schema helpers

@@ -13,37 +13,32 @@ tasks:
     env:
       TF_ACC: 1
     cmds:
-      - go test ./... -v {{.TESTARGS}} -timeout 120m
+      - go test ./... -v {{.CLI_ARGS}} -timeout 120m
     
   test:
     desc: Run unit tests only
     cmds:
-      - go test ./... -v {{.TESTARGS}} -short
+      - go test ./... -v {{.CLI_ARGS}} -short
 
   build:
     desc: Build the provider
     cmds:
-      - go build -o terraform-provider-meshstack
+      - go build {{.CLI_ARGS}} -o terraform-provider-meshstack
 
   install:
     desc: Install provider locally for testing
     cmds:
-      - go install
-
-  fmt:
-    desc: Format Go code
-    cmds:
-      - go fmt ./...
+      - go install {{.CLI_ARGS}}
 
   lint:
     desc: Run golangci-lint
     cmds:
-      - golangci-lint run
+      - golangci-lint run {{.CLI_ARGS}}
 
   generate:
     desc: Generate documentation
     cmds:
-      - go generate
+      - go generate {{.CLI_ARGS}}
 
   clean:
     desc: Clean build artifacts

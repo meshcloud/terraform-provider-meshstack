@@ -36,7 +36,7 @@ jobs:
 
   golangci:
     needs: [ build ]
-    name: Go Lint
+    name: Go Lint and Format Check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -47,25 +47,10 @@ jobs:
         uses: golangci/golangci-lint-action@v9
         with:
           version: latest
-
-  format:
-    needs: [ build ]
-    name: Go Format Check
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-go@v6
-        with:
-          go-version-file: 'go.mod'
-          cache: true
-      - name: Check Go formatting
+      - name: Suggest fix command on failure
+        if: failure()
         run: |
-          if [ "$(gofmt -l . | wc -l)" -gt 0 ]; then
-            echo "The following files are not formatted correctly:"
-            gofmt -l .
-            echo "Please run 'gofmt -w .' (or configure your IDE to automatically run gofmt upon save) to fix formatting issues."
-            exit 1
-          fi
+          echo "::error::Linting or formatting issues detected. Run 'golangci-lint run --fix' locally to automatically fix these issues, then commit the changes."
 
   generate:
     name: Generate Terraform Provider Docs

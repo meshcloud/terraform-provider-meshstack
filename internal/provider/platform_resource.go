@@ -5,9 +5,6 @@ import (
 	"fmt"
 	"regexp"
 
-	"github.com/meshcloud/terraform-provider-meshstack/client"
-	"github.com/meshcloud/terraform-provider-meshstack/internal/modifiers/platformtypemodifier"
-
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -20,6 +17,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"github.com/meshcloud/terraform-provider-meshstack/client"
+	"github.com/meshcloud/terraform-provider-meshstack/internal/modifiers/platformtypemodifier"
 )
 
 // Ensure the implementation satisfies the expected interfaces.

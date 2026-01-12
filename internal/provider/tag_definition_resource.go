@@ -5,9 +5,6 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/meshcloud/terraform-provider-meshstack/client"
-	"github.com/meshcloud/terraform-provider-meshstack/internal/modifiers/tagdefinitionmodifier"
-
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -22,6 +19,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
+
+	"github.com/meshcloud/terraform-provider-meshstack/client"
+	"github.com/meshcloud/terraform-provider-meshstack/internal/modifiers/tagdefinitionmodifier"
 )
 
 // Ensure the implementation satisfies the expected interfaces.

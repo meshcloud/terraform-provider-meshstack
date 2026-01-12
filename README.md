@@ -33,9 +33,9 @@ Replace `<GOBIN>` with the output of `go env GOBIN` or `go env GOPATH` + `/bin`.
 Run `go install` to update your local provider installation.
 If everything is working correctly Terraform will show a warning that dev overrides are being used.
 
-Note: The `go-task` is also available via `nix`, for example
+Note: `task` is also available via `nix`, for example
 ```bash
-nix develop --command go-task testacc
+nix develop --command task testacc
 ```
 
 ## Running Tests
@@ -49,40 +49,57 @@ Acceptance tests run against a real meshStack API and require environment variab
 
 ```bash
 # Run all acceptance tests
-go-task testacc
+task testacc
 
 # Run specific acceptance test(s) by name pattern
-go-task testacc TESTARGS="-run=BuildingBlockDefinition"
+task testacc -- -run=BuildingBlockDefinition
 
 # Run multiple specific tests
-go-task testacc TESTARGS="-run=BuildingBlock|Workspace"
+task testacc -- -run=BuildingBlock|Workspace
 ```
 
 ### Unit Tests
 
 ```bash
 # Run unit tests only (excludes acceptance tests)
-go-task test
+task test
+
+# Run specific unit test(s)
+task test -- -run=TestValidation
 ```
 
 ### Other Development Tasks
 
 ```bash
 # Build the provider
-go-task build
+task build
 
 # Install provider locally
-go-task install
+task install
 
-# Format code
-go-task fmt
+# Run linter (also checks formatting)
+task lint
 
-# Run linter
-go-task lint
+# Fix formatting and linting issues
+task lint -- --fix
 
 # Generate documentation
-go-task generate
+task generate
 
 # Clean build artifacts
-go-task clean
+task clean
+```
+
+## Code Formatting
+
+This project uses golangci-lint with the gci formatter to enforce consistent import ordering:
+
+1. Go standard library imports
+2. External dependencies (third-party packages)
+3. Local modules (this repository's packages)
+
+Each section is separated by a blank line. To format your code, run:
+
+```bash
+task lint -- --fix
 ```
