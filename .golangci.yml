@@ -4,6 +4,17 @@ version: "2"
 issues:
   max-same-issues: 0
 
+formatters:
+  enable:
+    - gci
+    - gofmt
+  settings:
+    gci:
+      sections:
+        - standard     # Go standard library
+        - default      # All other external dependencies
+        - localmodule  # This repository's modules
+
 linters:
   default: none
   enable:

@@ -4,13 +4,13 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/meshcloud/terraform-provider-meshstack/client"
-
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+
+	"github.com/meshcloud/terraform-provider-meshstack/client"
 )
 
 var (

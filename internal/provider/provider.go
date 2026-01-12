@@ -6,14 +6,14 @@ import (
 	"net/url"
 	"os"
 
-	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/meshcloud/terraform-provider-meshstack/client"
-
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"github.com/meshcloud/terraform-provider-meshstack/client"
 )
 
 // Ensure MeshStackProvider satisfies various provider interfaces.

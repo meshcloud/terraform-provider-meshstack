@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/meshcloud/terraform-provider-meshstack/client"
-
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
+
+	"github.com/meshcloud/terraform-provider-meshstack/client"
 )
 
 // Ensure the implementation satisfies the expected interfaces.

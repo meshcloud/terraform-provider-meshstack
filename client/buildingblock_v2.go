@@ -3,9 +3,11 @@ package client
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
-	"github.com/meshcloud/terraform-provider-meshstack/client/internal"
 	"time"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
+
+	"github.com/meshcloud/terraform-provider-meshstack/client/internal"
 )
 
 const (
