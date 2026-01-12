@@ -304,7 +304,7 @@ func (r *platformResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	createdPlatform, err := r.MeshPlatform.Create(&platform)
+	createdPlatform, err := r.MeshPlatform.Create(ctx, &platform)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Creating Platform",
@@ -326,7 +326,7 @@ func (r *platformResource) Read(ctx context.Context, req resource.ReadRequest, r
 	var uuid string
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("metadata").AtName("uuid"), &uuid)...)
 
-	readPlatform, err := r.MeshPlatform.Read(uuid)
+	readPlatform, err := r.MeshPlatform.Read(ctx, uuid)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("Could not read platform with UUID '%s'", uuid),
@@ -384,7 +384,7 @@ func (r *platformResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	updatedPlatform, err := r.MeshPlatform.Update(uuid, &platform)
+	updatedPlatform, err := r.MeshPlatform.Update(ctx, uuid, &platform)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Updating Platform",
@@ -408,7 +408,7 @@ func (r *platformResource) Delete(ctx context.Context, req resource.DeleteReques
 		return
 	}
 
-	err := r.MeshPlatform.Delete(uuid)
+	err := r.MeshPlatform.Delete(ctx, uuid)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("Could not delete platform with UUID '%s'", uuid),

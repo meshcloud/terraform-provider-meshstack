@@ -104,7 +104,7 @@ func (d *tenantDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 		return
 	}
 
-	tenant, err := d.MeshTenant.Read(workspace, project, platform)
+	tenant, err := d.MeshTenant.Read(ctx, workspace, project, platform)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read tenant", err.Error())
 		return

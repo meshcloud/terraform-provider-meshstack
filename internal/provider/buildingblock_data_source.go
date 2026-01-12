@@ -148,7 +148,7 @@ func (d *buildingBlockDataSource) Read(ctx context.Context, req datasource.ReadR
 		return
 	}
 
-	bb, err := d.MeshBuildingBlock.Read(uuid)
+	bb, err := d.MeshBuildingBlock.Read(ctx, uuid)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read building block", err.Error())
 	}

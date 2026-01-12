@@ -38,6 +38,9 @@ Note: `task` is also available via `nix`, for example
 nix develop --command task testacc
 ```
 
+Debugging can be enabled by setting `TF_LOG=DEBUG` or `TF_ACC_LOG=DEBUG` (when running tests), 
+which shows all full HTTP request and response communication.
+
 ## Running Tests
 
 This project uses [Task](https://taskfile.dev) for common development workflows. 

@@ -191,7 +191,7 @@ func (d *buildingBlockV2DataSource) Read(ctx context.Context, req datasource.Rea
 		return
 	}
 
-	bb, err := d.MeshBuildingBlockV2.Read(uuid)
+	bb, err := d.MeshBuildingBlockV2.Read(ctx, uuid)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read building block", err.Error())
 	}

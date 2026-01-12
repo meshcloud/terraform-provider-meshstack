@@ -106,7 +106,7 @@ func (d *projectGroupBindingDataSource) Read(ctx context.Context, req datasource
 		return
 	}
 
-	binding, err := d.MeshProjectGroupBinding.Read(name)
+	binding, err := d.MeshProjectGroupBinding.Read(ctx, name)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read project group binding", err.Error())
 	}

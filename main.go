@@ -1,12 +1,8 @@
-// Copyright (c) meshcloud GmbH
-// SPDX-License-Identifier: MPL-2.0
-
 package main
 
 import (
 	"context"
 	"flag"
-	"log"
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 
@@ -46,6 +42,6 @@ func main() {
 	err := providerserver.Serve(context.Background(), provider.New(version), opts)
 
 	if err != nil {
-		log.Fatal(err.Error())
+		panic(err)
 	}
 }

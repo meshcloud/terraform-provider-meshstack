@@ -112,7 +112,7 @@ func (d *paymentMethodDataSource) Read(ctx context.Context, req datasource.ReadR
 		return
 	}
 
-	paymentMethod, err := d.MeshPaymentMethod.Read(workspace, name)
+	paymentMethod, err := d.MeshPaymentMethod.Read(ctx, workspace, name)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("Could not read payment method '%s' in workspace '%s'", name, workspace),

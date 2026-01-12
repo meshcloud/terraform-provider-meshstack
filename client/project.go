@@ -1,6 +1,8 @@
 package client
 
 import (
+	"context"
+
 	"github.com/meshcloud/terraform-provider-meshstack/client/internal"
 )
 
@@ -39,9 +41,9 @@ type MeshProjectClient struct {
 	meshObject internal.MeshObjectClient[MeshProject]
 }
 
-func newProjectClient(httpClient *internal.HttpClient) MeshProjectClient {
+func newProjectClient(ctx context.Context, httpClient *internal.HttpClient) MeshProjectClient {
 	return MeshProjectClient{
-		meshObject: internal.NewMeshObjectClient[MeshProject](httpClient, "v2"),
+		meshObject: internal.NewMeshObjectClient[MeshProject](ctx, httpClient, "v2"),
 	}
 }
 
@@ -49,28 +51,28 @@ func (c MeshProjectClient) projectId(workspace string, name string) string {
 	return workspace + "." + name
 }
 
-func (c MeshProjectClient) Read(workspace string, name string) (*MeshProject, error) {
-	return c.meshObject.Get(c.projectId(workspace, name))
+func (c MeshProjectClient) Read(ctx context.Context, workspace string, name string) (*MeshProject, error) {
+	return c.meshObject.Get(ctx, c.projectId(workspace, name))
 }
 
-func (c MeshProjectClient) List(workspaceIdentifier string, paymentMethodIdentifier *string) ([]MeshProject, error) {
+func (c MeshProjectClient) List(ctx context.Context, workspaceIdentifier string, paymentMethodIdentifier *string) ([]MeshProject, error) {
 	options := []internal.RequestOption{
 		internal.WithUrlQuery("workspaceIdentifier", workspaceIdentifier),
 	}
 	if paymentMethodIdentifier != nil {
 		options = append(options, internal.WithUrlQuery("paymentIdentifier", *paymentMethodIdentifier))
 	}
-	return c.meshObject.List(options...)
+	return c.meshObject.List(ctx, options...)
 }
 
-func (c MeshProjectClient) Create(project *MeshProjectCreate) (*MeshProject, error) {
-	return c.meshObject.Post(project)
+func (c MeshProjectClient) Create(ctx context.Context, project *MeshProjectCreate) (*MeshProject, error) {
+	return c.meshObject.Post(ctx, project)
 }
 
-func (c MeshProjectClient) Update(project *MeshProjectCreate) (*MeshProject, error) {
-	return c.meshObject.Put(c.projectId(project.Metadata.OwnedByWorkspace, project.Metadata.Name), project)
+func (c MeshProjectClient) Update(ctx context.Context, project *MeshProjectCreate) (*MeshProject, error) {
+	return c.meshObject.Put(ctx, c.projectId(project.Metadata.OwnedByWorkspace, project.Metadata.Name), project)
 }
 
-func (c MeshProjectClient) Delete(workspace string, name string) error {
-	return c.meshObject.Delete(c.projectId(workspace, name))
+func (c MeshProjectClient) Delete(ctx context.Context, workspace string, name string) error {
+	return c.meshObject.Delete(ctx, c.projectId(workspace, name))
 }

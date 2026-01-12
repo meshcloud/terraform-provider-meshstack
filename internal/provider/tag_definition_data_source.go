@@ -197,7 +197,7 @@ func (d *tagDefinitionDataSource) Read(ctx context.Context, req datasource.ReadR
 		return
 	}
 
-	tag, err := d.MeshTagDefinition.Read(name)
+	tag, err := d.MeshTagDefinition.Read(ctx, name)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read meshTagDefinition", err.Error())
 		return

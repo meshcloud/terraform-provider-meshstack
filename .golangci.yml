@@ -44,12 +44,16 @@ linters:
           files:
             - "!$test"
           list-mode: lax
+          deny:
+            - pkg: "log"
+              desc: "Always use 'hclog' or SDK logging"
           allow:
             - $gostd
             - github.com/hashicorp/terraform-plugin-framework
             - github.com/hashicorp/terraform-plugin-framework-validators
             - github.com/hashicorp/terraform-plugin-go
             - github.com/hashicorp/terraform-plugin-sdk
+            - github.com/hashicorp/terraform-plugin-log
             - github.com/meshcloud/terraform-provider-meshstack
         test:
           files:

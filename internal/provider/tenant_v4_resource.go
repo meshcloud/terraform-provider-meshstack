@@ -285,7 +285,7 @@ func (r *tenantV4Resource) Create(ctx context.Context, req resource.CreateReques
 		},
 	}
 
-	tenant, err := r.MeshTenantV4.Create(&createRequest)
+	tenant, err := r.MeshTenantV4.Create(ctx, &createRequest)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating tenant",
@@ -331,7 +331,7 @@ func (r *tenantV4Resource) Read(ctx context.Context, req resource.ReadRequest, r
 		return
 	}
 
-	tenant, err := r.MeshTenantV4.Read(uuid.ValueString())
+	tenant, err := r.MeshTenantV4.Read(ctx, uuid.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading tenant",
@@ -361,7 +361,7 @@ func (r *tenantV4Resource) Delete(ctx context.Context, req resource.DeleteReques
 
 	uuid := state.Metadata.Uuid.ValueString()
 
-	err := r.MeshTenantV4.Delete(uuid)
+	err := r.MeshTenantV4.Delete(ctx, uuid)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error deleting tenant",

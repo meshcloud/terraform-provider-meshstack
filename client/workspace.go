@@ -1,6 +1,8 @@
 package client
 
 import (
+	"context"
+
 	"github.com/meshcloud/terraform-provider-meshstack/client/internal"
 )
 
@@ -37,24 +39,24 @@ type MeshWorkspaceClient struct {
 	meshObject internal.MeshObjectClient[MeshWorkspace]
 }
 
-func newWorkspaceClient(httpClient *internal.HttpClient) MeshWorkspaceClient {
+func newWorkspaceClient(ctx context.Context, httpClient *internal.HttpClient) MeshWorkspaceClient {
 	return MeshWorkspaceClient{
-		meshObject: internal.NewMeshObjectClient[MeshWorkspace](httpClient, "v2"),
+		meshObject: internal.NewMeshObjectClient[MeshWorkspace](ctx, httpClient, "v2"),
 	}
 }
 
-func (c MeshWorkspaceClient) Read(name string) (*MeshWorkspace, error) {
-	return c.meshObject.Get(name)
+func (c MeshWorkspaceClient) Read(ctx context.Context, name string) (*MeshWorkspace, error) {
+	return c.meshObject.Get(ctx, name)
 }
 
-func (c MeshWorkspaceClient) Create(workspace *MeshWorkspaceCreate) (*MeshWorkspace, error) {
-	return c.meshObject.Post(workspace)
+func (c MeshWorkspaceClient) Create(ctx context.Context, workspace *MeshWorkspaceCreate) (*MeshWorkspace, error) {
+	return c.meshObject.Post(ctx, workspace)
 }
 
-func (c MeshWorkspaceClient) Update(name string, workspace *MeshWorkspaceCreate) (*MeshWorkspace, error) {
-	return c.meshObject.Put(name, workspace)
+func (c MeshWorkspaceClient) Update(ctx context.Context, name string, workspace *MeshWorkspaceCreate) (*MeshWorkspace, error) {
+	return c.meshObject.Put(ctx, name, workspace)
 }
 
-func (c MeshWorkspaceClient) Delete(name string) error {
-	return c.meshObject.Delete(name)
+func (c MeshWorkspaceClient) Delete(ctx context.Context, name string) error {
+	return c.meshObject.Delete(ctx, name)
 }

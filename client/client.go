@@ -1,6 +1,7 @@
 package client
 
 import (
+	"context"
 	"net/http"
 	"net/url"
 	"time"
@@ -27,7 +28,7 @@ type Client struct {
 	WorkspaceUserBinding  MeshWorkspaceUserBindingClient
 }
 
-func New(rootUrl *url.URL, userAgent, apiKey, apiSecret string) Client {
+func New(ctx context.Context, rootUrl *url.URL, userAgent, apiKey, apiSecret string) Client {
 	httpClient := &internal.HttpClient{
 		Client:    http.Client{Timeout: 5 * time.Minute},
 		RootUrl:   rootUrl,
@@ -39,21 +40,21 @@ func New(rootUrl *url.URL, userAgent, apiKey, apiSecret string) Client {
 		ApiSecret: apiSecret,
 	}
 	return Client{
-		newBuildingBlockClient(httpClient),
-		newBuildingBlockV2Client(httpClient),
-		newIntegrationClient(httpClient),
-		newLandingZoneClient(httpClient),
-		newLocationClient(httpClient),
-		newPaymentMethodClient(httpClient),
-		newPlatformClient(httpClient),
-		newProjectClient(httpClient),
-		newProjectGroupBindingClient(httpClient),
-		newProjectUserBindingClient(httpClient),
-		newTagDefinitionClient(httpClient),
-		newTenantClient(httpClient),
-		newTenantV4Client(httpClient),
-		newWorkspaceClient(httpClient),
-		newWorkspaceGroupBindingClient(httpClient),
-		newWorkspaceUserBindingClient(httpClient),
+		newBuildingBlockClient(ctx, httpClient),
+		newBuildingBlockV2Client(ctx, httpClient),
+		newIntegrationClient(ctx, httpClient),
+		newLandingZoneClient(ctx, httpClient),
+		newLocationClient(ctx, httpClient),
+		newPaymentMethodClient(ctx, httpClient),
+		newPlatformClient(ctx, httpClient),
+		newProjectClient(ctx, httpClient),
+		newProjectGroupBindingClient(ctx, httpClient),
+		newProjectUserBindingClient(ctx, httpClient),
+		newTagDefinitionClient(ctx, httpClient),
+		newTenantClient(ctx, httpClient),
+		newTenantV4Client(ctx, httpClient),
+		newWorkspaceClient(ctx, httpClient),
+		newWorkspaceGroupBindingClient(ctx, httpClient),
+		newWorkspaceUserBindingClient(ctx, httpClient),
 	}
 }

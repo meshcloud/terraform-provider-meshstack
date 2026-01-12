@@ -1,6 +1,8 @@
 package client
 
 import (
+	"context"
+
 	"github.com/meshcloud/terraform-provider-meshstack/client/internal"
 )
 
@@ -78,20 +80,20 @@ type MeshBuildingBlockClient struct {
 	meshObject internal.MeshObjectClient[MeshBuildingBlock]
 }
 
-func newBuildingBlockClient(httpClient *internal.HttpClient) MeshBuildingBlockClient {
+func newBuildingBlockClient(ctx context.Context, httpClient *internal.HttpClient) MeshBuildingBlockClient {
 	return MeshBuildingBlockClient{
-		meshObject: internal.NewMeshObjectClient[MeshBuildingBlock](httpClient, "v1"),
+		meshObject: internal.NewMeshObjectClient[MeshBuildingBlock](ctx, httpClient, "v1"),
 	}
 }
 
-func (c MeshBuildingBlockClient) Read(uuid string) (*MeshBuildingBlock, error) {
-	return c.meshObject.Get(uuid)
+func (c MeshBuildingBlockClient) Read(ctx context.Context, uuid string) (*MeshBuildingBlock, error) {
+	return c.meshObject.Get(ctx, uuid)
 }
 
-func (c MeshBuildingBlockClient) Create(bb *MeshBuildingBlockCreate) (*MeshBuildingBlock, error) {
-	return c.meshObject.Post(bb)
+func (c MeshBuildingBlockClient) Create(ctx context.Context, bb *MeshBuildingBlockCreate) (*MeshBuildingBlock, error) {
+	return c.meshObject.Post(ctx, bb)
 }
 
-func (c MeshBuildingBlockClient) Delete(uuid string) error {
-	return c.meshObject.Delete(uuid)
+func (c MeshBuildingBlockClient) Delete(ctx context.Context, uuid string) error {
+	return c.meshObject.Delete(ctx, uuid)
 }

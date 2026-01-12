@@ -1266,7 +1266,7 @@ func (d *platformDataSource) Read(ctx context.Context, req datasource.ReadReques
 		return
 	}
 
-	platform, err := d.MeshPlatform.Read(uuid)
+	platform, err := d.MeshPlatform.Read(ctx, uuid)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("Could not read platform with UUID '%s'", uuid),

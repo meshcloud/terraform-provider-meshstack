@@ -181,7 +181,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		},
 	}
 
-	project, err := r.MeshProject.Create(&create)
+	project, err := r.MeshProject.Create(ctx, &create)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating project",
@@ -207,7 +207,7 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	project, err := r.MeshProject.Read(workspace, name)
+	project, err := r.MeshProject.Read(ctx, workspace, name)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read project", err.Error())
 	}
@@ -264,7 +264,7 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 		},
 	}
 
-	project, err := r.MeshProject.Update(&create)
+	project, err := r.MeshProject.Update(ctx, &create)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error updating project",
@@ -289,7 +289,7 @@ func (r *projectResource) Delete(ctx context.Context, req resource.DeleteRequest
 		return
 	}
 
-	err := r.MeshProject.Delete(state.Metadata.OwnedByWorkspace, state.Metadata.Name)
+	err := r.MeshProject.Delete(ctx, state.Metadata.OwnedByWorkspace, state.Metadata.Name)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error deleting project",

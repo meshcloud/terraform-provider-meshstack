@@ -1,6 +1,8 @@
 package client
 
 import (
+	"context"
+
 	"github.com/meshcloud/terraform-provider-meshstack/client/internal"
 )
 
@@ -40,24 +42,24 @@ type MeshPaymentMethodClient struct {
 	meshObject internal.MeshObjectClient[MeshPaymentMethod]
 }
 
-func newPaymentMethodClient(httpClient *internal.HttpClient) MeshPaymentMethodClient {
+func newPaymentMethodClient(ctx context.Context, httpClient *internal.HttpClient) MeshPaymentMethodClient {
 	return MeshPaymentMethodClient{
-		meshObject: internal.NewMeshObjectClient[MeshPaymentMethod](httpClient, "v2"),
+		meshObject: internal.NewMeshObjectClient[MeshPaymentMethod](ctx, httpClient, "v2"),
 	}
 }
 
-func (c MeshPaymentMethodClient) Read(workspace string, identifier string) (*MeshPaymentMethod, error) {
-	return c.meshObject.Get(identifier)
+func (c MeshPaymentMethodClient) Read(ctx context.Context, workspace string, identifier string) (*MeshPaymentMethod, error) {
+	return c.meshObject.Get(ctx, identifier)
 }
 
-func (c MeshPaymentMethodClient) Create(paymentMethod *MeshPaymentMethodCreate) (*MeshPaymentMethod, error) {
-	return c.meshObject.Post(paymentMethod)
+func (c MeshPaymentMethodClient) Create(ctx context.Context, paymentMethod *MeshPaymentMethodCreate) (*MeshPaymentMethod, error) {
+	return c.meshObject.Post(ctx, paymentMethod)
 }
 
-func (c MeshPaymentMethodClient) Update(identifier string, paymentMethod *MeshPaymentMethodCreate) (*MeshPaymentMethod, error) {
-	return c.meshObject.Put(identifier, paymentMethod)
+func (c MeshPaymentMethodClient) Update(ctx context.Context, identifier string, paymentMethod *MeshPaymentMethodCreate) (*MeshPaymentMethod, error) {
+	return c.meshObject.Put(ctx, identifier, paymentMethod)
 }
 
-func (c MeshPaymentMethodClient) Delete(identifier string) error {
-	return c.meshObject.Delete(identifier)
+func (c MeshPaymentMethodClient) Delete(ctx context.Context, identifier string) error {
+	return c.meshObject.Delete(ctx, identifier)
 }

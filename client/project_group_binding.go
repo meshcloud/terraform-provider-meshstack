@@ -1,6 +1,8 @@
 package client
 
 import (
+	"context"
+
 	"github.com/meshcloud/terraform-provider-meshstack/client/internal"
 )
 
@@ -12,20 +14,20 @@ type MeshProjectGroupBindingClient struct {
 	meshObject internal.MeshObjectClient[MeshProjectGroupBinding]
 }
 
-func newProjectGroupBindingClient(httpClient *internal.HttpClient) MeshProjectGroupBindingClient {
+func newProjectGroupBindingClient(ctx context.Context, httpClient *internal.HttpClient) MeshProjectGroupBindingClient {
 	return MeshProjectGroupBindingClient{
-		meshObject: internal.NewMeshObjectClient[MeshProjectGroupBinding](httpClient, "v3", "meshprojectbindings", "groupbindings"),
+		meshObject: internal.NewMeshObjectClient[MeshProjectGroupBinding](ctx, httpClient, "v3", "meshprojectbindings", "groupbindings"),
 	}
 }
 
-func (c MeshProjectGroupBindingClient) Read(name string) (*MeshProjectGroupBinding, error) {
-	return c.meshObject.Get(name)
+func (c MeshProjectGroupBindingClient) Read(ctx context.Context, name string) (*MeshProjectGroupBinding, error) {
+	return c.meshObject.Get(ctx, name)
 }
 
-func (c MeshProjectGroupBindingClient) Create(binding *MeshProjectGroupBinding) (*MeshProjectGroupBinding, error) {
-	return c.meshObject.Post(binding)
+func (c MeshProjectGroupBindingClient) Create(ctx context.Context, binding *MeshProjectGroupBinding) (*MeshProjectGroupBinding, error) {
+	return c.meshObject.Post(ctx, binding)
 }
 
-func (c MeshProjectGroupBindingClient) Delete(name string) error {
-	return c.meshObject.Delete(name)
+func (c MeshProjectGroupBindingClient) Delete(ctx context.Context, name string) error {
+	return c.meshObject.Delete(ctx, name)
 }

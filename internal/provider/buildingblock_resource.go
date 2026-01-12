@@ -247,7 +247,7 @@ func (r *buildingBlockResource) Create(ctx context.Context, req resource.CreateR
 		bb.Spec.Inputs = append(bb.Spec.Inputs, input)
 	}
 
-	created, err := r.MeshBuildingBlock.Create(&bb)
+	created, err := r.MeshBuildingBlock.Create(ctx, &bb)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating building block",
@@ -268,7 +268,7 @@ func (r *buildingBlockResource) Read(ctx context.Context, req resource.ReadReque
 		return
 	}
 
-	bb, err := r.MeshBuildingBlock.Read(uuid)
+	bb, err := r.MeshBuildingBlock.Read(ctx, uuid)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read building block", err.Error())
 	}
@@ -292,7 +292,7 @@ func (r *buildingBlockResource) Delete(ctx context.Context, req resource.DeleteR
 		return
 	}
 
-	err := r.MeshBuildingBlock.Delete(uuid)
+	err := r.MeshBuildingBlock.Delete(ctx, uuid)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error deleting building block",

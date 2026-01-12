@@ -2,11 +2,11 @@ package internal
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"slices"
@@ -29,7 +29,7 @@ type HttpClient struct {
 	AuthorizationExpiresAt time.Time
 }
 
-func (c *HttpClient) doRequest(method string, url *url.URL, options ...RequestOption) ([]byte, error) {
+func (c *HttpClient) doRequest(ctx context.Context, method string, url *url.URL, options ...RequestOption) ([]byte, error) {
 	options = slices.Insert(options, 0,
 		withHeader("User-Agent", c.UserAgent),
 	)
@@ -37,7 +37,7 @@ func (c *HttpClient) doRequest(method string, url *url.URL, options ...RequestOp
 	for _, option := range options {
 		option(&opts)
 	}
-	req, err := c.buildRequest(method, *url, opts)
+	req, err := c.buildRequest(ctx, method, *url, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -48,16 +48,15 @@ func (c *HttpClient) doRequest(method string, url *url.URL, options ...RequestOp
 	defer func() {
 		_ = res.Body.Close()
 	}()
-	log.Println(res)
-	return c.readBodyAndCheckSuccess(res)
+	return c.readBodyAndCheckSuccess(ctx, res)
 }
 
-func (c *HttpClient) readBodyAndCheckSuccess(res *http.Response) ([]byte, error) {
+func (c *HttpClient) readBodyAndCheckSuccess(ctx context.Context, res *http.Response) ([]byte, error) {
 	responseBody, err := io.ReadAll(res.Body)
 	if err != nil {
 		return nil, fmt.Errorf("cannot read response body, status code %d: %w", res.StatusCode, err)
 	}
-	log.Printf("Got response body with %d bytes", len(responseBody))
+	Log.Debug(ctx, "response", "status", res.StatusCode, "body", loggedBody{bytes.NewBuffer(responseBody)})
 
 	if res.StatusCode >= 200 && res.StatusCode <= 299 {
 		return responseBody, nil
@@ -73,7 +72,7 @@ func (c *HttpClient) readBodyAndCheckSuccess(res *http.Response) ([]byte, error)
 	return responseBody, errors.Join(errs...)
 }
 
-func (c *HttpClient) buildRequest(method string, url url.URL, opts requestOptions) (*http.Request, error) {
+func (c *HttpClient) buildRequest(ctx context.Context, method string, url url.URL, opts requestOptions) (*http.Request, error) {
 	if len(opts.urlQueryParams) > 0 {
 		query := url.Query()
 		for k, v := range opts.urlQueryParams {
@@ -90,13 +89,14 @@ func (c *HttpClient) buildRequest(method string, url url.URL, opts requestOption
 		}
 	}
 
-	req, err := http.NewRequest(method, url.String(), requestBody)
+	req, err := http.NewRequestWithContext(ctx, method, url.String(), requestBody)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 	for _, requestModifier := range opts.requestModifiers {
 		requestModifier(req)
 	}
+	Log.Debug(ctx, "request", "url", req.URL.String(), "method", req.Method, "headers", loggedHeaders(req.Header), "body", loggedBody{requestBody})
 	return req, err
 }
 

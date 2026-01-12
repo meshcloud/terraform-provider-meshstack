@@ -8,22 +8,13 @@ import (
 
 type MeshBuildingBlock struct{}
 type MeshBuildingBlockV2 struct{}
-type MeshProject struct{}
+type MeshTenantV4 struct{}
 type MeshWorkspace struct{}
-type MeshProjectBinding struct{}
-type MeshProjectGroupBinding struct {
-	MeshProjectBinding
-}
-type MeshProjectUserBinding struct {
-	MeshProjectBinding
-}
-type MeshWorkspaceGroupBinding struct{}
-type MeshWorkspaceUserBinding struct{}
 
 func TestInferMeshObjectName(t *testing.T) {
 	tests := []struct {
 		name     string
-		testFunc func() string
+		testFunc func() (string, string)
 		expected string
 	}{
 		{
@@ -34,12 +25,7 @@ func TestInferMeshObjectName(t *testing.T) {
 		{
 			name:     "MeshBuildingBlockV2",
 			testFunc: inferMeshObjectName[MeshBuildingBlockV2],
-			expected: "meshBuildingBlockV2",
-		},
-		{
-			name:     "MeshProject",
-			testFunc: inferMeshObjectName[MeshProject],
-			expected: "meshProject",
+			expected: "meshBuildingBlock",
 		},
 		{
 			name:     "MeshWorkspace",
@@ -47,35 +33,15 @@ func TestInferMeshObjectName(t *testing.T) {
 			expected: "meshWorkspace",
 		},
 		{
-			name:     "MeshProjectBinding",
-			testFunc: inferMeshObjectName[MeshProjectBinding],
-			expected: "meshProjectBinding",
-		},
-		{
-			name:     "MeshProjectGroupBinding (embedded struct)",
-			testFunc: inferMeshObjectName[MeshProjectGroupBinding],
-			expected: "meshProjectGroupBinding",
-		},
-		{
-			name:     "MeshProjectUserBinding (embedded struct)",
-			testFunc: inferMeshObjectName[MeshProjectUserBinding],
-			expected: "meshProjectUserBinding",
-		},
-		{
-			name:     "MeshWorkspaceGroupBinding (embedded struct)",
-			testFunc: inferMeshObjectName[MeshWorkspaceGroupBinding],
-			expected: "meshWorkspaceGroupBinding",
-		},
-		{
-			name:     "MeshWorkspaceUserBinding (embedded struct)",
-			testFunc: inferMeshObjectName[MeshWorkspaceUserBinding],
-			expected: "meshWorkspaceUserBinding",
+			name:     "MeshTenantV4",
+			testFunc: inferMeshObjectName[MeshTenantV4],
+			expected: "meshTenant",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			actual := tt.testFunc()
+			actual, _ := tt.testFunc()
 			assert.Equal(t, tt.expected, actual)
 		})
 	}

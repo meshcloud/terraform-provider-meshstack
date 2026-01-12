@@ -130,7 +130,7 @@ func (r *workspaceUserBindingResource) Create(ctx context.Context, req resource.
 		return
 	}
 
-	binding, err := r.MeshWorkspaceUserBinding.Create(&plan)
+	binding, err := r.MeshWorkspaceUserBinding.Create(ctx, &plan)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating workspace user binding",
@@ -151,7 +151,7 @@ func (r *workspaceUserBindingResource) Read(ctx context.Context, req resource.Re
 		return
 	}
 
-	binding, err := r.MeshWorkspaceUserBinding.Read(name)
+	binding, err := r.MeshWorkspaceUserBinding.Read(ctx, name)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read workspace user binding", err.Error())
 	}
@@ -177,7 +177,7 @@ func (r *workspaceUserBindingResource) Delete(ctx context.Context, req resource.
 		return
 	}
 
-	err := r.MeshWorkspaceUserBinding.Delete(name)
+	err := r.MeshWorkspaceUserBinding.Delete(ctx, name)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error deleting workspace user binding",

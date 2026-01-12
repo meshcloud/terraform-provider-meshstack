@@ -108,7 +108,7 @@ func (d *workspaceDataSource) Read(ctx context.Context, req datasource.ReadReque
 		return
 	}
 
-	workspace, err := d.MeshWorkspace.Read(name)
+	workspace, err := d.MeshWorkspace.Read(ctx, name)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("Could not read workspace '%s'", name),

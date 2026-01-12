@@ -1,6 +1,8 @@
 package client
 
 import (
+	"context"
+
 	"github.com/meshcloud/terraform-provider-meshstack/client/internal"
 )
 
@@ -51,9 +53,9 @@ type MeshTenantClient struct {
 	meshObject internal.MeshObjectClient[MeshTenant]
 }
 
-func newTenantClient(httpClient *internal.HttpClient) MeshTenantClient {
+func newTenantClient(ctx context.Context, httpClient *internal.HttpClient) MeshTenantClient {
 	return MeshTenantClient{
-		meshObject: internal.NewMeshObjectClient[MeshTenant](httpClient, "v3"),
+		meshObject: internal.NewMeshObjectClient[MeshTenant](ctx, httpClient, "v3"),
 	}
 }
 
@@ -61,14 +63,14 @@ func (c MeshTenantClient) tenantId(workspace string, project string, platform st
 	return workspace + "." + project + "." + platform
 }
 
-func (c MeshTenantClient) Read(workspace string, project string, platform string) (*MeshTenant, error) {
-	return c.meshObject.Get(c.tenantId(workspace, project, platform))
+func (c MeshTenantClient) Read(ctx context.Context, workspace string, project string, platform string) (*MeshTenant, error) {
+	return c.meshObject.Get(ctx, c.tenantId(workspace, project, platform))
 }
 
-func (c MeshTenantClient) Create(tenant *MeshTenantCreate) (*MeshTenant, error) {
-	return c.meshObject.Post(tenant)
+func (c MeshTenantClient) Create(ctx context.Context, tenant *MeshTenantCreate) (*MeshTenant, error) {
+	return c.meshObject.Post(ctx, tenant)
 }
 
-func (c MeshTenantClient) Delete(workspace string, project string, platform string) error {
-	return c.meshObject.Delete(c.tenantId(workspace, project, platform))
+func (c MeshTenantClient) Delete(ctx context.Context, workspace string, project string, platform string) error {
+	return c.meshObject.Delete(ctx, c.tenantId(workspace, project, platform))
 }

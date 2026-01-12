@@ -178,7 +178,7 @@ func (r *tenantResource) Create(ctx context.Context, req resource.CreateRequest,
 		},
 	}
 
-	tenant, err := r.MeshTenant.Create(&create)
+	tenant, err := r.MeshTenant.Create(ctx, &create)
 
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -202,7 +202,7 @@ func (r *tenantResource) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
-	tenant, err := r.MeshTenant.Read(workspace, project, platform)
+	tenant, err := r.MeshTenant.Read(ctx, workspace, project, platform)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read tenant", err.Error())
 		return
@@ -230,7 +230,7 @@ func (r *tenantResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		return
 	}
 
-	err := r.MeshTenant.Delete(state.Metadata.OwnedByWorkspace, state.Metadata.OwnedByProject, state.Metadata.PlatformIdentifier)
+	err := r.MeshTenant.Delete(ctx, state.Metadata.OwnedByWorkspace, state.Metadata.OwnedByProject, state.Metadata.PlatformIdentifier)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error deleting tenant",
