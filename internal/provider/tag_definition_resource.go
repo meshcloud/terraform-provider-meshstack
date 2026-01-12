@@ -361,7 +361,7 @@ func (r *tagDefinitionResource) Create(ctx context.Context, req resource.CreateR
 		},
 	}
 
-	tagDefinition, err := r.MeshTagDefinition.Create(&create)
+	tagDefinition, err := r.MeshTagDefinition.Create(ctx, &create)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating tag definition",
@@ -441,7 +441,7 @@ func (r *tagDefinitionResource) Read(ctx context.Context, req resource.ReadReque
 		return
 	}
 
-	tagDefinition, err := r.MeshTagDefinition.Read(name.ValueString())
+	tagDefinition, err := r.MeshTagDefinition.Read(ctx, name.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read tag definition", err.Error())
 	}
@@ -487,7 +487,7 @@ func (r *tagDefinitionResource) Update(ctx context.Context, req resource.UpdateR
 		},
 	}
 
-	tagDefinition, err := r.MeshTagDefinition.Update(&update)
+	tagDefinition, err := r.MeshTagDefinition.Update(ctx, &update)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error updating tag definition",
@@ -510,7 +510,7 @@ func (r *tagDefinitionResource) Delete(ctx context.Context, req resource.DeleteR
 		return
 	}
 
-	err := r.MeshTagDefinition.Delete(state.Metadata.Name)
+	err := r.MeshTagDefinition.Delete(ctx, state.Metadata.Name)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error deleting tag definition",
@@ -526,7 +526,7 @@ func (r *tagDefinitionResource) ImportState(ctx context.Context, req resource.Im
 	tagDefinitionName := req.ID
 
 	// Read the tag definition from the provider
-	tagDefinition, err := r.MeshTagDefinition.Read(tagDefinitionName)
+	tagDefinition, err := r.MeshTagDefinition.Read(ctx, tagDefinitionName)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error importing tag definition",

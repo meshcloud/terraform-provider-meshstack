@@ -214,7 +214,7 @@ func (d *landingZoneDataSource) Read(ctx context.Context, req datasource.ReadReq
 		return
 	}
 
-	landingZone, err := d.MeshLandingZone.Read(name)
+	landingZone, err := d.MeshLandingZone.Read(ctx, name)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("Could not read landing zone '%s'", name),

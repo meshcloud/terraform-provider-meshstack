@@ -1,12 +1,13 @@
 package internal
 
 import (
+	"context"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
 	"reflect"
+	"regexp"
 	"slices"
 	"strings"
 	"time"
@@ -27,22 +28,23 @@ type MeshObjectClient[M any] struct {
 
 // NewMeshObjectClient creates a new [MeshObjectClient] for a specific meshObject type with automatic URL path inference.
 // The meshObject name is inferred from type M, and the API URL is constructed from explicitApiPaths or the pluralized type name.
-func NewMeshObjectClient[M any](httpClient *HttpClient, apiVersion string, explicitApiPaths ...string) MeshObjectClient[M] {
-	name := inferMeshObjectName[M]()
+func NewMeshObjectClient[M any](ctx context.Context, httpClient *HttpClient, apiVersion string, explicitApiPaths ...string) MeshObjectClient[M] {
+	name, typeName := inferMeshObjectName[M]()
 
 	if len(explicitApiPaths) == 0 {
 		explicitApiPaths = []string{strings.ToLower(pluralizeName(name))}
 	}
 	explicitApiPaths = slices.Insert(explicitApiPaths, 0, "/api/meshobjects")
 	apiUrl := httpClient.RootUrl.JoinPath(explicitApiPaths...)
-	log.Printf("Using API at '%s' for meshObject '%s', version '%s'", apiUrl, name, apiVersion)
+	Log.Info(ctx, fmt.Sprintf("initialized %s", typeName), "url", apiUrl.String(), "name", name, "version", apiVersion)
 	return MeshObjectClient[M]{httpClient, name, apiVersion, apiUrl}
 }
 
-func inferMeshObjectName[M any]() string {
+func inferMeshObjectName[M any]() (name, typeName string) {
 	var zero M
-	typeName := reflect.TypeOf(zero).Name()
-	return lowercaseFirst(typeName)
+	typeName = reflect.TypeOf(zero).Name()
+	name = lowercaseFirst(typeName)
+	return regexp.MustCompile(`V\d+$`).ReplaceAllString(name, ""), typeName
 }
 
 func lowercaseFirst(s string) string {
@@ -67,8 +69,8 @@ func (c MeshObjectClient[M]) meshObjectMimeType() string {
 }
 
 // Get retrieves a meshObject by ID. Returns nil if not found.
-func (c MeshObjectClient[M]) Get(id string) (*M, error) {
-	body, err := c.doAuthorizedRequest(http.MethodGet, c.ApiUrl.JoinPath(id), withAccept(c.meshObjectMimeType()))
+func (c MeshObjectClient[M]) Get(ctx context.Context, id string) (*M, error) {
+	body, err := c.doAuthorizedRequest(ctx, http.MethodGet, c.ApiUrl.JoinPath(id), withAccept(c.meshObjectMimeType()))
 	if errors.Is(err, errNotFound) {
 		return nil, nil
 	}
@@ -76,30 +78,30 @@ func (c MeshObjectClient[M]) Get(id string) (*M, error) {
 }
 
 // Post creates a new meshObject with the given payload.
-func (c MeshObjectClient[M]) Post(payload any) (*M, error) {
-	return unmarshalBody[M](c.doAuthorizedRequest(http.MethodPost, c.ApiUrl, withPayload(payload, c.meshObjectMimeType())))
+func (c MeshObjectClient[M]) Post(ctx context.Context, payload any) (*M, error) {
+	return unmarshalBody[M](c.doAuthorizedRequest(ctx, http.MethodPost, c.ApiUrl, withPayload(payload, c.meshObjectMimeType())))
 }
 
 // Put updates an existing meshObject by ID with the given payload.
-func (c MeshObjectClient[M]) Put(id string, payload any) (*M, error) {
-	return unmarshalBody[M](c.doAuthorizedRequest(http.MethodPut, c.ApiUrl.JoinPath(id), withPayload(payload, c.meshObjectMimeType())))
+func (c MeshObjectClient[M]) Put(ctx context.Context, id string, payload any) (*M, error) {
+	return unmarshalBody[M](c.doAuthorizedRequest(ctx, http.MethodPut, c.ApiUrl.JoinPath(id), withPayload(payload, c.meshObjectMimeType())))
 }
 
 // Delete removes a meshObject by ID.
-func (c MeshObjectClient[M]) Delete(id string) (err error) {
-	_, err = c.doAuthorizedRequest(http.MethodDelete, c.ApiUrl.JoinPath(id), withAccept(c.meshObjectMimeType()))
+func (c MeshObjectClient[M]) Delete(ctx context.Context, id string) (err error) {
+	_, err = c.doAuthorizedRequest(ctx, http.MethodDelete, c.ApiUrl.JoinPath(id), withAccept(c.meshObjectMimeType()))
 	return
 }
 
 // List retrieves all meshObjects with automatic pagination handling.
 // Accepts optional [RequestOption] parameters for filtering and querying.
-func (c MeshObjectClient[M]) List(options ...RequestOption) ([]M, error) {
+func (c MeshObjectClient[M]) List(ctx context.Context, options ...RequestOption) ([]M, error) {
 	var result []M
 	embeddedKey := pluralizeName(c.Name)
 	pageNumber := 0
 
 	for {
-		body, err := c.doAuthorizedRequest(http.MethodGet, c.ApiUrl, append(options,
+		body, err := c.doAuthorizedRequest(ctx, http.MethodGet, c.ApiUrl, append(options,
 			withAccept(c.meshObjectMimeType()),
 			WithUrlQuery("page", pageNumber),
 		)...)
@@ -128,19 +130,14 @@ func (c MeshObjectClient[M]) List(options ...RequestOption) ([]M, error) {
 	}
 }
 
-func (c MeshObjectClient[M]) doAuthorizedRequest(method string, url *url.URL, options ...RequestOption) ([]byte, error) {
-	if err := c.ensureAuthorization(); err != nil {
+func (c MeshObjectClient[M]) doAuthorizedRequest(ctx context.Context, method string, url *url.URL, options ...RequestOption) ([]byte, error) {
+	if err := c.ensureAuthorization(ctx); err != nil {
 		return nil, err
 	}
-	return c.doRequest(method, url, append(options,
-		appendRequestModifier(func(req *http.Request) {
-			log.Println(req)
-		}),
-		withHeader("Authorization", c.Authorization),
-	)...)
+	return c.doRequest(ctx, method, url, append(options, withHeader("Authorization", c.Authorization))...)
 }
 
-func (c MeshObjectClient[M]) ensureAuthorization() error {
+func (c MeshObjectClient[M]) ensureAuthorization(ctx context.Context) error {
 	if c.Authorization != "" && time.Until(c.AuthorizationExpiresAt) > 30*time.Second {
 		return nil
 	}
@@ -157,7 +154,7 @@ func (c MeshObjectClient[M]) ensureAuthorization() error {
 		ExpireSec int    `json:"expires_in"`
 	}
 
-	loginResult, err := unmarshalBody[loginResponse](c.doRequest("POST", loginApiUrl,
+	loginResult, err := unmarshalBody[loginResponse](c.doRequest(ctx, "POST", loginApiUrl,
 		withPayload(loginRequest{ClientId: c.ApiKey, ClientSecret: c.ApiSecret}, "application/json")),
 	)
 	if err != nil {

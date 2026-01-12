@@ -130,7 +130,7 @@ func (r *workspaceGroupBindingResource) Create(ctx context.Context, req resource
 		return
 	}
 
-	binding, err := r.MeshWorkspaceGroupBinding.Create(&plan)
+	binding, err := r.MeshWorkspaceGroupBinding.Create(ctx, &plan)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating workspace group binding",
@@ -151,7 +151,7 @@ func (r *workspaceGroupBindingResource) Read(ctx context.Context, req resource.R
 		return
 	}
 
-	binding, err := r.MeshWorkspaceGroupBinding.Read(name)
+	binding, err := r.MeshWorkspaceGroupBinding.Read(ctx, name)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read workspace group binding", err.Error())
 	}
@@ -177,7 +177,7 @@ func (r *workspaceGroupBindingResource) Delete(ctx context.Context, req resource
 		return
 	}
 
-	err := r.MeshWorkspaceGroupBinding.Delete(name)
+	err := r.MeshWorkspaceGroupBinding.Delete(ctx, name)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error deleting workspace group binding",

@@ -71,22 +71,22 @@ type MeshBuildingBlockV2Client struct {
 	meshObject internal.MeshObjectClient[MeshBuildingBlockV2]
 }
 
-func newBuildingBlockV2Client(httpClient *internal.HttpClient) MeshBuildingBlockV2Client {
+func newBuildingBlockV2Client(ctx context.Context, httpClient *internal.HttpClient) MeshBuildingBlockV2Client {
 	return MeshBuildingBlockV2Client{
-		meshObject: internal.NewMeshObjectClient[MeshBuildingBlockV2](httpClient, "v2-preview"),
+		meshObject: internal.NewMeshObjectClient[MeshBuildingBlockV2](ctx, httpClient, "v2-preview"),
 	}
 }
 
-func (c MeshBuildingBlockV2Client) Read(uuid string) (*MeshBuildingBlockV2, error) {
-	return c.meshObject.Get(uuid)
+func (c MeshBuildingBlockV2Client) Read(ctx context.Context, uuid string) (*MeshBuildingBlockV2, error) {
+	return c.meshObject.Get(ctx, uuid)
 }
 
-func (c MeshBuildingBlockV2Client) Create(bb *MeshBuildingBlockV2Create) (*MeshBuildingBlockV2, error) {
-	return c.meshObject.Post(bb)
+func (c MeshBuildingBlockV2Client) Create(ctx context.Context, bb *MeshBuildingBlockV2Create) (*MeshBuildingBlockV2, error) {
+	return c.meshObject.Post(ctx, bb)
 }
 
-func (c MeshBuildingBlockV2Client) Delete(uuid string) error {
-	return c.meshObject.Delete(uuid)
+func (c MeshBuildingBlockV2Client) Delete(ctx context.Context, uuid string) error {
+	return c.meshObject.Delete(ctx, uuid)
 }
 
 // PollUntilCompletion polls a building block until it reaches a terminal state (SUCCEEDED or FAILED)
@@ -94,14 +94,14 @@ func (c MeshBuildingBlockV2Client) Delete(uuid string) error {
 func (c MeshBuildingBlockV2Client) PollUntilCompletion(ctx context.Context, uuid string) (*MeshBuildingBlockV2, error) {
 	var result *MeshBuildingBlockV2
 
-	err := retry.RetryContext(ctx, 30*time.Minute, c.waitForCompletionFunc(uuid, &result))
+	err := retry.RetryContext(ctx, 30*time.Minute, c.waitForCompletionFunc(ctx, uuid, &result))
 	return result, err
 }
 
 // waitForCompletionFunc returns a RetryFunc that checks building block completion status.
-func (c MeshBuildingBlockV2Client) waitForCompletionFunc(uuid string, result **MeshBuildingBlockV2) retry.RetryFunc {
+func (c MeshBuildingBlockV2Client) waitForCompletionFunc(ctx context.Context, uuid string, result **MeshBuildingBlockV2) retry.RetryFunc {
 	return func() *retry.RetryError {
-		current, err := c.Read(uuid)
+		current, err := c.Read(ctx, uuid)
 		if err != nil {
 			return retry.NonRetryableError(fmt.Errorf("could not read building block status while waiting for completion: %w", err))
 		}
@@ -128,13 +128,13 @@ func (c MeshBuildingBlockV2Client) waitForCompletionFunc(uuid string, result **M
 // PollUntilDeletion polls a building block until it is deleted (not found)
 // Returns nil on successful deletion or an error if polling fails or times out.
 func (c MeshBuildingBlockV2Client) PollUntilDeletion(ctx context.Context, uuid string) error {
-	return retry.RetryContext(ctx, 30*time.Minute, c.waitForDeletionFunc(uuid))
+	return retry.RetryContext(ctx, 30*time.Minute, c.waitForDeletionFunc(ctx, uuid))
 }
 
 // waitForDeletionFunc returns a RetryFunc that checks building block deletion status.
-func (c MeshBuildingBlockV2Client) waitForDeletionFunc(uuid string) retry.RetryFunc {
+func (c MeshBuildingBlockV2Client) waitForDeletionFunc(ctx context.Context, uuid string) retry.RetryFunc {
 	return func() *retry.RetryError {
-		current, err := c.Read(uuid)
+		current, err := c.Read(ctx, uuid)
 		if err != nil {
 			return retry.NonRetryableError(fmt.Errorf("could not read building block status while waiting for deletion: %w", err))
 		}

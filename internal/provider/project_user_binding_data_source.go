@@ -106,7 +106,7 @@ func (d *projectUserBindingDataSource) Read(ctx context.Context, req datasource.
 		return
 	}
 
-	binding, err := d.MeshProjectUserBinding.Read(name)
+	binding, err := d.MeshProjectUserBinding.Read(ctx, name)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read project user binding", err.Error())
 	}

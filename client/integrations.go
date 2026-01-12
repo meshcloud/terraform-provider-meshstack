@@ -1,6 +1,8 @@
 package client
 
 import (
+	"context"
+
 	"github.com/meshcloud/terraform-provider-meshstack/client/internal"
 )
 
@@ -87,9 +89,9 @@ type MeshIntegrationClient struct {
 	meshObject internal.MeshObjectClient[MeshIntegration]
 }
 
-func newIntegrationClient(httpClient *internal.HttpClient) MeshIntegrationClient {
+func newIntegrationClient(ctx context.Context, httpClient *internal.HttpClient) MeshIntegrationClient {
 	return MeshIntegrationClient{
-		meshObject: internal.NewMeshObjectClient[MeshIntegration](httpClient, "v1-preview"),
+		meshObject: internal.NewMeshObjectClient[MeshIntegration](ctx, httpClient, "v1-preview"),
 	}
 }
 
@@ -97,10 +99,10 @@ func (c MeshIntegrationClient) integrationId(workspace string, uuid string) stri
 	return workspace + "/" + uuid
 }
 
-func (c MeshIntegrationClient) Read(workspace string, uuid string) (*MeshIntegration, error) {
-	return c.meshObject.Get(c.integrationId(workspace, uuid))
+func (c MeshIntegrationClient) Read(ctx context.Context, workspace string, uuid string) (*MeshIntegration, error) {
+	return c.meshObject.Get(ctx, c.integrationId(workspace, uuid))
 }
 
-func (c MeshIntegrationClient) List() ([]MeshIntegration, error) {
-	return c.meshObject.List()
+func (c MeshIntegrationClient) List(ctx context.Context) ([]MeshIntegration, error) {
+	return c.meshObject.List(ctx)
 }

@@ -1,6 +1,8 @@
 package client
 
 import (
+	"context"
+
 	"github.com/meshcloud/terraform-provider-meshstack/client/internal"
 )
 
@@ -39,24 +41,24 @@ type MeshLocationClient struct {
 	meshObject internal.MeshObjectClient[MeshLocation]
 }
 
-func newLocationClient(httpClient *internal.HttpClient) MeshLocationClient {
+func newLocationClient(ctx context.Context, httpClient *internal.HttpClient) MeshLocationClient {
 	return MeshLocationClient{
-		meshObject: internal.NewMeshObjectClient[MeshLocation](httpClient, "v1-preview"),
+		meshObject: internal.NewMeshObjectClient[MeshLocation](ctx, httpClient, "v1-preview"),
 	}
 }
 
-func (c MeshLocationClient) Read(name string) (*MeshLocation, error) {
-	return c.meshObject.Get(name)
+func (c MeshLocationClient) Read(ctx context.Context, name string) (*MeshLocation, error) {
+	return c.meshObject.Get(ctx, name)
 }
 
-func (c MeshLocationClient) Create(location *MeshLocationCreate) (*MeshLocation, error) {
-	return c.meshObject.Post(location)
+func (c MeshLocationClient) Create(ctx context.Context, location *MeshLocationCreate) (*MeshLocation, error) {
+	return c.meshObject.Post(ctx, location)
 }
 
-func (c MeshLocationClient) Update(name string, location *MeshLocationCreate) (*MeshLocation, error) {
-	return c.meshObject.Put(name, location)
+func (c MeshLocationClient) Update(ctx context.Context, name string, location *MeshLocationCreate) (*MeshLocation, error) {
+	return c.meshObject.Put(ctx, name, location)
 }
 
-func (c MeshLocationClient) Delete(name string) error {
-	return c.meshObject.Delete(name)
+func (c MeshLocationClient) Delete(ctx context.Context, name string) error {
+	return c.meshObject.Delete(ctx, name)
 }

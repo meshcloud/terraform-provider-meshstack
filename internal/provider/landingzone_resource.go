@@ -509,7 +509,7 @@ func (r *landingZoneResource) Create(ctx context.Context, req resource.CreateReq
 		return
 	}
 
-	createdLandingZone, err := r.MeshLandingZone.Create(&landingZone)
+	createdLandingZone, err := r.MeshLandingZone.Create(ctx, &landingZone)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Creating Landing Zone",
@@ -531,7 +531,7 @@ func (r *landingZoneResource) Read(ctx context.Context, req resource.ReadRequest
 		return
 	}
 
-	landingZone, err := r.MeshLandingZone.Read(name)
+	landingZone, err := r.MeshLandingZone.Read(ctx, name)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("Could not read landing zone '%s'", name),
@@ -564,7 +564,7 @@ func (r *landingZoneResource) Update(ctx context.Context, req resource.UpdateReq
 		return
 	}
 
-	updatedLandingZone, err := r.MeshLandingZone.Update(landingZone.Metadata.Name, &landingZone)
+	updatedLandingZone, err := r.MeshLandingZone.Update(ctx, landingZone.Metadata.Name, &landingZone)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Updating Landing Zone",
@@ -585,7 +585,7 @@ func (r *landingZoneResource) Delete(ctx context.Context, req resource.DeleteReq
 		return
 	}
 
-	err := r.MeshLandingZone.Delete(name)
+	err := r.MeshLandingZone.Delete(ctx, name)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("Could not delete landing zone '%s'", name),

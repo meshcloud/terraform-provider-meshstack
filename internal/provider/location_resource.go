@@ -151,7 +151,7 @@ func (r *locationResource) Create(ctx context.Context, req resource.CreateReques
 		},
 	}
 
-	createdLocation, err := r.MeshLocation.Create(&location)
+	createdLocation, err := r.MeshLocation.Create(ctx, &location)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Creating Location",
@@ -178,7 +178,7 @@ func (r *locationResource) Read(ctx context.Context, req resource.ReadRequest, r
 		return
 	}
 
-	location, err := r.MeshLocation.Read(name)
+	location, err := r.MeshLocation.Read(ctx, name)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("Could not read location '%s'", name),
@@ -230,7 +230,7 @@ func (r *locationResource) Update(ctx context.Context, req resource.UpdateReques
 		},
 	}
 
-	updatedLocation, err := r.MeshLocation.Update(stateName, &location)
+	updatedLocation, err := r.MeshLocation.Update(ctx, stateName, &location)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Updating Location",
@@ -257,7 +257,7 @@ func (r *locationResource) Delete(ctx context.Context, req resource.DeleteReques
 		return
 	}
 
-	err := r.MeshLocation.Delete(name)
+	err := r.MeshLocation.Delete(ctx, name)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("Could not delete location '%s'", name),

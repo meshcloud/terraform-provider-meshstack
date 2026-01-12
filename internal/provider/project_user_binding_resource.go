@@ -135,7 +135,7 @@ func (r *projectUserBindingResource) Create(ctx context.Context, req resource.Cr
 		return
 	}
 
-	binding, err := r.MeshProjectUserBinding.Create(&plan)
+	binding, err := r.MeshProjectUserBinding.Create(ctx, &plan)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating project user binding",
@@ -156,7 +156,7 @@ func (r *projectUserBindingResource) Read(ctx context.Context, req resource.Read
 		return
 	}
 
-	binding, err := r.MeshProjectUserBinding.Read(name)
+	binding, err := r.MeshProjectUserBinding.Read(ctx, name)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read project user binding", err.Error())
 	}
@@ -182,7 +182,7 @@ func (r *projectUserBindingResource) Delete(ctx context.Context, req resource.De
 		return
 	}
 
-	err := r.MeshProjectUserBinding.Delete(name)
+	err := r.MeshProjectUserBinding.Delete(ctx, name)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error deleting project user binding",

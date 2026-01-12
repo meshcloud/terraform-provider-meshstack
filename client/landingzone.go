@@ -1,6 +1,8 @@
 package client
 
 import (
+	"context"
+
 	"github.com/meshcloud/terraform-provider-meshstack/client/internal"
 )
 
@@ -67,24 +69,24 @@ type MeshLandingZoneClient struct {
 	meshObject internal.MeshObjectClient[MeshLandingZone]
 }
 
-func newLandingZoneClient(httpClient *internal.HttpClient) MeshLandingZoneClient {
+func newLandingZoneClient(ctx context.Context, httpClient *internal.HttpClient) MeshLandingZoneClient {
 	return MeshLandingZoneClient{
-		meshObject: internal.NewMeshObjectClient[MeshLandingZone](httpClient, "v1-preview"),
+		meshObject: internal.NewMeshObjectClient[MeshLandingZone](ctx, httpClient, "v1-preview"),
 	}
 }
 
-func (c MeshLandingZoneClient) Read(name string) (*MeshLandingZone, error) {
-	return c.meshObject.Get(name)
+func (c MeshLandingZoneClient) Read(ctx context.Context, name string) (*MeshLandingZone, error) {
+	return c.meshObject.Get(ctx, name)
 }
 
-func (c MeshLandingZoneClient) Create(landingZone *MeshLandingZoneCreate) (*MeshLandingZone, error) {
-	return c.meshObject.Post(landingZone)
+func (c MeshLandingZoneClient) Create(ctx context.Context, landingZone *MeshLandingZoneCreate) (*MeshLandingZone, error) {
+	return c.meshObject.Post(ctx, landingZone)
 }
 
-func (c MeshLandingZoneClient) Update(name string, landingZone *MeshLandingZoneCreate) (*MeshLandingZone, error) {
-	return c.meshObject.Put(name, landingZone)
+func (c MeshLandingZoneClient) Update(ctx context.Context, name string, landingZone *MeshLandingZoneCreate) (*MeshLandingZone, error) {
+	return c.meshObject.Put(ctx, name, landingZone)
 }
 
-func (c MeshLandingZoneClient) Delete(name string) error {
-	return c.meshObject.Delete(name)
+func (c MeshLandingZoneClient) Delete(ctx context.Context, name string) error {
+	return c.meshObject.Delete(ctx, name)
 }

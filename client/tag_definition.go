@@ -1,6 +1,8 @@
 package client
 
 import (
+	"context"
+
 	"github.com/meshcloud/terraform-provider-meshstack/client/internal"
 )
 
@@ -71,28 +73,28 @@ type MeshTagDefinitionClient struct {
 	meshObject internal.MeshObjectClient[MeshTagDefinition]
 }
 
-func newTagDefinitionClient(httpClient *internal.HttpClient) MeshTagDefinitionClient {
+func newTagDefinitionClient(ctx context.Context, httpClient *internal.HttpClient) MeshTagDefinitionClient {
 	return MeshTagDefinitionClient{
-		meshObject: internal.NewMeshObjectClient[MeshTagDefinition](httpClient, "v1"),
+		meshObject: internal.NewMeshObjectClient[MeshTagDefinition](ctx, httpClient, "v1"),
 	}
 }
 
-func (c MeshTagDefinitionClient) List() ([]MeshTagDefinition, error) {
-	return c.meshObject.List()
+func (c MeshTagDefinitionClient) List(ctx context.Context) ([]MeshTagDefinition, error) {
+	return c.meshObject.List(ctx)
 }
 
-func (c MeshTagDefinitionClient) Read(name string) (*MeshTagDefinition, error) {
-	return c.meshObject.Get(name)
+func (c MeshTagDefinitionClient) Read(ctx context.Context, name string) (*MeshTagDefinition, error) {
+	return c.meshObject.Get(ctx, name)
 }
 
-func (c MeshTagDefinitionClient) Create(tagDefinition *MeshTagDefinition) (*MeshTagDefinition, error) {
-	return c.meshObject.Post(tagDefinition)
+func (c MeshTagDefinitionClient) Create(ctx context.Context, tagDefinition *MeshTagDefinition) (*MeshTagDefinition, error) {
+	return c.meshObject.Post(ctx, tagDefinition)
 }
 
-func (c MeshTagDefinitionClient) Update(tagDefinition *MeshTagDefinition) (*MeshTagDefinition, error) {
-	return c.meshObject.Put(tagDefinition.Metadata.Name, tagDefinition)
+func (c MeshTagDefinitionClient) Update(ctx context.Context, tagDefinition *MeshTagDefinition) (*MeshTagDefinition, error) {
+	return c.meshObject.Put(ctx, tagDefinition.Metadata.Name, tagDefinition)
 }
 
-func (c MeshTagDefinitionClient) Delete(name string) error {
-	return c.meshObject.Delete(name)
+func (c MeshTagDefinitionClient) Delete(ctx context.Context, name string) error {
+	return c.meshObject.Delete(ctx, name)
 }

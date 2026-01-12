@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
+	"github.com/meshcloud/terraform-provider-meshstack/internal/util/logging"
 )
 
 // Ensure MeshStackProvider satisfies various provider interfaces.
@@ -63,9 +64,10 @@ const (
 )
 
 func (p *MeshStackProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
+	client.SetLogger(logging.TerraformClientLogger{MessagePrefix: "client: "})
 	var data MeshStackProviderModel
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
-	providerClient, diags := newProviderClient(data, p.version)
+	providerClient, diags := newProviderClient(ctx, data, p.version)
 	resp.Diagnostics.Append(diags...)
 	resp.DataSourceData = providerClient
 	resp.ResourceData = providerClient
@@ -87,7 +89,7 @@ func configureProviderClient(providerData any, consumer func(client client.Clien
 	return
 }
 
-func newProviderClient(data MeshStackProviderModel, providerVersion string) (providerClient client.Client, diags diag.Diagnostics) {
+func newProviderClient(ctx context.Context, data MeshStackProviderModel, providerVersion string) (providerClient client.Client, diags diag.Diagnostics) {
 	var endpoint string
 	if !data.Endpoint.IsNull() && !data.Endpoint.IsUnknown() {
 		endpoint = data.Endpoint.ValueString()
@@ -131,7 +133,7 @@ func newProviderClient(data MeshStackProviderModel, providerVersion string) (pro
 	}
 
 	userAgent := fmt.Sprintf("terraform-provider-meshstack/%s", providerVersion)
-	providerClient = client.New(parsedEndpoint, userAgent, apiKey, apiSecret)
+	providerClient = client.New(ctx, parsedEndpoint, userAgent, apiKey, apiSecret)
 	return
 }
 

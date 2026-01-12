@@ -139,7 +139,7 @@ func (r *workspaceResource) Create(ctx context.Context, req resource.CreateReque
 		return
 	}
 
-	createdWorkspace, err := r.MeshWorkspace.Create(&workspace)
+	createdWorkspace, err := r.MeshWorkspace.Create(ctx, &workspace)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Creating Workspace",
@@ -161,7 +161,7 @@ func (r *workspaceResource) Read(ctx context.Context, req resource.ReadRequest, 
 		return
 	}
 
-	workspace, err := r.MeshWorkspace.Read(name)
+	workspace, err := r.MeshWorkspace.Read(ctx, name)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("Could not read workspace '%s'", name),
@@ -195,7 +195,7 @@ func (r *workspaceResource) Update(ctx context.Context, req resource.UpdateReque
 		return
 	}
 
-	updatedWorkspace, err := r.MeshWorkspace.Update(workspace.Metadata.Name, &workspace)
+	updatedWorkspace, err := r.MeshWorkspace.Update(ctx, workspace.Metadata.Name, &workspace)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Updating Workspace",
@@ -216,7 +216,7 @@ func (r *workspaceResource) Delete(ctx context.Context, req resource.DeleteReque
 		return
 	}
 
-	err := r.MeshWorkspace.Delete(name)
+	err := r.MeshWorkspace.Delete(ctx, name)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("Could not delete workspace '%s'", name),

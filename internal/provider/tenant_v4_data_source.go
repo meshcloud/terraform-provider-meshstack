@@ -147,7 +147,7 @@ func (d *tenantV4DataSource) Read(ctx context.Context, req datasource.ReadReques
 		return
 	}
 
-	tenant, err := d.MeshTenantV4.Read(uuid)
+	tenant, err := d.MeshTenantV4.Read(ctx, uuid)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading tenant",

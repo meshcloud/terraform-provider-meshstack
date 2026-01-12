@@ -188,7 +188,7 @@ func (d *tagDefinitionsDataSource) Configure(_ context.Context, req datasource.C
 }
 
 func (d *tagDefinitionsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	tags, err := d.MeshTagDefinition.List()
+	tags, err := d.MeshTagDefinition.List(ctx)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read meshTagDefinitions", err.Error())
 		return

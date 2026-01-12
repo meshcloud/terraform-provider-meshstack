@@ -135,7 +135,7 @@ func (r *projectGroupBindingResource) Create(ctx context.Context, req resource.C
 		return
 	}
 
-	binding, err := r.MeshProjectGroupBinding.Create(&plan)
+	binding, err := r.MeshProjectGroupBinding.Create(ctx, &plan)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating project group binding",
@@ -156,7 +156,7 @@ func (r *projectGroupBindingResource) Read(ctx context.Context, req resource.Rea
 		return
 	}
 
-	binding, err := r.MeshProjectGroupBinding.Read(name)
+	binding, err := r.MeshProjectGroupBinding.Read(ctx, name)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read project group binding", err.Error())
 	}
@@ -182,7 +182,7 @@ func (r *projectGroupBindingResource) Delete(ctx context.Context, req resource.D
 		return
 	}
 
-	err := r.MeshProjectGroupBinding.Delete(name)
+	err := r.MeshProjectGroupBinding.Delete(ctx, name)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error deleting project group binding",
