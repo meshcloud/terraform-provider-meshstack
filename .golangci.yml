@@ -18,6 +18,7 @@ formatters:
 linters:
   default: none
   enable:
+    - depguard
     - durationcheck
     - errcheck
     - copyloopvar
@@ -36,3 +37,30 @@ linters:
     - govet
     - testifylint
     - thelper
+  settings:
+    depguard:
+      rules:
+        main:
+          files:
+            - "!$test"
+          list-mode: lax
+          allow:
+            - $gostd
+            - github.com/hashicorp/terraform-plugin-framework
+            - github.com/hashicorp/terraform-plugin-framework-validators
+            - github.com/hashicorp/terraform-plugin-go
+            - github.com/hashicorp/terraform-plugin-sdk
+            - github.com/meshcloud/terraform-provider-meshstack
+        test:
+          files:
+            - "$test"
+          list-mode: lax
+          allow:
+            - $gostd
+            - github.com/hashicorp/terraform-plugin-framework
+            - github.com/hashicorp/terraform-plugin-framework-validators
+            - github.com/hashicorp/terraform-plugin-go
+            - github.com/hashicorp/terraform-plugin-sdk
+            - github.com/hashicorp/terraform-plugin-testing
+            - github.com/meshcloud/terraform-provider-meshstack
+            - github.com/stretchr/testify
