@@ -40,9 +40,7 @@ type MeshWorkspaceClient struct {
 }
 
 func newWorkspaceClient(ctx context.Context, httpClient *internal.HttpClient) MeshWorkspaceClient {
-	return MeshWorkspaceClient{
-		meshObject: internal.NewMeshObjectClient[MeshWorkspace](ctx, httpClient, "v2"),
-	}
+	return MeshWorkspaceClient{internal.NewMeshObjectClient[MeshWorkspace](ctx, httpClient, "v2")}
 }
 
 func (c MeshWorkspaceClient) Read(ctx context.Context, name string) (*MeshWorkspace, error) {

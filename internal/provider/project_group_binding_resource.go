@@ -29,7 +29,7 @@ func NewProjectGroupBindingResource() resource.Resource {
 
 // projectGroupBindingResource is the resource implementation.
 type projectGroupBindingResource struct {
-	MeshProjectGroupBinding client.MeshProjectGroupBindingClient
+	meshProjectGroupBindingClient client.MeshProjectGroupBindingClient
 }
 
 // Metadata returns the resource type name.
@@ -40,7 +40,7 @@ func (r *projectGroupBindingResource) Metadata(_ context.Context, req resource.M
 // Configure adds the provider configured client to the resource.
 func (r *projectGroupBindingResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	resp.Diagnostics.Append(configureProviderClient(req.ProviderData, func(client client.Client) {
-		r.MeshProjectGroupBinding = client.ProjectGroupBinding
+		r.meshProjectGroupBindingClient = client.ProjectGroupBinding
 	})...)
 }
 
@@ -135,7 +135,7 @@ func (r *projectGroupBindingResource) Create(ctx context.Context, req resource.C
 		return
 	}
 
-	binding, err := r.MeshProjectGroupBinding.Create(ctx, &plan)
+	binding, err := r.meshProjectGroupBindingClient.Create(ctx, &plan)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating project group binding",
@@ -156,7 +156,7 @@ func (r *projectGroupBindingResource) Read(ctx context.Context, req resource.Rea
 		return
 	}
 
-	binding, err := r.MeshProjectGroupBinding.Read(ctx, name)
+	binding, err := r.meshProjectGroupBindingClient.Read(ctx, name)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read project group binding", err.Error())
 	}
@@ -182,7 +182,7 @@ func (r *projectGroupBindingResource) Delete(ctx context.Context, req resource.D
 		return
 	}
 
-	err := r.MeshProjectGroupBinding.Delete(ctx, name)
+	err := r.meshProjectGroupBindingClient.Delete(ctx, name)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error deleting project group binding",

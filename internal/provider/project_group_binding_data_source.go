@@ -23,7 +23,7 @@ func NewProjectGroupBindingDataSource() datasource.DataSource {
 }
 
 type projectGroupBindingDataSource struct {
-	MeshProjectGroupBinding client.MeshProjectGroupBindingClient
+	meshProjectGroupBindingClient client.MeshProjectGroupBindingClient
 }
 
 func (d *projectGroupBindingDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -95,7 +95,7 @@ func (d *projectGroupBindingDataSource) Schema(ctx context.Context, req datasour
 
 func (d *projectGroupBindingDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	resp.Diagnostics.Append(configureProviderClient(req.ProviderData, func(client client.Client) {
-		d.MeshProjectGroupBinding = client.ProjectGroupBinding
+		d.meshProjectGroupBindingClient = client.ProjectGroupBinding
 	})...)
 }
 
@@ -106,7 +106,7 @@ func (d *projectGroupBindingDataSource) Read(ctx context.Context, req datasource
 		return
 	}
 
-	binding, err := d.MeshProjectGroupBinding.Read(ctx, name)
+	binding, err := d.meshProjectGroupBindingClient.Read(ctx, name)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read project group binding", err.Error())
 	}

@@ -28,7 +28,7 @@ func NewLocationResource() resource.Resource {
 }
 
 type locationResource struct {
-	MeshLocation client.MeshLocationClient
+	meshLocationClient client.MeshLocationClient
 }
 
 type locationRef struct {
@@ -46,7 +46,7 @@ func (r *locationResource) Metadata(_ context.Context, req resource.MetadataRequ
 
 func (r *locationResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	resp.Diagnostics.Append(configureProviderClient(req.ProviderData, func(client client.Client) {
-		r.MeshLocation = client.Location
+		r.meshLocationClient = client.Location
 	})...)
 }
 
@@ -151,7 +151,7 @@ func (r *locationResource) Create(ctx context.Context, req resource.CreateReques
 		},
 	}
 
-	createdLocation, err := r.MeshLocation.Create(ctx, &location)
+	createdLocation, err := r.meshLocationClient.Create(ctx, &location)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Creating Location",
@@ -178,7 +178,7 @@ func (r *locationResource) Read(ctx context.Context, req resource.ReadRequest, r
 		return
 	}
 
-	location, err := r.MeshLocation.Read(ctx, name)
+	location, err := r.meshLocationClient.Read(ctx, name)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("Could not read location '%s'", name),
@@ -230,7 +230,7 @@ func (r *locationResource) Update(ctx context.Context, req resource.UpdateReques
 		},
 	}
 
-	updatedLocation, err := r.MeshLocation.Update(ctx, stateName, &location)
+	updatedLocation, err := r.meshLocationClient.Update(ctx, stateName, &location)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Updating Location",
@@ -257,7 +257,7 @@ func (r *locationResource) Delete(ctx context.Context, req resource.DeleteReques
 		return
 	}
 
-	err := r.MeshLocation.Delete(ctx, name)
+	err := r.meshLocationClient.Delete(ctx, name)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("Could not delete location '%s'", name),

@@ -60,9 +60,7 @@ type MeshTenantV4Client struct {
 }
 
 func newTenantV4Client(ctx context.Context, httpClient *internal.HttpClient) MeshTenantV4Client {
-	return MeshTenantV4Client{
-		meshObject: internal.NewMeshObjectClient[MeshTenantV4](ctx, httpClient, "v4-preview"),
-	}
+	return MeshTenantV4Client{internal.NewMeshObjectClient[MeshTenantV4](ctx, httpClient, "v4-preview")}
 }
 
 func (c MeshTenantV4Client) Read(ctx context.Context, uuid string) (*MeshTenantV4, error) {

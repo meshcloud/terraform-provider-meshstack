@@ -22,7 +22,7 @@ func NewProjectsDataSource() datasource.DataSource {
 }
 
 type projectsDataSource struct {
-	MeshProject client.MeshProjectClient
+	meshProjectClient client.MeshProjectClient
 }
 
 func (d *projectsDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -109,7 +109,7 @@ func (d *projectsDataSource) Schema(ctx context.Context, req datasource.SchemaRe
 
 func (d *projectsDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	resp.Diagnostics.Append(configureProviderClient(req.ProviderData, func(client client.Client) {
-		d.MeshProject = client.Project
+		d.meshProjectClient = client.Project
 	})...)
 }
 
@@ -124,7 +124,7 @@ func (d *projectsDataSource) Read(ctx context.Context, req datasource.ReadReques
 		return
 	}
 
-	projects, err := d.MeshProject.List(ctx, workspaceIdentifier, paymentMethodIdentifier)
+	projects, err := d.meshProjectClient.List(ctx, workspaceIdentifier, paymentMethodIdentifier)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read projects", err.Error())
 		return

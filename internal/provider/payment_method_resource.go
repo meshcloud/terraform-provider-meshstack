@@ -32,7 +32,7 @@ func NewPaymentMethodResource() resource.Resource {
 }
 
 type paymentMethodResource struct {
-	MeshPaymentMethod client.MeshPaymentMethodClient
+	meshPaymentMethodClient client.MeshPaymentMethodClient
 }
 
 func (r *paymentMethodResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -41,7 +41,7 @@ func (r *paymentMethodResource) Metadata(_ context.Context, req resource.Metadat
 
 func (r *paymentMethodResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	resp.Diagnostics.Append(configureProviderClient(req.ProviderData, func(client client.Client) {
-		r.MeshPaymentMethod = client.PaymentMethod
+		r.meshPaymentMethodClient = client.PaymentMethod
 	})...)
 }
 
@@ -142,7 +142,7 @@ func (r *paymentMethodResource) Create(ctx context.Context, req resource.CreateR
 		return
 	}
 
-	createdPaymentMethod, err := r.MeshPaymentMethod.Create(ctx, &paymentMethod)
+	createdPaymentMethod, err := r.meshPaymentMethodClient.Create(ctx, &paymentMethod)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Creating Payment Method",
@@ -168,7 +168,7 @@ func (r *paymentMethodResource) Read(ctx context.Context, req resource.ReadReque
 		return
 	}
 
-	paymentMethod, err := r.MeshPaymentMethod.Read(ctx, workspace, name)
+	paymentMethod, err := r.meshPaymentMethodClient.Read(ctx, workspace, name)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("Could not read payment method '%s' in workspace '%s'", name, workspace),
@@ -204,7 +204,7 @@ func (r *paymentMethodResource) Update(ctx context.Context, req resource.UpdateR
 		return
 	}
 
-	updatedPaymentMethod, err := r.MeshPaymentMethod.Update(ctx, paymentMethod.Metadata.Name, &paymentMethod)
+	updatedPaymentMethod, err := r.meshPaymentMethodClient.Update(ctx, paymentMethod.Metadata.Name, &paymentMethod)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Updating Payment Method",
@@ -230,7 +230,7 @@ func (r *paymentMethodResource) Delete(ctx context.Context, req resource.DeleteR
 		return
 	}
 
-	err := r.MeshPaymentMethod.Delete(ctx, name)
+	err := r.meshPaymentMethodClient.Delete(ctx, name)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("Could not delete payment method '%s' in workspace '%s'", name, workspace),

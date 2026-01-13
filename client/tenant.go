@@ -54,9 +54,7 @@ type MeshTenantClient struct {
 }
 
 func newTenantClient(ctx context.Context, httpClient *internal.HttpClient) MeshTenantClient {
-	return MeshTenantClient{
-		meshObject: internal.NewMeshObjectClient[MeshTenant](ctx, httpClient, "v3"),
-	}
+	return MeshTenantClient{internal.NewMeshObjectClient[MeshTenant](ctx, httpClient, "v3")}
 }
 
 func (c MeshTenantClient) tenantId(workspace string, project string, platform string) string {

@@ -33,7 +33,7 @@ func NewProjectResource() resource.Resource {
 
 // projectResource is the resource implementation.
 type projectResource struct {
-	MeshProject client.MeshProjectClient
+	meshProjectClient client.MeshProjectClient
 }
 
 // Metadata returns the resource type name.
@@ -44,7 +44,7 @@ func (r *projectResource) Metadata(_ context.Context, req resource.MetadataReque
 // Configure adds the provider configured client to the resource.
 func (r *projectResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	resp.Diagnostics.Append(configureProviderClient(req.ProviderData, func(client client.Client) {
-		r.MeshProject = client.Project
+		r.meshProjectClient = client.Project
 	})...)
 }
 
@@ -181,7 +181,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		},
 	}
 
-	project, err := r.MeshProject.Create(ctx, &create)
+	project, err := r.meshProjectClient.Create(ctx, &create)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating project",
@@ -207,7 +207,7 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	project, err := r.MeshProject.Read(ctx, workspace, name)
+	project, err := r.meshProjectClient.Read(ctx, workspace, name)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read project", err.Error())
 	}
@@ -264,7 +264,7 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 		},
 	}
 
-	project, err := r.MeshProject.Update(ctx, &create)
+	project, err := r.meshProjectClient.Update(ctx, &create)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error updating project",
@@ -289,7 +289,7 @@ func (r *projectResource) Delete(ctx context.Context, req resource.DeleteRequest
 		return
 	}
 
-	err := r.MeshProject.Delete(ctx, state.Metadata.OwnedByWorkspace, state.Metadata.Name)
+	err := r.meshProjectClient.Delete(ctx, state.Metadata.OwnedByWorkspace, state.Metadata.Name)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error deleting project",

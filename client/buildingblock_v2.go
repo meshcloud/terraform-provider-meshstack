@@ -69,9 +69,7 @@ type MeshBuildingBlockV2Client struct {
 }
 
 func newBuildingBlockV2Client(ctx context.Context, httpClient *internal.HttpClient) MeshBuildingBlockV2Client {
-	return MeshBuildingBlockV2Client{
-		meshObject: internal.NewMeshObjectClient[MeshBuildingBlockV2](ctx, httpClient, "v2-preview"),
-	}
+	return MeshBuildingBlockV2Client{internal.NewMeshObjectClient[MeshBuildingBlockV2](ctx, httpClient, "v2-preview")}
 }
 
 func (c MeshBuildingBlockV2Client) Read(ctx context.Context, uuid string) (*MeshBuildingBlockV2, error) {

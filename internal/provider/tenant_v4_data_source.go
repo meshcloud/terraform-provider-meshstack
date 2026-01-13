@@ -24,7 +24,7 @@ func NewTenantV4DataSource() datasource.DataSource {
 }
 
 type tenantV4DataSource struct {
-	MeshTenantV4 client.MeshTenantV4Client
+	meshTenantV4Client client.MeshTenantV4Client
 }
 
 func (d *tenantV4DataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -33,7 +33,7 @@ func (d *tenantV4DataSource) Metadata(_ context.Context, req datasource.Metadata
 
 func (d *tenantV4DataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	resp.Diagnostics.Append(configureProviderClient(req.ProviderData, func(client client.Client) {
-		d.MeshTenantV4 = client.TenantV4
+		d.meshTenantV4Client = client.TenantV4
 	})...)
 }
 
@@ -147,7 +147,7 @@ func (d *tenantV4DataSource) Read(ctx context.Context, req datasource.ReadReques
 		return
 	}
 
-	tenant, err := d.MeshTenantV4.Read(ctx, uuid)
+	tenant, err := d.meshTenantV4Client.Read(ctx, uuid)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading tenant",

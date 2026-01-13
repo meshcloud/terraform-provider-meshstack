@@ -42,9 +42,7 @@ type MeshProjectClient struct {
 }
 
 func newProjectClient(ctx context.Context, httpClient *internal.HttpClient) MeshProjectClient {
-	return MeshProjectClient{
-		meshObject: internal.NewMeshObjectClient[MeshProject](ctx, httpClient, "v2"),
-	}
+	return MeshProjectClient{internal.NewMeshObjectClient[MeshProject](ctx, httpClient, "v2")}
 }
 
 func (c MeshProjectClient) projectId(workspace string, name string) string {

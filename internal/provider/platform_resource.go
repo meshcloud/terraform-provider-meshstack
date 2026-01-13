@@ -36,7 +36,7 @@ func NewPlatformResource() resource.Resource {
 
 // platformResource is the resource implementation.
 type platformResource struct {
-	MeshPlatform client.MeshPlatformClient
+	meshPlatformClient client.MeshPlatformClient
 }
 
 // Metadata returns the resource type name.
@@ -47,7 +47,7 @@ func (r *platformResource) Metadata(_ context.Context, req resource.MetadataRequ
 // Configure adds the provider configured client to the resource.
 func (r *platformResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	resp.Diagnostics.Append(configureProviderClient(req.ProviderData, func(client client.Client) {
-		r.MeshPlatform = client.Platform
+		r.meshPlatformClient = client.Platform
 	})...)
 }
 
@@ -304,7 +304,7 @@ func (r *platformResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	createdPlatform, err := r.MeshPlatform.Create(ctx, &platform)
+	createdPlatform, err := r.meshPlatformClient.Create(ctx, &platform)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Creating Platform",
@@ -326,7 +326,7 @@ func (r *platformResource) Read(ctx context.Context, req resource.ReadRequest, r
 	var uuid string
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("metadata").AtName("uuid"), &uuid)...)
 
-	readPlatform, err := r.MeshPlatform.Read(ctx, uuid)
+	readPlatform, err := r.meshPlatformClient.Read(ctx, uuid)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("Could not read platform with UUID '%s'", uuid),
@@ -384,7 +384,7 @@ func (r *platformResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	updatedPlatform, err := r.MeshPlatform.Update(ctx, uuid, &platform)
+	updatedPlatform, err := r.meshPlatformClient.Update(ctx, uuid, &platform)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Updating Platform",
@@ -408,7 +408,7 @@ func (r *platformResource) Delete(ctx context.Context, req resource.DeleteReques
 		return
 	}
 
-	err := r.MeshPlatform.Delete(ctx, uuid)
+	err := r.meshPlatformClient.Delete(ctx, uuid)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("Could not delete platform with UUID '%s'", uuid),

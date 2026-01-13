@@ -24,7 +24,7 @@ func NewPaymentMethodDataSource() datasource.DataSource {
 }
 
 type paymentMethodDataSource struct {
-	MeshPaymentMethod client.MeshPaymentMethodClient
+	meshPaymentMethodClient client.MeshPaymentMethodClient
 }
 
 func (d *paymentMethodDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -98,7 +98,7 @@ func (d *paymentMethodDataSource) Schema(_ context.Context, _ datasource.SchemaR
 
 func (d *paymentMethodDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	resp.Diagnostics.Append(configureProviderClient(req.ProviderData, func(client client.Client) {
-		d.MeshPaymentMethod = client.PaymentMethod
+		d.meshPaymentMethodClient = client.PaymentMethod
 	})...)
 }
 
@@ -112,7 +112,7 @@ func (d *paymentMethodDataSource) Read(ctx context.Context, req datasource.ReadR
 		return
 	}
 
-	paymentMethod, err := d.MeshPaymentMethod.Read(ctx, workspace, name)
+	paymentMethod, err := d.meshPaymentMethodClient.Read(ctx, workspace, name)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("Could not read payment method '%s' in workspace '%s'", name, workspace),

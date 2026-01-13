@@ -69,7 +69,7 @@ func NewTenantV4Resource() resource.Resource {
 }
 
 type tenantV4Resource struct {
-	MeshTenantV4 client.MeshTenantV4Client
+	meshTenantV4Client client.MeshTenantV4Client
 }
 
 func (r *tenantV4Resource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -78,7 +78,7 @@ func (r *tenantV4Resource) Metadata(_ context.Context, req resource.MetadataRequ
 
 func (r *tenantV4Resource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	resp.Diagnostics.Append(configureProviderClient(req.ProviderData, func(client client.Client) {
-		r.MeshTenantV4 = client.TenantV4
+		r.meshTenantV4Client = client.TenantV4
 	})...)
 }
 
@@ -287,7 +287,7 @@ func (r *tenantV4Resource) Create(ctx context.Context, req resource.CreateReques
 		},
 	}
 
-	tenant, err := r.MeshTenantV4.Create(ctx, &createRequest)
+	tenant, err := r.meshTenantV4Client.Create(ctx, &createRequest)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating tenant",
@@ -298,7 +298,7 @@ func (r *tenantV4Resource) Create(ctx context.Context, req resource.CreateReques
 
 	// Poll for completion if wait_for_completion is true (and not null)
 	if plan.WaitForCompletion.ValueBool() {
-		err := poll.AtMostFor(30*time.Minute, r.MeshTenantV4.ReadFunc(tenant.Metadata.Uuid), poll.WithLastResultTo(&tenant)).
+		err := poll.AtMostFor(30*time.Minute, r.meshTenantV4Client.ReadFunc(tenant.Metadata.Uuid), poll.WithLastResultTo(&tenant)).
 			Until(ctx, (*client.MeshTenantV4).CreationSuccessful)
 		if err != nil {
 			resp.Diagnostics.AddError("Failed to await tenant creation", err.Error())
@@ -331,7 +331,7 @@ func (r *tenantV4Resource) Read(ctx context.Context, req resource.ReadRequest, r
 		return
 	}
 
-	tenant, err := r.MeshTenantV4.Read(ctx, uuid.ValueString())
+	tenant, err := r.meshTenantV4Client.Read(ctx, uuid.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading tenant",
@@ -361,7 +361,7 @@ func (r *tenantV4Resource) Delete(ctx context.Context, req resource.DeleteReques
 
 	uuid := state.Metadata.Uuid.ValueString()
 
-	err := r.MeshTenantV4.Delete(ctx, uuid)
+	err := r.meshTenantV4Client.Delete(ctx, uuid)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error deleting tenant",
@@ -372,7 +372,7 @@ func (r *tenantV4Resource) Delete(ctx context.Context, req resource.DeleteReques
 
 	// Poll for deletion completion if wait_for_completion is true
 	if state.WaitForCompletion.ValueBool() {
-		if err := poll.AtMostFor(30*time.Minute, r.MeshTenantV4.ReadFunc(uuid)).
+		if err := poll.AtMostFor(30*time.Minute, r.meshTenantV4Client.ReadFunc(uuid)).
 			Until(ctx, (*client.MeshTenantV4).DeletionSuccessful); err != nil {
 			resp.Diagnostics.AddError("Failed to await tenant deletion", err.Error())
 			return

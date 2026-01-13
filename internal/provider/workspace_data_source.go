@@ -25,7 +25,7 @@ func NewWorkspaceDataSource() datasource.DataSource {
 }
 
 type workspaceDataSource struct {
-	MeshWorkspace client.MeshWorkspaceClient
+	meshWorkspaceClient client.MeshWorkspaceClient
 }
 
 func (d *workspaceDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -93,7 +93,7 @@ func (d *workspaceDataSource) Schema(_ context.Context, _ datasource.SchemaReque
 // Configure adds the provider configured client to the data source.
 func (d *workspaceDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	resp.Diagnostics.Append(configureProviderClient(req.ProviderData, func(client client.Client) {
-		d.MeshWorkspace = client.Workspace
+		d.meshWorkspaceClient = client.Workspace
 	})...)
 }
 
@@ -108,7 +108,7 @@ func (d *workspaceDataSource) Read(ctx context.Context, req datasource.ReadReque
 		return
 	}
 
-	workspace, err := d.MeshWorkspace.Read(ctx, name)
+	workspace, err := d.meshWorkspaceClient.Read(ctx, name)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("Could not read workspace '%s'", name),

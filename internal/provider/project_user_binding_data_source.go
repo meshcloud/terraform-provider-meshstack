@@ -23,7 +23,7 @@ func NewProjectUserBindingDataSource() datasource.DataSource {
 }
 
 type projectUserBindingDataSource struct {
-	MeshProjectUserBinding client.MeshProjectUserBindingClient
+	meshProjectUserBindingClient client.MeshProjectUserBindingClient
 }
 
 func (d *projectUserBindingDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -95,7 +95,7 @@ func (d *projectUserBindingDataSource) Schema(ctx context.Context, req datasourc
 
 func (d *projectUserBindingDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	resp.Diagnostics.Append(configureProviderClient(req.ProviderData, func(client client.Client) {
-		d.MeshProjectUserBinding = client.ProjectUserBinding
+		d.meshProjectUserBindingClient = client.ProjectUserBinding
 	})...)
 }
 
@@ -106,7 +106,7 @@ func (d *projectUserBindingDataSource) Read(ctx context.Context, req datasource.
 		return
 	}
 
-	binding, err := d.MeshProjectUserBinding.Read(ctx, name)
+	binding, err := d.meshProjectUserBindingClient.Read(ctx, name)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read project user binding", err.Error())
 	}
