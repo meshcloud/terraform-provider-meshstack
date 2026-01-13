@@ -90,9 +90,7 @@ type MeshIntegrationClient struct {
 }
 
 func newIntegrationClient(ctx context.Context, httpClient *internal.HttpClient) MeshIntegrationClient {
-	return MeshIntegrationClient{
-		meshObject: internal.NewMeshObjectClient[MeshIntegration](ctx, httpClient, "v1-preview"),
-	}
+	return MeshIntegrationClient{internal.NewMeshObjectClient[MeshIntegration](ctx, httpClient, "v1-preview")}
 }
 
 func (c MeshIntegrationClient) integrationId(workspace string, uuid string) string {

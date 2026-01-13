@@ -28,7 +28,7 @@ func NewPlatformDataSource() datasource.DataSource {
 
 // platformDataSource is the data source implementation.
 type platformDataSource struct {
-	MeshPlatform client.MeshPlatformClient
+	meshPlatformClient client.MeshPlatformClient
 }
 
 // Metadata returns the data source type name.
@@ -39,7 +39,7 @@ func (d *platformDataSource) Metadata(_ context.Context, req datasource.Metadata
 // Configure adds the provider configured client to the data source.
 func (d *platformDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	resp.Diagnostics.Append(configureProviderClient(req.ProviderData, func(client client.Client) {
-		d.MeshPlatform = client.Platform
+		d.meshPlatformClient = client.Platform
 	})...)
 }
 
@@ -1266,7 +1266,7 @@ func (d *platformDataSource) Read(ctx context.Context, req datasource.ReadReques
 		return
 	}
 
-	platform, err := d.MeshPlatform.Read(ctx, uuid)
+	platform, err := d.meshPlatformClient.Read(ctx, uuid)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("Could not read platform with UUID '%s'", uuid),

@@ -25,7 +25,7 @@ func NewTenantDataSource() datasource.DataSource {
 }
 
 type tenantDataSource struct {
-	MeshTenant client.MeshTenantClient
+	meshTenantClient client.MeshTenantClient
 }
 
 func (d *tenantDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -89,7 +89,7 @@ func (d *tenantDataSource) Schema(ctx context.Context, req datasource.SchemaRequ
 
 func (d *tenantDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	resp.Diagnostics.Append(configureProviderClient(req.ProviderData, func(client client.Client) {
-		d.MeshTenant = client.Tenant
+		d.meshTenantClient = client.Tenant
 	})...)
 }
 
@@ -104,7 +104,7 @@ func (d *tenantDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 		return
 	}
 
-	tenant, err := d.MeshTenant.Read(ctx, workspace, project, platform)
+	tenant, err := d.meshTenantClient.Read(ctx, workspace, project, platform)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read tenant", err.Error())
 		return

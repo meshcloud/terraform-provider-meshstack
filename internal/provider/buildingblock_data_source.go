@@ -23,7 +23,7 @@ func NewBuildingBlockDataSource() datasource.DataSource {
 }
 
 type buildingBlockDataSource struct {
-	MeshBuildingBlock client.MeshBuildingBlockClient
+	meshBuildingBlockClient client.MeshBuildingBlockClient
 }
 
 func (d *buildingBlockDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -137,7 +137,7 @@ func (d *buildingBlockDataSource) Schema(ctx context.Context, req datasource.Sch
 
 func (d *buildingBlockDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	resp.Diagnostics.Append(configureProviderClient(req.ProviderData, func(client client.Client) {
-		d.MeshBuildingBlock = client.BuildingBlock
+		d.meshBuildingBlockClient = client.BuildingBlock
 	})...)
 }
 
@@ -148,7 +148,7 @@ func (d *buildingBlockDataSource) Read(ctx context.Context, req datasource.ReadR
 		return
 	}
 
-	bb, err := d.MeshBuildingBlock.Read(ctx, uuid)
+	bb, err := d.meshBuildingBlockClient.Read(ctx, uuid)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read building block", err.Error())
 	}

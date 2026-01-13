@@ -43,9 +43,7 @@ type MeshPaymentMethodClient struct {
 }
 
 func newPaymentMethodClient(ctx context.Context, httpClient *internal.HttpClient) MeshPaymentMethodClient {
-	return MeshPaymentMethodClient{
-		meshObject: internal.NewMeshObjectClient[MeshPaymentMethod](ctx, httpClient, "v2"),
-	}
+	return MeshPaymentMethodClient{internal.NewMeshObjectClient[MeshPaymentMethod](ctx, httpClient, "v2")}
 }
 
 func (c MeshPaymentMethodClient) Read(ctx context.Context, workspace string, identifier string) (*MeshPaymentMethod, error) {

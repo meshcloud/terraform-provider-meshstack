@@ -114,9 +114,7 @@ type MeshPlatformClient struct {
 }
 
 func newPlatformClient(ctx context.Context, httpClient *internal.HttpClient) MeshPlatformClient {
-	return MeshPlatformClient{
-		meshObject: internal.NewMeshObjectClient[MeshPlatform](ctx, httpClient, "v2-preview"),
-	}
+	return MeshPlatformClient{internal.NewMeshObjectClient[MeshPlatform](ctx, httpClient, "v2-preview")}
 }
 
 func (c MeshPlatformClient) Read(ctx context.Context, uuid string) (*MeshPlatform, error) {

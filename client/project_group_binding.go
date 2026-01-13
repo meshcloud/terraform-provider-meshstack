@@ -15,9 +15,7 @@ type MeshProjectGroupBindingClient struct {
 }
 
 func newProjectGroupBindingClient(ctx context.Context, httpClient *internal.HttpClient) MeshProjectGroupBindingClient {
-	return MeshProjectGroupBindingClient{
-		meshObject: internal.NewMeshObjectClient[MeshProjectGroupBinding](ctx, httpClient, "v3", "meshprojectbindings", "groupbindings"),
-	}
+	return MeshProjectGroupBindingClient{internal.NewMeshObjectClient[MeshProjectGroupBinding](ctx, httpClient, "v3", "meshprojectbindings", "groupbindings")}
 }
 
 func (c MeshProjectGroupBindingClient) Read(ctx context.Context, name string) (*MeshProjectGroupBinding, error) {

@@ -29,7 +29,7 @@ func NewProjectUserBindingResource() resource.Resource {
 
 // projectUserBindingResource is the resource implementation.
 type projectUserBindingResource struct {
-	MeshProjectUserBinding client.MeshProjectUserBindingClient
+	meshProjectUserBindingClient client.MeshProjectUserBindingClient
 }
 
 // Metadata returns the resource type name.
@@ -40,7 +40,7 @@ func (r *projectUserBindingResource) Metadata(_ context.Context, req resource.Me
 // Configure adds the provider configured client to the resource.
 func (r *projectUserBindingResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	resp.Diagnostics.Append(configureProviderClient(req.ProviderData, func(client client.Client) {
-		r.MeshProjectUserBinding = client.ProjectUserBinding
+		r.meshProjectUserBindingClient = client.ProjectUserBinding
 	})...)
 }
 
@@ -135,7 +135,7 @@ func (r *projectUserBindingResource) Create(ctx context.Context, req resource.Cr
 		return
 	}
 
-	binding, err := r.MeshProjectUserBinding.Create(ctx, &plan)
+	binding, err := r.meshProjectUserBindingClient.Create(ctx, &plan)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating project user binding",
@@ -156,7 +156,7 @@ func (r *projectUserBindingResource) Read(ctx context.Context, req resource.Read
 		return
 	}
 
-	binding, err := r.MeshProjectUserBinding.Read(ctx, name)
+	binding, err := r.meshProjectUserBindingClient.Read(ctx, name)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read project user binding", err.Error())
 	}
@@ -182,7 +182,7 @@ func (r *projectUserBindingResource) Delete(ctx context.Context, req resource.De
 		return
 	}
 
-	err := r.MeshProjectUserBinding.Delete(ctx, name)
+	err := r.meshProjectUserBindingClient.Delete(ctx, name)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error deleting project user binding",

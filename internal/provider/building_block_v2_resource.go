@@ -35,7 +35,7 @@ func NewBuildingBlockV2Resource() resource.Resource {
 }
 
 type buildingBlockV2Resource struct {
-	MeshBuildingBlockV2 client.MeshBuildingBlockV2Client
+	meshBuildingBlockV2Client client.MeshBuildingBlockV2Client
 }
 
 func (r *buildingBlockV2Resource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -44,7 +44,7 @@ func (r *buildingBlockV2Resource) Metadata(ctx context.Context, req resource.Met
 
 func (r *buildingBlockV2Resource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	resp.Diagnostics.Append(configureProviderClient(req.ProviderData, func(client client.Client) {
-		r.MeshBuildingBlockV2 = client.BuildingBlockV2
+		r.meshBuildingBlockV2Client = client.BuildingBlockV2
 	})...)
 }
 
@@ -270,7 +270,7 @@ func (r *buildingBlockV2Resource) Create(ctx context.Context, req resource.Creat
 		return
 	}
 
-	created, err := r.MeshBuildingBlockV2.Create(ctx, &bb)
+	created, err := r.meshBuildingBlockV2Client.Create(ctx, &bb)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating building block",
@@ -291,7 +291,7 @@ func (r *buildingBlockV2Resource) Create(ctx context.Context, req resource.Creat
 	// Pollable for completion if wait_for_completion is true
 	if waitForCompletion {
 		var lastPollOutput *client.MeshBuildingBlockV2
-		err := poll.AtMostFor(30*time.Minute, r.MeshBuildingBlockV2.ReadFunc(created.Metadata.Uuid), poll.WithLastResultTo(&lastPollOutput)).
+		err := poll.AtMostFor(30*time.Minute, r.meshBuildingBlockV2Client.ReadFunc(created.Metadata.Uuid), poll.WithLastResultTo(&lastPollOutput)).
 			Until(ctx, (*client.MeshBuildingBlockV2).CreateSuccessful)
 		if lastPollOutput != nil {
 			// Always set last known building block state, no matter what error!
@@ -311,7 +311,7 @@ func (r *buildingBlockV2Resource) Read(ctx context.Context, req resource.ReadReq
 		return
 	}
 
-	bb, err := r.MeshBuildingBlockV2.Read(ctx, uuid)
+	bb, err := r.meshBuildingBlockV2Client.Read(ctx, uuid)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read building block", err.Error())
 	}
@@ -342,7 +342,7 @@ func (r *buildingBlockV2Resource) Delete(ctx context.Context, req resource.Delet
 		return
 	}
 
-	err := r.MeshBuildingBlockV2.Delete(ctx, uuid)
+	err := r.meshBuildingBlockV2Client.Delete(ctx, uuid)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error deleting building block",
@@ -353,7 +353,7 @@ func (r *buildingBlockV2Resource) Delete(ctx context.Context, req resource.Delet
 
 	// Poll for completion if wait_for_completion is true (and not null)
 	if waitForCompletion.ValueBool() {
-		if err := poll.AtMostFor(30*time.Minute, r.MeshBuildingBlockV2.ReadFunc(uuid)).
+		if err := poll.AtMostFor(30*time.Minute, r.meshBuildingBlockV2Client.ReadFunc(uuid)).
 			Until(ctx, (*client.MeshBuildingBlockV2).DeletionSuccessful); err != nil {
 			resp.Diagnostics.AddError("Failed to await building block deletion", err.Error())
 			return

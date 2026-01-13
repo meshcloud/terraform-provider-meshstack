@@ -25,7 +25,7 @@ func NewLandingZoneDataSource() datasource.DataSource {
 }
 
 type landingZoneDataSource struct {
-	MeshLandingZone client.MeshLandingZoneClient
+	meshLandingZoneClient client.MeshLandingZoneClient
 }
 
 func (d *landingZoneDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -199,7 +199,7 @@ func (d *landingZoneDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 // Configure adds the provider configured client to the data source.
 func (d *landingZoneDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	resp.Diagnostics.Append(configureProviderClient(req.ProviderData, func(client client.Client) {
-		d.MeshLandingZone = client.LandingZone
+		d.meshLandingZoneClient = client.LandingZone
 	})...)
 }
 
@@ -214,7 +214,7 @@ func (d *landingZoneDataSource) Read(ctx context.Context, req datasource.ReadReq
 		return
 	}
 
-	landingZone, err := d.MeshLandingZone.Read(ctx, name)
+	landingZone, err := d.meshLandingZoneClient.Read(ctx, name)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("Could not read landing zone '%s'", name),

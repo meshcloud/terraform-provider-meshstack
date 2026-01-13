@@ -35,7 +35,7 @@ func NewWorkspaceResource() resource.Resource {
 
 // workspaceResource is the resource implementation.
 type workspaceResource struct {
-	MeshWorkspace client.MeshWorkspaceClient
+	meshWorkspaceClient client.MeshWorkspaceClient
 }
 
 // Metadata returns the resource type name.
@@ -46,7 +46,7 @@ func (r *workspaceResource) Metadata(_ context.Context, req resource.MetadataReq
 // Configure adds the provider configured client to the resource.
 func (r *workspaceResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	resp.Diagnostics.Append(configureProviderClient(req.ProviderData, func(client client.Client) {
-		r.MeshWorkspace = client.Workspace
+		r.meshWorkspaceClient = client.Workspace
 	})...)
 }
 
@@ -139,7 +139,7 @@ func (r *workspaceResource) Create(ctx context.Context, req resource.CreateReque
 		return
 	}
 
-	createdWorkspace, err := r.MeshWorkspace.Create(ctx, &workspace)
+	createdWorkspace, err := r.meshWorkspaceClient.Create(ctx, &workspace)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Creating Workspace",
@@ -161,7 +161,7 @@ func (r *workspaceResource) Read(ctx context.Context, req resource.ReadRequest, 
 		return
 	}
 
-	workspace, err := r.MeshWorkspace.Read(ctx, name)
+	workspace, err := r.meshWorkspaceClient.Read(ctx, name)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("Could not read workspace '%s'", name),
@@ -195,7 +195,7 @@ func (r *workspaceResource) Update(ctx context.Context, req resource.UpdateReque
 		return
 	}
 
-	updatedWorkspace, err := r.MeshWorkspace.Update(ctx, workspace.Metadata.Name, &workspace)
+	updatedWorkspace, err := r.meshWorkspaceClient.Update(ctx, workspace.Metadata.Name, &workspace)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Updating Workspace",
@@ -216,7 +216,7 @@ func (r *workspaceResource) Delete(ctx context.Context, req resource.DeleteReque
 		return
 	}
 
-	err := r.MeshWorkspace.Delete(ctx, name)
+	err := r.meshWorkspaceClient.Delete(ctx, name)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("Could not delete workspace '%s'", name),
