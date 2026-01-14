@@ -142,6 +142,38 @@ func (d *landingZoneDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 							},
 						},
 					},
+					"mandatory_building_block_refs": schema.ListNestedAttribute{
+						MarkdownDescription: "List of mandatory building block references for this landing zone.",
+						Computed:            true,
+						NestedObject: schema.NestedAttributeObject{
+							Attributes: map[string]schema.Attribute{
+								"kind": schema.StringAttribute{
+									MarkdownDescription: "meshObject type, always `meshBuildingBlockDefinition`.",
+									Computed:            true,
+								},
+								"uuid": schema.StringAttribute{
+									MarkdownDescription: "UUID of the building block.",
+									Computed:            true,
+								},
+							},
+						},
+					},
+					"recommended_building_block_refs": schema.ListNestedAttribute{
+						MarkdownDescription: "List of recommended building block references for this landing zone.",
+						Computed:            true,
+						NestedObject: schema.NestedAttributeObject{
+							Attributes: map[string]schema.Attribute{
+								"kind": schema.StringAttribute{
+									MarkdownDescription: "meshObject type, always `meshBuildingBlockDefinition`.",
+									Computed:            true,
+								},
+								"uuid": schema.StringAttribute{
+									MarkdownDescription: "UUID of the building block.",
+									Computed:            true,
+								},
+							},
+						},
+					},
 				},
 			},
 

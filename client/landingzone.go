@@ -26,14 +26,16 @@ type MeshLandingZoneMetadata struct {
 }
 
 type MeshLandingZoneSpec struct {
-	DisplayName                 string                             `json:"displayName" tfsdk:"display_name"`
-	Description                 string                             `json:"description" tfsdk:"description"`
-	AutomateDeletionApproval    bool                               `json:"automateDeletionApproval" tfsdk:"automate_deletion_approval"`
-	AutomateDeletionReplication bool                               `json:"automateDeletionReplication" tfsdk:"automate_deletion_replication"`
-	InfoLink                    *string                            `json:"infoLink,omitempty" tfsdk:"info_link"`
-	PlatformRef                 MeshLandingZonePlatformRef         `json:"platformRef" tfsdk:"platform_ref"`
-	PlatformProperties          *MeshLandingZonePlatformProperties `json:"platformProperties,omitempty" tfsdk:"platform_properties"`
-	Quotas                      []MeshLandingZoneQuota             `json:"quotas" tfsdk:"quotas"`
+	DisplayName                  string                             `json:"displayName" tfsdk:"display_name"`
+	Description                  string                             `json:"description" tfsdk:"description"`
+	AutomateDeletionApproval     bool                               `json:"automateDeletionApproval" tfsdk:"automate_deletion_approval"`
+	AutomateDeletionReplication  bool                               `json:"automateDeletionReplication" tfsdk:"automate_deletion_replication"`
+	InfoLink                     *string                            `json:"infoLink,omitempty" tfsdk:"info_link"`
+	PlatformRef                  MeshLandingZonePlatformRef         `json:"platformRef" tfsdk:"platform_ref"`
+	PlatformProperties           *MeshLandingZonePlatformProperties `json:"platformProperties,omitempty" tfsdk:"platform_properties"`
+	Quotas                       []MeshLandingZoneQuota             `json:"quotas" tfsdk:"quotas"`
+	MandatoryBuildingBlockRefs   []MeshBuildingBlockDefinitionRef   `json:"mandatoryBuildingBlockRefs" tfsdk:"mandatory_building_block_refs"`
+	RecommendedBuildingBlockRefs []MeshBuildingBlockDefinitionRef   `json:"recommendedBuildingBlockRefs" tfsdk:"recommended_building_block_refs"`
 }
 
 type MeshLandingZoneStatus struct {

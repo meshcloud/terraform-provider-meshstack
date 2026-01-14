@@ -34,6 +34,25 @@ func meshProjectRoleAttribute(computed bool) schema.SingleNestedAttribute {
 	}
 }
 
+func meshBuildingBlockDefinitionRefAttribute(computed bool) map[string]schema.Attribute {
+	return map[string]schema.Attribute{
+		"kind": schema.StringAttribute{
+			MarkdownDescription: "meshObject type, always `meshBuildingBlockDefinition`.",
+			Computed:            true,
+			Default:             stringdefault.StaticString("meshBuildingBlockDefinition"),
+			Validators: []validator.String{
+				stringvalidator.OneOf([]string{"meshBuildingBlockDefinition"}...),
+			},
+			PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+		},
+		"uuid": schema.StringAttribute{
+			MarkdownDescription: "UUID of the building block.",
+			Computed:            computed,
+			Required:            !computed,
+		},
+	}
+}
+
 func tenantTagsAttribute() schema.SingleNestedAttribute {
 	return schema.SingleNestedAttribute{
 		MarkdownDescription: "Tenant tags configuration",

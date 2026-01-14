@@ -1,3 +1,9 @@
+## v0.16.6
+
+FIXES:
+
+- Landing zone resource and data source: Added support for `mandatory_building_block_refs` and `recommended_building_block_refs` fields.
+
 ## v0.16.5
 
 BREAKING CHANGES:

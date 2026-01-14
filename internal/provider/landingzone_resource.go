@@ -213,6 +213,40 @@ func (r *landingZoneResource) Schema(_ context.Context, _ resource.SchemaRequest
 							},
 						},
 					},
+					"mandatory_building_block_refs": schema.SetNestedAttribute{
+						MarkdownDescription: "List of mandatory building block references for this landing zone.",
+						Optional:            true,
+						Computed:            true,
+						Default: setdefault.StaticValue(types.SetValueMust(
+							types.ObjectType{
+								AttrTypes: map[string]attr.Type{
+									"kind": types.StringType,
+									"uuid": types.StringType,
+								},
+							},
+							[]attr.Value{},
+						)),
+						NestedObject: schema.NestedAttributeObject{
+							Attributes: meshBuildingBlockDefinitionRefAttribute(false),
+						},
+					},
+					"recommended_building_block_refs": schema.SetNestedAttribute{
+						MarkdownDescription: "List of recommended building block references for this landing zone.",
+						Optional:            true,
+						Computed:            true,
+						Default: setdefault.StaticValue(types.SetValueMust(
+							types.ObjectType{
+								AttrTypes: map[string]attr.Type{
+									"kind": types.StringType,
+									"uuid": types.StringType,
+								},
+							},
+							[]attr.Value{},
+						)),
+						NestedObject: schema.NestedAttributeObject{
+							Attributes: meshBuildingBlockDefinitionRefAttribute(false),
+						},
+					},
 				},
 			},
 

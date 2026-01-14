@@ -57,9 +57,20 @@ Read-Only:
 - `description` (String) Description of the landing zone.
 - `display_name` (String) Display name of the landing zone.
 - `info_link` (String) Link to additional information about the landing zone.
+- `mandatory_building_block_refs` (Attributes List) List of mandatory building block references for this landing zone. (see [below for nested schema](#nestedatt--spec--mandatory_building_block_refs))
 - `platform_properties` (Attributes) Platform-specific configuration options. (see [below for nested schema](#nestedatt--spec--platform_properties))
 - `platform_ref` (Attributes) Reference to the platform this landing zone belongs to. (see [below for nested schema](#nestedatt--spec--platform_ref))
 - `quotas` (Attributes List) Quota definitions for this landing zone. (see [below for nested schema](#nestedatt--spec--quotas))
+- `recommended_building_block_refs` (Attributes List) List of recommended building block references for this landing zone. (see [below for nested schema](#nestedatt--spec--recommended_building_block_refs))
+
+<a id="nestedatt--spec--mandatory_building_block_refs"></a>
+### Nested Schema for `spec.mandatory_building_block_refs`
+
+Read-Only:
+
+- `kind` (String) meshObject type, always `meshBuildingBlockDefinition`.
+- `uuid` (String) UUID of the building block.
+
 
 <a id="nestedatt--spec--platform_properties"></a>
 ### Nested Schema for `spec.platform_properties`
@@ -318,6 +329,15 @@ Read-Only:
 
 - `key` (String) Quota key identifier.
 - `value` (Number) Quota value.
+
+
+<a id="nestedatt--spec--recommended_building_block_refs"></a>
+### Nested Schema for `spec.recommended_building_block_refs`
+
+Read-Only:
+
+- `kind` (String) meshObject type, always `meshBuildingBlockDefinition`.
+- `uuid` (String) UUID of the building block.
 
 
 
