@@ -76,6 +76,11 @@ type MeshBuildingBlockCreateMetadata struct {
 	TenantIdentifier  string `json:"tenantIdentifier" tfsdk:"tenant_identifier"`
 }
 
+type MeshBuildingBlockDefinitionRef struct {
+	Kind string `json:"kind" tfsdk:"kind"`
+	Uuid string `json:"uuid" tfsdk:"uuid"`
+}
+
 func (c *MeshStackProviderClient) urlForBuildingBlock(uuid string) *url.URL {
 	return c.endpoints.BuildingBlocks.JoinPath(uuid)
 }
