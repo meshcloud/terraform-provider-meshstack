@@ -11,36 +11,36 @@ type MeshBuildingBlockV2 struct{}
 type MeshTenantV4 struct{}
 type MeshWorkspace struct{}
 
-func TestInferMeshObjectName(t *testing.T) {
+func Test_inferMeshObjectKindFromType(t *testing.T) {
 	tests := []struct {
-		name     string
+		kind     string
 		testFunc func() (string, string)
 		expected string
 	}{
 		{
-			name:     "MeshBuildingBlock",
-			testFunc: inferMeshObjectName[MeshBuildingBlock],
+			kind:     "MeshBuildingBlock",
+			testFunc: inferMeshObjectKindFromType[MeshBuildingBlock],
 			expected: "meshBuildingBlock",
 		},
 		{
-			name:     "MeshBuildingBlockV2",
-			testFunc: inferMeshObjectName[MeshBuildingBlockV2],
+			kind:     "MeshBuildingBlockV2",
+			testFunc: inferMeshObjectKindFromType[MeshBuildingBlockV2],
 			expected: "meshBuildingBlock",
 		},
 		{
-			name:     "MeshWorkspace",
-			testFunc: inferMeshObjectName[MeshWorkspace],
+			kind:     "MeshWorkspace",
+			testFunc: inferMeshObjectKindFromType[MeshWorkspace],
 			expected: "meshWorkspace",
 		},
 		{
-			name:     "MeshTenantV4",
-			testFunc: inferMeshObjectName[MeshTenantV4],
+			kind:     "MeshTenantV4",
+			testFunc: inferMeshObjectKindFromType[MeshTenantV4],
 			expected: "meshTenant",
 		},
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+		t.Run(tt.kind, func(t *testing.T) {
 			actual, _ := tt.testFunc()
 			assert.Equal(t, tt.expected, actual)
 		})
