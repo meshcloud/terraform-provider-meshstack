@@ -70,9 +70,9 @@ linters:
             - github.com/meshcloud/terraform-provider-meshstack/client
             - github.com/meshcloud/terraform-provider-meshstack/internal
             - github.com/hashicorp/terraform-plugin-framework/
+            - github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry
             - github.com/hashicorp/terraform-plugin-framework-validators
             - github.com/hashicorp/terraform-plugin-go
-            - github.com/hashicorp/terraform-plugin-sdk
             - github.com/hashicorp/terraform-plugin-log
         provider-test:
           files:
