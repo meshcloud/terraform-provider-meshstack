@@ -21,30 +21,30 @@ import (
 // which are embedded in HttpClient for convenient construction with NewMeshObjectClient.
 type MeshObjectClient[M any] struct {
 	*HttpClient
-	Name       string
+	Kind       string
 	ApiVersion string
 	ApiUrl     *url.URL
 }
 
 // NewMeshObjectClient creates a new [MeshObjectClient] for a specific meshObject type with automatic URL path inference.
-// The meshObject name is inferred from type M, and the API URL is constructed from explicitApiPaths or the pluralized type name.
+// The meshObject kind is inferred from type M, and the API URL is constructed from explicitApiPaths or the pluralized kind.
 func NewMeshObjectClient[M any](ctx context.Context, httpClient *HttpClient, apiVersion string, explicitApiPaths ...string) MeshObjectClient[M] {
-	name, typeName := inferMeshObjectName[M]()
+	kind, typeName := inferMeshObjectKindFromType[M]()
 
 	if len(explicitApiPaths) == 0 {
-		explicitApiPaths = []string{strings.ToLower(pluralizeName(name))}
+		explicitApiPaths = []string{strings.ToLower(pluralizeKind(kind))}
 	}
 	explicitApiPaths = slices.Insert(explicitApiPaths, 0, "/api/meshobjects")
 	apiUrl := httpClient.RootUrl.JoinPath(explicitApiPaths...)
-	Log.Info(ctx, fmt.Sprintf("initialized %s", typeName), "url", apiUrl.String(), "name", name, "version", apiVersion)
-	return MeshObjectClient[M]{httpClient, name, apiVersion, apiUrl}
+	Log.Info(ctx, fmt.Sprintf("initialized %s client", typeName), "url", apiUrl.String(), "kind", kind, "version", apiVersion)
+	return MeshObjectClient[M]{httpClient, kind, apiVersion, apiUrl}
 }
 
-func inferMeshObjectName[M any]() (name, typeName string) {
+func inferMeshObjectKindFromType[M any]() (lowercase, typeName string) {
 	var zero M
 	typeName = reflect.TypeOf(zero).Name()
-	name = lowercaseFirst(typeName)
-	return regexp.MustCompile(`V\d+$`).ReplaceAllString(name, ""), typeName
+	lowercase = lowercaseFirst(typeName)
+	return regexp.MustCompile(`V\d+$`).ReplaceAllString(lowercase, ""), typeName
 }
 
 func lowercaseFirst(s string) string {
@@ -56,16 +56,16 @@ func lowercaseFirst(s string) string {
 	return string(runes)
 }
 
-func pluralizeName(name string) string {
-	if strings.HasSuffix(name, "y") {
+func pluralizeKind(kind string) string {
+	if strings.HasSuffix(kind, "y") {
 		// this is ok, as we don't have meshObjects ending in 'y' yet, so take this shortcut
-		panic(fmt.Sprintf("Correctly pluralizing '%s' is not supported yet", name))
+		panic(fmt.Sprintf("Correctly pluralizing meshObject kind '%s' is not supported yet", kind))
 	}
-	return fmt.Sprintf("%ss", name)
+	return fmt.Sprintf("%ss", kind)
 }
 
 func (c MeshObjectClient[M]) meshObjectMimeType() string {
-	return fmt.Sprintf("application/vnd.meshcloud.api.%s.%s.hal+json", c.Name, c.ApiVersion)
+	return fmt.Sprintf("application/vnd.meshcloud.api.%s.%s.hal+json", c.Kind, c.ApiVersion)
 }
 
 // Get retrieves a meshObject by ID. Returns nil if not found.
@@ -97,7 +97,7 @@ func (c MeshObjectClient[M]) Delete(ctx context.Context, id string) (err error) 
 // Accepts optional [RequestOption] parameters for filtering and querying.
 func (c MeshObjectClient[M]) List(ctx context.Context, options ...RequestOption) ([]M, error) {
 	var result []M
-	embeddedKey := pluralizeName(c.Name)
+	embeddedKey := pluralizeKind(c.Kind)
 	pageNumber := 0
 
 	for {
