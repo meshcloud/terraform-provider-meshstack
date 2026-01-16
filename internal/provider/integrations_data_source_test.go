@@ -12,7 +12,7 @@ import (
 func TestAccIntegrationsDataSource(t *testing.T) {
 	// this very minimal test is already useful as it runs a request against the API to receive integrations
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories(),
 		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{

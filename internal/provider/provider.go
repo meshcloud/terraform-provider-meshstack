@@ -25,6 +25,9 @@ type MeshStackProvider struct {
 	// provider is built and ran locally, and "test" when running acceptance
 	// testing.
 	version string
+	// clientFactory is helpful when injecting mocked clients during testing,
+	// by default, newProviderClient is run.
+	clientFactory func(ctx context.Context, data MeshStackProviderModel, providerVersion string) (client.Client, diag.Diagnostics)
 }
 
 type MeshStackProviderModel struct {
@@ -75,7 +78,7 @@ func (p *MeshStackProvider) Configure(ctx context.Context, req provider.Configur
 	client.SetLogger(logging.TerraformClientLogger{MessagePrefix: "client: "})
 	var data MeshStackProviderModel
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
-	providerClient, diags := newProviderClient(ctx, data, p.version)
+	providerClient, diags := p.clientFactory(ctx, data, p.version)
 	resp.Diagnostics.Append(diags...)
 	resp.DataSourceData = providerClient
 	resp.ResourceData = providerClient
@@ -203,10 +206,17 @@ func (p *MeshStackProvider) DataSources(ctx context.Context) []func() datasource
 	}
 }
 
-func New(version string) func() provider.Provider {
+type providerOption func(*MeshStackProvider)
+
+func New(version string, opts ...providerOption) func() provider.Provider {
 	return func() provider.Provider {
-		return &MeshStackProvider{
-			version: version,
+		p := &MeshStackProvider{
+			version:       version,
+			clientFactory: newProviderClient,
 		}
+		for _, opt := range opts {
+			opt(p)
+		}
+		return p
 	}
 }
