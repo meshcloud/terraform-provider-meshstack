@@ -26,6 +26,7 @@ type Client struct {
 	Workspace             MeshWorkspaceClient
 	WorkspaceGroupBinding MeshWorkspaceGroupBindingClient
 	WorkspaceUserBinding  MeshWorkspaceUserBindingClient
+	PlatformType          MeshPlatformTypeClient
 }
 
 func New(ctx context.Context, rootUrl *url.URL, userAgent, apiKey, apiSecret string) Client {
@@ -56,5 +57,6 @@ func New(ctx context.Context, rootUrl *url.URL, userAgent, apiKey, apiSecret str
 		newWorkspaceClient(ctx, httpClient),
 		newWorkspaceGroupBindingClient(ctx, httpClient),
 		newWorkspaceUserBindingClient(ctx, httpClient),
+		newPlatformTypeClient(ctx, httpClient),
 	}
 }
