@@ -10,6 +10,7 @@ FEATURES:
 
 FIXES:
 
+- Platform resource: Added schema-level validation to ensure exactly one of `credential` or `workload_identity` is provided when `workload_identity` can be set.
 - DELETE endpoints now properly include versioning Accept header.
 - Context is now correctly propagated through client HTTP transport.
 

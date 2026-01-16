@@ -935,7 +935,7 @@ Required:
 - `bigquery_table` (String) BigQuery table for metering data.
 - `partition_time_column` (String) Partition time column for BigQuery table.
 - `processing` (Attributes) Processing configuration for metering (see [below for nested schema](#nestedatt--spec--config--gcp--metering--processing))
-- `service_account` (Attributes) Service account configuration. Either credential or workload_identity must be provided. (see [below for nested schema](#nestedatt--spec--config--gcp--metering--service_account))
+- `service_account` (Attributes) Service account configuration. Exactly one of credential or workload_identity must be provided. (see [below for nested schema](#nestedatt--spec--config--gcp--metering--service_account))
 
 Optional:
 
@@ -996,7 +996,7 @@ Required:
 - `group_name_pattern` (String) All the commonly available replicator string template properties are available. Additionally you can also use 'platformGroupAlias' as a placeholder to access the specific project role from the role mappings done in this platform configuration or in the meshLandingZone configuration.
 - `project_id_pattern` (String) All the commonly available replicator string template properties are available. The resulting string must not exceed a total length of 30 characters. Only alphanumeric + hyphen are allowed. We recommend that configuration include at least 3 characters of the random parameter to reduce the chance of naming collisions as the project Ids must be globally unique within GCP.
 - `project_name_pattern` (String) All the commonly available replicator string template properties are available. The result must be 4 to 30 characters. Allowed characters are: lowercase and uppercase letters, numbers, hyphen, single-quote, double-quote, space, and exclamation point. When length restrictions are applied, the abbreviation will be in the middle and marked by a single-quote.
-- `service_account` (Attributes) Service account configuration. Either credential or workload_identity must be provided. (see [below for nested schema](#nestedatt--spec--config--gcp--replication--service_account))
+- `service_account` (Attributes) Service account configuration. Exactly one of credential or workload_identity must be provided. (see [below for nested schema](#nestedatt--spec--config--gcp--replication--service_account))
 - `skip_user_group_permission_cleanup` (Boolean) For certain use cases you might want to preserve user groups and replicated permission after a tenant was deleted on the GCP platform. Checking this option preserves those permissions. Please keep in mind that the platform operator is then responsible for cleaning them up later.
 - `user_lookup_strategy` (String) Users can either be looked up by E-Mail or externalAccountId. This must also be the property that is placed in the external user id (EUID) of your meshUser entity to match. E-Mail is usually a good choice as this is often set up as the EUID throughout all cloud platforms and meshStack. ('email' or 'externalId')
 

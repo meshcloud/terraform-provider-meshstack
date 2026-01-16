@@ -1,8 +1,11 @@
 package provider
 
 import (
+	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -57,6 +60,15 @@ func awsAccessConfigSchema() schema.Attribute {
 					"workload_identity": schema.SingleNestedAttribute{
 						MarkdownDescription: "Workload identity configuration",
 						Optional:            true,
+						Validators: []validator.Object{
+							// This will result in an unclear path in the error message for credential because
+							// it traverses up to the parent and back down.
+							// see https://github.com/hashicorp/terraform-plugin-framework-validators/issues/274
+							objectvalidator.ExactlyOneOf(
+								path.MatchRelative(),
+								path.MatchRelative().AtParent().AtName("credential"),
+							),
+						},
 						Attributes: map[string]schema.Attribute{
 							"role_arn": schema.StringAttribute{
 								MarkdownDescription: "ARN of the role that should be used as the entry point for meshStack by assuming it via web identity.",
