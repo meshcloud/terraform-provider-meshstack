@@ -3,11 +3,6 @@ version: '3'
 dotenv: ['.env']
 
 tasks:
-  default:
-    desc: Run acceptance tests (default task)
-    cmds:
-      - task: testacc
-
   testacc:
     desc: Run acceptance tests
     env:
