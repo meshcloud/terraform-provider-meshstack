@@ -18,7 +18,7 @@ func TestAccLocation(t *testing.T) {
 	const resourceAddress = "meshstack_location.example"
 	const resourceIdentifier = "my-location"
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories(),
 		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
