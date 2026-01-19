@@ -12,15 +12,28 @@ The meshStack terraform provider is an open-source tool, licensed under the MPL-
 ## Example Usage
 
 ```terraform
+# Using API Key and Secret
 provider "meshstack" {
   endpoint  = "meshfed.url"
   apikey    = "API_KEY"
   apisecret = "API_SECRET"
 }
+
+# Using API Token
+provider "meshstack" {
+  endpoint = "meshfed.url"
+  apitoken = "API_TOKEN"
+}
 ```
+
+## Schema
 
 ### Required
 
-- `apikey` (String) API Key to authenticate against the meshStack API. Can be sourced from `MESHSTACK_API_KEY`.
-- `apisecret` (String) API Secret to authenticate against the meshStack API. Can be sourced from `MESHSTACK_API_SECRET`.
-- `endpoint` (String) URl of meshStack API, e.g. `https://api.my.meshstack.io`. Can be sourced from `MESHSTACK_ENDPOINT`.
+- `endpoint` (String) URL of meshStack API, e.g. `https://api.my.meshstack.io`. Can be sourced from `MESHSTACK_ENDPOINT`.
+
+### Optional
+
+- `apikey` (String) API Key to authenticate against the meshStack API. Can be sourced from `MESHSTACK_API_KEY`. Required if `apitoken` is not set.
+- `apisecret` (String) API Secret to authenticate against the meshStack API. Can be sourced from `MESHSTACK_API_SECRET`. Required if `apitoken` is not set.
+- `apitoken` (String) API Token to authenticate against the meshStack API. Can be sourced from `MESHSTACK_API_TOKEN`. Required if `apikey` and `apisecret` are not set.

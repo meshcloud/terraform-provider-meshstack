@@ -5,6 +5,7 @@ FEATURES:
 - New data source: `meshstack_platform_types` for listing all platform types available in the meshStack installation.
 - New data source: `meshstack_platform_type` for reading a single platform type by name.
 - New resource: `meshstack_platform_type` for managing meshStack platform types.
+- Added support for authenticating directly via `apitoken` or `MESHSTACK_API_TOKEN`, bypassing the initial login call.
 
 FIXES:
 
