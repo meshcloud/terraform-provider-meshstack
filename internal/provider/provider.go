@@ -31,6 +31,7 @@ type MeshStackProviderModel struct {
 	Endpoint  types.String `tfsdk:"endpoint"`
 	ApiKey    types.String `tfsdk:"apikey"`
 	ApiSecret types.String `tfsdk:"apisecret"`
+	ApiToken  types.String `tfsdk:"apitoken"`
 }
 
 func (p *MeshStackProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
@@ -52,6 +53,12 @@ func (p *MeshStackProvider) Schema(ctx context.Context, req provider.SchemaReque
 			"apisecret": schema.StringAttribute{
 				MarkdownDescription: "API Secret to authenticate against the meshStack API",
 				Optional:            true,
+				Sensitive:           true,
+			},
+			"apitoken": schema.StringAttribute{
+				MarkdownDescription: "API Token to authenticate against the meshStack API",
+				Optional:            true,
+				Sensitive:           true,
 			},
 		},
 	}
@@ -61,6 +68,7 @@ const (
 	envKeyMeshstackEndpoint  = "MESHSTACK_ENDPOINT"
 	envKeyMeshstackApiKey    = "MESHSTACK_API_KEY"
 	envKeyMeshstackApiSecret = "MESHSTACK_API_SECRET"
+	envKeyMeshstackApiToken  = "MESHSTACK_API_TOKEN"
 )
 
 func (p *MeshStackProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
@@ -108,32 +116,41 @@ func newProviderClient(ctx context.Context, data MeshStackProviderModel, provide
 		return
 	}
 
+	var apiToken string
+	if !data.ApiToken.IsNull() && !data.ApiToken.IsUnknown() {
+		apiToken = data.ApiToken.ValueString()
+	} else {
+		apiToken = os.Getenv(envKeyMeshstackApiToken)
+	}
+
 	var apiKey string
 	if !data.ApiKey.IsNull() && !data.ApiKey.IsUnknown() {
 		apiKey = data.ApiKey.ValueString()
 	} else {
-		var ok bool
-		apiKey, ok = os.LookupEnv(envKeyMeshstackApiKey)
-		if !ok {
-			diags.AddError("Provider API key missing.", "Set provider.meshstack.apikey or use MESHSTACK_API_KEY environment variable.")
-			return
-		}
+		apiKey = os.Getenv(envKeyMeshstackApiKey)
 	}
 
 	var apiSecret string
 	if !data.ApiSecret.IsNull() && !data.ApiSecret.IsUnknown() {
 		apiSecret = data.ApiSecret.ValueString()
 	} else {
-		var ok bool
-		apiSecret, ok = os.LookupEnv(envKeyMeshstackApiSecret)
-		if !ok {
+		apiSecret = os.Getenv(envKeyMeshstackApiSecret)
+	}
+
+	if apiToken == "" {
+		if apiKey == "" {
+			diags.AddError("Provider API key missing.", "Set provider.meshstack.apikey or use MESHSTACK_API_KEY environment variable.")
+		}
+		if apiSecret == "" {
 			diags.AddError("Provider API secret missing.", "Set provider.meshstack.apisecret or use MESHSTACK_API_SECRET environment variable.")
+		}
+		if diags.HasError() {
 			return
 		}
 	}
 
 	userAgent := fmt.Sprintf("terraform-provider-meshstack/%s", providerVersion)
-	providerClient = client.New(ctx, parsedEndpoint, userAgent, apiKey, apiSecret)
+	providerClient = client.New(ctx, parsedEndpoint, userAgent, apiKey, apiSecret, apiToken)
 	return
 }
 

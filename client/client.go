@@ -2,8 +2,12 @@ package client
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client/internal"
@@ -29,7 +33,7 @@ type Client struct {
 	PlatformType          MeshPlatformTypeClient
 }
 
-func New(ctx context.Context, rootUrl *url.URL, userAgent, apiKey, apiSecret string) Client {
+func New(ctx context.Context, rootUrl *url.URL, userAgent, apiKey, apiSecret, apiToken string) Client {
 	httpClient := &internal.HttpClient{
 		Client:    http.Client{Timeout: 5 * time.Minute},
 		RootUrl:   rootUrl,
@@ -40,6 +44,18 @@ func New(ctx context.Context, rootUrl *url.URL, userAgent, apiKey, apiSecret str
 		ApiKey:    apiKey,
 		ApiSecret: apiSecret,
 	}
+
+	if apiToken != "" {
+		httpClient.Authorization = "Bearer " + apiToken
+
+		if expiresAt, err := parseTokenExpiration(apiToken); err == nil {
+			httpClient.AuthorizationExpiresAt = expiresAt
+		} else {
+			// If token has no expiration we assume it is valid for the default duration.
+			httpClient.AuthorizationExpiresAt = time.Now().Add(6 * time.Hour)
+		}
+	}
+
 	return Client{
 		newBuildingBlockClient(ctx, httpClient),
 		newBuildingBlockV2Client(ctx, httpClient),
@@ -59,4 +75,29 @@ func New(ctx context.Context, rootUrl *url.URL, userAgent, apiKey, apiSecret str
 		newWorkspaceUserBindingClient(ctx, httpClient),
 		newPlatformTypeClient(ctx, httpClient),
 	}
+}
+
+func parseTokenExpiration(token string) (time.Time, error) {
+	parts := strings.Split(token, ".")
+	if len(parts) != 3 {
+		return time.Time{}, fmt.Errorf("invalid token format")
+	}
+
+	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	var claims struct {
+		Exp int64 `json:"exp"`
+	}
+	if err := json.Unmarshal(payload, &claims); err != nil {
+		return time.Time{}, err
+	}
+
+	if claims.Exp == 0 {
+		return time.Time{}, fmt.Errorf("expiration claim missing")
+	}
+
+	return time.Unix(claims.Exp, 0), nil
 }
