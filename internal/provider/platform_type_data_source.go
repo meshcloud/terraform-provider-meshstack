@@ -41,46 +41,8 @@ func (d *platformTypeDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 				MarkdownDescription: "Kind of meshObject. This is always meshPlatformType for this endpoint.",
 				Computed:            true,
 			},
-			"metadata": schema.SingleNestedAttribute{
-				MarkdownDescription: "Metadata of the platform type",
-				Required:            true,
-				Attributes: map[string]schema.Attribute{
-					"name": schema.StringAttribute{
-						MarkdownDescription: "Name of the platform type",
-						Required:            true,
-					},
-					"created_on": schema.StringAttribute{
-						MarkdownDescription: "Creation date of the platform type",
-						Computed:            true,
-					},
-					"uuid": schema.StringAttribute{
-						MarkdownDescription: "UUID of the platform type",
-						Computed:            true,
-					},
-				},
-			},
-			"spec": schema.SingleNestedAttribute{
-				MarkdownDescription: "Specifications of the platform type",
-				Computed:            true,
-				Attributes: map[string]schema.Attribute{
-					"display_name": schema.StringAttribute{
-						MarkdownDescription: "Display name of the platform type",
-						Computed:            true,
-					},
-					"category": schema.StringAttribute{
-						MarkdownDescription: "Category of the platform type",
-						Computed:            true,
-					},
-					"default_endpoint": schema.StringAttribute{
-						MarkdownDescription: "Default endpoint for the platform type",
-						Computed:            true,
-					},
-					"icon": schema.StringAttribute{
-						MarkdownDescription: "Icon of the platform type",
-						Computed:            true,
-					},
-				},
-			},
+			"metadata": platformTypeMetadataSchema(false),
+			"spec":     platformTypeSpecSchema(),
 		},
 	}
 }
