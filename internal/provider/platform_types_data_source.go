@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -10,6 +11,13 @@ import (
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
 )
+
+var platformTypeCategories = []string{
+	"OPENSTACK", "CLOUDFOUNDRY", "SERVICEREGISTRY", "AWS",
+	"OPENSHIFT", "KUBERNETES", "AZURE", "GCP",
+	"AZURE_KUBERNETES_SERVICE", "AZURE_RESOURCE_GROUP",
+	"CUSTOM", "GITHUB",
+}
 
 func NewPlatformTypesDataSource() datasource.DataSource {
 	return &platformTypesDataSource{}
@@ -31,19 +39,14 @@ func (d *platformTypesDataSource) Metadata(ctx context.Context, req datasource.M
 
 func (d *platformTypesDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Platform types available in the meshStack installation.",
+		MarkdownDescription: "Platform types available in meshStack.",
 
 		Attributes: map[string]schema.Attribute{
 			"category": schema.StringAttribute{
-				MarkdownDescription: "Filter platform types by category",
+				MarkdownDescription: "Filter platform types by category. Possible values: " + strings.Join(platformTypeCategories, ", ") + ".",
 				Optional:            true,
 				Validators: []validator.String{
-					stringvalidator.OneOf(
-						"OPENSTACK", "CLOUDFOUNDRY", "SERVICEREGISTRY", "AWS",
-						"OPENSHIFT", "KUBERNETES", "AZURE", "GCP",
-						"AZURE_KUBERNETES_SERVICE", "AZURE_RESOURCE_GROUP",
-						"CUSTOM", "GITHUB",
-					),
+					stringvalidator.OneOf(platformTypeCategories...),
 				},
 			},
 			"lifecycle_status": schema.StringAttribute{
@@ -66,46 +69,8 @@ func (d *platformTypesDataSource) Schema(ctx context.Context, req datasource.Sch
 							MarkdownDescription: "Kind of meshObject. This is always meshPlatformType for this endpoint.",
 							Computed:            true,
 						},
-						"metadata": schema.SingleNestedAttribute{
-							MarkdownDescription: "Metadata of the platform type",
-							Computed:            true,
-							Attributes: map[string]schema.Attribute{
-								"name": schema.StringAttribute{
-									MarkdownDescription: "Name of the platform type",
-									Computed:            true,
-								},
-								"created_on": schema.StringAttribute{
-									MarkdownDescription: "Creation date of the platform type",
-									Computed:            true,
-								},
-								"uuid": schema.StringAttribute{
-									MarkdownDescription: "UUID of the platform type",
-									Computed:            true,
-								},
-							},
-						},
-						"spec": schema.SingleNestedAttribute{
-							MarkdownDescription: "Specifications of the platform type",
-							Computed:            true,
-							Attributes: map[string]schema.Attribute{
-								"display_name": schema.StringAttribute{
-									MarkdownDescription: "Display name of the platform type",
-									Computed:            true,
-								},
-								"category": schema.StringAttribute{
-									MarkdownDescription: "Category of the platform type",
-									Computed:            true,
-								},
-								"default_endpoint": schema.StringAttribute{
-									MarkdownDescription: "Default endpoint for the platform type",
-									Computed:            true,
-								},
-								"icon": schema.StringAttribute{
-									MarkdownDescription: "Icon of the platform type",
-									Computed:            true,
-								},
-							},
-						},
+						"metadata": platformTypeMetadataSchema(true),
+						"spec":     platformTypeSpecSchema(),
 					},
 				},
 			},

@@ -76,7 +76,7 @@ func (r *platformTypeResource) Schema(_ context.Context, _ resource.SchemaReques
 				Required: true,
 				Attributes: map[string]schema.Attribute{
 					"name": schema.StringAttribute{
-						MarkdownDescription: "The unique identifier of the platform type. Restricted to uppercase alphanumeric characters and dashes. Must be unique across all platform types.",
+						MarkdownDescription: "Unique identifier of the platform type. Restricted to uppercase alphanumeric characters and dashes. Must be unique across all platform types.",
 						Required:            true,
 						PlanModifiers: []planmodifier.String{
 							stringplanmodifier.RequiresReplace(),
@@ -90,12 +90,12 @@ func (r *platformTypeResource) Schema(_ context.Context, _ resource.SchemaReques
 						},
 					},
 					"created_on": schema.StringAttribute{
-						MarkdownDescription: "Timestamp of when the platform type was created (server-generated).",
+						MarkdownDescription: "Timestamp of when the platform type was created.",
 						Computed:            true,
 						PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 					},
 					"uuid": schema.StringAttribute{
-						MarkdownDescription: "Universally unique identifier of the platform type (server-generated).",
+						MarkdownDescription: "UUID of the platform type.",
 						Computed:            true,
 						PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 					},
@@ -106,21 +106,21 @@ func (r *platformTypeResource) Schema(_ context.Context, _ resource.SchemaReques
 				Required: true,
 				Attributes: map[string]schema.Attribute{
 					"display_name": schema.StringAttribute{
-						MarkdownDescription: "Human-readable name for the platform type.",
+						MarkdownDescription: "Display name of the meshPlatformType shown in the UI.",
 						Required:            true,
 					},
 					"category": schema.StringAttribute{
-						MarkdownDescription: "The category of the platform type. Always `CUSTOM` for user-created platform types.",
+						MarkdownDescription: "Category of the platform type. Always `CUSTOM` for user-created platform types.",
 						Computed:            true,
 						Default:             stringdefault.StaticString("CUSTOM"),
 						PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 					},
 					"default_endpoint": schema.StringAttribute{
-						MarkdownDescription: "Default API endpoint URL for platforms of this type.",
+						MarkdownDescription: "Default endpoint URL for platforms of this type.",
 						Optional:            true,
 					},
 					"icon": schema.StringAttribute{
-						MarkdownDescription: "Visual icon representation for the platform type. Must be a base64 encoded data URI (e.g., `data:image/png;base64,...`).",
+						MarkdownDescription: "Icon used to represent the platform type. Must be a base64 encoded data URI (e.g., `data:image/png;base64,...`).",
 						Required:            true,
 						Validators: []validator.String{
 							stringvalidator.RegexMatches(
