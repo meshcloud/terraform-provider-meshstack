@@ -71,6 +71,7 @@ func (d *platformTypesDataSource) Schema(ctx context.Context, req datasource.Sch
 						},
 						"metadata": platformTypeMetadataSchema(true),
 						"spec":     platformTypeSpecSchema(),
+						"status":   platformTypeStatusSchema(),
 					},
 				},
 			},

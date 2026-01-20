@@ -132,6 +132,17 @@ func (r *platformTypeResource) Schema(_ context.Context, _ resource.SchemaReques
 				},
 			},
 
+			"status": schema.SingleNestedAttribute{
+				MarkdownDescription: "Status of the platform type.",
+				Computed:            true,
+				Attributes: map[string]schema.Attribute{
+					"lifecycle_state": schema.StringAttribute{
+						MarkdownDescription: "Lifecycle state of the platform type. Either ACTIVE or DEACTIVATED.",
+						Computed:            true,
+					},
+				},
+			},
+
 			"ref": schema.SingleNestedAttribute{
 				MarkdownDescription: "Reference to this platform type, can be used as input for `platform_type_ref` in platform resources.",
 				Computed:            true,

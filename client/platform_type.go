@@ -11,6 +11,11 @@ type MeshPlatformType struct {
 	Kind       string                   `json:"kind" tfsdk:"kind"`
 	Metadata   MeshPlatformTypeMetadata `json:"metadata" tfsdk:"metadata"`
 	Spec       MeshPlatformTypeSpec     `json:"spec" tfsdk:"spec"`
+	Status     MeshPlatformTypeStatus   `json:"status" tfsdk:"status"`
+}
+
+type MeshPlatformTypeStatus struct {
+	LifecycleState string `json:"lifecycleState" tfsdk:"lifecycle_state"`
 }
 
 type MeshPlatformTypeMetadata struct {

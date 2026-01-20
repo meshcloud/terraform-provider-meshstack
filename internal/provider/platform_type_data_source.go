@@ -43,6 +43,7 @@ func (d *platformTypeDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 			},
 			"metadata": platformTypeMetadataSchema(false),
 			"spec":     platformTypeSpecSchema(),
+			"status":   platformTypeStatusSchema(),
 		},
 	}
 }
