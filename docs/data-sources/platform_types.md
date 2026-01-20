@@ -3,12 +3,12 @@
 page_title: "meshstack_platform_types Data Source - terraform-provider-meshstack"
 subcategory: ""
 description: |-
-  Platform types available in the meshStack installation.
+  Platform types available in meshStack.
 ---
 
 # meshstack_platform_types (Data Source)
 
-Platform types available in the meshStack installation.
+Platform types available in meshStack.
 
 ## Example Usage
 
@@ -25,7 +25,7 @@ data "meshstack_platform_types" "all" {
 
 ### Optional
 
-- `category` (String) Filter platform types by category
+- `category` (String) Filter platform types by category. Possible values: OPENSTACK, CLOUDFOUNDRY, SERVICEREGISTRY, AWS, OPENSHIFT, KUBERNETES, AZURE, GCP, AZURE_KUBERNETES_SERVICE, AZURE_RESOURCE_GROUP, CUSTOM, GITHUB.
 - `lifecycle_status` (String) Filter platform types by lifecycle status
 
 ### Read-Only
@@ -39,17 +39,18 @@ Read-Only:
 
 - `api_version` (String) API version of meshPlatformType datatype.
 - `kind` (String) Kind of meshObject. This is always meshPlatformType for this endpoint.
-- `metadata` (Attributes) Metadata of the platform type (see [below for nested schema](#nestedatt--platform_types--metadata))
+- `metadata` (Attributes) Platform type metadata (see [below for nested schema](#nestedatt--platform_types--metadata))
 - `spec` (Attributes) Specifications of the platform type (see [below for nested schema](#nestedatt--platform_types--spec))
+- `status` (Attributes) Status of the platform type (see [below for nested schema](#nestedatt--platform_types--status))
 
 <a id="nestedatt--platform_types--metadata"></a>
 ### Nested Schema for `platform_types.metadata`
 
 Read-Only:
 
-- `created_on` (String) Creation date of the platform type
-- `name` (String) Name of the platform type
-- `uuid` (String) UUID of the platform type
+- `created_on` (String) Timestamp of when the platform type was created.
+- `name` (String) Unique identifier of the platform type.
+- `uuid` (String) UUID of the platform type.
 
 
 <a id="nestedatt--platform_types--spec"></a>
@@ -57,7 +58,15 @@ Read-Only:
 
 Read-Only:
 
-- `category` (String) Category of the platform type
-- `default_endpoint` (String) Default endpoint for the platform type
-- `display_name` (String) Display name of the platform type
-- `icon` (String) Icon of the platform type
+- `category` (String) Category of the platform type.
+- `default_endpoint` (String) Default endpoint URL for platforms of this type.
+- `display_name` (String) Display name of the meshPlatformType shown in the UI.
+- `icon` (String) Icon used to represent the platform type. Base64 encoded data URI (e.g., `data:image/png;base64,...`).
+
+
+<a id="nestedatt--platform_types--status"></a>
+### Nested Schema for `platform_types.status`
+
+Read-Only:
+
+- `lifecycle_state` (String) Lifecycle state of the platform type. Either ACTIVE or DEACTIVATED.
