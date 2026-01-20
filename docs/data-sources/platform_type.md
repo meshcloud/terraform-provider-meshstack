@@ -25,25 +25,26 @@ data "meshstack_platform_type" "example" {
 
 ### Required
 
-- `metadata` (Attributes) Metadata of the platform type (see [below for nested schema](#nestedatt--metadata))
+- `metadata` (Attributes) Platform type metadata (see [below for nested schema](#nestedatt--metadata))
 
 ### Read-Only
 
 - `api_version` (String) API version of meshPlatformType datatype.
 - `kind` (String) Kind of meshObject. This is always meshPlatformType for this endpoint.
 - `spec` (Attributes) Specifications of the platform type (see [below for nested schema](#nestedatt--spec))
+- `status` (Attributes) Status of the platform type (see [below for nested schema](#nestedatt--status))
 
 <a id="nestedatt--metadata"></a>
 ### Nested Schema for `metadata`
 
 Required:
 
-- `name` (String) Name of the platform type
+- `name` (String) Unique identifier of the platform type.
 
 Read-Only:
 
-- `created_on` (String) Creation date of the platform type
-- `uuid` (String) UUID of the platform type
+- `created_on` (String) Timestamp of when the platform type was created.
+- `uuid` (String) UUID of the platform type.
 
 
 <a id="nestedatt--spec"></a>
@@ -51,7 +52,15 @@ Read-Only:
 
 Read-Only:
 
-- `category` (String) Category of the platform type
-- `default_endpoint` (String) Default endpoint for the platform type
-- `display_name` (String) Display name of the platform type
-- `icon` (String) Icon of the platform type
+- `category` (String) Category of the platform type.
+- `default_endpoint` (String) Default endpoint URL for platforms of this type.
+- `display_name` (String) Display name of the meshPlatformType shown in the UI.
+- `icon` (String) Icon used to represent the platform type. Base64 encoded data URI (e.g., `data:image/png;base64,...`).
+
+
+<a id="nestedatt--status"></a>
+### Nested Schema for `status`
+
+Read-Only:
+
+- `lifecycle_state` (String) Lifecycle state of the platform type. Either ACTIVE or DEACTIVATED.

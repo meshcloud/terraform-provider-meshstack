@@ -39,18 +39,19 @@ resource "meshstack_platform_type" "example" {
 - `api_version` (String) The version of the API used for the platform type. Defaults to `v1-preview`.
 - `kind` (String) The kind of the object. Always `meshPlatformType`.
 - `ref` (Attributes) Reference to this platform type, can be used as input for `platform_type_ref` in platform resources. (see [below for nested schema](#nestedatt--ref))
+- `status` (Attributes) Status of the platform type. (see [below for nested schema](#nestedatt--status))
 
 <a id="nestedatt--metadata"></a>
 ### Nested Schema for `metadata`
 
 Required:
 
-- `name` (String) The unique identifier of the platform type. Restricted to uppercase alphanumeric characters and dashes. Must be unique across all platform types.
+- `name` (String) Unique identifier of the platform type. Restricted to uppercase alphanumeric characters and dashes. Must be unique across all platform types.
 
 Read-Only:
 
-- `created_on` (String) Timestamp of when the platform type was created (server-generated).
-- `uuid` (String) Universally unique identifier of the platform type (server-generated).
+- `created_on` (String) Timestamp of when the platform type was created.
+- `uuid` (String) UUID of the platform type.
 
 
 <a id="nestedatt--spec"></a>
@@ -58,16 +59,16 @@ Read-Only:
 
 Required:
 
-- `display_name` (String) Human-readable name for the platform type.
-- `icon` (String) Visual icon representation for the platform type. Must be a base64 encoded data URI (e.g., `data:image/png;base64,...`).
+- `display_name` (String) Display name of the meshPlatformType shown in the UI.
+- `icon` (String) Icon used to represent the platform type. Must be a base64 encoded data URI (e.g., `data:image/png;base64,...`).
 
 Optional:
 
-- `default_endpoint` (String) Default API endpoint URL for platforms of this type.
+- `default_endpoint` (String) Default endpoint URL for platforms of this type.
 
 Read-Only:
 
-- `category` (String) The category of the platform type. Always `CUSTOM` for user-created platform types.
+- `category` (String) Category of the platform type. Always `CUSTOM` for user-created platform types.
 
 
 <a id="nestedatt--ref"></a>
@@ -76,6 +77,14 @@ Read-Only:
 Read-Only:
 
 - `name` (String) Identifier of the platform type.
+
+
+<a id="nestedatt--status"></a>
+### Nested Schema for `status`
+
+Read-Only:
+
+- `lifecycle_state` (String) Lifecycle state of the platform type. Either ACTIVE or DEACTIVATED.
 
 ## Import
 
