@@ -69,4 +69,11 @@ Read-Only:
 
 Read-Only:
 
-- `lifecycle_state` (String) Lifecycle state of the platform type. Either ACTIVE or DEACTIVATED.
+- `lifecycle` (Attributes) Lifecycle information of the platform type (see [below for nested schema](#nestedatt--platform_types--status--lifecycle))
+
+<a id="nestedatt--platform_types--status--lifecycle"></a>
+### Nested Schema for `platform_types.status.lifecycle`
+
+Read-Only:
+
+- `state` (String) Lifecycle state of the platform type. Either ACTIVE or DEACTIVATED.
