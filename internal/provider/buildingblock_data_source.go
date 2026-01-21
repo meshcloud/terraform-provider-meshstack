@@ -3,11 +3,9 @@ package provider
 import (
 	"context"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
 )
@@ -43,9 +41,6 @@ func (d *buildingBlockDataSource) Schema(ctx context.Context, req datasource.Sch
 			"kind": schema.StringAttribute{
 				MarkdownDescription: "meshObject type, always `meshBuildingBlock`.",
 				Computed:            true,
-				Validators: []validator.String{
-					stringvalidator.OneOf([]string{"meshBuildingBlock"}...),
-				},
 			},
 
 			"metadata": schema.SingleNestedAttribute{
@@ -124,9 +119,6 @@ func (d *buildingBlockDataSource) Schema(ctx context.Context, req datasource.Sch
 					"status": schema.StringAttribute{
 						MarkdownDescription: "Execution status. One of `WAITING_FOR_DEPENDENT_INPUT`, `WAITING_FOR_OPERATOR_INPUT`, `PENDING`, `IN_PROGRESS`, `SUCCEEDED`, `FAILED`.",
 						Computed:            true,
-						Validators: []validator.String{
-							stringvalidator.OneOf([]string{"WAITING_FOR_DEPENDENT_INPUT", "WAITING_FOR_OPERATOR_INPUT", "PENDING", "IN_PROGRESS", "SUCCEEDED", "FAILED"}...),
-						},
 					},
 					"outputs": buildingBlockOutputs(),
 				},

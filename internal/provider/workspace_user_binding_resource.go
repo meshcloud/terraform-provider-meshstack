@@ -61,10 +61,7 @@ func (r *workspaceUserBindingResource) Schema(_ context.Context, _ resource.Sche
 				MarkdownDescription: "meshObject type, always `meshWorkspaceUserBinding`.",
 				Computed:            true,
 				Default:             stringdefault.StaticString("meshWorkspaceUserBinding"),
-				Validators: []validator.String{
-					stringvalidator.OneOf([]string{"meshWorkspaceUserBinding"}...),
-				},
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 
 			"metadata": schema.SingleNestedAttribute{

@@ -80,10 +80,7 @@ func (r *platformResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				MarkdownDescription: "meshObject type, always `meshPlatform`.",
 				Computed:            true,
 				Default:             stringdefault.StaticString("meshPlatform"),
-				Validators: []validator.String{
-					stringvalidator.OneOf([]string{"meshPlatform"}...),
-				},
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 
 			"metadata": schema.SingleNestedAttribute{
@@ -164,10 +161,7 @@ func (r *platformResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 								MarkdownDescription: "meshObject type, always `meshLocation`.",
 								Computed:            true,
 								Default:             stringdefault.StaticString("meshLocation"),
-								Validators: []validator.String{
-									stringvalidator.OneOf([]string{"meshLocation"}...),
-								},
-								PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+								PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 							},
 							"name": schema.StringAttribute{
 								MarkdownDescription: "Identifier of the Location.",

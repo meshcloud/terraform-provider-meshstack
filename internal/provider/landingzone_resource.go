@@ -67,10 +67,7 @@ func (r *landingZoneResource) Schema(_ context.Context, _ resource.SchemaRequest
 				MarkdownDescription: "meshObject type, always `meshLandingZone`.",
 				Computed:            true,
 				Default:             stringdefault.StaticString("meshLandingZone"),
-				Validators: []validator.String{
-					stringvalidator.OneOf("meshLandingZone"),
-				},
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 
 			"metadata": schema.SingleNestedAttribute{
@@ -143,9 +140,6 @@ func (r *landingZoneResource) Schema(_ context.Context, _ resource.SchemaRequest
 								Computed:            true,
 								PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 								Default:             stringdefault.StaticString("meshPlatform"),
-								Validators: []validator.String{
-									stringvalidator.OneOf("meshPlatform"),
-								},
 							},
 						},
 					},

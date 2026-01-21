@@ -61,10 +61,7 @@ func (r *projectGroupBindingResource) Schema(_ context.Context, _ resource.Schem
 				MarkdownDescription: "meshObject type, always `meshProjectGroupBinding`.",
 				Computed:            true,
 				Default:             stringdefault.StaticString("meshProjectGroupBinding"),
-				Validators: []validator.String{
-					stringvalidator.OneOf([]string{"meshProjectGroupBinding"}...),
-				},
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 
 			"metadata": schema.SingleNestedAttribute{

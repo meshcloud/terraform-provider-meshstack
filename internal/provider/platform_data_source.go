@@ -4,12 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
@@ -112,9 +110,6 @@ func (d *platformDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 							"kind": schema.StringAttribute{
 								MarkdownDescription: "Must always be set to meshLocation",
 								Computed:            true,
-								Validators: []validator.String{
-									stringvalidator.OneOf("meshLocation"),
-								},
 							},
 							"name": schema.StringAttribute{
 								MarkdownDescription: "Identifier of the Location.",
@@ -134,16 +129,10 @@ func (d *platformDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 							"restriction": schema.StringAttribute{
 								MarkdownDescription: "Access restriction for the platform. Must be one of: PUBLIC, PRIVATE, RESTRICTED.",
 								Computed:            true,
-								Validators: []validator.String{
-									stringvalidator.OneOf("PUBLIC", "PRIVATE", "RESTRICTED"),
-								},
 							},
 							"publication_state": schema.StringAttribute{
 								MarkdownDescription: "Publication state of the platform. Must be one of: PUBLISHED, UNPUBLISHED.",
 								Computed:            true,
-								Validators: []validator.String{
-									stringvalidator.OneOf("PUBLISHED", "UNPUBLISHED"),
-								},
 							},
 							"restricted_to_workspaces": schema.ListAttribute{
 								MarkdownDescription: "If the restriction is set to `RESTRICTED`, you can specify the workspace identifiers this meshPlatform is restricted to.",

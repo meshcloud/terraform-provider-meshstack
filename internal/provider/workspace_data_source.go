@@ -4,11 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
@@ -45,9 +43,6 @@ func (d *workspaceDataSource) Schema(_ context.Context, _ datasource.SchemaReque
 			"kind": schema.StringAttribute{
 				MarkdownDescription: "meshObject type, always `meshWorkspace`.",
 				Computed:            true,
-				Validators: []validator.String{
-					stringvalidator.OneOf([]string{"meshWorkspace"}...),
-				},
 			},
 
 			"metadata": schema.SingleNestedAttribute{

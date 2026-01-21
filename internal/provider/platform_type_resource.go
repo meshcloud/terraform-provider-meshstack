@@ -67,9 +67,6 @@ func (r *platformTypeResource) Schema(_ context.Context, _ resource.SchemaReques
 				Computed:            true,
 				Default:             stringdefault.StaticString("meshPlatformType"),
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Validators: []validator.String{
-					stringvalidator.OneOf("meshPlatformType"),
-				},
 			},
 
 			"metadata": schema.SingleNestedAttribute{

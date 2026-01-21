@@ -64,9 +64,6 @@ func (r *workspaceResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 			"kind": schema.StringAttribute{
 				MarkdownDescription: "meshObject type, always `meshWorkspace`.",
 				Computed:            true,
-				Validators: []validator.String{
-					stringvalidator.OneOf([]string{"meshWorkspace"}...),
-				},
 			},
 
 			"metadata": schema.SingleNestedAttribute{

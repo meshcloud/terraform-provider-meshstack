@@ -4,11 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
@@ -45,9 +43,6 @@ func (d *landingZoneDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 			"kind": schema.StringAttribute{
 				MarkdownDescription: "meshObject type, always `meshLandingZone`.",
 				Computed:            true,
-				Validators: []validator.String{
-					stringvalidator.OneOf([]string{"meshLandingZone"}...),
-				},
 			},
 
 			"metadata": schema.SingleNestedAttribute{
@@ -103,9 +98,6 @@ func (d *landingZoneDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 							"kind": schema.StringAttribute{
 								MarkdownDescription: "Must always be set to meshPlatform",
 								Computed:            true,
-								Validators: []validator.String{
-									stringvalidator.OneOf("meshPlatform"),
-								},
 							},
 						},
 					},

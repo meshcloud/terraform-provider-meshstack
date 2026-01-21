@@ -1,12 +1,10 @@
 package provider
 
 import (
-	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 )
 
 // meshProjectRoleAttribute returns a schema attribute for meshProject role references.
@@ -25,10 +23,7 @@ func meshProjectRoleAttribute(computed bool) schema.SingleNestedAttribute {
 				MarkdownDescription: "meshObject type, always `meshProjectRole`.",
 				Computed:            true,
 				Default:             stringdefault.StaticString("meshProjectRole"),
-				Validators: []validator.String{
-					stringvalidator.OneOf([]string{"meshProjectRole"}...),
-				},
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 		},
 	}
@@ -40,10 +35,7 @@ func meshBuildingBlockDefinitionRefAttribute(computed bool) map[string]schema.At
 			MarkdownDescription: "meshObject type, always `meshBuildingBlockDefinition`.",
 			Computed:            true,
 			Default:             stringdefault.StaticString("meshBuildingBlockDefinition"),
-			Validators: []validator.String{
-				stringvalidator.OneOf([]string{"meshBuildingBlockDefinition"}...),
-			},
-			PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+			PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 		},
 		"uuid": schema.StringAttribute{
 			MarkdownDescription: "UUID of the building block.",

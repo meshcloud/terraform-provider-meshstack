@@ -61,10 +61,7 @@ func (r *workspaceGroupBindingResource) Schema(_ context.Context, _ resource.Sch
 				MarkdownDescription: "meshObject type, always `meshWorkspaceGroupBinding`.",
 				Computed:            true,
 				Default:             stringdefault.StaticString("meshWorkspaceGroupBinding"),
-				Validators: []validator.String{
-					stringvalidator.OneOf([]string{"meshWorkspaceGroupBinding"}...),
-				},
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 
 			"metadata": schema.SingleNestedAttribute{

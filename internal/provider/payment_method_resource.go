@@ -59,9 +59,6 @@ func (r *paymentMethodResource) Schema(_ context.Context, _ resource.SchemaReque
 			"kind": schema.StringAttribute{
 				MarkdownDescription: "meshObject type, always `meshPaymentMethod`.",
 				Computed:            true,
-				Validators: []validator.String{
-					stringvalidator.OneOf([]string{"meshPaymentMethod"}...),
-				},
 			},
 
 			"metadata": schema.SingleNestedAttribute{
