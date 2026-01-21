@@ -1,5 +1,7 @@
 package client
 
+import "github.com/meshcloud/terraform-provider-meshstack/client/types"
+
 type AksPlatformConfig struct {
 	BaseUrl              string                `json:"baseUrl" tfsdk:"base_url"`
 	DisableSslValidation bool                  `json:"disableSslValidation" tfsdk:"disable_ssl_validation"`
@@ -8,7 +10,7 @@ type AksPlatformConfig struct {
 }
 
 type AksReplicationConfig struct {
-	AccessToken             SecretEmbedded            `json:"accessToken" tfsdk:"access_token"`
+	AccessToken             types.Secret              `json:"accessToken" tfsdk:"access_token"`
 	NamespaceNamePattern    string                    `json:"namespaceNamePattern" tfsdk:"namespace_name_pattern"`
 	GroupNamePattern        string                    `json:"groupNamePattern" tfsdk:"group_name_pattern"`
 	ServicePrincipal        AksServicePrincipalConfig `json:"servicePrincipal" tfsdk:"service_principal"`
