@@ -10,8 +10,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-version"
+
 	"github.com/meshcloud/terraform-provider-meshstack/client/internal"
 )
+
+const MinMeshStackVersion = "2026.2.0"
 
 type Client struct {
 	BuildingBlock         MeshBuildingBlockClient
@@ -33,7 +37,7 @@ type Client struct {
 	PlatformType          MeshPlatformTypeClient
 }
 
-func New(ctx context.Context, rootUrl *url.URL, userAgent, apiKey, apiSecret, apiToken string) Client {
+func New(ctx context.Context, rootUrl *url.URL, userAgent, apiKey, apiSecret string, apiToken string) (Client, error) {
 	httpClient := &internal.HttpClient{
 		Client:    http.Client{Timeout: 5 * time.Minute},
 		RootUrl:   rootUrl,
@@ -56,6 +60,26 @@ func New(ctx context.Context, rootUrl *url.URL, userAgent, apiKey, apiSecret, ap
 		}
 	}
 
+	// Validate meshStack version compatibility
+	meshInfo, err := httpClient.GetMeshInfo(ctx)
+	if err != nil {
+		return Client{}, fmt.Errorf("failed to retrieve meshStack version information from /mesh/info endpoint: %w", err)
+	}
+
+	minVersion, err := version.NewVersion(MinMeshStackVersion)
+	if err != nil {
+		return Client{}, fmt.Errorf("invalid minimum version format %s: %w", MinMeshStackVersion, err)
+	}
+
+	actualVersion, err := version.NewVersion(meshInfo.Version)
+	if err != nil {
+		return Client{}, fmt.Errorf("invalid meshStack version format %s: %w", meshInfo.Version, err)
+	}
+
+	if actualVersion.LessThan(minVersion) {
+		return Client{}, fmt.Errorf("unsupported meshStack version: meshStack is running version %s, but this client requires version %s or higher", meshInfo.Version, MinMeshStackVersion)
+	}
+
 	return Client{
 		newBuildingBlockClient(ctx, httpClient),
 		newBuildingBlockV2Client(ctx, httpClient),
@@ -74,7 +98,7 @@ func New(ctx context.Context, rootUrl *url.URL, userAgent, apiKey, apiSecret, ap
 		newWorkspaceGroupBindingClient(ctx, httpClient),
 		newWorkspaceUserBindingClient(ctx, httpClient),
 		newPlatformTypeClient(ctx, httpClient),
-	}
+	}, nil
 }
 
 func parseTokenExpiration(token string) (time.Time, error) {
