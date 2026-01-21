@@ -61,10 +61,7 @@ func (r *projectUserBindingResource) Schema(_ context.Context, _ resource.Schema
 				MarkdownDescription: "meshObject type, always `meshProjectUserBinding`.",
 				Computed:            true,
 				Default:             stringdefault.StaticString("meshProjectUserBinding"),
-				Validators: []validator.String{
-					stringvalidator.OneOf([]string{"meshProjectUserBinding"}...),
-				},
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 
 			"metadata": schema.SingleNestedAttribute{

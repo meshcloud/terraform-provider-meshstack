@@ -64,10 +64,7 @@ func (r *buildingBlockV2Resource) Schema(ctx context.Context, req resource.Schem
 				MarkdownDescription: "meshObject type, always `meshBuildingBlock`.",
 				Computed:            true,
 				Default:             stringdefault.StaticString("meshBuildingBlock"),
-				Validators: []validator.String{
-					stringvalidator.OneOf([]string{"meshBuildingBlock"}...),
-				},
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 
 			"metadata": schema.SingleNestedAttribute{
@@ -195,16 +192,6 @@ func (r *buildingBlockV2Resource) Schema(ctx context.Context, req resource.Schem
 							client.BUILDING_BLOCK_STATUS_SUCCEEDED,
 							client.BUILDING_BLOCK_STATUS_FAILED),
 						Computed: true,
-						Validators: []validator.String{
-							stringvalidator.OneOf([]string{
-								client.BUILDING_BLOCK_STATUS_WAITING_FOR_DEPENDENT_INPUT,
-								client.BUILDING_BLOCK_STATUS_WAITING_FOR_OPERATOR_INPUT,
-								client.BUILDING_BLOCK_STATUS_PENDING,
-								client.BUILDING_BLOCK_STATUS_IN_PROGRESS,
-								client.BUILDING_BLOCK_STATUS_SUCCEEDED,
-								client.BUILDING_BLOCK_STATUS_FAILED,
-							}...),
-						},
 					},
 					"force_purge": schema.BoolAttribute{
 						MarkdownDescription: "Indicates whether an operator has requested purging of this Building Block.",

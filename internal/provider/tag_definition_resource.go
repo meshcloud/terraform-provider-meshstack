@@ -145,10 +145,7 @@ func (r *tagDefinitionResource) Schema(_ context.Context, _ resource.SchemaReque
 			"kind": schema.StringAttribute{
 				MarkdownDescription: "meshObject type, always `meshTagDefinition`.",
 				Computed:            true,
-				Validators: []validator.String{
-					stringvalidator.OneOf([]string{"meshTagDefinition"}...),
-				},
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 
 			"metadata": schema.SingleNestedAttribute{

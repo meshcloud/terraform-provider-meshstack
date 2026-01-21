@@ -44,9 +44,6 @@ func (d *buildingBlockV2DataSource) Schema(ctx context.Context, req datasource.S
 			"kind": schema.StringAttribute{
 				MarkdownDescription: "meshObject type, always `meshBuildingBlock`.",
 				Computed:            true,
-				Validators: []validator.String{
-					stringvalidator.OneOf([]string{"meshBuildingBlock"}...),
-				},
 			},
 
 			"metadata": schema.SingleNestedAttribute{
@@ -103,9 +100,6 @@ func (d *buildingBlockV2DataSource) Schema(ctx context.Context, req datasource.S
 							"kind": schema.StringAttribute{
 								MarkdownDescription: "Target kind for this building block, depends on building block definition type. One of `meshTenant`, `meshWorkspace`.",
 								Computed:            true,
-								Validators: []validator.String{
-									stringvalidator.OneOf([]string{"meshTenant", "meshWorkspace"}...),
-								},
 							},
 							"uuid": schema.StringAttribute{
 								MarkdownDescription: "UUID of the target tenant.",
@@ -156,16 +150,6 @@ func (d *buildingBlockV2DataSource) Schema(ctx context.Context, req datasource.S
 							client.BUILDING_BLOCK_STATUS_SUCCEEDED,
 							client.BUILDING_BLOCK_STATUS_FAILED),
 						Computed: true,
-						Validators: []validator.String{
-							stringvalidator.OneOf([]string{
-								client.BUILDING_BLOCK_STATUS_WAITING_FOR_DEPENDENT_INPUT,
-								client.BUILDING_BLOCK_STATUS_WAITING_FOR_OPERATOR_INPUT,
-								client.BUILDING_BLOCK_STATUS_PENDING,
-								client.BUILDING_BLOCK_STATUS_IN_PROGRESS,
-								client.BUILDING_BLOCK_STATUS_SUCCEEDED,
-								client.BUILDING_BLOCK_STATUS_FAILED,
-							}...),
-						},
 					},
 					"force_purge": schema.BoolAttribute{
 						MarkdownDescription: "Indicates whether an operator has requested purging of this Building Block.",

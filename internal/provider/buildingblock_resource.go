@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -18,7 +17,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
@@ -64,10 +62,7 @@ func (r *buildingBlockResource) Schema(ctx context.Context, req resource.SchemaR
 				MarkdownDescription: "meshObject type, always `meshBuildingBlock`.",
 				Computed:            true,
 				Default:             stringdefault.StaticString("meshBuildingBlock"),
-				Validators: []validator.String{
-					stringvalidator.OneOf([]string{"meshBuildingBlock"}...),
-				},
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 
 			"metadata": schema.SingleNestedAttribute{
@@ -169,9 +164,6 @@ func (r *buildingBlockResource) Schema(ctx context.Context, req resource.SchemaR
 					"status": schema.StringAttribute{
 						MarkdownDescription: "Execution status. One of `WAITING_FOR_DEPENDENT_INPUT`, `WAITING_FOR_OPERATOR_INPUT`, `PENDING`, `IN_PROGRESS`, `SUCCEEDED`, `FAILED`.",
 						Computed:            true,
-						Validators: []validator.String{
-							stringvalidator.OneOf([]string{"WAITING_FOR_DEPENDENT_INPUT", "WAITING_FOR_OPERATOR_INPUT", "PENDING", "IN_PROGRESS", "SUCCEEDED", "FAILED"}...),
-						},
 					},
 					"outputs": buildingBlockOutputs(),
 				},

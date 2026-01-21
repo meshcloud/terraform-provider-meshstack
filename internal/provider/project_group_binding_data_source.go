@@ -44,9 +44,6 @@ func (d *projectGroupBindingDataSource) Schema(ctx context.Context, req datasour
 			"kind": schema.StringAttribute{
 				MarkdownDescription: "meshObject type, always `meshProjectGroupBinding`.",
 				Computed:            true,
-				Validators: []validator.String{
-					stringvalidator.OneOf([]string{"meshProjectGroupBinding"}...),
-				},
 			},
 
 			"metadata": schema.SingleNestedAttribute{

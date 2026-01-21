@@ -4,11 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
@@ -49,9 +47,6 @@ func (d *tenantV4DataSource) Schema(_ context.Context, _ datasource.SchemaReques
 			"kind": schema.StringAttribute{
 				MarkdownDescription: "meshObject type, always `meshTenant`.",
 				Computed:            true,
-				Validators: []validator.String{
-					stringvalidator.OneOf([]string{"meshTenant"}...),
-				},
 			},
 
 			"metadata": schema.SingleNestedAttribute{
