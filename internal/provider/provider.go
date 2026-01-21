@@ -150,7 +150,11 @@ func newProviderClient(ctx context.Context, data MeshStackProviderModel, provide
 	}
 
 	userAgent := fmt.Sprintf("terraform-provider-meshstack/%s", providerVersion)
-	providerClient = client.New(ctx, parsedEndpoint, userAgent, apiKey, apiSecret, apiToken)
+	providerClient, err = client.New(ctx, parsedEndpoint, userAgent, apiKey, apiSecret, apiToken)
+	if err != nil {
+		diags.AddError("Failed to create meshStack client.", err.Error())
+		return
+	}
 	return
 }
 

@@ -110,3 +110,12 @@ func unmarshalBody[T any](body []byte, err error) (*T, error) {
 	}
 	return &target, nil
 }
+
+type MeshInfo struct {
+	Version string `json:"version"`
+}
+
+func (c *HttpClient) GetMeshInfo(ctx context.Context) (*MeshInfo, error) {
+	meshInfoUrl := c.RootUrl.JoinPath("/mesh/info")
+	return unmarshalBody[MeshInfo](c.doRequest(ctx, "GET", meshInfoUrl))
+}

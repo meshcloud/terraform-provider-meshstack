@@ -48,6 +48,7 @@ linters:
           allow:
             - $gostd
             - github.com/meshcloud/terraform-provider-meshstack/client
+            - github.com/hashicorp/go-version
         client-test:
           files:
             - "**/client/**/*_test.go"
@@ -74,6 +75,7 @@ linters:
             - github.com/hashicorp/terraform-plugin-go
             - github.com/hashicorp/terraform-plugin-sdk
             - github.com/hashicorp/terraform-plugin-log
+            - github.com/hashicorp/go-version
         provider-test:
           files:
             - "$test"
