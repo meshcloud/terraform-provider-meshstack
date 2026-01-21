@@ -1,5 +1,7 @@
 package client
 
+import "github.com/meshcloud/terraform-provider-meshstack/client/types"
+
 type GcpPlatformConfig struct {
 	Replication *GcpReplicationConfig `json:"replication,omitempty" tfsdk:"replication"`
 	Metering    *GcpMeteringConfig    `json:"metering,omitempty" tfsdk:"metering"`
@@ -23,7 +25,7 @@ type GcpReplicationConfig struct {
 
 type GcpServiceAccountConfig struct {
 	Type             string                                   `json:"type" tfsdk:"type"`
-	Credential       *SecretEmbedded                          `json:"credential,omitempty" tfsdk:"credential"`
+	Credential       *types.Secret                            `json:"credential,omitempty" tfsdk:"credential"`
 	WorkloadIdentity *GcpServiceAccountWorkloadIdentityConfig `json:"workloadIdentity,omitempty" tfsdk:"workload_identity"`
 }
 

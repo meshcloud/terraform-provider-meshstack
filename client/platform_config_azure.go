@@ -1,5 +1,7 @@
 package client
 
+import "github.com/meshcloud/terraform-provider-meshstack/client/types"
+
 type AzurePlatformConfig struct {
 	EntraTenant string                  `json:"entraTenant" tfsdk:"entra_tenant"`
 	Replication *AzureReplicationConfig `json:"replication,omitempty" tfsdk:"replication"`
@@ -29,8 +31,8 @@ type AzureServicePrincipalConfig struct {
 }
 
 type AzureAuthConfig struct {
-	Type       string          `json:"type" tfsdk:"type"`
-	Credential *SecretEmbedded `json:"credential,omitempty" tfsdk:"credential"`
+	Type       string        `json:"type" tfsdk:"type"`
+	Credential *types.Secret `json:"credential,omitempty" tfsdk:"credential"`
 }
 
 type AzureGraphApiCredentials struct {
