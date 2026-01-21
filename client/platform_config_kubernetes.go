@@ -1,5 +1,7 @@
 package client
 
+import "github.com/meshcloud/terraform-provider-meshstack/client/types"
+
 type KubernetesPlatformConfig struct {
 	BaseUrl              string                       `json:"baseUrl" tfsdk:"base_url"`
 	DisableSslValidation bool                         `json:"disableSslValidation" tfsdk:"disable_ssl_validation"`
@@ -13,7 +15,7 @@ type KubernetesReplicationConfig struct {
 }
 
 type KubernetesClientConfig struct {
-	AccessToken SecretEmbedded `json:"accessToken" tfsdk:"access_token"`
+	AccessToken types.Secret `json:"accessToken" tfsdk:"access_token"`
 }
 
 type KubernetesMeteringConfig struct {
