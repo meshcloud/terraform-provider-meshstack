@@ -15,7 +15,11 @@ type MeshPlatformType struct {
 }
 
 type MeshPlatformTypeStatus struct {
-	LifecycleState string `json:"lifecycleState" tfsdk:"lifecycle_state"`
+	Lifecycle MeshPlatformTypeLifecycle `json:"lifecycle" tfsdk:"lifecycle"`
+}
+
+type MeshPlatformTypeLifecycle struct {
+	State string `json:"state" tfsdk:"state"`
 }
 
 type MeshPlatformTypeMetadata struct {

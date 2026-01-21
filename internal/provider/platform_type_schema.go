@@ -57,9 +57,15 @@ func platformTypeStatusSchema() schema.SingleNestedAttribute {
 		MarkdownDescription: "Status of the platform type",
 		Computed:            true,
 		Attributes: map[string]schema.Attribute{
-			"lifecycle_state": schema.StringAttribute{
-				MarkdownDescription: "Lifecycle state of the platform type. Either ACTIVE or DEACTIVATED.",
+			"lifecycle": schema.SingleNestedAttribute{
+				MarkdownDescription: "Lifecycle information of the platform type",
 				Computed:            true,
+				Attributes: map[string]schema.Attribute{
+					"state": schema.StringAttribute{
+						MarkdownDescription: "Lifecycle state of the platform type. Either ACTIVE or DEACTIVATED.",
+						Computed:            true,
+					},
+				},
 			},
 		},
 	}
