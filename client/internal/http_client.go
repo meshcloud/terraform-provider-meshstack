@@ -11,6 +11,8 @@ import (
 	"net/url"
 	"slices"
 	"time"
+
+	"github.com/meshcloud/terraform-provider-meshstack/client/version"
 )
 
 var (
@@ -112,7 +114,7 @@ func unmarshalBody[T any](body []byte, err error) (*T, error) {
 }
 
 type MeshInfo struct {
-	Version string `json:"version"`
+	Version version.Version `json:"version"`
 }
 
 func (c *HttpClient) GetMeshInfo(ctx context.Context) (*MeshInfo, error) {
