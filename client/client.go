@@ -10,12 +10,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/go-version"
-
 	"github.com/meshcloud/terraform-provider-meshstack/client/internal"
+	"github.com/meshcloud/terraform-provider-meshstack/client/version"
 )
 
-const MinMeshStackVersion = "2026.2.0"
+var MinMeshStackVersion = version.MustParse("2026.2.0")
 
 type Client struct {
 	BuildingBlock         MeshBuildingBlockClient
@@ -60,23 +59,10 @@ func New(ctx context.Context, rootUrl *url.URL, userAgent, apiKey, apiSecret str
 		}
 	}
 
-	// Validate meshStack version compatibility
-	meshInfo, err := httpClient.GetMeshInfo(ctx)
-	if err != nil {
+	// Check meshStack version compatibility
+	if meshInfo, err := httpClient.GetMeshInfo(ctx); err != nil {
 		return Client{}, fmt.Errorf("failed to retrieve meshStack version information from /mesh/info endpoint: %w", err)
-	}
-
-	minVersion, err := version.NewVersion(MinMeshStackVersion)
-	if err != nil {
-		return Client{}, fmt.Errorf("invalid minimum version format %s: %w", MinMeshStackVersion, err)
-	}
-
-	actualVersion, err := version.NewVersion(meshInfo.Version)
-	if err != nil {
-		return Client{}, fmt.Errorf("invalid meshStack version format %s: %w", meshInfo.Version, err)
-	}
-
-	if actualVersion.LessThan(minVersion) {
+	} else if meshInfo.Version.Less(MinMeshStackVersion) {
 		return Client{}, fmt.Errorf("unsupported meshStack version: meshStack is running version %s, but this client requires version %s or higher", meshInfo.Version, MinMeshStackVersion)
 	}
 
