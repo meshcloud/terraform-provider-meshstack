@@ -19,6 +19,9 @@ import (
 // can be customized.
 //go:generate go tool tfplugindocs
 
+// Update generated documentation with the current version requirement
+//go:generate go run ./tools/update-docs-version
+
 var (
 	// these will be set by the goreleaser configuration
 	// to appropriate values for the compiled binary.
