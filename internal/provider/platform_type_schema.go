@@ -15,6 +15,11 @@ func platformTypeMetadataSchema(computed bool) schema.SingleNestedAttribute {
 				Computed:            computed,
 				Required:            !computed,
 			},
+			"owned_by_workspace": schema.StringAttribute{
+				MarkdownDescription: "Identifier of the workspace that owns this platform type.",
+				Computed:            computed,
+				Required:            !computed,
+			},
 			"created_on": schema.StringAttribute{
 				MarkdownDescription: "Timestamp of when the platform type was created.",
 				Computed:            true,
