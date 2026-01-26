@@ -1,3 +1,9 @@
+## v0.17.3
+
+BREAKING CHANGES:
+
+- Platform type resource: Added required `owned_by_workspace` field to metadata. This field specifies the workspace that owns the platform type and must be provided when creating or updating platform types.
+
 ## v0.17.2
 
 FIXES:

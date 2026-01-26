@@ -40,6 +40,7 @@ data "meshstack_platform_type" "example" {
 Required:
 
 - `name` (String) Unique identifier of the platform type.
+- `owned_by_workspace` (String) Identifier of the workspace that owns this platform type.
 
 Read-Only:
 
