@@ -86,6 +86,13 @@ func (r *platformTypeResource) Schema(_ context.Context, _ resource.SchemaReques
 							),
 						},
 					},
+					"owned_by_workspace": schema.StringAttribute{
+						MarkdownDescription: "Identifier of the workspace that owns this platform type.",
+						Required:            true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.RequiresReplace(),
+						},
+					},
 					"created_on": schema.StringAttribute{
 						MarkdownDescription: "Timestamp of when the platform type was created.",
 						Computed:            true,
@@ -165,6 +172,7 @@ func (r *platformTypeResource) Create(ctx context.Context, req resource.CreateRe
 	var apiVersion string
 	var kind string
 	var name string
+	var ownedByWorkspace string
 	var displayName string
 	var category string
 	var defaultEndpoint *string
@@ -173,6 +181,7 @@ func (r *platformTypeResource) Create(ctx context.Context, req resource.CreateRe
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("api_version"), &apiVersion)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("kind"), &kind)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("metadata").AtName("name"), &name)...)
+	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("metadata").AtName("owned_by_workspace"), &ownedByWorkspace)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec").AtName("display_name"), &displayName)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec").AtName("category"), &category)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec").AtName("default_endpoint"), &defaultEndpoint)...)
@@ -186,7 +195,8 @@ func (r *platformTypeResource) Create(ctx context.Context, req resource.CreateRe
 		ApiVersion: apiVersion,
 		Kind:       kind,
 		Metadata: client.MeshPlatformTypeCreateMetadata{
-			Name: name,
+			Name:             name,
+			OwnedByWorkspace: ownedByWorkspace,
 		},
 		Spec: client.MeshPlatformTypeSpec{
 			DisplayName:     displayName,
@@ -251,6 +261,7 @@ func (r *platformTypeResource) Update(ctx context.Context, req resource.UpdateRe
 	var planApiVersion string
 	var planKind string
 	var planName string
+	var planOwnedByWorkspace string
 	var planDisplayName string
 	var planCategory string
 	var planDefaultEndpoint *string
@@ -260,6 +271,7 @@ func (r *platformTypeResource) Update(ctx context.Context, req resource.UpdateRe
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("api_version"), &planApiVersion)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("kind"), &planKind)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("metadata").AtName("name"), &planName)...)
+	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("metadata").AtName("owned_by_workspace"), &planOwnedByWorkspace)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec").AtName("display_name"), &planDisplayName)...)
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("spec").AtName("category"), &planCategory)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec").AtName("default_endpoint"), &planDefaultEndpoint)...)
@@ -274,7 +286,8 @@ func (r *platformTypeResource) Update(ctx context.Context, req resource.UpdateRe
 		ApiVersion: planApiVersion,
 		Kind:       planKind,
 		Metadata: client.MeshPlatformTypeCreateMetadata{
-			Name: planName,
+			Name:             planName,
+			OwnedByWorkspace: planOwnedByWorkspace,
 		},
 		Spec: client.MeshPlatformTypeSpec{
 			DisplayName:     planDisplayName,

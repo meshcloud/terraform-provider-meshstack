@@ -15,7 +15,8 @@ Represents a meshStack platform type.
 ```terraform
 resource "meshstack_platform_type" "example" {
   metadata = {
-    name = "MY-PLATFORM-TYPE"
+    name               = "MY-PLATFORM-TYPE"
+    owned_by_workspace = "my-workspace-identifier"
   }
 
   spec = {
@@ -47,6 +48,7 @@ resource "meshstack_platform_type" "example" {
 Required:
 
 - `name` (String) Unique identifier of the platform type. Restricted to uppercase alphanumeric characters and dashes. Must be unique across all platform types.
+- `owned_by_workspace` (String) Identifier of the workspace that owns this platform type.
 
 Read-Only:
 

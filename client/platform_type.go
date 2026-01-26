@@ -23,9 +23,10 @@ type MeshPlatformTypeLifecycle struct {
 }
 
 type MeshPlatformTypeMetadata struct {
-	Name      string  `json:"name" tfsdk:"name"`
-	CreatedOn *string `json:"createdOn" tfsdk:"created_on"`
-	Uuid      *string `json:"uuid,omitempty" tfsdk:"uuid"`
+	Name             string  `json:"name" tfsdk:"name"`
+	OwnedByWorkspace string  `json:"ownedByWorkspace" tfsdk:"owned_by_workspace"`
+	CreatedOn        *string `json:"createdOn" tfsdk:"created_on"`
+	Uuid             *string `json:"uuid,omitempty" tfsdk:"uuid"`
 }
 
 type MeshPlatformTypeSpec struct {
@@ -43,7 +44,8 @@ type MeshPlatformTypeCreate struct {
 }
 
 type MeshPlatformTypeCreateMetadata struct {
-	Name string `json:"name" tfsdk:"name"`
+	Name             string `json:"name" tfsdk:"name"`
+	OwnedByWorkspace string `json:"ownedByWorkspace" tfsdk:"owned_by_workspace"`
 }
 
 type MeshPlatformTypeClient struct {
