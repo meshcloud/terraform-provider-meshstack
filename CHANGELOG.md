@@ -1,5 +1,9 @@
 ## v0.17.0
 
+BREAKING CHANGES:
+
+- Platform type resource: Added required `owned_by_workspace` field to metadata. This field specifies the workspace that owns the platform type and must be provided when creating or updating platform types.
+
 FEATURES:
 
 - New data source: `meshstack_platform_types` for listing all platform types available in the meshStack installation.
