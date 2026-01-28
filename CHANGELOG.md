@@ -1,3 +1,8 @@
+## v0.17.2
+
+FIXES:
+- `meshstack_platform`: correctly mark `subscription_creation_error_cooldown_sec` as computed for Azure platforms.
+
 ## v0.17.1
 
 FIXES:

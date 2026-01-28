@@ -73,6 +73,7 @@ func azureReplicationConfigSchema() schema.Attribute {
 							"subscription_creation_error_cooldown_sec": schema.Int64Attribute{
 								MarkdownDescription: "This value must be defined in seconds. It is a safety mechanism to avoid duplicate Subscription creation in case of an error on Azure's MCA API. This delay should be a bit higher than it usually takes to create subscriptions. For big installations this is somewhere between 5-15 minutes. The default of 900s should be fine for most installations.",
 								Optional:            true,
+								Computed:            true,
 							},
 						},
 					},
@@ -106,6 +107,7 @@ func azureReplicationConfigSchema() schema.Attribute {
 							"subscription_creation_error_cooldown_sec": schema.Int64Attribute{
 								MarkdownDescription: "This value must be defined in seconds. It is a safety mechanism to avoid duplicate Subscription creation in case of an error on Azure's MCA API. This delay should be a bit higher than it usually takes to create subscriptions. For big installations this is somewhere between 5-15 minutes. The default of 900s should be fine for most installations.",
 								Optional:            true,
+								Computed:            true,
 							},
 						},
 					},
