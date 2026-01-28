@@ -1,5 +1,7 @@
 package client
 
+import "github.com/meshcloud/terraform-provider-meshstack/client/types"
+
 type AwsPlatformConfig struct {
 	Region      string                `json:"region,omitempty" tfsdk:"region"`
 	Replication *AwsReplicationConfig `json:"replication,omitempty" tfsdk:"replication"`
@@ -36,8 +38,8 @@ type AwsAuth struct {
 }
 
 type AwsServiceUserCredential struct {
-	AccessKey string         `json:"accessKey" tfsdk:"access_key"`
-	SecretKey SecretEmbedded `json:"secretKey" tfsdk:"secret_key"`
+	AccessKey string       `json:"accessKey" tfsdk:"access_key"`
+	SecretKey types.Secret `json:"secretKey" tfsdk:"secret_key"`
 }
 
 type AwsWorkloadIdentityCredential struct {
@@ -48,7 +50,7 @@ type AwsSsoConfig struct {
 	ScimEndpoint     string              `json:"scimEndpoint" tfsdk:"scim_endpoint"`
 	Arn              string              `json:"arn" tfsdk:"arn"`
 	GroupNamePattern string              `json:"groupNamePattern" tfsdk:"group_name_pattern"`
-	SsoAccessToken   SecretEmbedded      `json:"ssoAccessToken" tfsdk:"sso_access_token"`
+	SsoAccessToken   types.Secret        `json:"ssoAccessToken" tfsdk:"sso_access_token"`
 	AwsRoleMappings  []AwsSsoRoleMapping `json:"awsRoleMappings" tfsdk:"aws_role_mappings"`
 	SignInUrl        string              `json:"signInUrl" tfsdk:"sign_in_url"`
 }
