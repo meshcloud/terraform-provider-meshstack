@@ -51,11 +51,17 @@ resource "meshstack_platform" "example" {
           service_principal = {
             client_id = "58d6f907-7b0e-4fd8-b328-3e8342dddc8d"
             object_id = "3c305efe-625d-4eaf-9bfa-b981ddbcc99f"
-            auth = {
-              credential = {
-                plaintext = "your-client-secret-here"
-              }
-            }
+            # Workload Identity Federation (Recommended)
+            # To use workload identity federation, set auth to an empty object
+            auth = {}
+
+            # Credential-based authentication (Alternative)
+            # Uncomment the following to use client secret authentication instead
+            # auth = {
+            #   credential = {
+            #     plaintext = "your-client-secret-here"
+            #   }
+            # }
           }
 
           provisioning = {
@@ -312,7 +318,13 @@ Required:
 
 Required:
 
-- `auth` (Attributes) Authentication configuration (see [below for nested schema](#nestedatt--spec--config--aks--replication--service_principal--auth))
+- `auth` (Attributes) Authentication configuration
+
+meshStack supports 2 types of authentication for Azure service principals:
+
+1. **Workload Identity Federation (Recommended)**: Uses OIDC to enable secure access without long-lived credentials. To enable workload identity federation, set `auth = {}` (empty object). The `type` will automatically be set to `workloadIdentity`.
+
+2. **Credential-based authentication**: Uses client secrets for authentication. Provide the `credential` block with the plaintext secret. (see [below for nested schema](#nestedatt--spec--config--aks--replication--service_principal--auth))
 - `client_id` (String) The Application (Client) ID. In Azure Portal, this is the Application ID of the 'Enterprise Application' but can also be retrieved via the 'App Registration' object as 'Application (Client) ID'.
 - `entra_tenant` (String) Domain name or ID of the Entra Tenant that holds the Service Principal.
 - `object_id` (String) The Object ID of the Enterprise Application. You can get this Object ID via the API (e.g. when using our Terraform provider) or from Enterprise applications pane in Microsoft Entra admin center.
@@ -610,7 +622,13 @@ Optional:
 
 Required:
 
-- `auth` (Attributes) Authentication configuration (see [below for nested schema](#nestedatt--spec--config--azure--metering--service_principal--auth))
+- `auth` (Attributes) Authentication configuration
+
+meshStack supports 2 types of authentication for Azure service principals:
+
+1. **Workload Identity Federation (Recommended)**: Uses OIDC to enable secure access without long-lived credentials. To enable workload identity federation, set `auth = {}` (empty object). The `type` will automatically be set to `workloadIdentity`.
+
+2. **Credential-based authentication**: Uses client secrets for authentication. Provide the `credential` block with the plaintext secret. (see [below for nested schema](#nestedatt--spec--config--azure--metering--service_principal--auth))
 - `client_id` (String) The Application (Client) ID. In Azure Portal, this is the Application ID of the 'Enterprise Application' but can also be retrieved via the 'App Registration' object as 'Application (Client) ID
 - `object_id` (String) The Object ID of the Enterprise Application. You can get this Object ID via the API (e.g. when using our Terraform provider) or from Enterprise applications pane in Microsoft Entra admin center.
 
@@ -693,8 +711,14 @@ Read-Only:
 
 Required:
 
-- `auth` (Attributes) Authentication configuration (see [below for nested schema](#nestedatt--spec--config--azure--replication--service_principal--auth))
-- `client_id` (String) The Application (Client) ID. In Azure Portal, this is the Application ID of the 'Enterprise Application' but can also be retrieved via the 'App Registration' object as 'Application (Client) ID
+- `auth` (Attributes) Authentication configuration
+
+meshStack supports 2 types of authentication for Azure service principals:
+
+1. **Workload Identity Federation (Recommended)**: Uses OIDC to enable secure access without long-lived credentials. To enable workload identity federation, set `auth = {}` (empty object). The `type` will automatically be set to `workloadIdentity`.
+
+2. **Credential-based authentication**: Uses client secrets for authentication. Provide the `credential` block with the plaintext secret. (see [below for nested schema](#nestedatt--spec--config--azure--replication--service_principal--auth))
+- `client_id` (String) The Application (Client) ID. In Azure Portal, this is the Application ID of the 'Enterprise Application' but can also be retrieved via the 'App Registration' object as 'Application (Client) ID.
 - `object_id` (String) The Object ID of the Enterprise Application. You can get this Object ID via the API (e.g. when using our Terraform provider) or from Enterprise applications pane in Microsoft Entra admin center.
 
 <a id="nestedatt--spec--config--azure--replication--service_principal--auth"></a>
@@ -745,10 +769,10 @@ Required:
 - `billing_scope` (String) ID of the MCA Billing Scope used for creating subscriptions. Must follow this format: `/providers/Microsoft.Billing/billingAccounts/$accountId/billingProfiles/$profileId/invoiceSections/$sectionId`.
 - `destination_entra_id` (String) Microsoft Entra ID Tenant UUID where created subscriptions should be moved. Set this to the Microsoft Entra ID Tenant hosting your landing zones.
 - `source_entra_tenant` (String) Microsoft Entra ID Tenant UUID or domain name used for creating subscriptions. Set this to the Microsoft Entra ID Tenant owning the MCA Billing Scope. If source and destination Microsoft Entra ID Tenants are the same, you need to use UUID.
+- `source_service_principal` (Attributes) Configure the SPN used by meshStack to create a new Subscription in your MCA billing scope. For more information on the required permissions, see the [Azure docs](https://learn.microsoft.com/en-us/azure/cost-management-billing/manage/programmatically-create-subscription-microsoft-customer-agreement-across-tenants). (see [below for nested schema](#nestedatt--spec--config--azure--replication--provisioning--customer_agreement--source_service_principal))
 
 Optional:
 
-- `source_service_principal` (Attributes) Configure the SPN used by meshStack to create a new Subscription in your MCA billing scope. For more information on the required permissions, see the [Azure docs](https://learn.microsoft.com/en-us/azure/cost-management-billing/manage/programmatically-create-subscription-microsoft-customer-agreement-across-tenants). (see [below for nested schema](#nestedatt--spec--config--azure--replication--provisioning--customer_agreement--source_service_principal))
 - `subscription_creation_error_cooldown_sec` (Number) This value must be defined in seconds. It is a safety mechanism to avoid duplicate Subscription creation in case of an error on Azure's MCA API. This delay should be a bit higher than it usually takes to create subscriptions. For big installations this is somewhere between 5-15 minutes. The default of 900s should be fine for most installations.
 
 <a id="nestedatt--spec--config--azure--replication--provisioning--customer_agreement--source_service_principal"></a>
@@ -756,7 +780,13 @@ Optional:
 
 Required:
 
-- `auth` (Attributes) Authentication configuration (see [below for nested schema](#nestedatt--spec--config--azure--replication--provisioning--customer_agreement--source_service_principal--auth))
+- `auth` (Attributes) Authentication configuration
+
+meshStack supports 2 types of authentication for Azure service principals:
+
+1. **Workload Identity Federation (Recommended)**: Uses OIDC to enable secure access without long-lived credentials. To enable workload identity federation, set `auth = {}` (empty object). The `type` will automatically be set to `workloadIdentity`.
+
+2. **Credential-based authentication**: Uses client secrets for authentication. Provide the `credential` block with the plaintext secret. (see [below for nested schema](#nestedatt--spec--config--azure--replication--provisioning--customer_agreement--source_service_principal--auth))
 - `client_id` (String) The Application (Client) ID. In Azure Portal, this is the Application ID of the "Enterprise Application" but can also be retrieved via the "App Registration" object as "Application (Client) ID".
 
 <a id="nestedatt--spec--config--azure--replication--provisioning--customer_agreement--source_service_principal--auth"></a>
@@ -862,7 +892,13 @@ Optional:
 
 Required:
 
-- `auth` (Attributes) Authentication configuration (see [below for nested schema](#nestedatt--spec--config--azurerg--replication--service_principal--auth))
+- `auth` (Attributes) Authentication configuration
+
+meshStack supports 2 types of authentication for Azure service principals:
+
+1. **Workload Identity Federation (Recommended)**: Uses OIDC to enable secure access without long-lived credentials. To enable workload identity federation, set `auth = {}` (empty object). The `type` will automatically be set to `workloadIdentity`.
+
+2. **Credential-based authentication**: Uses client secrets for authentication. Provide the `credential` block with the plaintext secret. (see [below for nested schema](#nestedatt--spec--config--azurerg--replication--service_principal--auth))
 - `client_id` (String) The Application (Client) ID. In Azure Portal, this is the Application ID of the 'Enterprise Application' but can also be retrieved via the 'App Registration' object as 'Application (Client) ID
 - `object_id` (String) The Object ID of the Enterprise Application. You can get this Object ID via the API (e.g. when using our Terraform provider) or from Enterprise applications pane in Microsoft Entra admin center.
 

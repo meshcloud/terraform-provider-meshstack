@@ -30,11 +30,17 @@ resource "meshstack_platform" "example" {
           service_principal = {
             client_id = "58d6f907-7b0e-4fd8-b328-3e8342dddc8d"
             object_id = "3c305efe-625d-4eaf-9bfa-b981ddbcc99f"
-            auth = {
-              credential = {
-                plaintext = "your-client-secret-here"
-              }
-            }
+            # Workload Identity Federation (Recommended)
+            # To use workload identity federation, set auth to an empty object
+            auth = {}
+
+            # Credential-based authentication (Alternative)
+            # Uncomment the following to use client secret authentication instead
+            # auth = {
+            #   credential = {
+            #     plaintext = "your-client-secret-here"
+            #   }
+            # }
           }
 
           provisioning = {

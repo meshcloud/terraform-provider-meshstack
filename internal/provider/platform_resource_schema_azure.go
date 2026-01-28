@@ -35,7 +35,7 @@ func azureReplicationConfigSchema() schema.Attribute {
 				Required:            true,
 				Attributes: map[string]schema.Attribute{
 					"client_id": schema.StringAttribute{
-						MarkdownDescription: "The Application (Client) ID. In Azure Portal, this is the Application ID of the 'Enterprise Application' but can also be retrieved via the 'App Registration' object as 'Application (Client) ID",
+						MarkdownDescription: "The Application (Client) ID. In Azure Portal, this is the Application ID of the 'Enterprise Application' but can also be retrieved via the 'App Registration' object as 'Application (Client) ID.",
 						Required:            true,
 					},
 					"object_id": schema.StringAttribute{
@@ -82,7 +82,7 @@ func azureReplicationConfigSchema() schema.Attribute {
 						Attributes: map[string]schema.Attribute{
 							"source_service_principal": schema.SingleNestedAttribute{
 								MarkdownDescription: "Configure the SPN used by meshStack to create a new Subscription in your MCA billing scope. For more information on the required permissions, see the [Azure docs](https://learn.microsoft.com/en-us/azure/cost-management-billing/manage/programmatically-create-subscription-microsoft-customer-agreement-across-tenants).",
-								Optional:            true,
+								Required:            true,
 								Attributes: map[string]schema.Attribute{
 									"client_id": schema.StringAttribute{
 										MarkdownDescription: "The Application (Client) ID. In Azure Portal, this is the Application ID of the \"Enterprise Application\" but can also be retrieved via the \"App Registration\" object as \"Application (Client) ID\".",
@@ -308,8 +308,12 @@ func azureUserLookupStrategySchema() schema.Attribute {
 
 func azureAuthSchema() schema.Attribute {
 	return schema.SingleNestedAttribute{
-		MarkdownDescription: "Authentication configuration",
-		Required:            true,
+		MarkdownDescription: "Authentication configuration\n\n" +
+			"meshStack supports 2 types of authentication for Azure service principals:\n\n" +
+			"1. **Workload Identity Federation (Recommended)**: Uses OIDC to enable secure access without long-lived credentials. " +
+			"To enable workload identity federation, set `auth = {}` (empty object). The `type` will automatically be set to `workloadIdentity`.\n\n" +
+			"2. **Credential-based authentication**: Uses client secrets for authentication. Provide the `credential` block with the plaintext secret.",
+		Required: true,
 		Attributes: map[string]schema.Attribute{
 			"type": schema.StringAttribute{
 				MarkdownDescription: "Authentication type (credential or workloadIdentity)",
