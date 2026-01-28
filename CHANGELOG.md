@@ -1,3 +1,12 @@
+## v0.17.1
+
+FIXES:
+- `meshstack_platform`: correctly handle null values of `subscription_creation_error_cooldown_sec` for Azure platforms.
+- `meshstack_platform`: for Azure platforms using `customer_agreement`, `source_service_principal` is a required field.
+
+OTHER:
+- Improve documentation around Azure workload identity federation.
+
 ## v0.17.0
 
 FEATURES:
