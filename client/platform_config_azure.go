@@ -49,7 +49,7 @@ type AzureEnterpriseEnrollmentConfig struct {
 	EnrollmentAccountId                  string `json:"enrollmentAccountId" tfsdk:"enrollment_account_id"`
 	SubscriptionOfferType                string `json:"subscriptionOfferType" tfsdk:"subscription_offer_type"`
 	UseLegacySubscriptionEnrollment      bool   `json:"useLegacySubscriptionEnrollment" tfsdk:"use_legacy_subscription_enrollment"`
-	SubscriptionCreationErrorCooldownSec int64  `json:"subscriptionCreationErrorCooldownSec" tfsdk:"subscription_creation_error_cooldown_sec"`
+	SubscriptionCreationErrorCooldownSec *int64 `json:"subscriptionCreationErrorCooldownSec,omitempty" tfsdk:"subscription_creation_error_cooldown_sec"`
 }
 
 type AzureCustomerAgreementConfig struct {
@@ -57,7 +57,7 @@ type AzureCustomerAgreementConfig struct {
 	DestinationEntraId                   string                   `json:"destinationEntraId" tfsdk:"destination_entra_id"`
 	SourceEntraTenant                    string                   `json:"sourceEntraTenant" tfsdk:"source_entra_tenant"`
 	BillingScope                         string                   `json:"billingScope" tfsdk:"billing_scope"`
-	SubscriptionCreationErrorCooldownSec int64                    `json:"subscriptionCreationErrorCooldownSec" tfsdk:"subscription_creation_error_cooldown_sec"`
+	SubscriptionCreationErrorCooldownSec *int64                   `json:"subscriptionCreationErrorCooldownSec,omitempty" tfsdk:"subscription_creation_error_cooldown_sec"`
 }
 
 type AzurePreProvisionedSubscriptionConfig struct {
