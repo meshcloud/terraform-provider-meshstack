@@ -60,13 +60,17 @@ linters:
           files:
             - "!$test"
             - "!**/client/**/*.go"
+            - "!**/internal/clientmock/*.go"
           list-mode: strict
           deny:
             - pkg: log # as $gostd is allowed
               desc: Always use 'hclog' or SDK logging
+            - pkg: github.com/meshcloud/terraform-provider-meshstack/internal/clientmock
+              desc: clientmock package must only be used in tests
           allow:
             - $gostd
-            # explicitly specifying 'client' and 'internal' suffixes prevents 'examples' package to be included in non-test files
+            # explicitly specifying 'client' and 'internal' suffixes
+            # prevents 'examples' package to be included in non-test files
             - github.com/meshcloud/terraform-provider-meshstack/client
             - github.com/meshcloud/terraform-provider-meshstack/internal
             - github.com/hashicorp/terraform-plugin-framework/
@@ -77,6 +81,7 @@ linters:
         provider-test:
           files:
             - "$test"
+            - "**/internal/clientmock/**/*.go"
             - "!**/client/**/*_test.go"
             - "!**/internal/provider/provider_test.go" # contains common adapters for all tests, using non-testing deps.
           list-mode: strict
