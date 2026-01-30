@@ -60,25 +60,32 @@ linters:
           files:
             - "!$test"
             - "!**/client/**/*.go"
+            - "!**/internal/types/**/*.go"
+            - "!**/internal/clientmock/*.go"
           list-mode: strict
           deny:
             - pkg: log # as $gostd is allowed
               desc: Always use 'hclog' or SDK logging
+            - pkg: github.com/meshcloud/terraform-provider-meshstack/internal/clientmock
+              desc: clientmock package must only be used in tests
           allow:
             - $gostd
-            # explicitly specifying 'client' and 'internal' suffixes prevents 'examples' package to be included in non-test files
+            # explicitly specifying 'client' and 'internal' suffixes
+            # prevents 'examples' package to be included in non-test files
             - github.com/meshcloud/terraform-provider-meshstack/client
             - github.com/meshcloud/terraform-provider-meshstack/internal
             - github.com/hashicorp/terraform-plugin-framework/
+            - github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry
             - github.com/hashicorp/terraform-plugin-framework-validators
             - github.com/hashicorp/terraform-plugin-go
-            - github.com/hashicorp/terraform-plugin-sdk
             - github.com/hashicorp/terraform-plugin-log
         provider-test:
           files:
             - "$test"
+            - "**/internal/clientmock/**/*.go"
             - "!**/client/**/*_test.go"
             - "!**/internal/provider/provider_test.go" # contains common adapters for all tests, using non-testing deps.
+            - "!**/internal/types/**/*_test.go" # contains type-related code with some additional dependencies.
           list-mode: strict
           deny:
             - pkg: github.com/meshcloud/terraform-provider-meshstack/client/internal
@@ -87,4 +94,34 @@ linters:
             - $gostd
             - github.com/meshcloud/terraform-provider-meshstack # any packages are included in tests
             - github.com/hashicorp/terraform-plugin-testing
+            - github.com/stretchr/testify
+        types:
+          files:
+            - "**/internal/types/**/*.go"
+            - "!$test"
+          list-mode: strict
+          deny:
+            - pkg: log # as $gostd is allowed
+              desc: Always use 'hclog' or SDK logging
+          allow:
+            - $gostd
+            - github.com/meshcloud/terraform-provider-meshstack/client/types # only types should be used from client, if at all!
+            - github.com/meshcloud/terraform-provider-meshstack/internal/util/
+            - github.com/meshcloud/terraform-provider-meshstack/internal/types/
+            - github.com/hashicorp/terraform-plugin-framework/
+            - github.com/hashicorp/terraform-plugin-framework-jsontypes/jsontypes
+            - github.com/hashicorp/terraform-plugin-go/tftypes
+        types-test:
+          files:
+            - "**/internal/types/**/*_test.go"
+          list-mode: strict
+          deny:
+            - pkg: log # as $gostd is allowed
+              desc: Always use 'hclog' or SDK logging
+          allow:
+            - $gostd
+            - github.com/meshcloud/terraform-provider-meshstack/internal/util/
+            - github.com/meshcloud/terraform-provider-meshstack/internal/types/
+            - github.com/hashicorp/terraform-plugin-framework/
+            - github.com/hashicorp/terraform-plugin-framework-jsontypes/jsontypes
             - github.com/stretchr/testify

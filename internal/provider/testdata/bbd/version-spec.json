@@ -1,0 +1,70 @@
+{
+  "buildingBlockDefinitionRef" : {
+    "uuid" : "dummy-uuid-12345",
+    "kind" : "meshBuildingBlockDefinition"
+  },
+  "onlyApplyOncePerTenant" : false,
+  "deletionMode" : "DELETE",
+  "runnerRef" : {
+    "uuid" : "",
+    "kind" : "meshBuildingBlockRunner"
+  },
+  "dependencyDefinitionUuids" : [ "dep-1", "dep-2" ],
+  "outputs" : {
+    "sign_in_url" : {
+      "displayName" : "Sign-in URL",
+      "type" : "STRING",
+      "assignmentType" : "SIGN_IN_URL"
+    },
+    "tenant_id" : {
+      "displayName" : "Tenant ID",
+      "type" : "STRING",
+      "assignmentType" : "PLATFORM_TENANT_ID"
+    }
+  },
+  "versionNumber" : 1,
+  "state" : "DRAFT",
+  "implementation" : {
+    "terraform" : {
+      "terraformVersion" : "1.9.0",
+      "repositoryUrl" : "https://github.com/example/building-block.git",
+      "async" : false,
+      "repositoryPath" : "terraform/modules/example",
+      "refName" : "v1.0.0",
+      "sshKnownHost" : {
+        "host" : "github.com",
+        "keyType" : "ssh-rsa",
+        "keyValue" : "AAAAB3NzaC1yc2EAAAABIwAAAQEAq2A7hRGmdnm9tUDbO9IDSwBK6TbQa+..."
+      },
+      "useMeshHttpBackendFallback" : false,
+      "sshPrivateKey" : {
+        "hash" : "sha256:-----BEGIN OPENSSH PRIVATE KEY-----\n..."
+      }
+    }
+  },
+  "inputs" : {
+    "environment" : {
+      "displayName" : "Environment",
+      "type" : "SINGLE_SELECT",
+      "assignmentType" : "USER_INPUT",
+      "isEnvironment" : false,
+      "isSensitive" : false,
+      "updateableByConsumer" : true,
+      "selectableValues" : [ "dev", "staging", "prod" ],
+      "description" : "The target environment"
+    },
+    "resource_name" : {
+      "displayName" : "Resource Name",
+      "type" : "BOOLEAN",
+      "assignmentType" : "STATIC",
+      "isEnvironment" : false,
+      "isSensitive" : false,
+      "updateableByConsumer" : true,
+      "description" : "Name of the resource to create",
+      "valueValidationRegex" : "^[a-z0-9-]+$",
+      "validationRegexErrorMessage" : "Resource name must contain only lowercase letters, numbers, and hyphens",
+      "argument" : true,
+      "defaultValue" : true
+    }
+  }
+}

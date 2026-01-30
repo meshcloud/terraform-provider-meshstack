@@ -1,0 +1,6 @@
+{
+  "isSensitive": true,
+  "defaultValue": {
+    "hash": "some-hash"
+  }
+}
