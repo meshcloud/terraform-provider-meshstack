@@ -173,6 +173,7 @@ resource "meshstack_platform" "example" {
 
 - `api_version` (String) Platform datatype version
 - `kind` (String) meshObject type, always `meshPlatform`.
+- `ref` (Attributes) Reference to this platform, can be used for referencing the platform by its UUID. (see [below for nested schema](#nestedatt--ref))
 
 <a id="nestedatt--metadata"></a>
 ### Nested Schema for `metadata`
@@ -257,6 +258,9 @@ Optional:
 Required:
 
 - `client_config` (Attributes) Client configuration for AKS metering (see [below for nested schema](#nestedatt--spec--config--aks--metering--client_config))
+
+Optional:
+
 - `processing` (Attributes) Processing configuration for metering (see [below for nested schema](#nestedatt--spec--config--aks--metering--processing))
 
 <a id="nestedatt--spec--config--aks--metering--client_config"></a>
@@ -368,9 +372,12 @@ Required:
 
 - `access_config` (Attributes) meshStack currently supports 2 types of authentication. Workload Identity Federation (using OIDC) is the one that we recommend as it enables secure access to your AWS account without using long lived credentials. Alternatively, you can use credential based authentication by providing access and secret keys. Either the `service_user_config` or `workload_identity_config` must be provided. (see [below for nested schema](#nestedatt--spec--config--aws--metering--access_config))
 - `filter` (String) Filter for AWS metering data.
-- `processing` (Attributes) Processing configuration for metering (see [below for nested schema](#nestedatt--spec--config--aws--metering--processing))
 - `reserved_instance_fair_chargeback` (Boolean) Flag to enable fair chargeback for reserved instances.
 - `savings_plan_fair_chargeback` (Boolean) Flag to enable fair chargeback for savings plans.
+
+Optional:
+
+- `processing` (Attributes) Processing configuration for metering (see [below for nested schema](#nestedatt--spec--config--aws--metering--processing))
 
 <a id="nestedatt--spec--config--aws--metering--access_config"></a>
 ### Nested Schema for `spec.config.aws.metering.access_config`
@@ -605,17 +612,11 @@ Optional:
 
 Required:
 
-- `processing` (Attributes) Processing configuration for metering (see [below for nested schema](#nestedatt--spec--config--azure--metering--processing))
 - `service_principal` (Attributes) Service principal configuration for Azure metering (see [below for nested schema](#nestedatt--spec--config--azure--metering--service_principal))
-
-<a id="nestedatt--spec--config--azure--metering--processing"></a>
-### Nested Schema for `spec.config.azure.metering.processing`
 
 Optional:
 
-- `compact_timelines_after_days` (Number) Number of days after which timelines should be compacted.
-- `delete_raw_data_after_days` (Number) Number of days after which raw data should be deleted.
-
+- `processing` (Attributes) Processing configuration for metering (see [below for nested schema](#nestedatt--spec--config--azure--metering--processing))
 
 <a id="nestedatt--spec--config--azure--metering--service_principal"></a>
 ### Nested Schema for `spec.config.azure.metering.service_principal`
@@ -651,6 +652,15 @@ Required:
 - `plaintext` (String, Sensitive) Plaintext secret value
 
 
+
+
+<a id="nestedatt--spec--config--azure--metering--processing"></a>
+### Nested Schema for `spec.config.azure.metering.processing`
+
+Optional:
+
+- `compact_timelines_after_days` (Number) Number of days after which timelines should be compacted.
+- `delete_raw_data_after_days` (Number) Number of days after which raw data should be deleted.
 
 
 
@@ -970,7 +980,6 @@ Required:
 
 - `bigquery_table` (String) BigQuery table for metering data.
 - `partition_time_column` (String) Partition time column for BigQuery table.
-- `processing` (Attributes) Processing configuration for metering (see [below for nested schema](#nestedatt--spec--config--gcp--metering--processing))
 - `service_account` (Attributes) Service account configuration. Exactly one of credential or workload_identity must be provided. (see [below for nested schema](#nestedatt--spec--config--gcp--metering--service_account))
 
 Optional:
@@ -978,15 +987,7 @@ Optional:
 - `additional_filter` (String) Additional filter for metering data.
 - `bigquery_table_for_carbon_footprint` (String) BigQuery table for carbon footprint data.
 - `carbon_footprint_data_collection_start_month` (String) Start month for carbon footprint data collection.
-
-<a id="nestedatt--spec--config--gcp--metering--processing"></a>
-### Nested Schema for `spec.config.gcp.metering.processing`
-
-Optional:
-
-- `compact_timelines_after_days` (Number) Number of days after which timelines should be compacted.
-- `delete_raw_data_after_days` (Number) Number of days after which raw data should be deleted.
-
+- `processing` (Attributes) Processing configuration for metering (see [below for nested schema](#nestedatt--spec--config--gcp--metering--processing))
 
 <a id="nestedatt--spec--config--gcp--metering--service_account"></a>
 ### Nested Schema for `spec.config.gcp.metering.service_account`
@@ -1016,6 +1017,15 @@ Required:
 - `audience` (String) The audience associated with your workload identity pool provider.
 - `service_account_email` (String) The email address of the Service Account, that gets impersonated for calling Google APIs via Workload Identity Federation.
 
+
+
+<a id="nestedatt--spec--config--gcp--metering--processing"></a>
+### Nested Schema for `spec.config.gcp.metering.processing`
+
+Optional:
+
+- `compact_timelines_after_days` (Number) Number of days after which timelines should be compacted.
+- `delete_raw_data_after_days` (Number) Number of days after which raw data should be deleted.
 
 
 
@@ -1134,6 +1144,9 @@ Optional:
 Required:
 
 - `client_config` (Attributes) Client configuration for Kubernetes metering (see [below for nested schema](#nestedatt--spec--config--kubernetes--metering--client_config))
+
+Optional:
+
 - `processing` (Attributes) Processing configuration for metering (see [below for nested schema](#nestedatt--spec--config--kubernetes--metering--processing))
 
 <a id="nestedatt--spec--config--kubernetes--metering--client_config"></a>
@@ -1207,6 +1220,9 @@ Optional:
 Required:
 
 - `client_config` (Attributes) Client configuration for OpenShift metering (see [below for nested schema](#nestedatt--spec--config--openshift--metering--client_config))
+
+Optional:
+
 - `processing` (Attributes) Processing configuration for metering (see [below for nested schema](#nestedatt--spec--config--openshift--metering--processing))
 
 <a id="nestedatt--spec--config--openshift--metering--client_config"></a>
@@ -1336,6 +1352,15 @@ Required:
 - `min_value` (Number)
 - `quota_key` (String)
 - `unit` (String)
+
+
+
+<a id="nestedatt--ref"></a>
+### Nested Schema for `ref`
+
+Read-Only:
+
+- `uuid` (String) UUID of the platform.
 
 ## Import
 

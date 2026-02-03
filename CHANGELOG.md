@@ -1,3 +1,9 @@
+## Unreleased
+
+IMPROVEMENTS:
+- `meshstack_platform`: The `processing` configuration block for platform metering configuration is now optional instead of required. When omitted, both `compact_timelines_after_days` and `delete_raw_data_after_days` default to null (unset).
+- `meshstack_platform`: Added a `ref` field which can be used in places where the resource must be referenced, e.g. `meshstack_landingzone`.
+
 ## v0.17.3
 
 BREAKING CHANGES:

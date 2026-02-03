@@ -95,8 +95,8 @@ type MeshPlatformUpdateMetadata struct {
 }
 
 type MeshPlatformMeteringProcessingConfig struct {
-	CompactTimelinesAfterDays int64 `json:"compactTimelinesAfterDays" tfsdk:"compact_timelines_after_days"`
-	DeleteRawDataAfterDays    int64 `json:"deleteRawDataAfterDays" tfsdk:"delete_raw_data_after_days"`
+	CompactTimelinesAfterDays *int64 `json:"compactTimelinesAfterDays,omitempty" tfsdk:"compact_timelines_after_days"`
+	DeleteRawDataAfterDays    *int64 `json:"deleteRawDataAfterDays,omitempty" tfsdk:"delete_raw_data_after_days"`
 }
 
 type MeshTenantTags struct {

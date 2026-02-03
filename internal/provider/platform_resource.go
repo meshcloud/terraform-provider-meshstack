@@ -10,7 +10,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
@@ -37,6 +38,15 @@ func NewPlatformResource() resource.Resource {
 // platformResource is the resource implementation.
 type platformResource struct {
 	meshPlatformClient client.MeshPlatformClient
+}
+
+type platformRef struct {
+	Uuid string `tfsdk:"uuid"`
+}
+
+type platformResourceModel struct {
+	client.MeshPlatform
+	Ref platformRef `tfsdk:"ref"`
 }
 
 // Metadata returns the resource type name.
@@ -243,28 +253,53 @@ func (r *platformResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					},
 				},
 			},
+
+			"ref": schema.SingleNestedAttribute{
+				MarkdownDescription: "Reference to this platform, can be used for referencing the platform by its UUID.",
+				Computed:            true,
+				Attributes: map[string]schema.Attribute{
+					"uuid": schema.StringAttribute{
+						MarkdownDescription: "UUID of the platform.",
+						Computed:            true,
+						PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+					},
+				},
+			},
 		},
 	}
 }
 
 func meteringProcessingConfigSchema() schema.Attribute {
-	return schema.SingleNestedAttribute{
-		MarkdownDescription: "Processing configuration for metering",
-		Required:            true,
-		Attributes: map[string]schema.Attribute{
-			"compact_timelines_after_days": schema.Int64Attribute{
-				MarkdownDescription: "Number of days after which timelines should be compacted.",
-				Computed:            true,
-				Optional:            true,
-				Default:             int64default.StaticInt64(30),
-			},
-			"delete_raw_data_after_days": schema.Int64Attribute{
-				MarkdownDescription: "Number of days after which raw data should be deleted.",
-				Computed:            true,
-				Optional:            true,
-				Default:             int64default.StaticInt64(65),
+	attributes := map[string]schema.Attribute{
+		"compact_timelines_after_days": schema.Int64Attribute{
+			MarkdownDescription: "Number of days after which timelines should be compacted.",
+			Optional:            true,
+			Computed:            true,
+			PlanModifiers: []planmodifier.Int64{
+				int64planmodifier.UseStateForUnknown(),
 			},
 		},
+		"delete_raw_data_after_days": schema.Int64Attribute{
+			MarkdownDescription: "Number of days after which raw data should be deleted.",
+			Optional:            true,
+			Computed:            true,
+			PlanModifiers: []planmodifier.Int64{
+				int64planmodifier.UseStateForUnknown(),
+			},
+		},
+	}
+
+	return schema.SingleNestedAttribute{
+		MarkdownDescription: "Processing configuration for metering",
+		Optional:            true,
+		Computed:            true,
+		Default: objectdefault.StaticValue(
+			types.ObjectValueMust(deriveAttributeTypes(attributes), map[string]attr.Value{
+				"compact_timelines_after_days": types.Int64Null(),
+				"delete_raw_data_after_days":   types.Int64Null(),
+			}),
+		),
+		Attributes: attributes,
 	}
 }
 
@@ -312,7 +347,14 @@ func (r *platformResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, &createdPlatform)...)
+	state := platformResourceModel{
+		MeshPlatform: *createdPlatform,
+		Ref: platformRef{
+			Uuid: createdPlatform.Metadata.Uuid,
+		},
+	}
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
 func (r *platformResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -346,7 +388,14 @@ func (r *platformResource) Read(ctx context.Context, req resource.ReadRequest, r
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, readPlatform)...)
+	state := platformResourceModel{
+		MeshPlatform: *readPlatform,
+		Ref: platformRef{
+			Uuid: readPlatform.Metadata.Uuid,
+		},
+	}
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
 func (r *platformResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -392,7 +441,14 @@ func (r *platformResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, updatedPlatform)...)
+	state := platformResourceModel{
+		MeshPlatform: *updatedPlatform,
+		Ref: platformRef{
+			Uuid: updatedPlatform.Metadata.Uuid,
+		},
+	}
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
 func (r *platformResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {

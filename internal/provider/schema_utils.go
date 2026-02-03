@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
@@ -72,4 +73,15 @@ func tenantTagsAttribute() schema.SingleNestedAttribute {
 			},
 		},
 	}
+}
+
+// Extracts the attribute types from a map of schema attributes.
+// This is useful when defining the types for an object value (e.g. for default values)
+// based on the schema definition to avoid duplication and ensure consistency.
+func deriveAttributeTypes(attributes map[string]schema.Attribute) map[string]attr.Type {
+	attrTypes := make(map[string]attr.Type, len(attributes))
+	for k, v := range attributes {
+		attrTypes[k] = v.GetType()
+	}
+	return attrTypes
 }
