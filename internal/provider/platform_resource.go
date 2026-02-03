@@ -270,9 +270,23 @@ func (r *platformResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 }
 
 func meteringProcessingConfigSchema() schema.Attribute {
-	attrTypes := map[string]attr.Type{
-		"compact_timelines_after_days": types.Int64Type,
-		"delete_raw_data_after_days":   types.Int64Type,
+	attributes := map[string]schema.Attribute{
+		"compact_timelines_after_days": schema.Int64Attribute{
+			MarkdownDescription: "Number of days after which timelines should be compacted.",
+			Optional:            true,
+			Computed:            true,
+			PlanModifiers: []planmodifier.Int64{
+				int64planmodifier.UseStateForUnknown(),
+			},
+		},
+		"delete_raw_data_after_days": schema.Int64Attribute{
+			MarkdownDescription: "Number of days after which raw data should be deleted.",
+			Optional:            true,
+			Computed:            true,
+			PlanModifiers: []planmodifier.Int64{
+				int64planmodifier.UseStateForUnknown(),
+			},
+		},
 	}
 
 	return schema.SingleNestedAttribute{
@@ -280,29 +294,12 @@ func meteringProcessingConfigSchema() schema.Attribute {
 		Optional:            true,
 		Computed:            true,
 		Default: objectdefault.StaticValue(
-			types.ObjectValueMust(attrTypes, map[string]attr.Value{
+			types.ObjectValueMust(deriveAttributeTypes(attributes), map[string]attr.Value{
 				"compact_timelines_after_days": types.Int64Null(),
 				"delete_raw_data_after_days":   types.Int64Null(),
 			}),
 		),
-		Attributes: map[string]schema.Attribute{
-			"compact_timelines_after_days": schema.Int64Attribute{
-				MarkdownDescription: "Number of days after which timelines should be compacted.",
-				Optional:            true,
-				Computed:            true,
-				PlanModifiers: []planmodifier.Int64{
-					int64planmodifier.UseStateForUnknown(),
-				},
-			},
-			"delete_raw_data_after_days": schema.Int64Attribute{
-				MarkdownDescription: "Number of days after which raw data should be deleted.",
-				Optional:            true,
-				Computed:            true,
-				PlanModifiers: []planmodifier.Int64{
-					int64planmodifier.UseStateForUnknown(),
-				},
-			},
-		},
+		Attributes: attributes,
 	}
 }
 
