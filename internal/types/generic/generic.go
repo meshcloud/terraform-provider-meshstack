@@ -15,31 +15,39 @@ import (
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 )
 
-type Value[T Supported] struct {
+type Value[T any] struct {
 	attr.Value
 	attributePath *path.Path
 }
 
-// Supported matches TypeFor implementation and factory functions matching ValueFactory.
-type Supported interface {
-	any | ~string | ~int64
-}
-
 var (
 	// Ensure the implementation satisfies the expected interfaces to the Terraform Framework.
-	// Must match the Supported types, but note that any is represented as jsontypes.Normalized, which is a basetypes.StringValuable.
+	// Must match the supported types in TypeFor.
+	// Note that T=any is represented as jsontypes.Normalized, which is a basetypes.StringValuableWithSemanticEquals.
 	_ basetypes.StringValuable                   = Value[any]{}
 	_ basetypes.StringValuableWithSemanticEquals = Value[any]{}
+	_ basetypes.BoolValuable                     = Value[any]{}
 	_ basetypes.Int64Valuable                    = Value[any]{}
-	_ xattr.ValidateableAttribute                = Value[any]{}
+	_ basetypes.ObjectValuable                   = Value[any]{}
+	// Implementing this allows us to catch and set the Value.attributePath field!
+	_ xattr.ValidateableAttribute = Value[any]{}
 )
 
 func (v *Value[T]) SetRequired(in *T, diags *diag.Diagnostics) {
 	if in == nil {
-		diags.AddAttributeError(*v.attributePath, "Required input not present", fmt.Sprintf("The value of type %T is required, but nil input was provided.", *v))
+		v.addAttributeErrorf(diags, "Required input not present", "The value of type %T is required, but nil input was provided.", *v)
 		return
 	}
 	v.SetOptional(in, diags)
+}
+
+func (v Value[T]) addAttributeErrorf(diags *diag.Diagnostics, summary, format string, args ...any) {
+	details := fmt.Sprintf(format, args...)
+	if v.attributePath != nil {
+		diags.AddAttributeError(*v.attributePath, summary, details)
+	} else {
+		diags.AddError(summary, details)
+	}
 }
 
 func (v *Value[T]) SetOptional(in *T, diags *diag.Diagnostics) {
@@ -52,7 +60,7 @@ func (v *Value[T]) SetOptional(in *T, diags *diag.Diagnostics) {
 
 func (v Value[T]) Get(diags *diag.Diagnostics) (result T) {
 	if v.IsUnknown() {
-		diags.AddAttributeError(*v.attributePath, "generic.Value.Get failed", "Getting an unknown generic value is impossible")
+		v.addAttributeErrorf(diags, "generic.Value.Get failed", "Getting an unknown generic value is impossible")
 		return
 	}
 	if jsonValue, ok := v.Value.(jsontypes.Normalized); ok {
@@ -66,7 +74,7 @@ func (v Value[T]) Get(diags *diag.Diagnostics) (result T) {
 		return
 	} else {
 		if v.IsNull() {
-			diags.AddAttributeError(*v.attributePath, "generic.Value.Get failed", "Getting a null generic value as non-pointer primitive (non-any) is impossible. Use generic.Value.GetPtr instead.")
+			v.addAttributeErrorf(diags, "generic.Value.Get failed", "Getting a null generic value as non-pointer primitive (non-any) is impossible. Use generic.Value.GetPtr instead.")
 			return
 		}
 		return v.asPrimitive(diags)
@@ -80,7 +88,7 @@ func (v Value[T]) GetPtr(diags *diag.Diagnostics) (result *T) {
 		return
 	default:
 		if _, ok := v.Value.(jsontypes.Normalized); ok {
-			diags.AddAttributeError(*v.attributePath, "generic.Value.GetPtr failed", fmt.Sprintf("Getting a pointer to value of type %s (any) is not allowed", Type[T]{}))
+			v.addAttributeErrorf(diags, "generic.Value.GetPtr failed", "Getting a pointer to value of type %s (any) is not allowed", Type[T]{})
 			return
 		} else {
 			valueResult := v.asPrimitive(diags)
@@ -90,9 +98,13 @@ func (v Value[T]) GetPtr(diags *diag.Diagnostics) (result *T) {
 }
 
 func (v Value[T]) asPrimitive(diags *diag.Diagnostics) (result T) {
+	if objectValue, ok := v.Value.(basetypes.ObjectValue); ok {
+		diags.Append(objectValue.As(context.Background(), &result, basetypes.ObjectAsOptions{})...)
+		return
+	}
 	tfValue, err := v.ToTerraformValue(context.Background())
 	if err != nil {
-		diags.AddAttributeError(*v.attributePath, "Error in generic.Value.asPrimitive", fmt.Sprintf("Failed to convert generic value of type %T to Terraform value: %s", v, err.Error()))
+		v.addAttributeErrorf(diags, "Error in generic.Value.asPrimitive", "Failed to convert generic value of type %T to Terraform value: %s", v, err.Error())
 		return
 	}
 	var target any
@@ -102,12 +114,12 @@ func (v Value[T]) asPrimitive(diags *diag.Diagnostics) (result T) {
 		target = &result
 	}
 	if err := tfValue.As(target); err != nil {
-		diags.AddAttributeError(*v.attributePath, "Error in generic.Value.asPrimitive", fmt.Sprintf("Failed to convert Terraform value of type %s to result of type %T: %s", tfValue.Type(), result, err.Error()))
+		v.addAttributeErrorf(diags, "Error in generic.Value.asPrimitive", "Failed to convert Terraform value of type %s to result of type %T: %s", tfValue.Type(), result, err.Error())
 	}
 	if float, ok := target.(*big.Float); ok {
 		mapper := TypeFor[T]().bigFloatMapper
 		if mapper == nil {
-			diags.AddAttributeError(*v.attributePath, "Error in generic.Value.asPrimitive", fmt.Sprintf("No mapper for big.Float for generic type %T", v))
+			v.addAttributeErrorf(diags, "Error in generic.Value.asPrimitive", "No mapper for big.Float for generic type %T", v)
 			return
 		}
 		return mapper(float, diags)
@@ -115,7 +127,7 @@ func (v Value[T]) asPrimitive(diags *diag.Diagnostics) (result T) {
 	return
 }
 
-func bigFloatMapper[T Supported, Number any](mapper func(*big.Float) (Number, big.Accuracy)) func(*big.Float, *diag.Diagnostics) T {
+func bigFloatMapper[T, Number any](mapper func(*big.Float) (Number, big.Accuracy)) func(*big.Float, *diag.Diagnostics) T {
 	return func(float *big.Float, diags *diag.Diagnostics) (result T) {
 		number, accuracy := mapper(float)
 		if accuracy != big.Exact {
@@ -133,11 +145,11 @@ func (v Value[T]) null() Value[T] {
 	return newValue[T](TypeFor[T]().underlyingNull)
 }
 
-func newValue[T Supported](attrValue attr.Value) Value[T] {
+func newValue[T any](attrValue attr.Value) Value[T] {
 	return Value[T]{attrValue, &path.Path{}}
 }
 
-func anyValueFactory[T Supported](v any, diags *diag.Diagnostics) (result Value[T]) {
+func anyValueFactory[T any](v any, diags *diag.Diagnostics) (result Value[T]) {
 	if vPtr, ok := v.(*any); ok {
 		if vPtr == nil {
 			return result.null()
@@ -189,11 +201,11 @@ func (v Value[T]) ValidateAttribute(ctx context.Context, request xattr.ValidateA
 	}
 }
 
-func toValue[T Supported, V, R any](v Value[T], ctx context.Context, mapper func(V, context.Context) (R, diag.Diagnostics)) (result R, diags diag.Diagnostics) {
+func toValue[T, V, R any](v Value[T], ctx context.Context, mapper func(V, context.Context) (R, diag.Diagnostics)) (result R, diags diag.Diagnostics) {
 	if valuable, ok := v.Value.(V); ok {
 		return mapper(valuable, ctx)
 	} else {
-		diags.AddAttributeError(*v.attributePath, "Generic Value Conversion Error", fmt.Sprintf("Attribute type %s not a %T", v.Type(ctx), valuable))
+		v.addAttributeErrorf(&diags, "Generic Value Conversion Error", "Attribute type %s not a %T", v.Type(ctx), valuable)
 	}
 	return
 }
@@ -202,6 +214,14 @@ func (v Value[T]) ToStringValue(ctx context.Context) (result basetypes.StringVal
 	return toValue(v, ctx, basetypes.StringValuable.ToStringValue)
 }
 
+func (v Value[T]) ToBoolValue(ctx context.Context) (basetypes.BoolValue, diag.Diagnostics) {
+	return toValue(v, ctx, basetypes.BoolValuable.ToBoolValue)
+}
+
 func (v Value[T]) ToInt64Value(ctx context.Context) (result basetypes.Int64Value, diags diag.Diagnostics) {
 	return toValue(v, ctx, basetypes.Int64Valuable.ToInt64Value)
+}
+
+func (v Value[T]) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
+	return toValue(v, ctx, basetypes.ObjectValuable.ToObjectValue)
 }

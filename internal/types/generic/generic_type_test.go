@@ -3,6 +3,8 @@ package generic
 import (
 	"context"
 	"fmt"
+	"maps"
+	"math"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework-jsontypes/jsontypes"
@@ -13,7 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type testCaseForType[T Supported] struct {
+type testCaseForType[T any] struct {
 	Want      attr.Type
 	WantPanic assert.PanicAssertionFunc
 
@@ -91,55 +93,114 @@ func (tt testCaseForType[T]) Run(t *testing.T) {
 }
 
 func TestTypeFor(t *testing.T) {
-	type (
-		stringLike string
-		int64Like  int64
-	)
 
-	testCaseForType[string]{
-		Want:        basetypes.StringType{},
-		Values:      []any{"1", "", "some string"},
-		WantValues:  []string{`1`, ``, `some string`},
-		ValuesPanic: []any{7, true, nil},
-	}.Run(t)
-	testCaseForType[stringLike]{Want: basetypes.StringType{}}.Run(t)
+	t.Run("string", func(t *testing.T) {
+		testCaseForType[string]{
+			Want:        basetypes.StringType{},
+			Values:      []any{"1", "", "some string"},
+			WantValues:  []string{`1`, ``, `some string`},
+			ValuesPanic: []any{7, true, nil},
+		}.Run(t)
+		type StringLike string
+		testCaseForType[StringLike]{Want: basetypes.StringType{}}.Run(t)
+	})
 
-	const (
-		MaxUint64 = ^uint64(0)
-		MaxInt64  = int64(MaxUint64 >> 1)
-	)
-	testCaseForType[int64]{
-		Want:        basetypes.Int64Type{},
-		Values:      []any{1, 2, 0, MaxInt64},
-		WantValues:  []string{`1`, `2`, `0`, `9223372036854775807`},
-		ValuesPanic: []any{"string", true},
-		ValueAssertEqual: func(t assert.TestingT, expected any, actual any, msgAndArgs ...any) bool {
-			return assert.InDelta(t, expected, actual, 0, msgAndArgs...)
-		},
-	}.Run(t)
-	testCaseForType[int64Like]{Want: basetypes.Int64Type{}}.Run(t)
+	t.Run("bool", func(t *testing.T) {
+		testCaseForType[bool]{
+			Want:        basetypes.BoolType{},
+			Values:      []any{true, false},
+			WantValues:  []string{`true`, `false`},
+			ValuesPanic: []any{"", 7, nil},
+		}.Run(t)
+		type BoolLike bool
+		testCaseForType[BoolLike]{Want: basetypes.BoolType{}}.Run(t)
+	})
 
-	var nothing any
-	someString := "pointer string"
-	testCaseForType[any]{
-		Want:       jsontypes.NormalizedType{},
-		Values:     []any{true, 8, false, MaxInt64, "some string", nil, &nothing, "😍", &someString, float32(8.1231)},
-		WantValues: []string{`true`, `8`, `false`, `9223372036854775807`, `"some string"`, ``, ``, `"😍"`, `"pointer string"`, `8.1231`},
-		ValueAssertEqual: func(t assert.TestingT, expected any, actual any, msgAndArgs ...any) bool {
-			if _, isFloat32 := expected.(float32); isFloat32 {
-				return assert.InDelta(t, expected, actual, 1e-6, msgAndArgs...)
-			} else if _, isNumeric := actual.(float64); isNumeric {
+	t.Run("int64", func(t *testing.T) {
+		testCaseForType[int64]{
+			Want:        basetypes.Int64Type{},
+			Values:      []any{1, 2, 0, math.MaxInt64},
+			WantValues:  []string{`1`, `2`, `0`, `9223372036854775807`},
+			ValuesPanic: []any{"string", true},
+			ValueAssertEqual: func(t assert.TestingT, expected any, actual any, msgAndArgs ...any) bool {
 				return assert.InDelta(t, expected, actual, 0, msgAndArgs...)
-			} else {
-				if stringPtr, ok := expected.(*string); ok {
-					expected = *stringPtr
+			},
+		}.Run(t)
+		type Int64Like int64
+		testCaseForType[Int64Like]{Want: basetypes.Int64Type{}}.Run(t)
+	})
+
+	t.Run("any", func(t *testing.T) {
+		var nothing any
+		someString := "pointer string"
+		testCaseForType[any]{
+			Want:       jsontypes.NormalizedType{},
+			Values:     []any{true, 8, false, math.MaxInt64, "some string", nil, &nothing, "😍", &someString, float32(8.1231)},
+			WantValues: []string{`true`, `8`, `false`, `9223372036854775807`, `"some string"`, ``, ``, `"😍"`, `"pointer string"`, `8.1231`},
+			ValueAssertEqual: func(t assert.TestingT, expected any, actual any, msgAndArgs ...any) bool {
+				if _, isFloat32 := expected.(float32); isFloat32 {
+					return assert.InDelta(t, expected, actual, 1e-6, msgAndArgs...)
+				} else if _, isNumeric := actual.(float64); isNumeric {
+					return assert.InDelta(t, expected, actual, 0, msgAndArgs...)
+				} else {
+					if stringPtr, ok := expected.(*string); ok {
+						expected = *stringPtr
+					}
+					return assert.Equal(t, expected, actual, msgAndArgs...)
 				}
-				return assert.Equal(t, expected, actual, msgAndArgs...)
+			},
+		}.Run(t)
+	})
+
+	t.Run("struct", func(t *testing.T) {
+		type (
+			EmptyStruct  struct{}
+			SimpleStruct struct {
+				A       string `tfsdk:"a"`
+				B       int64  `tfsdk:"b"`
+				C       bool   `tfsdk:"c"`
+				Ignored string `tfsdk:"-"`
 			}
-		},
-	}.Run(t)
+			NestedStruct struct {
+				SimpleStruct
+				More SimpleStruct `tfsdk:"more"`
+			}
+		)
+
+		testCaseForType[EmptyStruct]{
+			Want:       basetypes.ObjectType{},
+			Values:     []any{EmptyStruct{}},
+			WantValues: []string{"{}"},
+		}.Run(t)
+
+		simpleAttributeTypes := map[string]attr.Type{
+			"a": TypeFor[string](),
+			"b": TypeFor[int64](),
+			"c": TypeFor[bool](),
+		}
+		testCaseForType[SimpleStruct]{
+			Want:       basetypes.ObjectType{AttrTypes: simpleAttributeTypes},
+			Values:     []any{SimpleStruct{}},
+			WantValues: []string{`{"a":"","b":0,"c":false}`},
+		}.Run(t)
+
+		nestedAttributeTypes := maps.Clone(simpleAttributeTypes)
+		nestedAttributeTypes["more"] = basetypes.ObjectType{AttrTypes: simpleAttributeTypes}
+		testCaseForType[NestedStruct]{
+			Want:       basetypes.ObjectType{AttrTypes: nestedAttributeTypes},
+			Values:     []any{NestedStruct{}},
+			WantValues: []string{`{"a":"","b":0,"c":false,"more":{"a":"","b":0,"c":false}}`},
+		}.Run(t)
+	})
 
 	// Currently unsupported types:
-	testCaseForType[bool]{WantPanic: assert.Panics}.Run(t)
-	testCaseForType[struct{}]{WantPanic: assert.Panics}.Run(t)
+	t.Run("unsupported", func(t *testing.T) {
+		testCaseForType[int]{WantPanic: assert.Panics}.Run(t)
+		testCaseForType[float32]{WantPanic: assert.Panics}.Run(t)
+		testCaseForType[complex64]{WantPanic: assert.Panics}.Run(t)
+
+		testCaseForType[struct {
+			A complex64 `tfsdk:"a"` // nested 'complex64' field also unsupported
+		}]{WantPanic: assert.Panics}.Run(t)
+	})
 }
