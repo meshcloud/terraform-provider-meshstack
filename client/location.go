@@ -37,26 +37,33 @@ type MeshLocationCreateMetadata struct {
 	Name string `json:"name" tfsdk:"name"`
 }
 
-type MeshLocationClient struct {
+type MeshLocationClient interface {
+	Read(ctx context.Context, name string) (*MeshLocation, error)
+	Create(ctx context.Context, location *MeshLocationCreate) (*MeshLocation, error)
+	Update(ctx context.Context, name string, location *MeshLocationCreate) (*MeshLocation, error)
+	Delete(ctx context.Context, name string) error
+}
+
+type meshLocationClient struct {
 	meshObject internal.MeshObjectClient[MeshLocation]
 }
 
 func newLocationClient(ctx context.Context, httpClient *internal.HttpClient) MeshLocationClient {
-	return MeshLocationClient{internal.NewMeshObjectClient[MeshLocation](ctx, httpClient, "v1-preview")}
+	return meshLocationClient{internal.NewMeshObjectClient[MeshLocation](ctx, httpClient, "v1-preview")}
 }
 
-func (c MeshLocationClient) Read(ctx context.Context, name string) (*MeshLocation, error) {
+func (c meshLocationClient) Read(ctx context.Context, name string) (*MeshLocation, error) {
 	return c.meshObject.Get(ctx, name)
 }
 
-func (c MeshLocationClient) Create(ctx context.Context, location *MeshLocationCreate) (*MeshLocation, error) {
+func (c meshLocationClient) Create(ctx context.Context, location *MeshLocationCreate) (*MeshLocation, error) {
 	return c.meshObject.Post(ctx, location)
 }
 
-func (c MeshLocationClient) Update(ctx context.Context, name string, location *MeshLocationCreate) (*MeshLocation, error) {
+func (c meshLocationClient) Update(ctx context.Context, name string, location *MeshLocationCreate) (*MeshLocation, error) {
 	return c.meshObject.Put(ctx, name, location)
 }
 
-func (c MeshLocationClient) Delete(ctx context.Context, name string) error {
+func (c meshLocationClient) Delete(ctx context.Context, name string) error {
 	return c.meshObject.Delete(ctx, name)
 }
