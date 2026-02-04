@@ -2,7 +2,10 @@ package clientmock
 
 import (
 	"fmt"
+	"maps"
 	"reflect"
+	"slices"
+	"strings"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
 	clientTypes "github.com/meshcloud/terraform-provider-meshstack/client/types"
@@ -11,26 +14,33 @@ import (
 )
 
 type Client struct {
-	BuildingBlockDefinition        *MeshBuildingBlockDefinitionClient
-	BuildingBlockDefinitionVersion *MeshBuildingBlockDefinitionVersionClient
+	BuildingBlockDefinition        MeshBuildingBlockDefinitionClient
+	BuildingBlockDefinitionVersion MeshBuildingBlockDefinitionVersionClient
+	TagDefinition                  MeshTagDefinitionClient
 }
 
-func (c *Client) AsClientInterface() client.Client {
+func (c Client) AsClient() client.Client {
 	return client.Client{
 		BuildingBlockDefinition:        c.BuildingBlockDefinition,
 		BuildingBlockDefinitionVersion: c.BuildingBlockDefinitionVersion,
+		TagDefinition:                  c.TagDefinition,
 	}
 }
 
-func NewMock() *Client {
+func NewMock() Client {
 	bbdVersionStore := make(Store[client.MeshBuildingBlockDefinitionVersion])
-	return &Client{
-		BuildingBlockDefinition:        &MeshBuildingBlockDefinitionClient{make(Store[client.MeshBuildingBlockDefinition]), bbdVersionStore},
-		BuildingBlockDefinitionVersion: &MeshBuildingBlockDefinitionVersionClient{bbdVersionStore},
+	return Client{
+		BuildingBlockDefinition:        MeshBuildingBlockDefinitionClient{make(Store[client.MeshBuildingBlockDefinition]), bbdVersionStore},
+		BuildingBlockDefinitionVersion: MeshBuildingBlockDefinitionVersionClient{bbdVersionStore},
+		TagDefinition:                  MeshTagDefinitionClient{make(Store[client.MeshTagDefinition])},
 	}
 }
 
 type Store[M any] map[string]*M
+
+func (s Store[M]) SortedKeys() []string {
+	return slices.SortedFunc(maps.Keys(s), strings.Compare)
+}
 
 // backendSecretBehavior mocks backend behavior in the sense that it consumes the plaintext secret and returns a hash of the secret only.
 func backendSecretBehavior[T any](allowSecretHashOnlyOnCreate bool, dto, existingDto *T) {
