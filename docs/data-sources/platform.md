@@ -42,8 +42,6 @@ Required:
 
 Read-Only:
 
-- `created_on` (String) Creation timestamp of the platform (server-generated).
-- `deleted_on` (String) Timestamp when the meshPlatform was deleted, null if not deleted.
 - `name` (String) Platform identifier.
 - `owned_by_workspace` (String) The identifier of the workspace that owns this meshPlatform.
 
