@@ -15,7 +15,8 @@ Read a single platform type by name.
 ```terraform
 data "meshstack_platform_type" "example" {
   metadata = {
-    name = "OPENSHIFT-4"
+    name               = "OPENSHIFT-4"
+    owned_by_workspace = "my-workspace"
   }
 }
 ```
@@ -31,6 +32,7 @@ data "meshstack_platform_type" "example" {
 
 - `api_version` (String) API version of meshPlatformType datatype.
 - `kind` (String) Kind of meshObject. This is always meshPlatformType for this endpoint.
+- `ref` (Attributes) Reference to this platform type, can be used as input for `platform_type_ref` in platform resources. (see [below for nested schema](#nestedatt--ref))
 - `spec` (Attributes) Specifications of the platform type (see [below for nested schema](#nestedatt--spec))
 - `status` (Attributes) Status of the platform type (see [below for nested schema](#nestedatt--status))
 
@@ -44,8 +46,16 @@ Required:
 
 Read-Only:
 
-- `created_on` (String) Timestamp of when the platform type was created.
 - `uuid` (String) UUID of the platform type.
+
+
+<a id="nestedatt--ref"></a>
+### Nested Schema for `ref`
+
+Read-Only:
+
+- `kind` (String) The kind of the object. Always `meshPlatformType`.
+- `name` (String) Identifier of the platform type.
 
 
 <a id="nestedatt--spec"></a>

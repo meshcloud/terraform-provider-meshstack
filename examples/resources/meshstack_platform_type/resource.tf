@@ -1,7 +1,7 @@
 resource "meshstack_platform_type" "example" {
   metadata = {
     name               = "MY-PLATFORM-TYPE"
-    owned_by_workspace = "my-workspace-identifier"
+    owned_by_workspace = "my-workspace"
   }
 
   spec = {

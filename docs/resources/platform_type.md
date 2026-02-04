@@ -16,7 +16,7 @@ Represents a meshStack platform type.
 resource "meshstack_platform_type" "example" {
   metadata = {
     name               = "MY-PLATFORM-TYPE"
-    owned_by_workspace = "my-workspace-identifier"
+    owned_by_workspace = "my-workspace"
   }
 
   spec = {
@@ -52,7 +52,6 @@ Required:
 
 Read-Only:
 
-- `created_on` (String) Timestamp of when the platform type was created.
 - `uuid` (String) UUID of the platform type.
 
 
@@ -78,6 +77,7 @@ Read-Only:
 
 Read-Only:
 
+- `kind` (String) The kind of the object. Always `meshPlatformType`.
 - `name` (String) Identifier of the platform type.
 
 
