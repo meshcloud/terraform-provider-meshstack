@@ -31,15 +31,6 @@ type platformTypeResource struct {
 	meshPlatformTypeClient client.MeshPlatformTypeClient
 }
 
-type platformTypeRef struct {
-	Name string `tfsdk:"name"`
-}
-
-type platformTypeResourceModel struct {
-	client.MeshPlatformType
-	Ref platformTypeRef `tfsdk:"ref"`
-}
-
 func (r *platformTypeResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_platform_type"
 }
@@ -92,11 +83,6 @@ func (r *platformTypeResource) Schema(_ context.Context, _ resource.SchemaReques
 						PlanModifiers: []planmodifier.String{
 							stringplanmodifier.RequiresReplace(),
 						},
-					},
-					"created_on": schema.StringAttribute{
-						MarkdownDescription: "Timestamp of when the platform type was created.",
-						Computed:            true,
-						PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 					},
 					"uuid": schema.StringAttribute{
 						MarkdownDescription: "UUID of the platform type.",
@@ -157,6 +143,12 @@ func (r *platformTypeResource) Schema(_ context.Context, _ resource.SchemaReques
 				MarkdownDescription: "Reference to this platform type, can be used as input for `platform_type_ref` in platform resources.",
 				Computed:            true,
 				Attributes: map[string]schema.Attribute{
+					"kind": schema.StringAttribute{
+						MarkdownDescription: "The kind of the object. Always `meshPlatformType`.",
+						Computed:            true,
+						Default:             stringdefault.StaticString("meshPlatformType"),
+						PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+					},
 					"name": schema.StringAttribute{
 						MarkdownDescription: "Identifier of the platform type.",
 						Computed:            true,
@@ -215,14 +207,7 @@ func (r *platformTypeResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
-	state := platformTypeResourceModel{
-		MeshPlatformType: *createdPlatformType,
-		Ref: platformTypeRef{
-			Name: createdPlatformType.Metadata.Name,
-		},
-	}
-
-	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, newPlatformTypeModel(createdPlatformType))...)
 }
 
 func (r *platformTypeResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -247,14 +232,7 @@ func (r *platformTypeResource) Read(ctx context.Context, req resource.ReadReques
 		return
 	}
 
-	state := platformTypeResourceModel{
-		MeshPlatformType: *platformType,
-		Ref: platformTypeRef{
-			Name: platformType.Metadata.Name,
-		},
-	}
-
-	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, newPlatformTypeModel(platformType))...)
 }
 
 func (r *platformTypeResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -306,14 +284,7 @@ func (r *platformTypeResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 
-	state := platformTypeResourceModel{
-		MeshPlatformType: *updatedPlatformType,
-		Ref: platformTypeRef{
-			Name: updatedPlatformType.Metadata.Name,
-		},
-	}
-
-	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, newPlatformTypeModel(updatedPlatformType))...)
 }
 
 func (r *platformTypeResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {

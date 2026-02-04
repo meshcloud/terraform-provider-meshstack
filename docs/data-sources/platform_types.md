@@ -48,7 +48,6 @@ Read-Only:
 
 Read-Only:
 
-- `created_on` (String) Timestamp of when the platform type was created.
 - `name` (String) Unique identifier of the platform type.
 - `owned_by_workspace` (String) Identifier of the workspace that owns this platform type.
 - `uuid` (String) UUID of the platform type.

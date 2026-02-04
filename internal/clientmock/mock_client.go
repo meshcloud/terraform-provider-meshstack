@@ -18,6 +18,7 @@ type Client struct {
 	BuildingBlockDefinitionVersion MeshBuildingBlockDefinitionVersionClient
 	TagDefinition                  MeshTagDefinitionClient
 	Platform                       MeshPlatformClient
+	PlatformType                   MeshPlatformTypeClient
 	Location                       MeshLocationClient
 }
 
@@ -27,6 +28,7 @@ func (c Client) AsClient() client.Client {
 		BuildingBlockDefinitionVersion: c.BuildingBlockDefinitionVersion,
 		TagDefinition:                  c.TagDefinition,
 		Platform:                       c.Platform,
+		PlatformType:                   c.PlatformType,
 		Location:                       c.Location,
 	}
 }
@@ -38,6 +40,7 @@ func NewMock() Client {
 		BuildingBlockDefinitionVersion: MeshBuildingBlockDefinitionVersionClient{bbdVersionStore},
 		TagDefinition:                  MeshTagDefinitionClient{make(Store[client.MeshTagDefinition])},
 		Platform:                       MeshPlatformClient{make(Store[client.MeshPlatform])},
+		PlatformType:                   MeshPlatformTypeClient{make(Store[client.MeshPlatformType])},
 		Location:                       MeshLocationClient{make(Store[client.MeshLocation])},
 	}
 }
