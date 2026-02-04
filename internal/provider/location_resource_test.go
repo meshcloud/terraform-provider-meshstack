@@ -18,11 +18,11 @@ func TestAccLocation(t *testing.T) {
 	const resourceAddress = "meshstack_location.example"
 	const resourceIdentifier = "my-location"
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories(),
-		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: ProviderFactoriesForTest(),
+		PreCheck:                 func() { DefaultTestPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: examples.Resource{Name: "location"}.String(),
+				Config: examples.Resource{Name: "location"}.Config().String(),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectResourceAction(resourceAddress, plancheck.ResourceActionCreate),
@@ -37,7 +37,7 @@ func TestAccLocation(t *testing.T) {
 				},
 			},
 			{
-				Config: strings.ReplaceAll(examples.Resource{Name: "location"}.String(), `"My Cloud Location"`, `"My Updated Location"`),
+				Config: strings.ReplaceAll(examples.Resource{Name: "location"}.Config().String(), `"My Cloud Location"`, `"My Updated Location"`),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectResourceAction(resourceAddress, plancheck.ResourceActionUpdate),
