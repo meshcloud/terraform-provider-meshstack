@@ -62,6 +62,7 @@ type PlatformAvailability struct {
 
 type PlatformConfig struct {
 	Type       string                    `json:"type" tfsdk:"type"`
+	Custom     *CustomPlatformConfig     `json:"custom,omitempty" tfsdk:"custom"`
 	Aws        *AwsPlatformConfig        `json:"aws,omitempty" tfsdk:"aws"`
 	Aks        *AksPlatformConfig        `json:"aks,omitempty" tfsdk:"aks"`
 	Azure      *AzurePlatformConfig      `json:"azure,omitempty" tfsdk:"azure"`

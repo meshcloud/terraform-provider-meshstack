@@ -1,3 +1,9 @@
+## Unreleased
+
+FEATURES:
+
+- `meshstack_platform`: Added support for `custom` platforms.
+
 ## v0.17.3
 
 BREAKING CHANGES:

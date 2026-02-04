@@ -230,6 +230,7 @@ Optional:
 - `aws` (Attributes) Configuration for AWS (see [below for nested schema](#nestedatt--spec--config--aws))
 - `azure` (Attributes) Azure platform configuration. (see [below for nested schema](#nestedatt--spec--config--azure))
 - `azurerg` (Attributes) Azure Resource Group platform configuration. (see [below for nested schema](#nestedatt--spec--config--azurerg))
+- `custom` (Attributes) Custom platform configuration. (see [below for nested schema](#nestedatt--spec--config--custom))
 - `gcp` (Attributes) Google Cloud Platform (GCP) platform configuration. (see [below for nested schema](#nestedatt--spec--config--gcp))
 - `kubernetes` (Attributes) Kubernetes platform configuration. (see [below for nested schema](#nestedatt--spec--config--kubernetes))
 - `openshift` (Attributes) OpenShift platform configuration. (see [below for nested schema](#nestedatt--spec--config--openshift))
@@ -280,8 +281,8 @@ Required:
 
 Optional:
 
-- `compact_timelines_after_days` (Number) Number of days after which timelines should be compacted.
-- `delete_raw_data_after_days` (Number) Number of days after which raw data should be deleted.
+- `compact_timelines_after_days` (Number) Defines the number of days after which timelines are compacted to save database space. This means that meshMetering will only retain actual state changes instead of every single observation point. The default of 30 days is usually sufficient.
+- `delete_raw_data_after_days` (Number) Defines the number of days meshMetering retains raw data, such as states and events. This enables data reprocessing as long as the raw data is available. Although usually not relevant after chargeback statements are generated, a grace period is provided by default. The default of 65 days is usually sufficient.
 
 
 
@@ -428,8 +429,8 @@ Required:
 
 Optional:
 
-- `compact_timelines_after_days` (Number) Number of days after which timelines should be compacted.
-- `delete_raw_data_after_days` (Number) Number of days after which raw data should be deleted.
+- `compact_timelines_after_days` (Number) Defines the number of days after which timelines are compacted to save database space. This means that meshMetering will only retain actual state changes instead of every single observation point. The default of 30 days is usually sufficient.
+- `delete_raw_data_after_days` (Number) Defines the number of days meshMetering retains raw data, such as states and events. This enables data reprocessing as long as the raw data is available. Although usually not relevant after chargeback statements are generated, a grace period is provided by default. The default of 65 days is usually sufficient.
 
 
 
@@ -613,8 +614,8 @@ Required:
 
 Optional:
 
-- `compact_timelines_after_days` (Number) Number of days after which timelines should be compacted.
-- `delete_raw_data_after_days` (Number) Number of days after which raw data should be deleted.
+- `compact_timelines_after_days` (Number) Defines the number of days after which timelines are compacted to save database space. This means that meshMetering will only retain actual state changes instead of every single observation point. The default of 30 days is usually sufficient.
+- `delete_raw_data_after_days` (Number) Defines the number of days meshMetering retains raw data, such as states and events. This enables data reprocessing as long as the raw data is available. Although usually not relevant after chargeback statements are generated, a grace period is provided by default. The default of 65 days is usually sufficient.
 
 
 <a id="nestedatt--spec--config--azure--metering--service_principal"></a>
@@ -955,6 +956,47 @@ Required:
 
 
 
+<a id="nestedatt--spec--config--custom"></a>
+### Nested Schema for `spec.config.custom`
+
+Required:
+
+- `platform_type_ref` (Attributes) Reference to the platform type. (see [below for nested schema](#nestedatt--spec--config--custom--platform_type_ref))
+
+Optional:
+
+- `metering` (Attributes) Metering configuration. (see [below for nested schema](#nestedatt--spec--config--custom--metering))
+
+<a id="nestedatt--spec--config--custom--platform_type_ref"></a>
+### Nested Schema for `spec.config.custom.platform_type_ref`
+
+Required:
+
+- `name` (String) Name of the platform type.
+
+Read-Only:
+
+- `kind` (String) Kind of the platform type. Always `meshPlatformType`.
+
+
+<a id="nestedatt--spec--config--custom--metering"></a>
+### Nested Schema for `spec.config.custom.metering`
+
+Required:
+
+- `processing` (Attributes) Processing configuration for metering (see [below for nested schema](#nestedatt--spec--config--custom--metering--processing))
+
+<a id="nestedatt--spec--config--custom--metering--processing"></a>
+### Nested Schema for `spec.config.custom.metering.processing`
+
+Optional:
+
+- `compact_timelines_after_days` (Number) Defines the number of days after which timelines are compacted to save database space. This means that meshMetering will only retain actual state changes instead of every single observation point. The default of 30 days is usually sufficient.
+- `delete_raw_data_after_days` (Number) Defines the number of days meshMetering retains raw data, such as states and events. This enables data reprocessing as long as the raw data is available. Although usually not relevant after chargeback statements are generated, a grace period is provided by default. The default of 65 days is usually sufficient.
+
+
+
+
 <a id="nestedatt--spec--config--gcp"></a>
 ### Nested Schema for `spec.config.gcp`
 
@@ -984,8 +1026,8 @@ Optional:
 
 Optional:
 
-- `compact_timelines_after_days` (Number) Number of days after which timelines should be compacted.
-- `delete_raw_data_after_days` (Number) Number of days after which raw data should be deleted.
+- `compact_timelines_after_days` (Number) Defines the number of days after which timelines are compacted to save database space. This means that meshMetering will only retain actual state changes instead of every single observation point. The default of 30 days is usually sufficient.
+- `delete_raw_data_after_days` (Number) Defines the number of days meshMetering retains raw data, such as states and events. This enables data reprocessing as long as the raw data is available. Although usually not relevant after chargeback statements are generated, a grace period is provided by default. The default of 65 days is usually sufficient.
 
 
 <a id="nestedatt--spec--config--gcp--metering--service_account"></a>
@@ -1157,8 +1199,8 @@ Required:
 
 Optional:
 
-- `compact_timelines_after_days` (Number) Number of days after which timelines should be compacted.
-- `delete_raw_data_after_days` (Number) Number of days after which raw data should be deleted.
+- `compact_timelines_after_days` (Number) Defines the number of days after which timelines are compacted to save database space. This means that meshMetering will only retain actual state changes instead of every single observation point. The default of 30 days is usually sufficient.
+- `delete_raw_data_after_days` (Number) Defines the number of days meshMetering retains raw data, such as states and events. This enables data reprocessing as long as the raw data is available. Although usually not relevant after chargeback statements are generated, a grace period is provided by default. The default of 65 days is usually sufficient.
 
 
 
@@ -1230,8 +1272,8 @@ Required:
 
 Optional:
 
-- `compact_timelines_after_days` (Number) Number of days after which timelines should be compacted.
-- `delete_raw_data_after_days` (Number) Number of days after which raw data should be deleted.
+- `compact_timelines_after_days` (Number) Defines the number of days after which timelines are compacted to save database space. This means that meshMetering will only retain actual state changes instead of every single observation point. The default of 30 days is usually sufficient.
+- `delete_raw_data_after_days` (Number) Defines the number of days meshMetering retains raw data, such as states and events. This enables data reprocessing as long as the raw data is available. Although usually not relevant after chargeback statements are generated, a grace period is provided by default. The default of 65 days is usually sufficient.
 
 
 
