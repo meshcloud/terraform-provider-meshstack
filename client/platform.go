@@ -104,26 +104,33 @@ type TagMapper struct {
 	ValuePattern string `json:"valuePattern" tfsdk:"value_pattern"`
 }
 
-type MeshPlatformClient struct {
+type MeshPlatformClient interface {
+	Read(ctx context.Context, uuid string) (*MeshPlatform, error)
+	Create(ctx context.Context, platform *MeshPlatformCreate) (*MeshPlatform, error)
+	Update(ctx context.Context, uuid string, platform *MeshPlatformUpdate) (*MeshPlatform, error)
+	Delete(ctx context.Context, uuid string) error
+}
+
+type meshPlatformClient struct {
 	meshObject internal.MeshObjectClient[MeshPlatform]
 }
 
 func newPlatformClient(ctx context.Context, httpClient *internal.HttpClient) MeshPlatformClient {
-	return MeshPlatformClient{internal.NewMeshObjectClient[MeshPlatform](ctx, httpClient, "v2-preview")}
+	return meshPlatformClient{internal.NewMeshObjectClient[MeshPlatform](ctx, httpClient, "v2-preview")}
 }
 
-func (c MeshPlatformClient) Read(ctx context.Context, uuid string) (*MeshPlatform, error) {
+func (c meshPlatformClient) Read(ctx context.Context, uuid string) (*MeshPlatform, error) {
 	return c.meshObject.Get(ctx, uuid)
 }
 
-func (c MeshPlatformClient) Create(ctx context.Context, platform *MeshPlatformCreate) (*MeshPlatform, error) {
+func (c meshPlatformClient) Create(ctx context.Context, platform *MeshPlatformCreate) (*MeshPlatform, error) {
 	return c.meshObject.Post(ctx, platform)
 }
 
-func (c MeshPlatformClient) Update(ctx context.Context, uuid string, platform *MeshPlatformUpdate) (*MeshPlatform, error) {
+func (c meshPlatformClient) Update(ctx context.Context, uuid string, platform *MeshPlatformUpdate) (*MeshPlatform, error) {
 	return c.meshObject.Put(ctx, uuid, platform)
 }
 
-func (c MeshPlatformClient) Delete(ctx context.Context, uuid string) error {
+func (c meshPlatformClient) Delete(ctx context.Context, uuid string) error {
 	return c.meshObject.Delete(ctx, uuid)
 }
