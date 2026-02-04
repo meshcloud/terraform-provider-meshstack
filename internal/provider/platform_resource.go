@@ -228,6 +228,7 @@ func (r *platformResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 							"aks":        aksPlatformSchema(),
 							"azure":      azurePlatformSchema(),
 							"azurerg":    azureRgPlatformSchema(),
+							"custom":     customPlatformSchema(),
 							"gcp":        gcpPlatformSchema(),
 							"kubernetes": kubernetesPlatformSchema(),
 							"openshift":  openShiftPlatformSchema(),
@@ -253,13 +254,13 @@ func meteringProcessingConfigSchema() schema.Attribute {
 		Required:            true,
 		Attributes: map[string]schema.Attribute{
 			"compact_timelines_after_days": schema.Int64Attribute{
-				MarkdownDescription: "Number of days after which timelines should be compacted.",
+				MarkdownDescription: "Defines the number of days after which timelines are compacted to save database space. This means that meshMetering will only retain actual state changes instead of every single observation point. The default of 30 days is usually sufficient.",
 				Computed:            true,
 				Optional:            true,
 				Default:             int64default.StaticInt64(30),
 			},
 			"delete_raw_data_after_days": schema.Int64Attribute{
-				MarkdownDescription: "Number of days after which raw data should be deleted.",
+				MarkdownDescription: "Defines the number of days meshMetering retains raw data, such as states and events. This enables data reprocessing as long as the raw data is available. Although usually not relevant after chargeback statements are generated, a grace period is provided by default. The default of 65 days is usually sufficient.",
 				Computed:            true,
 				Optional:            true,
 				Default:             int64default.StaticInt64(65),

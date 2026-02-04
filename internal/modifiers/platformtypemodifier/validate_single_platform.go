@@ -3,6 +3,7 @@ package platformtypemodifier
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 )
@@ -31,10 +32,8 @@ func (v singlePlatformValidator) PlanModifyObject(ctx context.Context, req planm
 		return
 	}
 
-	platformTypes := []string{"aws", "aks", "azure", "azurerg", "gcp", "kubernetes", "openshift"}
-
 	var configuredPlatforms []string
-	for _, platformType := range platformTypes {
+	for _, platformType := range PlatformTypes {
 		attrValue := req.PlanValue.Attributes()[platformType]
 		if attrValue != nil && !attrValue.IsNull() {
 			configuredPlatforms = append(configuredPlatforms, platformType)
@@ -53,8 +52,8 @@ func (v singlePlatformValidator) PlanModifyObject(ctx context.Context, req planm
 	if len(configuredPlatforms) == 0 {
 		resp.Diagnostics.AddError(
 			"No Platform Configuration",
-			"At least one platform configuration must be specified. "+
-				"Please specify one of: aws, aks, azure, azurerg, gcp, kubernetes, openshift.",
+			fmt.Sprintf("At least one platform configuration must be specified. "+
+				"Please specify one of: %s.", strings.Join(PlatformTypes, ", ")),
 		)
 	}
 }

@@ -40,9 +40,7 @@ func (m platformTypeModifier) PlanModifyString(ctx context.Context, req planmodi
 	}
 
 	// Check which platform-specific configuration is present
-	platformTypes := []string{"aws", "aks", "azure", "azurerg", "gcp", "kubernetes", "openshift"}
-
-	for _, platformType := range platformTypes {
+	for _, platformType := range PlatformTypes {
 		attrValue := platformProps.Attributes()[platformType]
 		if attrValue != nil && !attrValue.IsNull() {
 			resp.PlanValue = types.StringValue(platformType)
