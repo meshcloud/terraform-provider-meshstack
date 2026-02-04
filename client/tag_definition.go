@@ -69,30 +69,38 @@ type TagValueMultiSelect struct {
 	DefaultValue *[]string `json:"defaultValue,omitempty" tfsdk:"default_value"`
 }
 
-type MeshTagDefinitionClient struct {
+type MeshTagDefinitionClient interface {
+	List(ctx context.Context) ([]MeshTagDefinition, error)
+	Read(ctx context.Context, name string) (*MeshTagDefinition, error)
+	Create(ctx context.Context, tagDefinition *MeshTagDefinition) (*MeshTagDefinition, error)
+	Update(ctx context.Context, tagDefinition *MeshTagDefinition) (*MeshTagDefinition, error)
+	Delete(ctx context.Context, name string) error
+}
+
+type meshTagDefinitionClient struct {
 	meshObject internal.MeshObjectClient[MeshTagDefinition]
 }
 
 func newTagDefinitionClient(ctx context.Context, httpClient *internal.HttpClient) MeshTagDefinitionClient {
-	return MeshTagDefinitionClient{internal.NewMeshObjectClient[MeshTagDefinition](ctx, httpClient, "v1")}
+	return meshTagDefinitionClient{internal.NewMeshObjectClient[MeshTagDefinition](ctx, httpClient, "v1")}
 }
 
-func (c MeshTagDefinitionClient) List(ctx context.Context) ([]MeshTagDefinition, error) {
+func (c meshTagDefinitionClient) List(ctx context.Context) ([]MeshTagDefinition, error) {
 	return c.meshObject.List(ctx)
 }
 
-func (c MeshTagDefinitionClient) Read(ctx context.Context, name string) (*MeshTagDefinition, error) {
+func (c meshTagDefinitionClient) Read(ctx context.Context, name string) (*MeshTagDefinition, error) {
 	return c.meshObject.Get(ctx, name)
 }
 
-func (c MeshTagDefinitionClient) Create(ctx context.Context, tagDefinition *MeshTagDefinition) (*MeshTagDefinition, error) {
+func (c meshTagDefinitionClient) Create(ctx context.Context, tagDefinition *MeshTagDefinition) (*MeshTagDefinition, error) {
 	return c.meshObject.Post(ctx, tagDefinition)
 }
 
-func (c MeshTagDefinitionClient) Update(ctx context.Context, tagDefinition *MeshTagDefinition) (*MeshTagDefinition, error) {
+func (c meshTagDefinitionClient) Update(ctx context.Context, tagDefinition *MeshTagDefinition) (*MeshTagDefinition, error) {
 	return c.meshObject.Put(ctx, tagDefinition.Metadata.Name, tagDefinition)
 }
 
-func (c MeshTagDefinitionClient) Delete(ctx context.Context, name string) error {
+func (c meshTagDefinitionClient) Delete(ctx context.Context, name string) error {
 	return c.meshObject.Delete(ctx, name)
 }
