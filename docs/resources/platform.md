@@ -184,8 +184,6 @@ Required:
 
 Read-Only:
 
-- `created_on` (String) Creation timestamp of the platform (server-generated).
-- `deleted_on` (String) Timestamp when the meshPlatform was deleted, null if not deleted.
 - `uuid` (String) Unique identifier of the platform (server-generated).
 
 

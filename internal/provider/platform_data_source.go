@@ -69,14 +69,6 @@ func (d *platformDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 						MarkdownDescription: "The identifier of the workspace that owns this meshPlatform.",
 						Computed:            true,
 					},
-					"created_on": schema.StringAttribute{
-						MarkdownDescription: "Creation timestamp of the platform (server-generated).",
-						Computed:            true,
-					},
-					"deleted_on": schema.StringAttribute{
-						MarkdownDescription: "Timestamp when the meshPlatform was deleted, null if not deleted.",
-						Computed:            true,
-					},
 				},
 			},
 
