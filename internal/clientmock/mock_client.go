@@ -20,6 +20,7 @@ type Client struct {
 	Platform                       MeshPlatformClient
 	PlatformType                   MeshPlatformTypeClient
 	Location                       MeshLocationClient
+	Integration                    MeshIntegrationClient
 }
 
 func (c Client) AsClient() client.Client {
@@ -30,6 +31,7 @@ func (c Client) AsClient() client.Client {
 		Platform:                       c.Platform,
 		PlatformType:                   c.PlatformType,
 		Location:                       c.Location,
+		Integration:                    c.Integration,
 	}
 }
 
@@ -42,6 +44,7 @@ func NewMock() Client {
 		Platform:                       MeshPlatformClient{make(Store[client.MeshPlatform])},
 		PlatformType:                   MeshPlatformTypeClient{make(Store[client.MeshPlatformType])},
 		Location:                       MeshLocationClient{make(Store[client.MeshLocation])},
+		Integration:                    MeshIntegrationClient{make(Store[client.MeshIntegration])},
 	}
 }
 
