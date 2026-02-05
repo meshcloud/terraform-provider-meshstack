@@ -179,6 +179,7 @@ func (p *MeshStackProvider) Resources(ctx context.Context) []func() resource.Res
 		NewPaymentMethodResource,
 		NewLocationResource,
 		NewPlatformTypeResource,
+		NewIntegrationResource,
 	}
 }
 

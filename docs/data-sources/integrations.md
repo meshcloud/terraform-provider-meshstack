@@ -35,8 +35,6 @@ Optional:
 
 Read-Only:
 
-- `api_version` (String)
-- `kind` (String)
 - `metadata` (Attributes) (see [below for nested schema](#nestedatt--integrations--metadata))
 - `spec` (Attributes) (see [below for nested schema](#nestedatt--integrations--spec))
 
@@ -91,7 +89,6 @@ Read-Only:
 
 Read-Only:
 
-- `created_on` (String)
 - `owned_by_workspace` (String)
 - `uuid` (String)
 
@@ -112,10 +109,6 @@ Optional:
 - `azuredevops` (Attributes) (see [below for nested schema](#nestedatt--integrations--spec--config--azuredevops))
 - `github` (Attributes) (see [below for nested schema](#nestedatt--integrations--spec--config--github))
 - `gitlab` (Attributes) (see [below for nested schema](#nestedatt--integrations--spec--config--gitlab))
-
-Read-Only:
-
-- `type` (String)
 
 <a id="nestedatt--integrations--spec--config--azuredevops"></a>
 ### Nested Schema for `integrations.spec.config.azuredevops`
