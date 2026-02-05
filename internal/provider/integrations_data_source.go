@@ -89,12 +89,6 @@ func (d *integrationsDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 				Computed:            true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"api_version": schema.StringAttribute{
-							Computed: true,
-						},
-						"kind": schema.StringAttribute{
-							Computed: true,
-						},
 						"metadata": schema.SingleNestedAttribute{
 							Computed: true,
 							Attributes: map[string]schema.Attribute{
@@ -102,9 +96,6 @@ func (d *integrationsDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 									Computed: true,
 								},
 								"owned_by_workspace": schema.StringAttribute{
-									Computed: true,
-								},
-								"created_on": schema.StringAttribute{
 									Computed: true,
 								},
 							},
@@ -118,9 +109,6 @@ func (d *integrationsDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 								"config": schema.SingleNestedAttribute{
 									Computed: true,
 									Attributes: map[string]schema.Attribute{
-										"type": schema.StringAttribute{
-											Computed: true,
-										},
 										"github": schema.SingleNestedAttribute{
 											Computed: true,
 											Optional: true,
@@ -226,25 +214,26 @@ func (d *integrationsDataSource) Configure(_ context.Context, req datasource.Con
 
 // Read refreshes the Terraform state with the latest data.
 func (d *integrationsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	integrations, err := d.meshIntegrationClient.List(ctx)
+	integrationDtos, err := d.meshIntegrationClient.List(ctx)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read integrations, got error: %s", err))
 		return
 	}
-
-	// Save data into Terraform state
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("integrations"), integrations)...)
-
-	for _, integration := range integrations {
-		if integration.Status != nil && integration.Status.IsBuiltIn {
-			if integration.Spec.Config.Type == "replicator" {
+	var integrations []integration
+	for _, integrationDto := range integrationDtos {
+		if integrationDto.Status != nil && integrationDto.Status.IsBuiltIn {
+			if integrationDto.Spec.Config.Type == "replicator" {
 				resp.Diagnostics.Append(resp.State.SetAttribute(ctx,
-					path.Root("workload_identity_federation").AtName("replicator"), integration.Status.WorkloadIdentityFederation)...)
+					path.Root("workload_identity_federation").AtName("replicator"), integrationDto.Status.WorkloadIdentityFederation)...)
 			}
-			if integration.Spec.Config.Type == "metering" {
+			if integrationDto.Spec.Config.Type == "metering" {
 				resp.Diagnostics.Append(resp.State.SetAttribute(ctx,
-					path.Root("workload_identity_federation").AtName("metering"), integration.Status.WorkloadIdentityFederation)...)
+					path.Root("workload_identity_federation").AtName("metering"), integrationDto.Status.WorkloadIdentityFederation)...)
 			}
 		}
+		var state integration
+		state.SetFromClientDto(&integrationDto, &resp.Diagnostics)
+		integrations = append(integrations, state)
 	}
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("integrations"), integrations)...)
 }
