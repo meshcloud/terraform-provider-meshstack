@@ -198,6 +198,8 @@ func (p *MeshStackProvider) DataSources(ctx context.Context) []func() datasource
 		NewIntegrationsDataSource,
 		NewPlatformTypesDataSource,
 		NewPlatformTypeDataSource,
+		NewServiceInstanceDataSource,
+		NewServiceInstancesDataSource,
 	}
 }
 

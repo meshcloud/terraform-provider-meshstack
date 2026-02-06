@@ -27,6 +27,7 @@ type Client struct {
 	Project               MeshProjectClient
 	ProjectGroupBinding   MeshProjectGroupBindingClient
 	ProjectUserBinding    MeshProjectUserBindingClient
+	ServiceInstance       MeshServiceInstanceClient
 	TagDefinition         MeshTagDefinitionClient
 	Tenant                MeshTenantClient
 	TenantV4              MeshTenantV4Client
@@ -77,6 +78,7 @@ func New(ctx context.Context, rootUrl *url.URL, userAgent, apiKey, apiSecret str
 		newProjectClient(ctx, httpClient),
 		newProjectGroupBindingClient(ctx, httpClient),
 		newProjectUserBindingClient(ctx, httpClient),
+		newServiceInstanceClient(ctx, httpClient),
 		newTagDefinitionClient(ctx, httpClient),
 		newTenantClient(ctx, httpClient),
 		newTenantV4Client(ctx, httpClient),
