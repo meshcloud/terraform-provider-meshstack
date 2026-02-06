@@ -13,6 +13,10 @@ Official Terraform Provider for managing meshStack resources via Infrastructure 
 - **`docs/`**: Auto-generated Terraform registry documentation
 - **`examples/`**: Example Terraform configurations
 
+## Conventions
+
+- If a variable contains an acronym of 2 or more letters, only the first letter should be uppercase (e.g., Id instead of ID).
+
 ## Development Patterns
 
 ### meshObject Schema Structure
