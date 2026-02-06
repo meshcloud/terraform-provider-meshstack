@@ -68,7 +68,7 @@ func (h Hasher) hash(root reflectwalk.WalkPath, v reflect.Value) (Sum, bool, err
 				return err
 			}
 			var total Sum
-			if err := path.WalkSlice(v, func(path reflectwalk.WalkPath, value reflect.Value) (err error) {
+			if err := path.WalkSlice(v, func(path reflectwalk.WalkPath, _ *reflectwalk.SliceIndex, value reflect.Value) (err error) {
 				err = path.Stop() // always stop walking further, as we hash value only (also recursively)
 				if sum, written, err := h.hash(path, value); err != nil {
 					return err
