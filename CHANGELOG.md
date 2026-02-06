@@ -3,6 +3,7 @@
 FEATURES:
 
 - `meshstack_platform`: Added support for `custom` platforms.
+- Data source for `meshstack_service_instance` and `meshstack_service_instances`.
 
 ## v0.17.3
 
