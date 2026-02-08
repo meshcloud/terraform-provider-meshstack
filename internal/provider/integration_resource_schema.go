@@ -7,28 +7,15 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 
-	"github.com/meshcloud/terraform-provider-meshstack/client"
-	"github.com/meshcloud/terraform-provider-meshstack/internal/types/generic"
+	"github.com/meshcloud/terraform-provider-meshstack/internal/types/secret"
 )
 
 func (r *integrationResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	runnerRefAttributes := map[string]schema.Attribute{
-		"uuid": schema.StringAttribute{
-			MarkdownDescription: "UUID of the building block runner.",
-			Required:            true,
-		},
-		"kind": schema.StringAttribute{
-			MarkdownDescription: "Kind of the runner reference.",
-			Computed:            true,
-			Default:             stringdefault.StaticString("meshBuildingBlockRunner"),
-		},
-	}
-
 	workloadIdentityFederationAttributes := map[string]schema.Attribute{
 		"issuer": schema.StringAttribute{
 			MarkdownDescription: "OIDC issuer URL for workload identity federation.",
@@ -74,6 +61,11 @@ func (r *integrationResource) Schema(_ context.Context, _ resource.SchemaRequest
 		},
 	}
 
+	allowSingleImplementation := objectvalidator.ConflictsWith(
+		path.MatchRelative().AtParent().AtName("github"),
+		path.MatchRelative().AtParent().AtName("gitlab"),
+		path.MatchRelative().AtParent().AtName("azuredevops"),
+	)
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Manages a meshIntegration in meshStack. " +
 			"Integrations configure external CI/CD systems (GitHub, GitLab, Azure DevOps) for building block execution.",
@@ -86,7 +78,6 @@ func (r *integrationResource) Schema(_ context.Context, _ resource.SchemaRequest
 					"uuid": schema.StringAttribute{
 						MarkdownDescription: "UUID of the integration.",
 						Computed:            true,
-						CustomType:          generic.TypeFor[string](),
 						PlanModifiers: []planmodifier.String{
 							stringplanmodifier.UseStateForUnknown(),
 						},
@@ -115,13 +106,7 @@ func (r *integrationResource) Schema(_ context.Context, _ resource.SchemaRequest
 							"github": schema.SingleNestedAttribute{
 								MarkdownDescription: "GitHub integration configuration.",
 								Optional:            true,
-								Validators: []validator.Object{
-									objectvalidator.ConflictsWith(
-										path.MatchRelative().AtParent().AtName("github"),
-										path.MatchRelative().AtParent().AtName("gitlab"),
-										path.MatchRelative().AtParent().AtName("azuredevops"),
-									),
-								},
+								Validators:          []validator.Object{allowSingleImplementation},
 								Attributes: map[string]schema.Attribute{
 									"owner": schema.StringAttribute{
 										MarkdownDescription: "GitHub organization or user that owns the repositories.",
@@ -135,37 +120,41 @@ func (r *integrationResource) Schema(_ context.Context, _ resource.SchemaRequest
 										MarkdownDescription: "GitHub App ID for authentication.",
 										Required:            true,
 									},
-									"app_private_key": schema.StringAttribute{
-										MarkdownDescription: "Private key for the GitHub App. This is a sensitive value.",
-										Required:            true,
-									},
+									"app_private_key": secret.ResourceSchema(secret.SchemaOptions{
+										MarkdownDescription: "Private key for the GitHub App.",
+										Optional:            false,
+									}),
 									"runner_ref": schema.SingleNestedAttribute{
-										MarkdownDescription: "Reference to the building block runner that executes GitHub workflows.",
-										Required:            true,
-										CustomType:          generic.TypeFor[client.BuildingBlockRunnerRef](),
-										Attributes:          runnerRefAttributes,
+										MarkdownDescription: "Reference to the building block runner that executes GitHub workflows." +
+											"If omitted, the pre-defined shared runner is used.",
+										Optional:   true,
+										Computed:   true,
+										Attributes: meshUuidRefAttribute("meshBuildingBlockRunner"),
 									},
 								},
 							},
 							"gitlab": schema.SingleNestedAttribute{
 								MarkdownDescription: "GitLab integration configuration.",
 								Optional:            true,
+								Validators:          []validator.Object{allowSingleImplementation},
 								Attributes: map[string]schema.Attribute{
 									"base_url": schema.StringAttribute{
 										MarkdownDescription: "Base URL of the GitLab instance (e.g., `https://gitlab.com` or your self-hosted GitLab URL).",
 										Required:            true,
 									},
 									"runner_ref": schema.SingleNestedAttribute{
-										MarkdownDescription: "Reference to the building block runner that executes GitLab pipelines.",
-										Required:            true,
-										CustomType:          generic.TypeFor[client.BuildingBlockRunnerRef](),
-										Attributes:          runnerRefAttributes,
+										MarkdownDescription: "Reference to the building block runner that executes GitLab pipelines." +
+											"If omitted, the pre-defined shared runner is used.",
+										Optional:   true,
+										Computed:   true,
+										Attributes: meshUuidRefAttribute("meshBuildingBlockRunner"),
 									},
 								},
 							},
 							"azuredevops": schema.SingleNestedAttribute{
 								MarkdownDescription: "Azure DevOps integration configuration.",
 								Optional:            true,
+								Validators:          []validator.Object{allowSingleImplementation},
 								Attributes: map[string]schema.Attribute{
 									"base_url": schema.StringAttribute{
 										MarkdownDescription: "Base URL of the Azure DevOps instance (e.g., `https://dev.azure.com`).",
@@ -175,15 +164,16 @@ func (r *integrationResource) Schema(_ context.Context, _ resource.SchemaRequest
 										MarkdownDescription: "Azure DevOps organization name.",
 										Required:            true,
 									},
-									"personal_access_token": schema.StringAttribute{
-										MarkdownDescription: "Personal Access Token (PAT) for authentication. This is a sensitive value.",
-										Required:            true,
-									},
+									"personal_access_token": secret.ResourceSchema(secret.SchemaOptions{
+										MarkdownDescription: "Personal Access Token (PAT) for authentication.",
+										Optional:            true,
+									}),
 									"runner_ref": schema.SingleNestedAttribute{
-										MarkdownDescription: "Reference to the building block runner that executes Azure DevOps pipelines.",
-										Required:            true,
-										CustomType:          generic.TypeFor[client.BuildingBlockRunnerRef](),
-										Attributes:          runnerRefAttributes,
+										MarkdownDescription: "Reference to the building block runner that executes Azure DevOps pipelines. " +
+											"If omitted, the pre-defined shared runner is used.",
+										Optional:   true,
+										Computed:   true,
+										Attributes: meshUuidRefAttribute("meshBuildingBlockRunner"),
 									},
 								},
 							},
@@ -194,7 +184,6 @@ func (r *integrationResource) Schema(_ context.Context, _ resource.SchemaRequest
 			"status": schema.SingleNestedAttribute{
 				MarkdownDescription: "Status information of the integration. Computed by meshStack.",
 				Computed:            true,
-				CustomType:          generic.TypeFor[client.MeshIntegrationStatus](),
 				Attributes: map[string]schema.Attribute{
 					"is_built_in": schema.BoolAttribute{
 						MarkdownDescription: "For integrations created by this resource, this flag is always `false`",
@@ -205,6 +194,15 @@ func (r *integrationResource) Schema(_ context.Context, _ resource.SchemaRequest
 						Computed:            true,
 						Attributes:          workloadIdentityFederationAttributes,
 					},
+				},
+			},
+
+			"ref": schema.SingleNestedAttribute{
+				MarkdownDescription: "Reference to integration, can be used in building block definitions.",
+				Computed:            true,
+				Attributes:          meshUuidRefOutputAttribute("meshIntegration"),
+				PlanModifiers: []planmodifier.Object{
+					objectplanmodifier.UseStateForUnknown(),
 				},
 			},
 		},

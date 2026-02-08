@@ -113,12 +113,23 @@ Optional:
 <a id="nestedatt--integrations--spec--config--azuredevops"></a>
 ### Nested Schema for `integrations.spec.config.azuredevops`
 
+Required:
+
+- `personal_access_token` (Attributes) (see [below for nested schema](#nestedatt--integrations--spec--config--azuredevops--personal_access_token))
+
 Read-Only:
 
 - `base_url` (String)
 - `organization` (String)
-- `personal_access_token` (String)
 - `runner_ref` (Attributes) (see [below for nested schema](#nestedatt--integrations--spec--config--azuredevops--runner_ref))
+
+<a id="nestedatt--integrations--spec--config--azuredevops--personal_access_token"></a>
+### Nested Schema for `integrations.spec.config.azuredevops.personal_access_token`
+
+Read-Only:
+
+- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret was changed externally.
+
 
 <a id="nestedatt--integrations--spec--config--azuredevops--runner_ref"></a>
 ### Nested Schema for `integrations.spec.config.azuredevops.runner_ref`
@@ -133,13 +144,24 @@ Read-Only:
 <a id="nestedatt--integrations--spec--config--github"></a>
 ### Nested Schema for `integrations.spec.config.github`
 
+Required:
+
+- `app_private_key` (Attributes) (see [below for nested schema](#nestedatt--integrations--spec--config--github--app_private_key))
+
 Read-Only:
 
 - `app_id` (String)
-- `app_private_key` (String)
 - `base_url` (String)
 - `owner` (String)
 - `runner_ref` (Attributes) (see [below for nested schema](#nestedatt--integrations--spec--config--github--runner_ref))
+
+<a id="nestedatt--integrations--spec--config--github--app_private_key"></a>
+### Nested Schema for `integrations.spec.config.github.app_private_key`
+
+Read-Only:
+
+- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret was changed externally.
+
 
 <a id="nestedatt--integrations--spec--config--github--runner_ref"></a>
 ### Nested Schema for `integrations.spec.config.github.runner_ref`
