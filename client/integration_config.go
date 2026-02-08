@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/meshcloud/terraform-provider-meshstack/client/types"
 	"github.com/meshcloud/terraform-provider-meshstack/client/types/enum"
 )
 
@@ -18,23 +19,23 @@ var (
 )
 
 type MeshIntegrationGithubConfig struct {
-	Owner         string                 `json:"owner" tfsdk:"owner"`
-	BaseUrl       string                 `json:"baseUrl" tfsdk:"base_url"`
-	AppId         string                 `json:"appId" tfsdk:"app_id"`
-	AppPrivateKey string                 `json:"appPrivateKey" tfsdk:"app_private_key"`
-	RunnerRef     BuildingBlockRunnerRef `json:"runnerRef" tfsdk:"runner_ref"`
+	Owner         string                  `json:"owner" tfsdk:"owner"`
+	BaseUrl       string                  `json:"baseUrl" tfsdk:"base_url"`
+	AppId         string                  `json:"appId" tfsdk:"app_id"`
+	AppPrivateKey types.Secret            `json:"appPrivateKey" tfsdk:"app_private_key"`
+	RunnerRef     *BuildingBlockRunnerRef `json:"runnerRef" tfsdk:"runner_ref"`
 }
 
 type MeshIntegrationGitlabConfig struct {
-	BaseUrl   string                 `json:"baseUrl" tfsdk:"base_url"`
-	RunnerRef BuildingBlockRunnerRef `json:"runnerRef" tfsdk:"runner_ref"`
+	BaseUrl   string                  `json:"baseUrl" tfsdk:"base_url"`
+	RunnerRef *BuildingBlockRunnerRef `json:"runnerRef" tfsdk:"runner_ref"`
 }
 
 type MeshIntegrationAzureDevopsConfig struct {
-	BaseUrl             string                 `json:"baseUrl" tfsdk:"base_url"`
-	Organization        string                 `json:"organization" tfsdk:"organization"`
-	PersonalAccessToken string                 `json:"personalAccessToken" tfsdk:"personal_access_token"`
-	RunnerRef           BuildingBlockRunnerRef `json:"runnerRef" tfsdk:"runner_ref"`
+	BaseUrl             string                  `json:"baseUrl" tfsdk:"base_url"`
+	Organization        string                  `json:"organization" tfsdk:"organization"`
+	PersonalAccessToken types.Secret            `json:"personalAccessToken" tfsdk:"personal_access_token"`
+	RunnerRef           *BuildingBlockRunnerRef `json:"runnerRef" tfsdk:"runner_ref"`
 }
 
 type MeshIntegrationConfig struct {

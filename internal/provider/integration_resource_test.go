@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 	"github.com/stretchr/testify/assert"
 
@@ -35,7 +36,7 @@ func runIntegrationTestCases(t *testing.T, modifiers ...ResourceTestCaseModifier
 		t.Run(exampleSuffix, func(t *testing.T) {
 			t.Parallel()
 			var resourceAddress examples.Identifier
-			config := exampleResource.Config().SingleResourceAddress(&resourceAddress)
+			config := exampleResource.Config().SingleResourceAddress(&resourceAddress).OwnedByAdminWorkspace()
 
 			type DisplayName struct {
 				Value        string
@@ -57,36 +58,70 @@ func runIntegrationTestCases(t *testing.T, modifiers ...ResourceTestCaseModifier
 				},
 			}
 
-			testCase := resource.TestCase{
-				Steps: []resource.TestStep{
-					{
-						Config: config.String(),
-						ConfigPlanChecks: resource.ConfigPlanChecks{
-							PreApply: []plancheck.PlanCheck{
-								plancheck.ExpectResourceAction(resourceAddress.String(), plancheck.ResourceActionCreate),
-							},
-						},
-						ConfigStateChecks: []statecheck.StateCheck{
-							statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("metadata"), checkIntegrationMetadata()),
-							statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("spec"), checkIntegrationSpec(exampleSuffix, displayNamesByExample[exampleSuffix].Value)),
-							statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("status"), checkIntegrationStatus()),
+			var resourceUuid string
+			testSteps := []resource.TestStep{
+				{
+					Config: config.String(),
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PreApply: []plancheck.PlanCheck{
+							plancheck.ExpectResourceAction(resourceAddress.String(), plancheck.ResourceActionCreate),
 						},
 					},
-					{
-						Config: config.ReplaceAll(` Integration"`, ` Updated Integration"`).String(),
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("metadata"), checkIntegrationMetadata()),
+						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("spec"), checkIntegrationSpec(exampleSuffix, displayNamesByExample[exampleSuffix].Value)),
+						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("status"), checkIntegrationStatus()),
+						KnownValueRef(resourceAddress, "meshIntegration", &resourceUuid),
+					},
+				},
+				{
+					Config: config.ReplaceAll(` Integration"`, ` Updated Integration"`).String(),
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PreApply: []plancheck.PlanCheck{
+							plancheck.ExpectResourceAction(resourceAddress.String(), plancheck.ResourceActionUpdate),
+						},
+					},
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("spec"), checkIntegrationSpec(exampleSuffix, displayNamesByExample[exampleSuffix].UpdatedValue)),
+						KnownValueRef(resourceAddress, "meshIntegration", &resourceUuid),
+					},
+				},
+				{
+					ImportState:     true,
+					ImportStateKind: resource.ImportBlockWithID,
+					ImportStateIdFunc: func(state *terraform.State) (string, error) {
+						return resourceUuid, nil
+					},
+					ResourceName: resourceAddress.String(),
+				},
+			}
+
+			if exampleSuffix == "02_azure_devops" {
+				// Step 4: Change a secret value and apply:
+				testSteps = append(testSteps,
+					resource.TestStep{
+						Config: config.
+							ReplaceAll(`secret_version = null`, `secret_version = "v1"`).
+							ReplaceAll(`secret_value   = "mock-pat-token-12345"`, `secret_value   = "updated-plaintext-secret"`).
+							String(),
 						ConfigPlanChecks: resource.ConfigPlanChecks{
 							PreApply: []plancheck.PlanCheck{
 								plancheck.ExpectResourceAction(resourceAddress.String(), plancheck.ResourceActionUpdate),
 							},
 						},
 						ConfigStateChecks: []statecheck.StateCheck{
-							statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("spec"), checkIntegrationSpec(exampleSuffix, displayNamesByExample[exampleSuffix].UpdatedValue)),
+							statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("metadata"), checkIntegrationMetadata()),
+							statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("spec"), checkIntegrationSpec(exampleSuffix, displayNamesByExample[exampleSuffix].Value)),
+							statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("status"), checkIntegrationStatus()),
+							KnownValueRef(resourceAddress, "meshIntegration", &resourceUuid),
 						},
 					},
-				},
+				)
 			}
 
-			ResourceTestCaseModifiers(modifiers).ApplyAndTest(t, testCase)
+			ResourceTestCaseModifiers(modifiers).ApplyAndTest(t, resource.TestCase{
+				Steps: testSteps,
+			})
 		})
 	}
 }
@@ -94,7 +129,7 @@ func runIntegrationTestCases(t *testing.T, modifiers ...ResourceTestCaseModifier
 func checkIntegrationMetadata() knownvalue.Check {
 	return knownvalue.MapExact(map[string]knownvalue.Check{
 		"uuid":               KnownValueNotEmptyString(),
-		"owned_by_workspace": knownvalue.StringExact("my-workspace"),
+		"owned_by_workspace": knownvalue.StringExact("managed-customer"),
 	})
 }
 
@@ -110,10 +145,14 @@ func checkIntegrationConfig(exampleSuffix string) knownvalue.Check {
 	case "01_github":
 		return knownvalue.MapExact(map[string]knownvalue.Check{
 			"github": knownvalue.MapExact(map[string]knownvalue.Check{
-				"owner":           knownvalue.StringExact("my-org"),
-				"base_url":        knownvalue.StringExact("https://github.com"),
-				"app_id":          knownvalue.StringExact("123456"),
-				"app_private_key": KnownValueNotEmptyString(),
+				"owner":    knownvalue.StringExact("my-org"),
+				"base_url": knownvalue.StringExact("https://github.com"),
+				"app_id":   knownvalue.StringExact("123456"),
+				"app_private_key": knownvalue.MapExact(map[string]knownvalue.Check{
+					"secret_value":   knownvalue.Null(),
+					"secret_hash":    KnownValueNotEmptyString(),
+					"secret_version": KnownValueNotEmptyString(),
+				}),
 				"runner_ref": knownvalue.MapExact(map[string]knownvalue.Check{
 					"uuid": knownvalue.StringExact("dc8c57a1-823f-4e96-8582-0275fa27dc7b"),
 					"kind": knownvalue.StringExact("meshBuildingBlockRunner"),
@@ -126,9 +165,13 @@ func checkIntegrationConfig(exampleSuffix string) knownvalue.Check {
 		return knownvalue.MapExact(map[string]knownvalue.Check{
 			"github": knownvalue.Null(),
 			"azuredevops": knownvalue.MapExact(map[string]knownvalue.Check{
-				"base_url":              knownvalue.StringExact("https://dev.azure.com"),
-				"organization":          knownvalue.StringExact("my-organization"),
-				"personal_access_token": KnownValueNotEmptyString(),
+				"base_url":     knownvalue.StringExact("https://dev.azure.com"),
+				"organization": knownvalue.StringExact("my-organization"),
+				"personal_access_token": knownvalue.MapExact(map[string]knownvalue.Check{
+					"secret_value":   knownvalue.Null(),
+					"secret_hash":    KnownValueNotEmptyString(),
+					"secret_version": KnownValueNotEmptyString(),
+				}),
 				"runner_ref": knownvalue.MapExact(map[string]knownvalue.Check{
 					"uuid": knownvalue.StringExact("05cfa85f-2818-4bdd-b193-620e0187d7de"),
 					"kind": knownvalue.StringExact("meshBuildingBlockRunner"),
@@ -155,20 +198,7 @@ func checkIntegrationConfig(exampleSuffix string) knownvalue.Check {
 
 func checkIntegrationStatus() knownvalue.Check {
 	return knownvalue.MapExact(map[string]knownvalue.Check{
-		"is_built_in": knownvalue.Bool(false),
-		"workload_identity_federation": knownvalue.MapExact(map[string]knownvalue.Check{
-			"issuer":  KnownValueNotEmptyString(),
-			"subject": KnownValueNotEmptyString(),
-			"gcp": knownvalue.MapExact(map[string]knownvalue.Check{
-				"audience": KnownValueNotEmptyString(),
-			}),
-			"aws": knownvalue.MapExact(map[string]knownvalue.Check{
-				"audience":   KnownValueNotEmptyString(),
-				"thumbprint": KnownValueNotEmptyString(),
-			}),
-			"azure": knownvalue.MapExact(map[string]knownvalue.Check{
-				"audience": KnownValueNotEmptyString(),
-			}),
-		}),
+		"is_built_in":                  knownvalue.Bool(false),
+		"workload_identity_federation": knownvalue.Null(),
 	})
 }

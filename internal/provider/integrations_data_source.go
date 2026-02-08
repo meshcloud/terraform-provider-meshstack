@@ -9,6 +9,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
+	"github.com/meshcloud/terraform-provider-meshstack/internal/types/generic"
+	"github.com/meshcloud/terraform-provider-meshstack/internal/types/secret"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -122,9 +124,7 @@ func (d *integrationsDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 												"app_id": schema.StringAttribute{
 													Computed: true,
 												},
-												"app_private_key": schema.StringAttribute{
-													Computed: true,
-												},
+												"app_private_key": secret.DatasourceSchema(secret.SchemaOptions{}),
 												"runner_ref": schema.SingleNestedAttribute{
 													Computed: true,
 													Attributes: map[string]schema.Attribute{
@@ -168,9 +168,7 @@ func (d *integrationsDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 												"organization": schema.StringAttribute{
 													Computed: true,
 												},
-												"personal_access_token": schema.StringAttribute{
-													Computed: true,
-												},
+												"personal_access_token": secret.DatasourceSchema(secret.SchemaOptions{}),
 												"runner_ref": schema.SingleNestedAttribute{
 													Computed: true,
 													Attributes: map[string]schema.Attribute{
@@ -219,7 +217,6 @@ func (d *integrationsDataSource) Read(ctx context.Context, req datasource.ReadRe
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read integrations, got error: %s", err))
 		return
 	}
-	var integrations []integration
 	for _, integrationDto := range integrationDtos {
 		if integrationDto.Status != nil && integrationDto.Status.IsBuiltIn {
 			if integrationDto.Spec.Config.Type == "replicator" {
@@ -231,9 +228,11 @@ func (d *integrationsDataSource) Read(ctx context.Context, req datasource.ReadRe
 					path.Root("workload_identity_federation").AtName("metering"), integrationDto.Status.WorkloadIdentityFederation)...)
 			}
 		}
-		var state integration
-		state.SetFromClientDto(&integrationDto, &resp.Diagnostics)
-		integrations = append(integrations, state)
+	}
+	integrations, err := generic.ValueFrom(integrationDtos, secret.WithDatasourceConverter())
+	if err != nil {
+		resp.Diagnostics.AddError("Value conversion error", err.Error())
+		return
 	}
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("integrations"), integrations)...)
 }

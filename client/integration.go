@@ -4,23 +4,20 @@ import (
 	"context"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client/internal"
-	"github.com/meshcloud/terraform-provider-meshstack/client/types"
 )
 
 type MeshIntegration struct {
-	ApiVersion string                  `json:"apiVersion"`
-	Kind       string                  `json:"kind"`
-	Metadata   MeshIntegrationMetadata `json:"metadata"`
-	Spec       MeshIntegrationSpec     `json:"spec"`
-	Status     *MeshIntegrationStatus  `json:"status"`
+	ApiVersion string                  `json:"apiVersion" tfsdk:"-"`
+	Kind       string                  `json:"kind" tfsdk:"-"`
+	Metadata   MeshIntegrationMetadata `json:"metadata" tfsdk:"metadata"`
+	Spec       MeshIntegrationSpec     `json:"spec" tfsdk:"spec"`
+	Status     *MeshIntegrationStatus  `json:"status" tfsdk:"status"`
 }
 
-type MeshIntegrationMetadataAdapter[String any] struct {
-	Uuid             String `json:"uuid,omitempty" tfsdk:"uuid"`
-	OwnedByWorkspace string `json:"ownedByWorkspace" tfsdk:"owned_by_workspace"`
+type MeshIntegrationMetadata struct {
+	Uuid             *string `json:"uuid,omitempty" tfsdk:"uuid"`
+	OwnedByWorkspace string  `json:"ownedByWorkspace" tfsdk:"owned_by_workspace"`
 }
-
-type MeshIntegrationMetadata = MeshIntegrationMetadataAdapter[*types.String]
 
 type MeshIntegrationSpec struct {
 	DisplayName string                `json:"displayName" tfsdk:"display_name"`

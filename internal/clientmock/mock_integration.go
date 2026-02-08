@@ -26,22 +26,9 @@ func (m MeshIntegrationClient) Create(_ context.Context, integration client.Mesh
 		Spec: integration.Spec,
 		Status: &client.MeshIntegrationStatus{
 			IsBuiltIn: false,
-			WorkloadIdentityFederation: &client.MeshWorkloadIdentityFederation{
-				Issuer:  "https://meshstack.example.com",
-				Subject: "integration:" + integrationUuid,
-				Gcp: &client.MeshWifProvider{
-					Audience: "gcp-audience",
-				},
-				Aws: &client.MeshAwsWifProvider{
-					Audience:   "aws-audience",
-					Thumbprint: "abc123",
-				},
-				Azure: &client.MeshWifProvider{
-					Audience: "azure-audience",
-				},
-			},
 		},
 	}
+	backendSecretBehavior(true, created, nil)
 	m.Store[integrationUuid] = created
 	return created, nil
 }
@@ -55,6 +42,7 @@ func (m MeshIntegrationClient) Read(_ context.Context, uuid string) (*client.Mes
 
 func (m MeshIntegrationClient) Update(_ context.Context, integration client.MeshIntegration) (*client.MeshIntegration, error) {
 	if existing, ok := m.Store[*integration.Metadata.Uuid]; ok {
+		backendSecretBehavior(false, &integration, existing)
 		existing.Spec = integration.Spec
 		return existing, nil
 	}

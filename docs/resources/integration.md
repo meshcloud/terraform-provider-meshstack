@@ -25,18 +25,11 @@ resource "meshstack_integration" "example_github" {
         owner           = "my-org"
         base_url        = "https://github.com"
         app_id          = "123456"
-        app_private_key = "-----BEGIN RSA PRIVATE KEY-----\nMOCK_KEY_CONTENT\n-----END RSA PRIVATE KEY-----"
-        runner_ref = {
-          uuid = "dc8c57a1-823f-4e96-8582-0275fa27dc7b"
-        }
+        app_private_key = { secret_value = "-----BEGIN RSA PRIVATE KEY-----\nMOCK_KEY_CONTENT\n-----END RSA PRIVATE KEY-----" }
+        runner_ref      = { uuid = "dc8c57a1-823f-4e96-8582-0275fa27dc7b" } # Optional, by default, pre-defined shared runner is used
       }
     }
   }
-}
-
-# Access workload identity federation for GCP
-output "github_wif_gcp_audience" {
-  value = meshstack_integration.example_github.status.workload_identity_federation.gcp.audience
 }
 ```
 
@@ -50,11 +43,11 @@ resource "meshstack_integration" "example_azure_devops" {
     display_name = "Azure DevOps Integration"
     config = {
       azuredevops = {
-        base_url              = "https://dev.azure.com"
-        organization          = "my-organization"
-        personal_access_token = "mock-pat-token-12345"
-        runner_ref = {
-          uuid = "05cfa85f-2818-4bdd-b193-620e0187d7de"
+        base_url     = "https://dev.azure.com"
+        organization = "my-organization"
+        personal_access_token = {
+          secret_value   = "mock-pat-token-12345"
+          secret_version = null
         }
       }
     }
@@ -73,9 +66,6 @@ resource "meshstack_integration" "example_gitlab" {
     config = {
       gitlab = {
         base_url = "https://gitlab.com"
-        runner_ref = {
-          uuid = "f4f4402b-f54d-4ab9-93ae-c07e997041e9"
-        }
       }
     }
   }
@@ -92,6 +82,7 @@ resource "meshstack_integration" "example_gitlab" {
 
 ### Read-Only
 
+- `ref` (Attributes) Reference to integration, can be used in building block definitions. (see [below for nested schema](#nestedatt--ref))
 - `status` (Attributes) Status information of the integration. Computed by meshStack. (see [below for nested schema](#nestedatt--status))
 
 <a id="nestedatt--metadata"></a>
@@ -130,19 +121,35 @@ Required:
 
 - `base_url` (String) Base URL of the Azure DevOps instance (e.g., `https://dev.azure.com`).
 - `organization` (String) Azure DevOps organization name.
-- `personal_access_token` (String) Personal Access Token (PAT) for authentication. This is a sensitive value.
-- `runner_ref` (Attributes) Reference to the building block runner that executes Azure DevOps pipelines. (see [below for nested schema](#nestedatt--spec--config--azuredevops--runner_ref))
+
+Optional:
+
+- `personal_access_token` (Attributes) Personal Access Token (PAT) for authentication. (see [below for nested schema](#nestedatt--spec--config--azuredevops--personal_access_token))
+- `runner_ref` (Attributes) Reference to the building block runner that executes Azure DevOps pipelines. If omitted, the pre-defined shared runner is used. (see [below for nested schema](#nestedatt--spec--config--azuredevops--runner_ref))
+
+<a id="nestedatt--spec--config--azuredevops--personal_access_token"></a>
+### Nested Schema for `spec.config.azuredevops.personal_access_token`
+
+Required:
+
+- `secret_value` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Personal Access Token (PAT) for authentication.
+
+Optional:
+
+- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_hash`. Can be omitted if resource is imported, in this case the `secret_value` attribute is used as an initial value for this attribute (computed output).
+
+Read-Only:
+
+- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret was changed externally.
+
 
 <a id="nestedatt--spec--config--azuredevops--runner_ref"></a>
 ### Nested Schema for `spec.config.azuredevops.runner_ref`
 
-Required:
+Optional:
 
-- `uuid` (String) UUID of the building block runner.
-
-Read-Only:
-
-- `kind` (String) Kind of the runner reference.
+- `kind` (String) meshObject type, always `meshBuildingBlockRunner`.
+- `uuid` (String) UUID of the meshBuildingBlockRunner.
 
 
 
@@ -152,21 +159,37 @@ Read-Only:
 Required:
 
 - `app_id` (String) GitHub App ID for authentication.
-- `app_private_key` (String) Private key for the GitHub App. This is a sensitive value.
+- `app_private_key` (Attributes) Private key for the GitHub App. (see [below for nested schema](#nestedatt--spec--config--github--app_private_key))
 - `base_url` (String) Base URL of the GitHub instance (e.g., `https://github.com` for GitHub.com or your GitHub Enterprise URL).
 - `owner` (String) GitHub organization or user that owns the repositories.
-- `runner_ref` (Attributes) Reference to the building block runner that executes GitHub workflows. (see [below for nested schema](#nestedatt--spec--config--github--runner_ref))
+
+Optional:
+
+- `runner_ref` (Attributes) Reference to the building block runner that executes GitHub workflows.If omitted, the pre-defined shared runner is used. (see [below for nested schema](#nestedatt--spec--config--github--runner_ref))
+
+<a id="nestedatt--spec--config--github--app_private_key"></a>
+### Nested Schema for `spec.config.github.app_private_key`
+
+Required:
+
+- `secret_value` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Private key for the GitHub App.
+
+Optional:
+
+- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_hash`. Can be omitted if resource is imported, in this case the `secret_value` attribute is used as an initial value for this attribute (computed output).
+
+Read-Only:
+
+- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret was changed externally.
+
 
 <a id="nestedatt--spec--config--github--runner_ref"></a>
 ### Nested Schema for `spec.config.github.runner_ref`
 
-Required:
+Optional:
 
-- `uuid` (String) UUID of the building block runner.
-
-Read-Only:
-
-- `kind` (String) Kind of the runner reference.
+- `kind` (String) meshObject type, always `meshBuildingBlockRunner`.
+- `uuid` (String) UUID of the meshBuildingBlockRunner.
 
 
 
@@ -176,21 +199,30 @@ Read-Only:
 Required:
 
 - `base_url` (String) Base URL of the GitLab instance (e.g., `https://gitlab.com` or your self-hosted GitLab URL).
-- `runner_ref` (Attributes) Reference to the building block runner that executes GitLab pipelines. (see [below for nested schema](#nestedatt--spec--config--gitlab--runner_ref))
+
+Optional:
+
+- `runner_ref` (Attributes) Reference to the building block runner that executes GitLab pipelines.If omitted, the pre-defined shared runner is used. (see [below for nested schema](#nestedatt--spec--config--gitlab--runner_ref))
 
 <a id="nestedatt--spec--config--gitlab--runner_ref"></a>
 ### Nested Schema for `spec.config.gitlab.runner_ref`
 
-Required:
+Optional:
 
-- `uuid` (String) UUID of the building block runner.
+- `kind` (String) meshObject type, always `meshBuildingBlockRunner`.
+- `uuid` (String) UUID of the meshBuildingBlockRunner.
+
+
+
+
+
+<a id="nestedatt--ref"></a>
+### Nested Schema for `ref`
 
 Read-Only:
 
-- `kind` (String) Kind of the runner reference.
-
-
-
+- `kind` (String) meshObject type, always `meshIntegration`.
+- `uuid` (String) UUID of the meshIntegration.
 
 
 <a id="nestedatt--status"></a>
