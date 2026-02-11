@@ -153,6 +153,7 @@ func (d *platformDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 						MarkdownDescription: "Platform-specific configuration options.",
 						Computed:            true,
 						Attributes: map[string]schema.Attribute{
+							"custom":     customPlatformDataSourceSchema(),
 							"aws":        awsPlatformDataSourceSchema(),
 							"aks":        aksPlatformDataSourceSchema(),
 							"azure":      azurePlatformDataSourceSchema(),
@@ -182,6 +183,36 @@ func secretEmbeddedDataSourceSchema(description string) schema.Attribute {
 				MarkdownDescription: "Plaintext secret value",
 				Computed:            true,
 				Sensitive:           true,
+			},
+		},
+	}
+}
+
+func customPlatformDataSourceSchema() schema.Attribute {
+	return schema.SingleNestedAttribute{
+		MarkdownDescription: "Custom platform configuration.",
+		Computed:            true,
+		Attributes: map[string]schema.Attribute{
+			"platform_type_ref": schema.SingleNestedAttribute{
+				MarkdownDescription: "Reference to the platform type.",
+				Computed:            true,
+				Attributes: map[string]schema.Attribute{
+					"name": schema.StringAttribute{
+						MarkdownDescription: "Name of the platform type.",
+						Computed:            true,
+					},
+					"kind": schema.StringAttribute{
+						MarkdownDescription: "Kind of the platform type. Always `meshPlatformType`.",
+						Computed:            true,
+					},
+				},
+			},
+			"metering": schema.SingleNestedAttribute{
+				MarkdownDescription: "Metering configuration.",
+				Computed:            true,
+				Attributes: map[string]schema.Attribute{
+					"processing": meteringProcessingConfigDataSourceSchema(),
+				},
 			},
 		},
 	}
