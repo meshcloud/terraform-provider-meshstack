@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	//go:embed testdata/bbd_input
+	//go:embed testdata/building_block_definition_version_input
 	bbdInputTestdata embed.FS
 )
 
@@ -36,7 +36,7 @@ func TestMeshBuildingBlockDefinitionInput_UnmarshalJSON(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			jsonFile, err := bbdInputTestdata.ReadFile(path.Join("testdata/bbd_input", path.Base(tt.name)+".json"))
+			jsonFile, err := bbdInputTestdata.ReadFile(path.Join("testdata/building_block_definition_version_input", path.Base(tt.name)+".json"))
 			require.NoError(t, err)
 			var target MeshBuildingBlockDefinitionInput
 			if tt.wantErr(t, json.Unmarshal(jsonFile, &target)) {
