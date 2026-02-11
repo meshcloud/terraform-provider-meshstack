@@ -24,6 +24,7 @@ func TestSecretOrAny(t *testing.T) {
 		{"Y string", `"some-string"`, SecretOrAny{Y: "some-string"}, false, true},
 		{"Y bool", `true`, SecretOrAny{Y: true}, false, true},
 		{"Y number", `1.23123`, SecretOrAny{Y: 1.23123}, false, true},
+		{"Y empty string", `""`, SecretOrAny{Y: ""}, false, true},
 		{"Y other struct", `{"A":"aa","B":"bb"}`, SecretOrAny{Y: map[string]any{"A": "aa", "B": "bb"}}, false, true},
 	}
 	for _, tt := range tests {

@@ -31,14 +31,24 @@ func (v Variant[X, Y]) MarshalJSON() ([]byte, error) {
 	}
 }
 
+func has[T any](xy any) bool {
+	v := reflect.ValueOf(xy)
+	kind := reflect.TypeFor[T]().Kind()
+	if kind != reflect.Interface {
+		// T is not any (aka as a valid 'zero' representation)
+		return !v.IsZero()
+	} else {
+		// T is any, so we only check for validness
+		return v.IsValid()
+	}
+}
+
 func (v Variant[X, Y]) HasX() bool {
-	x := reflect.ValueOf(v.X)
-	return x.IsValid() && !x.IsZero()
+	return has[X](v.X)
 }
 
 func (v Variant[X, Y]) HasY() bool {
-	y := reflect.ValueOf(v.Y)
-	return y.IsValid() && !y.IsZero()
+	return has[Y](v.Y)
 }
 
 func (v Variant[X, Y]) WithX(action func(x *X)) {
