@@ -1,3 +1,19 @@
+## v0.18.0
+
+FEATURES:
+
+- New resource: `meshstack_building_block_definition`
+- New resource: `meshstack_integration`
+
+FIXES:
+
+- `meshstack_platform`: Support custom platform in datasource as well
+
+BREAKING CHANGES:
+
+- Proper secret handling for data source `meshstack_integrations`, 
+  as only the hash is returned from the API now.
+
 ## v0.17.5
 
 FEATURES:
