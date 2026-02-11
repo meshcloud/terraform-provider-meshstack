@@ -75,6 +75,7 @@ linters:
             - github.com/meshcloud/terraform-provider-meshstack/internal
             - github.com/hashicorp/terraform-plugin-framework/
             - github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry
+            - github.com/hashicorp/terraform-plugin-framework-jsontypes/jsontypes # for 'any' value support
             - github.com/hashicorp/terraform-plugin-framework-validators
             - github.com/hashicorp/terraform-plugin-go
             - github.com/hashicorp/terraform-plugin-log
@@ -93,6 +94,7 @@ linters:
             - $gostd
             - github.com/meshcloud/terraform-provider-meshstack # any packages are included in tests
             - github.com/hashicorp/terraform-plugin-testing
+            - github.com/hashicorp/terraform-plugin-framework/diag
             - github.com/stretchr/testify
         types:
           files:
