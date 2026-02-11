@@ -81,6 +81,7 @@ Read-Only:
 - `aws` (Attributes) Configuration for AWS (see [below for nested schema](#nestedatt--spec--config--aws))
 - `azure` (Attributes) Azure platform configuration. (see [below for nested schema](#nestedatt--spec--config--azure))
 - `azurerg` (Attributes) Azure Resource Group platform configuration. (see [below for nested schema](#nestedatt--spec--config--azurerg))
+- `custom` (Attributes) Custom platform configuration. (see [below for nested schema](#nestedatt--spec--config--custom))
 - `gcp` (Attributes) Google Cloud Platform (GCP) platform configuration. (see [below for nested schema](#nestedatt--spec--config--gcp))
 - `kubernetes` (Attributes) Kubernetes platform configuration. (see [below for nested schema](#nestedatt--spec--config--kubernetes))
 - `openshift` (Attributes) OpenShift platform configuration. (see [below for nested schema](#nestedatt--spec--config--openshift))
@@ -701,6 +702,41 @@ Read-Only:
 - `value_pattern` (String) Value pattern for the tag mapper
 
 
+
+
+
+<a id="nestedatt--spec--config--custom"></a>
+### Nested Schema for `spec.config.custom`
+
+Read-Only:
+
+- `metering` (Attributes) Metering configuration. (see [below for nested schema](#nestedatt--spec--config--custom--metering))
+- `platform_type_ref` (Attributes) Reference to the platform type. (see [below for nested schema](#nestedatt--spec--config--custom--platform_type_ref))
+
+<a id="nestedatt--spec--config--custom--metering"></a>
+### Nested Schema for `spec.config.custom.metering`
+
+Read-Only:
+
+- `processing` (Attributes) Processing configuration for metering (see [below for nested schema](#nestedatt--spec--config--custom--metering--processing))
+
+<a id="nestedatt--spec--config--custom--metering--processing"></a>
+### Nested Schema for `spec.config.custom.metering.processing`
+
+Read-Only:
+
+- `compact_timelines_after_days` (Number) Number of days after which timelines should be compacted.
+- `delete_raw_data_after_days` (Number) Number of days after which raw data should be deleted.
+
+
+
+<a id="nestedatt--spec--config--custom--platform_type_ref"></a>
+### Nested Schema for `spec.config.custom.platform_type_ref`
+
+Read-Only:
+
+- `kind` (String) Kind of the platform type. Always `meshPlatformType`.
+- `name` (String) Name of the platform type.
 
 
 
