@@ -46,94 +46,100 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 	}
 
 	inputsAttribute := schema.MapNestedAttribute{
-		MarkdownDescription: "Building block definition inputs. Map from input name to input configuration.",
-		Optional:            true,
+		MarkdownDescription: "Map of input definitions for the building block. Keys are input names, values are input configuration objects. " +
+			"Inputs define parameters that building blocks can receive.",
+		Optional: true,
 		NestedObject: schema.NestedAttributeObject{
 			Attributes: map[string]schema.Attribute{
 				"display_name": schema.StringAttribute{
-					MarkdownDescription: "Display name for the input shown to users.",
+					MarkdownDescription: "Human-readable display name for the input.",
 					Required:            true,
 				},
 				"description": schema.StringAttribute{
-					MarkdownDescription: "Description of the input parameter.",
+					MarkdownDescription: "Description explaining the purpose and usage of the input.",
 					Optional:            true,
 				},
 				"type": schema.StringAttribute{
-					MarkdownDescription: "Input type. One of " + client.MeshBuildingBlockIOTypes.Markdown() + ".",
+					MarkdownDescription: "Data type of the input. One of " + client.MeshBuildingBlockIOTypes.Markdown() + ".",
 					Required:            true,
 					Validators: []validator.String{
 						stringvalidator.OneOf(client.MeshBuildingBlockIOTypes.Strings()...),
 					},
 				},
 				"assignment_type": schema.StringAttribute{
-					MarkdownDescription: "How the input value is assigned. One of " + client.MeshBuildingBlockInputAssignmentTypes.Markdown() + ".",
-					Required:            true,
+					MarkdownDescription: "How the input value is assigned. One of " + client.MeshBuildingBlockInputAssignmentTypes.Markdown() + ". " +
+						"Determines which additional attributes are required or allowed.",
+					Required: true,
 					Validators: []validator.String{
 						stringvalidator.OneOf(client.MeshBuildingBlockInputAssignmentTypes.Strings()...),
 					},
 				},
 				"argument": schema.StringAttribute{
 					CustomType: jsontypes.NormalizedType{},
-					MarkdownDescription: "Argument value for static assignment types. " +
-						"Must be provided if `assignment_type` is one of " + enum.Of(
+					MarkdownDescription: "Argument value for the input, depending on the assignment type. " +
+						"**Required** if `assignment_type` is " + enum.Of(
 						client.MeshBuildingBlockInputAssignmentTypeStatic,
 						client.MeshBuildingBlockInputAssignmentTypeBuildingBlockOutput,
 					).Markdown() + ". " +
-						"Otherwise it must not be provided. " +
-						"The value must be passed through `jsonencode` to support dynamic typing as given by `type` attribute. " +
-						"In case of " + client.MeshBuildingBlockInputAssignmentTypeBuildingBlockOutput.Markdown() + ", must have the format `" + `jsonencode("<BuildingBlockDefinitionUuid>.<outputName>")` + "`.",
+						"**Must not be provided** for other assignment types. " +
+						"The value must be passed through `jsonencode()` to support dynamic typing as defined by the `type` attribute. " +
+						"For " + client.MeshBuildingBlockInputAssignmentTypeBuildingBlockOutput.Markdown() + ", the value must have the format `jsonencode(\"<BuildingBlockDefinitionUuid>.<outputName>\")`.",
 					Optional: true,
 				},
 				"default_value": schema.StringAttribute{
 					CustomType: jsontypes.NormalizedType{},
-					MarkdownDescription: "Default value for the input. Can be provided if `assignment_type` is one of " + enum.Of(
+					MarkdownDescription: "Default value for the input. " +
+						"**Can only be provided** if `assignment_type` is " + enum.Of(
 						client.MeshBuildingBlockInputAssignmentTypeUserInput,
 						client.MeshBuildingBlockInputAssignmentTypePlatformOperatorManualInput,
-					).Markdown() + ".",
+					).Markdown() + ". " +
+						"Must be passed through `jsonencode()` to match the `type` attribute.",
 					Optional: true,
 				},
 				"sensitive": schema.SingleNestedAttribute{
-					MarkdownDescription: "Sensitive input values, mutually exclusive with non-sensitive `argument` and `default_value` attributes. " +
-						"You can provide an empty attribute `sensitive = {}` to mark this input sensitive without providing `argument` or `default_value`. " +
-						"Sensitive input values are only supported for `argument_type` of " + enum.Of(
+					MarkdownDescription: "Configuration for sensitive input values. " +
+						"**Mutually exclusive** with the non-sensitive `argument` and `default_value` attributes. " +
+						"When an input is marked as sensitive, use the nested `sensitive.argument` or `sensitive.default_value` instead of the top-level attributes. " +
+						"You can provide an empty attribute `sensitive = {}` to mark this input as sensitive without providing values. " +
+						"Sensitive inputs are **only supported** for `assignment_type` of " + enum.Of(
 						client.MeshBuildingBlockInputAssignmentTypeUserInput,
 						client.MeshBuildingBlockInputAssignmentTypePlatformOperatorManualInput,
 						client.MeshBuildingBlockInputAssignmentTypeStatic).Markdown() + ".",
 					Optional: true,
 					Attributes: map[string]schema.Attribute{
 						"argument": secret.ResourceSchema(secret.SchemaOptions{
-							MarkdownDescription: "Sensitive variant of `argument` attribute. See there for further explanation.",
+							MarkdownDescription: "Sensitive variant of the `argument` attribute. Contains encrypted secret data.",
 							Optional:            true,
 						}),
 						"default_value": secret.ResourceSchema(secret.SchemaOptions{
-							MarkdownDescription: "Sensitive variant of `default_value` attribute. See there for further explanation.",
+							MarkdownDescription: "Sensitive variant of the `default_value` attribute. Contains encrypted secret data.",
 							Optional:            true,
 						}),
 					},
 				},
 				"is_environment": schema.BoolAttribute{
-					MarkdownDescription: "Whether this input is exposed as an environment variable.",
+					MarkdownDescription: "Whether this input is exposed as an environment variable (when `true`) or as a regular variable (when `false`).",
 					Optional:            true,
 					Computed:            true,
 					Default:             booldefault.StaticBool(false),
 				},
 				"updateable_by_consumer": schema.BoolAttribute{
-					MarkdownDescription: "Whether consumers can update this input value.",
+					MarkdownDescription: "Whether the input value can be updated by consumers without admin or platform operator permissions.",
 					Optional:            true,
 					Computed:            true,
 					Default:             booldefault.StaticBool(false),
 				},
 				"selectable_values": schema.SetAttribute{
-					MarkdownDescription: "Set of allowed values for " + client.MeshBuildingBlockIOTypeSingleSelect.Markdown() + " or " + client.MeshBuildingBlockIOTypeMultiSelect.Markdown() + " types.",
+					MarkdownDescription: "List of allowed values for the input. **Required** when `type` is " + client.MeshBuildingBlockIOTypeSingleSelect.Markdown() + " or " + client.MeshBuildingBlockIOTypeMultiSelect.Markdown() + ".",
 					ElementType:         types.StringType,
 					Optional:            true,
 				},
 				"value_validation_regex": schema.StringAttribute{
-					MarkdownDescription: "Regular expression to validate input values.",
+					MarkdownDescription: "Regular expression pattern to validate input values.",
 					Optional:            true,
 				},
 				"validation_regex_error_message": schema.StringAttribute{
-					MarkdownDescription: "Error message shown when validation regex fails.",
+					MarkdownDescription: "Error message to display when regex validation fails.",
 					Optional:            true,
 				},
 			},
@@ -141,23 +147,24 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 	}
 
 	outputsAttribute := schema.MapNestedAttribute{
-		MarkdownDescription: "Building block definition outputs. Map from output name to output configuration.",
-		Optional:            true,
+		MarkdownDescription: "Map of output definitions for the building block. Keys are output names, values are output configuration objects. " +
+			"Outputs define values that building blocks produce and can be consumed by other building blocks.",
+		Optional: true,
 		NestedObject: schema.NestedAttributeObject{
 			Attributes: map[string]schema.Attribute{
 				"display_name": schema.StringAttribute{
-					MarkdownDescription: "Display name for the output shown to users.",
+					MarkdownDescription: "Human-readable display name for the output.",
 					Required:            true,
 				},
 				"assignment_type": schema.StringAttribute{
-					MarkdownDescription: "How the output is assigned. One of " + client.MeshBuildingBlockDefinitionOutputAssignmentTypes.Markdown() + ".",
+					MarkdownDescription: "How the output is used. One of " + client.MeshBuildingBlockDefinitionOutputAssignmentTypes.Markdown() + ".",
 					Required:            true,
 					Validators: []validator.String{
 						stringvalidator.OneOf(client.MeshBuildingBlockDefinitionOutputAssignmentTypes.Strings()...),
 					},
 				},
 				"type": schema.StringAttribute{
-					MarkdownDescription: "Output type. One of " + client.MeshBuildingBlockIOTypes.Markdown() + ".",
+					MarkdownDescription: "Data type of the output. One of " + client.MeshBuildingBlockIOTypes.Markdown() + ".",
 					Required:            true,
 					Validators: []validator.String{
 						stringvalidator.OneOf(client.MeshBuildingBlockIOTypes.Strings()...),
@@ -175,28 +182,31 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 		path.MatchRelative().AtParent().AtName("azure_devops_pipeline"),
 	)
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Represents a meshStack building block definition with version information merged into a single resource.",
+		MarkdownDescription: "Manages a meshBuildingBlockDefinition in meshStack. " +
+			"Building Block Definitions define reusable automation components that can be executed on workspaces or tenants. " +
+			"This resource combines the building block definition metadata with version information in a single resource for simplified management.",
 
 		Attributes: map[string]schema.Attribute{
 			"metadata": schema.SingleNestedAttribute{
-				Required: true,
+				MarkdownDescription: "Metadata of the building block definition. Contains identifiers and ownership details.",
+				Required:            true,
 				Attributes: map[string]schema.Attribute{
 					"uuid": schema.StringAttribute{
-						MarkdownDescription: "Unique identifier of the building block definition (server-generated).",
+						MarkdownDescription: "UUID to uniquely identify the building block definition.",
 						Computed:            true,
 						PlanModifiers: []planmodifier.String{
 							stringplanmodifier.UseStateForUnknown(),
 						},
 					},
 					"owned_by_workspace": schema.StringAttribute{
-						MarkdownDescription: "The workspace that owns this building block definition.",
+						MarkdownDescription: "Identifier of the workspace that owns this building block definition.",
 						Required:            true,
 						PlanModifiers: []planmodifier.String{
 							stringplanmodifier.RequiresReplace(),
 						},
 					},
 					"tags": schema.MapAttribute{
-						MarkdownDescription: "Tags associated with this building block definition.",
+						MarkdownDescription: "Key/value pairs of tags set on the building block definition. Values are arrays of strings.",
 						ElementType:         types.ListType{ElemType: types.StringType},
 						Optional:            true,
 					},
@@ -204,14 +214,15 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 			},
 
 			"spec": schema.SingleNestedAttribute{
-				Required: true,
+				MarkdownDescription: "Specification of the building block definition. Contains configuration settings for the building block.",
+				Required:            true,
 				Attributes: map[string]schema.Attribute{
 					"display_name": schema.StringAttribute{
-						MarkdownDescription: "Display name for the building block definition.",
+						MarkdownDescription: "Display name of the building block definition as shown in meshPanel.",
 						Required:            true,
 					},
 					"symbol": schema.StringAttribute{
-						MarkdownDescription: "Icon symbol for the building block definition.",
+						MarkdownDescription: "Symbol/icon of the building block definition as shown in meshPanel.",
 						Optional:            true,
 						Computed:            true,
 						PlanModifiers: []planmodifier.String{
@@ -219,7 +230,7 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 						},
 					},
 					"description": schema.StringAttribute{
-						MarkdownDescription: "Description of the building block definition.",
+						MarkdownDescription: "Description of the building block definition as shown in meshPanel.",
 						Required:            true,
 					},
 					"readme": schema.StringAttribute{
@@ -227,11 +238,11 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 						Optional:            true,
 					},
 					"support_url": schema.StringAttribute{
-						MarkdownDescription: "URL for support resources.",
+						MarkdownDescription: "URL pointing to support resources for the building block definition.",
 						Optional:            true,
 					},
 					"documentation_url": schema.StringAttribute{
-						MarkdownDescription: "URL for additional documentation.",
+						MarkdownDescription: "URL pointing to documentation for the building block definition.",
 						Optional:            true,
 					},
 					"supported_platforms": schema.SetNestedAttribute{
@@ -259,7 +270,7 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 						},
 					},
 					"run_transparency": schema.BoolAttribute{
-						MarkdownDescription: "Whether to enable run transparency for this building block.",
+						MarkdownDescription: "Specifies the building block run control. When set to `true`, both platform teams and workspace users can view detailed run logs and re-run building blocks. When set to `false` (default), only platform teams have this access.",
 						Optional:            true,
 						Computed:            true,
 						Default:             booldefault.StaticBool(false),
@@ -271,7 +282,7 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 						Default:             booldefault.StaticBool(false),
 					},
 					"target_type": schema.StringAttribute{
-						MarkdownDescription: fmt.Sprintf("Target type for building blocks using this definition. One of %s.", client.MeshBuildingBlockTypes.Markdown()),
+						MarkdownDescription: fmt.Sprintf("Type of building block definition. Determines where building blocks can be attached. One of %s.", client.MeshBuildingBlockTypes.Markdown()),
 						Optional:            true,
 						Computed:            true,
 						Default:             stringdefault.StaticString(client.MeshBuildingBlockTypeWorkspaceLevel.String()),

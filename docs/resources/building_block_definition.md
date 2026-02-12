@@ -3,12 +3,12 @@
 page_title: "meshstack_building_block_definition Resource - terraform-provider-meshstack"
 subcategory: ""
 description: |-
-  Represents a meshStack building block definition with version information merged into a single resource.
+  Manages a meshBuildingBlockDefinition in meshStack. Building Block Definitions define reusable automation components that can be executed on workspaces or tenants. This resource combines the building block definition metadata with version information in a single resource for simplified management.
 ---
 
 # meshstack_building_block_definition (Resource)
 
-Represents a meshStack building block definition with version information merged into a single resource.
+Manages a meshBuildingBlockDefinition in meshStack. Building Block Definitions define reusable automation components that can be executed on workspaces or tenants. This resource combines the building block definition metadata with version information in a single resource for simplified management.
 
 ## Example Usage
 
@@ -304,8 +304,8 @@ resource "meshstack_building_block_definition" "example_05_gitlab_pipeline" {
 
 ### Required
 
-- `metadata` (Attributes) (see [below for nested schema](#nestedatt--metadata))
-- `spec` (Attributes) (see [below for nested schema](#nestedatt--spec))
+- `metadata` (Attributes) Metadata of the building block definition. Contains identifiers and ownership details. (see [below for nested schema](#nestedatt--metadata))
+- `spec` (Attributes) Specification of the building block definition. Contains configuration settings for the building block. (see [below for nested schema](#nestedatt--spec))
 - `version_spec` (Attributes) Version specification for the building block definition. (see [below for nested schema](#nestedatt--version_spec))
 
 ### Optional
@@ -323,15 +323,15 @@ resource "meshstack_building_block_definition" "example_05_gitlab_pipeline" {
 
 Required:
 
-- `owned_by_workspace` (String) The workspace that owns this building block definition.
+- `owned_by_workspace` (String) Identifier of the workspace that owns this building block definition.
 
 Optional:
 
-- `tags` (Map of List of String) Tags associated with this building block definition.
+- `tags` (Map of List of String) Key/value pairs of tags set on the building block definition. Values are arrays of strings.
 
 Read-Only:
 
-- `uuid` (String) Unique identifier of the building block definition (server-generated).
+- `uuid` (String) UUID to uniquely identify the building block definition.
 
 
 <a id="nestedatt--spec"></a>
@@ -339,19 +339,19 @@ Read-Only:
 
 Required:
 
-- `description` (String) Description of the building block definition.
-- `display_name` (String) Display name for the building block definition.
+- `description` (String) Description of the building block definition as shown in meshPanel.
+- `display_name` (String) Display name of the building block definition as shown in meshPanel.
 
 Optional:
 
-- `documentation_url` (String) URL for additional documentation.
+- `documentation_url` (String) URL pointing to documentation for the building block definition.
 - `notification_subscribers` (List of String) List of subscribers to notify about events related to this building block. Prefix usernames with `user:` and emails with `email:`.
 - `readme` (String) Detailed readme/documentation in markdown format.
-- `run_transparency` (Boolean) Whether to enable run transparency for this building block.
-- `support_url` (String) URL for support resources.
+- `run_transparency` (Boolean) Specifies the building block run control. When set to `true`, both platform teams and workspace users can view detailed run logs and re-run building blocks. When set to `false` (default), only platform teams have this access.
+- `support_url` (String) URL pointing to support resources for the building block definition.
 - `supported_platforms` (Attributes Set) List of platform identifiers that this building block supports. Required and must be non-empty if target_type is `TENANT_LEVEL` (see [below for nested schema](#nestedatt--spec--supported_platforms))
-- `symbol` (String) Icon symbol for the building block definition.
-- `target_type` (String) Target type for building blocks using this definition. One of `TENANT_LEVEL`, `WORKSPACE_LEVEL`.
+- `symbol` (String) Symbol/icon of the building block definition as shown in meshPanel.
+- `target_type` (String) Type of building block definition. Determines where building blocks can be attached. One of `TENANT_LEVEL`, `WORKSPACE_LEVEL`.
 - `use_in_landing_zones_only` (Boolean) Whether this building block can only be used in landing zones.
 
 <a id="nestedatt--spec--supported_platforms"></a>
@@ -376,9 +376,9 @@ Optional:
 - `deletion_mode` (String) Deletion behavior. One of `DELETE`, `PURGE`.
 - `dependency_refs` (Attributes List) List of refs to building block definitions this definition depends on. (see [below for nested schema](#nestedatt--version_spec--dependency_refs))
 - `implementation` (Attributes) Implementation configuration for the building block. Must contain exactly one of `manual`, `terraform`, `github_workflows`, `gitlab_pipeline`, or `azure_devops_pipeline`. (see [below for nested schema](#nestedatt--version_spec--implementation))
-- `inputs` (Attributes Map) Building block definition inputs. Map from input name to input configuration. (see [below for nested schema](#nestedatt--version_spec--inputs))
+- `inputs` (Attributes Map) Map of input definitions for the building block. Keys are input names, values are input configuration objects. Inputs define parameters that building blocks can receive. (see [below for nested schema](#nestedatt--version_spec--inputs))
 - `only_apply_once_per_tenant` (Boolean) Whether this building block can only be applied once per tenant.
-- `outputs` (Attributes Map) Building block definition outputs. Map from output name to output configuration. (see [below for nested schema](#nestedatt--version_spec--outputs))
+- `outputs` (Attributes Map) Map of output definitions for the building block. Keys are output names, values are output configuration objects. Outputs define values that building blocks produce and can be consumed by other building blocks. (see [below for nested schema](#nestedatt--version_spec--outputs))
 - `runner_ref` (Attributes) Reference to the runner to run the implementation. If omitted, the pre-defined shared runner is used suitable for the given `implementation` choice (see [below for nested schema](#nestedatt--version_spec--runner_ref))
 
 Read-Only:
@@ -545,36 +545,36 @@ Read-Only:
 
 Required:
 
-- `assignment_type` (String) How the input value is assigned. One of `AUTHOR`, `USER_INPUT`, `PLATFORM_OPERATOR_MANUAL_INPUT`, `BUILDING_BLOCK_OUTPUT`, `PLATFORM_TENANT_ID`, `WORKSPACE_IDENTIFIER`, `PROJECT_IDENTIFIER`, `FULL_PLATFORM_IDENTIFIER`, `TENANT_BUILDING_BLOCK_UUID`, `STATIC`, `USER_PERMISSIONS`.
-- `display_name` (String) Display name for the input shown to users.
-- `type` (String) Input type. One of `STRING`, `CODE`, `INTEGER`, `BOOLEAN`, `FILE`, `LIST`, `SINGLE_SELECT`, `MULTI_SELECT`.
+- `assignment_type` (String) How the input value is assigned. One of `AUTHOR`, `USER_INPUT`, `PLATFORM_OPERATOR_MANUAL_INPUT`, `BUILDING_BLOCK_OUTPUT`, `PLATFORM_TENANT_ID`, `WORKSPACE_IDENTIFIER`, `PROJECT_IDENTIFIER`, `FULL_PLATFORM_IDENTIFIER`, `TENANT_BUILDING_BLOCK_UUID`, `STATIC`, `USER_PERMISSIONS`. Determines which additional attributes are required or allowed.
+- `display_name` (String) Human-readable display name for the input.
+- `type` (String) Data type of the input. One of `STRING`, `CODE`, `INTEGER`, `BOOLEAN`, `FILE`, `LIST`, `SINGLE_SELECT`, `MULTI_SELECT`.
 
 Optional:
 
-- `argument` (String) Argument value for static assignment types. Must be provided if `assignment_type` is one of `STATIC`, `BUILDING_BLOCK_OUTPUT`. Otherwise it must not be provided. The value must be passed through `jsonencode` to support dynamic typing as given by `type` attribute. In case of `BUILDING_BLOCK_OUTPUT`, must have the format `jsonencode("<BuildingBlockDefinitionUuid>.<outputName>")`.
-- `default_value` (String) Default value for the input. Can be provided if `assignment_type` is one of `USER_INPUT`, `PLATFORM_OPERATOR_MANUAL_INPUT`.
-- `description` (String) Description of the input parameter.
-- `is_environment` (Boolean) Whether this input is exposed as an environment variable.
-- `selectable_values` (Set of String) Set of allowed values for `SINGLE_SELECT` or `MULTI_SELECT` types.
-- `sensitive` (Attributes) Sensitive input values, mutually exclusive with non-sensitive `argument` and `default_value` attributes. You can provide an empty attribute `sensitive = {}` to mark this input sensitive without providing `argument` or `default_value`. Sensitive input values are only supported for `argument_type` of `USER_INPUT`, `PLATFORM_OPERATOR_MANUAL_INPUT`, `STATIC`. (see [below for nested schema](#nestedatt--version_spec--inputs--sensitive))
-- `updateable_by_consumer` (Boolean) Whether consumers can update this input value.
-- `validation_regex_error_message` (String) Error message shown when validation regex fails.
-- `value_validation_regex` (String) Regular expression to validate input values.
+- `argument` (String) Argument value for the input, depending on the assignment type. **Required** if `assignment_type` is `STATIC`, `BUILDING_BLOCK_OUTPUT`. **Must not be provided** for other assignment types. The value must be passed through `jsonencode()` to support dynamic typing as defined by the `type` attribute. For `BUILDING_BLOCK_OUTPUT`, the value must have the format `jsonencode("<BuildingBlockDefinitionUuid>.<outputName>")`.
+- `default_value` (String) Default value for the input. **Can only be provided** if `assignment_type` is `USER_INPUT`, `PLATFORM_OPERATOR_MANUAL_INPUT`. Must be passed through `jsonencode()` to match the `type` attribute.
+- `description` (String) Description explaining the purpose and usage of the input.
+- `is_environment` (Boolean) Whether this input is exposed as an environment variable (when `true`) or as a regular variable (when `false`).
+- `selectable_values` (Set of String) List of allowed values for the input. **Required** when `type` is `SINGLE_SELECT` or `MULTI_SELECT`.
+- `sensitive` (Attributes) Configuration for sensitive input values. **Mutually exclusive** with the non-sensitive `argument` and `default_value` attributes. When an input is marked as sensitive, use the nested `sensitive.argument` or `sensitive.default_value` instead of the top-level attributes. You can provide an empty attribute `sensitive = {}` to mark this input as sensitive without providing values. Sensitive inputs are **only supported** for `assignment_type` of `USER_INPUT`, `PLATFORM_OPERATOR_MANUAL_INPUT`, `STATIC`. (see [below for nested schema](#nestedatt--version_spec--inputs--sensitive))
+- `updateable_by_consumer` (Boolean) Whether the input value can be updated by consumers without admin or platform operator permissions.
+- `validation_regex_error_message` (String) Error message to display when regex validation fails.
+- `value_validation_regex` (String) Regular expression pattern to validate input values.
 
 <a id="nestedatt--version_spec--inputs--sensitive"></a>
 ### Nested Schema for `version_spec.inputs.sensitive`
 
 Optional:
 
-- `argument` (Attributes) Sensitive variant of `argument` attribute. See there for further explanation. (see [below for nested schema](#nestedatt--version_spec--inputs--sensitive--argument))
-- `default_value` (Attributes) Sensitive variant of `default_value` attribute. See there for further explanation. (see [below for nested schema](#nestedatt--version_spec--inputs--sensitive--default_value))
+- `argument` (Attributes) Sensitive variant of the `argument` attribute. Contains encrypted secret data. (see [below for nested schema](#nestedatt--version_spec--inputs--sensitive--argument))
+- `default_value` (Attributes) Sensitive variant of the `default_value` attribute. Contains encrypted secret data. (see [below for nested schema](#nestedatt--version_spec--inputs--sensitive--default_value))
 
 <a id="nestedatt--version_spec--inputs--sensitive--argument"></a>
 ### Nested Schema for `version_spec.inputs.sensitive.argument`
 
 Required:
 
-- `secret_value` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Sensitive variant of `argument` attribute. See there for further explanation.
+- `secret_value` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Sensitive variant of the `argument` attribute. Contains encrypted secret data.
 
 Optional:
 
@@ -590,7 +590,7 @@ Read-Only:
 
 Required:
 
-- `secret_value` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Sensitive variant of `default_value` attribute. See there for further explanation.
+- `secret_value` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Sensitive variant of the `default_value` attribute. Contains encrypted secret data.
 
 Optional:
 
@@ -608,9 +608,9 @@ Read-Only:
 
 Required:
 
-- `assignment_type` (String) How the output is assigned. One of `NONE`, `PLATFORM_TENANT_ID`, `SIGN_IN_URL`, `RESOURCE_URL`, `SUMMARY`.
-- `display_name` (String) Display name for the output shown to users.
-- `type` (String) Output type. One of `STRING`, `CODE`, `INTEGER`, `BOOLEAN`, `FILE`, `LIST`, `SINGLE_SELECT`, `MULTI_SELECT`.
+- `assignment_type` (String) How the output is used. One of `NONE`, `PLATFORM_TENANT_ID`, `SIGN_IN_URL`, `RESOURCE_URL`, `SUMMARY`.
+- `display_name` (String) Human-readable display name for the output.
+- `type` (String) Data type of the output. One of `STRING`, `CODE`, `INTEGER`, `BOOLEAN`, `FILE`, `LIST`, `SINGLE_SELECT`, `MULTI_SELECT`.
 
 
 <a id="nestedatt--version_spec--runner_ref"></a>
