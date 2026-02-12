@@ -109,6 +109,7 @@ func (d *landingZoneDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 							"aks":        aksPlatformConfigSchema(),
 							"azure":      azurePlatformConfigSchema(),
 							"azurerg":    azureRgPlatformConfigSchema(),
+							"custom":     customPlatformConfigSchema(),
 							"gcp":        gcpPlatformConfigSchema(),
 							"kubernetes": kubernetesPlatformConfigSchema(),
 							"openshift":  openShiftPlatformConfigSchema(),

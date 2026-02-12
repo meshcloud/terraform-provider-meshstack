@@ -49,6 +49,7 @@ type MeshLandingZonePlatformProperties struct {
 	Aks        *AksPlatformProperties        `json:"aks" tfsdk:"aks"`
 	Azure      *AzurePlatformProperties      `json:"azure" tfsdk:"azure"`
 	AzureRg    *AzureRgPlatformProperties    `json:"azurerg" tfsdk:"azurerg"`
+	Custom     *CustomPlatformProperties     `json:"custom" tfsdk:"custom"`
 	Gcp        *GcpPlatformProperties        `json:"gcp" tfsdk:"gcp"`
 	Kubernetes *KubernetesPlatformProperties `json:"kubernetes" tfsdk:"kubernetes"`
 	OpenShift  *OpenShiftPlatformProperties  `json:"openshift" tfsdk:"openshift"`

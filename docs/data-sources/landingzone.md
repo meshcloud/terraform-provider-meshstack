@@ -81,6 +81,7 @@ Optional:
 - `aws` (Attributes) AWS platform properties. (see [below for nested schema](#nestedatt--spec--platform_properties--aws))
 - `azure` (Attributes) Azure platform properties. (see [below for nested schema](#nestedatt--spec--platform_properties--azure))
 - `azurerg` (Attributes) Azure Resource Group platform properties. (see [below for nested schema](#nestedatt--spec--platform_properties--azurerg))
+- `custom` (Attributes) Custom platform properties. Custom platforms do not require any platform-specific configuration properties, so this is intentionally an empty object (`{}`). Simply set `custom = {}` in your Terraform configuration. (see [below for nested schema](#nestedatt--spec--platform_properties--custom))
 - `gcp` (Attributes) GCP platform properties. (see [below for nested schema](#nestedatt--spec--platform_properties--gcp))
 - `kubernetes` (Attributes) Kubernetes platform properties. (see [below for nested schema](#nestedatt--spec--platform_properties--kubernetes))
 - `openshift` (Attributes) OpenShift platform properties. (see [below for nested schema](#nestedatt--spec--platform_properties--openshift))
@@ -239,6 +240,10 @@ Required:
 - `azure_function_scope` (String) The unique ID of the Azure Enterprise Application your function belongs to. More details are described [here](https://docs.meshcloud.io/docs/meshstack.azure.landing-zones.html#azure-function-invocation).
 - `azure_function_url` (String) The URL of your Azure Function. This is typically a value like https://my-function-app.azurewebsites.net/myfunc
 
+
+
+<a id="nestedatt--spec--platform_properties--custom"></a>
+### Nested Schema for `spec.platform_properties.custom`
 
 
 <a id="nestedatt--spec--platform_properties--gcp"></a>

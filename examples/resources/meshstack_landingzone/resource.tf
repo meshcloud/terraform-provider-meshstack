@@ -37,3 +37,29 @@ resource "meshstack_landingzone" "example" {
     }
   }
 }
+
+resource "meshstack_landingzone" "custom_example" {
+  metadata = {
+    name               = "new-landing-zone-custom-1"
+    owned_by_workspace = "managed-customer"
+    tags               = {}
+  }
+
+  spec = {
+    display_name                  = "New Landing Zone custom"
+    description                   = "A new custom landing zone for testing"
+    automate_deletion_approval    = false
+    automate_deletion_replication = false
+    info_link                     = "https://example.com"
+
+    platform_ref = {
+      // UUID of an existing custom platform.
+      uuid = "7035ad04-f912-44d5-98ce-ddcc2cf84b10"
+    }
+
+    platform_properties = {
+      // Nothing to be specified for custom platforms, but the block must be present.
+      custom = {}
+    }
+  }
+}
