@@ -155,6 +155,7 @@ func (r *landingZoneResource) Schema(_ context.Context, _ resource.SchemaRequest
 							"aks":        aksPlatformConfigSchema(),
 							"azure":      azurePlatformConfigSchema(),
 							"azurerg":    azureRgPlatformConfigSchema(),
+							"custom":     customPlatformConfigSchema(),
 							"gcp":        gcpPlatformConfigSchema(),
 							"kubernetes": kubernetesPlatformConfigSchema(),
 							"openshift":  openShiftPlatformConfigSchema(),
@@ -486,6 +487,14 @@ func openShiftPlatformConfigSchema() schema.Attribute {
 				Optional:            true,
 			},
 		},
+	}
+}
+
+func customPlatformConfigSchema() schema.Attribute {
+	return schema.SingleNestedAttribute{
+		MarkdownDescription: "Custom platform properties. Custom platforms do not require any platform-specific configuration properties, so this is intentionally an empty object (`{}`). Simply set `custom = {}` in your Terraform configuration.",
+		Optional:            true,
+		Attributes:          map[string]schema.Attribute{},
 	}
 }
 

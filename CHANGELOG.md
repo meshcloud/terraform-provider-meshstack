@@ -1,3 +1,9 @@
+## v0.17.5
+
+FEATURES:
+
+- `meshstack_landingzone`: Added support for `custom` platform type.
+
 ## v0.17.4
 
 FEATURES:
