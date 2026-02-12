@@ -68,11 +68,13 @@ func (r *integrationResource) Schema(_ context.Context, _ resource.SchemaRequest
 	)
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Manages a meshIntegration in meshStack. " +
-			"Integrations configure external CI/CD systems (GitHub, GitLab, Azure DevOps) for building block execution.",
+			"Integrations configure external CI/CD systems (GitHub, GitLab, Azure DevOps) for building block execution. " +
+			"Secrets in the integration configurations are encrypted and stored securely. When retrieving the integration, " +
+			"these fields are returned with a hash value instead of the actual secret, enabling drift detection while maintaining security.",
 
 		Attributes: map[string]schema.Attribute{
 			"metadata": schema.SingleNestedAttribute{
-				MarkdownDescription: "Metadata of the integration.",
+				MarkdownDescription: "Metadata of the integration. Contains identifiers and ownership details.",
 				Required:            true,
 				Attributes: map[string]schema.Attribute{
 					"uuid": schema.StringAttribute{
@@ -83,7 +85,7 @@ func (r *integrationResource) Schema(_ context.Context, _ resource.SchemaRequest
 						},
 					},
 					"owned_by_workspace": schema.StringAttribute{
-						MarkdownDescription: "Identifier of the workspace that owns this integration.",
+						MarkdownDescription: "Identifier of the workspace that owns this integration. The integration will be owned by the workspace specified here.",
 						Required:            true,
 						PlanModifiers: []planmodifier.String{
 							stringplanmodifier.RequiresReplace(),
@@ -92,7 +94,7 @@ func (r *integrationResource) Schema(_ context.Context, _ resource.SchemaRequest
 				},
 			},
 			"spec": schema.SingleNestedAttribute{
-				MarkdownDescription: "Specification of the integration.",
+				MarkdownDescription: "Specification of the integration. Contains configuration settings specific to the integration type.",
 				Required:            true,
 				Attributes: map[string]schema.Attribute{
 					"display_name": schema.StringAttribute{
@@ -182,7 +184,7 @@ func (r *integrationResource) Schema(_ context.Context, _ resource.SchemaRequest
 				},
 			},
 			"status": schema.SingleNestedAttribute{
-				MarkdownDescription: "Status information of the integration. Computed by meshStack.",
+				MarkdownDescription: "Status information of the integration. System-managed state computed by meshStack.",
 				Computed:            true,
 				Attributes: map[string]schema.Attribute{
 					"is_built_in": schema.BoolAttribute{

@@ -3,12 +3,12 @@
 page_title: "meshstack_integrations Data Source - terraform-provider-meshstack"
 subcategory: ""
 description: |-
-  List of integrations.
+  Retrieve a list of integrations. Includes integrations that belong to your workspace as well as built-in integrations (replicator and metering). Platform administrators can retrieve any integration. Sensitive fields are masked with a hash value for security purposes.
 ---
 
 # meshstack_integrations (Data Source)
 
-List of integrations.
+Retrieve a list of integrations. Includes integrations that belong to your workspace as well as built-in integrations (replicator and metering). Platform administrators can retrieve any integration. Sensitive fields are masked with a hash value for security purposes.
 
 ## Example Usage
 
@@ -23,27 +23,27 @@ data "meshstack_integrations" "all" {
 
 ### Read-Only
 
-- `integrations` (Attributes List) List of integrations (see [below for nested schema](#nestedatt--integrations))
-- `workload_identity_federation` (Attributes) Workload identity federation information for built in integrations. (see [below for nested schema](#nestedatt--workload_identity_federation))
+- `integrations` (Attributes List) List of integrations. Each integration contains configuration for external CI/CD systems. (see [below for nested schema](#nestedatt--integrations))
+- `workload_identity_federation` (Attributes) Workload identity federation information for built-in integrations (replicator and metering). (see [below for nested schema](#nestedatt--workload_identity_federation))
 
 <a id="nestedatt--integrations"></a>
 ### Nested Schema for `integrations`
 
 Optional:
 
-- `status` (Attributes) (see [below for nested schema](#nestedatt--integrations--status))
+- `status` (Attributes) Status information of the integration. System-managed state. (see [below for nested schema](#nestedatt--integrations--status))
 
 Read-Only:
 
-- `metadata` (Attributes) (see [below for nested schema](#nestedatt--integrations--metadata))
-- `spec` (Attributes) (see [below for nested schema](#nestedatt--integrations--spec))
+- `metadata` (Attributes) Metadata of the integration. Contains identifiers and ownership details. (see [below for nested schema](#nestedatt--integrations--metadata))
+- `spec` (Attributes) Specification of the integration. Contains configuration settings specific to the integration type. (see [below for nested schema](#nestedatt--integrations--spec))
 
 <a id="nestedatt--integrations--status"></a>
 ### Nested Schema for `integrations.status`
 
 Read-Only:
 
-- `is_built_in` (Boolean)
+- `is_built_in` (Boolean) Indicates whether this is a built-in integration (replicator or metering).
 - `workload_identity_federation` (Attributes) (see [below for nested schema](#nestedatt--integrations--status--workload_identity_federation))
 
 <a id="nestedatt--integrations--status--workload_identity_federation"></a>
@@ -89,8 +89,8 @@ Read-Only:
 
 Read-Only:
 
-- `owned_by_workspace` (String)
-- `uuid` (String)
+- `owned_by_workspace` (String) Identifier of the workspace that owns this integration.
+- `uuid` (String) UUID of the integration.
 
 
 <a id="nestedatt--integrations--spec"></a>
@@ -98,17 +98,17 @@ Read-Only:
 
 Read-Only:
 
-- `config` (Attributes) (see [below for nested schema](#nestedatt--integrations--spec--config))
-- `display_name` (String)
+- `config` (Attributes) Configuration for the integration. Specifies one of github, gitlab, or azuredevops integration types. (see [below for nested schema](#nestedatt--integrations--spec--config))
+- `display_name` (String) Display name of the integration.
 
 <a id="nestedatt--integrations--spec--config"></a>
 ### Nested Schema for `integrations.spec.config`
 
 Optional:
 
-- `azuredevops` (Attributes) (see [below for nested schema](#nestedatt--integrations--spec--config--azuredevops))
-- `github` (Attributes) (see [below for nested schema](#nestedatt--integrations--spec--config--github))
-- `gitlab` (Attributes) (see [below for nested schema](#nestedatt--integrations--spec--config--gitlab))
+- `azuredevops` (Attributes) Azure DevOps integration configuration. (see [below for nested schema](#nestedatt--integrations--spec--config--azuredevops))
+- `github` (Attributes) GitHub integration configuration. (see [below for nested schema](#nestedatt--integrations--spec--config--github))
+- `gitlab` (Attributes) GitLab integration configuration. (see [below for nested schema](#nestedatt--integrations--spec--config--gitlab))
 
 <a id="nestedatt--integrations--spec--config--azuredevops"></a>
 ### Nested Schema for `integrations.spec.config.azuredevops`
@@ -119,9 +119,9 @@ Required:
 
 Read-Only:
 
-- `base_url` (String)
-- `organization` (String)
-- `runner_ref` (Attributes) (see [below for nested schema](#nestedatt--integrations--spec--config--azuredevops--runner_ref))
+- `base_url` (String) Base URL of the Azure DevOps instance (e.g., https://dev.azure.com).
+- `organization` (String) Azure DevOps organization name.
+- `runner_ref` (Attributes) Reference to the building block runner that executes Azure DevOps pipelines. (see [below for nested schema](#nestedatt--integrations--spec--config--azuredevops--runner_ref))
 
 <a id="nestedatt--integrations--spec--config--azuredevops--personal_access_token"></a>
 ### Nested Schema for `integrations.spec.config.azuredevops.personal_access_token`
@@ -136,8 +136,8 @@ Read-Only:
 
 Read-Only:
 
-- `kind` (String)
-- `uuid` (String)
+- `kind` (String) meshObject type, always meshBuildingBlockRunner.
+- `uuid` (String) UUID of the meshBuildingBlockRunner.
 
 
 
@@ -150,10 +150,10 @@ Required:
 
 Read-Only:
 
-- `app_id` (String)
-- `base_url` (String)
-- `owner` (String)
-- `runner_ref` (Attributes) (see [below for nested schema](#nestedatt--integrations--spec--config--github--runner_ref))
+- `app_id` (String) GitHub App ID for authentication.
+- `base_url` (String) Base URL of the GitHub instance (e.g., https://github.com for GitHub.com or your GitHub Enterprise URL).
+- `owner` (String) GitHub organization or user that owns the repositories.
+- `runner_ref` (Attributes) Reference to the building block runner that executes GitHub workflows. (see [below for nested schema](#nestedatt--integrations--spec--config--github--runner_ref))
 
 <a id="nestedatt--integrations--spec--config--github--app_private_key"></a>
 ### Nested Schema for `integrations.spec.config.github.app_private_key`
@@ -168,8 +168,8 @@ Read-Only:
 
 Read-Only:
 
-- `kind` (String)
-- `uuid` (String)
+- `kind` (String) meshObject type, always meshBuildingBlockRunner.
+- `uuid` (String) UUID of the meshBuildingBlockRunner.
 
 
 
@@ -178,16 +178,16 @@ Read-Only:
 
 Read-Only:
 
-- `base_url` (String)
-- `runner_ref` (Attributes) (see [below for nested schema](#nestedatt--integrations--spec--config--gitlab--runner_ref))
+- `base_url` (String) Base URL of the GitLab instance (e.g., https://gitlab.com or your self-hosted GitLab URL).
+- `runner_ref` (Attributes) Reference to the building block runner that executes GitLab pipelines. (see [below for nested schema](#nestedatt--integrations--spec--config--gitlab--runner_ref))
 
 <a id="nestedatt--integrations--spec--config--gitlab--runner_ref"></a>
 ### Nested Schema for `integrations.spec.config.gitlab.runner_ref`
 
 Read-Only:
 
-- `kind` (String)
-- `uuid` (String)
+- `kind` (String) meshObject type, always meshBuildingBlockRunner.
+- `uuid` (String) UUID of the meshBuildingBlockRunner.
 
 
 

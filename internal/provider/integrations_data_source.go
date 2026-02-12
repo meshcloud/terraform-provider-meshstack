@@ -75,11 +75,14 @@ func (d *integrationsDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 	}
 
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "List of integrations.",
+		MarkdownDescription: "Retrieve a list of integrations. " +
+			"Includes integrations that belong to your workspace as well as built-in integrations (replicator and metering). " +
+			"Platform administrators can retrieve any integration. " +
+			"Sensitive fields are masked with a hash value for security purposes.",
 
 		Attributes: map[string]schema.Attribute{
 			"workload_identity_federation": schema.SingleNestedAttribute{
-				MarkdownDescription: "Workload identity federation information for built in integrations.",
+				MarkdownDescription: "Workload identity federation information for built-in integrations (replicator and metering).",
 				Computed:            true,
 				Attributes: map[string]schema.Attribute{
 					"replicator": workloadIdentityFederation,
@@ -87,96 +90,120 @@ func (d *integrationsDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 				},
 			},
 			"integrations": schema.ListNestedAttribute{
-				MarkdownDescription: "List of integrations",
+				MarkdownDescription: "List of integrations. Each integration contains configuration for external CI/CD systems.",
 				Computed:            true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"metadata": schema.SingleNestedAttribute{
-							Computed: true,
+							MarkdownDescription: "Metadata of the integration. Contains identifiers and ownership details.",
+							Computed:            true,
 							Attributes: map[string]schema.Attribute{
 								"uuid": schema.StringAttribute{
-									Computed: true,
+									MarkdownDescription: "UUID of the integration.",
+									Computed:            true,
 								},
 								"owned_by_workspace": schema.StringAttribute{
-									Computed: true,
+									MarkdownDescription: "Identifier of the workspace that owns this integration.",
+									Computed:            true,
 								},
 							},
 						},
 						"spec": schema.SingleNestedAttribute{
-							Computed: true,
+							MarkdownDescription: "Specification of the integration. Contains configuration settings specific to the integration type.",
+							Computed:            true,
 							Attributes: map[string]schema.Attribute{
 								"display_name": schema.StringAttribute{
-									Computed: true,
+									MarkdownDescription: "Display name of the integration.",
+									Computed:            true,
 								},
 								"config": schema.SingleNestedAttribute{
-									Computed: true,
+									MarkdownDescription: "Configuration for the integration. Specifies one of github, gitlab, or azuredevops integration types.",
+									Computed:            true,
 									Attributes: map[string]schema.Attribute{
 										"github": schema.SingleNestedAttribute{
-											Computed: true,
-											Optional: true,
+											MarkdownDescription: "GitHub integration configuration.",
+											Computed:            true,
+											Optional:            true,
 											Attributes: map[string]schema.Attribute{
 												"owner": schema.StringAttribute{
-													Computed: true,
+													MarkdownDescription: "GitHub organization or user that owns the repositories.",
+													Computed:            true,
 												},
 												"base_url": schema.StringAttribute{
-													Computed: true,
+													MarkdownDescription: "Base URL of the GitHub instance (e.g., https://github.com for GitHub.com or your GitHub Enterprise URL).",
+													Computed:            true,
 												},
 												"app_id": schema.StringAttribute{
-													Computed: true,
+													MarkdownDescription: "GitHub App ID for authentication.",
+													Computed:            true,
 												},
 												"app_private_key": secret.DatasourceSchema(secret.SchemaOptions{}),
 												"runner_ref": schema.SingleNestedAttribute{
-													Computed: true,
+													MarkdownDescription: "Reference to the building block runner that executes GitHub workflows.",
+													Computed:            true,
 													Attributes: map[string]schema.Attribute{
 														"uuid": schema.StringAttribute{
-															Computed: true,
+															MarkdownDescription: "UUID of the meshBuildingBlockRunner.",
+															Computed:            true,
 														},
 														"kind": schema.StringAttribute{
-															Computed: true,
+															MarkdownDescription: "meshObject type, always meshBuildingBlockRunner.",
+															Computed:            true,
 														},
 													},
 												},
 											},
 										},
 										"gitlab": schema.SingleNestedAttribute{
-											Computed: true,
-											Optional: true,
+											MarkdownDescription: "GitLab integration configuration.",
+											Computed:            true,
+											Optional:            true,
 											Attributes: map[string]schema.Attribute{
 												"base_url": schema.StringAttribute{
-													Computed: true,
+													MarkdownDescription: "Base URL of the GitLab instance (e.g., https://gitlab.com or your self-hosted GitLab URL).",
+													Computed:            true,
 												},
 												"runner_ref": schema.SingleNestedAttribute{
-													Computed: true,
+													MarkdownDescription: "Reference to the building block runner that executes GitLab pipelines.",
+													Computed:            true,
 													Attributes: map[string]schema.Attribute{
 														"uuid": schema.StringAttribute{
-															Computed: true,
+															MarkdownDescription: "UUID of the meshBuildingBlockRunner.",
+															Computed:            true,
 														},
 														"kind": schema.StringAttribute{
-															Computed: true,
+															MarkdownDescription: "meshObject type, always meshBuildingBlockRunner.",
+															Computed:            true,
 														},
 													},
 												},
 											},
 										},
 										"azuredevops": schema.SingleNestedAttribute{
-											Computed: true,
-											Optional: true,
+											MarkdownDescription: "Azure DevOps integration configuration.",
+											Computed:            true,
+											Optional:            true,
 											Attributes: map[string]schema.Attribute{
 												"base_url": schema.StringAttribute{
-													Computed: true,
+													MarkdownDescription: "Base URL of the Azure DevOps instance (e.g., https://dev.azure.com).",
+													Computed:            true,
 												},
 												"organization": schema.StringAttribute{
-													Computed: true,
+													MarkdownDescription: "Azure DevOps organization name.",
+													Computed:            true,
 												},
 												"personal_access_token": secret.DatasourceSchema(secret.SchemaOptions{}),
 												"runner_ref": schema.SingleNestedAttribute{
-													Computed: true,
+													MarkdownDescription: "Reference to the building block runner that executes Azure DevOps pipelines.",
+													Computed:            true,
 													Attributes: map[string]schema.Attribute{
 														"uuid": schema.StringAttribute{
-															Computed: true,
+															MarkdownDescription: "UUID of the meshBuildingBlockRunner.",
+															Computed:            true,
 														},
 														"kind": schema.StringAttribute{
-															Computed: true,
+															MarkdownDescription: "meshObject type, always meshBuildingBlockRunner.",
+															Computed:            true,
 														},
 													},
 												},
@@ -187,11 +214,13 @@ func (d *integrationsDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 							},
 						},
 						"status": schema.SingleNestedAttribute{
-							Computed: true,
-							Optional: true,
+							MarkdownDescription: "Status information of the integration. System-managed state.",
+							Computed:            true,
+							Optional:            true,
 							Attributes: map[string]schema.Attribute{
 								"is_built_in": schema.BoolAttribute{
-									Computed: true,
+									MarkdownDescription: "Indicates whether this is a built-in integration (replicator or metering).",
+									Computed:            true,
 								},
 								"workload_identity_federation": workloadIdentityFederation,
 							},
