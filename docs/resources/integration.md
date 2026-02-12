@@ -3,12 +3,12 @@
 page_title: "meshstack_integration Resource - terraform-provider-meshstack"
 subcategory: ""
 description: |-
-  Manages a meshIntegration in meshStack. Integrations configure external CI/CD systems (GitHub, GitLab, Azure DevOps) for building block execution.
+  Manages a meshIntegration in meshStack. Integrations configure external CI/CD systems (GitHub, GitLab, Azure DevOps) for building block execution. Secrets in the integration configurations are encrypted and stored securely. When retrieving the integration, these fields are returned with a hash value instead of the actual secret, enabling drift detection while maintaining security.
 ---
 
 # meshstack_integration (Resource)
 
-Manages a meshIntegration in meshStack. Integrations configure external CI/CD systems (GitHub, GitLab, Azure DevOps) for building block execution.
+Manages a meshIntegration in meshStack. Integrations configure external CI/CD systems (GitHub, GitLab, Azure DevOps) for building block execution. Secrets in the integration configurations are encrypted and stored securely. When retrieving the integration, these fields are returned with a hash value instead of the actual secret, enabling drift detection while maintaining security.
 
 ## Example Usage
 
@@ -77,20 +77,20 @@ resource "meshstack_integration" "example_gitlab" {
 
 ### Required
 
-- `metadata` (Attributes) Metadata of the integration. (see [below for nested schema](#nestedatt--metadata))
-- `spec` (Attributes) Specification of the integration. (see [below for nested schema](#nestedatt--spec))
+- `metadata` (Attributes) Metadata of the integration. Contains identifiers and ownership details. (see [below for nested schema](#nestedatt--metadata))
+- `spec` (Attributes) Specification of the integration. Contains configuration settings specific to the integration type. (see [below for nested schema](#nestedatt--spec))
 
 ### Read-Only
 
 - `ref` (Attributes) Reference to integration, can be used in building block definitions. (see [below for nested schema](#nestedatt--ref))
-- `status` (Attributes) Status information of the integration. Computed by meshStack. (see [below for nested schema](#nestedatt--status))
+- `status` (Attributes) Status information of the integration. System-managed state computed by meshStack. (see [below for nested schema](#nestedatt--status))
 
 <a id="nestedatt--metadata"></a>
 ### Nested Schema for `metadata`
 
 Required:
 
-- `owned_by_workspace` (String) Identifier of the workspace that owns this integration.
+- `owned_by_workspace` (String) Identifier of the workspace that owns this integration. The integration will be owned by the workspace specified here.
 
 Read-Only:
 
