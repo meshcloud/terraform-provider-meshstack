@@ -34,6 +34,9 @@ resource "meshstack_building_block_definition" "example_01_terraform" {
     only_apply_once_per_tenant = false    # Optional: defaults to false
     deletion_mode              = "DELETE" # Optional: defaults to "DELETE"
 
+    # Optional: API permissions provided to building block runs via an ephemeral API key
+    permissions = ["TENANT_LIST", "TENANT_SAVE"]
+
     # Optional: Inputs for the building block
     inputs = {
       environment = {

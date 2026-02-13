@@ -151,6 +151,8 @@ func buildingBlockDefinitionVersionConverterOptions(ctx context.Context, config,
 		// This is somewhat unprecise handling in the backend for optional lists, but let's take that shortcut.
 		generic.WithSetEmptyContainersToNull(),
 
+		generic.WithUseSetForElementsOf[client.ApiPermission](),
+
 		// Handle implementation
 		generic.WithValueFromConverterFor[client.MeshBuildingBlockDefinitionImplementation](nil, func(attributePath path.Path, in client.MeshBuildingBlockDefinitionImplementation) (tftypes.Value, error) {
 			if in.Type == client.MeshBuildingBlockImplementationTypeManual {

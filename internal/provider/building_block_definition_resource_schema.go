@@ -6,6 +6,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework-jsontypes/jsontypes"
 	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -346,6 +347,19 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 						Default:             stringdefault.StaticString(client.BuildingBlockDeletionModeDelete.String()),
 						Validators: []validator.String{
 							stringvalidator.OneOf(client.BuildingBlockDeletionModes.Strings()...),
+						},
+					},
+					"permissions": schema.SetAttribute{
+						MarkdownDescription: "Set of API permissions required by this building block. " +
+							"Will provide building block runs with an ephemeral API token with the specified workspace permissions. " +
+							"See [Workspace Permissions](https://docs.meshcloud.io/api/authentication/api-permissions/) for available values and " +
+							"[documentation on ephemeral API keys](https://docs.dev.meshcloud.io/concepts/building-block/#ephemeral-api-keys).",
+						Optional:    true,
+						ElementType: types.StringType,
+						Validators: []validator.Set{
+							setvalidator.ValueStringsAre(
+								stringvalidator.OneOf(client.WorkspacePermissions.Strings()...),
+							),
 						},
 					},
 					"dependency_refs": schema.ListNestedAttribute{
