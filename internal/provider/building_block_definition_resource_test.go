@@ -370,6 +370,7 @@ func checkBuildingBlockVersionSpec(exampleSuffix string, expectedState enum.Entr
 		"inputs":          checkInputs,
 		"implementation":  checkImplementation,
 		"outputs":         checkOutputs,
+		"permissions":     knownvalue.Null(),
 	}
 
 	if exampleSuffix == "01_terraform" {
@@ -378,6 +379,10 @@ func checkBuildingBlockVersionSpec(exampleSuffix string, expectedState enum.Entr
 				"kind": knownvalue.StringExact("meshBuildingBlockDefinition"),
 				"uuid": KnownValueNotEmptyString(),
 			}),
+		})
+		expected["permissions"] = knownvalue.SetExact([]knownvalue.Check{
+			knownvalue.StringExact("TENANT_SAVE"),
+			knownvalue.StringExact("TENANT_LIST"),
 		})
 	}
 	return knownvalue.MapExact(expected)

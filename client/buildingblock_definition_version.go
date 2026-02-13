@@ -156,6 +156,7 @@ type MeshBuildingBlockDefinitionVersionSpec struct {
 	BuildingBlockDefinitionRef *BuildingBlockDefinitionRef                  `json:"buildingBlockDefinitionRef" tfsdk:"-"`
 	OnlyApplyOncePerTenant     bool                                         `json:"onlyApplyOncePerTenant" tfsdk:"only_apply_once_per_tenant"`
 	DeletionMode               BuildingBlockDeletionMode                    `json:"deletionMode" tfsdk:"deletion_mode"`
+	Permissions                []ApiPermission                              `json:"permissions,omitempty" tfsdk:"permissions"`
 	Outputs                    map[string]MeshBuildingBlockDefinitionOutput `json:"outputs" tfsdk:"outputs"`
 	VersionNumber              *int64                                       `json:"versionNumber,omitempty" tfsdk:"version_number"`
 	State                      *MeshBuildingBlockDefinitionVersionState     `json:"state,omitempty" tfsdk:"state"`

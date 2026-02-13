@@ -49,6 +49,9 @@ resource "meshstack_building_block_definition" "example_01_terraform" {
     only_apply_once_per_tenant = false    # Optional: defaults to false
     deletion_mode              = "DELETE" # Optional: defaults to "DELETE"
 
+    # Optional: API permissions provided to building block runs via an ephemeral API key
+    permissions = ["TENANT_LIST", "TENANT_SAVE"]
+
     # Optional: Inputs for the building block
     inputs = {
       environment = {
@@ -379,6 +382,7 @@ Optional:
 - `inputs` (Attributes Map) Map of input definitions for the building block. Keys are input names, values are input configuration objects. Inputs define parameters that building blocks can receive. (see [below for nested schema](#nestedatt--version_spec--inputs))
 - `only_apply_once_per_tenant` (Boolean) Whether this building block can only be applied once per tenant.
 - `outputs` (Attributes Map) Map of output definitions for the building block. Keys are output names, values are output configuration objects. Outputs define values that building blocks produce and can be consumed by other building blocks. (see [below for nested schema](#nestedatt--version_spec--outputs))
+- `permissions` (Set of String) Set of API permissions required by this building block. Will provide building block runs with an ephemeral API token with the specified workspace permissions. See [Workspace Permissions](https://docs.meshcloud.io/api/authentication/api-permissions/) for available values and [documentation on ephemeral API keys](https://docs.dev.meshcloud.io/concepts/building-block/#ephemeral-api-keys).
 - `runner_ref` (Attributes) Reference to the runner to run the implementation. If omitted, the pre-defined shared runner is used suitable for the given `implementation` choice (see [below for nested schema](#nestedatt--version_spec--runner_ref))
 
 Read-Only:

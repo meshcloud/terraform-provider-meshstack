@@ -87,7 +87,8 @@ func (r *buildingBlockDefinitionResource) Create(ctx context.Context, req resour
 
 	// Updating the empty created version with provided configuration to complete creation
 	versionUuid := createdEmptyVersion.Metadata.Uuid
-	createdVersionDto, err := r.buildingBlockDefinitionVersionClient.Update(ctx, versionUuid, createdDto.Metadata.OwnedByWorkspace, plan.VersionSpec.ToClientDto(bbdUuid))
+	createVersionSpecDto := plan.VersionSpec.ToClientDto(bbdUuid)
+	createdVersionDto, err := r.buildingBlockDefinitionVersionClient.Update(ctx, versionUuid, createdDto.Metadata.OwnedByWorkspace, createVersionSpecDto)
 	if err != nil {
 		resp.Diagnostics.AddError("Error updating initial version", fmt.Sprintf(
 			"Building block '%s', uuid=%s was just created, and the initial version '%s' failed to update with given version_spec configuration. "+
