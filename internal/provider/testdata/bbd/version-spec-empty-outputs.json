@@ -1,0 +1,78 @@
+{
+  "buildingBlockDefinitionRef": null,
+  "onlyApplyOncePerTenant": false,
+  "deletionMode": "DELETE",
+  "permissions": [
+    "PROJECT_LIST",
+    "PROJECT_SAVE",
+    "PROJECT_DELETE",
+    "TENANT_LIST",
+    "TENANT_SAVE",
+    "TENANT_DELETE"
+  ],
+  "outputs": {},
+  "runnerRef": {
+    "uuid": "66ddc814-1e69-4dad-b5f1-3a5bce51c01f",
+    "kind": "meshBuildingBlockRunner"
+  },
+  "implementation": {
+    "type": "terraform",
+    "terraform": {
+      "terraformVersion": "1.9.0",
+      "repositoryUrl": "git@github.com:meshcloud/meshstack-smoke-test.git",
+      "async": false,
+      "repositoryPath": "buildingblocks/permissions",
+      "refName": "add-bbd-resource",
+      "useMeshHttpBackendFallback": true,
+      "sshPrivateKey": {
+        "hash": "sha256:46c6abc222cd04811b9bb2e96f81459123407977ab95565d7a3017a4a64bc48d"
+      }
+    }
+  },
+  "inputs": {
+    "paymentmethod_identifier": {
+      "displayName": "Paymentmethod Identifier",
+      "type": "STRING",
+      "assignmentType": "USER_INPUT",
+      "isEnvironment": false,
+      "isSensitive": false,
+      "argument": null,
+      "defaultValue": null,
+      "updateableByConsumer": false,
+      "description": "The identifier of the existing meshStack payment method."
+    },
+    "project_identifier": {
+      "displayName": "Project Identifier",
+      "type": "STRING",
+      "assignmentType": "USER_INPUT",
+      "isEnvironment": false,
+      "isSensitive": false,
+      "argument": null,
+      "defaultValue": null,
+      "updateableByConsumer": false,
+      "description": "The identifier of the meshStack project to be created."
+    },
+    "project_tags": {
+      "displayName": "Project Tags",
+      "type": "CODE",
+      "assignmentType": "USER_INPUT",
+      "isEnvironment": false,
+      "isSensitive": false,
+      "argument": null,
+      "defaultValue": null,
+      "updateableByConsumer": false,
+      "description": "The tags to assign to the created meshStack project."
+    },
+    "workspace_identifier": {
+      "displayName": "Workspace Identifier",
+      "type": "STRING",
+      "assignmentType": "USER_INPUT",
+      "isEnvironment": false,
+      "isSensitive": false,
+      "argument": null,
+      "defaultValue": null,
+      "updateableByConsumer": false,
+      "description": "The identifier of the existing meshStack workspace."
+    }
+  }
+}

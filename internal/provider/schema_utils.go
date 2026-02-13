@@ -1,10 +1,12 @@
 package provider
 
 import (
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 )
 
 // meshProjectRoleAttribute returns a schema attribute for meshProject role references.
@@ -41,6 +43,44 @@ func meshBuildingBlockDefinitionRefAttribute(computed bool) map[string]schema.At
 			MarkdownDescription: "UUID of the building block.",
 			Computed:            computed,
 			Required:            !computed,
+		},
+	}
+}
+
+// TODO reuse this at all other places where UUID refs.
+func meshUuidRefAttribute(kind string) map[string]schema.Attribute {
+	return map[string]schema.Attribute{
+		"kind": schema.StringAttribute{
+			MarkdownDescription: "meshObject type, always `" + kind + "`.",
+			Optional:            true,
+			Computed:            true,
+			Default:             stringdefault.StaticString(kind),
+			PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+			Validators: []validator.String{
+				stringvalidator.OneOf(kind),
+			},
+		},
+		"uuid": schema.StringAttribute{
+			MarkdownDescription: "UUID of the " + kind + ".",
+			Optional:            true,
+			Computed:            true,
+			PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+		},
+	}
+}
+
+func meshUuidRefOutputAttribute(kind string) map[string]schema.Attribute {
+	return map[string]schema.Attribute{
+		"kind": schema.StringAttribute{
+			MarkdownDescription: "meshObject type, always `" + kind + "`.",
+			Computed:            true,
+			Default:             stringdefault.StaticString(kind),
+			PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+		},
+		"uuid": schema.StringAttribute{
+			MarkdownDescription: "UUID of the " + kind + ".",
+			Computed:            true,
+			PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 		},
 	}
 }

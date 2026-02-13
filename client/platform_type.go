@@ -25,7 +25,6 @@ type MeshPlatformTypeLifecycle struct {
 type MeshPlatformTypeMetadata struct {
 	Name             string  `json:"name" tfsdk:"name"`
 	OwnedByWorkspace string  `json:"ownedByWorkspace" tfsdk:"owned_by_workspace"`
-	CreatedOn        *string `json:"createdOn" tfsdk:"created_on"`
 	Uuid             *string `json:"uuid,omitempty" tfsdk:"uuid"`
 }
 
@@ -48,31 +47,39 @@ type MeshPlatformTypeCreateMetadata struct {
 	OwnedByWorkspace string `json:"ownedByWorkspace" tfsdk:"owned_by_workspace"`
 }
 
-type MeshPlatformTypeClient struct {
+type MeshPlatformTypeClient interface {
+	Create(ctx context.Context, platformType *MeshPlatformTypeCreate) (*MeshPlatformType, error)
+	Read(ctx context.Context, identifier string) (*MeshPlatformType, error)
+	Update(ctx context.Context, name string, platformType *MeshPlatformTypeCreate) (*MeshPlatformType, error)
+	Delete(ctx context.Context, name string) error
+	List(ctx context.Context, category *string, lifecycleStatus *string) ([]MeshPlatformType, error)
+}
+
+type meshPlatformTypeClient struct {
 	meshObject internal.MeshObjectClient[MeshPlatformType]
 }
 
 func newPlatformTypeClient(ctx context.Context, httpClient *internal.HttpClient) MeshPlatformTypeClient {
-	return MeshPlatformTypeClient{internal.NewMeshObjectClient[MeshPlatformType](ctx, httpClient, "v1-preview")}
+	return meshPlatformTypeClient{internal.NewMeshObjectClient[MeshPlatformType](ctx, httpClient, "v1-preview")}
 }
 
-func (c MeshPlatformTypeClient) Read(ctx context.Context, identifier string) (*MeshPlatformType, error) {
-	return c.meshObject.Get(ctx, identifier)
-}
-
-func (c MeshPlatformTypeClient) Create(ctx context.Context, platformType *MeshPlatformTypeCreate) (*MeshPlatformType, error) {
+func (c meshPlatformTypeClient) Create(ctx context.Context, platformType *MeshPlatformTypeCreate) (*MeshPlatformType, error) {
 	return c.meshObject.Post(ctx, platformType)
 }
 
-func (c MeshPlatformTypeClient) Update(ctx context.Context, name string, platformType *MeshPlatformTypeCreate) (*MeshPlatformType, error) {
+func (c meshPlatformTypeClient) Read(ctx context.Context, identifier string) (*MeshPlatformType, error) {
+	return c.meshObject.Get(ctx, identifier)
+}
+
+func (c meshPlatformTypeClient) Update(ctx context.Context, name string, platformType *MeshPlatformTypeCreate) (*MeshPlatformType, error) {
 	return c.meshObject.Put(ctx, name, platformType)
 }
 
-func (c MeshPlatformTypeClient) Delete(ctx context.Context, name string) error {
+func (c meshPlatformTypeClient) Delete(ctx context.Context, name string) error {
 	return c.meshObject.Delete(ctx, name)
 }
 
-func (c MeshPlatformTypeClient) List(ctx context.Context, category *string, lifecycleStatus *string) ([]MeshPlatformType, error) {
+func (c meshPlatformTypeClient) List(ctx context.Context, category *string, lifecycleStatus *string) ([]MeshPlatformType, error) {
 	var options []internal.RequestOption
 	if category != nil {
 		options = append(options, internal.WithUrlQuery("category", *category))

@@ -20,10 +20,6 @@ func platformTypeMetadataSchema(computed bool) schema.SingleNestedAttribute {
 				Computed:            computed,
 				Required:            !computed,
 			},
-			"created_on": schema.StringAttribute{
-				MarkdownDescription: "Timestamp of when the platform type was created.",
-				Computed:            true,
-			},
 			"uuid": schema.StringAttribute{
 				MarkdownDescription: "UUID of the platform type.",
 				Computed:            true,

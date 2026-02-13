@@ -17,24 +17,26 @@ import (
 var MinMeshStackVersion = version.MustParse("2026.2.0")
 
 type Client struct {
-	BuildingBlock         MeshBuildingBlockClient
-	BuildingBlockV2       MeshBuildingBlockV2Client
-	Integration           MeshIntegrationClient
-	LandingZone           MeshLandingZoneClient
-	Location              MeshLocationClient
-	PaymentMethod         MeshPaymentMethodClient
-	Platform              MeshPlatformClient
-	Project               MeshProjectClient
-	ProjectGroupBinding   MeshProjectGroupBindingClient
-	ProjectUserBinding    MeshProjectUserBindingClient
-	ServiceInstance       MeshServiceInstanceClient
-	TagDefinition         MeshTagDefinitionClient
-	Tenant                MeshTenantClient
-	TenantV4              MeshTenantV4Client
-	Workspace             MeshWorkspaceClient
-	WorkspaceGroupBinding MeshWorkspaceGroupBindingClient
-	WorkspaceUserBinding  MeshWorkspaceUserBindingClient
-	PlatformType          MeshPlatformTypeClient
+	BuildingBlock                  MeshBuildingBlockClient
+	BuildingBlockV2                MeshBuildingBlockV2Client
+	BuildingBlockDefinition        MeshBuildingBlockDefinitionClient
+	BuildingBlockDefinitionVersion MeshBuildingBlockDefinitionVersionClient
+	Integration                    MeshIntegrationClient
+	LandingZone                    MeshLandingZoneClient
+	Location                       MeshLocationClient
+	PaymentMethod                  MeshPaymentMethodClient
+	Platform                       MeshPlatformClient
+	Project                        MeshProjectClient
+	ProjectGroupBinding            MeshProjectGroupBindingClient
+	ProjectUserBinding             MeshProjectUserBindingClient
+	ServiceInstance                MeshServiceInstanceClient
+	TagDefinition                  MeshTagDefinitionClient
+	Tenant                         MeshTenantClient
+	TenantV4                       MeshTenantV4Client
+	Workspace                      MeshWorkspaceClient
+	WorkspaceGroupBinding          MeshWorkspaceGroupBindingClient
+	WorkspaceUserBinding           MeshWorkspaceUserBindingClient
+	PlatformType                   MeshPlatformTypeClient
 }
 
 func New(ctx context.Context, rootUrl *url.URL, userAgent, apiKey, apiSecret string, apiToken string) (Client, error) {
@@ -70,6 +72,8 @@ func New(ctx context.Context, rootUrl *url.URL, userAgent, apiKey, apiSecret str
 	return Client{
 		newBuildingBlockClient(ctx, httpClient),
 		newBuildingBlockV2Client(ctx, httpClient),
+		newBuildingBlockDefinitionClient(ctx, httpClient),
+		newBuildingBlockDefinitionVersionClient(ctx, httpClient),
 		newIntegrationClient(ctx, httpClient),
 		newLandingZoneClient(ctx, httpClient),
 		newLocationClient(ctx, httpClient),

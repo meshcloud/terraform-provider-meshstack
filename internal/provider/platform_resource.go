@@ -113,20 +113,6 @@ func (r *platformResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 							stringplanmodifier.RequiresReplace(),
 						},
 					},
-					"created_on": schema.StringAttribute{
-						MarkdownDescription: "Creation timestamp of the platform (server-generated).",
-						Computed:            true,
-						PlanModifiers: []planmodifier.String{
-							stringplanmodifier.UseStateForUnknown(),
-						},
-					},
-					"deleted_on": schema.StringAttribute{
-						MarkdownDescription: "Timestamp when the meshPlatform was deleted, null if not deleted.",
-						Computed:            true,
-						PlanModifiers: []planmodifier.String{
-							stringplanmodifier.UseStateForUnknown(),
-						},
-					},
 				},
 			},
 
