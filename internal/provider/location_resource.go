@@ -58,7 +58,7 @@ func (r *locationResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			"api_version": schema.StringAttribute{
 				MarkdownDescription: "Location datatype version",
 				Computed:            true,
-				Default:             stringdefault.StaticString("v1-preview"),
+				Default:             stringdefault.StaticString("v1"),
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 

@@ -37,7 +37,7 @@ resource "meshstack_platform_type" "example" {
 
 ### Read-Only
 
-- `api_version` (String) The version of the API used for the platform type. Defaults to `v1-preview`.
+- `api_version` (String) The version of the API used for the platform type. Defaults to `v1`.
 - `kind` (String) The kind of the object. Always `meshPlatformType`.
 - `ref` (Attributes) Reference to this platform type, can be used as input for `platform_type_ref` in platform resources. (see [below for nested schema](#nestedatt--ref))
 - `status` (Attributes) Status of the platform type. (see [below for nested schema](#nestedatt--status))

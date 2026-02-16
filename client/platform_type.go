@@ -60,7 +60,7 @@ type meshPlatformTypeClient struct {
 }
 
 func newPlatformTypeClient(ctx context.Context, httpClient *internal.HttpClient) MeshPlatformTypeClient {
-	return meshPlatformTypeClient{internal.NewMeshObjectClient[MeshPlatformType](ctx, httpClient, "v1-preview")}
+	return meshPlatformTypeClient{internal.NewMeshObjectClient[MeshPlatformType](ctx, httpClient, "v1")}
 }
 
 func (c meshPlatformTypeClient) Create(ctx context.Context, platformType *MeshPlatformTypeCreate) (*MeshPlatformType, error) {

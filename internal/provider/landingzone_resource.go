@@ -61,7 +61,7 @@ func (r *landingZoneResource) Schema(_ context.Context, _ resource.SchemaRequest
 			"api_version": schema.StringAttribute{
 				MarkdownDescription: "Landing zone datatype version",
 				Computed:            true,
-				Default:             stringdefault.StaticString("v1-preview"),
+				Default:             stringdefault.StaticString("v1"),
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"kind": schema.StringAttribute{

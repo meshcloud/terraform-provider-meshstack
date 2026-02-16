@@ -54,7 +54,7 @@ func (r *platformResource) Configure(_ context.Context, req resource.ConfigureRe
 
 func (r *platformResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	markdownDescription := "Represents a meshStack platform.\n\n" +
-		"Please note that the meshPlatform API endpoints are still in preview state and therefore the following limitations apply:\n" +
+		"Please note that for the meshPlatform, the following limitations apply:\n" +
 		"* Deleting and re-creating a platform with the same identifier is not possible. Once you have used a platform identifier, you cannot use it again, even if the platform has been deleted. You may run into this issue when you attempt to modify an immutable attribute and terraform therefore attempts to replace (i.e., delete and recreate) the entire platform, which will result in an error with a status code of `409` due to the identifier already being used by a deleted platform.\n" +
 		"* Changing the owning workspace of a platform (`metadata.owned_by_workspace`) is not possible. To transfer the ownership of a platform, you must use meshPanel."
 
@@ -74,7 +74,7 @@ func (r *platformResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			"api_version": schema.StringAttribute{
 				MarkdownDescription: "Platform datatype version",
 				Computed:            true,
-				Default:             stringdefault.StaticString("v2-preview"),
+				Default:             stringdefault.StaticString("v2"),
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"kind": schema.StringAttribute{
