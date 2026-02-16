@@ -173,24 +173,39 @@ func TestValueToFrom(t *testing.T) {
 			N string `tfsdk:"n"`
 		}
 		type testStruct struct {
-			A NullIsUnknown[string]       `tfsdk:"a"`
-			B NullIsUnknown[nestedStruct] `tfsdk:"b"`
+			A NullIsUnknown[string]        `tfsdk:"a"`
+			B NullIsUnknown[nestedStruct]  `tfsdk:"b"`
+			C NullIsUnknown[*nestedStruct] `tfsdk:"c"`
 		}
 		nestedType := tftypes.Object{AttributeTypes: map[string]tftypes.Type{"n": tftypes.String}}
-		structType := tftypes.Object{AttributeTypes: map[string]tftypes.Type{"a": tftypes.String, "b": nestedType}}
+		structType := tftypes.Object{AttributeTypes: map[string]tftypes.Type{"a": tftypes.String, "b": nestedType, "c": nestedType}}
 
 		t.Run("all known", func(t *testing.T) {
 			TestValueToFromTestcase[testStruct]{
 				Value: testStruct{
-					A: NullIsUnknown[string]{Value: ptrTo("known1")},
-					B: NullIsUnknown[nestedStruct]{Value: &nestedStruct{N: "known2"}},
+					A: KnownValue("known1"),
+					B: KnownValue(nestedStruct{N: "known2"}),
+					C: KnownValue[*nestedStruct](nil),
 				},
 				TfValue: tftypes.NewValue(structType, map[string]tftypes.Value{
 					"a": tftypes.NewValue(tftypes.String, "known1"),
 					"b": tftypes.NewValue(nestedType, map[string]tftypes.Value{"n": tftypes.NewValue(tftypes.String, "known2")}),
+					"c": tftypes.NewValue(nestedType, nil),
 				}),
 			}.Run(t)
 		})
+
+		t.Run("all unknown", func(t *testing.T) {
+			TestValueToFromTestcase[testStruct]{
+				Value: testStruct{},
+				TfValue: tftypes.NewValue(structType, map[string]tftypes.Value{
+					"a": tftypes.NewValue(tftypes.String, tftypes.UnknownValue),
+					"b": tftypes.NewValue(nestedType, tftypes.UnknownValue),
+					"c": tftypes.NewValue(nestedType, tftypes.UnknownValue),
+				}),
+			}.Run(t)
+		})
+
 	})
 
 	t.Run("ValueTo Ptr-Ptr-Ptr", func(t *testing.T) {

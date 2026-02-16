@@ -71,6 +71,19 @@ func (conv converter) valueTo(in tftypes.Value, out reflect.Value, path reflectw
 		err = path.WrapError(err)
 	}()
 
+	if out.CanAddr() {
+		// unwrap UnknownIsNull wrapping struct
+		if u, ok := out.Addr().Interface().(unknowableAddr); ok {
+			if in.IsKnown() {
+				unwrapped := u.UnwrapAddr()
+				unwrapped.Set(reflect.New(unwrapped.Type().Elem()))
+				return conv.valueTo(in, unwrapped, path)
+			} else {
+				return nil
+			}
+		}
+	}
+
 	// Run value converters on null input values to allow setting computed, optional values
 	if len(conv.ValueToConverters) > 0 {
 		attributePath := conv.walkPathToAttributePath(path)
@@ -80,13 +93,6 @@ func (conv converter) valueTo(in tftypes.Value, out reflect.Value, path reflectw
 			} else if matched {
 				return nil
 			}
-		}
-	}
-
-	if out.CanAddr() {
-		// unwrap UnknownIsNull wrapping struct
-		if u, ok := out.Addr().Interface().(unknowableAddr); ok {
-			return conv.valueTo(in, u.UnwrapAddr(), path)
 		}
 	}
 
