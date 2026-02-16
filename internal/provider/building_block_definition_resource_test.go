@@ -163,7 +163,7 @@ func runBuildingBlockDefinitionTestCases(t *testing.T, testCaseModifiers ...Reso
 							KnownValueRef(resourceAddress, "meshBuildingBlockDefinition", &resourceUuid),
 						},
 					},
-					// Step 3: Update BBD Version Spec with draft=false, which will release the existing BBD version
+					// Step 3: Update BBD Version Spec with draft=false, which will immediately release the existing BBD version (as we're in an admin workspace)
 					resource.TestStep{
 						Config: configDraftFalse.String(),
 						ConfigPlanChecks: resource.ConfigPlanChecks{

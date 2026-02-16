@@ -269,7 +269,7 @@ func buildingBlockDefinitionVersionConverterOptions(ctx context.Context, config,
 	)
 }
 
-func (model *buildingBlockDefinition) SetFromClientDtos(diags *diag.Diagnostics, bbdUuid string, versionDtos ...client.MeshBuildingBlockDefinitionVersion) {
+func (model *buildingBlockDefinition) SetFromClientDtos(diags *diag.Diagnostics, isDraft generic.NullIsUnknown[bool], bbdUuid string, versionDtos ...client.MeshBuildingBlockDefinitionVersion) {
 	if len(versionDtos) == 0 {
 		diags.AddError("Building Block Definition without versions found",
 			"This should never happen for a properly created building block definition. "+
@@ -298,7 +298,21 @@ func (model *buildingBlockDefinition) SetFromClientDtos(diags *diag.Diagnostics,
 	model.VersionSpec = buildingBlockDefinitionVersionSpec{
 		MeshBuildingBlockDefinitionVersionSpec: versionDtos[latestIndex].Spec,
 	}
-	model.VersionSpec.Draft = *model.VersionSpec.State == client.MeshBuildingBlockDefinitionVersionStateDraft.Unwrap()
+
+	if !isDraft.IsUnknown() && !isDraft.Get() {
+		// draft=false from config/plan, let's always keep this desired value!
+		model.VersionSpec.Draft = false
+		if *model.VersionSpec.State == client.MeshBuildingBlockDefinitionVersionStateDraft.Unwrap() {
+			// show a warning though if that doesn't fit the state (aka state is still DRAFT), as the version might be "in review"
+			// the publication status IN_REVIEW is currently not available in the meshObject API, and it would only make sense to have some auto_approve flag next to draft
+			// (provided the API token has sufficient permissions to approve this)
+			diags.AddWarning("Building Block Definition release needs admin approval", fmt.Sprintf(
+				"The latest version of the Building Block Definition %s needs admin approval before its state can change to %s as desired by your current Terraform configuration draft=false. "+
+					"Approve the release in the Admin panel and re-run Terraform, which makes this warning disappear.", bbdUuid, client.MeshBuildingBlockDefinitionVersionStateReleased))
+		}
+	} else {
+		model.VersionSpec.Draft = *model.VersionSpec.State == client.MeshBuildingBlockDefinitionVersionStateDraft.Unwrap()
+	}
 	model.VersionLatest = model.Versions[latestIndex]
 
 	if model.VersionLatest.State.Get() == client.MeshBuildingBlockDefinitionVersionStateReleased.Unwrap() {

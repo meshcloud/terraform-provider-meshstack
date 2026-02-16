@@ -99,7 +99,7 @@ func (r *buildingBlockDefinitionResource) Create(ctx context.Context, req resour
 		return
 	}
 
-	plan.SetFromClientDtos(&resp.Diagnostics, bbdUuid, *createdVersionDto)
+	plan.SetFromClientDtos(&resp.Diagnostics, generic.KnownValue(plan.VersionSpec.Draft), bbdUuid, *createdVersionDto)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -108,6 +108,7 @@ func (r *buildingBlockDefinitionResource) Create(ctx context.Context, req resour
 
 func (r *buildingBlockDefinitionResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	stateMetadata := generic.GetAttribute[client.MeshBuildingBlockDefinitionMetadata](ctx, req.State, path.Root("metadata"), &resp.Diagnostics, generic.WithSetUnknownValueToZero())
+	isDraft := generic.GetAttribute[generic.NullIsUnknown[bool]](ctx, req.State, path.Root("version_spec").AtName("draft"), &resp.Diagnostics, generic.WithSetUnknownValueToZero())
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -137,7 +138,7 @@ func (r *buildingBlockDefinitionResource) Read(ctx context.Context, req resource
 			definitionDto.Spec.DisplayName, bbdUuid,
 		))
 	}
-	state.SetFromClientDtos(&resp.Diagnostics, bbdUuid, versionDtos...)
+	state.SetFromClientDtos(&resp.Diagnostics, isDraft, bbdUuid, versionDtos...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -174,13 +175,13 @@ func (r *buildingBlockDefinitionResource) ModifyPlan(ctx context.Context, req re
 	// Modifying only a certain portion of the plan related to output versions
 	type buildingBlockDefinitionPartial struct {
 		VersionSpec struct {
-			Draft         generic.NullIsUnknown[bool]                    `tfsdk:"draft"`
-			VersionNumber int64                                          `tfsdk:"version_number"`
-			State         client.MeshBuildingBlockDefinitionVersionState `tfsdk:"state"`
+			Draft         generic.NullIsUnknown[bool]                                           `tfsdk:"draft"`
+			VersionNumber int64                                                                 `tfsdk:"version_number"`
+			State         generic.NullIsUnknown[client.MeshBuildingBlockDefinitionVersionState] `tfsdk:"state"`
 		} `tfsdk:"version_spec"`
-		Versions             []buildingBlockDefinitionVersionRef `tfsdk:"versions"`
-		VersionLatest        buildingBlockDefinitionVersionRef   `tfsdk:"version_latest"`
-		VersionLatestRelease *buildingBlockDefinitionVersionRef  `tfsdk:"version_latest_release"`
+		Versions             []buildingBlockDefinitionVersionRef                       `tfsdk:"versions"`
+		VersionLatest        buildingBlockDefinitionVersionRef                         `tfsdk:"version_latest"`
+		VersionLatestRelease generic.NullIsUnknown[*buildingBlockDefinitionVersionRef] `tfsdk:"version_latest_release"`
 	}
 
 	state := generic.Get[buildingBlockDefinitionPartial](ctx, req.State, &resp.Diagnostics)
@@ -245,7 +246,7 @@ func (r *buildingBlockDefinitionResource) ModifyPlan(ctx context.Context, req re
 	switch {
 	case !state.VersionSpec.Draft.Get() && plan.VersionSpec.Draft.Get():
 		// changing draft=false->true means creating a new draft version from the existing one with increased version number
-		plan.VersionSpec.State = client.MeshBuildingBlockDefinitionVersionStateDraft.Unwrap()
+		plan.VersionSpec.State = generic.KnownValue(client.MeshBuildingBlockDefinitionVersionStateDraft.Unwrap())
 		plan.VersionSpec.VersionNumber = state.VersionSpec.VersionNumber + 1
 		plan.Versions = append(state.Versions, buildingBlockDefinitionVersionRef{
 			Uuid:        generic.NullIsUnknown[string]{},
@@ -254,23 +255,21 @@ func (r *buildingBlockDefinitionResource) ModifyPlan(ctx context.Context, req re
 			ContentHash: versionSpecContentHash,
 		})
 	case state.VersionSpec.Draft.Get():
-		// State is in draft=true, and plan might have draft=false,
-		// so always update the content hash of version latest (and last element of versions)
-		// and set VersionLatestRelease to new released version if required
-		if plan.VersionSpec.Draft.Get() {
-			plan.VersionSpec.State = client.MeshBuildingBlockDefinitionVersionStateDraft.Unwrap()
-		} else {
-			plan.VersionSpec.State = client.MeshBuildingBlockDefinitionVersionStateReleased.Unwrap()
+		// State is in draft=true, and plan might have draft=false
+		if !plan.VersionSpec.Draft.Get() {
+			// Draft changes to false according to plan (from draft=true in state)
+			// If the BBD is part of a non-admin (non-partner) workspace, the BBD does change to RELEASED state immediately, but needs review approval first.
+			// Thus, we need to be defensive here and keep values unknown for know.
+			// SetFromClientDtos detects this an issues a warning if the release in pending.
+			plan.VersionSpec.State = generic.NullIsUnknown[client.MeshBuildingBlockDefinitionVersionState]{}
+			plan.VersionLatestRelease = generic.NullIsUnknown[*buildingBlockDefinitionVersionRef]{}
 		}
+
 		plan.Versions = slices.Clone(state.Versions)
 		latestVersionRef := &plan.Versions[len(plan.Versions)-1]
 
-		latestVersionRef.State = generic.KnownValue(plan.VersionSpec.State)
+		latestVersionRef.State = plan.VersionSpec.State
 		latestVersionRef.ContentHash = versionSpecContentHash
-
-		if latestVersionRef.State.Get() == client.MeshBuildingBlockDefinitionVersionStateReleased.Unwrap() {
-			plan.VersionLatestRelease = &plan.VersionLatest
-		}
 	}
 }
 
@@ -322,7 +321,7 @@ func (r *buildingBlockDefinitionResource) Update(ctx context.Context, req resour
 		}
 	case !state.VersionSpec.Draft:
 		// state (and plan) are in draft=false (aka released), so one should not change version_spec at all
-		// this makes released versions immutable
+		// this makes released or in-review versions immutable
 		versionSpecDtoContentHash := versionContentHash(versionSpecDto, &resp.Diagnostics)
 		if resp.Diagnostics.HasError() {
 			return
@@ -358,7 +357,7 @@ func (r *buildingBlockDefinitionResource) Update(ctx context.Context, req resour
 		return
 	}
 
-	plan.SetFromClientDtos(&resp.Diagnostics, bbdUuid, allVersionDtos...)
+	plan.SetFromClientDtos(&resp.Diagnostics, generic.KnownValue(plan.VersionSpec.Draft), bbdUuid, allVersionDtos...)
 	if resp.Diagnostics.HasError() {
 		return
 	}

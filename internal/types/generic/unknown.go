@@ -10,7 +10,8 @@ type NullIsUnknown[T any] struct {
 }
 
 func (v *NullIsUnknown[T]) UnwrapAddr() reflect.Value {
-	return reflect.ValueOf(&v.Value)
+	// Be careful that one is returning an addressable value even if the Value struct field is nil!
+	return reflect.ValueOf(v).Elem().FieldByName("Value")
 }
 
 func (v NullIsUnknown[T]) IsUnknown() bool {
