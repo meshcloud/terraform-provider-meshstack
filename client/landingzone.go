@@ -71,7 +71,7 @@ type MeshLandingZoneClient struct {
 }
 
 func newLandingZoneClient(ctx context.Context, httpClient *internal.HttpClient) MeshLandingZoneClient {
-	return MeshLandingZoneClient{internal.NewMeshObjectClient[MeshLandingZone](ctx, httpClient, "v1-preview")}
+	return MeshLandingZoneClient{internal.NewMeshObjectClient[MeshLandingZone](ctx, httpClient, "v1")}
 }
 
 func (c MeshLandingZoneClient) Read(ctx context.Context, name string) (*MeshLandingZone, error) {

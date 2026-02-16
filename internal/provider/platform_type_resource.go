@@ -47,10 +47,9 @@ func (r *platformTypeResource) Schema(_ context.Context, _ resource.SchemaReques
 
 		Attributes: map[string]schema.Attribute{
 			"api_version": schema.StringAttribute{
-				MarkdownDescription: "The version of the API used for the platform type. Defaults to `v1-preview`.",
+				MarkdownDescription: "The version of the API used for the platform type. Defaults to `v1`.",
 				Computed:            true,
-				Default:             stringdefault.StaticString("v1-preview"),
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				Default:             stringdefault.StaticString("v1"),
 			},
 
 			"kind": schema.StringAttribute{

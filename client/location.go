@@ -51,7 +51,7 @@ type meshLocationClient struct {
 }
 
 func newLocationClient(ctx context.Context, httpClient *internal.HttpClient) MeshLocationClient {
-	return meshLocationClient{internal.NewMeshObjectClient[MeshLocation](ctx, httpClient, "v1-preview")}
+	return meshLocationClient{internal.NewMeshObjectClient[MeshLocation](ctx, httpClient, "v1")}
 }
 
 func (c meshLocationClient) Read(ctx context.Context, name string) (*MeshLocation, error) {
