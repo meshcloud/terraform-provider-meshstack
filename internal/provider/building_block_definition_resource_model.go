@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"slices"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
@@ -57,31 +58,51 @@ func newBuildingBlockDefinitionRef(uuid string) buildingBlockDefinitionRef {
 	}
 }
 
-var buildingBlockDefinitionConverterOptions = generic.ConverterOptions{
-	// Transform ref input in schema to simple string (aka the platform type).
-	generic.WithValueFromConverterFor[client.BuildingBlockDefinitionSupportedPlatform](generic.ValueFromConverterForTypedNilHandler[supportedPlatformRef](),
-		func(_ path.Path, value client.BuildingBlockDefinitionSupportedPlatform) (tftypes.Value, error) {
-			return generic.ValueFrom(supportedPlatformRef{Kind: "meshPlatformType", Name: string(value)})
-		},
-	),
-	generic.WithValueToConverterFor[client.BuildingBlockDefinitionSupportedPlatform](func(_ path.Path, in tftypes.Value) (client.BuildingBlockDefinitionSupportedPlatform, error) {
-		// Handling this Ref (struct) to simple String Value could be extracted into re-usable converter I suppose (similar to schema_utils.go functions)
-		ref, err := generic.ValueTo[supportedPlatformRef](in)
-		if err != nil {
-			return "", err
+// withSetEmptyContainersToNull transform all empty slices/maps as returned from API into null value (optional value),
+// if the plan/state also specifies it as null (optional/omitted attribute).
+// This accounts for somewhat unprecise handling in the backend for optional inputs, but let's take that shortcut
+// and keep the config in-sync ignoring the bogus backend change.
+func withSetEmptyContainersToNull(ctx context.Context, plan, state generic.AttributeGetter) generic.ConverterOption {
+	return generic.WithValueFromEmptyContainer(func(attributePath path.Path) (haveNil bool, err error) {
+		var attributeValue attr.Value
+		var diags diag.Diagnostics
+		if plan != nil {
+			diags.Append(plan.GetAttribute(ctx, attributePath, &attributeValue)...)
+		} else if state != nil {
+			diags.Append(state.GetAttribute(ctx, attributePath, &attributeValue)...)
 		}
-		if ref.Kind != "meshPlatformType" {
-			return "", fmt.Errorf("expected meshPlatformType for kind in given supported platform ref, got %s", ref.Kind)
+		if diags.HasError() || attributeValue == nil {
+			return true, fmt.Errorf("cannot get attribute from plan/state at %s: %s", attributePath, diags)
 		}
-		return client.BuildingBlockDefinitionSupportedPlatform(ref.Name), nil
-	}),
-	generic.WithUseSetForElementsOf[client.BuildingBlockDefinitionSupportedPlatform](),
+		return attributeValue.IsNull(), nil
+	})
+}
 
-	// Transform all empty slices/maps as returned from API into null value (optional).
-	// This is somewhat unprecise handling in the backend for optional inputs, but let's take that shortcut.
-	generic.WithSetEmptyContainersToNull(),
+func buildingBlockDefinitionConverterOptions(ctx context.Context, plan, state generic.AttributeGetter) generic.ConverterOptions {
+	return generic.ConverterOptions{
+		// Transform ref input in schema to simple string (aka the platform type).
+		generic.WithValueFromConverterFor[client.BuildingBlockDefinitionSupportedPlatform](generic.ValueFromConverterForTypedNilHandler[supportedPlatformRef](),
+			func(_ path.Path, value client.BuildingBlockDefinitionSupportedPlatform) (tftypes.Value, error) {
+				return generic.ValueFrom(supportedPlatformRef{Kind: "meshPlatformType", Name: string(value)})
+			},
+		),
+		generic.WithValueToConverterFor[client.BuildingBlockDefinitionSupportedPlatform](func(_ path.Path, in tftypes.Value) (client.BuildingBlockDefinitionSupportedPlatform, error) {
+			// Handling this Ref (struct) to simple String Value could be extracted into re-usable converter I suppose (similar to schema_utils.go functions)
+			ref, err := generic.ValueTo[supportedPlatformRef](in)
+			if err != nil {
+				return "", err
+			}
+			if ref.Kind != "meshPlatformType" {
+				return "", fmt.Errorf("expected meshPlatformType for kind in given supported platform ref, got %s", ref.Kind)
+			}
+			return client.BuildingBlockDefinitionSupportedPlatform(ref.Name), nil
+		}),
+		generic.WithUseSetForElementsOf[client.BuildingBlockDefinitionSupportedPlatform](),
 
-	generic.WithUseSetForElementsOf[clientTypes.SetElem](),
+		withSetEmptyContainersToNull(ctx, plan, state),
+
+		generic.WithUseSetForElementsOf[clientTypes.SetElem](),
+	}
 }
 
 type buildingBlockDefinitionVersionSpec struct {
@@ -151,7 +172,7 @@ func buildingBlockDefinitionVersionConverterOptions(ctx context.Context, config,
 
 		// Transform all empty slices as returned from API into null value (optional).
 		// This is somewhat unprecise handling in the backend for optional lists, but let's take that shortcut.
-		generic.WithSetEmptyContainersToNull(),
+		withSetEmptyContainersToNull(ctx, plan, state),
 
 		generic.WithUseSetForElementsOf[client.ApiPermission](),
 
@@ -186,17 +207,17 @@ func buildingBlockDefinitionVersionConverterOptions(ctx context.Context, config,
 					secretOrAnyValueFromConverter,
 					// for selectable values
 					generic.WithUseSetForElementsOf[clientTypes.SetElem](),
-					generic.WithSetEmptyContainersToNull(),
 				)
 			},
 			func(attributePath path.Path, in client.MeshBuildingBlockDefinitionInput) (tftypes.Value, error) {
 				// Note that client.MeshBuildingBlockDefinitionInput.UnmarshalJSON ensures that the IsSensitive flag is consistent with the clientTypes.SecretOrAny aka Variant[X, Y] state
 				out := buildingBlockDefinitionInputWithSensitive{MeshBuildingBlockDefinitionInput: in}
 				converterOptions := generic.ConverterOptions{
+					generic.WithAttributePath(attributePath), // pass down attribute path into walk
 					secretOrAnyValueFromConverter,
 					// for selectable values
 					generic.WithUseSetForElementsOf[clientTypes.SetElem](),
-					generic.WithSetEmptyContainersToNull(),
+					withSetEmptyContainersToNull(ctx, plan, state),
 				}
 				if in.IsSensitive {
 					var errs []error
