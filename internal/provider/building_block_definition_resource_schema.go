@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -330,6 +331,9 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 						Optional:            true,
 						Computed:            true,
 						Default:             booldefault.StaticBool(false),
+						PlanModifiers: []planmodifier.Bool{
+							boolplanmodifier.RequiresReplace(),
+						},
 					},
 					"deletion_mode": schema.StringAttribute{
 						MarkdownDescription: fmt.Sprintf("Deletion behavior. One of %s.", client.BuildingBlockDeletionModes.Markdown()),

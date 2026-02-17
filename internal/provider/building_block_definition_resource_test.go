@@ -360,7 +360,7 @@ func checkBuildingBlockVersionSpec(exampleSuffix string, expectedState enum.Entr
 		"state":                      knownvalue.StringExact(expectedState.String()),
 		"version_number":             knownvalue.Int64Exact(expectedNumber),
 		"draft":                      knownvalue.Bool(expectedState == client.MeshBuildingBlockDefinitionVersionStateDraft),
-		"only_apply_once_per_tenant": knownvalue.Bool(false),
+		"only_apply_once_per_tenant": knownvalue.Bool(exampleSuffix == "01_terraform"),
 		"deletion_mode":              knownvalue.StringExact(expectedDeletionMode),
 		"runner_ref": knownvalue.MapExact(map[string]knownvalue.Check{
 			"kind": knownvalue.StringExact("meshBuildingBlockRunner"),

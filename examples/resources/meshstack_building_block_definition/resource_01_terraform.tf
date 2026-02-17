@@ -31,7 +31,7 @@ resource "meshstack_building_block_definition" "example_01_terraform" {
       uuid = "66ddc814-1e69-4dad-b5f1-3a5bce51c01f"
     }
 
-    only_apply_once_per_tenant = false    # Optional: defaults to false
+    only_apply_once_per_tenant = true     # Optional: defaults to false
     deletion_mode              = "DELETE" # Optional: defaults to "DELETE"
 
     # Optional: API permissions provided to building block runs via an ephemeral API key
