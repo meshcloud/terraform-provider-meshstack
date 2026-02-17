@@ -1,8 +1,10 @@
-## v0.18.1
+## Unreleased
 
 FEATURES:
 
 - `meshstack_service_instance` and `meshstack_service_instances`: Added support for `parameters` field in service instance specification.
+
+## v0.18.1
 
 FIXES:
 

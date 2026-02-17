@@ -66,5 +66,6 @@ Read-Only:
 
 - `creator` (String) User who created this service instance.
 - `display_name` (String) Human-readable display name.
+- `parameters` (Map of String) Service instance parameters as JSON object. Use `jsondecode()` to work with the map values in Terraform.
 - `plan_id` (String) Service plan identifier.
 - `service_id` (String) Service identifier.
