@@ -283,7 +283,7 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 							stringvalidator.OneOf(client.MeshBuildingBlockTypes.Strings()...),
 						},
 					},
-					"notification_subscribers": schema.ListAttribute{
+					"notification_subscribers": schema.SetAttribute{
 						MarkdownDescription: "List of subscribers to notify about events related to this building block. Prefix usernames with `user:` and emails with `email:`.",
 						ElementType:         types.StringType,
 						Optional:            true,

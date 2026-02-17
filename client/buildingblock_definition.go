@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client/internal"
+	"github.com/meshcloud/terraform-provider-meshstack/client/types"
 	"github.com/meshcloud/terraform-provider-meshstack/client/types/enum"
 )
 
@@ -33,8 +34,8 @@ type MeshBuildingBlockDefinitionSpec struct {
 	SupportURL            *string               `json:"supportUrl,omitempty" tfsdk:"support_url"`
 	DocumentationURL      *string               `json:"documentationUrl,omitempty" tfsdk:"documentation_url"`
 	// NotificationSubscribers can also specify emails with prefix 'email:', so it's not only usernames (as the JSON field name suggests)!
-	NotificationSubscribers []string `json:"notificationSubscriberUsernames,omitempty" tfsdk:"notification_subscribers"`
-	Symbol                  *string  `json:"symbol,omitempty" tfsdk:"symbol"`
+	NotificationSubscribers []types.SetElem `json:"notificationSubscriberUsernames,omitempty" tfsdk:"notification_subscribers"`
+	Symbol                  *string         `json:"symbol,omitempty" tfsdk:"symbol"`
 	// SupportedPlatforms are currently platform types only. Specifying single platforms is currently unsupported.
 	// Have this list of string with a dedicated type, to convert it to/from Platform Type refs.
 	SupportedPlatforms []BuildingBlockDefinitionSupportedPlatform `json:"supportedPlatforms" tfsdk:"supported_platforms"`

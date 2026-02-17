@@ -348,7 +348,7 @@ Required:
 Optional:
 
 - `documentation_url` (String) URL pointing to documentation for the building block definition.
-- `notification_subscribers` (List of String) List of subscribers to notify about events related to this building block. Prefix usernames with `user:` and emails with `email:`.
+- `notification_subscribers` (Set of String) List of subscribers to notify about events related to this building block. Prefix usernames with `user:` and emails with `email:`.
 - `readme` (String) Detailed readme/documentation in markdown format.
 - `run_transparency` (Boolean) Specifies the building block run control. When set to `true`, both platform teams and workspace users can view detailed run logs and re-run building blocks. When set to `false` (default), only platform teams have this access.
 - `support_url` (String) URL pointing to support resources for the building block definition.
