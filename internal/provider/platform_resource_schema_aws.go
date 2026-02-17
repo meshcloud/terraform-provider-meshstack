@@ -177,7 +177,7 @@ func awsReplicationConfigSchema() schema.Attribute {
 					},
 					"sign_in_url": schema.StringAttribute{
 						MarkdownDescription: "The AWS IAM Identity Center sign in Url, that must be used by end-users to log in via AWS IAM Identity Center to AWS Management Console.",
-						Optional:            true,
+						Required:            true,
 					},
 				},
 			},
