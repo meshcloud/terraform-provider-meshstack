@@ -5,10 +5,8 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework-jsontypes/jsontypes"
-	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
@@ -175,13 +173,6 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 		},
 	}
 
-	allowSingleImplementationOnly := objectvalidator.ConflictsWith(
-		path.MatchRelative().AtParent().AtName("manual"),
-		path.MatchRelative().AtParent().AtName("github_workflows"),
-		path.MatchRelative().AtParent().AtName("terraform"),
-		path.MatchRelative().AtParent().AtName("gitlab_pipeline"),
-		path.MatchRelative().AtParent().AtName("azure_devops_pipeline"),
-	)
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Manages a meshBuildingBlockDefinition in meshStack. " +
 			"Building Block Definitions define reusable automation components that can be executed on workspaces or tenants. " +
@@ -374,18 +365,19 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 
 					"implementation": schema.SingleNestedAttribute{
 						MarkdownDescription: "Implementation configuration for the building block. Must contain exactly one of `manual`, `terraform`, `github_workflows`, `gitlab_pipeline`, or `azure_devops_pipeline`.",
-						Optional:            true,
+						Required:            true,
+						Validators: []validator.Object{
+							validators.ExactlyOneAttributeValidator{},
+						},
 						Attributes: map[string]schema.Attribute{
 							"manual": schema.SingleNestedAttribute{
 								MarkdownDescription: "Manual implementation (no automation).",
 								Optional:            true,
-								Validators:          []validator.Object{allowSingleImplementationOnly},
 								Attributes:          map[string]schema.Attribute{},
 							},
 							"terraform": schema.SingleNestedAttribute{
 								MarkdownDescription: "Terraform implementation configuration.",
 								Optional:            true,
-								Validators:          []validator.Object{allowSingleImplementationOnly},
 								Attributes: map[string]schema.Attribute{
 									"terraform_version": schema.StringAttribute{
 										MarkdownDescription: "Terraform version to use (e.g., `1.9.0`).",
@@ -442,7 +434,6 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 							"github_workflows": schema.SingleNestedAttribute{
 								MarkdownDescription: "GitHub Workflows implementation configuration.",
 								Optional:            true,
-								Validators:          []validator.Object{allowSingleImplementationOnly},
 								Attributes: map[string]schema.Attribute{
 									"repository": schema.StringAttribute{
 										MarkdownDescription: "GitHub repository in format `owner/repo`.",
@@ -482,7 +473,6 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 							"gitlab_pipeline": schema.SingleNestedAttribute{
 								MarkdownDescription: "GitLab Pipeline implementation configuration.",
 								Optional:            true,
-								Validators:          []validator.Object{allowSingleImplementationOnly},
 								Attributes: map[string]schema.Attribute{
 									"project_id": schema.StringAttribute{
 										MarkdownDescription: "GitLab project ID.",
@@ -505,7 +495,6 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 							"azure_devops_pipeline": schema.SingleNestedAttribute{
 								MarkdownDescription: "Azure DevOps Pipeline implementation configuration.",
 								Optional:            true,
-								Validators:          []validator.Object{allowSingleImplementationOnly},
 								Attributes: map[string]schema.Attribute{
 									"project": schema.StringAttribute{
 										MarkdownDescription: "Azure DevOps project name.",
