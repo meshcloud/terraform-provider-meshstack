@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client/internal"
+	"github.com/meshcloud/terraform-provider-meshstack/client/types"
 )
 
 type MeshServiceInstance struct {
@@ -21,13 +22,19 @@ type MeshServiceInstanceMetadata struct {
 }
 
 type MeshServiceInstanceSpec struct {
-	Creator     string `json:"creator" tfsdk:"creator"`
-	DisplayName string `json:"displayName" tfsdk:"display_name"`
-	PlanId      string `json:"planId" tfsdk:"plan_id"`
-	ServiceId   string `json:"serviceId" tfsdk:"service_id"`
+	Creator     string               `json:"creator" tfsdk:"creator"`
+	DisplayName string               `json:"displayName" tfsdk:"display_name"`
+	PlanId      string               `json:"planId" tfsdk:"plan_id"`
+	ServiceId   string               `json:"serviceId" tfsdk:"service_id"`
+	Parameters  map[string]types.Any `json:"parameters" tfsdk:"parameters"`
 }
 
-type MeshServiceInstanceClient struct {
+type MeshServiceInstanceClient interface {
+	Read(ctx context.Context, instanceId string) (*MeshServiceInstance, error)
+	List(ctx context.Context, filter *MeshServiceInstanceFilter) ([]MeshServiceInstance, error)
+}
+
+type meshServiceInstanceClient struct {
 	meshObject internal.MeshObjectClient[MeshServiceInstance]
 }
 
@@ -40,14 +47,14 @@ type MeshServiceInstanceFilter struct {
 }
 
 func newServiceInstanceClient(ctx context.Context, httpClient *internal.HttpClient) MeshServiceInstanceClient {
-	return MeshServiceInstanceClient{internal.NewMeshObjectClient[MeshServiceInstance](ctx, httpClient, "v2")}
+	return meshServiceInstanceClient{internal.NewMeshObjectClient[MeshServiceInstance](ctx, httpClient, "v2")}
 }
 
-func (c MeshServiceInstanceClient) Read(ctx context.Context, instanceId string) (*MeshServiceInstance, error) {
+func (c meshServiceInstanceClient) Read(ctx context.Context, instanceId string) (*MeshServiceInstance, error) {
 	return c.meshObject.Get(ctx, instanceId)
 }
 
-func (c MeshServiceInstanceClient) List(ctx context.Context, filter *MeshServiceInstanceFilter) ([]MeshServiceInstance, error) {
+func (c meshServiceInstanceClient) List(ctx context.Context, filter *MeshServiceInstanceFilter) ([]MeshServiceInstance, error) {
 	var options []internal.RequestOption
 	if filter != nil {
 		if filter.WorkspaceIdentifier != nil {
