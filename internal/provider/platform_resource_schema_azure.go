@@ -45,6 +45,10 @@ func azureReplicationConfigSchema() schema.Attribute {
 					"auth": azureAuthSchema(),
 				},
 			},
+			"update_subscription_name": schema.BoolAttribute{
+				MarkdownDescription: "Update existing subscription names to match the subscription name pattern during replication.",
+				Required:            true,
+			},
 			"provisioning": schema.SingleNestedAttribute{
 				MarkdownDescription: "To provide Azure Subscription for your organization's meshProjects, meshcloud supports using Enterprise Enrollment or allocating from a pool of pre-provisioned subscriptions. One of the subFields enterpriseEnrollment, customerAgreement or preProvisioned must be provided!",
 				Optional:            true,
@@ -151,7 +155,7 @@ func azureReplicationConfigSchema() schema.Attribute {
 			},
 			"blueprint_location": schema.StringAttribute{
 				MarkdownDescription: "The Azure location where replication creates and updates Blueprint Assignments. Note that it's still possible that the Blueprint creates resources in other locations, this is merely the location where the Blueprint Assignment is managed.",
-				Optional:            true,
+				Required:            true,
 			},
 			"azure_role_mappings": schema.ListNestedAttribute{
 				MarkdownDescription: "Azure role mappings for Azure role definitions.",

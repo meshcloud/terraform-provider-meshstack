@@ -43,6 +43,8 @@ resource "meshstack_platform" "example" {
             # }
           }
 
+          update_subscription_name = false
+
           provisioning = {
             subscription_owner_object_ids = [
               "2af5651f-bfa2-45b8-8780-f63dd51f515f"

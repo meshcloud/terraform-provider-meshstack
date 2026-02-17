@@ -469,6 +469,7 @@ Read-Only:
 - `skip_user_group_permission_cleanup` (Boolean) Flag to skip user group permission cleanup. For certain use cases you might want to preserve user groups and replicated permission after a tenant was deleted on the Azure platform. Checking this option preserves those permissions. Please keep in mind that the platform operator is then responsible for cleaning them up later.
 - `subscription_name_pattern` (String) Configures the pattern that defines the desired name of Azure Subscriptions managed by meshStack.
 - `tenant_tags` (Attributes) Tenant tagging configuration. (see [below for nested schema](#nestedatt--spec--config--azure--replication--tenant_tags))
+- `update_subscription_name` (Boolean) Update existing subscription names to match the subscription name pattern during replication.
 - `user_lookup_strategy` (String) User lookup strategy (`userPrincipalName` or `email`). Users can either be looked up in cloud platforms by email or UPN (User Principal Name). In most cases email is the matching way as it is the only identifier that is consistently used throughout all cloud platforms and meshStack.
 
 <a id="nestedatt--spec--config--azure--replication--azure_role_mappings"></a>
