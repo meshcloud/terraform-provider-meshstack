@@ -1,3 +1,10 @@
+## v0.18.1
+
+FIXES:
+
+- `meshstack_platform`: Adds missing `update_subscription_name` field to Azure config.
+- `meshstack_platform`: `blueprint_location` is required for Azure.
+
 ## v0.18.0
 
 FEATURES:

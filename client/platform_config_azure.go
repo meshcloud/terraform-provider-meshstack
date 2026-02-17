@@ -10,6 +10,7 @@ type AzurePlatformConfig struct {
 
 type AzureReplicationConfig struct {
 	ServicePrincipal                           AzureServicePrincipalConfig          `json:"servicePrincipal" tfsdk:"service_principal"`
+	UpdateSubscriptionName                     bool                                 `json:"updateSubscriptionName" tfsdk:"update_subscription_name"`
 	Provisioning                               *AzureSubscriptionProvisioningConfig `json:"provisioning,omitempty" tfsdk:"provisioning"`
 	B2bUserInvitation                          *AzureInviteB2BUserConfig            `json:"b2bUserInvitation,omitempty" tfsdk:"b2b_user_invitation"`
 	SubscriptionNamePattern                    string                               `json:"subscriptionNamePattern" tfsdk:"subscription_name_pattern"`

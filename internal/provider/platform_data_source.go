@@ -747,6 +747,10 @@ func azureReplicationConfigDataSourceSchema() schema.Attribute {
 					},
 				},
 			},
+			"update_subscription_name": schema.BoolAttribute{
+				MarkdownDescription: "Update existing subscription names to match the subscription name pattern during replication.",
+				Computed:            true,
+			},
 			"provisioning": schema.SingleNestedAttribute{
 				MarkdownDescription: "To provide Azure Subscription for your organization's meshProjects, meshcloud supports using Enterprise Enrollment or allocating from a pool of pre-provisioned subscriptions. One of the subFields enterpriseEnrollment, customerAgreement or preProvisioned must be provided!",
 				Computed:            true,

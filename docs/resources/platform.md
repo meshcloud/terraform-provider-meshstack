@@ -64,6 +64,8 @@ resource "meshstack_platform" "example" {
             # }
           }
 
+          update_subscription_name = false
+
           provisioning = {
             subscription_owner_object_ids = [
               "2af5651f-bfa2-45b8-8780-f63dd51f515f"
@@ -660,18 +662,19 @@ Required:
 
 - `allow_hierarchical_management_group_assignment` (Boolean) Configuration flag to enable or disable hierarchical management group assignment in Azure. If set to true: Subscriptions can be moved to sub management groups of the management group defined in the Landing Zone. This is useful if you want to manage the subscription location with a deeper and more granular hierarchy. If set to false: Subscriptions will always be moved directly to the management group defined in the Landing Zone.
 - `azure_role_mappings` (Attributes List) Azure role mappings for Azure role definitions. (see [below for nested schema](#nestedatt--spec--config--azure--replication--azure_role_mappings))
+- `blueprint_location` (String) The Azure location where replication creates and updates Blueprint Assignments. Note that it's still possible that the Blueprint creates resources in other locations, this is merely the location where the Blueprint Assignment is managed.
 - `blueprint_service_principal` (String) Object ID of the Enterprise Application belonging to the Microsoft Application 'Azure Blueprints'. meshStack will grant the necessary permissions on managed Subscriptions to this SPN so that it can create System Assigned Managed Identities (SAMI) for Blueprint execution.
 - `group_name_pattern` (String) Configures the pattern that defines the desired name of AAD groups managed by meshStack. It follows the usual replicator string pattern features and provides the additional replacement 'platformGroupAlias', which contains the role name suffix, which is configurable via Role Mappings in this platform config or via a meshLandingZone. Operators must ensure the group names are unique in the managed AAD Tenant.
 - `service_principal` (Attributes) Service principal configuration for Azure (see [below for nested schema](#nestedatt--spec--config--azure--replication--service_principal))
 - `skip_user_group_permission_cleanup` (Boolean) Flag to skip user group permission cleanup. For certain use cases you might want to preserve user groups and replicated permission after a tenant was deleted on the Azure platform. Checking this option preserves those permissions. Please keep in mind that the platform operator is then responsible for cleaning them up later.
 - `subscription_name_pattern` (String) Configures the pattern that defines the desired name of Azure Subscriptions managed by meshStack.
+- `update_subscription_name` (Boolean) Update existing subscription names to match the subscription name pattern during replication.
 - `user_lookup_strategy` (String) Strategy for user lookup in Azure (`UserByMailLookupStrategy` or `UserByUsernameLookupStrategy`)
 
 Optional:
 
 - `administrative_unit_id` (String) If you enter an administrative unit ID the replicated (and potentially existing) groups will be put into this AU. This can be used to limit the permission scopes which are required for the replicator principal. If you remove the AU ID again or change it, the groups will not be removed from the old AU.
 - `b2b_user_invitation` (Attributes) Optional B2B user invitation configuration. When configured, instructs the replicator to create AAD B2B guest invitations for users missing in the AAD tenant managed by this meshPlatform. (see [below for nested schema](#nestedatt--spec--config--azure--replication--b2b_user_invitation))
-- `blueprint_location` (String) The Azure location where replication creates and updates Blueprint Assignments. Note that it's still possible that the Blueprint creates resources in other locations, this is merely the location where the Blueprint Assignment is managed.
 - `provisioning` (Attributes) To provide Azure Subscription for your organization's meshProjects, meshcloud supports using Enterprise Enrollment or allocating from a pool of pre-provisioned subscriptions. One of the subFields enterpriseEnrollment, customerAgreement or preProvisioned must be provided! (see [below for nested schema](#nestedatt--spec--config--azure--replication--provisioning))
 - `tenant_tags` (Attributes) Tenant tags configuration (see [below for nested schema](#nestedatt--spec--config--azure--replication--tenant_tags))
 
