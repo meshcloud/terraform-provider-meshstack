@@ -104,15 +104,15 @@ dereference:
 			} else {
 				in = in.Elem()
 			}
-		case reflect.Interface, reflect.Invalid:
-			return out, fmt.Errorf("cannot handle kind %s", kind)
 		default:
 			break dereference
 		}
 	}
 
-	if u, ok := in.Interface().(unknowable); ok {
-		return conv.valueFrom(u.Unwrap(), path, haveNil, u.IsUnknown())
+	if in.IsValid() {
+		if u, ok := in.Interface().(unknowable); ok {
+			return conv.valueFrom(u.Unwrap(), path, haveNil, u.IsUnknown())
+		}
 	}
 
 	if len(conv.ValueFromConverters) > 0 {
