@@ -25,8 +25,9 @@ func (m MeshLocationClient) Create(_ context.Context, location *client.MeshLocat
 	created := &client.MeshLocation{
 		ApiVersion: location.ApiVersion,
 		Metadata: client.MeshLocationMetadata{
-			Name: location.Metadata.Name,
-			Uuid: locationUuid,
+			Name:             location.Metadata.Name,
+			OwnedByWorkspace: location.Metadata.OwnedByWorkspace,
+			Uuid:             locationUuid,
 		},
 		Spec: location.Spec,
 		Status: client.MeshLocationStatus{

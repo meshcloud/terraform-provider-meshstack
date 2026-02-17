@@ -78,6 +78,13 @@ func (r *locationResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 							),
 						},
 					},
+					"owned_by_workspace": schema.StringAttribute{
+						MarkdownDescription: "Identifier of the workspace that owns this location.",
+						Required:            true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.RequiresReplace(),
+						},
+					},
 					"uuid": schema.StringAttribute{
 						MarkdownDescription: "Unique identifier of the location (server-generated).",
 						Computed:            true,
@@ -128,11 +135,13 @@ func (r *locationResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 func (r *locationResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var apiVersion string
 	var name string
+	var ownedByWorkspace string
 	var displayName string
 	var description string
 
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("api_version"), &apiVersion)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("metadata").AtName("name"), &name)...)
+	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("metadata").AtName("owned_by_workspace"), &ownedByWorkspace)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec").AtName("display_name"), &displayName)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec").AtName("description"), &description)...)
 
@@ -143,7 +152,8 @@ func (r *locationResource) Create(ctx context.Context, req resource.CreateReques
 	location := client.MeshLocationCreate{
 		ApiVersion: apiVersion,
 		Metadata: client.MeshLocationCreateMetadata{
-			Name: name,
+			Name:             name,
+			OwnedByWorkspace: ownedByWorkspace,
 		},
 		Spec: client.MeshLocationSpec{
 			DisplayName: displayName,
@@ -205,12 +215,14 @@ func (r *locationResource) Read(ctx context.Context, req resource.ReadRequest, r
 func (r *locationResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var planApiVersion string
 	var planName string
+	var planOwnedByWorkspace string
 	var planDisplayName string
 	var planDescription string
 	var stateName string
 
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("api_version"), &planApiVersion)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("metadata").AtName("name"), &planName)...)
+	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("metadata").AtName("owned_by_workspace"), &planOwnedByWorkspace)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec").AtName("display_name"), &planDisplayName)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec").AtName("description"), &planDescription)...)
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("metadata").AtName("name"), &stateName)...)
@@ -222,7 +234,8 @@ func (r *locationResource) Update(ctx context.Context, req resource.UpdateReques
 	location := client.MeshLocationCreate{
 		ApiVersion: planApiVersion,
 		Metadata: client.MeshLocationCreateMetadata{
-			Name: planName,
+			Name:             planName,
+			OwnedByWorkspace: planOwnedByWorkspace,
 		},
 		Spec: client.MeshLocationSpec{
 			DisplayName: planDisplayName,
