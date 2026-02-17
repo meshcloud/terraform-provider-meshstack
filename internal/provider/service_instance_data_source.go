@@ -4,30 +4,17 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"reflect"
 
 	"github.com/hashicorp/terraform-plugin-framework-jsontypes/jsontypes"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
-
+	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/meshcloud/terraform-provider-meshstack/client"
+	clientTypes "github.com/meshcloud/terraform-provider-meshstack/client/types"
+	"github.com/meshcloud/terraform-provider-meshstack/internal/types/generic"
 )
-
-// serviceInstanceModel wraps client type with Terraform-friendly Parameters field
-type serviceInstanceModel struct {
-	ApiVersion string                             `tfsdk:"api_version"`
-	Kind       string                             `tfsdk:"kind"`
-	Metadata   client.MeshServiceInstanceMetadata `tfsdk:"metadata"`
-	Spec       serviceInstanceSpecModel           `tfsdk:"spec"`
-}
-
-type serviceInstanceSpecModel struct {
-	Creator     string                          `tfsdk:"creator"`
-	DisplayName string                          `tfsdk:"display_name"`
-	PlanId      string                          `tfsdk:"plan_id"`
-	ServiceId   string                          `tfsdk:"service_id"`
-	Parameters  map[string]jsontypes.Normalized `tfsdk:"parameters"`
-}
 
 // Ensure provider defined types fully satisfy framework interfaces.
 var (
@@ -148,32 +135,21 @@ func (d *serviceInstanceDataSource) Read(ctx context.Context, req datasource.Rea
 		return
 	}
 
-	// Convert to model with Terraform-friendly Parameters field
-	model := toServiceInstanceModel(serviceInstance)
-	resp.Diagnostics.Append(resp.State.Set(ctx, model)...)
+	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, serviceInstance, withValueFromConverterForClientTypeAny())...)
 }
 
-// toServiceInstanceModel converts client type to Terraform model with JSON-encoded parameters
-func toServiceInstanceModel(instance *client.MeshServiceInstance) *serviceInstanceModel {
-	var parameters map[string]jsontypes.Normalized
-	if instance.Spec.Parameters != nil {
-		parameters = make(map[string]jsontypes.Normalized, len(instance.Spec.Parameters))
-		for key, value := range instance.Spec.Parameters {
-			jsonBytes, _ := json.Marshal(value)
-			parameters[key] = jsontypes.NewNormalizedValue(string(jsonBytes))
+func withValueFromConverterForClientTypeAny() generic.ConverterOption {
+	clientTypeAny := reflect.TypeFor[clientTypes.Any]()
+	return generic.WithValueFromConverter(func(attributePath path.Path, in reflect.Value, haveNil, haveUnknown bool) (out tftypes.Value, matched bool, err error) {
+		if in.Type() == clientTypeAny {
+			matched = true
+			var marshalled []byte
+			marshalled, err = json.Marshal(in.Interface())
+			if err != nil {
+				return
+			}
+			out, err = generic.ValueFrom(string(marshalled))
 		}
-	}
-
-	return &serviceInstanceModel{
-		ApiVersion: instance.ApiVersion,
-		Kind:       instance.Kind,
-		Metadata:   instance.Metadata,
-		Spec: serviceInstanceSpecModel{
-			Creator:     instance.Spec.Creator,
-			DisplayName: instance.Spec.DisplayName,
-			PlanId:      instance.Spec.PlanId,
-			ServiceId:   instance.Spec.ServiceId,
-			Parameters:  parameters,
-		},
-	}
+		return
+	})
 }
