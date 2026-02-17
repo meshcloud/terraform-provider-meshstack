@@ -20,6 +20,7 @@ import (
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/modifiers/platformtypemodifier"
+	"github.com/meshcloud/terraform-provider-meshstack/internal/validators"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -206,8 +207,8 @@ func (r *platformResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						MarkdownDescription: "Platform-specific configuration settings.",
 						Required:            true,
 						Sensitive:           false,
-						PlanModifiers: []planmodifier.Object{
-							platformtypemodifier.ValidateSinglePlatform(),
+						Validators: []validator.Object{
+							validators.ExactlyOneAttributeValidator{},
 						},
 						Attributes: map[string]schema.Attribute{
 							"aws":        awsPlatformSchema(),
