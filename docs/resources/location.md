@@ -15,7 +15,8 @@ Represents a meshStack location.
 ```terraform
 resource "meshstack_location" "example" {
   metadata = {
-    name = "my-location"
+    name               = "my-location"
+    owned_by_workspace = "my-workspace-identifier"
   }
 
   spec = {
@@ -45,6 +46,7 @@ resource "meshstack_location" "example" {
 Required:
 
 - `name` (String) Location identifier. Must be unique across all locations.
+- `owned_by_workspace` (String) Identifier of the workspace that owns this location.
 
 Read-Only:
 

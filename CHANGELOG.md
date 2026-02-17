@@ -1,3 +1,7 @@
+## Unreleased
+
+- `meshstack_location`: Added required `owned_by_workspace` field to metadata. This field specifies the workspace that owns the location and must be provided when creating or updating locations.
+
 ## v0.18.2
 
 FEATURES:

@@ -1,6 +1,7 @@
 resource "meshstack_location" "example" {
   metadata = {
-    name = "my-location"
+    name               = "my-location"
+    owned_by_workspace = "my-workspace-identifier"
   }
 
   spec = {

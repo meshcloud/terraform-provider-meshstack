@@ -14,7 +14,7 @@ import (
 	"github.com/meshcloud/terraform-provider-meshstack/client/version"
 )
 
-var MinMeshStackVersion = version.MustParse("2026.2.0")
+var MinMeshStackVersion = version.MustParse("2026.7.0")
 
 type Client struct {
 	BuildingBlock                  MeshBuildingBlockClient

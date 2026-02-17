@@ -14,8 +14,9 @@ type MeshLocation struct {
 }
 
 type MeshLocationMetadata struct {
-	Name string `json:"name" tfsdk:"name"`
-	Uuid string `json:"uuid" tfsdk:"uuid"`
+	Name             string `json:"name" tfsdk:"name"`
+	OwnedByWorkspace string `json:"ownedByWorkspace" tfsdk:"owned_by_workspace"`
+	Uuid             string `json:"uuid" tfsdk:"uuid"`
 }
 
 type MeshLocationSpec struct {
@@ -34,7 +35,8 @@ type MeshLocationCreate struct {
 }
 
 type MeshLocationCreateMetadata struct {
-	Name string `json:"name" tfsdk:"name"`
+	Name             string `json:"name" tfsdk:"name"`
+	OwnedByWorkspace string `json:"ownedByWorkspace" tfsdk:"owned_by_workspace"`
 }
 
 type MeshLocationClient interface {

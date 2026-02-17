@@ -78,8 +78,9 @@ func runLocationResourceTestCase(t *testing.T, modifiers ...ResourceTestCaseModi
 
 func checkLocationMetadata(name string) knownvalue.Check {
 	return knownvalue.MapExact(map[string]knownvalue.Check{
-		"name": knownvalue.StringExact(name),
-		"uuid": KnownValueNotEmptyString(),
+		"name":               knownvalue.StringExact(name),
+		"owned_by_workspace": knownvalue.StringExact("my-workspace-identifier"),
+		"uuid":               KnownValueNotEmptyString(),
 	})
 }
 
