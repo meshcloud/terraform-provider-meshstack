@@ -6,6 +6,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/meshcloud/terraform-provider-meshstack/internal/types/generic"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
 )
@@ -101,11 +102,5 @@ func (d *serviceInstancesDataSource) Read(ctx context.Context, req datasource.Re
 		return
 	}
 
-	// Convert to models with Terraform-friendly Parameters fields
-	models := make([]*serviceInstanceModel, len(serviceInstances))
-	for i := range serviceInstances {
-		models[i] = toServiceInstanceModel(&serviceInstances[i])
-	}
-
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("service_instances"), models)...)
+	resp.Diagnostics.Append(generic.SetAttributeTo(ctx, &resp.State, path.Root("service_instances"), serviceInstances, withValueFromConverterForClientTypeAny())...)
 }
