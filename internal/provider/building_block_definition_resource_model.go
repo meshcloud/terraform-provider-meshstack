@@ -80,6 +80,8 @@ var buildingBlockDefinitionConverterOptions = generic.ConverterOptions{
 	// Transform all empty slices/maps as returned from API into null value (optional).
 	// This is somewhat unprecise handling in the backend for optional inputs, but let's take that shortcut.
 	generic.WithSetEmptyContainersToNull(),
+
+	generic.WithUseSetForElementsOf[clientTypes.SetElem](),
 }
 
 type buildingBlockDefinitionVersionSpec struct {
@@ -269,7 +271,33 @@ func buildingBlockDefinitionVersionConverterOptions(ctx context.Context, config,
 	)
 }
 
-func (model *buildingBlockDefinition) SetFromClientDtos(diags *diag.Diagnostics, isDraft generic.NullIsUnknown[bool], bbdUuid string, versionDtos ...client.MeshBuildingBlockDefinitionVersion) {
+func (model *buildingBlockDefinition) SetFromClientDto(dto *client.MeshBuildingBlockDefinition, diags *diag.Diagnostics) {
+	model.Metadata = dto.Metadata
+
+	if len(model.Spec.NotificationSubscribers) > 0 {
+		sortAndUnique := func(s []clientTypes.SetElem) (result []clientTypes.SetElem) {
+			result = slices.Clone(s)
+			slices.Sort(result)
+			result = slices.Compact(result)
+			return
+		}
+		if slices.Compare(sortAndUnique(model.Spec.NotificationSubscribers), sortAndUnique(dto.Spec.NotificationSubscribers)) != 0 {
+			missingSubscribers := slices.DeleteFunc(slices.Clone(model.Spec.NotificationSubscribers), func(subscriber clientTypes.SetElem) bool {
+				return slices.Contains(dto.Spec.NotificationSubscribers, subscriber)
+			})
+			diags.AddWarning("Notification Subscribers modified", fmt.Sprintf(
+				"The backend only accepted the following notification subscribers: %s. The following are missing: %s. Please adapt your configuration for Building Block Definition %s.",
+				dto.Spec.NotificationSubscribers, missingSubscribers, *model.Metadata.Uuid,
+			))
+			// Ignore response from backend to avoid config vs. state drift and ugly Terraform error complaining about this
+			// The next read will show a state drift again.
+			dto.Spec.NotificationSubscribers = model.Spec.NotificationSubscribers
+		}
+	}
+	model.Spec = dto.Spec
+}
+
+func (model *buildingBlockDefinition) SetFromVersionClientDtos(diags *diag.Diagnostics, isDraft generic.NullIsUnknown[bool], bbdUuid string, versionDtos ...client.MeshBuildingBlockDefinitionVersion) {
 	if len(versionDtos) == 0 {
 		diags.AddError("Building Block Definition without versions found",
 			"This should never happen for a properly created building block definition. "+

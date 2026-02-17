@@ -57,13 +57,11 @@ func (r *buildingBlockDefinitionResource) Create(ctx context.Context, req resour
 		resp.Diagnostics.AddError("Error creating MeshBuildingBlockDefinition", err.Error())
 		return
 	}
-	plan.Metadata = createdDto.Metadata
-	plan.Spec = createdDto.Spec
 
 	// Set spec/metadata of BBD immediately after successful creation
+	plan.SetFromClientDto(createdDto, &resp.Diagnostics)
 	resp.Diagnostics.Append(generic.SetAttributeTo(ctx, &resp.State, path.Root("metadata"), plan.Metadata, buildingBlockDefinitionConverterOptions...)...)
 	resp.Diagnostics.Append(generic.SetAttributeTo(ctx, &resp.State, path.Root("spec"), plan.Spec, buildingBlockDefinitionConverterOptions...)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -99,7 +97,7 @@ func (r *buildingBlockDefinitionResource) Create(ctx context.Context, req resour
 		return
 	}
 
-	plan.SetFromClientDtos(&resp.Diagnostics, generic.KnownValue(plan.VersionSpec.Draft), bbdUuid, *createdVersionDto)
+	plan.SetFromVersionClientDtos(&resp.Diagnostics, generic.KnownValue(plan.VersionSpec.Draft), bbdUuid, *createdVersionDto)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -138,7 +136,7 @@ func (r *buildingBlockDefinitionResource) Read(ctx context.Context, req resource
 			definitionDto.Spec.DisplayName, bbdUuid,
 		))
 	}
-	state.SetFromClientDtos(&resp.Diagnostics, isDraft, bbdUuid, versionDtos...)
+	state.SetFromVersionClientDtos(&resp.Diagnostics, isDraft, bbdUuid, versionDtos...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -260,7 +258,7 @@ func (r *buildingBlockDefinitionResource) ModifyPlan(ctx context.Context, req re
 			// Draft changes to false according to plan (from draft=true in state)
 			// If the BBD is part of a non-admin (non-partner) workspace, the BBD does change to RELEASED state immediately, but needs review approval first.
 			// Thus, we need to be defensive here and keep values unknown for know.
-			// SetFromClientDtos detects this an issues a warning if the release in pending.
+			// SetFromVersionClientDtos detects this an issues a warning if the release in pending.
 			plan.VersionSpec.State = generic.NullIsUnknown[client.MeshBuildingBlockDefinitionVersionState]{}
 			plan.VersionLatestRelease = generic.NullIsUnknown[*buildingBlockDefinitionVersionRef]{}
 		}
@@ -293,9 +291,8 @@ func (r *buildingBlockDefinitionResource) Update(ctx context.Context, req resour
 		resp.Diagnostics.AddError("Error updating MeshBuildingBlockDefinition", err.Error())
 		return
 	}
-	plan.Metadata = updatedDto.Metadata
-	plan.Spec = updatedDto.Spec
 
+	plan.SetFromClientDto(updatedDto, &resp.Diagnostics)
 	resp.Diagnostics.Append(generic.SetAttributeTo(ctx, &resp.State, path.Root("metadata"), plan.Metadata, buildingBlockDefinitionConverterOptions...)...)
 	resp.Diagnostics.Append(generic.SetAttributeTo(ctx, &resp.State, path.Root("spec"), plan.Spec, buildingBlockDefinitionConverterOptions...)...)
 	if resp.Diagnostics.HasError() {
@@ -357,7 +354,7 @@ func (r *buildingBlockDefinitionResource) Update(ctx context.Context, req resour
 		return
 	}
 
-	plan.SetFromClientDtos(&resp.Diagnostics, generic.KnownValue(plan.VersionSpec.Draft), bbdUuid, allVersionDtos...)
+	plan.SetFromVersionClientDtos(&resp.Diagnostics, generic.KnownValue(plan.VersionSpec.Draft), bbdUuid, allVersionDtos...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
