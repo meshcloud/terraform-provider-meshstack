@@ -46,7 +46,7 @@ resource "meshstack_building_block_definition" "example_01_terraform" {
       uuid = "66ddc814-1e69-4dad-b5f1-3a5bce51c01f"
     }
 
-    only_apply_once_per_tenant = false    # Optional: defaults to false
+    only_apply_once_per_tenant = true     # Optional: defaults to false
     deletion_mode              = "DELETE" # Optional: defaults to "DELETE"
 
     # Optional: API permissions provided to building block runs via an ephemeral API key
@@ -373,12 +373,12 @@ Optional:
 Required:
 
 - `draft` (Boolean) Whether the current version is a draft. Set to false to release the version.
+- `implementation` (Attributes) Implementation configuration for the building block. Must contain exactly one of `manual`, `terraform`, `github_workflows`, `gitlab_pipeline`, or `azure_devops_pipeline`. (see [below for nested schema](#nestedatt--version_spec--implementation))
 
 Optional:
 
 - `deletion_mode` (String) Deletion behavior. One of `DELETE`, `PURGE`.
 - `dependency_refs` (Attributes List) List of refs to building block definitions this definition depends on. (see [below for nested schema](#nestedatt--version_spec--dependency_refs))
-- `implementation` (Attributes) Implementation configuration for the building block. Must contain exactly one of `manual`, `terraform`, `github_workflows`, `gitlab_pipeline`, or `azure_devops_pipeline`. (see [below for nested schema](#nestedatt--version_spec--implementation))
 - `inputs` (Attributes Map) Map of input definitions for the building block. Keys are input names, values are input configuration objects. Inputs define parameters that building blocks can receive. (see [below for nested schema](#nestedatt--version_spec--inputs))
 - `only_apply_once_per_tenant` (Boolean) Whether this building block can only be applied once per tenant.
 - `outputs` (Attributes Map) Map of output definitions for the building block. Keys are output names, values are output configuration objects. Outputs define values that building blocks produce and can be consumed by other building blocks. (see [below for nested schema](#nestedatt--version_spec--outputs))
@@ -389,15 +389,6 @@ Read-Only:
 
 - `state` (String) State of the current version. One of `DRAFT`, `RELEASED`.
 - `version_number` (Number) The current version number, see also dedicated `version_latest` and `version_latest_release` outputs.
-
-<a id="nestedatt--version_spec--dependency_refs"></a>
-### Nested Schema for `version_spec.dependency_refs`
-
-Optional:
-
-- `kind` (String) meshObject type, always `meshBuildingBlockDefinition`.
-- `uuid` (String) UUID of the meshBuildingBlockDefinition.
-
 
 <a id="nestedatt--version_spec--implementation"></a>
 ### Nested Schema for `version_spec.implementation`
@@ -542,6 +533,15 @@ Read-Only:
 - `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret was changed externally.
 
 
+
+
+<a id="nestedatt--version_spec--dependency_refs"></a>
+### Nested Schema for `version_spec.dependency_refs`
+
+Optional:
+
+- `kind` (String) meshObject type, always `meshBuildingBlockDefinition`.
+- `uuid` (String) UUID of the meshBuildingBlockDefinition.
 
 
 <a id="nestedatt--version_spec--inputs"></a>
