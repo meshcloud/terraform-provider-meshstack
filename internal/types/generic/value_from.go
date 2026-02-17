@@ -21,10 +21,11 @@ func ValueFrom[T any](in T, opts ...ConverterOption) (tftypes.Value, error) {
 		valueFrom(reflect.ValueOf(in), nil, false, false)
 }
 
-// WithSetEmptyContainersToNull sets empty maps and slices to nil when encountered during ValueFrom.
-func WithSetEmptyContainersToNull() ConverterOption {
+// WithValueFromEmptyContainer defines a handler which is called when the value encountered is an empty slice or map.
+// By default, empty containers are converted to empty Terraform values (not null), and the handler can change this to a null value if desired.
+func WithValueFromEmptyContainer(handler ValueFromEmptyContainerHandler) ConverterOption {
 	return func(c *converter) {
-		c.SetEmptyContainersToNull = true
+		c.ValueFromEmptyContainer = handler
 	}
 }
 
@@ -147,8 +148,11 @@ dereference:
 		return newValueFrom(tftypes.Number, in.Int()), nil
 	case reflect.Slice:
 		haveNil = haveNil || in.IsNil()
-		if conv.SetEmptyContainersToNull && in.Len() == 0 {
-			haveNil = true
+		if in.Len() == 0 && conv.ValueFromEmptyContainer != nil {
+			haveNil, err = conv.ValueFromEmptyContainer(conv.walkPathToAttributePath(path))
+			if err != nil {
+				return
+			}
 		}
 		values := make([]tftypes.Value, 0)
 		var elemType tftypes.Type
@@ -177,8 +181,11 @@ dereference:
 		return newValueFrom(tftypes.List{ElementType: elemType}, values), nil
 	case reflect.Map:
 		haveNil = haveNil || in.IsNil()
-		if conv.SetEmptyContainersToNull && in.Len() == 0 {
-			haveNil = true
+		if in.Len() == 0 && conv.ValueFromEmptyContainer != nil {
+			haveNil, err = conv.ValueFromEmptyContainer(conv.walkPathToAttributePath(path))
+			if err != nil {
+				return
+			}
 		}
 		values := map[string]tftypes.Value{}
 		var elemType tftypes.Type

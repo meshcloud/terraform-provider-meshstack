@@ -14,5 +14,6 @@ resource "meshstack_building_block_definition" "other" {
     implementation = {
       manual = {}
     }
+    inputs = {} # just show that null and empty map are the same!
   }
 }

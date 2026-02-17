@@ -32,13 +32,15 @@ func (opts ConverterOptions) newConverter() (conv converter) {
 }
 
 type converter struct {
-	AttributePath            path.Path
-	ValueToConverters        []ValueToConverter
-	ValueFromConverters      []ValueFromConverter
-	SetUnknownValueToZero    bool
-	SetEmptyContainersToNull bool
-	SetElemTypes             []reflect.Type
+	AttributePath           path.Path
+	ValueToConverters       []ValueToConverter
+	ValueFromConverters     []ValueFromConverter
+	ValueFromEmptyContainer ValueFromEmptyContainerHandler
+	SetUnknownValueToZero   bool
+	SetElemTypes            []reflect.Type
 }
+
+type ValueFromEmptyContainerHandler func(attributePath path.Path) (haveNil bool, err error)
 
 func (conv converter) walkPathToAttributePath(walkPath reflectwalk.WalkPath) (result path.Path) {
 	result = conv.AttributePath
