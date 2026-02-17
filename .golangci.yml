@@ -61,6 +61,7 @@ linters:
             - "!$test"
             - "!**/client/**/*.go"
             - "!**/internal/clientmock/*.go"
+            - "!**/internal/util/xknownvalue/*.go"
           list-mode: strict
           deny:
             - pkg: log # as $gostd is allowed
@@ -83,6 +84,7 @@ linters:
           files:
             - "$test"
             - "**/internal/clientmock/**/*.go"
+            - "**/internal/util/xknownvalue/*.go"
             - "!**/internal/types/**/*.go"
             - "!**/client/**/*_test.go"
             - "!**/internal/provider/provider_test.go" # contains common adapters for all tests, using non-testing deps.
