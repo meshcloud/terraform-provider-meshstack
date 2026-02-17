@@ -1,5 +1,9 @@
 ## v0.18.1
 
+FEATURES:
+
+- `meshstack_service_instance` and `meshstack_service_instances`: Added support for `parameters` field in service instance specification.
+
 FIXES:
 
 - `meshstack_platform`: Adds missing `update_subscription_name` field to Azure config.

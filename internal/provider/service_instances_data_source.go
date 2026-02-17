@@ -101,5 +101,11 @@ func (d *serviceInstancesDataSource) Read(ctx context.Context, req datasource.Re
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("service_instances"), &serviceInstances)...)
+	// Convert to models with Terraform-friendly Parameters fields
+	models := make([]*serviceInstanceModel, len(serviceInstances))
+	for i := range serviceInstances {
+		models[i] = toServiceInstanceModel(&serviceInstances[i])
+	}
+
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("service_instances"), models)...)
 }

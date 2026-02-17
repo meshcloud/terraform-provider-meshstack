@@ -13,4 +13,6 @@ type (
 	}
 
 	SecretOrAny = variant.Variant[Secret, any]
+
+	Any any
 )

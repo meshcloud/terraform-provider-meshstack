@@ -2,14 +2,32 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework-jsontypes/jsontypes"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
 )
+
+// serviceInstanceModel wraps client type with Terraform-friendly Parameters field
+type serviceInstanceModel struct {
+	ApiVersion string                             `tfsdk:"api_version"`
+	Kind       string                             `tfsdk:"kind"`
+	Metadata   client.MeshServiceInstanceMetadata `tfsdk:"metadata"`
+	Spec       serviceInstanceSpecModel           `tfsdk:"spec"`
+}
+
+type serviceInstanceSpecModel struct {
+	Creator     string                          `tfsdk:"creator"`
+	DisplayName string                          `tfsdk:"display_name"`
+	PlanId      string                          `tfsdk:"plan_id"`
+	ServiceId   string                          `tfsdk:"service_id"`
+	Parameters  map[string]jsontypes.Normalized `tfsdk:"parameters"`
+}
 
 // Ensure provider defined types fully satisfy framework interfaces.
 var (
@@ -94,6 +112,11 @@ func serviceInstanceSchemaAttributes(computed bool) map[string]schema.Attribute 
 					MarkdownDescription: "Service identifier.",
 					Computed:            true,
 				},
+				"parameters": schema.MapAttribute{
+					ElementType:         jsontypes.NormalizedType{},
+					MarkdownDescription: "Service instance parameters as JSON object. Use `jsondecode()` to work with the map values in Terraform.",
+					Computed:            true,
+				},
 			},
 		},
 	}
@@ -125,6 +148,32 @@ func (d *serviceInstanceDataSource) Read(ctx context.Context, req datasource.Rea
 		return
 	}
 
-	// Client data maps directly to the schema so we just need to set the state
-	resp.Diagnostics.Append(resp.State.Set(ctx, serviceInstance)...)
+	// Convert to model with Terraform-friendly Parameters field
+	model := toServiceInstanceModel(serviceInstance)
+	resp.Diagnostics.Append(resp.State.Set(ctx, model)...)
+}
+
+// toServiceInstanceModel converts client type to Terraform model with JSON-encoded parameters
+func toServiceInstanceModel(instance *client.MeshServiceInstance) *serviceInstanceModel {
+	var parameters map[string]jsontypes.Normalized
+	if instance.Spec.Parameters != nil {
+		parameters = make(map[string]jsontypes.Normalized, len(instance.Spec.Parameters))
+		for key, value := range instance.Spec.Parameters {
+			jsonBytes, _ := json.Marshal(value)
+			parameters[key] = jsontypes.NewNormalizedValue(string(jsonBytes))
+		}
+	}
+
+	return &serviceInstanceModel{
+		ApiVersion: instance.ApiVersion,
+		Kind:       instance.Kind,
+		Metadata:   instance.Metadata,
+		Spec: serviceInstanceSpecModel{
+			Creator:     instance.Spec.Creator,
+			DisplayName: instance.Spec.DisplayName,
+			PlanId:      instance.Spec.PlanId,
+			ServiceId:   instance.Spec.ServiceId,
+			Parameters:  parameters,
+		},
+	}
 }
