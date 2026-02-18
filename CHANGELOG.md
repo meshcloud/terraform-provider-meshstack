@@ -1,8 +1,13 @@
-## Unreleased
+## v0.18.2
 
 FEATURES:
 
 - `meshstack_service_instance` and `meshstack_service_instances`: Added support for `parameters` field in service instance specification.
+
+FIXES:
+
+- `meshstack_building_block_definition`: Handle `notification_subscribers` being filtered by backend
+- `meshstack_building_block_definition`: Ignore empty vs. nil/null map/slices mismatch backend vs. config
 
 ## v0.18.1
 
@@ -10,8 +15,6 @@ FIXES:
 
 - `meshstack_platform`: Adds missing `update_subscription_name` field to Azure config.
 - `meshstack_platform`: `blueprint_location` is required for Azure.
-- `meshstack_building_block_definition`: Handle `notification_subscribers` being filtered by backend
-- `meshstack_building_block_definition`: Ignore empty vs. nil/null map/slices mismatch backend vs. config
 
 ## v0.18.0
 
