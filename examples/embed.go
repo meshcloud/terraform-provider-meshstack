@@ -78,6 +78,19 @@ func (c Config) SingleResourceAddress(out *Identifier) Config {
 	return c
 }
 
+func (c Config) SingleResourceAddressWithType(resourceType string, out *Identifier) Config {
+	re := regexp.MustCompile(fmt.Sprintf(`(?m)^resource "%s" "(?P<name>[^"]+)"`, resourceType))
+	if matches := re.FindAllStringSubmatch(string(c), -1); len(matches) == 1 {
+		*out = Identifier{
+			resourceType,
+			matches[0][re.SubexpIndex("name")],
+		}
+	} else {
+		panic(fmt.Sprintf("not exactly one single resource found, but %d", len(matches)))
+	}
+	return c
+}
+
 func (c Config) Join(others ...Config) (joined Config) {
 	joined = c
 	for _, other := range others {

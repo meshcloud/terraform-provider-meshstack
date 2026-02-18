@@ -2,6 +2,7 @@ package provider
 
 import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -89,8 +90,11 @@ func awsMeteringConfigSchema() schema.Attribute {
 		Attributes: map[string]schema.Attribute{
 			"access_config": awsAccessConfigSchema(),
 			"filter": schema.StringAttribute{
-				MarkdownDescription: "Filter for AWS metering data.",
+				MarkdownDescription: "Filter for AWS metering data. Allowed values: `NONE`, `EXCLUDE_TAX`.",
 				Required:            true,
+				Validators: []validator.String{
+					stringvalidator.OneOf("NONE", "EXCLUDE_TAX"),
+				},
 			},
 			"reserved_instance_fair_chargeback": schema.BoolAttribute{
 				MarkdownDescription: "Flag to enable fair chargeback for reserved instances.",
