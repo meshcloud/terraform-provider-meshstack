@@ -16,7 +16,7 @@ Represents a meshStack location.
 resource "meshstack_location" "example" {
   metadata = {
     name               = "my-location"
-    owned_by_workspace = "my-workspace-identifier"
+    owned_by_workspace = "my-workspace"
   }
 
   spec = {
