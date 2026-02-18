@@ -31,7 +31,7 @@ resource "meshstack_platform" "example_aws" {
               credential = {
                 access_key = "AKIAIOSFODNN7EXAMPLE"
                 secret_key = {
-                  plaintext = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+                  secret_value = "top-secret-ephemeral"
                 }
               }
             }
@@ -52,7 +52,7 @@ resource "meshstack_platform" "example_aws" {
             scim_endpoint      = "https://scim.us-east-1.amazonaws.com/abcd1234-5678-90ab-cdef-example12345/scim/v2/"
             group_name_pattern = "#{workspaceIdentifier}.#{projectIdentifier}-#{platformGroupAlias}"
             sso_access_token = {
-              plaintext = "mock-sso-access-token"
+              secret_value = "top-secret-ephemeral"
             }
             sign_in_url = "https://my-sso-portal.awsapps.com/start"
 
@@ -90,7 +90,7 @@ resource "meshstack_platform" "example_aws" {
               credential = {
                 access_key = "AKIAIOSFODNN7EXAMPLE"
                 secret_key = {
-                  plaintext = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+                  secret_value = "top-secret-ephemeral"
                 }
               }
             }

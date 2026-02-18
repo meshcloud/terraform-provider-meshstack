@@ -44,7 +44,8 @@ func (r *buildingBlockDefinitionResource) Configure(_ context.Context, req resou
 }
 
 func (r *buildingBlockDefinitionResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	converterOptions := buildingBlockDefinitionConverterOptions(ctx, req.Plan, nil).Append(buildingBlockDefinitionVersionConverterOptions(ctx, req.Config, req.Plan, nil)...)
+	converterOptions := buildingBlockDefinitionConverterOptions(ctx, req.Plan, nil).
+		Append(buildingBlockDefinitionVersionConverterOptions(ctx, req.Config, req.Plan, nil)...)
 	plan := generic.Get[buildingBlockDefinition](ctx, req.Plan, &resp.Diagnostics, converterOptions.Append(generic.WithSetUnknownValueToZero())...)
 	if resp.Diagnostics.HasError() {
 		return

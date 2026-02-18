@@ -76,7 +76,7 @@ resource "meshstack_platform" "example_azure" {
             # Uncomment the following to use client secret authentication instead
             # auth = {
             #   credential = {
-            #     plaintext = "your-client-secret-here"
+            #     secret_value = "top-secret-ephemeral"
             #   }
             # }
           }
@@ -214,7 +214,7 @@ resource "meshstack_platform" "example_aws" {
               credential = {
                 access_key = "AKIAIOSFODNN7EXAMPLE"
                 secret_key = {
-                  plaintext = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+                  secret_value = "top-secret-ephemeral"
                 }
               }
             }
@@ -235,7 +235,7 @@ resource "meshstack_platform" "example_aws" {
             scim_endpoint      = "https://scim.us-east-1.amazonaws.com/abcd1234-5678-90ab-cdef-example12345/scim/v2/"
             group_name_pattern = "#{workspaceIdentifier}.#{projectIdentifier}-#{platformGroupAlias}"
             sso_access_token = {
-              plaintext = "mock-sso-access-token"
+              secret_value = "top-secret-ephemeral"
             }
             sign_in_url = "https://my-sso-portal.awsapps.com/start"
 
@@ -273,7 +273,7 @@ resource "meshstack_platform" "example_aws" {
               credential = {
                 access_key = "AKIAIOSFODNN7EXAMPLE"
                 secret_key = {
-                  plaintext = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+                  secret_value = "top-secret-ephemeral"
                 }
               }
             }
@@ -323,7 +323,7 @@ resource "meshstack_platform" "example_gcp" {
         replication = {
           service_account = {
             credential = {
-              plaintext = "base64-encoded-service-account-key-json"
+              secret_value = "top-secret-ephemeral"
             }
           }
 
@@ -371,7 +371,7 @@ resource "meshstack_platform" "example_gcp" {
         metering = {
           service_account = {
             credential = {
-              plaintext = "base64-encoded-service-account-key-json"
+              secret_value = "top-secret-ephemeral"
             }
           }
 
@@ -422,7 +422,7 @@ resource "meshstack_platform" "example_kubernetes" {
         replication = {
           client_config = {
             access_token = {
-              plaintext = "mock-k8s-access-token"
+              secret_value = "top-secret-ephemeral"
             }
           }
 
@@ -432,7 +432,7 @@ resource "meshstack_platform" "example_kubernetes" {
         metering = {
           client_config = {
             access_token = {
-              plaintext = "mock-k8s-metering-token"
+              secret_value = "top-secret-ephemeral"
             }
           }
 
@@ -478,7 +478,7 @@ resource "meshstack_platform" "example_aks" {
 
         replication = {
           access_token = {
-            plaintext = "mock-aks-access-token"
+            secret_value = "top-secret-ephemeral"
           }
 
           service_principal = {
@@ -491,7 +491,7 @@ resource "meshstack_platform" "example_aks" {
             # Credential-based authentication (Alternative)
             # auth = {
             #   credential = {
-            #     plaintext = "your-client-secret-here"
+            #     secret_value = "top-secret-ephemeral"
             #   }
             # }
           }
@@ -508,7 +508,7 @@ resource "meshstack_platform" "example_aks" {
         metering = {
           client_config = {
             access_token = {
-              plaintext = "mock-aks-metering-token"
+              secret_value = "top-secret-ephemeral"
             }
           }
 
@@ -556,7 +556,7 @@ resource "meshstack_platform" "example_azurerg" {
             object_id = "87654321-4321-4321-4321-cba987654321"
             auth = {
               credential = {
-                plaintext = "example-client-secret"
+                secret_value = "top-secret-ephemeral"
               }
             }
           }
@@ -626,7 +626,7 @@ resource "meshstack_platform" "example_openshift" {
         replication = {
           client_config = {
             access_token = {
-              plaintext = "example-openshift-service-account-token"
+              secret_value = "top-secret-ephemeral"
             }
           }
 
@@ -669,7 +669,7 @@ resource "meshstack_platform" "example_openshift" {
         metering = {
           client_config = {
             access_token = {
-              plaintext = "example-openshift-metering-token"
+              secret_value = "top-secret-ephemeral"
             }
           }
 
@@ -828,7 +828,15 @@ Required:
 
 Required:
 
-- `plaintext` (String, Sensitive) Plaintext secret value
+- `secret_value` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) The Access Token of the service account for replicator access.
+
+Optional:
+
+- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_hash`. Can be omitted if resource is imported, in this case the `secret_value` attribute is used as an initial value for this attribute (computed output).
+
+Read-Only:
+
+- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret was changed externally.
 
 
 
@@ -867,7 +875,15 @@ Optional:
 
 Required:
 
-- `plaintext` (String, Sensitive) Plaintext secret value
+- `secret_value` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) The Access Token of the service account for replicator access.
+
+Optional:
+
+- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_hash`. Can be omitted if resource is imported, in this case the `secret_value` attribute is used as an initial value for this attribute (computed output).
+
+Read-Only:
+
+- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret was changed externally.
 
 
 <a id="nestedatt--spec--config--aks--replication--service_principal"></a>
@@ -902,7 +918,15 @@ Read-Only:
 
 Required:
 
-- `plaintext` (String, Sensitive) Plaintext secret value
+- `secret_value` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Client secret (if type is credential)
+
+Optional:
+
+- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_hash`. Can be omitted if resource is imported, in this case the `secret_value` attribute is used as an initial value for this attribute (computed output).
+
+Read-Only:
+
+- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret was changed externally.
 
 
 
@@ -966,7 +990,15 @@ Required:
 
 Required:
 
-- `plaintext` (String, Sensitive) Plaintext secret value
+- `secret_value` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) AWS secret key for service user
+
+Optional:
+
+- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_hash`. Can be omitted if resource is imported, in this case the `secret_value` attribute is used as an initial value for this attribute (computed output).
+
+Read-Only:
+
+- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret was changed externally.
 
 
 
@@ -1050,7 +1082,15 @@ Required:
 
 Required:
 
-- `plaintext` (String, Sensitive) Plaintext secret value
+- `secret_value` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) AWS secret key for service user
+
+Optional:
+
+- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_hash`. Can be omitted if resource is imported, in this case the `secret_value` attribute is used as an initial value for this attribute (computed output).
+
+Read-Only:
+
+- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret was changed externally.
 
 
 
@@ -1084,7 +1124,15 @@ Optional:
 
 Required:
 
-- `plaintext` (String, Sensitive) Plaintext secret value
+- `secret_value` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) The AWS IAM Identity Center SCIM Access Token that was generated via the Automatic provisioning config in AWS IAM Identity Center.
+
+Optional:
+
+- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_hash`. Can be omitted if resource is imported, in this case the `secret_value` attribute is used as an initial value for this attribute (computed output).
+
+Read-Only:
+
+- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret was changed externally.
 
 
 <a id="nestedatt--spec--config--aws--replication--aws_sso--aws_role_mappings"></a>
@@ -1205,7 +1253,15 @@ Read-Only:
 
 Required:
 
-- `plaintext` (String, Sensitive) Plaintext secret value
+- `secret_value` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Client secret (if type is credential)
+
+Optional:
+
+- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_hash`. Can be omitted if resource is imported, in this case the `secret_value` attribute is used as an initial value for this attribute (computed output).
+
+Read-Only:
+
+- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret was changed externally.
 
 
 
@@ -1217,7 +1273,7 @@ Required:
 Required:
 
 - `allow_hierarchical_management_group_assignment` (Boolean) Configuration flag to enable or disable hierarchical management group assignment in Azure. If set to true: Subscriptions can be moved to sub management groups of the management group defined in the Landing Zone. This is useful if you want to manage the subscription location with a deeper and more granular hierarchy. If set to false: Subscriptions will always be moved directly to the management group defined in the Landing Zone.
-- `azure_role_mappings` (Attributes List) Azure role mappings for Azure role definitions. (see [below for nested schema](#nestedatt--spec--config--azure--replication--azure_role_mappings))
+- `azure_role_mappings` (Attributes Set) Azure role mappings for Azure role definitions. (see [below for nested schema](#nestedatt--spec--config--azure--replication--azure_role_mappings))
 - `blueprint_location` (String) The Azure location where replication creates and updates Blueprint Assignments. Note that it's still possible that the Blueprint creates resources in other locations, this is merely the location where the Blueprint Assignment is managed.
 - `blueprint_service_principal` (String) Object ID of the Enterprise Application belonging to the Microsoft Application 'Azure Blueprints'. meshStack will grant the necessary permissions on managed Subscriptions to this SPN so that it can create System Assigned Managed Identities (SAMI) for Blueprint execution.
 - `group_name_pattern` (String) Configures the pattern that defines the desired name of AAD groups managed by meshStack. It follows the usual replicator string pattern features and provides the additional replacement 'platformGroupAlias', which contains the role name suffix, which is configurable via Role Mappings in this platform config or via a meshLandingZone. Operators must ensure the group names are unique in the managed AAD Tenant.
@@ -1295,7 +1351,15 @@ Read-Only:
 
 Required:
 
-- `plaintext` (String, Sensitive) Plaintext secret value
+- `secret_value` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Client secret (if type is credential)
+
+Optional:
+
+- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_hash`. Can be omitted if resource is imported, in this case the `secret_value` attribute is used as an initial value for this attribute (computed output).
+
+Read-Only:
+
+- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret was changed externally.
 
 
 
@@ -1317,7 +1381,7 @@ Optional:
 - `customer_agreement` (Attributes) meshcloud can automatically provision new subscriptions from a Customer Agreement Account owned by your organization. This is suitable for larger organizations that have such a Customer Agreement with Microsoft, and want to provide a large number of subscriptions in a fully automated fashion. (see [below for nested schema](#nestedatt--spec--config--azure--replication--provisioning--customer_agreement))
 - `enterprise_enrollment` (Attributes) meshcloud can automatically provision new subscriptions from an Enterprise Enrollment Account owned by your organization. This is suitable for large organizations that have a Microsoft Enterprise Agreement, Microsoft Customer Agreement or a Microsoft Partner Agreement and want to provide a large number of subscriptions in a fully automated fashion. (see [below for nested schema](#nestedatt--spec--config--azure--replication--provisioning--enterprise_enrollment))
 - `pre_provisioned` (Attributes) If your organization does not have access to an Enterprise Enrollment, you can alternatively configure meshcloud to consume subscriptions from a pool of externally-provisioned subscriptions. This is useful for smaller organizations that wish to use 'Pay-as-you-go' subscriptions or if you're organization partners with an Azure Cloud Solution Provider to provide your subscriptions. The meshcloud Azure replication detects externally-provisioned subscriptions based on a configurable prefix in the subscription name. Upon assignment to a meshProject, the subscription is inflated with the right Landing Zone configuration and removed from the subscription pool. (see [below for nested schema](#nestedatt--spec--config--azure--replication--provisioning--pre_provisioned))
-- `subscription_owner_object_ids` (List of String) One or more principals Object IDs (e.g. user groups, SPNs) that meshStack will ensure have an 'Owner' role assignment on the managed subscriptions. This can be useful to satisfy Azure's constraint of at least one direct 'Owner' role assignment per Subscription. If you want to use a Service Principal please use the Enterprise Application Object ID. You can not use the replicator object ID here, because meshStack always removes its high privilege access after a Subscription creation.
+- `subscription_owner_object_ids` (Set of String) One or more principals Object IDs (e.g. user groups, SPNs) that meshStack will ensure have an 'Owner' role assignment on the managed subscriptions. This can be useful to satisfy Azure's constraint of at least one direct 'Owner' role assignment per Subscription. If you want to use a Service Principal please use the Enterprise Application Object ID. You can not use the replicator object ID here, because meshStack always removes its high privilege access after a Subscription creation.
 
 <a id="nestedatt--spec--config--azure--replication--provisioning--customer_agreement"></a>
 ### Nested Schema for `spec.config.azure.replication.provisioning.customer_agreement`
@@ -1363,7 +1427,15 @@ Read-Only:
 
 Required:
 
-- `plaintext` (String, Sensitive) Plaintext secret value
+- `secret_value` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Client secret (if type is credential)
+
+Optional:
+
+- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_hash`. Can be omitted if resource is imported, in this case the `secret_value` attribute is used as an initial value for this attribute (computed output).
+
+Read-Only:
+
+- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret was changed externally.
 
 
 
@@ -1476,7 +1548,15 @@ Read-Only:
 
 Required:
 
-- `plaintext` (String, Sensitive) Plaintext secret value
+- `secret_value` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Client secret (if type is credential)
+
+Optional:
+
+- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_hash`. Can be omitted if resource is imported, in this case the `secret_value` attribute is used as an initial value for this attribute (computed output).
+
+Read-Only:
+
+- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret was changed externally.
 
 
 
@@ -1604,7 +1684,15 @@ Read-Only:
 
 Required:
 
-- `plaintext` (String, Sensitive) Plaintext secret value
+- `secret_value` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Base64 encoded credentials.json file for a GCP ServiceAccount.
+
+Optional:
+
+- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_hash`. Can be omitted if resource is imported, in this case the `secret_value` attribute is used as an initial value for this attribute (computed output).
+
+Read-Only:
+
+- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret was changed externally.
 
 
 <a id="nestedatt--spec--config--gcp--metering--service_account--workload_identity"></a>
@@ -1678,7 +1766,15 @@ Read-Only:
 
 Required:
 
-- `plaintext` (String, Sensitive) Plaintext secret value
+- `secret_value` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Base64 encoded credentials.json file for a GCP ServiceAccount.
+
+Optional:
+
+- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_hash`. Can be omitted if resource is imported, in this case the `secret_value` attribute is used as an initial value for this attribute (computed output).
+
+Read-Only:
+
+- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret was changed externally.
 
 
 <a id="nestedatt--spec--config--gcp--replication--service_account--workload_identity"></a>
@@ -1725,7 +1821,7 @@ Optional:
 
 - `disable_ssl_validation` (Boolean) Flag to disable SSL validation for the Kubernetes cluster. SSL Validation should at best never be disabled, but for integration of some private cloud platforms in an early state, they might not yet be using valid SSL certificates. In that case it can make sense to disable SSL validation here to already test integration of these platforms.
 - `metering` (Attributes) Metering configuration for Kubernetes (optional, but required for metering) (see [below for nested schema](#nestedatt--spec--config--kubernetes--metering))
-- `replication` (Attributes) Replication configuration for Kubernetes (optional, but required for replication) (see [below for nested schema](#nestedatt--spec--config--kubernetes--replication))
+- `replication` (Attributes) (see [below for nested schema](#nestedatt--spec--config--kubernetes--replication))
 
 <a id="nestedatt--spec--config--kubernetes--metering"></a>
 ### Nested Schema for `spec.config.kubernetes.metering`
@@ -1747,7 +1843,15 @@ Required:
 
 Required:
 
-- `plaintext` (String, Sensitive) Plaintext secret value
+- `secret_value` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) The Access Token of the service account for replicator access.
+
+Optional:
+
+- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_hash`. Can be omitted if resource is imported, in this case the `secret_value` attribute is used as an initial value for this attribute (computed output).
+
+Read-Only:
+
+- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret was changed externally.
 
 
 
@@ -1781,7 +1885,15 @@ Required:
 
 Required:
 
-- `plaintext` (String, Sensitive) Plaintext secret value
+- `secret_value` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) The Access Token of the service account for replicator access.
+
+Optional:
+
+- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_hash`. Can be omitted if resource is imported, in this case the `secret_value` attribute is used as an initial value for this attribute (computed output).
+
+Read-Only:
+
+- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret was changed externally.
 
 
 
@@ -1820,7 +1932,15 @@ Required:
 
 Required:
 
-- `plaintext` (String, Sensitive) Plaintext secret value
+- `secret_value` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) The Access Token of the service account for replicator access.
+
+Optional:
+
+- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_hash`. Can be omitted if resource is imported, in this case the `secret_value` attribute is used as an initial value for this attribute (computed output).
+
+Read-Only:
+
+- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret was changed externally.
 
 
 
@@ -1846,7 +1966,7 @@ Required:
 
 Optional:
 
-- `openshift_role_mappings` (Attributes List) OpenShift role mappings for OpenShift roles. (see [below for nested schema](#nestedatt--spec--config--openshift--replication--openshift_role_mappings))
+- `openshift_role_mappings` (Attributes Set) OpenShift role mappings for OpenShift roles. (see [below for nested schema](#nestedatt--spec--config--openshift--replication--openshift_role_mappings))
 - `tenant_tags` (Attributes) Tenant tags configuration (see [below for nested schema](#nestedatt--spec--config--openshift--replication--tenant_tags))
 - `web_console_url` (String) The Web Console URL that is used to redirect the user to the cloud platform. An example Web Console URL is https://console-openshift-console.apps.okd4.dev.eu-de-central.msh.host
 
@@ -1862,7 +1982,15 @@ Required:
 
 Required:
 
-- `plaintext` (String, Sensitive) Plaintext secret value
+- `secret_value` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) The Access Token of the service account for replicator access.
+
+Optional:
+
+- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_hash`. Can be omitted if resource is imported, in this case the `secret_value` attribute is used as an initial value for this attribute (computed output).
+
+Read-Only:
+
+- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret was changed externally.
 
 
 

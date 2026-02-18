@@ -28,7 +28,7 @@ resource "meshstack_platform" "example_kubernetes" {
         replication = {
           client_config = {
             access_token = {
-              plaintext = "mock-k8s-access-token"
+              secret_value = "top-secret-ephemeral"
             }
           }
 
@@ -38,7 +38,7 @@ resource "meshstack_platform" "example_kubernetes" {
         metering = {
           client_config = {
             access_token = {
-              plaintext = "mock-k8s-metering-token"
+              secret_value = "top-secret-ephemeral"
             }
           }
 

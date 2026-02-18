@@ -25,7 +25,7 @@ resource "meshstack_platform" "example_gcp" {
         replication = {
           service_account = {
             credential = {
-              plaintext = "base64-encoded-service-account-key-json"
+              secret_value = "top-secret-ephemeral"
             }
           }
 
@@ -73,7 +73,7 @@ resource "meshstack_platform" "example_gcp" {
         metering = {
           service_account = {
             credential = {
-              plaintext = "base64-encoded-service-account-key-json"
+              secret_value = "top-secret-ephemeral"
             }
           }
 

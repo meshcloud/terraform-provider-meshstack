@@ -27,7 +27,7 @@ resource "meshstack_platform" "example_openshift" {
         replication = {
           client_config = {
             access_token = {
-              plaintext = "example-openshift-service-account-token"
+              secret_value = "top-secret-ephemeral"
             }
           }
 
@@ -70,7 +70,7 @@ resource "meshstack_platform" "example_openshift" {
         metering = {
           client_config = {
             access_token = {
-              plaintext = "example-openshift-metering-token"
+              secret_value = "top-secret-ephemeral"
             }
           }
 
