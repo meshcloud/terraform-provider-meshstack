@@ -7,8 +7,8 @@ import (
 )
 
 type MeshLandingZone struct {
-	ApiVersion string                  `json:"apiVersion" tfsdk:"api_version"`
-	Kind       string                  `json:"kind" tfsdk:"kind"`
+	ApiVersion string                  `json:"apiVersion" tfsdk:"-"`
+	Kind       string                  `json:"kind" tfsdk:"-"`
 	Metadata   MeshLandingZoneMetadata `json:"metadata" tfsdk:"metadata"`
 	Spec       MeshLandingZoneSpec     `json:"spec" tfsdk:"spec"`
 	Status     MeshLandingZoneStatus   `json:"status" tfsdk:"status"`
@@ -61,7 +61,7 @@ type MeshLandingZoneQuota struct {
 }
 
 type MeshLandingZoneCreate struct {
-	ApiVersion string                  `json:"apiVersion" tfsdk:"api_version"`
+	ApiVersion string                  `json:"apiVersion" tfsdk:"-"`
 	Metadata   MeshLandingZoneMetadata `json:"metadata" tfsdk:"metadata"`
 	Spec       MeshLandingZoneSpec     `json:"spec" tfsdk:"spec"`
 }

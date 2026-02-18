@@ -90,8 +90,6 @@ resource "meshstack_landingzone" "custom_example" {
 
 ### Read-Only
 
-- `api_version` (String) Landing zone datatype version
-- `kind` (String) meshObject type, always `meshLandingZone`.
 - `status` (Attributes) Current Landing Zone status. (see [below for nested schema](#nestedatt--status))
 
 <a id="nestedatt--metadata"></a>

@@ -29,8 +29,6 @@ data "meshstack_platform" "example" {
 
 ### Read-Only
 
-- `api_version` (String) Platform datatype version
-- `kind` (String) meshObject type, always `meshPlatform`.
 - `spec` (Attributes) (see [below for nested schema](#nestedatt--spec))
 
 <a id="nestedatt--metadata"></a>

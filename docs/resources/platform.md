@@ -171,11 +171,6 @@ resource "meshstack_platform" "example" {
 - `metadata` (Attributes) (see [below for nested schema](#nestedatt--metadata))
 - `spec` (Attributes) (see [below for nested schema](#nestedatt--spec))
 
-### Read-Only
-
-- `api_version` (String) Platform datatype version
-- `kind` (String) meshObject type, always `meshPlatform`.
-
 <a id="nestedatt--metadata"></a>
 ### Nested Schema for `metadata`
 

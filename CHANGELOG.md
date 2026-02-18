@@ -1,12 +1,6 @@
-## Unreleased
-
-- `meshstack_location`: Added required `owned_by_workspace` field to metadata. This field specifies the workspace that owns the location and must be provided when creating or updating locations.
-
-## v0.18.2
+## v0.19.0
 
 FEATURES:
-
-- `meshstack_service_instance` and `meshstack_service_instances`: Added support for `parameters` field in service instance specification.
 - The following resources are now generally available (GA) and fully supported for production use: 
 `meshstack_platform`, `meshstack_landingzone`, `meshstack_platform_type`, `meshstack_location`, and `meshstack_integrations`. 
 These resources have been thoroughly tested and validated, and are now considered stable and ready for production deployments.
@@ -15,6 +9,16 @@ These resources have been thoroughly tested and validated, and are now considere
   - `meshstack_platform_type`: Platform type API now uses GA version `v1` (was `v1-preview`).
   - `meshstack_location`: Location API now uses GA version `v1` (was `v1-preview`).
   - `meshstack_integrations`: Integration API now uses GA version `v1` (was `v1-preview`).
+
+BREAKING CHANGES:
+- `meshstack_location`: Added required `owned_by_workspace` field to metadata. This field specifies the workspace that owns the location and must be provided when creating or updating locations.
+- Removed `api_version` and `kind` fields from resource and data source schemas for `meshstack_platform`, `meshstack_platform_type`, and `meshstack_location`. These internal fields are no longer exposed to Terraform users. Existing configurations that reference these attributes must be updated to remove those references.
+
+## v0.18.2
+
+FEATURES:
+
+- `meshstack_service_instance` and `meshstack_service_instances`: Added support for `parameters` field in service instance specification.
 
 FIXES:
 

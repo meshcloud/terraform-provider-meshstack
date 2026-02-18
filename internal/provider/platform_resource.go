@@ -71,19 +71,6 @@ func (r *platformResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 	resp.Schema = schema.Schema{
 		MarkdownDescription: markdownDescription,
 		Attributes: map[string]schema.Attribute{
-			"api_version": schema.StringAttribute{
-				MarkdownDescription: "Platform datatype version",
-				Computed:            true,
-				Default:             stringdefault.StaticString("v2"),
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-			},
-			"kind": schema.StringAttribute{
-				MarkdownDescription: "meshObject type, always `meshPlatform`.",
-				Computed:            true,
-				Default:             stringdefault.StaticString("meshPlatform"),
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-			},
-
 			"metadata": schema.SingleNestedAttribute{
 				Required: true,
 				Attributes: map[string]schema.Attribute{
@@ -277,10 +264,10 @@ func (r *platformResource) Create(ctx context.Context, req resource.CreateReques
 	}
 
 	// Retrieve values from plan
-	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("api_version"), &platform.ApiVersion)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec"), &platform.Spec)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("metadata").AtName("name"), &platform.Metadata.Name)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("metadata").AtName("owned_by_workspace"), &platform.Metadata.OwnedByWorkspace)...)
+	platform.ApiVersion = "v2"
 
 	if resp.Diagnostics.HasError() {
 		return
@@ -354,8 +341,8 @@ func (r *platformResource) Update(ctx context.Context, req resource.UpdateReques
 	}
 
 	// Retrieve values from plan
-	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("api_version"), &platform.ApiVersion)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec"), &platform.Spec)...)
+	platform.ApiVersion = "v2"
 
 	// Handle metadata fields including UUID for updates
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("metadata").AtName("name"), &platform.Metadata.Name)...)

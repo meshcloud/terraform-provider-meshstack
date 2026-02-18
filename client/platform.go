@@ -7,8 +7,8 @@ import (
 )
 
 type MeshPlatform struct {
-	ApiVersion string               `json:"apiVersion" tfsdk:"api_version"`
-	Kind       string               `json:"kind" tfsdk:"kind"`
+	ApiVersion string               `json:"apiVersion" tfsdk:"-"`
+	Kind       string               `json:"kind" tfsdk:"-"`
 	Metadata   MeshPlatformMetadata `json:"metadata" tfsdk:"metadata"`
 	Spec       MeshPlatformSpec     `json:"spec" tfsdk:"spec"`
 }
@@ -66,7 +66,7 @@ type PlatformConfig struct {
 }
 
 type MeshPlatformCreate struct {
-	ApiVersion string                     `json:"apiVersion" tfsdk:"api_version"`
+	ApiVersion string                     `json:"apiVersion" tfsdk:"-"`
 	Metadata   MeshPlatformCreateMetadata `json:"metadata" tfsdk:"metadata"`
 	Spec       MeshPlatformSpec           `json:"spec" tfsdk:"spec"`
 }
@@ -77,7 +77,7 @@ type MeshPlatformCreateMetadata struct {
 }
 
 type MeshPlatformUpdate struct {
-	ApiVersion string                     `json:"apiVersion" tfsdk:"api_version"`
+	ApiVersion string                     `json:"apiVersion" tfsdk:"-"`
 	Metadata   MeshPlatformUpdateMetadata `json:"metadata" tfsdk:"metadata"`
 	Spec       MeshPlatformSpec           `json:"spec" tfsdk:"spec"`
 }

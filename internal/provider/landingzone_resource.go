@@ -58,19 +58,6 @@ func (r *landingZoneResource) Schema(_ context.Context, _ resource.SchemaRequest
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Represents a meshStack landing zone.",
 		Attributes: map[string]schema.Attribute{
-			"api_version": schema.StringAttribute{
-				MarkdownDescription: "Landing zone datatype version",
-				Computed:            true,
-				Default:             stringdefault.StaticString("v1"),
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-			},
-			"kind": schema.StringAttribute{
-				MarkdownDescription: "meshObject type, always `meshLandingZone`.",
-				Computed:            true,
-				Default:             stringdefault.StaticString("meshLandingZone"),
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-			},
-
 			"metadata": schema.SingleNestedAttribute{
 				Required: true,
 				Attributes: map[string]schema.Attribute{
@@ -501,11 +488,11 @@ func customPlatformConfigSchema() schema.Attribute {
 
 func (r *landingZoneResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	landingZone := client.MeshLandingZoneCreate{
-		Metadata: client.MeshLandingZoneMetadata{},
+		ApiVersion: "v1",
+		Metadata:   client.MeshLandingZoneMetadata{},
 	}
 
 	// Retrieve values from plan
-	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("api_version"), &landingZone.ApiVersion)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec"), &landingZone.Spec)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("metadata"), &landingZone.Metadata)...)
 
@@ -556,11 +543,11 @@ func (r *landingZoneResource) Read(ctx context.Context, req resource.ReadRequest
 
 func (r *landingZoneResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	landingZone := client.MeshLandingZoneCreate{
-		Metadata: client.MeshLandingZoneMetadata{},
+		ApiVersion: "v1",
+		Metadata:   client.MeshLandingZoneMetadata{},
 	}
 
 	// Retrieve values from plan
-	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("api_version"), &landingZone.ApiVersion)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec"), &landingZone.Spec)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("metadata"), &landingZone.Metadata)...)
 

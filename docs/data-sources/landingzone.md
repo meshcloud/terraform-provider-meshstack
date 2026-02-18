@@ -29,8 +29,6 @@ data "meshstack_landingzone" "example" {
 
 ### Read-Only
 
-- `api_version` (String) Landing Zone API version.
-- `kind` (String) meshObject type, always `meshLandingZone`.
 - `spec` (Attributes) (see [below for nested schema](#nestedatt--spec))
 - `status` (Attributes) Current Landing Zone status. (see [below for nested schema](#nestedatt--status))
 

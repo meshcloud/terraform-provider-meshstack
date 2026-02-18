@@ -37,8 +37,6 @@ data "meshstack_platform_types" "all" {
 
 Read-Only:
 
-- `api_version` (String) API version of meshPlatformType datatype.
-- `kind` (String) Kind of meshObject. This is always meshPlatformType for this endpoint.
 - `metadata` (Attributes) Platform type metadata (see [below for nested schema](#nestedatt--platform_types--metadata))
 - `spec` (Attributes) Specifications of the platform type (see [below for nested schema](#nestedatt--platform_types--spec))
 - `status` (Attributes) Status of the platform type (see [below for nested schema](#nestedatt--platform_types--status))
