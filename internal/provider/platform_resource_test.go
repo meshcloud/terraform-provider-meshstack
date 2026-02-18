@@ -311,7 +311,9 @@ func checkAwsPlatformConfig() knownvalue.Check {
 					"credential": knownvalue.MapExact(map[string]knownvalue.Check{
 						"access_key": knownvalue.StringExact("AKIAIOSFODNN7EXAMPLE"),
 						"secret_key": knownvalue.MapExact(map[string]knownvalue.Check{
-							"plaintext": KnownValueNotEmptyString(),
+							"secret_value":   knownvalue.Null(),
+							"secret_hash":    KnownValueNotEmptyString(),
+							"secret_version": KnownValueNotEmptyString(),
 						}),
 					}),
 					"workload_identity": knownvalue.Null(),
@@ -333,7 +335,9 @@ func checkAwsPlatformConfig() knownvalue.Check {
 				"scim_endpoint":      knownvalue.StringExact("https://scim.us-east-1.amazonaws.com/abcd1234-5678-90ab-cdef-example12345/scim/v2/"),
 				"group_name_pattern": knownvalue.StringExact("#{workspaceIdentifier}.#{projectIdentifier}-#{platformGroupAlias}"),
 				"sso_access_token": knownvalue.MapExact(map[string]knownvalue.Check{
-					"plaintext": KnownValueNotEmptyString(),
+					"secret_value":   knownvalue.Null(),
+					"secret_hash":    KnownValueNotEmptyString(),
+					"secret_version": KnownValueNotEmptyString(),
 				}),
 				"sign_in_url": knownvalue.StringExact("https://my-sso-portal.awsapps.com/start"),
 				"aws_role_mappings": knownvalue.ListExact([]knownvalue.Check{
@@ -361,7 +365,9 @@ func checkAwsPlatformConfig() knownvalue.Check {
 					"credential": knownvalue.MapExact(map[string]knownvalue.Check{
 						"access_key": knownvalue.StringExact("AKIAIOSFODNN7EXAMPLE"),
 						"secret_key": knownvalue.MapExact(map[string]knownvalue.Check{
-							"plaintext": KnownValueNotEmptyString(),
+							"secret_value":   knownvalue.Null(),
+							"secret_hash":    KnownValueNotEmptyString(),
+							"secret_version": KnownValueNotEmptyString(),
 						}),
 					}),
 					"workload_identity": knownvalue.Null(),
@@ -381,7 +387,9 @@ func checkGcpPlatformConfig() knownvalue.Check {
 			"service_account": knownvalue.MapExact(map[string]knownvalue.Check{
 				"type": knownvalue.StringExact("credential"),
 				"credential": knownvalue.MapExact(map[string]knownvalue.Check{
-					"plaintext": KnownValueNotEmptyString(),
+					"secret_value":   knownvalue.Null(),
+					"secret_hash":    KnownValueNotEmptyString(),
+					"secret_version": KnownValueNotEmptyString(),
 				}),
 				"workload_identity": knownvalue.Null(),
 			}),
@@ -420,7 +428,9 @@ func checkGcpPlatformConfig() knownvalue.Check {
 			"service_account": knownvalue.MapExact(map[string]knownvalue.Check{
 				"type": knownvalue.StringExact("credential"),
 				"credential": knownvalue.MapExact(map[string]knownvalue.Check{
-					"plaintext": KnownValueNotEmptyString(),
+					"secret_value":   knownvalue.Null(),
+					"secret_hash":    KnownValueNotEmptyString(),
+					"secret_version": KnownValueNotEmptyString(),
 				}),
 				"workload_identity": knownvalue.Null(),
 			}),
@@ -441,7 +451,9 @@ func checkKubernetesPlatformConfig() knownvalue.Check {
 		"replication": knownvalue.MapExact(map[string]knownvalue.Check{
 			"client_config": knownvalue.MapExact(map[string]knownvalue.Check{
 				"access_token": knownvalue.MapExact(map[string]knownvalue.Check{
-					"plaintext": KnownValueNotEmptyString(),
+					"secret_value":   knownvalue.Null(),
+					"secret_hash":    KnownValueNotEmptyString(),
+					"secret_version": KnownValueNotEmptyString(),
 				}),
 			}),
 			"namespace_name_pattern": knownvalue.StringExact("#{workspaceIdentifier}-#{projectIdentifier}"),
@@ -449,7 +461,9 @@ func checkKubernetesPlatformConfig() knownvalue.Check {
 		"metering": knownvalue.MapExact(map[string]knownvalue.Check{
 			"client_config": knownvalue.MapExact(map[string]knownvalue.Check{
 				"access_token": knownvalue.MapExact(map[string]knownvalue.Check{
-					"plaintext": KnownValueNotEmptyString(),
+					"secret_value":   knownvalue.Null(),
+					"secret_hash":    KnownValueNotEmptyString(),
+					"secret_version": KnownValueNotEmptyString(),
 				}),
 			}),
 			"processing": checkMeteringProcessingConfig(),
@@ -463,7 +477,9 @@ func checkAksPlatformConfig() knownvalue.Check {
 		"disable_ssl_validation": knownvalue.Bool(false),
 		"replication": xknownvalue.MapExact(map[string]knownvalue.Check{
 			"access_token": knownvalue.MapExact(map[string]knownvalue.Check{
-				"plaintext": KnownValueNotEmptyString(),
+				"secret_value":   knownvalue.Null(),
+				"secret_hash":    KnownValueNotEmptyString(),
+				"secret_version": KnownValueNotEmptyString(),
 			}),
 			"service_principal": knownvalue.MapExact(map[string]knownvalue.Check{
 				"entra_tenant": knownvalue.StringExact("dev-mycompany.onmicrosoft.com"),
@@ -487,7 +503,9 @@ func checkAksPlatformConfig() knownvalue.Check {
 		"metering": knownvalue.MapExact(map[string]knownvalue.Check{
 			"client_config": knownvalue.MapExact(map[string]knownvalue.Check{
 				"access_token": knownvalue.MapExact(map[string]knownvalue.Check{
-					"plaintext": KnownValueNotEmptyString(),
+					"secret_value":   knownvalue.Null(),
+					"secret_hash":    KnownValueNotEmptyString(),
+					"secret_version": KnownValueNotEmptyString(),
 				}),
 			}),
 			"processing": checkMeteringProcessingConfig(),
@@ -505,7 +523,9 @@ func checkAzureRgPlatformConfig() knownvalue.Check {
 				"auth": knownvalue.MapExact(map[string]knownvalue.Check{
 					"type": knownvalue.StringExact("credential"),
 					"credential": knownvalue.MapExact(map[string]knownvalue.Check{
-						"plaintext": KnownValueNotEmptyString(),
+						"secret_value":   knownvalue.Null(),
+						"secret_hash":    KnownValueNotEmptyString(),
+						"secret_version": KnownValueNotEmptyString(),
 					}),
 				}),
 			}),
@@ -535,7 +555,9 @@ func checkOpenshiftPlatformConfig() knownvalue.Check {
 		"replication": knownvalue.MapExact(map[string]knownvalue.Check{
 			"client_config": knownvalue.MapExact(map[string]knownvalue.Check{
 				"access_token": knownvalue.MapExact(map[string]knownvalue.Check{
-					"plaintext": KnownValueNotEmptyString(),
+					"secret_value":   knownvalue.Null(),
+					"secret_hash":    KnownValueNotEmptyString(),
+					"secret_version": KnownValueNotEmptyString(),
 				}),
 			}),
 			"web_console_url":               knownvalue.StringExact("https://console-openshift-console.apps.okd4.dev.eu-de-central.msh.host"),
@@ -566,7 +588,9 @@ func checkOpenshiftPlatformConfig() knownvalue.Check {
 		"metering": knownvalue.MapExact(map[string]knownvalue.Check{
 			"client_config": knownvalue.MapExact(map[string]knownvalue.Check{
 				"access_token": knownvalue.MapExact(map[string]knownvalue.Check{
-					"plaintext": KnownValueNotEmptyString(),
+					"secret_value":   knownvalue.Null(),
+					"secret_hash":    KnownValueNotEmptyString(),
+					"secret_version": KnownValueNotEmptyString(),
 				}),
 			}),
 			"processing": checkMeteringProcessingConfig(),

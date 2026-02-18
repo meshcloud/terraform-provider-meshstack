@@ -29,7 +29,7 @@ resource "meshstack_platform" "example_azurerg" {
             object_id = "87654321-4321-4321-4321-cba987654321"
             auth = {
               credential = {
-                plaintext = "example-client-secret"
+                secret_value = "top-secret-ephemeral"
               }
             }
           }

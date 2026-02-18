@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -19,7 +20,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
+	clientTypes "github.com/meshcloud/terraform-provider-meshstack/client/types"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/modifiers/platformtypemodifier"
+	"github.com/meshcloud/terraform-provider-meshstack/internal/types/generic"
+	"github.com/meshcloud/terraform-provider-meshstack/internal/types/secret"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/validators"
 )
 
@@ -28,6 +32,7 @@ var (
 	_ resource.Resource                = &platformResource{}
 	_ resource.ResourceWithConfigure   = &platformResource{}
 	_ resource.ResourceWithImportState = &platformResource{}
+	_ resource.ResourceWithModifyPlan  = &platformResource{}
 )
 
 // NewPlatformResource is a helper function to simplify the provider implementation.
@@ -244,37 +249,23 @@ func meteringProcessingConfigSchema() schema.Attribute {
 	}
 }
 
-func secretEmbeddedSchema(description string, optional bool) schema.Attribute {
-	return schema.SingleNestedAttribute{
-		MarkdownDescription: description,
-		Required:            !optional,
-		Optional:            optional,
-		Attributes: map[string]schema.Attribute{
-			"plaintext": schema.StringAttribute{
-				MarkdownDescription: "Plaintext secret value",
-				Required:            true,
-				Sensitive:           true,
-			},
-		},
-	}
+func platformConverterOptions(ctx context.Context, config, plan, state generic.AttributeGetter) generic.ConverterOptions {
+	return secret.WithConverterSupport(ctx, config, plan, state).Append(
+		generic.WithUseSetForElementsOf[clientTypes.SetElem](),
+		generic.WithUseSetForElementsOf[client.QuotaDefinition](),
+		generic.WithUseSetForElementsOf[client.AzureRoleMapping](),
+		generic.WithUseSetForElementsOf[client.OpenShiftPlatformRoleMapping](),
+	)
 }
 
 func (r *platformResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	platform := client.MeshPlatformCreate{
-		Metadata: client.MeshPlatformCreateMetadata{},
-	}
-
 	// Retrieve values from plan
-	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec"), &platform.Spec)...)
-	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("metadata").AtName("name"), &platform.Metadata.Name)...)
-	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("metadata").AtName("owned_by_workspace"), &platform.Metadata.OwnedByWorkspace)...)
-	platform.ApiVersion = "v2"
-
+	converterOptions := platformConverterOptions(ctx, req.Config, req.Plan, nil)
+	createDto := generic.Get[client.MeshPlatform](ctx, req.Plan, &resp.Diagnostics, converterOptions.Append(generic.WithSetUnknownValueToZero())...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
-	createdPlatform, err := r.meshPlatformClient.Create(ctx, &platform)
+	createdPlatform, err := r.meshPlatformClient.Create(ctx, createDto)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Creating Platform",
@@ -282,13 +273,7 @@ func (r *platformResource) Create(ctx context.Context, req resource.CreateReques
 		)
 		return
 	}
-
-	handleObfuscatedSecrets(&createdPlatform.Spec.Config, &platform.Spec.Config, resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	resp.Diagnostics.Append(resp.State.Set(ctx, &createdPlatform)...)
+	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, createdPlatform, converterOptions...)...)
 }
 
 func (r *platformResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -304,57 +289,30 @@ func (r *platformResource) Read(ctx context.Context, req resource.ReadRequest, r
 		)
 		return
 	}
-
 	if readPlatform == nil {
 		// The platform was deleted outside of Terraform, so we remove it from the state
 		resp.State.RemoveResource(ctx)
 		return
 	}
+	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, readPlatform, platformConverterOptions(ctx, nil, nil, req.State)...)...)
+}
 
-	statePlatformSpec := client.MeshPlatformSpec{}
-	req.State.GetAttribute(ctx, path.Root("spec"), &statePlatformSpec)
-	if resp.Diagnostics.HasError() {
+func (r *platformResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	if req.Plan.Raw.IsNull() {
+		// do nothing in case of delete
 		return
 	}
-
-	handleObfuscatedSecrets(&readPlatform.Spec.Config, &statePlatformSpec.Config, resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	resp.Diagnostics.Append(resp.State.Set(ctx, readPlatform)...)
+	secret.WalkSecretPathsIn(req.Plan.Raw, &resp.Diagnostics, func(attributePath path.Path, diags *diag.Diagnostics) {
+		secret.SetHashToUnknownIfVersionChanged(ctx, req.Plan, req.State, &resp.Plan)(attributePath, diags)
+	})
 }
 
 func (r *platformResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	platform := client.MeshPlatformUpdate{
-		Metadata: client.MeshPlatformUpdateMetadata{},
-	}
+	converterOptions := platformConverterOptions(ctx, req.Config, req.Plan, req.State)
 
-	var uuid string
-	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("metadata").AtName("uuid"), &uuid)...)
+	platform := generic.Get[client.MeshPlatform](ctx, req.Plan, &resp.Diagnostics, converterOptions...)
 
-	if uuid == "" {
-		resp.Diagnostics.AddError(
-			"Resource ID Missing",
-			"The resource ID is missing. This should not happen.",
-		)
-		return
-	}
-
-	// Retrieve values from plan
-	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec"), &platform.Spec)...)
-	platform.ApiVersion = "v2"
-
-	// Handle metadata fields including UUID for updates
-	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("metadata").AtName("name"), &platform.Metadata.Name)...)
-	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("metadata").AtName("owned_by_workspace"), &platform.Metadata.OwnedByWorkspace)...)
-	platform.Metadata.Uuid = uuid
-
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	updatedPlatform, err := r.meshPlatformClient.Update(ctx, uuid, &platform)
+	updatedPlatform, err := r.meshPlatformClient.Update(ctx, *platform.Metadata.Uuid, platform)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Updating Platform",
@@ -362,13 +320,7 @@ func (r *platformResource) Update(ctx context.Context, req resource.UpdateReques
 		)
 		return
 	}
-
-	handleObfuscatedSecrets(&updatedPlatform.Spec.Config, &platform.Spec.Config, resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	resp.Diagnostics.Append(resp.State.Set(ctx, updatedPlatform)...)
+	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, updatedPlatform, converterOptions...)...)
 }
 
 func (r *platformResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {

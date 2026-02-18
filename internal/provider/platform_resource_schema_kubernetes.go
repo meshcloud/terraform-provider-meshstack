@@ -3,6 +3,8 @@ package provider
 import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+
+	"github.com/meshcloud/terraform-provider-meshstack/internal/types/secret"
 )
 
 // Vanilla Kubernetes
@@ -39,7 +41,9 @@ func kubernetesClientConfigSchema(description string) schema.Attribute {
 		MarkdownDescription: description,
 		Required:            true,
 		Attributes: map[string]schema.Attribute{
-			"access_token": secretEmbeddedSchema("The Access Token of the service account for replicator access.", false),
+			"access_token": secret.ResourceSchema(secret.SchemaOptions{
+				MarkdownDescription: "The Access Token of the service account for replicator access.",
+			}),
 		},
 	}
 }
@@ -103,7 +107,7 @@ func openShiftReplicationConfigSchema() schema.Attribute {
 				MarkdownDescription: "Here you can enable templates not only being rolled out to OpenShift but also instantiated during replication. Templates can be configured in meshLandingZones. Please keep in mind that the replication service account needs all the rights that are required to apply the templates that are configured in meshLandingZones.",
 				Required:            true,
 			},
-			"openshift_role_mappings": schema.ListNestedAttribute{
+			"openshift_role_mappings": schema.SetNestedAttribute{
 				MarkdownDescription: "OpenShift role mappings for OpenShift roles.",
 				Optional:            true,
 				NestedObject: schema.NestedAttributeObject{
@@ -147,7 +151,9 @@ func aksReplicationConfigSchema() schema.Attribute {
 		MarkdownDescription: "Replication configuration for AKS (optional, but required for replication)",
 		Optional:            true,
 		Attributes: map[string]schema.Attribute{
-			"access_token": secretEmbeddedSchema("The Access Token of the service account for replicator access.", false),
+			"access_token": secret.ResourceSchema(secret.SchemaOptions{
+				MarkdownDescription: "The Access Token of the service account for replicator access.",
+			}),
 			"namespace_name_pattern": schema.StringAttribute{
 				MarkdownDescription: "Pattern for naming namespaces in AKS",
 				Required:            true,

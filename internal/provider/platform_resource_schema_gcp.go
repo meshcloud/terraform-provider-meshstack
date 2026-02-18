@@ -6,6 +6,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+
+	"github.com/meshcloud/terraform-provider-meshstack/internal/types/secret"
 )
 
 func gcpPlatformSchema() schema.Attribute {
@@ -93,7 +95,10 @@ func gcpServiceAccountConfigSchema() schema.Attribute {
 				Computed:            true,
 				PlanModifiers:       []planmodifier.String{authTypeDefault()},
 			},
-			"credential": secretEmbeddedSchema("Base64 encoded credentials.json file for a GCP ServiceAccount.", true),
+			"credential": secret.ResourceSchema(secret.SchemaOptions{
+				MarkdownDescription: "Base64 encoded credentials.json file for a GCP ServiceAccount.",
+				Optional:            true,
+			}),
 			"workload_identity": schema.SingleNestedAttribute{
 				MarkdownDescription: "Workload identity configuration.",
 				Optional:            true,

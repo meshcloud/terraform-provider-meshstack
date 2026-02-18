@@ -27,7 +27,7 @@ resource "meshstack_platform" "example_aks" {
 
         replication = {
           access_token = {
-            plaintext = "mock-aks-access-token"
+            secret_value = "top-secret-ephemeral"
           }
 
           service_principal = {
@@ -40,7 +40,7 @@ resource "meshstack_platform" "example_aks" {
             # Credential-based authentication (Alternative)
             # auth = {
             #   credential = {
-            #     plaintext = "your-client-secret-here"
+            #     secret_value = "top-secret-ephemeral"
             #   }
             # }
           }
@@ -57,7 +57,7 @@ resource "meshstack_platform" "example_aks" {
         metering = {
           client_config = {
             access_token = {
-              plaintext = "mock-aks-metering-token"
+              secret_value = "top-secret-ephemeral"
             }
           }
 

@@ -55,7 +55,7 @@ resource "meshstack_platform" "example_azure" {
             # Uncomment the following to use client secret authentication instead
             # auth = {
             #   credential = {
-            #     plaintext = "your-client-secret-here"
+            #     secret_value = "top-secret-ephemeral"
             #   }
             # }
           }

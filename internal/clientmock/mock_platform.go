@@ -20,24 +20,18 @@ func (m MeshPlatformClient) Read(_ context.Context, uuid string) (*client.MeshPl
 	return nil, nil
 }
 
-func (m MeshPlatformClient) Create(_ context.Context, platform *client.MeshPlatformCreate) (*client.MeshPlatform, error) {
+func (m MeshPlatformClient) Create(_ context.Context, platform client.MeshPlatform) (*client.MeshPlatform, error) {
 	platformUuid := acctest.RandString(32)
-	created := &client.MeshPlatform{
-		ApiVersion: platform.ApiVersion,
-		Kind:       "meshPlatform",
-		Metadata: client.MeshPlatformMetadata{
-			Name:             platform.Metadata.Name,
-			OwnedByWorkspace: platform.Metadata.OwnedByWorkspace,
-			Uuid:             platformUuid,
-		},
-		Spec: platform.Spec,
-	}
-	m.Store[platformUuid] = created
-	return created, nil
+	platform.Kind = "meshPlatform"
+	platform.Metadata.Uuid = &platformUuid
+	backendSecretBehavior(true, &platform, nil)
+	m.Store[platformUuid] = &platform
+	return &platform, nil
 }
 
-func (m MeshPlatformClient) Update(_ context.Context, uuid string, platform *client.MeshPlatformUpdate) (*client.MeshPlatform, error) {
+func (m MeshPlatformClient) Update(_ context.Context, uuid string, platform client.MeshPlatform) (*client.MeshPlatform, error) {
 	if existing, ok := m.Store[uuid]; ok {
+		backendSecretBehavior(false, &platform.Spec, &existing.Spec)
 		existing.Spec = platform.Spec
 		return existing, nil
 	}

@@ -6,6 +6,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"github.com/meshcloud/terraform-provider-meshstack/internal/types/secret"
 )
 
 // Plain Azure
@@ -53,7 +55,7 @@ func azureReplicationConfigSchema() schema.Attribute {
 				MarkdownDescription: "To provide Azure Subscription for your organization's meshProjects, meshcloud supports using Enterprise Enrollment or allocating from a pool of pre-provisioned subscriptions. One of the subFields enterpriseEnrollment, customerAgreement or preProvisioned must be provided!",
 				Optional:            true,
 				Attributes: map[string]schema.Attribute{
-					"subscription_owner_object_ids": schema.ListAttribute{
+					"subscription_owner_object_ids": schema.SetAttribute{
 						MarkdownDescription: "One or more principals Object IDs (e.g. user groups, SPNs) that meshStack will ensure have an 'Owner' role assignment on the managed subscriptions. This can be useful to satisfy Azure's constraint of at least one direct 'Owner' role assignment per Subscription. If you want to use a Service Principal please use the Enterprise Application Object ID. You can not use the replicator object ID here, because meshStack always removes its high privilege access after a Subscription creation.",
 						Optional:            true,
 						ElementType:         types.StringType,
@@ -157,7 +159,7 @@ func azureReplicationConfigSchema() schema.Attribute {
 				MarkdownDescription: "The Azure location where replication creates and updates Blueprint Assignments. Note that it's still possible that the Blueprint creates resources in other locations, this is merely the location where the Blueprint Assignment is managed.",
 				Required:            true,
 			},
-			"azure_role_mappings": schema.ListNestedAttribute{
+			"azure_role_mappings": schema.SetNestedAttribute{
 				MarkdownDescription: "Azure role mappings for Azure role definitions.",
 				Required:            true,
 				NestedObject: schema.NestedAttributeObject{
@@ -326,7 +328,10 @@ func azureAuthSchema() schema.Attribute {
 				Computed:            true,
 				PlanModifiers:       []planmodifier.String{authTypeDefault()},
 			},
-			"credential": secretEmbeddedSchema("Client secret (if type is credential)", true),
+			"credential": secret.ResourceSchema(secret.SchemaOptions{
+				MarkdownDescription: "Client secret (if type is credential)",
+				Optional:            true,
+			}),
 		},
 	}
 }
