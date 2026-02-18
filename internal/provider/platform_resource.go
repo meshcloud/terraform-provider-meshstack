@@ -134,6 +134,7 @@ func (r *platformResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 							"kind": schema.StringAttribute{
 								MarkdownDescription: "meshObject type, always `meshLocation`.",
 								Computed:            true,
+								Optional:            true,
 								Default:             stringdefault.StaticString("meshLocation"),
 								PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 							},

@@ -19,21 +19,19 @@ Please note that for the meshPlatform, the following limitations apply:
 ## Example Usage
 
 ```terraform
-resource "meshstack_platform" "example" {
+resource "meshstack_platform" "example_azure" {
   metadata = {
-    name               = "my-azure-platform"
+    name               = "my-platform"
     owned_by_workspace = "my-workspace"
   }
 
   spec = {
-    display_name      = "Azure"
+    display_name      = "Example Platform"
     description       = "Azure is the Public Cloud Service provided by Microsoft."
     endpoint          = "https://azure.microsoft.com"
     documentation_url = "https://azure.microsoft.com"
 
-    location_ref = {
-      name = "meshcloud-azure-dev"
-    }
+    location_ref = { name = "meshcloud-azure-dev" }
 
     availability = {
       restriction              = "PUBLIC"
@@ -41,7 +39,26 @@ resource "meshstack_platform" "example" {
       restricted_to_workspaces = []
     }
 
-    quota_definitions = []
+    quota_definitions = [
+      {
+        quota_key               = "vcpu"
+        label                   = "Virtual CPUs"
+        description             = "Number of virtual CPUs available"
+        unit                    = "cores"
+        min_value               = 0
+        max_value               = 100
+        auto_approval_threshold = 50
+      },
+      {
+        quota_key               = "storage"
+        label                   = "Storage"
+        description             = "Storage capacity in GB"
+        unit                    = "GB"
+        min_value               = 0
+        max_value               = 1000
+        auto_approval_threshold = 500
+      }
+    ]
 
     config = {
       azure = {
@@ -154,6 +171,550 @@ resource "meshstack_platform" "example" {
           user_lookup_strategy                           = "UserByMailLookupStrategy"
           skip_user_group_permission_cleanup             = false
           allow_hierarchical_management_group_assignment = false
+        }
+      }
+    }
+
+    contributing_workspaces = []
+  }
+}
+```
+
+```terraform
+resource "meshstack_platform" "example_aws" {
+  metadata = {
+    name               = "my-platform"
+    owned_by_workspace = "my-workspace"
+  }
+
+  spec = {
+    display_name      = "Example Platform"
+    description       = "Amazon Web Services"
+    endpoint          = "https://console.aws.amazon.com"
+    documentation_url = "https://aws.amazon.com"
+
+    location_ref = { name = "aws-meshstack-dev" }
+
+    availability = {
+      restriction              = "PUBLIC"
+      publication_state        = "PUBLISHED"
+      restricted_to_workspaces = []
+    }
+
+    quota_definitions = []
+
+    config = {
+      aws = {
+        region = "us-east-1"
+
+        replication = {
+          access_config = {
+            organization_root_account_role = "OrganizationAccountAccessRole"
+            auth = {
+              credential = {
+                access_key = "AKIAIOSFODNN7EXAMPLE"
+                secret_key = {
+                  plaintext = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+                }
+              }
+            }
+          }
+
+          account_alias_pattern                             = "#{workspaceIdentifier}-#{projectIdentifier}"
+          account_email_pattern                             = "aws+#{workspaceIdentifier}.#{projectIdentifier}@example.com"
+          automation_account_role                           = "OrganizationAccountAccessRole"
+          account_access_role                               = "OrganizationAccountAccessRole"
+          self_downgrade_access_role                        = false
+          enforce_account_alias                             = false
+          wait_for_external_avm                             = false
+          skip_user_group_permission_cleanup                = false
+          allow_hierarchical_organizational_unit_assignment = false
+
+          aws_sso = {
+            arn                = "arn:aws:sso:::instance/ssoins-1234567890abcdef"
+            scim_endpoint      = "https://scim.us-east-1.amazonaws.com/abcd1234-5678-90ab-cdef-example12345/scim/v2/"
+            group_name_pattern = "#{workspaceIdentifier}.#{projectIdentifier}-#{platformGroupAlias}"
+            sso_access_token = {
+              plaintext = "mock-sso-access-token"
+            }
+            sign_in_url = "https://my-sso-portal.awsapps.com/start"
+
+            aws_role_mappings = [
+              {
+                project_role_ref = {
+                  name = "admin"
+                }
+                aws_role            = "admin"
+                permission_set_arns = ["arn:aws:sso:::permissionSet/ssoins-1234567890abcdef/ps-1234567890abcdef"]
+              }
+            ]
+          }
+
+          tenant_tags = {
+            namespace_prefix = "meshstack_"
+
+            tag_mappers = [
+              {
+                key           = "workspace"
+                value_pattern = "$${workspaceIdentifier}"
+              },
+              {
+                key           = "project"
+                value_pattern = "$${projectIdentifier}"
+              }
+            ]
+          }
+        }
+
+        metering = {
+          access_config = {
+            organization_root_account_role = "OrganizationAccountAccessRole"
+            auth = {
+              credential = {
+                access_key = "AKIAIOSFODNN7EXAMPLE"
+                secret_key = {
+                  plaintext = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+                }
+              }
+            }
+          }
+
+          filter                            = "NONE"
+          reserved_instance_fair_chargeback = false
+          savings_plan_fair_chargeback      = false
+
+          processing = {
+            enabled = true
+          }
+        }
+      }
+    }
+
+    contributing_workspaces = []
+  }
+}
+```
+
+```terraform
+resource "meshstack_platform" "example_gcp" {
+  metadata = {
+    name               = "my-platform"
+    owned_by_workspace = "my-workspace"
+  }
+
+  spec = {
+    display_name      = "Example Platform"
+    description       = "Google Cloud Platform"
+    endpoint          = "https://console.cloud.google.com"
+    documentation_url = "https://cloud.google.com"
+
+    location_ref = { name = "gcp-meshstack-dev" }
+
+    availability = {
+      restriction              = "PUBLIC"
+      publication_state        = "PUBLISHED"
+      restricted_to_workspaces = []
+    }
+
+    quota_definitions = []
+
+    config = {
+      gcp = {
+        replication = {
+          service_account = {
+            credential = {
+              plaintext = "base64-encoded-service-account-key-json"
+            }
+          }
+
+          project_id_pattern                   = "#{workspaceIdentifier}-#{projectIdentifier}"
+          project_name_pattern                 = "#{workspaceIdentifier}.#{projectIdentifier}"
+          group_name_pattern                   = "#{workspaceIdentifier}.#{projectIdentifier}-#{platformGroupAlias}"
+          billing_account_id                   = "012345-6789AB-CDEF01"
+          domain                               = "example.com"
+          customer_id                          = "C01234567"
+          user_lookup_strategy                 = "email"
+          allow_hierarchical_folder_assignment = false
+          skip_user_group_permission_cleanup   = false
+
+          gcp_role_mappings = [
+            {
+              project_role_ref = {
+                name = "admin"
+              }
+              gcp_role = "roles/editor"
+            },
+            {
+              project_role_ref = {
+                name = "reader"
+              }
+              gcp_role = "roles/viewer"
+            }
+          ]
+
+          tenant_tags = {
+            namespace_prefix = "meshstack_"
+
+            tag_mappers = [
+              {
+                key           = "workspace"
+                value_pattern = "$${workspaceIdentifier}"
+              },
+              {
+                key           = "project"
+                value_pattern = "$${projectIdentifier}"
+              }
+            ]
+          }
+        }
+
+        metering = {
+          service_account = {
+            credential = {
+              plaintext = "base64-encoded-service-account-key-json"
+            }
+          }
+
+          dataset_id            = "cloud_costs"
+          bigquery_table        = "gcp_billing_export_v1"
+          partition_time_column = "usage_start_time"
+
+          processing = {
+            enabled = true
+          }
+        }
+      }
+    }
+
+    contributing_workspaces = []
+  }
+}
+```
+
+```terraform
+resource "meshstack_platform" "example_kubernetes" {
+  metadata = {
+    name               = "my-platform"
+    owned_by_workspace = "my-workspace"
+  }
+
+  spec = {
+    display_name      = "Example Platform"
+    description       = "Kubernetes Cluster"
+    endpoint          = "https://k8s.dev.eu-de-central.msh.host:6443"
+    documentation_url = "https://kubernetes.io"
+
+    location_ref = { name = "global" }
+
+    availability = {
+      restriction              = "PUBLIC"
+      publication_state        = "PUBLISHED"
+      restricted_to_workspaces = []
+    }
+
+    quota_definitions = []
+
+    config = {
+      kubernetes = {
+        base_url               = "https://k8s.dev.eu-de-central.msh.host:6443"
+        disable_ssl_validation = false
+
+        replication = {
+          client_config = {
+            access_token = {
+              plaintext = "mock-k8s-access-token"
+            }
+          }
+
+          namespace_name_pattern = "#{workspaceIdentifier}-#{projectIdentifier}"
+        }
+
+        metering = {
+          client_config = {
+            access_token = {
+              plaintext = "mock-k8s-metering-token"
+            }
+          }
+
+          processing = {
+            enabled = true
+          }
+        }
+      }
+    }
+
+    contributing_workspaces = []
+  }
+}
+```
+
+```terraform
+resource "meshstack_platform" "example_aks" {
+  metadata = {
+    name               = "my-platform"
+    owned_by_workspace = "my-workspace"
+  }
+
+  spec = {
+    display_name      = "Example Platform"
+    description       = "Azure Kubernetes Service"
+    endpoint          = "https://myaks-dns.westeurope.azmk8s.io:443"
+    documentation_url = "https://azure.microsoft.com/en-us/services/kubernetes-service"
+
+    location_ref = { name = "eu-de-central" }
+
+    availability = {
+      restriction              = "PUBLIC"
+      publication_state        = "PUBLISHED"
+      restricted_to_workspaces = []
+    }
+
+    quota_definitions = []
+
+    config = {
+      aks = {
+        base_url               = "https://myaks-dns.westeurope.azmk8s.io:443"
+        disable_ssl_validation = false
+
+        replication = {
+          access_token = {
+            plaintext = "mock-aks-access-token"
+          }
+
+          service_principal = {
+            entra_tenant = "dev-mycompany.onmicrosoft.com"
+            client_id    = "58d6f907-7b0e-4fd8-b328-3e8342dddc8d"
+            object_id    = "3c305efe-625d-4eaf-9bfa-b981ddbcc99f"
+            # Workload Identity Federation (Recommended)
+            auth = {}
+
+            # Credential-based authentication (Alternative)
+            # auth = {
+            #   credential = {
+            #     plaintext = "your-client-secret-here"
+            #   }
+            # }
+          }
+
+          namespace_name_pattern     = "#{workspaceIdentifier}-#{projectIdentifier}"
+          group_name_pattern         = "#{workspaceIdentifier}.#{projectIdentifier}-#{platformGroupAlias}"
+          aks_subscription_id        = "12345678-90ab-cdef-1234-567890abcdef"
+          aks_cluster_name           = "my-aks-cluster"
+          aks_resource_group         = "my-aks-rg"
+          send_azure_invitation_mail = false
+          user_lookup_strategy       = "UserByMailLookupStrategy"
+        }
+
+        metering = {
+          client_config = {
+            access_token = {
+              plaintext = "mock-aks-metering-token"
+            }
+          }
+
+          processing = {
+            enabled = true
+          }
+        }
+      }
+    }
+
+    contributing_workspaces = []
+  }
+}
+```
+
+```terraform
+resource "meshstack_platform" "example_azurerg" {
+  metadata = {
+    name               = "my-platform"
+    owned_by_workspace = "my-workspace"
+  }
+
+  spec = {
+    display_name      = "Example Platform"
+    description       = "Azure Resource Group platform for tenant isolation"
+    endpoint          = "https://portal.azure.com"
+    documentation_url = "https://azure.microsoft.com"
+    location_ref      = { name = "meshcloud-azure-dev" }
+
+    availability = {
+      restriction              = "PUBLIC"
+      publication_state        = "PUBLISHED"
+      restricted_to_workspaces = []
+    }
+
+    quota_definitions = []
+
+    config = {
+      azurerg = {
+        entra_tenant = "example-tenant.onmicrosoft.com"
+
+        replication = {
+          service_principal = {
+            client_id = "12345678-1234-1234-1234-123456789abc"
+            object_id = "87654321-4321-4321-4321-cba987654321"
+            auth = {
+              credential = {
+                plaintext = "example-client-secret"
+              }
+            }
+          }
+
+          subscription                                   = "12345678-1234-1234-1234-123456789abc"
+          resource_group_name_pattern                    = "#{workspaceIdentifier}-#{projectIdentifier}"
+          user_group_name_pattern                        = "#{workspaceIdentifier}.#{projectIdentifier}-#{platformGroupAlias}"
+          user_lookup_strategy                           = "UserByMailLookupStrategy"
+          skip_user_group_permission_cleanup             = false
+          allow_hierarchical_management_group_assignment = false
+
+          b2b_user_invitation = {
+            redirect_url               = "https://meshcloud.io"
+            send_azure_invitation_mail = false
+          }
+
+          tenant_tags = {
+            namespace_prefix = "meshstack_"
+
+            tag_mappers = [
+              {
+                key           = "workspace"
+                value_pattern = "$${workspaceIdentifier}"
+              },
+              {
+                key           = "project"
+                value_pattern = "$${projectIdentifier}"
+              }
+            ]
+          }
+        }
+      }
+    }
+
+    contributing_workspaces = []
+  }
+}
+```
+
+```terraform
+resource "meshstack_platform" "example_openshift" {
+  metadata = {
+    name               = "my-platform"
+    owned_by_workspace = "my-workspace"
+  }
+
+  spec = {
+    display_name      = "Example Platform"
+    description       = "OpenShift Container Platform"
+    endpoint          = "https://api.okd4.dev.eu-de-central.msh.host:6443"
+    documentation_url = "https://www.openshift.com"
+    location_ref      = { name = "openshift" }
+
+    availability = {
+      restriction              = "PUBLIC"
+      publication_state        = "PUBLISHED"
+      restricted_to_workspaces = []
+    }
+
+    quota_definitions = []
+
+    config = {
+      openshift = {
+        base_url               = "https://api.okd4.dev.eu-de-central.msh.host:6443"
+        disable_ssl_validation = false
+
+        replication = {
+          client_config = {
+            access_token = {
+              plaintext = "example-openshift-service-account-token"
+            }
+          }
+
+          web_console_url               = "https://console-openshift-console.apps.okd4.dev.eu-de-central.msh.host"
+          project_name_pattern          = "#{workspaceIdentifier}-#{projectIdentifier}"
+          enable_template_instantiation = false
+          identity_provider_name        = "meshStack"
+
+          openshift_role_mappings = [
+            {
+              project_role_ref = {
+                name = "admin"
+              }
+              openshift_role = "admin"
+            },
+            {
+              project_role_ref = {
+                name = "user"
+              }
+              openshift_role = "edit"
+            }
+          ]
+
+          tenant_tags = {
+            namespace_prefix = "meshstack_"
+
+            tag_mappers = [
+              {
+                key           = "workspace"
+                value_pattern = "$${workspaceIdentifier}"
+              },
+              {
+                key           = "project"
+                value_pattern = "$${projectIdentifier}"
+              }
+            ]
+          }
+        }
+
+        metering = {
+          client_config = {
+            access_token = {
+              plaintext = "example-openshift-metering-token"
+            }
+          }
+
+          processing = {
+            enabled = true
+          }
+        }
+      }
+    }
+
+    contributing_workspaces = []
+  }
+}
+```
+
+```terraform
+resource "meshstack_platform" "example_custom" {
+  metadata = {
+    name               = "my-platform"
+    owned_by_workspace = "my-workspace"
+  }
+
+  spec = {
+    display_name      = "Example Platform"
+    description       = "Custom platform using a meshPlatformType"
+    endpoint          = "https://custom-platform.example.com"
+    documentation_url = "https://docs.example.com"
+    location_ref      = { name = "global" }
+
+    availability = {
+      restriction              = "PUBLIC"
+      publication_state        = "PUBLISHED"
+      restricted_to_workspaces = []
+    }
+
+    quota_definitions = []
+
+    config = {
+      custom = {
+        platform_type_ref = { name = "my-custom-platform-type" }
+
+        metering = {
+          processing = {
+            enabled = true
+          }
         }
       }
     }
@@ -363,7 +924,7 @@ Optional:
 Required:
 
 - `access_config` (Attributes) meshStack currently supports 2 types of authentication. Workload Identity Federation (using OIDC) is the one that we recommend as it enables secure access to your AWS account without using long lived credentials. Alternatively, you can use credential based authentication by providing access and secret keys. Either the `service_user_config` or `workload_identity_config` must be provided. (see [below for nested schema](#nestedatt--spec--config--aws--metering--access_config))
-- `filter` (String) Filter for AWS metering data.
+- `filter` (String) Filter for AWS metering data. Allowed values: `NONE`, `EXCLUDE_TAX`.
 - `processing` (Attributes) Processing configuration for metering (see [below for nested schema](#nestedatt--spec--config--aws--metering--processing))
 - `reserved_instance_fair_chargeback` (Boolean) Flag to enable fair chargeback for reserved instances.
 - `savings_plan_fair_chargeback` (Boolean) Flag to enable fair chargeback for savings plans.
@@ -511,12 +1072,12 @@ Required:
 - `arn` (String) The ARN of your AWS IAM Identity Center Instance. E.g. `arn:aws:sso:::instance/ssoins-123456789abc`.
 - `group_name_pattern` (String) Configures the pattern that defines the desired name of AWS IAM Identity Center groups managed by meshStack. It follows the usual replicator string pattern features and provides the additional replacement 'platformGroupAlias', which contains the role name suffix, which is configurable via Role Mappings in this platform config or via a meshLandingZone. Operators must ensure the group names will be unique within the same AWS IAM Identity Center Instance with that configuration. meshStack will additionally prefix the group name with 'mst-' to be able to identify the groups that are managed by meshStack.
 - `scim_endpoint` (String) The SCIM endpoint you can find in your AWS IAM Identity Center Automatic provisioning config.
+- `sign_in_url` (String) The AWS IAM Identity Center sign in Url, that must be used by end-users to log in via AWS IAM Identity Center to AWS Management Console.
 - `sso_access_token` (Attributes) The AWS IAM Identity Center SCIM Access Token that was generated via the Automatic provisioning config in AWS IAM Identity Center. (see [below for nested schema](#nestedatt--spec--config--aws--replication--aws_sso--sso_access_token))
 
 Optional:
 
 - `aws_role_mappings` (Attributes List) AWS role mappings for AWS SSO (see [below for nested schema](#nestedatt--spec--config--aws--replication--aws_sso--aws_role_mappings))
-- `sign_in_url` (String) The AWS IAM Identity Center sign in Url, that must be used by end-users to log in via AWS IAM Identity Center to AWS Management Console.
 
 <a id="nestedatt--spec--config--aws--replication--aws_sso--sso_access_token"></a>
 ### Nested Schema for `spec.config.aws.replication.aws_sso.sso_access_token`
@@ -970,7 +1531,7 @@ Required:
 
 - `name` (String) Name of the platform type.
 
-Read-Only:
+Optional:
 
 - `kind` (String) Kind of the platform type. Always `meshPlatformType`.
 
@@ -1357,7 +1918,7 @@ Required:
 
 - `name` (String) Identifier of the Location.
 
-Read-Only:
+Optional:
 
 - `kind` (String) meshObject type, always `meshLocation`.
 

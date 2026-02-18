@@ -27,11 +27,10 @@ func TestPlatformDataSource(t *testing.T) {
 
 func runPlatformDataSourceTestCase(t *testing.T, modifiers ...ResourceTestCaseModifier) {
 	t.Helper()
-	var resourceAddress, dataSourceAddress, platformName examples.Identifier
+	var resourceAddress, platformName examples.Identifier
 
 	config := examples.DataSource{Name: "platform"}.Config().
 		Join(PlatformResourceConfigForTest(&resourceAddress, &platformName)).
-		SingleResourceAddress(&dataSourceAddress).
 		ReplaceAll(`uuid = "d32951fc-6589-412f-b8bd-50c78fe2cb79"`, resourceAddress.Format(`uuid = %s.metadata.uuid`)).
 		ReplaceAll(
 			`data "meshstack_platform" "example" {`,
