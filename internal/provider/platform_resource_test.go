@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 	"github.com/stretchr/testify/assert"
 
@@ -53,6 +54,7 @@ func runPlatformTestCases(t *testing.T, modifiers ...ResourceTestCaseModifier) {
 				).ReplaceAll(`platform_type_ref = { name = "my-custom-platform-type" }`, platformTypeAddress.Format(`platform_type_ref = %s.ref`))
 			}
 
+			var resourceUuid string
 			testSteps := []resource.TestStep{
 				{
 					Config: config.String(),
@@ -63,7 +65,7 @@ func runPlatformTestCases(t *testing.T, modifiers ...ResourceTestCaseModifier) {
 					},
 					ConfigStateChecks: append(
 						[]statecheck.StateCheck{
-							statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("metadata"), checkPlatformMetadata()),
+							statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("metadata"), checkPlatformMetadata(&resourceUuid)),
 							statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("Example Platform")),
 						},
 						checkPlatformConfigState(resourceAddress.String(), exampleSuffix)...,
@@ -84,6 +86,17 @@ func runPlatformTestCases(t *testing.T, modifiers ...ResourceTestCaseModifier) {
 					},
 				})
 			}
+
+			testSteps = append(testSteps,
+				resource.TestStep{
+					ImportState:     true,
+					ImportStateKind: resource.ImportBlockWithID,
+					ImportStateIdFunc: func(state *terraform.State) (string, error) {
+						return resourceUuid, nil
+					},
+					ResourceName: resourceAddress.String(),
+				},
+			)
 
 			ResourceTestCaseModifiers(modifiers).ApplyAndTest(t, resource.TestCase{Steps: testSteps})
 		})
@@ -111,11 +124,14 @@ func PlatformResourceConfigForTest(resourceAddress, platformName *examples.Ident
 	return config
 }
 
-func checkPlatformMetadata() knownvalue.Check {
+func checkPlatformMetadata(resourceUuidOut *string) knownvalue.Check {
 	return knownvalue.MapExact(map[string]knownvalue.Check{
 		"name":               KnownValueNotEmptyString(),
 		"owned_by_workspace": knownvalue.StringExact("managed-customer"),
-		"uuid":               KnownValueNotEmptyString(),
+		"uuid": KnownValueNotEmptyString(func(actualValue string) error {
+			*resourceUuidOut = actualValue
+			return nil
+		}),
 	})
 }
 
