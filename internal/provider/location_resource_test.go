@@ -33,7 +33,8 @@ func runLocationResourceTestCase(t *testing.T, modifiers ...ResourceTestCaseModi
 	t.Helper()
 	var resourceAddress examples.Identifier
 	config := examples.Resource{Name: "location"}.Config().
-		SingleResourceAddress(&resourceAddress)
+		SingleResourceAddress(&resourceAddress).
+		OwnedByAdminWorkspace()
 
 	const resourceIdentifier = "my-location"
 
@@ -79,7 +80,7 @@ func runLocationResourceTestCase(t *testing.T, modifiers ...ResourceTestCaseModi
 func checkLocationMetadata(name string) knownvalue.Check {
 	return knownvalue.MapExact(map[string]knownvalue.Check{
 		"name":               knownvalue.StringExact(name),
-		"owned_by_workspace": knownvalue.StringExact("my-workspace-identifier"),
+		"owned_by_workspace": knownvalue.StringExact("managed-customer"),
 		"uuid":               KnownValueNotEmptyString(),
 	})
 }
