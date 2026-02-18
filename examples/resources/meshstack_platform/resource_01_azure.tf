@@ -1,18 +1,16 @@
-resource "meshstack_platform" "example" {
+resource "meshstack_platform" "example_azure" {
   metadata = {
-    name               = "my-azure-platform"
+    name               = "my-platform"
     owned_by_workspace = "my-workspace"
   }
 
   spec = {
-    display_name      = "Azure"
+    display_name      = "Example Platform"
     description       = "Azure is the Public Cloud Service provided by Microsoft."
     endpoint          = "https://azure.microsoft.com"
     documentation_url = "https://azure.microsoft.com"
 
-    location_ref = {
-      name = "meshcloud-azure-dev"
-    }
+    location_ref = { name = "meshcloud-azure-dev" }
 
     availability = {
       restriction              = "PUBLIC"
@@ -20,7 +18,26 @@ resource "meshstack_platform" "example" {
       restricted_to_workspaces = []
     }
 
-    quota_definitions = []
+    quota_definitions = [
+      {
+        quota_key               = "vcpu"
+        label                   = "Virtual CPUs"
+        description             = "Number of virtual CPUs available"
+        unit                    = "cores"
+        min_value               = 0
+        max_value               = 100
+        auto_approval_threshold = 50
+      },
+      {
+        quota_key               = "storage"
+        label                   = "Storage"
+        description             = "Storage capacity in GB"
+        unit                    = "GB"
+        min_value               = 0
+        max_value               = 1000
+        auto_approval_threshold = 500
+      }
+    ]
 
     config = {
       azure = {

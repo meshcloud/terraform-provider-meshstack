@@ -23,6 +23,7 @@ func customPlatformSchema() schema.Attribute {
 					"kind": schema.StringAttribute{
 						MarkdownDescription: "Kind of the platform type. Always `meshPlatformType`.",
 						Computed:            true,
+						Optional:            true,
 						Default:             stringdefault.StaticString("meshPlatformType"),
 						PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 					},
