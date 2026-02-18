@@ -45,15 +45,6 @@ func (d *platformDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Represents a meshStack platform.",
 		Attributes: map[string]schema.Attribute{
-			"api_version": schema.StringAttribute{
-				MarkdownDescription: "Platform datatype version",
-				Computed:            true,
-			},
-			"kind": schema.StringAttribute{
-				MarkdownDescription: "meshObject type, always `meshPlatform`.",
-				Computed:            true,
-			},
-
 			"metadata": schema.SingleNestedAttribute{
 				Required: true,
 				Attributes: map[string]schema.Attribute{

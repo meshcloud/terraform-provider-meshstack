@@ -61,14 +61,7 @@ func (d *platformTypesDataSource) Schema(ctx context.Context, req datasource.Sch
 				Computed:            true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"api_version": schema.StringAttribute{
-							MarkdownDescription: "API version of meshPlatformType datatype.",
-							Computed:            true,
-						},
-						"kind": schema.StringAttribute{
-							MarkdownDescription: "Kind of meshObject. This is always meshPlatformType for this endpoint.",
-							Computed:            true,
-						},
+
 						"metadata": platformTypeMetadataSchema(true),
 						"spec":     platformTypeSpecSchema(),
 						"status":   platformTypeStatusSchema(),

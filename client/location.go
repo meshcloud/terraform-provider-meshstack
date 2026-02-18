@@ -7,7 +7,7 @@ import (
 )
 
 type MeshLocation struct {
-	ApiVersion string               `json:"apiVersion" tfsdk:"api_version"`
+	ApiVersion string               `json:"apiVersion" tfsdk:"-"`
 	Metadata   MeshLocationMetadata `json:"metadata" tfsdk:"metadata"`
 	Spec       MeshLocationSpec     `json:"spec" tfsdk:"spec"`
 	Status     MeshLocationStatus   `json:"status" tfsdk:"status"`
@@ -29,7 +29,7 @@ type MeshLocationStatus struct {
 }
 
 type MeshLocationCreate struct {
-	ApiVersion string                     `json:"apiVersion" tfsdk:"api_version"`
+	ApiVersion string                     `json:"apiVersion" tfsdk:"-"`
 	Metadata   MeshLocationCreateMetadata `json:"metadata" tfsdk:"metadata"`
 	Spec       MeshLocationSpec           `json:"spec" tfsdk:"spec"`
 }

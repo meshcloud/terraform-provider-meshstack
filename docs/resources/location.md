@@ -36,7 +36,6 @@ resource "meshstack_location" "example" {
 
 ### Read-Only
 
-- `api_version` (String) Location datatype version
 - `ref` (Attributes) Reference to this location, can be used as input for `location_ref` in platform resources. (see [below for nested schema](#nestedatt--ref))
 - `status` (Attributes) (see [below for nested schema](#nestedatt--status))
 

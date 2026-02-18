@@ -33,14 +33,6 @@ func (d *platformTypeDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 		MarkdownDescription: "Read a single platform type by name.",
 
 		Attributes: map[string]schema.Attribute{
-			"api_version": schema.StringAttribute{
-				MarkdownDescription: "API version of meshPlatformType datatype.",
-				Computed:            true,
-			},
-			"kind": schema.StringAttribute{
-				MarkdownDescription: "Kind of meshObject. This is always meshPlatformType for this endpoint.",
-				Computed:            true,
-			},
 			"metadata": platformTypeMetadataSchema(false),
 			"spec":     platformTypeSpecSchema(),
 			"status":   platformTypeStatusSchema(),

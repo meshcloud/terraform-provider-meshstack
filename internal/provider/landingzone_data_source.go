@@ -36,15 +36,6 @@ func (d *landingZoneDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 		MarkdownDescription: "Read a single landing zone by identifier.",
 
 		Attributes: map[string]schema.Attribute{
-			"api_version": schema.StringAttribute{
-				MarkdownDescription: "Landing Zone API version.",
-				Computed:            true,
-			},
-			"kind": schema.StringAttribute{
-				MarkdownDescription: "meshObject type, always `meshLandingZone`.",
-				Computed:            true,
-			},
-
 			"metadata": schema.SingleNestedAttribute{
 				Required: true,
 				Attributes: map[string]schema.Attribute{
