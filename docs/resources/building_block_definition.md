@@ -478,11 +478,11 @@ Required:
 
 Optional:
 
-- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_hash`. Can be omitted if resource is imported, in this case the `secret_value` attribute is used as an initial value for this attribute (computed output).
+- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_value`. Can be omitted if resource is imported, in this case the `secret_hash` attribute is used as an initial value for this attribute (computed output).
 
 Read-Only:
 
-- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret was changed externally.
+- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret value was updated externally.
 
 
 
@@ -526,11 +526,11 @@ Required:
 
 Optional:
 
-- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_hash`. Can be omitted if resource is imported, in this case the `secret_value` attribute is used as an initial value for this attribute (computed output).
+- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_value`. Can be omitted if resource is imported, in this case the `secret_hash` attribute is used as an initial value for this attribute (computed output).
 
 Read-Only:
 
-- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret was changed externally.
+- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret value was updated externally.
 
 
 
@@ -582,11 +582,11 @@ Required:
 
 Optional:
 
-- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_hash`. Can be omitted if resource is imported, in this case the `secret_value` attribute is used as an initial value for this attribute (computed output).
+- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_value`. Can be omitted if resource is imported, in this case the `secret_hash` attribute is used as an initial value for this attribute (computed output).
 
 Read-Only:
 
-- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret was changed externally.
+- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret value was updated externally.
 
 
 <a id="nestedatt--version_spec--inputs--sensitive--default_value"></a>
@@ -598,11 +598,11 @@ Required:
 
 Optional:
 
-- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_hash`. Can be omitted if resource is imported, in this case the `secret_value` attribute is used as an initial value for this attribute (computed output).
+- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_value`. Can be omitted if resource is imported, in this case the `secret_hash` attribute is used as an initial value for this attribute (computed output).
 
 Read-Only:
 
-- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret was changed externally.
+- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret value was updated externally.
 
 
 

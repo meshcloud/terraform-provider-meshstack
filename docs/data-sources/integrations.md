@@ -113,14 +113,11 @@ Optional:
 <a id="nestedatt--integrations--spec--config--azuredevops"></a>
 ### Nested Schema for `integrations.spec.config.azuredevops`
 
-Required:
-
-- `personal_access_token` (Attributes) (see [below for nested schema](#nestedatt--integrations--spec--config--azuredevops--personal_access_token))
-
 Read-Only:
 
 - `base_url` (String) Base URL of the Azure DevOps instance (e.g., https://dev.azure.com).
 - `organization` (String) Azure DevOps organization name.
+- `personal_access_token` (Attributes) (see [below for nested schema](#nestedatt--integrations--spec--config--azuredevops--personal_access_token))
 - `runner_ref` (Attributes) Reference to the building block runner that executes Azure DevOps pipelines. (see [below for nested schema](#nestedatt--integrations--spec--config--azuredevops--runner_ref))
 
 <a id="nestedatt--integrations--spec--config--azuredevops--personal_access_token"></a>
@@ -144,13 +141,10 @@ Read-Only:
 <a id="nestedatt--integrations--spec--config--github"></a>
 ### Nested Schema for `integrations.spec.config.github`
 
-Required:
-
-- `app_private_key` (Attributes) (see [below for nested schema](#nestedatt--integrations--spec--config--github--app_private_key))
-
 Read-Only:
 
 - `app_id` (String) GitHub App ID for authentication.
+- `app_private_key` (Attributes) (see [below for nested schema](#nestedatt--integrations--spec--config--github--app_private_key))
 - `base_url` (String) Base URL of the GitHub instance (e.g., https://github.com for GitHub.com or your GitHub Enterprise URL).
 - `owner` (String) GitHub organization or user that owns the repositories.
 - `runner_ref` (Attributes) Reference to the building block runner that executes GitHub workflows. (see [below for nested schema](#nestedatt--integrations--spec--config--github--runner_ref))

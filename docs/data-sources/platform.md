@@ -51,13 +51,13 @@ Read-Only:
 
 - `availability` (Attributes) Availability configuration for the meshPlatform. (see [below for nested schema](#nestedatt--spec--availability))
 - `config` (Attributes) Platform-specific configuration options. (see [below for nested schema](#nestedatt--spec--config))
-- `contributing_workspaces` (List of String) A list of workspace identifiers that contribute to this meshPlatform.
+- `contributing_workspaces` (Set of String) A list of workspace identifiers that contribute to this meshPlatform.
 - `description` (String) Description of the meshPlatform.
 - `display_name` (String) The human-readable display name of the meshPlatform.
 - `documentation_url` (String) URL for platform documentation.
 - `endpoint` (String) The web console URL endpoint of the platform.
 - `location_ref` (Attributes) Reference to the location where this platform is situated. (see [below for nested schema](#nestedatt--spec--location_ref))
-- `quota_definitions` (List of Object) List of quota definitions for the platform. (see [below for nested schema](#nestedatt--spec--quota_definitions))
+- `quota_definitions` (Set of Object) List of quota definitions for the platform. (see [below for nested schema](#nestedatt--spec--quota_definitions))
 - `support_url` (String) URL for platform support documentation.
 
 <a id="nestedatt--spec--availability"></a>
@@ -66,7 +66,7 @@ Read-Only:
 Read-Only:
 
 - `publication_state` (String) Publication state of the platform. Must be one of: PUBLISHED, UNPUBLISHED.
-- `restricted_to_workspaces` (List of String) If the restriction is set to `RESTRICTED`, you can specify the workspace identifiers this meshPlatform is restricted to.
+- `restricted_to_workspaces` (Set of String) If the restriction is set to `RESTRICTED`, you can specify the workspace identifiers this meshPlatform is restricted to.
 - `restriction` (String) Access restriction for the platform. Must be one of: PUBLIC, PRIVATE, RESTRICTED.
 
 
@@ -108,14 +108,14 @@ Read-Only:
 
 Read-Only:
 
-- `access_token` (Attributes, Sensitive) The access token of the service account for replicator access. (see [below for nested schema](#nestedatt--spec--config--aks--metering--client_config--access_token))
+- `access_token` (Attributes) The access token of the service account for replicator access. (see [below for nested schema](#nestedatt--spec--config--aks--metering--client_config--access_token))
 
 <a id="nestedatt--spec--config--aks--metering--client_config--access_token"></a>
 ### Nested Schema for `spec.config.aks.metering.client_config.access_token`
 
 Read-Only:
 
-- `plaintext` (String, Sensitive) Plaintext secret value
+- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret was changed externally.
 
 
 
@@ -134,7 +134,7 @@ Read-Only:
 
 Read-Only:
 
-- `access_token` (Attributes, Sensitive) The access token of the service account for replicator access. (see [below for nested schema](#nestedatt--spec--config--aks--replication--access_token))
+- `access_token` (Attributes) The access token of the service account for replicator access. (see [below for nested schema](#nestedatt--spec--config--aks--replication--access_token))
 - `administrative_unit_id` (String) If you enter an administrative unit ID the replicated (and potentially existing) groups will be put into this AU. This can be used to limit the permission scopes which are required for the replicator principal. If you remove the AU ID again or change it, the groups will not be removed from the old AU.
 - `aks_cluster_name` (String) Name of the AKS cluster
 - `aks_resource_group` (String) Resource group for the AKS cluster
@@ -151,7 +151,7 @@ Read-Only:
 
 Read-Only:
 
-- `plaintext` (String, Sensitive) Plaintext secret value
+- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret was changed externally.
 
 
 <a id="nestedatt--spec--config--aks--replication--service_principal"></a>
@@ -169,7 +169,7 @@ Read-Only:
 
 Read-Only:
 
-- `credential` (Attributes, Sensitive) Client secret (if type is credential) (see [below for nested schema](#nestedatt--spec--config--aks--replication--service_principal--auth--credential))
+- `credential` (Attributes) Client secret (if type is credential) (see [below for nested schema](#nestedatt--spec--config--aks--replication--service_principal--auth--credential))
 - `type` (String) Authentication type (credential or workloadIdentity)
 
 <a id="nestedatt--spec--config--aks--replication--service_principal--auth--credential"></a>
@@ -177,7 +177,7 @@ Read-Only:
 
 Read-Only:
 
-- `plaintext` (String, Sensitive) Plaintext secret value
+- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret was changed externally.
 
 
 
@@ -228,14 +228,14 @@ Read-Only:
 Read-Only:
 
 - `access_key` (String) AWS access key
-- `secret_key` (Attributes, Sensitive) AWS secret key (see [below for nested schema](#nestedatt--spec--config--aws--metering--access_config--auth--credential--secret_key))
+- `secret_key` (Attributes) AWS secret key (see [below for nested schema](#nestedatt--spec--config--aws--metering--access_config--auth--credential--secret_key))
 
 <a id="nestedatt--spec--config--aws--metering--access_config--auth--credential--secret_key"></a>
 ### Nested Schema for `spec.config.aws.metering.access_config.auth.credential.secret_key`
 
 Read-Only:
 
-- `plaintext` (String, Sensitive) Plaintext secret value
+- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret was changed externally.
 
 
 
@@ -303,14 +303,14 @@ Read-Only:
 Read-Only:
 
 - `access_key` (String) AWS access key for service user
-- `secret_key` (Attributes, Sensitive) AWS secret key (see [below for nested schema](#nestedatt--spec--config--aws--replication--access_config--auth--credential--secret_key))
+- `secret_key` (Attributes) AWS secret key (see [below for nested schema](#nestedatt--spec--config--aws--replication--access_config--auth--credential--secret_key))
 
 <a id="nestedatt--spec--config--aws--replication--access_config--auth--credential--secret_key"></a>
 ### Nested Schema for `spec.config.aws.replication.access_config.auth.credential.secret_key`
 
 Read-Only:
 
-- `plaintext` (String, Sensitive) Plaintext secret value
+- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret was changed externally.
 
 
 
@@ -334,7 +334,7 @@ Read-Only:
 - `group_name_pattern` (String) Configures the pattern that defines the desired name of AWS IAM Identity Center groups managed by meshStack. It follows the usual replicator string pattern features and provides the additional replacement 'platformGroupAlias', which contains the role name suffix, which is configurable via Role Mappings in this platform config or via a meshLandingZone. Operators must ensure the group names will be unique within the same AWS IAM Identity Center Instance with that configuration. meshStack will additionally prefix the group name with 'mst-' to be able to identify the groups that are managed by meshStack.
 - `scim_endpoint` (String) The SCIM endpoint you can find in your AWS IAM Identity Center Automatic provisioning config.
 - `sign_in_url` (String) The AWS IAM Identity Center sign in Url, that must be used by end-users to log in via AWS IAM Identity Center to AWS Management Console.
-- `sso_access_token` (Attributes, Sensitive) The AWS IAM Identity Center SCIM Access Token that was generated via the Automatic provisioning config in AWS IAM Identity Center. (see [below for nested schema](#nestedatt--spec--config--aws--replication--aws_sso--sso_access_token))
+- `sso_access_token` (Attributes) The AWS IAM Identity Center SCIM Access Token that was generated via the Automatic provisioning config in AWS IAM Identity Center. (see [below for nested schema](#nestedatt--spec--config--aws--replication--aws_sso--sso_access_token))
 
 <a id="nestedatt--spec--config--aws--replication--aws_sso--aws_role_mappings"></a>
 ### Nested Schema for `spec.config.aws.replication.aws_sso.aws_role_mappings`
@@ -363,7 +363,7 @@ Read-Only:
 
 Read-Only:
 
-- `plaintext` (String, Sensitive) Plaintext secret value
+- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret was changed externally.
 
 
 
@@ -436,7 +436,7 @@ Read-Only:
 
 Read-Only:
 
-- `credential` (Attributes, Sensitive) Client secret (if type is credential) (see [below for nested schema](#nestedatt--spec--config--azure--metering--service_principal--auth--credential))
+- `credential` (Attributes) Client secret (if type is credential) (see [below for nested schema](#nestedatt--spec--config--azure--metering--service_principal--auth--credential))
 - `type` (String) Authentication type (credential or workloadIdentity)
 
 <a id="nestedatt--spec--config--azure--metering--service_principal--auth--credential"></a>
@@ -444,7 +444,7 @@ Read-Only:
 
 Read-Only:
 
-- `plaintext` (String, Sensitive) Plaintext secret value
+- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret was changed externally.
 
 
 
@@ -457,7 +457,7 @@ Read-Only:
 
 - `administrative_unit_id` (String) If you enter an administrative unit ID the replicated (and potentially existing) groups will be put into this AU. This can be used to limit the permission scopes which are required for the replicator principal. If you remove the AU ID again or change it, the groups will not be removed from the old AU.
 - `allow_hierarchical_management_group_assignment` (Boolean) Configuration flag to enable or disable hierarchical management group assignment in Azure. If set to true: Subscriptions can be moved to sub management groups of the management group defined in the Landing Zone. This is useful if you want to manage the subscription location with a deeper and more granular hierarchy. If set to false: Subscriptions will always be moved directly to the management group defined in the Landing Zone.
-- `azure_role_mappings` (Attributes List) Azure role mappings for Azure role definitions. (see [below for nested schema](#nestedatt--spec--config--azure--replication--azure_role_mappings))
+- `azure_role_mappings` (Attributes Set) Azure role mappings for Azure role definitions. (see [below for nested schema](#nestedatt--spec--config--azure--replication--azure_role_mappings))
 - `b2b_user_invitation` (Attributes) Optional B2B user invitation configuration. When configured, instructs the replicator to create AAD B2B guest invitations for users missing in the AAD tenant managed by this meshPlatform. (see [below for nested schema](#nestedatt--spec--config--azure--replication--b2b_user_invitation))
 - `blueprint_location` (String) The Azure location where replication creates and updates Blueprint Assignments. Note that it's still possible that the Blueprint creates resources in other locations, this is merely the location where the Blueprint Assignment is managed.
 - `blueprint_service_principal` (String) Object ID of the Enterprise Application belonging to the Microsoft Application 'Azure Blueprints'. meshStack will grant the necessary permissions on managed Subscriptions to this SPN so that it can create System Assigned Managed Identities (SAMI) for Blueprint execution.
@@ -517,7 +517,7 @@ Read-Only:
 - `customer_agreement` (Attributes) meshcloud can automatically provision new subscriptions from a Customer Agreement Account owned by your organization. This is suitable for larger organizations that have such a Customer Agreement with Microsoft, and want to provide a large number of subscriptions in a fully automated fashion. (see [below for nested schema](#nestedatt--spec--config--azure--replication--provisioning--customer_agreement))
 - `enterprise_enrollment` (Attributes) meshcloud can automatically provision new subscriptions from an Enterprise Enrollment Account owned by your organization. This is suitable for large organizations that have a Microsoft Enterprise Agreement, Microsoft Customer Agreement or a Microsoft Partner Agreement and want to provide a large number of subscriptions in a fully automated fashion. (see [below for nested schema](#nestedatt--spec--config--azure--replication--provisioning--enterprise_enrollment))
 - `pre_provisioned` (Attributes) If your organization does not have access to an Enterprise Enrollment, you can alternatively configure meshcloud to consume subscriptions from a pool of externally-provisioned subscriptions. This is useful for smaller organizations that wish to use 'Pay-as-you-go' subscriptions or if you're organization partners with an Azure Cloud Solution Provider to provide your subscriptions. The meshcloud Azure replication detects externally-provisioned subscriptions based on a configurable prefix in the subscription name. Upon assignment to a meshProject, the subscription is inflated with the right Landing Zone configuration and removed from the subscription pool. (see [below for nested schema](#nestedatt--spec--config--azure--replication--provisioning--pre_provisioned))
-- `subscription_owner_object_ids` (List of String) One or more principals Object IDs (e.g. user groups, SPNs) that meshStack will ensure have an 'Owner' role assignment on the managed subscriptions. This can be useful to satisfy Azure's constraint of at least one direct 'Owner' role assignment per Subscription. If you want to use a Service Principal please use the Enterprise Application Object ID. You can not use the replicator object ID here, because meshStack always removes its high privilege access after a Subscription creation.
+- `subscription_owner_object_ids` (Set of String) One or more principals Object IDs (e.g. user groups, SPNs) that meshStack will ensure have an 'Owner' role assignment on the managed subscriptions. This can be useful to satisfy Azure's constraint of at least one direct 'Owner' role assignment per Subscription. If you want to use a Service Principal please use the Enterprise Application Object ID. You can not use the replicator object ID here, because meshStack always removes its high privilege access after a Subscription creation.
 
 <a id="nestedatt--spec--config--azure--replication--provisioning--customer_agreement"></a>
 ### Nested Schema for `spec.config.azure.replication.provisioning.customer_agreement`
@@ -543,7 +543,7 @@ Read-Only:
 
 Read-Only:
 
-- `credential` (Attributes, Sensitive) Client secret (if type is credential) (see [below for nested schema](#nestedatt--spec--config--azure--replication--provisioning--customer_agreement--source_service_principal--auth--credential))
+- `credential` (Attributes) Client secret (if type is credential) (see [below for nested schema](#nestedatt--spec--config--azure--replication--provisioning--customer_agreement--source_service_principal--auth--credential))
 - `type` (String) Authentication type (credential or workloadIdentity)
 
 <a id="nestedatt--spec--config--azure--replication--provisioning--customer_agreement--source_service_principal--auth--credential"></a>
@@ -551,7 +551,7 @@ Read-Only:
 
 Read-Only:
 
-- `plaintext` (String, Sensitive) Plaintext secret value
+- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret was changed externally.
 
 
 
@@ -591,7 +591,7 @@ Read-Only:
 
 Read-Only:
 
-- `credential` (Attributes, Sensitive) Client secret (if type is credential) (see [below for nested schema](#nestedatt--spec--config--azure--replication--service_principal--auth--credential))
+- `credential` (Attributes) Client secret (if type is credential) (see [below for nested schema](#nestedatt--spec--config--azure--replication--service_principal--auth--credential))
 - `type` (String) Authentication type (credential or workloadIdentity)
 
 <a id="nestedatt--spec--config--azure--replication--service_principal--auth--credential"></a>
@@ -599,7 +599,7 @@ Read-Only:
 
 Read-Only:
 
-- `plaintext` (String, Sensitive) Plaintext secret value
+- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret was changed externally.
 
 
 
@@ -671,7 +671,7 @@ Read-Only:
 
 Read-Only:
 
-- `credential` (Attributes, Sensitive) Client secret (if type is credential) (see [below for nested schema](#nestedatt--spec--config--azurerg--replication--service_principal--auth--credential))
+- `credential` (Attributes) Client secret (if type is credential) (see [below for nested schema](#nestedatt--spec--config--azurerg--replication--service_principal--auth--credential))
 - `type` (String) Authentication type (credential or workloadIdentity)
 
 <a id="nestedatt--spec--config--azurerg--replication--service_principal--auth--credential"></a>
@@ -679,7 +679,7 @@ Read-Only:
 
 Read-Only:
 
-- `plaintext` (String, Sensitive) Plaintext secret value
+- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret was changed externally.
 
 
 
@@ -774,7 +774,7 @@ Read-Only:
 
 Read-Only:
 
-- `credential` (Attributes, Sensitive) Base64 encoded service account credentials (if type supports it) (see [below for nested schema](#nestedatt--spec--config--gcp--metering--service_account--credential))
+- `credential` (Attributes) Base64 encoded service account credentials (if type supports it) (see [below for nested schema](#nestedatt--spec--config--gcp--metering--service_account--credential))
 - `type` (String) Service account type
 - `workload_identity` (Attributes) Workload identity configuration (if type supports it) (see [below for nested schema](#nestedatt--spec--config--gcp--metering--service_account--workload_identity))
 
@@ -783,7 +783,7 @@ Read-Only:
 
 Read-Only:
 
-- `plaintext` (String, Sensitive) Plaintext secret value
+- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret was changed externally.
 
 
 <a id="nestedatt--spec--config--gcp--metering--service_account--workload_identity"></a>
@@ -842,7 +842,7 @@ Read-Only:
 
 Read-Only:
 
-- `credential` (Attributes, Sensitive) Base64 encoded credentials.json file for a GCP ServiceAccount (if type supports it). The replicator uses this Service Account to automate GCP API operations (IAM, ResourceManager etc.). (see [below for nested schema](#nestedatt--spec--config--gcp--replication--service_account--credential))
+- `credential` (Attributes) Base64 encoded credentials.json file for a GCP ServiceAccount (if type supports it). The replicator uses this Service Account to automate GCP API operations (IAM, ResourceManager etc.). (see [below for nested schema](#nestedatt--spec--config--gcp--replication--service_account--credential))
 - `type` (String) Service account type
 - `workload_identity` (Attributes) Workload identity configuration (if type supports it) (see [below for nested schema](#nestedatt--spec--config--gcp--replication--service_account--workload_identity))
 
@@ -851,7 +851,7 @@ Read-Only:
 
 Read-Only:
 
-- `plaintext` (String, Sensitive) Plaintext secret value
+- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret was changed externally.
 
 
 <a id="nestedatt--spec--config--gcp--replication--service_account--workload_identity"></a>
@@ -907,14 +907,14 @@ Read-Only:
 
 Read-Only:
 
-- `access_token` (Attributes, Sensitive) The access token of the service account for replicator access. (see [below for nested schema](#nestedatt--spec--config--kubernetes--metering--client_config--access_token))
+- `access_token` (Attributes) The access token of the service account for replicator access. (see [below for nested schema](#nestedatt--spec--config--kubernetes--metering--client_config--access_token))
 
 <a id="nestedatt--spec--config--kubernetes--metering--client_config--access_token"></a>
 ### Nested Schema for `spec.config.kubernetes.metering.client_config.access_token`
 
 Read-Only:
 
-- `plaintext` (String, Sensitive) Plaintext secret value
+- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret was changed externally.
 
 
 
@@ -941,14 +941,14 @@ Read-Only:
 
 Read-Only:
 
-- `access_token` (Attributes, Sensitive) The access token of the service account for replicator access. (see [below for nested schema](#nestedatt--spec--config--kubernetes--replication--client_config--access_token))
+- `access_token` (Attributes) The access token of the service account for replicator access. (see [below for nested schema](#nestedatt--spec--config--kubernetes--replication--client_config--access_token))
 
 <a id="nestedatt--spec--config--kubernetes--replication--client_config--access_token"></a>
 ### Nested Schema for `spec.config.kubernetes.replication.client_config.access_token`
 
 Read-Only:
 
-- `plaintext` (String, Sensitive) Plaintext secret value
+- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret was changed externally.
 
 
 
@@ -977,14 +977,14 @@ Read-Only:
 
 Read-Only:
 
-- `access_token` (Attributes, Sensitive) The access token of the service account for replicator access. (see [below for nested schema](#nestedatt--spec--config--openshift--metering--client_config--access_token))
+- `access_token` (Attributes) The access token of the service account for replicator access. (see [below for nested schema](#nestedatt--spec--config--openshift--metering--client_config--access_token))
 
 <a id="nestedatt--spec--config--openshift--metering--client_config--access_token"></a>
 ### Nested Schema for `spec.config.openshift.metering.client_config.access_token`
 
 Read-Only:
 
-- `plaintext` (String, Sensitive) Plaintext secret value
+- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret was changed externally.
 
 
 
@@ -1006,7 +1006,7 @@ Read-Only:
 - `client_config` (Attributes) Client configuration for OpenShift (see [below for nested schema](#nestedatt--spec--config--openshift--replication--client_config))
 - `enable_template_instantiation` (Boolean) Here you can enable templates not only being rolled out to OpenShift but also instantiated during replication. Templates can be configured in meshLandingZones. Please keep in mind that the replication service account needs all the rights that are required to apply the templates that are configured in meshLandingZones.
 - `identity_provider_name` (String) Identity provider name
-- `openshift_role_mappings` (Attributes List) OpenShift role mappings for OpenShift roles. (see [below for nested schema](#nestedatt--spec--config--openshift--replication--openshift_role_mappings))
+- `openshift_role_mappings` (Attributes Set) OpenShift role mappings for OpenShift roles. (see [below for nested schema](#nestedatt--spec--config--openshift--replication--openshift_role_mappings))
 - `project_name_pattern` (String) All the commonly available replicator string template properties are available. OpenShift Project Names must be no longer than 63 characters, must start and end with a lowercase letter or number, and may contain lowercase letters, numbers, and hyphens.
 - `tenant_tags` (Attributes) Tenant tagging configuration. (see [below for nested schema](#nestedatt--spec--config--openshift--replication--tenant_tags))
 - `web_console_url` (String) The Web Console URL that is used to redirect the user to the cloud platform. An example Web Console URL is https://console-openshift-console.apps.okd4.dev.eu-de-central.msh.host
@@ -1016,14 +1016,14 @@ Read-Only:
 
 Read-Only:
 
-- `access_token` (Attributes, Sensitive) The access token of the service account for replicator access. (see [below for nested schema](#nestedatt--spec--config--openshift--replication--client_config--access_token))
+- `access_token` (Attributes) The access token of the service account for replicator access. (see [below for nested schema](#nestedatt--spec--config--openshift--replication--client_config--access_token))
 
 <a id="nestedatt--spec--config--openshift--replication--client_config--access_token"></a>
 ### Nested Schema for `spec.config.openshift.replication.client_config.access_token`
 
 Read-Only:
 
-- `plaintext` (String, Sensitive) Plaintext secret value
+- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret was changed externally.
 
 
 
