@@ -255,6 +255,7 @@ func platformConverterOptions(ctx context.Context, config, plan, state generic.A
 		generic.WithUseSetForElementsOf[client.QuotaDefinition](),
 		generic.WithUseSetForElementsOf[client.AzureRoleMapping](),
 		generic.WithUseSetForElementsOf[client.OpenShiftPlatformRoleMapping](),
+		generic.WithUseSetForElementsOf[client.TagMapper](),
 	)
 }
 

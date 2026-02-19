@@ -4,6 +4,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/defaults"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
@@ -11,6 +12,22 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
+
+// nestedObjectToObjectType converts a schema.NestedAttributeObject into a types.ObjectType
+// by extracting the attr.Type from each attribute.
+func nestedObjectToObjectType(nested schema.NestedAttributeObject) types.ObjectType {
+	attrTypes := make(map[string]attr.Type, len(nested.Attributes))
+	for name, attribute := range nested.Attributes {
+		attrTypes[name] = attribute.GetType()
+	}
+	return types.ObjectType{AttrTypes: attrTypes}
+}
+
+// emptySetDefault returns an empty set whose element type is derived from the given
+// schema.NestedAttributeObject as a default value.
+func emptySetDefault(nested schema.NestedAttributeObject) defaults.Set {
+	return setdefault.StaticValue(types.SetValueMust(nestedObjectToObjectType(nested), []attr.Value{}))
+}
 
 // meshProjectRoleAttribute returns a schema attribute for meshProject role references.
 // This is used across multiple resources (landingzone, platform) to maintain consistency.
@@ -89,6 +106,19 @@ func meshUuidRefOutputAttribute(kind string) map[string]schema.Attribute {
 }
 
 func tenantTagsAttribute() schema.SingleNestedAttribute {
+	tagMappersNested := schema.NestedAttributeObject{
+		Attributes: map[string]schema.Attribute{
+			"key": schema.StringAttribute{
+				MarkdownDescription: "Key for the tag mapper",
+				Required:            true,
+			},
+			"value_pattern": schema.StringAttribute{
+				MarkdownDescription: "Value pattern for the tag mapper",
+				Required:            true,
+			},
+		},
+	}
+
 	return schema.SingleNestedAttribute{
 		MarkdownDescription: "Tenant tags configuration",
 		Optional:            true,
@@ -101,24 +131,8 @@ func tenantTagsAttribute() schema.SingleNestedAttribute {
 				MarkdownDescription: "Set of tag mappers for tenant tags",
 				Optional:            true,
 				Computed:            true,
-				Default: setdefault.StaticValue(types.SetValueMust(types.ObjectType{
-					AttrTypes: map[string]attr.Type{
-						"key":           types.StringType,
-						"value_pattern": types.StringType,
-					},
-				}, []attr.Value{})),
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"key": schema.StringAttribute{
-							MarkdownDescription: "Key for the tag mapper",
-							Required:            true,
-						},
-						"value_pattern": schema.StringAttribute{
-							MarkdownDescription: "Value pattern for the tag mapper",
-							Required:            true,
-						},
-					},
-				},
+				Default:             emptySetDefault(tagMappersNested),
+				NestedObject:        tagMappersNested,
 			},
 		},
 	}

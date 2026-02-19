@@ -14,7 +14,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -55,6 +54,23 @@ func (r *landingZoneResource) Configure(_ context.Context, req resource.Configur
 }
 
 func (r *landingZoneResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+	quotas := schema.NestedAttributeObject{
+		Attributes: map[string]schema.Attribute{
+			"key": schema.StringAttribute{
+				MarkdownDescription: "Quota key identifier. Must match a quota key that has been defined on the platform.",
+				Required:            true,
+			},
+			"value": schema.Int64Attribute{
+				MarkdownDescription: "Quota value.",
+				Required:            true,
+			},
+		},
+	}
+
+	buildingBlockRefs := schema.NestedAttributeObject{
+		Attributes: meshBuildingBlockDefinitionRefAttribute(false),
+	}
+
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Represents a meshStack landing zone.",
 		Attributes: map[string]schema.Attribute{
@@ -161,61 +177,22 @@ func (r *landingZoneResource) Schema(_ context.Context, _ resource.SchemaRequest
 						MarkdownDescription: "Quota definitions for this landing zone.",
 						Optional:            true,
 						Computed:            true,
-						Default: setdefault.StaticValue(types.SetValueMust(
-							types.ObjectType{
-								AttrTypes: map[string]attr.Type{
-									"key":   types.StringType,
-									"value": types.Int64Type,
-								},
-							},
-							[]attr.Value{},
-						)),
-						NestedObject: schema.NestedAttributeObject{
-							Attributes: map[string]schema.Attribute{
-								"key": schema.StringAttribute{
-									MarkdownDescription: "Quota key identifier. Must match a quota key that has been defined on the plaform.",
-									Required:            true,
-								},
-								"value": schema.Int64Attribute{
-									MarkdownDescription: "Quota value.",
-									Required:            true,
-								},
-							},
-						},
+						Default:             emptySetDefault(quotas),
+						NestedObject:        quotas,
 					},
 					"mandatory_building_block_refs": schema.SetNestedAttribute{
 						MarkdownDescription: "List of mandatory building block references for this landing zone.",
 						Optional:            true,
 						Computed:            true,
-						Default: setdefault.StaticValue(types.SetValueMust(
-							types.ObjectType{
-								AttrTypes: map[string]attr.Type{
-									"kind": types.StringType,
-									"uuid": types.StringType,
-								},
-							},
-							[]attr.Value{},
-						)),
-						NestedObject: schema.NestedAttributeObject{
-							Attributes: meshBuildingBlockDefinitionRefAttribute(false),
-						},
+						Default:             emptySetDefault(buildingBlockRefs),
+						NestedObject:        buildingBlockRefs,
 					},
 					"recommended_building_block_refs": schema.SetNestedAttribute{
 						MarkdownDescription: "List of recommended building block references for this landing zone.",
 						Optional:            true,
 						Computed:            true,
-						Default: setdefault.StaticValue(types.SetValueMust(
-							types.ObjectType{
-								AttrTypes: map[string]attr.Type{
-									"kind": types.StringType,
-									"uuid": types.StringType,
-								},
-							},
-							[]attr.Value{},
-						)),
-						NestedObject: schema.NestedAttributeObject{
-							Attributes: meshBuildingBlockDefinitionRefAttribute(false),
-						},
+						Default:             emptySetDefault(buildingBlockRefs),
+						NestedObject:        buildingBlockRefs,
 					},
 				},
 			},
@@ -308,6 +285,34 @@ func aksPlatformConfigSchema() schema.Attribute {
 }
 
 func azurePlatformConfigSchema() schema.Attribute {
+	azureRoleMappings := schema.NestedAttributeObject{
+		Attributes: map[string]schema.Attribute{
+			"project_role_ref": meshProjectRoleAttribute(false),
+			"azure_group_suffix": schema.StringAttribute{
+				MarkdownDescription: "The given role name will be injected into the" +
+					" group name via the group naming pattern configured on the" +
+					" platform instance.",
+				Required: true,
+			},
+			"azure_role_definitions": schema.SetNestedAttribute{
+				MarkdownDescription: "List of Azure role definitions",
+				Required:            true,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"azure_role_definition_id": schema.StringAttribute{
+							Required:            true,
+							MarkdownDescription: "Azure role definition ID",
+						},
+						"abac_condition": schema.StringAttribute{
+							Optional:            true,
+							MarkdownDescription: "an ABAC condition for the role assignment in form of a string",
+						},
+					},
+				},
+			},
+		},
+	}
+
 	return schema.SingleNestedAttribute{
 		MarkdownDescription: "Azure platform properties.",
 		Optional:            true,
@@ -321,54 +326,10 @@ func azurePlatformConfigSchema() schema.Attribute {
 					" specific access role. " +
 					"For more information see [the Landing Zone documentation](https://docs.meshcloud.io/meshstack.azure.landing-zones#meshrole-to-platform-role-mapping). " +
 					"If empty, the default that is configured on platform level will be used.",
-				Optional: true,
-				Computed: true,
-				Default: setdefault.StaticValue(types.SetValueMust(types.ObjectType{
-					AttrTypes: map[string]attr.Type{
-						"project_role_ref": types.ObjectType{
-							AttrTypes: map[string]attr.Type{
-								"name": types.StringType,
-								"kind": types.StringType,
-							},
-						},
-						"azure_group_suffix": types.StringType,
-						"azure_role_definitions": types.SetType{
-							ElemType: types.ObjectType{
-								AttrTypes: map[string]attr.Type{
-									"azure_role_definition_id": types.StringType,
-									"abac_condition":           types.StringType,
-								},
-							},
-						},
-					},
-				}, []attr.Value{})),
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"project_role_ref": meshProjectRoleAttribute(false),
-						"azure_group_suffix": schema.StringAttribute{
-							MarkdownDescription: "The given role name will be injected into the" +
-								" group name via the group naming pattern configured on the" +
-								" platform instance.",
-							Required: true,
-						},
-						"azure_role_definitions": schema.SetNestedAttribute{
-							MarkdownDescription: "List of Azure role definitions",
-							Required:            true,
-							NestedObject: schema.NestedAttributeObject{
-								Attributes: map[string]schema.Attribute{
-									"azure_role_definition_id": schema.StringAttribute{
-										Required:            true,
-										MarkdownDescription: "Azure role definition ID",
-									},
-									"abac_condition": schema.StringAttribute{
-										Optional:            true,
-										MarkdownDescription: "an ABAC condition for the role assignment in form of a string",
-									},
-								},
-							},
-						},
-					},
-				},
+				Optional:     true,
+				Computed:     true,
+				Default:      emptySetDefault(azureRoleMappings),
+				NestedObject: azureRoleMappings,
 			},
 		},
 	}

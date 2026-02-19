@@ -2,10 +2,8 @@ package provider
 
 import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
@@ -30,6 +28,26 @@ func azurePlatformSchema() schema.Attribute {
 }
 
 func azureReplicationConfigSchema() schema.Attribute {
+	azureRoleMappings := schema.NestedAttributeObject{
+		Attributes: map[string]schema.Attribute{
+			"project_role_ref": meshProjectRoleAttribute(false),
+			"azure_role": schema.SingleNestedAttribute{
+				MarkdownDescription: "The Azure role definition.",
+				Required:            true,
+				Attributes: map[string]schema.Attribute{
+					"alias": schema.StringAttribute{
+						MarkdownDescription: "The alias/name of the Azure role.",
+						Required:            true,
+					},
+					"id": schema.StringAttribute{
+						MarkdownDescription: "The Azure role definition ID.",
+						Required:            true,
+					},
+				},
+			},
+		},
+	}
+
 	return schema.SingleNestedAttribute{
 		MarkdownDescription: "Azure-specific replication configuration for the platform.",
 		Optional:            true,
@@ -165,41 +183,8 @@ func azureReplicationConfigSchema() schema.Attribute {
 				MarkdownDescription: "Azure role mappings for Azure role definitions.",
 				Optional:            true,
 				Computed:            true,
-				Default: setdefault.StaticValue(types.SetValueMust(types.ObjectType{
-					AttrTypes: map[string]attr.Type{
-						"project_role_ref": types.ObjectType{
-							AttrTypes: map[string]attr.Type{
-								"name": types.StringType,
-								"kind": types.StringType,
-							},
-						},
-						"azure_role": types.ObjectType{
-							AttrTypes: map[string]attr.Type{
-								"alias": types.StringType,
-								"id":    types.StringType,
-							},
-						},
-					},
-				}, []attr.Value{})),
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"project_role_ref": meshProjectRoleAttribute(false),
-						"azure_role": schema.SingleNestedAttribute{
-							MarkdownDescription: "The Azure role definition.",
-							Required:            true,
-							Attributes: map[string]schema.Attribute{
-								"alias": schema.StringAttribute{
-									MarkdownDescription: "The alias/name of the Azure role.",
-									Required:            true,
-								},
-								"id": schema.StringAttribute{
-									MarkdownDescription: "The Azure role definition ID.",
-									Required:            true,
-								},
-							},
-						},
-					},
-				},
+				Default:             emptySetDefault(azureRoleMappings),
+				NestedObject:        azureRoleMappings,
 			},
 			"tenant_tags":          tenantTagsAttribute(),
 			"user_lookup_strategy": azureUserLookupStrategySchema(),
