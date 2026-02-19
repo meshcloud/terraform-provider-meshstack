@@ -353,7 +353,7 @@ func awsMeteringConfigDataSourceSchema() schema.Attribute {
 										MarkdownDescription: "AWS access key",
 										Computed:            true,
 									},
-									"secret_key": secret.DatasourceSchema(secret.SchemaOptions{MarkdownDescription: "AWS secret key"})},
+									"secret_key": secret.DatasourceSchema(secret.DatasourceSchemaOptions{MarkdownDescription: "AWS secret key"})},
 							},
 							"workload_identity": schema.SingleNestedAttribute{
 								MarkdownDescription: "Workload identity configuration (if type is workloadIdentity)",
@@ -424,7 +424,7 @@ func gcpMeteringConfigDataSourceSchema() schema.Attribute {
 						MarkdownDescription: "Service account type",
 						Computed:            true,
 					},
-					"credential": secret.DatasourceSchema(secret.SchemaOptions{MarkdownDescription: "Base64 encoded service account credentials (if type supports it)"}),
+					"credential": secret.DatasourceSchema(secret.DatasourceSchemaOptions{MarkdownDescription: "Base64 encoded service account credentials (if type supports it)"}),
 					"workload_identity": schema.SingleNestedAttribute{
 						MarkdownDescription: "Workload identity configuration (if type supports it)",
 						Computed:            true,
@@ -471,7 +471,7 @@ func aksReplicationConfigDataSourceSchema() schema.Attribute {
 		MarkdownDescription: "Replication configuration for AKS (optional, but required for replication)",
 		Computed:            true,
 		Attributes: map[string]schema.Attribute{
-			"access_token": secret.DatasourceSchema(secret.SchemaOptions{MarkdownDescription: "The access token of the service account for replicator access."}),
+			"access_token": secret.DatasourceSchema(secret.DatasourceSchemaOptions{MarkdownDescription: "The access token of the service account for replicator access."}),
 			"namespace_name_pattern": schema.StringAttribute{
 				MarkdownDescription: "Pattern for naming namespaces in AKS",
 				Computed:            true,
@@ -564,7 +564,7 @@ func awsReplicationConfigDataSourceSchema() schema.Attribute {
 										MarkdownDescription: "AWS access key for service user",
 										Computed:            true,
 									},
-									"secret_key": secret.DatasourceSchema(secret.SchemaOptions{MarkdownDescription: "AWS secret key"}),
+									"secret_key": secret.DatasourceSchema(secret.DatasourceSchemaOptions{MarkdownDescription: "AWS secret key"}),
 								},
 							},
 							"workload_identity": schema.SingleNestedAttribute{
@@ -651,7 +651,7 @@ func awsReplicationConfigDataSourceSchema() schema.Attribute {
 						MarkdownDescription: "Configures the pattern that defines the desired name of AWS IAM Identity Center groups managed by meshStack. It follows the usual replicator string pattern features and provides the additional replacement 'platformGroupAlias', which contains the role name suffix, which is configurable via Role Mappings in this platform config or via a meshLandingZone. Operators must ensure the group names will be unique within the same AWS IAM Identity Center Instance with that configuration. meshStack will additionally prefix the group name with 'mst-' to be able to identify the groups that are managed by meshStack.",
 						Computed:            true,
 					},
-					"sso_access_token": secret.DatasourceSchema(secret.SchemaOptions{MarkdownDescription: "The AWS IAM Identity Center SCIM Access Token that was generated via the Automatic provisioning config in AWS IAM Identity Center."}),
+					"sso_access_token": secret.DatasourceSchema(secret.DatasourceSchemaOptions{MarkdownDescription: "The AWS IAM Identity Center SCIM Access Token that was generated via the Automatic provisioning config in AWS IAM Identity Center."}),
 					"aws_role_mappings": schema.ListNestedAttribute{
 						MarkdownDescription: "AWS role mappings for AWS SSO",
 						Computed:            true,
@@ -913,7 +913,7 @@ func azureAuthConfigDataSourceSchema() schema.Attribute {
 				MarkdownDescription: "Authentication type (credential or workloadIdentity)",
 				Computed:            true,
 			},
-			"credential": secret.DatasourceSchema(secret.SchemaOptions{MarkdownDescription: "Client secret (if type is credential)"}),
+			"credential": secret.DatasourceSchema(secret.DatasourceSchemaOptions{MarkdownDescription: "Client secret (if type is credential)"}),
 		},
 	}
 }
@@ -1023,7 +1023,7 @@ func gcpReplicationConfigDataSourceSchema() schema.Attribute {
 						MarkdownDescription: "Service account type",
 						Computed:            true,
 					},
-					"credential": secret.DatasourceSchema(secret.SchemaOptions{MarkdownDescription: "Base64 encoded credentials.json file for a GCP ServiceAccount (if type supports it). The replicator uses this Service Account to automate GCP API operations (IAM, ResourceManager etc.)."}),
+					"credential": secret.DatasourceSchema(secret.DatasourceSchemaOptions{MarkdownDescription: "Base64 encoded credentials.json file for a GCP ServiceAccount (if type supports it). The replicator uses this Service Account to automate GCP API operations (IAM, ResourceManager etc.)."}),
 					"workload_identity": schema.SingleNestedAttribute{
 						MarkdownDescription: "Workload identity configuration (if type supports it)",
 						Computed:            true,
@@ -1128,7 +1128,7 @@ func kubernetesClientConfigDataSourceSchema(description string) schema.Attribute
 		MarkdownDescription: description,
 		Computed:            true,
 		Attributes: map[string]schema.Attribute{
-			"access_token": secret.DatasourceSchema(secret.SchemaOptions{MarkdownDescription: "The access token of the service account for replicator access."}),
+			"access_token": secret.DatasourceSchema(secret.DatasourceSchemaOptions{MarkdownDescription: "The access token of the service account for replicator access."}),
 		},
 	}
 }

@@ -107,11 +107,11 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 						client.MeshBuildingBlockInputAssignmentTypeStatic).Markdown() + ".",
 					Optional: true,
 					Attributes: map[string]schema.Attribute{
-						"argument": secret.ResourceSchema(secret.SchemaOptions{
+						"argument": secret.ResourceSchema(secret.ResourceSchemaOptions{
 							MarkdownDescription: "Sensitive variant of the `argument` attribute. Contains encrypted secret data.",
 							Optional:            true,
 						}),
-						"default_value": secret.ResourceSchema(secret.SchemaOptions{
+						"default_value": secret.ResourceSchema(secret.ResourceSchemaOptions{
 							MarkdownDescription: "Sensitive variant of the `default_value` attribute. Contains encrypted secret data.",
 							Optional:            true,
 						}),
@@ -405,7 +405,7 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 										MarkdownDescription: "Git reference (branch, tag, or commit) to use.",
 										Optional:            true,
 									},
-									"ssh_private_key": secret.ResourceSchema(secret.SchemaOptions{
+									"ssh_private_key": secret.ResourceSchema(secret.ResourceSchemaOptions{
 										MarkdownDescription: "SSH private key for accessing private repositories.",
 										Optional:            true,
 									}),
@@ -486,7 +486,7 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 										MarkdownDescription: "Git reference (branch, tag) to use.",
 										Required:            true,
 									},
-									"pipeline_trigger_token": secret.ResourceSchema(secret.SchemaOptions{
+									"pipeline_trigger_token": secret.ResourceSchema(secret.ResourceSchemaOptions{
 										MarkdownDescription: "GitLab pipeline trigger token.",
 									}),
 									"integration_ref": schema.SingleNestedAttribute{

@@ -122,7 +122,7 @@ func (r *integrationResource) Schema(_ context.Context, _ resource.SchemaRequest
 										MarkdownDescription: "GitHub App ID for authentication.",
 										Required:            true,
 									},
-									"app_private_key": secret.ResourceSchema(secret.SchemaOptions{
+									"app_private_key": secret.ResourceSchema(secret.ResourceSchemaOptions{
 										MarkdownDescription: "Private key for the GitHub App.",
 										Optional:            false,
 									}),
@@ -166,7 +166,7 @@ func (r *integrationResource) Schema(_ context.Context, _ resource.SchemaRequest
 										MarkdownDescription: "Azure DevOps organization name.",
 										Required:            true,
 									},
-									"personal_access_token": secret.ResourceSchema(secret.SchemaOptions{
+									"personal_access_token": secret.ResourceSchema(secret.ResourceSchemaOptions{
 										MarkdownDescription: "Personal Access Token (PAT) for authentication.",
 										Optional:            true,
 									}),
