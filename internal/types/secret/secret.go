@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -123,6 +124,14 @@ func ValueToConverter(ctx context.Context, config, plan, state generic.Attribute
 
 	getAttributeFrom := func(getter generic.AttributeGetter, name string) (out *string) {
 		diags.Append(getter.GetAttribute(ctx, attributePath.AtName(name), &out)...)
+		if diags.HasError() {
+			return
+		}
+		if out == nil {
+			diags.AddError("Invalid secret state", fmt.Sprintf("Got nil/null value for attribute %s", name))
+		} else if strings.TrimSpace(*out) == "" {
+			diags.AddError("Invalid secret state", fmt.Sprintf("Got empty/whitespace only value '%s' for attribute %s", *out, name))
+		}
 		return
 	}
 
