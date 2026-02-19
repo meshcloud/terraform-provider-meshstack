@@ -10,9 +10,19 @@ These resources have been thoroughly tested and validated, and are now considere
   - `meshstack_location`: Location API now uses GA version `v1` (was `v1-preview`).
   - `meshstack_integrations`: Integration API now uses GA version `v1` (was `v1-preview`).
 
+FIXES:
+- `meshstack_platform`: `aws_sso.sign_in_url` is now a required attribute in the AWS SSO configuration.
+  Existing configurations must be updated to explicitly provide a valid `sign_in_url` value.
+- `datasource.meshstack_integrations`: Properly mark secrets as read-only.
+
 BREAKING CHANGES:
 - `meshstack_location`: Added required `owned_by_workspace` field to metadata. This field specifies the workspace that owns the location and must be provided when creating or updating locations.
 - Removed `api_version` and `kind` fields from resource and data source schemas for `meshstack_platform`, `meshstack_platform_type`, and `meshstack_location`. These internal fields are no longer exposed to Terraform users. Existing configurations that reference these attributes must be updated to remove those references.
+- `meshstack_platform`: Secrets are now write-only `secret_value` attributes instead of `plaintext`. 
+  Change the attribute from `plaintext` to `secret_value` in existing configs, and consider using ephemeral resources.
+  Likewise, there's an additional `secret_version` attribute for secret rotation, and the read-only hash attribute has changed to `secret_hash`.
+- `meshstack_platform`: The following attributes changed their schema type from list to set: `contributing_workspaces`, `restricted_to_workspaces`, `quota_definitions`, and `role_mappings`.  
+  Configurations that rely on element ordering or index-based access (e.g., `quota_definitions[0]`) must be updated, as sets are unordered and do not support stable indexing.
 
 ## v0.18.2
 

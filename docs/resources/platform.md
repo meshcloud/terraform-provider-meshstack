@@ -832,11 +832,11 @@ Required:
 
 Optional:
 
-- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_hash`. Can be omitted if resource is imported, in this case the `secret_value` attribute is used as an initial value for this attribute (computed output).
+- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_value`. Can be omitted if resource is imported, in this case the `secret_hash` attribute is used as an initial value for this attribute (computed output).
 
 Read-Only:
 
-- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret was changed externally.
+- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret value was updated externally.
 
 
 
@@ -879,11 +879,11 @@ Required:
 
 Optional:
 
-- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_hash`. Can be omitted if resource is imported, in this case the `secret_value` attribute is used as an initial value for this attribute (computed output).
+- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_value`. Can be omitted if resource is imported, in this case the `secret_hash` attribute is used as an initial value for this attribute (computed output).
 
 Read-Only:
 
-- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret was changed externally.
+- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret value was updated externally.
 
 
 <a id="nestedatt--spec--config--aks--replication--service_principal"></a>
@@ -922,11 +922,11 @@ Required:
 
 Optional:
 
-- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_hash`. Can be omitted if resource is imported, in this case the `secret_value` attribute is used as an initial value for this attribute (computed output).
+- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_value`. Can be omitted if resource is imported, in this case the `secret_hash` attribute is used as an initial value for this attribute (computed output).
 
 Read-Only:
 
-- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret was changed externally.
+- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret value was updated externally.
 
 
 
@@ -994,11 +994,11 @@ Required:
 
 Optional:
 
-- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_hash`. Can be omitted if resource is imported, in this case the `secret_value` attribute is used as an initial value for this attribute (computed output).
+- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_value`. Can be omitted if resource is imported, in this case the `secret_hash` attribute is used as an initial value for this attribute (computed output).
 
 Read-Only:
 
-- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret was changed externally.
+- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret value was updated externally.
 
 
 
@@ -1086,11 +1086,11 @@ Required:
 
 Optional:
 
-- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_hash`. Can be omitted if resource is imported, in this case the `secret_value` attribute is used as an initial value for this attribute (computed output).
+- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_value`. Can be omitted if resource is imported, in this case the `secret_hash` attribute is used as an initial value for this attribute (computed output).
 
 Read-Only:
 
-- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret was changed externally.
+- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret value was updated externally.
 
 
 
@@ -1128,11 +1128,11 @@ Required:
 
 Optional:
 
-- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_hash`. Can be omitted if resource is imported, in this case the `secret_value` attribute is used as an initial value for this attribute (computed output).
+- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_value`. Can be omitted if resource is imported, in this case the `secret_hash` attribute is used as an initial value for this attribute (computed output).
 
 Read-Only:
 
-- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret was changed externally.
+- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret value was updated externally.
 
 
 <a id="nestedatt--spec--config--aws--replication--aws_sso--aws_role_mappings"></a>
@@ -1257,11 +1257,11 @@ Required:
 
 Optional:
 
-- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_hash`. Can be omitted if resource is imported, in this case the `secret_value` attribute is used as an initial value for this attribute (computed output).
+- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_value`. Can be omitted if resource is imported, in this case the `secret_hash` attribute is used as an initial value for this attribute (computed output).
 
 Read-Only:
 
-- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret was changed externally.
+- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret value was updated externally.
 
 
 
@@ -1355,11 +1355,11 @@ Required:
 
 Optional:
 
-- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_hash`. Can be omitted if resource is imported, in this case the `secret_value` attribute is used as an initial value for this attribute (computed output).
+- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_value`. Can be omitted if resource is imported, in this case the `secret_hash` attribute is used as an initial value for this attribute (computed output).
 
 Read-Only:
 
-- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret was changed externally.
+- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret value was updated externally.
 
 
 
@@ -1431,11 +1431,11 @@ Required:
 
 Optional:
 
-- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_hash`. Can be omitted if resource is imported, in this case the `secret_value` attribute is used as an initial value for this attribute (computed output).
+- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_value`. Can be omitted if resource is imported, in this case the `secret_hash` attribute is used as an initial value for this attribute (computed output).
 
 Read-Only:
 
-- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret was changed externally.
+- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret value was updated externally.
 
 
 
@@ -1552,11 +1552,11 @@ Required:
 
 Optional:
 
-- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_hash`. Can be omitted if resource is imported, in this case the `secret_value` attribute is used as an initial value for this attribute (computed output).
+- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_value`. Can be omitted if resource is imported, in this case the `secret_hash` attribute is used as an initial value for this attribute (computed output).
 
 Read-Only:
 
-- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret was changed externally.
+- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret value was updated externally.
 
 
 
@@ -1688,11 +1688,11 @@ Required:
 
 Optional:
 
-- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_hash`. Can be omitted if resource is imported, in this case the `secret_value` attribute is used as an initial value for this attribute (computed output).
+- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_value`. Can be omitted if resource is imported, in this case the `secret_hash` attribute is used as an initial value for this attribute (computed output).
 
 Read-Only:
 
-- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret was changed externally.
+- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret value was updated externally.
 
 
 <a id="nestedatt--spec--config--gcp--metering--service_account--workload_identity"></a>
@@ -1770,11 +1770,11 @@ Required:
 
 Optional:
 
-- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_hash`. Can be omitted if resource is imported, in this case the `secret_value` attribute is used as an initial value for this attribute (computed output).
+- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_value`. Can be omitted if resource is imported, in this case the `secret_hash` attribute is used as an initial value for this attribute (computed output).
 
 Read-Only:
 
-- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret was changed externally.
+- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret value was updated externally.
 
 
 <a id="nestedatt--spec--config--gcp--replication--service_account--workload_identity"></a>
@@ -1821,7 +1821,7 @@ Optional:
 
 - `disable_ssl_validation` (Boolean) Flag to disable SSL validation for the Kubernetes cluster. SSL Validation should at best never be disabled, but for integration of some private cloud platforms in an early state, they might not yet be using valid SSL certificates. In that case it can make sense to disable SSL validation here to already test integration of these platforms.
 - `metering` (Attributes) Metering configuration for Kubernetes (optional, but required for metering) (see [below for nested schema](#nestedatt--spec--config--kubernetes--metering))
-- `replication` (Attributes) (see [below for nested schema](#nestedatt--spec--config--kubernetes--replication))
+- `replication` (Attributes) Replication configuration for Kubernetes (optional, but required for replication) (see [below for nested schema](#nestedatt--spec--config--kubernetes--replication))
 
 <a id="nestedatt--spec--config--kubernetes--metering"></a>
 ### Nested Schema for `spec.config.kubernetes.metering`
@@ -1847,11 +1847,11 @@ Required:
 
 Optional:
 
-- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_hash`. Can be omitted if resource is imported, in this case the `secret_value` attribute is used as an initial value for this attribute (computed output).
+- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_value`. Can be omitted if resource is imported, in this case the `secret_hash` attribute is used as an initial value for this attribute (computed output).
 
 Read-Only:
 
-- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret was changed externally.
+- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret value was updated externally.
 
 
 
@@ -1889,11 +1889,11 @@ Required:
 
 Optional:
 
-- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_hash`. Can be omitted if resource is imported, in this case the `secret_value` attribute is used as an initial value for this attribute (computed output).
+- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_value`. Can be omitted if resource is imported, in this case the `secret_hash` attribute is used as an initial value for this attribute (computed output).
 
 Read-Only:
 
-- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret was changed externally.
+- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret value was updated externally.
 
 
 
@@ -1936,11 +1936,11 @@ Required:
 
 Optional:
 
-- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_hash`. Can be omitted if resource is imported, in this case the `secret_value` attribute is used as an initial value for this attribute (computed output).
+- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_value`. Can be omitted if resource is imported, in this case the `secret_hash` attribute is used as an initial value for this attribute (computed output).
 
 Read-Only:
 
-- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret was changed externally.
+- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret value was updated externally.
 
 
 
@@ -1986,11 +1986,11 @@ Required:
 
 Optional:
 
-- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_hash`. Can be omitted if resource is imported, in this case the `secret_value` attribute is used as an initial value for this attribute (computed output).
+- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_value`. Can be omitted if resource is imported, in this case the `secret_hash` attribute is used as an initial value for this attribute (computed output).
 
 Read-Only:
 
-- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret was changed externally.
+- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret value was updated externally.
 
 
 
