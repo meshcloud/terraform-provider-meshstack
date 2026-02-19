@@ -2,11 +2,14 @@ package provider
 
 import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
 // meshProjectRoleAttribute returns a schema attribute for meshProject role references.
@@ -94,9 +97,16 @@ func tenantTagsAttribute() schema.SingleNestedAttribute {
 				MarkdownDescription: "This is the prefix for all labels created by meshStack. It helps to keep track of which labels are managed by meshStack. It is recommended to let this prefix end with a delimiter like an underscore.",
 				Required:            true,
 			},
-			"tag_mappers": schema.ListNestedAttribute{
-				MarkdownDescription: "List of tag mappers for tenant tags",
+			"tag_mappers": schema.SetNestedAttribute{
+				MarkdownDescription: "Set of tag mappers for tenant tags",
 				Optional:            true,
+				Computed:            true,
+				Default: setdefault.StaticValue(types.SetValueMust(types.ObjectType{
+					AttrTypes: map[string]attr.Type{
+						"key":           types.StringType,
+						"value_pattern": types.StringType,
+					},
+				}, []attr.Value{})),
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"key": schema.StringAttribute{
