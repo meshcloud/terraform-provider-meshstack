@@ -1,3 +1,5 @@
+
+
 ## v0.19.0
 
 FEATURES:
@@ -23,6 +25,11 @@ BREAKING CHANGES:
   Likewise, there's an additional `secret_version` attribute for secret rotation, and the read-only hash attribute has changed to `secret_hash`.
 - `meshstack_platform`: The following attributes changed their schema type from list to set: `contributing_workspaces`, `restricted_to_workspaces`, `quota_definitions`, and `role_mappings`.  
   Configurations that rely on element ordering or index-based access (e.g., `quota_definitions[0]`) must be updated, as sets are unordered and do not support stable indexing.
+
+FIXES:
+
+- `meshstack_platform`: `azure_role_mappings` and `tag_mappers` in Azure replication config are now sets instead of lists, with a default empty set value.
+- `meshstack_landingzone`: `azure_role_mappings` is now a set instead of a list, with a default empty set value.
 
 ## v0.18.2
 
