@@ -203,11 +203,12 @@ resource "meshstack_building_block_definition" "example_03_manual" {
       manual = {}
     }
 
+    # Output keys must match with inputs, as the backend copies over inputs to outputs
     outputs = {
-      completion_status = {
-        display_name    = "Completion Status"
-        type            = "STRING"
-        assignment_type = "SUMMARY"
+      approval_required = {
+        display_name    = "Approval Required"
+        type            = "BOOLEAN"
+        assignment_type = "NONE"
       }
     }
   }

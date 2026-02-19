@@ -57,8 +57,10 @@ func TestBuildingBlockDefinition(t *testing.T) {
 				assertMockClientStoreAfterApply(2, 1)
 
 			case strings.Contains(testName, "03_manual"):
-				if stepIdx == 3 {
+				switch stepIdx {
+				case 3, 4:
 					// Step 4 changes draft=false->true and creates new draft version
+					// Step 5 releases this draft (number of versions stays the same)
 					assertMockClientStoreAfterApply(1, 2)
 				}
 			case strings.Contains(testName, "05_gitlab_pipeline"):
@@ -195,6 +197,25 @@ func runBuildingBlockDefinitionTestCases(t *testing.T, testCaseModifiers ...Reso
 							statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("versions"), knownvalue.ListExact([]knownvalue.Check{
 								expectedVersion(1, versionStateReleased),
 								expectedVersion(2, versionStateDraft),
+							})),
+						},
+					},
+					// Step 5: Release the draft again (draft=false)
+					resource.TestStep{
+						Config: configDraftFalse.String(),
+						ConfigPlanChecks: resource.ConfigPlanChecks{
+							PreApply: []plancheck.PlanCheck{
+								plancheck.ExpectResourceAction(resourceAddress.String(), plancheck.ResourceActionUpdate),
+							},
+						},
+						ConfigStateChecks: []statecheck.StateCheck{
+							statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("version_spec"), checkBuildingBlockVersionSpec(exampleSuffix, versionStateReleased, 2)),
+							// Version checks - second draft is released
+							statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("version_latest_release"), expectedVersion(2, versionStateReleased)),
+							statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("version_latest"), expectedVersion(2, versionStateReleased)),
+							statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("versions"), knownvalue.ListExact([]knownvalue.Check{
+								expectedVersion(1, versionStateReleased),
+								expectedVersion(2, versionStateReleased),
 							})),
 						},
 					},
@@ -520,10 +541,10 @@ func checksForImplementation(exampleSuffix string) (checkInputs, checkImplementa
 				"terraform":             knownvalue.Null(),
 			}),
 			knownvalue.MapExact(map[string]knownvalue.Check{
-				"completion_status": knownvalue.MapExact(map[string]knownvalue.Check{
-					"display_name":    knownvalue.StringExact("Completion Status"),
-					"type":            knownvalue.StringExact("STRING"),
-					"assignment_type": knownvalue.StringExact("SUMMARY"),
+				"approval_required": knownvalue.MapExact(map[string]knownvalue.Check{
+					"display_name":    knownvalue.StringExact("Approval Required"),
+					"type":            knownvalue.StringExact("BOOLEAN"),
+					"assignment_type": knownvalue.StringExact("NONE"),
 				}),
 			})
 	case "04_azure_devops_pipeline":
