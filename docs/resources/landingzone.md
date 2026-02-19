@@ -402,7 +402,7 @@ Read-Only:
 
 Required:
 
-- `key` (String) Quota key identifier. Must match a quota key that has been defined on the plaform.
+- `key` (String) Quota key identifier. Must match a quota key that has been defined on the platform.
 - `value` (Number) Quota value.
 
 

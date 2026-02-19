@@ -382,7 +382,7 @@ Read-Only:
 Read-Only:
 
 - `namespace_prefix` (String) Namespace prefix for tenant tags
-- `tag_mappers` (Attributes List) List of tag mappers for tenant tags (see [below for nested schema](#nestedatt--spec--config--aws--replication--tenant_tags--tag_mappers))
+- `tag_mappers` (Attributes Set) List of tag mappers for tenant tags (see [below for nested schema](#nestedatt--spec--config--aws--replication--tenant_tags--tag_mappers))
 
 <a id="nestedatt--spec--config--aws--replication--tenant_tags--tag_mappers"></a>
 ### Nested Schema for `spec.config.aws.replication.tenant_tags.tag_mappers`
@@ -610,7 +610,7 @@ Read-Only:
 Read-Only:
 
 - `namespace_prefix` (String) This is the prefix for all labels created by meshStack. It helps to keep track of which labels are managed by meshStack. It is recommended to let this prefix end with a delimiter like an underscore.
-- `tag_mappers` (Attributes List) List of tag mappers for tenant tags (see [below for nested schema](#nestedatt--spec--config--azure--replication--tenant_tags--tag_mappers))
+- `tag_mappers` (Attributes Set) List of tag mappers for tenant tags (see [below for nested schema](#nestedatt--spec--config--azure--replication--tenant_tags--tag_mappers))
 
 <a id="nestedatt--spec--config--azure--replication--tenant_tags--tag_mappers"></a>
 ### Nested Schema for `spec.config.azure.replication.tenant_tags.tag_mappers`
@@ -690,7 +690,7 @@ Read-Only:
 Read-Only:
 
 - `namespace_prefix` (String) Prefix for tag namespaces.
-- `tag_mappers` (Attributes List) List of tag mappers for tenant tags (see [below for nested schema](#nestedatt--spec--config--azurerg--replication--tenant_tags--tag_mappers))
+- `tag_mappers` (Attributes Set) List of tag mappers for tenant tags (see [below for nested schema](#nestedatt--spec--config--azurerg--replication--tenant_tags--tag_mappers))
 
 <a id="nestedatt--spec--config--azurerg--replication--tenant_tags--tag_mappers"></a>
 ### Nested Schema for `spec.config.azurerg.replication.tenant_tags.tag_mappers`
@@ -870,7 +870,7 @@ Read-Only:
 Read-Only:
 
 - `namespace_prefix` (String) Prefix for tag namespaces.
-- `tag_mappers` (Attributes List) List of tag mappers for generating tags. (see [below for nested schema](#nestedatt--spec--config--gcp--replication--tenant_tags--tag_mappers))
+- `tag_mappers` (Attributes Set) List of tag mappers for generating tags. (see [below for nested schema](#nestedatt--spec--config--gcp--replication--tenant_tags--tag_mappers))
 
 <a id="nestedatt--spec--config--gcp--replication--tenant_tags--tag_mappers"></a>
 ### Nested Schema for `spec.config.gcp.replication.tenant_tags.tag_mappers`
@@ -1054,7 +1054,7 @@ Read-Only:
 Read-Only:
 
 - `namespace_prefix` (String) This is the prefix for all labels created by meshStack. It helps to keep track of which labels are managed by meshStack. It is recommended to let this prefix end with a delimiter like an underscore.
-- `tag_mappers` (Attributes List) List of tag mappers for tenant tags (see [below for nested schema](#nestedatt--spec--config--openshift--replication--tenant_tags--tag_mappers))
+- `tag_mappers` (Attributes Set) List of tag mappers for tenant tags (see [below for nested schema](#nestedatt--spec--config--openshift--replication--tenant_tags--tag_mappers))
 
 <a id="nestedatt--spec--config--openshift--replication--tenant_tags--tag_mappers"></a>
 ### Nested Schema for `spec.config.openshift.replication.tenant_tags.tag_mappers`

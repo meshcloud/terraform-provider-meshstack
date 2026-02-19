@@ -1,10 +1,13 @@
+## v0.19.1
 
+BREAKING CHANGES:
+- `meshstack_platform`: `tag_mappers` changed their schema type from list to set.
 
 ## v0.19.0
 
 FEATURES:
-- The following resources are now generally available (GA) and fully supported for production use: 
-`meshstack_platform`, `meshstack_landingzone`, `meshstack_platform_type`, `meshstack_location`, and `meshstack_integrations`. 
+- The following resources are now generally available (GA) and fully supported for production use:
+`meshstack_platform`, `meshstack_landingzone`, `meshstack_platform_type`, `meshstack_location`, and `meshstack_integrations`.
 These resources have been thoroughly tested and validated, and are now considered stable and ready for production deployments.
   - `meshstack_platform`: Platform API now uses GA version `v2` (was `v2-preview`).
   - `meshstack_landingzone`: Landing zone API now uses GA version `v1` (was `v1-preview`).
@@ -20,16 +23,12 @@ FIXES:
 BREAKING CHANGES:
 - `meshstack_location`: Added required `owned_by_workspace` field to metadata. This field specifies the workspace that owns the location and must be provided when creating or updating locations.
 - Removed `api_version` and `kind` fields from resource and data source schemas for `meshstack_platform`, `meshstack_platform_type`, and `meshstack_location`. These internal fields are no longer exposed to Terraform users. Existing configurations that reference these attributes must be updated to remove those references.
-- `meshstack_platform`: Secrets are now write-only `secret_value` attributes instead of `plaintext`. 
+- `meshstack_platform`: Secrets are now write-only `secret_value` attributes instead of `plaintext`.
   Change the attribute from `plaintext` to `secret_value` in existing configs, and consider using ephemeral resources.
   Likewise, there's an additional `secret_version` attribute for secret rotation, and the read-only hash attribute has changed to `secret_hash`.
-- `meshstack_platform`: The following attributes changed their schema type from list to set: `contributing_workspaces`, `restricted_to_workspaces`, `quota_definitions`, and `role_mappings`.  
+- `meshstack_platform`: The following attributes changed their schema type from list to set: `contributing_workspaces`, `restricted_to_workspaces`, `quota_definitions`, `role_mappings`, and `tenant_tags`.
   Configurations that rely on element ordering or index-based access (e.g., `quota_definitions[0]`) must be updated, as sets are unordered and do not support stable indexing.
 
-FIXES:
-
-- `meshstack_platform`: `azure_role_mappings` and `tag_mappers` in Azure replication config are now sets instead of lists, with a default empty set value.
-- `meshstack_landingzone`: `azure_role_mappings` is now a set instead of a list, with a default empty set value.
 
 ## v0.18.2
 
@@ -62,7 +61,7 @@ FIXES:
 
 BREAKING CHANGES:
 
-- Proper secret handling for data source `meshstack_integrations`, 
+- Proper secret handling for data source `meshstack_integrations`,
   as only the hash is returned from the API now.
 
 ## v0.17.5

@@ -617,7 +617,7 @@ func awsReplicationConfigDataSourceSchema() schema.Attribute {
 						MarkdownDescription: "Namespace prefix for tenant tags",
 						Computed:            true,
 					},
-					"tag_mappers": schema.ListNestedAttribute{
+					"tag_mappers": schema.SetNestedAttribute{
 						MarkdownDescription: "List of tag mappers for tenant tags",
 						Computed:            true,
 						NestedObject: schema.NestedAttributeObject{
@@ -866,7 +866,7 @@ func azureReplicationConfigDataSourceSchema() schema.Attribute {
 						MarkdownDescription: "This is the prefix for all labels created by meshStack. It helps to keep track of which labels are managed by meshStack. It is recommended to let this prefix end with a delimiter like an underscore.",
 						Computed:            true,
 					},
-					"tag_mappers": schema.ListNestedAttribute{
+					"tag_mappers": schema.SetNestedAttribute{
 						MarkdownDescription: "List of tag mappers for tenant tags",
 						Computed:            true,
 						NestedObject: schema.NestedAttributeObject{
@@ -976,7 +976,7 @@ func azureRgReplicationConfigDataSourceSchema() schema.Attribute {
 						MarkdownDescription: "Prefix for tag namespaces.",
 						Computed:            true,
 					},
-					"tag_mappers": schema.ListNestedAttribute{
+					"tag_mappers": schema.SetNestedAttribute{
 						MarkdownDescription: "List of tag mappers for tenant tags",
 						Computed:            true,
 						NestedObject: schema.NestedAttributeObject{
@@ -1097,7 +1097,7 @@ func gcpReplicationConfigDataSourceSchema() schema.Attribute {
 						MarkdownDescription: "Prefix for tag namespaces.",
 						Computed:            true,
 					},
-					"tag_mappers": schema.ListNestedAttribute{
+					"tag_mappers": schema.SetNestedAttribute{
 						MarkdownDescription: "List of tag mappers for generating tags.",
 						Computed:            true,
 						NestedObject: schema.NestedAttributeObject{
@@ -1218,7 +1218,7 @@ func openShiftReplicationConfigDataSourceSchema() schema.Attribute {
 						MarkdownDescription: "This is the prefix for all labels created by meshStack. It helps to keep track of which labels are managed by meshStack. It is recommended to let this prefix end with a delimiter like an underscore.",
 						Computed:            true,
 					},
-					"tag_mappers": schema.ListNestedAttribute{
+					"tag_mappers": schema.SetNestedAttribute{
 						MarkdownDescription: "List of tag mappers for tenant tags",
 						Computed:            true,
 						NestedObject: schema.NestedAttributeObject{
@@ -1284,5 +1284,6 @@ func (d *platformDataSource) Read(ctx context.Context, req datasource.ReadReques
 		generic.WithUseSetForElementsOf[client.QuotaDefinition](),
 		generic.WithUseSetForElementsOf[client.AzureRoleMapping](),
 		generic.WithUseSetForElementsOf[client.OpenShiftPlatformRoleMapping](),
+		generic.WithUseSetForElementsOf[client.TagMapper](),
 	)...)
 }
