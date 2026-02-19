@@ -11,6 +11,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
+	clientTypes "github.com/meshcloud/terraform-provider-meshstack/client/types"
+	"github.com/meshcloud/terraform-provider-meshstack/internal/types/generic"
+	"github.com/meshcloud/terraform-provider-meshstack/internal/types/secret"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -100,7 +103,7 @@ func (d *platformDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 							},
 						},
 					},
-					"contributing_workspaces": schema.ListAttribute{
+					"contributing_workspaces": schema.SetAttribute{
 						MarkdownDescription: "A list of workspace identifiers that contribute to this meshPlatform.",
 						ElementType:         types.StringType,
 						Computed:            true,
@@ -117,14 +120,14 @@ func (d *platformDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 								MarkdownDescription: "Publication state of the platform. Must be one of: PUBLISHED, UNPUBLISHED.",
 								Computed:            true,
 							},
-							"restricted_to_workspaces": schema.ListAttribute{
+							"restricted_to_workspaces": schema.SetAttribute{
 								MarkdownDescription: "If the restriction is set to `RESTRICTED`, you can specify the workspace identifiers this meshPlatform is restricted to.",
 								ElementType:         types.StringType,
 								Computed:            true,
 							},
 						},
 					},
-					"quota_definitions": schema.ListAttribute{
+					"quota_definitions": schema.SetAttribute{
 						MarkdownDescription: "List of quota definitions for the platform.",
 						Computed:            true,
 						Sensitive:           false,
@@ -159,21 +162,6 @@ func (d *platformDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 						},
 					},
 				},
-			},
-		},
-	}
-}
-
-func secretEmbeddedDataSourceSchema(description string) schema.Attribute {
-	return schema.SingleNestedAttribute{
-		MarkdownDescription: description,
-		Computed:            true,
-		Sensitive:           true,
-		Attributes: map[string]schema.Attribute{
-			"plaintext": schema.StringAttribute{
-				MarkdownDescription: "Plaintext secret value",
-				Computed:            true,
-				Sensitive:           true,
 			},
 		},
 	}
@@ -365,7 +353,7 @@ func awsMeteringConfigDataSourceSchema() schema.Attribute {
 										MarkdownDescription: "AWS access key",
 										Computed:            true,
 									},
-									"secret_key": secretEmbeddedDataSourceSchema("AWS secret key")},
+									"secret_key": secret.DatasourceSchema(secret.SchemaOptions{MarkdownDescription: "AWS secret key"})},
 							},
 							"workload_identity": schema.SingleNestedAttribute{
 								MarkdownDescription: "Workload identity configuration (if type is workloadIdentity)",
@@ -436,7 +424,7 @@ func gcpMeteringConfigDataSourceSchema() schema.Attribute {
 						MarkdownDescription: "Service account type",
 						Computed:            true,
 					},
-					"credential": secretEmbeddedDataSourceSchema("Base64 encoded service account credentials (if type supports it)"),
+					"credential": secret.DatasourceSchema(secret.SchemaOptions{MarkdownDescription: "Base64 encoded service account credentials (if type supports it)"}),
 					"workload_identity": schema.SingleNestedAttribute{
 						MarkdownDescription: "Workload identity configuration (if type supports it)",
 						Computed:            true,
@@ -483,7 +471,7 @@ func aksReplicationConfigDataSourceSchema() schema.Attribute {
 		MarkdownDescription: "Replication configuration for AKS (optional, but required for replication)",
 		Computed:            true,
 		Attributes: map[string]schema.Attribute{
-			"access_token": secretEmbeddedDataSourceSchema("The access token of the service account for replicator access."),
+			"access_token": secret.DatasourceSchema(secret.SchemaOptions{MarkdownDescription: "The access token of the service account for replicator access."}),
 			"namespace_name_pattern": schema.StringAttribute{
 				MarkdownDescription: "Pattern for naming namespaces in AKS",
 				Computed:            true,
@@ -576,7 +564,7 @@ func awsReplicationConfigDataSourceSchema() schema.Attribute {
 										MarkdownDescription: "AWS access key for service user",
 										Computed:            true,
 									},
-									"secret_key": secretEmbeddedDataSourceSchema("AWS secret key"),
+									"secret_key": secret.DatasourceSchema(secret.SchemaOptions{MarkdownDescription: "AWS secret key"}),
 								},
 							},
 							"workload_identity": schema.SingleNestedAttribute{
@@ -663,7 +651,7 @@ func awsReplicationConfigDataSourceSchema() schema.Attribute {
 						MarkdownDescription: "Configures the pattern that defines the desired name of AWS IAM Identity Center groups managed by meshStack. It follows the usual replicator string pattern features and provides the additional replacement 'platformGroupAlias', which contains the role name suffix, which is configurable via Role Mappings in this platform config or via a meshLandingZone. Operators must ensure the group names will be unique within the same AWS IAM Identity Center Instance with that configuration. meshStack will additionally prefix the group name with 'mst-' to be able to identify the groups that are managed by meshStack.",
 						Computed:            true,
 					},
-					"sso_access_token": secretEmbeddedDataSourceSchema("The AWS IAM Identity Center SCIM Access Token that was generated via the Automatic provisioning config in AWS IAM Identity Center."),
+					"sso_access_token": secret.DatasourceSchema(secret.SchemaOptions{MarkdownDescription: "The AWS IAM Identity Center SCIM Access Token that was generated via the Automatic provisioning config in AWS IAM Identity Center."}),
 					"aws_role_mappings": schema.ListNestedAttribute{
 						MarkdownDescription: "AWS role mappings for AWS SSO",
 						Computed:            true,
@@ -746,7 +734,7 @@ func azureReplicationConfigDataSourceSchema() schema.Attribute {
 				MarkdownDescription: "To provide Azure Subscription for your organization's meshProjects, meshcloud supports using Enterprise Enrollment or allocating from a pool of pre-provisioned subscriptions. One of the subFields enterpriseEnrollment, customerAgreement or preProvisioned must be provided!",
 				Computed:            true,
 				Attributes: map[string]schema.Attribute{
-					"subscription_owner_object_ids": schema.ListAttribute{
+					"subscription_owner_object_ids": schema.SetAttribute{
 						MarkdownDescription: "One or more principals Object IDs (e.g. user groups, SPNs) that meshStack will ensure have an 'Owner' role assignment on the managed subscriptions. This can be useful to satisfy Azure's constraint of at least one direct 'Owner' role assignment per Subscription. If you want to use a Service Principal please use the Enterprise Application Object ID. You can not use the replicator object ID here, because meshStack always removes its high privilege access after a Subscription creation.",
 						Computed:            true,
 						ElementType:         types.StringType,
@@ -847,7 +835,7 @@ func azureReplicationConfigDataSourceSchema() schema.Attribute {
 				MarkdownDescription: "The Azure location where replication creates and updates Blueprint Assignments. Note that it's still possible that the Blueprint creates resources in other locations, this is merely the location where the Blueprint Assignment is managed.",
 				Computed:            true,
 			},
-			"azure_role_mappings": schema.ListNestedAttribute{
+			"azure_role_mappings": schema.SetNestedAttribute{
 				MarkdownDescription: "Azure role mappings for Azure role definitions.",
 				Computed:            true,
 				NestedObject: schema.NestedAttributeObject{
@@ -925,7 +913,7 @@ func azureAuthConfigDataSourceSchema() schema.Attribute {
 				MarkdownDescription: "Authentication type (credential or workloadIdentity)",
 				Computed:            true,
 			},
-			"credential": secretEmbeddedDataSourceSchema("Client secret (if type is credential)"),
+			"credential": secret.DatasourceSchema(secret.SchemaOptions{MarkdownDescription: "Client secret (if type is credential)"}),
 		},
 	}
 }
@@ -1035,7 +1023,7 @@ func gcpReplicationConfigDataSourceSchema() schema.Attribute {
 						MarkdownDescription: "Service account type",
 						Computed:            true,
 					},
-					"credential": secretEmbeddedDataSourceSchema("Base64 encoded credentials.json file for a GCP ServiceAccount (if type supports it). The replicator uses this Service Account to automate GCP API operations (IAM, ResourceManager etc.)."),
+					"credential": secret.DatasourceSchema(secret.SchemaOptions{MarkdownDescription: "Base64 encoded credentials.json file for a GCP ServiceAccount (if type supports it). The replicator uses this Service Account to automate GCP API operations (IAM, ResourceManager etc.)."}),
 					"workload_identity": schema.SingleNestedAttribute{
 						MarkdownDescription: "Workload identity configuration (if type supports it)",
 						Computed:            true,
@@ -1140,7 +1128,7 @@ func kubernetesClientConfigDataSourceSchema(description string) schema.Attribute
 		MarkdownDescription: description,
 		Computed:            true,
 		Attributes: map[string]schema.Attribute{
-			"access_token": secretEmbeddedDataSourceSchema("The access token of the service account for replicator access."),
+			"access_token": secret.DatasourceSchema(secret.SchemaOptions{MarkdownDescription: "The access token of the service account for replicator access."}),
 		},
 	}
 }
@@ -1205,7 +1193,7 @@ func openShiftReplicationConfigDataSourceSchema() schema.Attribute {
 				MarkdownDescription: "Here you can enable templates not only being rolled out to OpenShift but also instantiated during replication. Templates can be configured in meshLandingZones. Please keep in mind that the replication service account needs all the rights that are required to apply the templates that are configured in meshLandingZones.",
 				Computed:            true,
 			},
-			"openshift_role_mappings": schema.ListNestedAttribute{
+			"openshift_role_mappings": schema.SetNestedAttribute{
 				MarkdownDescription: "OpenShift role mappings for OpenShift roles.",
 				Computed:            true,
 				NestedObject: schema.NestedAttributeObject{
@@ -1290,6 +1278,11 @@ func (d *platformDataSource) Read(ctx context.Context, req datasource.ReadReques
 		return
 	}
 
-	// client data maps directly to the schema so we just need to set the state
-	resp.Diagnostics.Append(resp.State.Set(ctx, platform)...)
+	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, platform,
+		secret.WithDatasourceConverter(),
+		generic.WithUseSetForElementsOf[clientTypes.SetElem](),
+		generic.WithUseSetForElementsOf[client.QuotaDefinition](),
+		generic.WithUseSetForElementsOf[client.AzureRoleMapping](),
+		generic.WithUseSetForElementsOf[client.OpenShiftPlatformRoleMapping](),
+	)...)
 }
