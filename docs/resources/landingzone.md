@@ -213,6 +213,9 @@ Read-Only:
 Required:
 
 - `azure_management_group_id` (String) Azure Management Group ID where projects will be created.
+
+Optional:
+
 - `azure_role_mappings` (Attributes Set) An array of mappings between the meshRole and the Azure specific access role. For more information see [the Landing Zone documentation](https://docs.meshcloud.io/meshstack.azure.landing-zones#meshrole-to-platform-role-mapping). If empty, the default that is configured on platform level will be used. (see [below for nested schema](#nestedatt--spec--platform_properties--azure--azure_role_mappings))
 
 <a id="nestedatt--spec--platform_properties--azure--azure_role_mappings"></a>

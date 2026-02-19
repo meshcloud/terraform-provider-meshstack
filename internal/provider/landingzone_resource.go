@@ -321,7 +321,27 @@ func azurePlatformConfigSchema() schema.Attribute {
 					" specific access role. " +
 					"For more information see [the Landing Zone documentation](https://docs.meshcloud.io/meshstack.azure.landing-zones#meshrole-to-platform-role-mapping). " +
 					"If empty, the default that is configured on platform level will be used.",
-				Required: true,
+				Optional: true,
+				Computed: true,
+				Default: setdefault.StaticValue(types.SetValueMust(types.ObjectType{
+					AttrTypes: map[string]attr.Type{
+						"project_role_ref": types.ObjectType{
+							AttrTypes: map[string]attr.Type{
+								"name": types.StringType,
+								"kind": types.StringType,
+							},
+						},
+						"azure_group_suffix": types.StringType,
+						"azure_role_definitions": types.SetType{
+							ElemType: types.ObjectType{
+								AttrTypes: map[string]attr.Type{
+									"azure_role_definition_id": types.StringType,
+									"abac_condition":           types.StringType,
+								},
+							},
+						},
+					},
+				}, []attr.Value{})),
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"project_role_ref": meshProjectRoleAttribute(false),

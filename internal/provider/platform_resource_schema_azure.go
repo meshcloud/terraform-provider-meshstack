@@ -2,8 +2,10 @@ package provider
 
 import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
@@ -161,7 +163,24 @@ func azureReplicationConfigSchema() schema.Attribute {
 			},
 			"azure_role_mappings": schema.SetNestedAttribute{
 				MarkdownDescription: "Azure role mappings for Azure role definitions.",
-				Required:            true,
+				Optional:            true,
+				Computed:            true,
+				Default: setdefault.StaticValue(types.SetValueMust(types.ObjectType{
+					AttrTypes: map[string]attr.Type{
+						"project_role_ref": types.ObjectType{
+							AttrTypes: map[string]attr.Type{
+								"name": types.StringType,
+								"kind": types.StringType,
+							},
+						},
+						"azure_role": types.ObjectType{
+							AttrTypes: map[string]attr.Type{
+								"alias": types.StringType,
+								"id":    types.StringType,
+							},
+						},
+					},
+				}, []attr.Value{})),
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"project_role_ref": meshProjectRoleAttribute(false),
