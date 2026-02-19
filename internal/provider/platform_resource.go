@@ -251,7 +251,7 @@ func meteringProcessingConfigSchema() schema.Attribute {
 
 func platformConverterOptions(ctx context.Context, config, plan, state generic.AttributeGetter) generic.ConverterOptions {
 	return secret.WithConverterSupport(ctx, config, plan, state).Append(
-		generic.WithUseSetForElementsOf[clientTypes.SetElem](),
+		generic.WithUseSetForElementsOf[clientTypes.StringSetElem](),
 		generic.WithUseSetForElementsOf[client.QuotaDefinition](),
 		generic.WithUseSetForElementsOf[client.AzureRoleMapping](),
 		generic.WithUseSetForElementsOf[client.OpenShiftPlatformRoleMapping](),

@@ -1280,7 +1280,7 @@ func (d *platformDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, platform,
 		secret.WithDatasourceConverter(),
-		generic.WithUseSetForElementsOf[clientTypes.SetElem](),
+		generic.WithUseSetForElementsOf[clientTypes.StringSetElem](),
 		generic.WithUseSetForElementsOf[client.QuotaDefinition](),
 		generic.WithUseSetForElementsOf[client.AzureRoleMapping](),
 		generic.WithUseSetForElementsOf[client.OpenShiftPlatformRoleMapping](),

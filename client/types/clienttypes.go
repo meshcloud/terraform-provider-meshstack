@@ -5,7 +5,7 @@ import (
 )
 
 type (
-	SetElem string
+	StringSetElem string
 
 	Secret struct {
 		Plaintext *string `json:"plaintext,omitempty" tfsdk:"plaintext"`
