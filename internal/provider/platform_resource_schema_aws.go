@@ -57,7 +57,7 @@ func awsAccessConfigSchema() schema.Attribute {
 								MarkdownDescription: "AWS access key for service user",
 								Required:            true,
 							},
-							"secret_key": secret.ResourceSchema(secret.SchemaOptions{
+							"secret_key": secret.ResourceSchema(secret.ResourceSchemaOptions{
 								MarkdownDescription: "AWS secret key for service user",
 							}),
 						},
@@ -164,7 +164,7 @@ func awsReplicationConfigSchema() schema.Attribute {
 						MarkdownDescription: "Configures the pattern that defines the desired name of AWS IAM Identity Center groups managed by meshStack. It follows the usual replicator string pattern features and provides the additional replacement 'platformGroupAlias', which contains the role name suffix, which is configurable via Role Mappings in this platform config or via a meshLandingZone. Operators must ensure the group names will be unique within the same AWS IAM Identity Center Instance with that configuration. meshStack will additionally prefix the group name with 'mst-' to be able to identify the groups that are managed by meshStack.",
 						Required:            true,
 					},
-					"sso_access_token": secret.ResourceSchema(secret.SchemaOptions{
+					"sso_access_token": secret.ResourceSchema(secret.ResourceSchemaOptions{
 						MarkdownDescription: "The AWS IAM Identity Center SCIM Access Token that was generated via the Automatic provisioning config in AWS IAM Identity Center.",
 					}),
 					"aws_role_mappings": schema.ListNestedAttribute{

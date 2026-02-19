@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 )
 
-type SchemaOptions struct {
+type ResourceSchemaOptions struct {
 	MarkdownDescription string
 	Optional            bool
 }
@@ -16,7 +16,7 @@ type SchemaOptions struct {
 // ResourceSchema defines the Secret representation within the Terraform state/plan.
 // Use during Create/Update resource actions with generic.ValueTo, generic.ValueFrom conversion  and WithConverterSupport as options.
 // For ModifyPlan resource action, use WalkSecretPathsIn with SetHashToUnknownIfVersionChanged.
-func ResourceSchema(opts SchemaOptions) (result schema.SingleNestedAttribute) {
+func ResourceSchema(opts ResourceSchemaOptions) (result schema.SingleNestedAttribute) {
 	return schema.SingleNestedAttribute{
 		MarkdownDescription: opts.MarkdownDescription,
 		Optional:            opts.Optional,

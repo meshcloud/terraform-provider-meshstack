@@ -137,7 +137,7 @@ func (d *integrationsDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 													MarkdownDescription: "GitHub App ID for authentication.",
 													Computed:            true,
 												},
-												"app_private_key": secret.DatasourceSchema(secret.SchemaOptions{}),
+												"app_private_key": secret.DatasourceSchema(secret.DatasourceSchemaOptions{}),
 												"runner_ref": schema.SingleNestedAttribute{
 													MarkdownDescription: "Reference to the building block runner that executes GitHub workflows.",
 													Computed:            true,
@@ -192,7 +192,7 @@ func (d *integrationsDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 													MarkdownDescription: "Azure DevOps organization name.",
 													Computed:            true,
 												},
-												"personal_access_token": secret.DatasourceSchema(secret.SchemaOptions{}),
+												"personal_access_token": secret.DatasourceSchema(secret.DatasourceSchemaOptions{}),
 												"runner_ref": schema.SingleNestedAttribute{
 													MarkdownDescription: "Reference to the building block runner that executes Azure DevOps pipelines.",
 													Computed:            true,

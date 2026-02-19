@@ -328,7 +328,7 @@ func azureAuthSchema() schema.Attribute {
 				Computed:            true,
 				PlanModifiers:       []planmodifier.String{authTypeDefault()},
 			},
-			"credential": secret.ResourceSchema(secret.SchemaOptions{
+			"credential": secret.ResourceSchema(secret.ResourceSchemaOptions{
 				MarkdownDescription: "Client secret (if type is credential)",
 				Optional:            true,
 			}),

@@ -95,7 +95,7 @@ func gcpServiceAccountConfigSchema() schema.Attribute {
 				Computed:            true,
 				PlanModifiers:       []planmodifier.String{authTypeDefault()},
 			},
-			"credential": secret.ResourceSchema(secret.SchemaOptions{
+			"credential": secret.ResourceSchema(secret.ResourceSchemaOptions{
 				MarkdownDescription: "Base64 encoded credentials.json file for a GCP ServiceAccount.",
 				Optional:            true,
 			}),

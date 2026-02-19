@@ -41,7 +41,7 @@ func kubernetesClientConfigSchema(description string) schema.Attribute {
 		MarkdownDescription: description,
 		Required:            true,
 		Attributes: map[string]schema.Attribute{
-			"access_token": secret.ResourceSchema(secret.SchemaOptions{
+			"access_token": secret.ResourceSchema(secret.ResourceSchemaOptions{
 				MarkdownDescription: "The Access Token of the service account for replicator access.",
 			}),
 		},
@@ -151,7 +151,7 @@ func aksReplicationConfigSchema() schema.Attribute {
 		MarkdownDescription: "Replication configuration for AKS (optional, but required for replication)",
 		Optional:            true,
 		Attributes: map[string]schema.Attribute{
-			"access_token": secret.ResourceSchema(secret.SchemaOptions{
+			"access_token": secret.ResourceSchema(secret.ResourceSchemaOptions{
 				MarkdownDescription: "The Access Token of the service account for replicator access.",
 			}),
 			"namespace_name_pattern": schema.StringAttribute{
