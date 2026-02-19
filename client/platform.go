@@ -21,16 +21,16 @@ type MeshPlatformMetadata struct {
 }
 
 type MeshPlatformSpec struct {
-	DisplayName            string                `json:"displayName" tfsdk:"display_name"`
-	Description            string                `json:"description" tfsdk:"description"`
-	Endpoint               string                `json:"endpoint" tfsdk:"endpoint"`
-	SupportUrl             *string               `json:"supportUrl,omitempty" tfsdk:"support_url"`
-	DocumentationUrl       *string               `json:"documentationUrl,omitempty" tfsdk:"documentation_url"`
-	LocationRef            LocationRef           `json:"locationRef" tfsdk:"location_ref"`
-	ContributingWorkspaces []clientTypes.SetElem `json:"contributingWorkspaces" tfsdk:"contributing_workspaces"`
-	Availability           PlatformAvailability  `json:"availability" tfsdk:"availability"`
-	Config                 PlatformConfig        `json:"config" tfsdk:"config"`
-	QuotaDefinitions       []QuotaDefinition     `json:"quotaDefinitions" tfsdk:"quota_definitions"`
+	DisplayName            string                      `json:"displayName" tfsdk:"display_name"`
+	Description            string                      `json:"description" tfsdk:"description"`
+	Endpoint               string                      `json:"endpoint" tfsdk:"endpoint"`
+	SupportUrl             *string                     `json:"supportUrl,omitempty" tfsdk:"support_url"`
+	DocumentationUrl       *string                     `json:"documentationUrl,omitempty" tfsdk:"documentation_url"`
+	LocationRef            LocationRef                 `json:"locationRef" tfsdk:"location_ref"`
+	ContributingWorkspaces []clientTypes.StringSetElem `json:"contributingWorkspaces" tfsdk:"contributing_workspaces"`
+	Availability           PlatformAvailability        `json:"availability" tfsdk:"availability"`
+	Config                 PlatformConfig              `json:"config" tfsdk:"config"`
+	QuotaDefinitions       []QuotaDefinition           `json:"quotaDefinitions" tfsdk:"quota_definitions"`
 }
 
 type QuotaDefinition struct {
@@ -49,9 +49,9 @@ type LocationRef struct {
 }
 
 type PlatformAvailability struct {
-	Restriction            string                `json:"restriction" tfsdk:"restriction"`
-	PublicationState       string                `json:"publicationState" tfsdk:"publication_state"`
-	RestrictedToWorkspaces []clientTypes.SetElem `json:"restrictedToWorkspaces,omitempty" tfsdk:"restricted_to_workspaces"`
+	Restriction            string                      `json:"restriction" tfsdk:"restriction"`
+	PublicationState       string                      `json:"publicationState" tfsdk:"publication_state"`
+	RestrictedToWorkspaces []clientTypes.StringSetElem `json:"restrictedToWorkspaces,omitempty" tfsdk:"restricted_to_workspaces"`
 }
 
 type PlatformConfig struct {

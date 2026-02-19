@@ -42,7 +42,7 @@ type AzureGraphApiCredentials struct {
 }
 
 type AzureSubscriptionProvisioningConfig struct {
-	SubscriptionOwnerObjectIds []types.SetElem                        `json:"subscriptionOwnerObjectIds" tfsdk:"subscription_owner_object_ids"`
+	SubscriptionOwnerObjectIds []types.StringSetElem                  `json:"subscriptionOwnerObjectIds" tfsdk:"subscription_owner_object_ids"`
 	EnterpriseEnrollment       *AzureEnterpriseEnrollmentConfig       `json:"enterpriseEnrollment,omitempty" tfsdk:"enterprise_enrollment"`
 	CustomerAgreement          *AzureCustomerAgreementConfig          `json:"customerAgreement,omitempty" tfsdk:"customer_agreement"`
 	PreProvisioned             *AzurePreProvisionedSubscriptionConfig `json:"preProvisioned,omitempty" tfsdk:"pre_provisioned"`

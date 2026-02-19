@@ -101,7 +101,7 @@ func buildingBlockDefinitionConverterOptions(ctx context.Context, plan, state ge
 
 		withSetEmptyContainersToNull(ctx, plan, state),
 
-		generic.WithUseSetForElementsOf[clientTypes.SetElem](),
+		generic.WithUseSetForElementsOf[clientTypes.StringSetElem](),
 	}
 }
 
@@ -206,7 +206,7 @@ func buildingBlockDefinitionVersionConverterOptions(ctx context.Context, config,
 				return generic.ValueFrom[*buildingBlockDefinitionInputWithSensitive](nil,
 					secretOrAnyValueFromConverter,
 					// for selectable values
-					generic.WithUseSetForElementsOf[clientTypes.SetElem](),
+					generic.WithUseSetForElementsOf[clientTypes.StringSetElem](),
 				)
 			},
 			func(attributePath path.Path, in client.MeshBuildingBlockDefinitionInput) (tftypes.Value, error) {
@@ -216,7 +216,7 @@ func buildingBlockDefinitionVersionConverterOptions(ctx context.Context, config,
 					generic.WithAttributePath(attributePath), // pass down attribute path into walk
 					secretOrAnyValueFromConverter,
 					// for selectable values
-					generic.WithUseSetForElementsOf[clientTypes.SetElem](),
+					generic.WithUseSetForElementsOf[clientTypes.StringSetElem](),
 					withSetEmptyContainersToNull(ctx, plan, state),
 				}
 				if in.IsSensitive {
@@ -296,14 +296,14 @@ func (model *buildingBlockDefinition) SetFromClientDto(dto *client.MeshBuildingB
 	model.Metadata = dto.Metadata
 
 	if len(model.Spec.NotificationSubscribers) > 0 {
-		sortAndUnique := func(s []clientTypes.SetElem) (result []clientTypes.SetElem) {
+		sortAndUnique := func(s []clientTypes.StringSetElem) (result []clientTypes.StringSetElem) {
 			result = slices.Clone(s)
 			slices.Sort(result)
 			result = slices.Compact(result)
 			return
 		}
 		if slices.Compare(sortAndUnique(model.Spec.NotificationSubscribers), sortAndUnique(dto.Spec.NotificationSubscribers)) != 0 {
-			missingSubscribers := slices.DeleteFunc(slices.Clone(model.Spec.NotificationSubscribers), func(subscriber clientTypes.SetElem) bool {
+			missingSubscribers := slices.DeleteFunc(slices.Clone(model.Spec.NotificationSubscribers), func(subscriber clientTypes.StringSetElem) bool {
 				return slices.Contains(dto.Spec.NotificationSubscribers, subscriber)
 			})
 			diags.AddWarning("Notification Subscribers modified", fmt.Sprintf(
