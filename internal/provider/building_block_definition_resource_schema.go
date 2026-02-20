@@ -130,9 +130,13 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 					Default:             booldefault.StaticBool(false),
 				},
 				"selectable_values": schema.SetAttribute{
-					MarkdownDescription: "List of allowed values for the input. **Required** when `type` is " + client.MeshBuildingBlockIOTypeSingleSelect.Markdown() + " or " + client.MeshBuildingBlockIOTypeMultiSelect.Markdown() + ".",
+					MarkdownDescription: "List of allowed values for the input. **Required** to be non-empty when `type` is " + client.MeshBuildingBlockIOTypeSingleSelect.Markdown() + " or " + client.MeshBuildingBlockIOTypeMultiSelect.Markdown() + ".",
 					ElementType:         types.StringType,
 					Optional:            true,
+					Validators: []validator.Set{
+						setvalidator.NoNullValues(),
+						setvalidator.SizeAtLeast(1),
+					},
 				},
 				"value_validation_regex": schema.StringAttribute{
 					MarkdownDescription: "Regular expression pattern to validate input values.",

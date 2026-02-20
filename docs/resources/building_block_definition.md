@@ -59,7 +59,7 @@ resource "meshstack_building_block_definition" "example_01_terraform" {
         description       = "The target environment" # Optional
         type              = "SINGLE_SELECT"
         assignment_type   = "USER_INPUT"
-        selectable_values = ["dev", "prod", "staging"] # Optional
+        selectable_values = ["dev", "prod", "staging"] # Optional, must be non-empty
       }
       resource_name = {
         display_name                   = "Resource Name"
@@ -560,7 +560,7 @@ Optional:
 - `default_value` (String) Default value for the input. **Can only be provided** if `assignment_type` is `USER_INPUT`, `PLATFORM_OPERATOR_MANUAL_INPUT`. Must be passed through `jsonencode()` to match the `type` attribute.
 - `description` (String) Description explaining the purpose and usage of the input.
 - `is_environment` (Boolean) Whether this input is exposed as an environment variable (when `true`) or as a regular variable (when `false`).
-- `selectable_values` (Set of String) List of allowed values for the input. **Required** when `type` is `SINGLE_SELECT` or `MULTI_SELECT`.
+- `selectable_values` (Set of String) List of allowed values for the input. **Required** to be non-empty when `type` is `SINGLE_SELECT` or `MULTI_SELECT`.
 - `sensitive` (Attributes) Configuration for sensitive input values. **Mutually exclusive** with the non-sensitive `argument` and `default_value` attributes. When an input is marked as sensitive, use the nested `sensitive.argument` or `sensitive.default_value` instead of the top-level attributes. You can provide an empty attribute `sensitive = {}` to mark this input as sensitive without providing values. Sensitive inputs are **only supported** for `assignment_type` of `USER_INPUT`, `PLATFORM_OPERATOR_MANUAL_INPUT`, `STATIC`. (see [below for nested schema](#nestedatt--version_spec--inputs--sensitive))
 - `updateable_by_consumer` (Boolean) Whether the input value can be updated by consumers without admin or platform operator permissions.
 - `validation_regex_error_message` (String) Error message to display when regex validation fails.

@@ -44,7 +44,7 @@ resource "meshstack_building_block_definition" "example_01_terraform" {
         description       = "The target environment" # Optional
         type              = "SINGLE_SELECT"
         assignment_type   = "USER_INPUT"
-        selectable_values = ["dev", "prod", "staging"] # Optional
+        selectable_values = ["dev", "prod", "staging"] # Optional, must be non-empty
       }
       resource_name = {
         display_name                   = "Resource Name"
