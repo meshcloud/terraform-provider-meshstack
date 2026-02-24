@@ -2,6 +2,7 @@
 
 FIXES:
 -  `meshstack_building_block_definition`: Provide empty defaults for `version_spec.outputs`, `version_spec.dependency_refs`, `metadata.tags`, `spec.notification_subscribers` to match backend API behavior better.
+- Plan modification of secrets which are added after resource creation as a resource update 
 
 ## v0.19.1
 

@@ -140,7 +140,20 @@ func runBuildingBlockDefinitionTestCases(t *testing.T, testCaseModifiers ...Reso
 					PlanOnly:           true,
 					ExpectNonEmptyPlan: true,
 				})
-				// Step 2 is already inserted by default above.
+				// Step 2 is already present by default above.
+			case "01_terraform":
+				configSecretChange := config.ReplaceAll(`SOMETHING_VERY_SECRET = {`, `SOMETHING_VERY_SECRET_RENAMED = {`)
+				testSteps = append(testSteps,
+					// Step 2: Change secret input name (aka remove/add operation on inputs map)
+					resource.TestStep{
+						Config: configSecretChange.String(),
+						ConfigPlanChecks: resource.ConfigPlanChecks{
+							PreApply: []plancheck.PlanCheck{
+								plancheck.ExpectResourceAction(resourceAddress.String(), plancheck.ResourceActionUpdate),
+							},
+						},
+					},
+				)
 			case "03_manual":
 				// test releasing a version with one implementation (not necessary to do that with all of them)
 				configSpecChange := config.ReplaceAll(bbdDescription, "An updated building block definition")

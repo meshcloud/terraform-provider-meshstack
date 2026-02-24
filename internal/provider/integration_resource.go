@@ -115,7 +115,7 @@ func (r *integrationResource) ModifyPlan(ctx context.Context, req resource.Modif
 		return
 	}
 	secret.WalkSecretPathsIn(req.Plan.Raw, &resp.Diagnostics, func(attributePath path.Path, diags *diag.Diagnostics) {
-		secret.SetHashToUnknownIfVersionChanged(ctx, req.Plan, req.State, &resp.Plan)(attributePath, diags)
+		secret.SetToUnknownIfVersionChangedOrCreated(ctx, req.Plan, req.State, &resp.Plan)(attributePath, diags)
 	})
 }
 
