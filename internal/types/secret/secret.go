@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -87,13 +88,14 @@ func ValueFromConverter(ctx context.Context, plan, state generic.AttributeGetter
 
 	var version *string
 	if versionFromPlan := getVersion(plan); versionFromPlan != nil {
-		// when importing or initially creating without version provided in plan,
-		// take over Hash as the (computed) version field
+		// use version from plan if already set
 		version = versionFromPlan
 	} else if versionFromState := getVersion(state); versionFromState != nil {
-		// finally, resort to version from state
+		// else, resort to version from state
 		version = versionFromState
 	} else {
+		// when importing or initially creating without version provided in plan,
+		// take over Hash as the (computed) version field
 		version = in.Hash
 	}
 
@@ -122,29 +124,35 @@ func ValueToConverter(ctx context.Context, config, plan, state generic.Attribute
 		}
 	}()
 
-	getAttributeFrom := func(getter generic.AttributeGetter, name string) (out *string) {
+	tryGetAttributeFrom := func(getter generic.AttributeGetter, name string) (out *string) {
 		diags.Append(getter.GetAttribute(ctx, attributePath.AtName(name), &out)...)
 		if diags.HasError() {
 			return
 		}
-		if out == nil {
-			diags.AddError("Invalid secret state", fmt.Sprintf("Got nil/null value for attribute %s", name))
-		} else if strings.TrimSpace(*out) == "" {
+		if out != nil && strings.TrimSpace(*out) == "" {
 			diags.AddError("Invalid secret state", fmt.Sprintf("Got empty/whitespace only value '%s' for attribute %s", *out, name))
 		}
 		return
 	}
 
-	if state == nil {
+	getAttributeFrom := func(getter generic.AttributeGetter, name string) (out *string) {
+		out = tryGetAttributeFrom(getter, name)
+		if out == nil {
+			diags.AddError("Invalid secret state", fmt.Sprintf("Got nil/null value for attribute %s", name))
+		}
+		return
+	}
+
+	if state == nil || isAttributeValueNull(ctx, state, &diags, attributePath) {
 		// there's no state available, so assume changed version (resource is newly created) and get the ephemeral value as plaintext!
 		return clientTypes.Secret{Plaintext: getAttributeFrom(config, valueAttributeKey)}, nil
-	} else if plan == nil {
-		// there's no plan, so we're simply reading the hash from the state
+	} else if plan == nil || isAttributeValueNull(ctx, plan, &diags, attributePath) {
+		// there's no plan but a state, so we're simply reading the hash from the state
 		return clientTypes.Secret{Hash: getAttributeFrom(state, hashAttributeKey)}, nil
 	}
 
-	versionFromState := getAttributeFrom(state, versionAttributeKey)
-	versionFromPlan := getAttributeFrom(plan, versionAttributeKey)
+	versionFromState := tryGetAttributeFrom(state, versionAttributeKey)
+	versionFromPlan := tryGetAttributeFrom(plan, versionAttributeKey)
 	if diags.HasError() {
 		return
 	}
@@ -165,10 +173,35 @@ func ValueToConverter(ctx context.Context, config, plan, state generic.Attribute
 
 }
 
-// SetHashToUnknownIfVersionChanged constructs a visitor which sets the secret_hash of the secret at the given attribute to unknown
-// if the secret_version changes according to the given plan and state. Used together with WalkSecretPathsIn.
-func SetHashToUnknownIfVersionChanged(ctx context.Context, plan, state generic.AttributeGetter, responsePlan generic.AttributeSetter) func(attributePath path.Path, diags *diag.Diagnostics) (versionChanged bool) {
+func isAttributeValueNull(ctx context.Context, getter generic.AttributeGetter, diags *diag.Diagnostics, attributePath path.Path) bool {
+	var v attr.Value
+	diags.Append(getter.GetAttribute(ctx, attributePath, &v)...)
+	if diags.HasError() {
+		return false
+	}
+	return v.IsNull()
+}
+
+// SetToUnknownIfVersionChangedOrCreated constructs a visitor which sets the secret_hash of the secret at the given attribute to unknown
+// if the secret_version changes according to the given plan and state.
+// If the secret is newly created, sets secret_hash and secret_version to unknown to cover the case of later addition of a secret attribute if the resource exists already (resource is updated).
+// Used together with WalkSecretPathsIn.
+func SetToUnknownIfVersionChangedOrCreated(ctx context.Context, plan, state generic.AttributeGetter, responsePlan generic.AttributeSetter) func(attributePath path.Path, diags *diag.Diagnostics) (versionChanged bool) {
 	return func(attributePath path.Path, diags *diag.Diagnostics) (versionChanged bool) {
+		if isAttributeValueNull(ctx, plan, diags, attributePath) {
+			// There's nothing to do if the plan/config removes the whole secret (there might also be an error diag)
+			return
+		}
+		if isAttributeValueNull(ctx, state, diags, attributePath) {
+			// This case happens if an optional secret is added after the resource is initially created.
+			versionChanged = true
+			responsePlan.SetAttribute(ctx, attributePath.AtName(versionAttributeKey), types.StringUnknown())
+			responsePlan.SetAttribute(ctx, attributePath.AtName(hashAttributeKey), types.StringUnknown())
+			return
+		} else if diags.HasError() {
+			return
+		}
+		// This case happens if an existing secret is updated (present in state and plan), so only check if version has changed.
 		var versionFromPlan types.String
 		diags.Append(plan.GetAttribute(ctx, attributePath.AtName(versionAttributeKey), &versionFromPlan)...)
 		if diags.HasError() {
@@ -197,7 +230,7 @@ func SetHashToUnknownIfVersionChanged(ctx context.Context, plan, state generic.A
 
 // WalkSecretPathsIn finds all secrets matching the Secret object representation in the given raw Terraform value (usually a req.Plan.Raw).
 // It calls the given visitor with the attributePath where the secret is located.
-// See SetHashToUnknownIfVersionChanged for an example visitor.
+// See SetToUnknownIfVersionChangedOrCreated for an example visitor.
 func WalkSecretPathsIn(raw tftypes.Value, diags *diag.Diagnostics, visitor func(attributePath path.Path, diags *diag.Diagnostics)) {
 	convertTfPath := func(tfType *tftypes.AttributePath) (result path.Path) {
 		result = path.Empty()

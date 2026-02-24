@@ -15,7 +15,7 @@ type ResourceSchemaOptions struct {
 
 // ResourceSchema defines the Secret representation within the Terraform state/plan.
 // Use during Create/Update resource actions with generic.ValueTo, generic.ValueFrom conversion  and WithConverterSupport as options.
-// For ModifyPlan resource action, use WalkSecretPathsIn with SetHashToUnknownIfVersionChanged.
+// For the ModifyPlan resource action, use WalkSecretPathsIn with SetToUnknownIfVersionChangedOrCreated.
 func ResourceSchema(opts ResourceSchemaOptions) (result schema.SingleNestedAttribute) {
 	return schema.SingleNestedAttribute{
 		MarkdownDescription: opts.MarkdownDescription,

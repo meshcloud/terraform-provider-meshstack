@@ -153,7 +153,7 @@ func (r *buildingBlockDefinitionResource) ModifyPlan(ctx context.Context, req re
 
 	versionSpecSecretsChanged := false
 	secret.WalkSecretPathsIn(req.Plan.Raw, &resp.Diagnostics, func(attributePath path.Path, diags *diag.Diagnostics) {
-		versionChanged := secret.SetHashToUnknownIfVersionChanged(ctx, req.Plan, req.State, &resp.Plan)(attributePath, diags)
+		versionChanged := secret.SetToUnknownIfVersionChangedOrCreated(ctx, req.Plan, req.State, &resp.Plan)(attributePath, diags)
 		if versionChanged {
 			if steps := attributePath.Steps(); len(steps) > 0 {
 				if steps[0].Equal(path.PathStepAttributeName("version_spec")) {
