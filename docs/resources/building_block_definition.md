@@ -353,7 +353,7 @@ Optional:
 - `readme` (String) Detailed readme/documentation in markdown format.
 - `run_transparency` (Boolean) Specifies the building block run control. When set to `true`, both platform teams and workspace users can view detailed run logs and re-run building blocks. When set to `false` (default), only platform teams have this access.
 - `support_url` (String) URL pointing to support resources for the building block definition.
-- `supported_platforms` (Attributes Set) List of platform identifiers that this building block supports. Required and must be non-empty if target_type is `TENANT_LEVEL` (see [below for nested schema](#nestedatt--spec--supported_platforms))
+- `supported_platforms` (Attributes Set) Set of platforms that this building block supports. Required and must be non-empty if target_type is `TENANT_LEVEL` (see [below for nested schema](#nestedatt--spec--supported_platforms))
 - `symbol` (String) Symbol/icon of the building block definition as shown in meshPanel.
 - `target_type` (String) Type of building block definition. Determines where building blocks can be attached. One of `TENANT_LEVEL`, `WORKSPACE_LEVEL`.
 - `use_in_landing_zones_only` (Boolean) Whether this building block can only be used in landing zones.
@@ -379,7 +379,7 @@ Required:
 Optional:
 
 - `deletion_mode` (String) Deletion behavior. One of `DELETE`, `PURGE`.
-- `dependency_refs` (Attributes List) List of refs to building block definitions this definition depends on. (see [below for nested schema](#nestedatt--version_spec--dependency_refs))
+- `dependency_refs` (Attributes Set) Set of refs to building block definitions this definition depends on. (see [below for nested schema](#nestedatt--version_spec--dependency_refs))
 - `inputs` (Attributes Map) Map of input definitions for the building block. Keys are input names, values are input configuration objects. Inputs define parameters that building blocks can receive. (see [below for nested schema](#nestedatt--version_spec--inputs))
 - `only_apply_once_per_tenant` (Boolean) Whether this building block can only be applied once per tenant.
 - `outputs` (Attributes Map) Map of output definitions for the building block. Keys are output names, values are output configuration objects. Outputs define values that building blocks produce and can be consumed by other building blocks. (see [below for nested schema](#nestedatt--version_spec--outputs))
@@ -560,7 +560,7 @@ Optional:
 - `default_value` (String) Default value for the input. **Can only be provided** if `assignment_type` is `USER_INPUT`, `PLATFORM_OPERATOR_MANUAL_INPUT`. Must be passed through `jsonencode()` to match the `type` attribute.
 - `description` (String) Description explaining the purpose and usage of the input.
 - `is_environment` (Boolean) Whether this input is exposed as an environment variable (when `true`) or as a regular variable (when `false`).
-- `selectable_values` (Set of String) List of allowed values for the input. **Required** to be non-empty when `type` is `SINGLE_SELECT` or `MULTI_SELECT`.
+- `selectable_values` (Set of String) Set of allowed values for the input. **Required** to be non-empty when `type` is `SINGLE_SELECT` or `MULTI_SELECT`.
 - `sensitive` (Attributes) Configuration for sensitive input values. **Mutually exclusive** with the non-sensitive `argument` and `default_value` attributes. When an input is marked as sensitive, use the nested `sensitive.argument` or `sensitive.default_value` instead of the top-level attributes. You can provide an empty attribute `sensitive = {}` to mark this input as sensitive without providing values. Sensitive inputs are **only supported** for `assignment_type` of `USER_INPUT`, `PLATFORM_OPERATOR_MANUAL_INPUT`, `STATIC`. (see [below for nested schema](#nestedatt--version_spec--inputs--sensitive))
 - `updateable_by_consumer` (Boolean) Whether the input value can be updated by consumers without admin or platform operator permissions.
 - `validation_regex_error_message` (String) Error message to display when regex validation fails.
@@ -613,9 +613,12 @@ Read-Only:
 
 Required:
 
-- `assignment_type` (String) How the output is used. One of `NONE`, `PLATFORM_TENANT_ID`, `SIGN_IN_URL`, `RESOURCE_URL`, `SUMMARY`.
 - `display_name` (String) Human-readable display name for the output.
 - `type` (String) Data type of the output. One of `STRING`, `CODE`, `INTEGER`, `BOOLEAN`, `FILE`, `LIST`, `SINGLE_SELECT`, `MULTI_SELECT`.
+
+Optional:
+
+- `assignment_type` (String) How the output is used. One of `NONE`, `PLATFORM_TENANT_ID`, `SIGN_IN_URL`, `RESOURCE_URL`, `SUMMARY`. Defaults to `NONE`.
 
 
 <a id="nestedatt--version_spec--runner_ref"></a>

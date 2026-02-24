@@ -17,7 +17,7 @@ type AzureReplicationConfig struct {
 	GroupNamePattern                           string                               `json:"groupNamePattern" tfsdk:"group_name_pattern"`
 	BlueprintServicePrincipal                  string                               `json:"blueprintServicePrincipal" tfsdk:"blueprint_service_principal"`
 	BlueprintLocation                          string                               `json:"blueprintLocation" tfsdk:"blueprint_location"`
-	AzureRoleMappings                          []AzureRoleMapping                   `json:"azureRoleMappings" tfsdk:"azure_role_mappings"`
+	AzureRoleMappings                          types.Set[AzureRoleMapping]          `json:"azureRoleMappings" tfsdk:"azure_role_mappings"`
 	TenantTags                                 *MeshTenantTags                      `json:"tenantTags,omitempty" tfsdk:"tenant_tags"`
 	UserLookUpStrategy                         string                               `json:"userLookUpStrategy" tfsdk:"user_lookup_strategy"`
 	SkipUserGroupPermissionCleanup             bool                                 `json:"skipUserGroupPermissionCleanup" tfsdk:"skip_user_group_permission_cleanup"`
@@ -42,7 +42,7 @@ type AzureGraphApiCredentials struct {
 }
 
 type AzureSubscriptionProvisioningConfig struct {
-	SubscriptionOwnerObjectIds []types.StringSetElem                  `json:"subscriptionOwnerObjectIds" tfsdk:"subscription_owner_object_ids"`
+	SubscriptionOwnerObjectIds types.Set[string]                      `json:"subscriptionOwnerObjectIds" tfsdk:"subscription_owner_object_ids"`
 	EnterpriseEnrollment       *AzureEnterpriseEnrollmentConfig       `json:"enterpriseEnrollment,omitempty" tfsdk:"enterprise_enrollment"`
 	CustomerAgreement          *AzureCustomerAgreementConfig          `json:"customerAgreement,omitempty" tfsdk:"customer_agreement"`
 	PreProvisioned             *AzurePreProvisionedSubscriptionConfig `json:"preProvisioned,omitempty" tfsdk:"pre_provisioned"`

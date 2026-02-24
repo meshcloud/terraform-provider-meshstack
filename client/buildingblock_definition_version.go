@@ -98,13 +98,13 @@ type MeshBuildingBlockDefinitionInput struct {
 	// Otherwise, the [types.Variant] is of [types.Any] (case [types.Variant.Y]).
 	// As this is a fallback detection when JSON (un)marshaling,
 	// types.Any must go second as [types.Variant] intentionally prefers X over Y.
-	Argument                    types.SecretOrAny     `json:"argument,omitempty" tfsdk:"argument"`
-	DefaultValue                types.SecretOrAny     `json:"defaultValue,omitempty" tfsdk:"default_value"`
-	UpdateableByConsumer        bool                  `json:"updateableByConsumer" tfsdk:"updateable_by_consumer"`
-	SelectableValues            []types.StringSetElem `json:"selectableValues,omitempty" tfsdk:"selectable_values"`
-	Description                 *string               `json:"description,omitempty" tfsdk:"description"`
-	ValueValidationRegex        *string               `json:"valueValidationRegex,omitempty" tfsdk:"value_validation_regex"`
-	ValidationRegexErrorMessage *string               `json:"validationRegexErrorMessage,omitempty" tfsdk:"validation_regex_error_message"`
+	Argument                    types.SecretOrAny `json:"argument,omitempty" tfsdk:"argument"`
+	DefaultValue                types.SecretOrAny `json:"defaultValue,omitempty" tfsdk:"default_value"`
+	UpdateableByConsumer        bool              `json:"updateableByConsumer" tfsdk:"updateable_by_consumer"`
+	SelectableValues            types.Set[string] `json:"selectableValues,omitempty" tfsdk:"selectable_values"`
+	Description                 *string           `json:"description,omitempty" tfsdk:"description"`
+	ValueValidationRegex        *string           `json:"valueValidationRegex,omitempty" tfsdk:"value_validation_regex"`
+	ValidationRegexErrorMessage *string           `json:"validationRegexErrorMessage,omitempty" tfsdk:"validation_regex_error_message"`
 }
 
 func (m *MeshBuildingBlockDefinitionInput) UnmarshalJSON(bytes []byte) error {
@@ -156,12 +156,12 @@ type MeshBuildingBlockDefinitionVersionSpec struct {
 	BuildingBlockDefinitionRef *BuildingBlockDefinitionRef                  `json:"buildingBlockDefinitionRef" tfsdk:"-"`
 	OnlyApplyOncePerTenant     bool                                         `json:"onlyApplyOncePerTenant" tfsdk:"only_apply_once_per_tenant"`
 	DeletionMode               BuildingBlockDeletionMode                    `json:"deletionMode" tfsdk:"deletion_mode"`
-	Permissions                []ApiPermission                              `json:"permissions,omitempty" tfsdk:"permissions"`
+	Permissions                types.Set[ApiPermission]                     `json:"permissions,omitempty" tfsdk:"permissions"`
 	Outputs                    map[string]MeshBuildingBlockDefinitionOutput `json:"outputs" tfsdk:"outputs"`
 	VersionNumber              *int64                                       `json:"versionNumber,omitempty" tfsdk:"version_number"`
 	State                      *MeshBuildingBlockDefinitionVersionState     `json:"state,omitempty" tfsdk:"state"`
 	RunnerRef                  *BuildingBlockRunnerRef                      `json:"runnerRef" tfsdk:"runner_ref"`
-	DependencyDefinitionUUIDs  []BuildingBlockDependencyRef                 `json:"dependencyDefinitionUuids,omitempty" tfsdk:"dependency_refs"`
+	DependencyDefinitionUUIDs  types.Set[BuildingBlockDependencyRef]        `json:"dependencyDefinitionUuids,omitempty" tfsdk:"dependency_refs"`
 	Implementation             MeshBuildingBlockDefinitionImplementation    `json:"implementation" tfsdk:"implementation"`
 	Inputs                     map[string]*MeshBuildingBlockDefinitionInput `json:"inputs" tfsdk:"inputs"`
 }

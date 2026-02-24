@@ -12,8 +12,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -130,7 +132,7 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 					Default:             booldefault.StaticBool(false),
 				},
 				"selectable_values": schema.SetAttribute{
-					MarkdownDescription: "List of allowed values for the input. **Required** to be non-empty when `type` is " + client.MeshBuildingBlockIOTypeSingleSelect.Markdown() + " or " + client.MeshBuildingBlockIOTypeMultiSelect.Markdown() + ".",
+					MarkdownDescription: "Set of allowed values for the input. **Required** to be non-empty when `type` is " + client.MeshBuildingBlockIOTypeSingleSelect.Markdown() + " or " + client.MeshBuildingBlockIOTypeMultiSelect.Markdown() + ".",
 					ElementType:         types.StringType,
 					Optional:            true,
 					Validators: []validator.Set{
@@ -150,33 +152,34 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 		},
 	}
 
-	outputsAttribute := schema.MapNestedAttribute{
-		MarkdownDescription: "Map of output definitions for the building block. Keys are output names, values are output configuration objects. " +
-			"Outputs define values that building blocks produce and can be consumed by other building blocks.",
-		Optional: true,
-		NestedObject: schema.NestedAttributeObject{
-			Attributes: map[string]schema.Attribute{
-				"display_name": schema.StringAttribute{
-					MarkdownDescription: "Human-readable display name for the output.",
-					Required:            true,
-				},
-				"assignment_type": schema.StringAttribute{
-					MarkdownDescription: "How the output is used. One of " + client.MeshBuildingBlockDefinitionOutputAssignmentTypes.Markdown() + ".",
-					Required:            true,
-					Validators: []validator.String{
-						stringvalidator.OneOf(client.MeshBuildingBlockDefinitionOutputAssignmentTypes.Strings()...),
-					},
-				},
-				"type": schema.StringAttribute{
-					MarkdownDescription: "Data type of the output. One of " + client.MeshBuildingBlockIOTypes.Markdown() + ".",
-					Required:            true,
-					Validators: []validator.String{
-						stringvalidator.OneOf(client.MeshBuildingBlockIOTypes.Strings()...),
-					},
-				},
+	outputs := schema.NestedAttributeObject{Attributes: map[string]schema.Attribute{
+		"display_name": schema.StringAttribute{
+			MarkdownDescription: "Human-readable display name for the output.",
+			Required:            true,
+		},
+		"assignment_type": schema.StringAttribute{
+			MarkdownDescription: fmt.Sprintf("How the output is used. One of %s. Defaults to %s.",
+				client.MeshBuildingBlockDefinitionOutputAssignmentTypes.Markdown(),
+				client.MeshBuildingBlockDefinitionOutputAssignmentTypeNone.Markdown(),
+			),
+			Optional: true,
+			Computed: true,
+			Default:  stringdefault.StaticString(client.MeshBuildingBlockDefinitionOutputAssignmentTypeNone.String()),
+			Validators: []validator.String{
+				stringvalidator.OneOf(client.MeshBuildingBlockDefinitionOutputAssignmentTypes.Strings()...),
 			},
 		},
+		"type": schema.StringAttribute{
+			MarkdownDescription: "Data type of the output. One of " + client.MeshBuildingBlockIOTypes.Markdown() + ".",
+			Required:            true,
+			Validators: []validator.String{
+				stringvalidator.OneOf(client.MeshBuildingBlockIOTypes.Strings()...),
+			},
+		},
+	},
 	}
+
+	dependencyRefs := schema.NestedAttributeObject{Attributes: meshUuidRefAttribute("meshBuildingBlockDefinition")}
 
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Manages a meshBuildingBlockDefinition in meshStack. " +
@@ -206,6 +209,8 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 						MarkdownDescription: "Key/value pairs of tags set on the building block definition. Values are arrays of strings.",
 						ElementType:         types.ListType{ElemType: types.StringType},
 						Optional:            true,
+						Computed:            true,
+						Default:             mapdefault.StaticValue(types.MapValueMust(types.ListType{ElemType: types.StringType}, nil)),
 					},
 				},
 			},
@@ -243,7 +248,7 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 						Optional:            true,
 					},
 					"supported_platforms": schema.SetNestedAttribute{
-						MarkdownDescription: fmt.Sprintf("List of platform identifiers that this building block supports. Required and must be non-empty if target_type is `%s`", client.MeshBuildingBlockTypeTenantLevel),
+						MarkdownDescription: fmt.Sprintf("Set of platforms that this building block supports. Required and must be non-empty if target_type is `%s`", client.MeshBuildingBlockTypeTenantLevel),
 						Optional:            true,
 						Validators: []validator.Set{
 							validators.SupportedPlatforms{},
@@ -291,6 +296,8 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 						MarkdownDescription: "List of subscribers to notify about events related to this building block. Prefix usernames with `user:` and emails with `email:`.",
 						ElementType:         types.StringType,
 						Optional:            true,
+						Computed:            true,
+						Default:             setdefault.StaticValue(types.SetValueMust(types.StringType, nil)),
 					},
 				},
 			},
@@ -354,22 +361,31 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 							"See [Workspace Permissions](https://docs.meshcloud.io/api/authentication/api-permissions/) for available values and " +
 							"[documentation on ephemeral API keys](https://docs.dev.meshcloud.io/concepts/building-block/#ephemeral-api-keys).",
 						Optional:    true,
+						Computed:    true,
 						ElementType: types.StringType,
+						Default:     setdefault.StaticValue(types.SetValueMust(types.StringType, nil)),
 						Validators: []validator.Set{
 							setvalidator.ValueStringsAre(
 								stringvalidator.OneOf(client.WorkspacePermissions.Strings()...),
 							),
 						},
 					},
-					"dependency_refs": schema.ListNestedAttribute{
-						MarkdownDescription: "List of refs to building block definitions this definition depends on.",
+					"dependency_refs": schema.SetNestedAttribute{
+						MarkdownDescription: "Set of refs to building block definitions this definition depends on.",
 						Optional:            true,
-						NestedObject: schema.NestedAttributeObject{
-							Attributes: meshUuidRefAttribute("meshBuildingBlockDefinition"),
-						},
+						Computed:            true,
+						Default:             emptySetDefault(dependencyRefs),
+						NestedObject:        dependencyRefs,
 					},
-					"inputs":  inputsAttribute,
-					"outputs": outputsAttribute,
+					"inputs": inputsAttribute,
+					"outputs": schema.MapNestedAttribute{
+						MarkdownDescription: "Map of output definitions for the building block. Keys are output names, values are output configuration objects. " +
+							"Outputs define values that building blocks produce and can be consumed by other building blocks.",
+						Optional:     true,
+						Computed:     true,
+						Default:      mapdefault.StaticValue(types.MapValueMust(nestedObjectToObjectType(outputs), nil)),
+						NestedObject: outputs,
+					},
 
 					"implementation": schema.SingleNestedAttribute{
 						MarkdownDescription: "Implementation configuration for the building block. Must contain exactly one of `manual`, `terraform`, `github_workflows`, `gitlab_pipeline`, or `azure_devops_pipeline`.",
