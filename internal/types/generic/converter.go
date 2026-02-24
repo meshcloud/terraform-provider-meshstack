@@ -37,7 +37,7 @@ type converter struct {
 	ValueFromConverters     []ValueFromConverter
 	ValueFromEmptyContainer ValueFromEmptyContainerHandler
 	SetUnknownValueToZero   bool
-	SetElemTypes            []reflect.Type
+	SliceTypeAsSet          func(reflect.Type) bool
 }
 
 type ValueFromEmptyContainerHandler func(attributePath path.Path) (haveNil bool, err error)

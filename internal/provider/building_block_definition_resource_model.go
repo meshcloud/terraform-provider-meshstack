@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
@@ -58,27 +57,7 @@ func newBuildingBlockDefinitionRef(uuid string) buildingBlockDefinitionRef {
 	}
 }
 
-// withSetEmptyContainersToNull transform all empty slices/maps as returned from API into null value (optional value),
-// if the plan/state also specifies it as null (optional/omitted attribute).
-// This accounts for somewhat unprecise handling in the backend for optional inputs, but let's take that shortcut
-// and keep the config in-sync ignoring the bogus backend change.
-func withSetEmptyContainersToNull(ctx context.Context, plan, state generic.AttributeGetter) generic.ConverterOption {
-	return generic.WithValueFromEmptyContainer(func(attributePath path.Path) (haveNil bool, err error) {
-		var attributeValue attr.Value
-		var diags diag.Diagnostics
-		if plan != nil {
-			diags.Append(plan.GetAttribute(ctx, attributePath, &attributeValue)...)
-		} else if state != nil {
-			diags.Append(state.GetAttribute(ctx, attributePath, &attributeValue)...)
-		}
-		if diags.HasError() || attributeValue == nil {
-			return true, fmt.Errorf("cannot get attribute from plan/state at %s: %s", attributePath, diags)
-		}
-		return attributeValue.IsNull(), nil
-	})
-}
-
-func buildingBlockDefinitionConverterOptions(ctx context.Context, plan, state generic.AttributeGetter) generic.ConverterOptions {
+func buildingBlockDefinitionConverterOptions() generic.ConverterOptions {
 	return generic.ConverterOptions{
 		// Transform ref input in schema to simple string (aka the platform type).
 		generic.WithValueFromConverterFor[client.BuildingBlockDefinitionSupportedPlatform](generic.ValueFromConverterForTypedNilHandler[supportedPlatformRef](),
@@ -97,11 +76,7 @@ func buildingBlockDefinitionConverterOptions(ctx context.Context, plan, state ge
 			}
 			return client.BuildingBlockDefinitionSupportedPlatform(ref.Name), nil
 		}),
-		generic.WithUseSetForElementsOf[client.BuildingBlockDefinitionSupportedPlatform](),
-
-		withSetEmptyContainersToNull(ctx, plan, state),
-
-		generic.WithUseSetForElementsOf[clientTypes.StringSetElem](),
+		generic.WithSliceTypeAsSet(clientTypes.IsSet),
 	}
 }
 
@@ -170,11 +145,8 @@ func buildingBlockDefinitionVersionConverterOptions(ctx context.Context, config,
 		// Support converting secrets in implementation config
 		secret.WithConverterSupport(ctx, config, plan, state),
 
-		// Transform all empty slices as returned from API into null value (optional).
-		// This is somewhat unprecise handling in the backend for optional lists, but let's take that shortcut.
-		withSetEmptyContainersToNull(ctx, plan, state),
-
-		generic.WithUseSetForElementsOf[client.ApiPermission](),
+		// Support sets marked with clientTypes.Set
+		generic.WithSliceTypeAsSet(clientTypes.IsSet),
 
 		// Handle implementation
 		generic.WithValueFromConverterFor[client.MeshBuildingBlockDefinitionImplementation](nil, func(attributePath path.Path, in client.MeshBuildingBlockDefinitionImplementation) (tftypes.Value, error) {
@@ -206,7 +178,7 @@ func buildingBlockDefinitionVersionConverterOptions(ctx context.Context, config,
 				return generic.ValueFrom[*buildingBlockDefinitionInputWithSensitive](nil,
 					secretOrAnyValueFromConverter,
 					// for selectable values
-					generic.WithUseSetForElementsOf[clientTypes.StringSetElem](),
+					generic.WithSliceTypeAsSet(clientTypes.IsSet),
 				)
 			},
 			func(attributePath path.Path, in client.MeshBuildingBlockDefinitionInput) (tftypes.Value, error) {
@@ -215,9 +187,8 @@ func buildingBlockDefinitionVersionConverterOptions(ctx context.Context, config,
 				converterOptions := generic.ConverterOptions{
 					generic.WithAttributePath(attributePath), // pass down attribute path into walk
 					secretOrAnyValueFromConverter,
-					// for selectable values
-					generic.WithUseSetForElementsOf[clientTypes.StringSetElem](),
-					withSetEmptyContainersToNull(ctx, plan, state),
+					// for selectable values (which are sets)
+					generic.WithSliceTypeAsSet(clientTypes.IsSet),
 				}
 				if in.IsSensitive {
 					var errs []error
@@ -296,14 +267,14 @@ func (model *buildingBlockDefinition) SetFromClientDto(dto *client.MeshBuildingB
 	model.Metadata = dto.Metadata
 
 	if len(model.Spec.NotificationSubscribers) > 0 {
-		sortAndUnique := func(s []clientTypes.StringSetElem) (result []clientTypes.StringSetElem) {
+		sortAndUnique := func(s []string) (result []string) {
 			result = slices.Clone(s)
 			slices.Sort(result)
 			result = slices.Compact(result)
 			return
 		}
 		if slices.Compare(sortAndUnique(model.Spec.NotificationSubscribers), sortAndUnique(dto.Spec.NotificationSubscribers)) != 0 {
-			missingSubscribers := slices.DeleteFunc(slices.Clone(model.Spec.NotificationSubscribers), func(subscriber clientTypes.StringSetElem) bool {
+			missingSubscribers := slices.DeleteFunc(slices.Clone(model.Spec.NotificationSubscribers), func(subscriber string) bool {
 				return slices.Contains(dto.Spec.NotificationSubscribers, subscriber)
 			})
 			diags.AddWarning("Notification Subscribers modified", fmt.Sprintf(
@@ -344,8 +315,12 @@ func (model *buildingBlockDefinition) SetFromVersionClientDtos(diags *diag.Diagn
 		return
 	}
 	latestIndex := len(versionDtos) - 1
+	inputsNil := model.VersionSpec.Inputs == nil
 	model.VersionSpec = buildingBlockDefinitionVersionSpec{
 		MeshBuildingBlockDefinitionVersionSpec: versionDtos[latestIndex].Spec,
+	}
+	if inputsNil && len(model.VersionSpec.Inputs) == 0 {
+		model.VersionSpec.Inputs = nil
 	}
 
 	if !isDraft.IsUnknown() && !isDraft.Get() {
@@ -353,8 +328,9 @@ func (model *buildingBlockDefinition) SetFromVersionClientDtos(diags *diag.Diagn
 		model.VersionSpec.Draft = false
 		if *model.VersionSpec.State == client.MeshBuildingBlockDefinitionVersionStateDraft.Unwrap() {
 			// show a warning though if that doesn't fit the state (aka state is still DRAFT), as the version might be "in review"
-			// the publication status IN_REVIEW is currently not available in the meshObject API, and it would only make sense to have some auto_approve flag next to draft
-			// (provided the API token has sufficient permissions to approve this)
+			// the publication status IN_REVIEW is currently not available in the meshObject API.
+			// It would only make sense to have some auto_approve flag next to draft,
+			// provided the API token has sufficient permissions to approve it.
 			diags.AddWarning("Building Block Definition release needs admin approval", fmt.Sprintf(
 				"The latest version of the Building Block Definition %s needs admin approval before its state can change to %s as desired by your current Terraform configuration draft=false. "+
 					"Approve the release in the Admin panel and re-run Terraform, which makes this warning disappear.", bbdUuid, client.MeshBuildingBlockDefinitionVersionStateReleased))

@@ -34,11 +34,11 @@ type MeshBuildingBlockDefinitionSpec struct {
 	SupportURL            *string               `json:"supportUrl,omitempty" tfsdk:"support_url"`
 	DocumentationURL      *string               `json:"documentationUrl,omitempty" tfsdk:"documentation_url"`
 	// NotificationSubscribers can also specify emails with prefix 'email:', so it's not only usernames (as the JSON field name suggests)!
-	NotificationSubscribers []types.StringSetElem `json:"notificationSubscriberUsernames,omitempty" tfsdk:"notification_subscribers"`
-	Symbol                  *string               `json:"symbol,omitempty" tfsdk:"symbol"`
+	NotificationSubscribers types.Set[string] `json:"notificationSubscriberUsernames,omitempty" tfsdk:"notification_subscribers"`
+	Symbol                  *string           `json:"symbol,omitempty" tfsdk:"symbol"`
 	// SupportedPlatforms are currently platform types only. Specifying single platforms is currently unsupported.
 	// Have this list of string with a dedicated type, to convert it to/from Platform Type refs.
-	SupportedPlatforms []BuildingBlockDefinitionSupportedPlatform `json:"supportedPlatforms" tfsdk:"supported_platforms"`
+	SupportedPlatforms types.Set[BuildingBlockDefinitionSupportedPlatform] `json:"supportedPlatforms" tfsdk:"supported_platforms"`
 }
 
 type MeshBuildingBlockDefinitionStatusVersion struct {

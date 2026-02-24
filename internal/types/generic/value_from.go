@@ -29,10 +29,10 @@ func WithValueFromEmptyContainer(handler ValueFromEmptyContainerHandler) Convert
 	}
 }
 
-// WithUseSetForElementsOf detects slices with given T as sets and uses the corresponding [tftypes.Set] for building the value.
-func WithUseSetForElementsOf[T any]() ConverterOption {
+// WithSliceTypeAsSet detects slices types where [tftypes.Set] is used for building the value.
+func WithSliceTypeAsSet(sliceTypeAsSet func(p reflect.Type) bool) ConverterOption {
 	return func(c *converter) {
-		c.SetElemTypes = append(c.SetElemTypes, reflect.TypeFor[T]())
+		c.SliceTypeAsSet = sliceTypeAsSet
 	}
 }
 
@@ -173,10 +173,8 @@ dereference:
 		}, reflectwalk.VisitEmptyContainers()); err != nil {
 			return out, err
 		}
-		for _, setElemType := range conv.SetElemTypes {
-			if setElemType.AssignableTo(in.Type().Elem()) {
-				return newValueFrom(tftypes.Set{ElementType: elemType}, values), nil
-			}
+		if conv.SliceTypeAsSet != nil && conv.SliceTypeAsSet(in.Type()) {
+			return newValueFrom(tftypes.Set{ElementType: elemType}, values), nil
 		}
 		return newValueFrom(tftypes.List{ElementType: elemType}, values), nil
 	case reflect.Map:

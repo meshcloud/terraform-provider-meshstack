@@ -314,7 +314,7 @@ func checkBuildingBlockMetadata(optional bool) knownvalue.Check {
 		"tags":               knownvalue.MapSizeExact(2),
 	}
 	if optional {
-		expected["tags"] = knownvalue.Null()
+		expected["tags"] = knownvalue.MapSizeExact(0)
 	}
 	return knownvalue.MapExact(expected)
 }
@@ -352,13 +352,14 @@ func checkBuildingBlockSpec(expectedDescription string, optional bool) knownvalu
 		}),
 	}
 	if optional {
-		for _, nullKey := range []string{"readme", "support_url", "documentation_url", "supported_platforms", "notification_subscribers"} {
+		for _, nullKey := range []string{"readme", "support_url", "documentation_url", "supported_platforms"} {
 			expected[nullKey] = knownvalue.Null()
 		}
 		expected["target_type"] = knownvalue.StringExact("WORKSPACE_LEVEL")
 		expected["run_transparency"] = knownvalue.Bool(false)
 		expected["use_in_landing_zones_only"] = knownvalue.Bool(false)
 		expected["symbol"] = KnownValueNotEmptyString()
+		expected["notification_subscribers"] = knownvalue.SetSizeExact(0)
 	}
 	return knownvalue.MapExact(expected)
 }
@@ -387,11 +388,11 @@ func checkBuildingBlockVersionSpec(exampleSuffix string, expectedState enum.Entr
 			"kind": knownvalue.StringExact("meshBuildingBlockRunner"),
 			"uuid": knownvalue.StringExact(SharedBuildingBlockRunnerUuids[exampleSuffixesToImplementationType[exampleSuffix]]),
 		}),
-		"dependency_refs": knownvalue.Null(),
+		"dependency_refs": knownvalue.SetSizeExact(0),
 		"inputs":          checkInputs,
 		"implementation":  checkImplementation,
 		"outputs":         checkOutputs,
-		"permissions":     knownvalue.Null(),
+		"permissions":     knownvalue.SetSizeExact(0),
 	}
 
 	if exampleSuffix == "01_terraform" {

@@ -26,7 +26,7 @@ func nestedObjectToObjectType(nested schema.NestedAttributeObject) types.ObjectT
 // emptySetDefault returns an empty set whose element type is derived from the given
 // schema.NestedAttributeObject as a default value.
 func emptySetDefault(nested schema.NestedAttributeObject) defaults.Set {
-	return setdefault.StaticValue(types.SetValueMust(nestedObjectToObjectType(nested), []attr.Value{}))
+	return setdefault.StaticValue(types.SetValueMust(nestedObjectToObjectType(nested), nil))
 }
 
 // meshProjectRoleAttribute returns a schema attribute for meshProject role references.

@@ -1,3 +1,8 @@
+## v0.19.2
+
+FIXES:
+-  `meshstack_building_block_definition`: Provide empty defaults for `version_spec.outputs`, `version_spec.dependency_refs`, `metadata.tags`, `spec.notification_subscribers` to match backend API behavior better.
+
 ## v0.19.1
 
 BREAKING CHANGES:
