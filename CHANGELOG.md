@@ -1,7 +1,14 @@
+## v0.19.3
+
+FIXES:
+- `meshstack_building_block_definition`: Require replace if `spec.target_type` is changed.
+- `meshstack_building_block_definition`: `use_mesh_http_backend_fallback` for Terraform implementation defaults to `true`.
+- `meshstack_building_block_definition`: Validate `notification_subscribers` to start with `user:` or `email:`.
+
 ## v0.19.2
 
 FIXES:
--  `meshstack_building_block_definition`: Provide empty defaults for `version_spec.outputs`, `version_spec.dependency_refs`, `metadata.tags`, `spec.notification_subscribers` to match backend API behavior better.
+- `meshstack_building_block_definition`: Provide empty defaults for `version_spec.outputs`, `version_spec.dependency_refs`, `metadata.tags`, `spec.notification_subscribers` to match backend API behavior better.
 - Plan modification of secrets which are added after resource creation as a resource update 
 
 ## v0.19.1
