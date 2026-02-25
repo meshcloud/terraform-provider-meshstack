@@ -10,7 +10,7 @@ resource "meshstack_building_block_definition" "example_01_terraform" {
 
   spec = {
     display_name              = "Example Building Block"
-    symbol                    = "🏗️" # Optional
+    symbol                    = provider::meshstack::load_image_file("${path.module}/bb-symbol.png") # Optional
     description               = "An example building block definition"
     readme                    = "# Example Building Block\n\nThis is a comprehensive example showcasing all available attributes." # Optional
     support_url               = "https://support.example.com/building-blocks"                                                      # Optional

@@ -25,7 +25,7 @@ resource "meshstack_building_block_definition" "example_01_terraform" {
 
   spec = {
     display_name              = "Example Building Block"
-    symbol                    = "🏗️" # Optional
+    symbol                    = provider::meshstack::load_image_file("${path.module}/bb-symbol.png") # Optional
     description               = "An example building block definition"
     readme                    = "# Example Building Block\n\nThis is a comprehensive example showcasing all available attributes." # Optional
     support_url               = "https://support.example.com/building-blocks"                                                      # Optional
@@ -354,7 +354,7 @@ Optional:
 - `run_transparency` (Boolean) Specifies the building block run control. When set to `true`, both platform teams and workspace users can view detailed run logs and re-run building blocks. When set to `false` (default), only platform teams have this access.
 - `support_url` (String) URL pointing to support resources for the building block definition.
 - `supported_platforms` (Attributes Set) Set of platforms that this building block supports. Required and must be non-empty if target_type is `TENANT_LEVEL` (see [below for nested schema](#nestedatt--spec--supported_platforms))
-- `symbol` (String) Symbol/icon of the building block definition as shown in meshPanel.
+- `symbol` (String) Symbol/icon of the building block definition as shown in meshPanel. This can either be an URL starting with `http[s]://` or a base64 encoded data blob. The function `provider::meshstack::load_image_file(<filepath>)` produces such a data blob from a local file.
 - `target_type` (String) Type of building block definition. Determines where building blocks can be attached. Cannot be changed after initial creation. One of `TENANT_LEVEL`, `WORKSPACE_LEVEL`.
 - `use_in_landing_zones_only` (Boolean) Whether this building block can only be used in landing zones.
 

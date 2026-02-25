@@ -80,6 +80,7 @@ linters:
             - github.com/hashicorp/terraform-plugin-framework-validators
             - github.com/hashicorp/terraform-plugin-go
             - github.com/hashicorp/terraform-plugin-log
+            - github.com/gabriel-vasile/mimetype
         provider-test:
           files:
             - "$test"
@@ -98,6 +99,7 @@ linters:
             - github.com/hashicorp/terraform-plugin-testing
             - github.com/hashicorp/terraform-plugin-framework/diag
             - github.com/stretchr/testify
+            - github.com/sebdah/goldie/v2
         types:
           files:
             - "**/internal/types/**/*.go"

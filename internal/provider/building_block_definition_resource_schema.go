@@ -225,9 +225,11 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 						Required:            true,
 					},
 					"symbol": schema.StringAttribute{
-						MarkdownDescription: "Symbol/icon of the building block definition as shown in meshPanel.",
-						Optional:            true,
-						Computed:            true,
+						MarkdownDescription: "Symbol/icon of the building block definition as shown in meshPanel. " +
+							"This can either be an URL starting with `http[s]://` or a base64 encoded data blob. " +
+							"The function `provider::meshstack::load_image_file(<filepath>)` produces such a data blob from a local file.",
+						Optional: true,
+						Computed: true,
 						PlanModifiers: []planmodifier.String{
 							stringplanmodifier.UseStateForUnknown(),
 						},

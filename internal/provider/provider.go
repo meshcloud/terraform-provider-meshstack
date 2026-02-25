@@ -8,6 +8,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/function"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -18,7 +19,7 @@ import (
 )
 
 // Ensure MeshStackProvider satisfies various provider interfaces.
-var _ provider.Provider = &MeshStackProvider{}
+var _ provider.ProviderWithFunctions = &MeshStackProvider{}
 
 type MeshStackProvider struct {
 	// version is set to the provider version on release, "dev" when the
@@ -205,6 +206,12 @@ func (p *MeshStackProvider) DataSources(ctx context.Context) []func() datasource
 		NewPlatformTypeDataSource,
 		NewServiceInstanceDataSource,
 		NewServiceInstancesDataSource,
+	}
+}
+
+func (p *MeshStackProvider) Functions(ctx context.Context) []func() function.Function {
+	return []func() function.Function{
+		NewLoadImageFileFunction,
 	}
 }
 
