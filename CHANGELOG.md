@@ -1,5 +1,8 @@
 ## v0.19.3
 
+FEATURES:
+- Add `provider::meshstack::load_image_file` function for convenient Building Block symbol loading
+
 FIXES:
 - `meshstack_building_block_definition`: Require replace if `spec.target_type` is changed.
 - `meshstack_building_block_definition`: `use_mesh_http_backend_fallback` for Terraform implementation defaults to `true`.

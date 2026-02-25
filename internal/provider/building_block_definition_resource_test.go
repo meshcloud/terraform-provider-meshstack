@@ -301,7 +301,8 @@ func buildingBlockDefinitionConfig(exampleResource examples.Resource, exampleSuf
 			ReplaceAll(`"environment" = [`, environmentTagAddress.Format(`(%s.spec.key) = [`)).
 			ReplaceAll(`"cost-center" = [`, costCenterTagAddress.Format(`(%s.spec.key) = [`)).
 			ReplaceAll(`dependency_refs = [{ uuid = "d161e3bf-c3e7-45f2-aa21-28de14593a74" }]`, dependencyBBDAddress.Format(`dependency_refs = [%s.ref]`)).
-			ReplaceAll(`notification_subscribers  = ["user:some-username", "email:ops@example.com"]`, `notification_subscribers = ["email:ops@example.com"]`)
+			ReplaceAll(`notification_subscribers  = ["user:some-username", "email:ops@example.com"]`, `notification_subscribers = ["email:ops@example.com"]`).
+			ReplaceAll(`("${path.module}/bb-symbol.png")`, `("testdata/images/image.png")`)
 	case "02_github_workflows", "04_azure_devops_pipeline", "05_gitlab_pipeline":
 		var integrationResourceAddress examples.Identifier
 		config = config.
@@ -342,7 +343,12 @@ func checkBuildingBlockSpec(expectedDescription string, optional bool) knownvalu
 			}
 			return nil
 		}),
-		"symbol":            knownvalue.StringExact("🏗️"),
+		"symbol": knownvalue.StringFunc(func(v string) error {
+			if !strings.HasPrefix(v, "data:image/png;base64,") {
+				return fmt.Errorf("value does not start with %s", "data:image/png;base64,")
+			}
+			return nil
+		}),
 		"description":       knownvalue.StringExact(expectedDescription),
 		"readme":            KnownValueNotEmptyString(),
 		"support_url":       knownvalue.StringExact("https://support.example.com/building-blocks"),
