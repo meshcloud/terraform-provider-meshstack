@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"regexp"
 
 	"github.com/hashicorp/terraform-plugin-framework-jsontypes/jsontypes"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
@@ -284,12 +285,15 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 						Default:             booldefault.StaticBool(false),
 					},
 					"target_type": schema.StringAttribute{
-						MarkdownDescription: fmt.Sprintf("Type of building block definition. Determines where building blocks can be attached. One of %s.", client.MeshBuildingBlockTypes.Markdown()),
+						MarkdownDescription: fmt.Sprintf("Type of building block definition. Determines where building blocks can be attached. Cannot be changed after initial creation. One of %s.", client.MeshBuildingBlockTypes.Markdown()),
 						Optional:            true,
 						Computed:            true,
 						Default:             stringdefault.StaticString(client.MeshBuildingBlockTypeWorkspaceLevel.String()),
 						Validators: []validator.String{
 							stringvalidator.OneOf(client.MeshBuildingBlockTypes.Strings()...),
+						},
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.RequiresReplace(),
 						},
 					},
 					"notification_subscribers": schema.SetAttribute{
@@ -297,7 +301,10 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 						ElementType:         types.StringType,
 						Optional:            true,
 						Computed:            true,
-						Default:             setdefault.StaticValue(types.SetValueMust(types.StringType, nil)),
+						Validators: []validator.Set{
+							setvalidator.ValueStringsAre(stringvalidator.RegexMatches(regexp.MustCompile(`^(user:|email:)\S`), "Entries must start with user: or email:")),
+						},
+						Default: setdefault.StaticValue(types.SetValueMust(types.StringType, nil)),
 					},
 				},
 			},
@@ -430,10 +437,10 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 										Optional:            true,
 									}),
 									"use_mesh_http_backend_fallback": schema.BoolAttribute{
-										MarkdownDescription: "Whether to use meshStack's HTTP backend as fallback.",
+										MarkdownDescription: "Whether to use meshStack's HTTP backend as fallback. Defaults to `true` as using a persisted state is recommended.",
 										Optional:            true,
 										Computed:            true,
-										Default:             booldefault.StaticBool(false),
+										Default:             booldefault.StaticBool(true),
 									},
 									"ssh_known_host": schema.SingleNestedAttribute{
 										MarkdownDescription: "SSH known host configuration.",

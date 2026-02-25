@@ -355,7 +355,7 @@ Optional:
 - `support_url` (String) URL pointing to support resources for the building block definition.
 - `supported_platforms` (Attributes Set) Set of platforms that this building block supports. Required and must be non-empty if target_type is `TENANT_LEVEL` (see [below for nested schema](#nestedatt--spec--supported_platforms))
 - `symbol` (String) Symbol/icon of the building block definition as shown in meshPanel.
-- `target_type` (String) Type of building block definition. Determines where building blocks can be attached. One of `TENANT_LEVEL`, `WORKSPACE_LEVEL`.
+- `target_type` (String) Type of building block definition. Determines where building blocks can be attached. Cannot be changed after initial creation. One of `TENANT_LEVEL`, `WORKSPACE_LEVEL`.
 - `use_in_landing_zones_only` (Boolean) Whether this building block can only be used in landing zones.
 
 <a id="nestedatt--spec--supported_platforms"></a>
@@ -506,7 +506,7 @@ Optional:
 - `repository_path` (String) Path within the repository to the Terraform module.
 - `ssh_known_host` (Attributes) SSH known host configuration. (see [below for nested schema](#nestedatt--version_spec--implementation--terraform--ssh_known_host))
 - `ssh_private_key` (Attributes) SSH private key for accessing private repositories. (see [below for nested schema](#nestedatt--version_spec--implementation--terraform--ssh_private_key))
-- `use_mesh_http_backend_fallback` (Boolean) Whether to use meshStack's HTTP backend as fallback.
+- `use_mesh_http_backend_fallback` (Boolean) Whether to use meshStack's HTTP backend as fallback. Defaults to `true` as using a persisted state is recommended.
 
 <a id="nestedatt--version_spec--implementation--terraform--ssh_known_host"></a>
 ### Nested Schema for `version_spec.implementation.terraform.ssh_known_host`
