@@ -99,7 +99,6 @@ linters:
             - github.com/hashicorp/terraform-plugin-testing
             - github.com/hashicorp/terraform-plugin-framework/diag
             - github.com/stretchr/testify
-            - github.com/sebdah/goldie/v2
         types:
           files:
             - "**/internal/types/**/*.go"
