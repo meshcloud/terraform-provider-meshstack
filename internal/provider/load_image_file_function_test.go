@@ -6,7 +6,7 @@ import (
 	"path"
 	"testing"
 
-	"github.com/sebdah/goldie/v2"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -14,7 +14,6 @@ import (
 var images embed.FS
 
 func Test_encodeImageAsDataBlob(t *testing.T) {
-	g := goldie.New(t, goldie.WithNameSuffix(".golden.txt"), goldie.WithFixtureDir("testdata/images"))
 	for _, ext := range []string{"gif", "jpg", "png", "svg", "webp"} {
 		t.Run(ext, func(t *testing.T) {
 			filename := fmt.Sprintf("image.%s", ext)
@@ -22,7 +21,9 @@ func Test_encodeImageAsDataBlob(t *testing.T) {
 			require.NoError(t, err)
 			encoded, err := encodeImageAsDataBlob(fileContent)
 			require.NoError(t, err)
-			g.Assert(t, filename, []byte(encoded))
+			expected, err := images.ReadFile(path.Join("testdata/images", filename+".golden.txt"))
+			require.NoError(t, err)
+			assert.Equal(t, string(expected), encoded)
 		})
 	}
 }
