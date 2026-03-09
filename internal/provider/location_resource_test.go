@@ -2,8 +2,10 @@ package provider
 
 import (
 	_ "embed"
+	"fmt"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
@@ -32,11 +34,11 @@ func TestLocation(t *testing.T) {
 func runLocationResourceTestCase(t *testing.T, modifiers ...ResourceTestCaseModifier) {
 	t.Helper()
 	var resourceAddress examples.Identifier
+	locationName := "my-location-" + acctest.RandString(32)
 	config := examples.Resource{Name: "location"}.Config().
 		SingleResourceAddress(&resourceAddress).
+		ReplaceAll(`name               = "my-location"`, fmt.Sprintf(`name = "%s"`, locationName)).
 		OwnedByAdminWorkspace()
-
-	const resourceIdentifier = "my-location"
 
 	testCase := resource.TestCase{
 		Steps: []resource.TestStep{
@@ -48,10 +50,10 @@ func runLocationResourceTestCase(t *testing.T, modifiers ...ResourceTestCaseModi
 					},
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("metadata"), checkLocationMetadata(resourceIdentifier)),
+					statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("metadata"), checkLocationMetadata(locationName)),
 					statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("spec"), checkLocationSpec("My Cloud Location")),
 					statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("status"), checkLocationStatus()),
-					statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("ref"), checkLocationRef(resourceIdentifier)),
+					statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("ref"), checkLocationRef(locationName)),
 				},
 			},
 			{
@@ -68,7 +70,7 @@ func runLocationResourceTestCase(t *testing.T, modifiers ...ResourceTestCaseModi
 			{
 				ImportState:     true,
 				ImportStateKind: resource.ImportBlockWithID,
-				ImportStateId:   resourceIdentifier,
+				ImportStateId:   locationName,
 				ResourceName:    resourceAddress.String(),
 			},
 		},
