@@ -465,8 +465,14 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 											},
 										},
 									},
+									"pre_run_script": schema.StringAttribute{
+										MarkdownDescription: "Optional shell script executed after `tofu init` and before `tofu apply`/`tofu destroy` in the runner container. " +
+											"When `null` (not set), no script is sent to the server and no pre-run script is executed.",
+										Optional: true,
+									},
 								},
 							},
+
 							"github_workflows": schema.SingleNestedAttribute{
 								MarkdownDescription: "GitHub Workflows implementation configuration.",
 								Optional:            true,
