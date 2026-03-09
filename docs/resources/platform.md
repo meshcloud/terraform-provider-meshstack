@@ -478,7 +478,11 @@ resource "meshstack_platform" "example_aks" {
 
         replication = {
           access_token = {
-            secret_value = "top-secret-ephemeral"
+            secret_value = "top-secret-value"
+            # This is a workaround if secret_value is non-ephemeral.
+            # If ephemeral, secret_version should be set to "v1" or similar
+            # and changed if secret rotation is desired.
+            secret_version = nonsensitive(sha256("top-secret-value"))
           }
 
           service_principal = {
@@ -832,7 +836,7 @@ Required:
 
 Optional:
 
-- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_value`. Can be omitted if resource is imported, in this case the `secret_hash` attribute is used as an initial value for this attribute (computed output).
+- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_value`. Can be omitted if resource is imported, in this case the `secret_hash` attribute is used as an initial value for this attribute (computed output). If `secret_value` attribute is non-ephemeral, set this to `nonsensitive(sha256(<value of secret_value attribute>))`.
 
 Read-Only:
 
@@ -879,7 +883,7 @@ Required:
 
 Optional:
 
-- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_value`. Can be omitted if resource is imported, in this case the `secret_hash` attribute is used as an initial value for this attribute (computed output).
+- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_value`. Can be omitted if resource is imported, in this case the `secret_hash` attribute is used as an initial value for this attribute (computed output). If `secret_value` attribute is non-ephemeral, set this to `nonsensitive(sha256(<value of secret_value attribute>))`.
 
 Read-Only:
 
@@ -922,7 +926,7 @@ Required:
 
 Optional:
 
-- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_value`. Can be omitted if resource is imported, in this case the `secret_hash` attribute is used as an initial value for this attribute (computed output).
+- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_value`. Can be omitted if resource is imported, in this case the `secret_hash` attribute is used as an initial value for this attribute (computed output). If `secret_value` attribute is non-ephemeral, set this to `nonsensitive(sha256(<value of secret_value attribute>))`.
 
 Read-Only:
 
@@ -994,7 +998,7 @@ Required:
 
 Optional:
 
-- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_value`. Can be omitted if resource is imported, in this case the `secret_hash` attribute is used as an initial value for this attribute (computed output).
+- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_value`. Can be omitted if resource is imported, in this case the `secret_hash` attribute is used as an initial value for this attribute (computed output). If `secret_value` attribute is non-ephemeral, set this to `nonsensitive(sha256(<value of secret_value attribute>))`.
 
 Read-Only:
 
@@ -1086,7 +1090,7 @@ Required:
 
 Optional:
 
-- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_value`. Can be omitted if resource is imported, in this case the `secret_hash` attribute is used as an initial value for this attribute (computed output).
+- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_value`. Can be omitted if resource is imported, in this case the `secret_hash` attribute is used as an initial value for this attribute (computed output). If `secret_value` attribute is non-ephemeral, set this to `nonsensitive(sha256(<value of secret_value attribute>))`.
 
 Read-Only:
 
@@ -1128,7 +1132,7 @@ Required:
 
 Optional:
 
-- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_value`. Can be omitted if resource is imported, in this case the `secret_hash` attribute is used as an initial value for this attribute (computed output).
+- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_value`. Can be omitted if resource is imported, in this case the `secret_hash` attribute is used as an initial value for this attribute (computed output). If `secret_value` attribute is non-ephemeral, set this to `nonsensitive(sha256(<value of secret_value attribute>))`.
 
 Read-Only:
 
@@ -1257,7 +1261,7 @@ Required:
 
 Optional:
 
-- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_value`. Can be omitted if resource is imported, in this case the `secret_hash` attribute is used as an initial value for this attribute (computed output).
+- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_value`. Can be omitted if resource is imported, in this case the `secret_hash` attribute is used as an initial value for this attribute (computed output). If `secret_value` attribute is non-ephemeral, set this to `nonsensitive(sha256(<value of secret_value attribute>))`.
 
 Read-Only:
 
@@ -1325,7 +1329,7 @@ Required:
 
 Optional:
 
-- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_value`. Can be omitted if resource is imported, in this case the `secret_hash` attribute is used as an initial value for this attribute (computed output).
+- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_value`. Can be omitted if resource is imported, in this case the `secret_hash` attribute is used as an initial value for this attribute (computed output). If `secret_value` attribute is non-ephemeral, set this to `nonsensitive(sha256(<value of secret_value attribute>))`.
 
 Read-Only:
 
@@ -1431,7 +1435,7 @@ Required:
 
 Optional:
 
-- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_value`. Can be omitted if resource is imported, in this case the `secret_hash` attribute is used as an initial value for this attribute (computed output).
+- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_value`. Can be omitted if resource is imported, in this case the `secret_hash` attribute is used as an initial value for this attribute (computed output). If `secret_value` attribute is non-ephemeral, set this to `nonsensitive(sha256(<value of secret_value attribute>))`.
 
 Read-Only:
 
@@ -1552,7 +1556,7 @@ Required:
 
 Optional:
 
-- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_value`. Can be omitted if resource is imported, in this case the `secret_hash` attribute is used as an initial value for this attribute (computed output).
+- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_value`. Can be omitted if resource is imported, in this case the `secret_hash` attribute is used as an initial value for this attribute (computed output). If `secret_value` attribute is non-ephemeral, set this to `nonsensitive(sha256(<value of secret_value attribute>))`.
 
 Read-Only:
 
@@ -1688,7 +1692,7 @@ Required:
 
 Optional:
 
-- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_value`. Can be omitted if resource is imported, in this case the `secret_hash` attribute is used as an initial value for this attribute (computed output).
+- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_value`. Can be omitted if resource is imported, in this case the `secret_hash` attribute is used as an initial value for this attribute (computed output). If `secret_value` attribute is non-ephemeral, set this to `nonsensitive(sha256(<value of secret_value attribute>))`.
 
 Read-Only:
 
@@ -1770,7 +1774,7 @@ Required:
 
 Optional:
 
-- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_value`. Can be omitted if resource is imported, in this case the `secret_hash` attribute is used as an initial value for this attribute (computed output).
+- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_value`. Can be omitted if resource is imported, in this case the `secret_hash` attribute is used as an initial value for this attribute (computed output). If `secret_value` attribute is non-ephemeral, set this to `nonsensitive(sha256(<value of secret_value attribute>))`.
 
 Read-Only:
 
@@ -1847,7 +1851,7 @@ Required:
 
 Optional:
 
-- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_value`. Can be omitted if resource is imported, in this case the `secret_hash` attribute is used as an initial value for this attribute (computed output).
+- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_value`. Can be omitted if resource is imported, in this case the `secret_hash` attribute is used as an initial value for this attribute (computed output). If `secret_value` attribute is non-ephemeral, set this to `nonsensitive(sha256(<value of secret_value attribute>))`.
 
 Read-Only:
 
@@ -1889,7 +1893,7 @@ Required:
 
 Optional:
 
-- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_value`. Can be omitted if resource is imported, in this case the `secret_hash` attribute is used as an initial value for this attribute (computed output).
+- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_value`. Can be omitted if resource is imported, in this case the `secret_hash` attribute is used as an initial value for this attribute (computed output). If `secret_value` attribute is non-ephemeral, set this to `nonsensitive(sha256(<value of secret_value attribute>))`.
 
 Read-Only:
 
@@ -1936,7 +1940,7 @@ Required:
 
 Optional:
 
-- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_value`. Can be omitted if resource is imported, in this case the `secret_hash` attribute is used as an initial value for this attribute (computed output).
+- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_value`. Can be omitted if resource is imported, in this case the `secret_hash` attribute is used as an initial value for this attribute (computed output). If `secret_value` attribute is non-ephemeral, set this to `nonsensitive(sha256(<value of secret_value attribute>))`.
 
 Read-Only:
 
@@ -1986,7 +1990,7 @@ Required:
 
 Optional:
 
-- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_value`. Can be omitted if resource is imported, in this case the `secret_hash` attribute is used as an initial value for this attribute (computed output).
+- `secret_version` (String) Version of the secret value. Change this to trigger rotation of the associated write-only attribute `secret_value`. Can be omitted if resource is imported, in this case the `secret_hash` attribute is used as an initial value for this attribute (computed output). If `secret_value` attribute is non-ephemeral, set this to `nonsensitive(sha256(<value of secret_value attribute>))`.
 
 Read-Only:
 

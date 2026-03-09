@@ -27,7 +27,11 @@ resource "meshstack_platform" "example_aks" {
 
         replication = {
           access_token = {
-            secret_value = "top-secret-ephemeral"
+            secret_value = "top-secret-value"
+            # This is a workaround if secret_value is non-ephemeral.
+            # If ephemeral, secret_version should be set to "v1" or similar
+            # and changed if secret rotation is desired.
+            secret_version = nonsensitive(sha256("top-secret-value"))
           }
 
           service_principal = {

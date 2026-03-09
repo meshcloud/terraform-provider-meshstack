@@ -1,3 +1,9 @@
+## v0.19.4
+
+FIXES:
+- Properly support specifying non-null `secret_version` along `secret_value`.
+- Document `nonsensitive(sha256(...))` workaround for non-ephemeral `secret_value` inputs.
+
 ## v0.19.3
 
 FEATURES:
