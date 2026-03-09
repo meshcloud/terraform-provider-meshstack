@@ -182,26 +182,17 @@ func isAttributeValueNull(ctx context.Context, getter generic.AttributeGetter, d
 	return v.IsNull()
 }
 
-// SetToUnknownIfVersionChangedOrCreated constructs a visitor which sets the secret_hash of the secret at the given attribute to unknown
+// SetToUnknownIfVersionChangedOrCreated constructs a visitor for WalkSecretPathsIn which sets the secret_hash of the secret at the given attribute to unknown
 // if the secret_version changes according to the given plan and state.
 // If the secret is newly created, sets secret_hash and secret_version to unknown to cover the case of later addition of a secret attribute if the resource exists already (resource is updated).
-// Used together with WalkSecretPathsIn.
+// secret_version is only set to unknown if the planned value is null (omitted in config).
 func SetToUnknownIfVersionChangedOrCreated(ctx context.Context, plan, state generic.AttributeGetter, responsePlan generic.AttributeSetter) func(attributePath path.Path, diags *diag.Diagnostics) (versionChanged bool) {
 	return func(attributePath path.Path, diags *diag.Diagnostics) (versionChanged bool) {
 		if isAttributeValueNull(ctx, plan, diags, attributePath) {
-			// There's nothing to do if the plan/config removes the whole secret (there might also be an error diag)
+			// There's nothing to do if the plan/config removes the whole secret (there might also be non-empty diags when returning here though)
 			return
 		}
-		if isAttributeValueNull(ctx, state, diags, attributePath) {
-			// This case happens if an optional secret is added after the resource is initially created.
-			versionChanged = true
-			responsePlan.SetAttribute(ctx, attributePath.AtName(versionAttributeKey), types.StringUnknown())
-			responsePlan.SetAttribute(ctx, attributePath.AtName(hashAttributeKey), types.StringUnknown())
-			return
-		} else if diags.HasError() {
-			return
-		}
-		// This case happens if an existing secret is updated (present in state and plan), so only check if version has changed.
+
 		var versionFromPlan types.String
 		diags.Append(plan.GetAttribute(ctx, attributePath.AtName(versionAttributeKey), &versionFromPlan)...)
 		if diags.HasError() {
@@ -209,6 +200,24 @@ func SetToUnknownIfVersionChangedOrCreated(ctx context.Context, plan, state gene
 		}
 
 		if versionFromPlan.IsUnknown() {
+			// secret_version might be a known-after-apply value, so make secret_hash known-after-apply as well,
+			// as this situation will trigger a re-apply of the secret_value!
+			versionChanged = true
+			responsePlan.SetAttribute(ctx, attributePath.AtName(hashAttributeKey), types.StringUnknown())
+			return
+		} else if versionFromPlan.IsNull() {
+			var hashFromState types.String
+			diags.Append(state.GetAttribute(ctx, attributePath.AtName(hashAttributeKey), &hashFromState)...)
+			if diags.HasError() {
+				return
+			}
+			if hashFromState.IsNull() {
+				versionChanged = true
+				hashFromState = types.StringUnknown()
+			}
+			responsePlan.SetAttribute(ctx, attributePath.AtName(versionAttributeKey), hashFromState)
+			return
+		} else if isAttributeValueNull(ctx, state, diags, attributePath) {
 			versionChanged = true
 			responsePlan.SetAttribute(ctx, attributePath.AtName(hashAttributeKey), types.StringUnknown())
 			return

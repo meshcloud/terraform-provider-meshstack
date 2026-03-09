@@ -30,7 +30,11 @@ func ResourceSchema(opts ResourceSchemaOptions) (result schema.SingleNestedAttri
 			},
 			versionAttributeKey: schema.StringAttribute{
 				MarkdownDescription: fmt.Sprintf("Version of the secret value. Change this to trigger rotation of the associated write-only attribute `%s`. "+
-					"Can be omitted if resource is imported, in this case the `%s` attribute is used as an initial value for this attribute (computed output).", valueAttributeKey, hashAttributeKey),
+					"Can be omitted if resource is imported, in this case the `%s` attribute is used as an initial value for this attribute (computed output). "+
+					"If `%s` attribute is non-ephemeral, set this to `nonsensitive(sha256(<value of %s attribute>))`.",
+					valueAttributeKey, hashAttributeKey,
+					valueAttributeKey, valueAttributeKey,
+				),
 				Optional:      true,
 				Computed:      true,
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -39,7 +43,7 @@ func ResourceSchema(opts ResourceSchemaOptions) (result schema.SingleNestedAttri
 				MarkdownDescription: "Hash value of the secret stored in the backend. " +
 					"If this hash has changed without changes in the version attribute, the secret value was updated externally.",
 				Computed:      true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
 			},
 		},
 	}

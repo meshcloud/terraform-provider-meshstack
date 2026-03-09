@@ -87,17 +87,30 @@ func runPlatformTestCases(t *testing.T, modifiers ...ResourceTestCaseModifier) {
 				})
 			}
 
-			testSteps = append(testSteps,
-				resource.TestStep{
-					ImportState:     true,
-					ImportStateKind: resource.ImportBlockWithID,
-					ImportStateIdFunc: func(state *terraform.State) (string, error) {
-						return resourceUuid, nil
-					},
-					ResourceName: resourceAddress.String(),
+			importTestStep := resource.TestStep{
+				ImportState:     true,
+				ImportStateKind: resource.ImportBlockWithID,
+				ImportStateIdFunc: func(state *terraform.State) (string, error) {
+					return resourceUuid, nil
 				},
-			)
+				ResourceName: resourceAddress.String(),
+			}
+			if exampleSuffix == "05_aks" {
+				// ExpectNonEmptyPlan is true for 05_aks as we explicitly set the secret_version to some explicit, non-null value
+				// which differs from the secret_hash of the backend, causing an expected change on import.
+				importTestStep.ExpectNonEmptyPlan = true
+				secretAttributePath := func() tfjsonpath.Path {
+					// Factory to workaround slice copy/clone bug in tfjsonpath.Path.AtMapKey
+					return tfjsonpath.New("spec").AtMapKey("config").AtMapKey("aks").AtMapKey("replication").AtMapKey("access_token")
+				}
+				importTestStep.ImportPlanChecks.PreApply = []plancheck.PlanCheck{
+					plancheck.ExpectResourceAction(resourceAddress.String(), plancheck.ResourceActionUpdate),
+					plancheck.ExpectUnknownValue(resourceAddress.String(), secretAttributePath().AtMapKey("secret_hash")),
+					plancheck.ExpectKnownValue(resourceAddress.String(), secretAttributePath().AtMapKey("secret_version"), knownvalue.StringExact("4823648dbe986627638418ba4469261474bd52043ffef910a5b2d62c92df86bc")),
+				}
+			}
 
+			testSteps = append(testSteps, importTestStep)
 			ResourceTestCaseModifiers(modifiers).ApplyAndTest(t, resource.TestCase{Steps: testSteps})
 		})
 	}
