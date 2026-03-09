@@ -35,6 +35,7 @@ type MeshBuildingBlockDefinitionTerraformImplementation struct {
 	SSHKnownHost               *MeshBuildingBlockDefinitionSshKnownHost `json:"sshKnownHost,omitempty" tfsdk:"ssh_known_host"`
 	UseMeshHTTPBackendFallback bool                                     `json:"useMeshHttpBackendFallback" tfsdk:"use_mesh_http_backend_fallback"`
 	SSHPrivateKey              *types.Secret                            `json:"sshPrivateKey,omitempty" tfsdk:"ssh_private_key"`
+	PreRunScript               *string                                  `json:"preRunScript,omitempty" tfsdk:"pre_run_script"`
 }
 
 type MeshBuildingBlockDefinitionGitHubWorkflowsImplementation struct {

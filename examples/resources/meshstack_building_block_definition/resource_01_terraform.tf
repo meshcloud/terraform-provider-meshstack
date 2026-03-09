@@ -91,6 +91,11 @@ resource "meshstack_building_block_definition" "example_01_terraform" {
           key_type  = "ssh-rsa"
           key_value = "AAAAB3NzaC1yc2EAAAABIwAAAQEAq2A7hRGmdnm9tUDbO9IDSwBK6TbQa+..."
         }
+
+        # Optional: Shell script executed after 'tofu init' and before 'tofu apply'/'tofu destroy'.
+        pre_run_script = <<-EOT
+          echo "hello world"
+        EOT
       }
     }
 
