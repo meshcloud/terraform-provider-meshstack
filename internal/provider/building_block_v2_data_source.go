@@ -202,14 +202,10 @@ func (d *buildingBlockV2DataSource) Read(ctx context.Context, req datasource.Rea
 	// Read inputs
 	inputs := make(map[string]buildingBlockIoModel)
 	for _, input := range bb.Spec.Inputs {
-		value, err := toResourceModel(&input)
-
-		if err != nil {
-			resp.Diagnostics.AddError("Error processing input", err.Error())
-			return
-		}
-
-		inputs[input.Key] = *value
+		inputs[input.Key] = toResourceModel(input, &resp.Diagnostics)
+	}
+	if resp.Diagnostics.HasError() {
+		return
 	}
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("spec").AtName("inputs"), inputs)...)
 
@@ -220,14 +216,10 @@ func (d *buildingBlockV2DataSource) Read(ctx context.Context, req datasource.Rea
 	// Read outputs
 	outputs := make(map[string]buildingBlockOutputModel)
 	for _, output := range bb.Status.Outputs {
-		value, err := toResourceModel(&output)
-
-		if err != nil {
-			resp.Diagnostics.AddError("Error processing output", err.Error())
-			return
-		}
-
-		outputs[output.Key] = value.toOutputModel()
+		outputs[output.Key] = toResourceModel(output, &resp.Diagnostics).toOutputModel()
+	}
+	if resp.Diagnostics.HasError() {
+		return
 	}
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("status").AtName("outputs"), outputs)...)
 }

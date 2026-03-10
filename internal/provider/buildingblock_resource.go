@@ -299,14 +299,11 @@ func (r *buildingBlockResource) Delete(ctx context.Context, req resource.DeleteR
 // 	resource.ImportStatePassthroughID(ctx, path.Root("metadata").AtName("uuid"), req, resp)
 // }
 
-func toResourceModel(io *client.MeshBuildingBlockIO) (*buildingBlockIoModel, error) {
-	resourceIo := buildingBlockIoModel{}
-	foundValue := false
-
+func toResourceModel(io client.MeshBuildingBlockIO, diags *diag.Diagnostics) (resourceIo buildingBlockIoModel) {
 	if io.Value == nil {
-		return &resourceIo, nil
+		return
 	}
-
+	foundValue := false
 	switch io.ValueType {
 	case client.MESH_BUILDING_BLOCK_IO_TYPE_BOOLEAN:
 		value, ok := io.Value.(bool)
@@ -331,7 +328,7 @@ func toResourceModel(io *client.MeshBuildingBlockIO) (*buildingBlockIoModel, err
 				if str, ok := v.(string); ok {
 					multiSelect[i] = types.StringValue(str)
 				} else {
-					return nil, fmt.Errorf("multi-select value at index %d is not a string for input '%s'", i, io.Key)
+					diags.AddError("Error processing input/output", fmt.Sprintf("Key %s: multi-select value at index %d is not a string but %T", io.Key, i, v))
 				}
 			}
 			resourceIo.ValueMultiSelect = multiSelect
@@ -369,25 +366,27 @@ func toResourceModel(io *client.MeshBuildingBlockIO) (*buildingBlockIoModel, err
 	case client.MESH_BUILDING_BLOCK_IO_TYPE_LIST:
 		value, err := json.Marshal(io.Value)
 		if err != nil {
-			return nil, err
+			diags.AddError("Error processing input/output", fmt.Sprintf("Key %s: Cannot marshal value '%v' to json: %s", io.Key, io.Value, err.Error()))
+			return
 		}
 		resourceIo.ValueList = types.StringValue(string(value))
 		foundValue = true
 
 	default:
-		return nil, fmt.Errorf("input type '%s' is not supported", io.ValueType)
+		diags.AddError("Error processing input/output", fmt.Sprintf("Key %s: Type '%s' is not supported", io.Key, io.ValueType))
+		return
 	}
 
-	if foundValue {
-		return &resourceIo, nil
+	if !foundValue {
+		// Be somewhat lenient here as the backend might return something we cannot parse due to improper validation.
+		// Issue a warning and fallback to string representation of the Go value
+		diags.AddWarning("Error processing input/output", fmt.Sprintf("Key %s: Value '%v' does not match type %s, using raw string representation", io.Key, io.Value, io.ValueType))
+		resourceIo.ValueString = types.StringValue(fmt.Sprintf("%v", io.Value))
 	}
-
-	return nil, fmt.Errorf("input '%s' with value type '%s' does not match actual value", io.Key, io.ValueType)
+	return
 }
 
-func (r *buildingBlockResource) setStateFromResponse(ctx *context.Context, state *tfsdk.State, bb *client.MeshBuildingBlock) diag.Diagnostics {
-	diags := make(diag.Diagnostics, 0)
-
+func (r *buildingBlockResource) setStateFromResponse(ctx *context.Context, state *tfsdk.State, bb *client.MeshBuildingBlock) (diags diag.Diagnostics) {
 	diags.Append(state.SetAttribute(*ctx, path.Root("api_version"), bb.ApiVersion)...)
 	diags.Append(state.SetAttribute(*ctx, path.Root("kind"), bb.Kind)...)
 
@@ -398,14 +397,10 @@ func (r *buildingBlockResource) setStateFromResponse(ctx *context.Context, state
 
 	combinedInputs := make(map[string]buildingBlockIoModel)
 	for _, input := range bb.Spec.Inputs {
-		value, err := toResourceModel(&input)
-
-		if err != nil {
-			diags.AddError("Error processing input", err.Error())
-			return diags
-		}
-
-		combinedInputs[input.Key] = *value
+		combinedInputs[input.Key] = toResourceModel(input, &diags)
+	}
+	if diags.HasError() {
+		return
 	}
 	diags.Append(state.SetAttribute(*ctx, path.Root("spec").AtName("combined_inputs"), combinedInputs)...)
 
@@ -413,16 +408,11 @@ func (r *buildingBlockResource) setStateFromResponse(ctx *context.Context, state
 
 	outputs := make(map[string]buildingBlockOutputModel)
 	for _, output := range bb.Status.Outputs {
-		value, err := toResourceModel(&output)
-
-		if err != nil {
-			diags.AddError("Error processing output", err.Error())
-			return diags
-		}
-
-		outputs[output.Key] = value.toOutputModel()
+		outputs[output.Key] = toResourceModel(output, &diags).toOutputModel()
+	}
+	if diags.HasError() {
+		return
 	}
 	diags.Append(state.SetAttribute(*ctx, path.Root("status").AtName("outputs"), outputs)...)
-
 	return diags
 }
