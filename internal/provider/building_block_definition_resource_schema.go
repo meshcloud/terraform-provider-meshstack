@@ -84,9 +84,12 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 						client.MeshBuildingBlockInputAssignmentTypeStatic,
 						client.MeshBuildingBlockInputAssignmentTypeBuildingBlockOutput,
 					).Markdown() + ". " +
-						"**Must not be provided** for other assignment types. " +
-						"The value must be passed through `jsonencode()` to support dynamic typing as defined by the `type` attribute. " +
-						"For " + client.MeshBuildingBlockInputAssignmentTypeBuildingBlockOutput.Markdown() + ", the value must have the format `jsonencode(\"<BuildingBlockDefinitionUuid>.<outputName>\")`.",
+						"**Must not be provided** for other assignment types.<br>" +
+						"For assignment type " + client.MeshBuildingBlockInputAssignmentTypeBuildingBlockOutput.Markdown() + ", the value must have the format `jsonencode(\"<BuildingBlockDefinitionUuid>.<outputName>\")`.<br>" +
+						"The value must be passed through `jsonencode()` to support dynamic typing as defined by the `type` attribute.<br>" +
+						"For type " + client.MeshBuildingBlockIOTypeCode.Markdown() + ", the value must be an `jsonencode`'d string, e.g. `jsonencode(\"some code\")` and the interpretation of the `\"some code\"` string is implementation-specific.<br>" +
+						"For the `terraform` implementation, the " + client.MeshBuildingBlockIOTypeCode.Markdown() + " input value should be `jsonencode`'d again, as any JSON is a valid HCL expression, which is properly passed to a variable input by the TF runner.<br>" +
+						"For example, if the variable input specifies `type = map(string)`, then a type-matching value input is `jsonencode(jsonencode({some-key: \"some-value\"}))`.",
 					Optional: true,
 				},
 				"default_value": schema.StringAttribute{
