@@ -143,7 +143,7 @@ type buildingBlockIoModel struct {
 	ValueCode         types.String   `tfsdk:"value_code"`
 }
 
-func (input *buildingBlockIoModel) toOutputModel() buildingBlockOutputModel {
+func (input buildingBlockIoModel) toOutputModel() buildingBlockOutputModel {
 	return buildingBlockOutputModel{
 		ValueString: input.ValueString,
 		ValueInt:    input.ValueInt,
