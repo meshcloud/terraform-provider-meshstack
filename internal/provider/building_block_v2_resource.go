@@ -353,9 +353,7 @@ func (r *buildingBlockV2Resource) Delete(ctx context.Context, req resource.Delet
 // 	resource.ImportStatePassthroughID(ctx, path.Root("metadata").AtName("uuid"), req, resp)
 // }
 
-func setStateFromResponseV2(ctx context.Context, state *tfsdk.State, bb *client.MeshBuildingBlockV2) diag.Diagnostics {
-	diags := make(diag.Diagnostics, 0)
-
+func setStateFromResponseV2(ctx context.Context, state *tfsdk.State, bb *client.MeshBuildingBlockV2) (diags diag.Diagnostics) {
 	diags.Append(state.SetAttribute(ctx, path.Root("api_version"), bb.ApiVersion)...)
 	diags.Append(state.SetAttribute(ctx, path.Root("kind"), bb.Kind)...)
 
@@ -368,14 +366,10 @@ func setStateFromResponseV2(ctx context.Context, state *tfsdk.State, bb *client.
 
 	combinedInputs := make(map[string]buildingBlockIoModel)
 	for _, input := range bb.Spec.Inputs {
-		value, err := toResourceModel(&input)
-
-		if err != nil {
-			diags.AddError("Error processing input", err.Error())
-			return diags
-		}
-
-		combinedInputs[input.Key] = *value
+		combinedInputs[input.Key] = toResourceModel(input, &diags)
+	}
+	if diags.HasError() {
+		return
 	}
 	diags.Append(state.SetAttribute(ctx, path.Root("spec").AtName("combined_inputs"), combinedInputs)...)
 
@@ -383,14 +377,7 @@ func setStateFromResponseV2(ctx context.Context, state *tfsdk.State, bb *client.
 
 	outputs := make(map[string]buildingBlockOutputModel)
 	for _, output := range bb.Status.Outputs {
-		value, err := toResourceModel(&output)
-
-		if err != nil {
-			diags.AddError("Error processing output", err.Error())
-			return diags
-		}
-
-		outputs[output.Key] = value.toOutputModel()
+		outputs[output.Key] = toResourceModel(output, &diags).toOutputModel()
 	}
 	diags.Append(state.SetAttribute(ctx, path.Root("status").AtName("outputs"), outputs)...)
 
