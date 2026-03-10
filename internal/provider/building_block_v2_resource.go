@@ -379,6 +379,9 @@ func setStateFromResponseV2(ctx context.Context, state *tfsdk.State, bb *client.
 	for _, output := range bb.Status.Outputs {
 		outputs[output.Key] = toResourceModel(output, &diags).toOutputModel()
 	}
+	if diags.HasError() {
+		return
+	}
 	diags.Append(state.SetAttribute(ctx, path.Root("status").AtName("outputs"), outputs)...)
 
 	return diags
