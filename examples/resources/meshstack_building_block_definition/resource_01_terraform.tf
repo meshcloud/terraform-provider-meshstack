@@ -93,9 +93,7 @@ resource "meshstack_building_block_definition" "example_01_terraform" {
         }
 
         # Optional: Shell script executed after 'tofu init' and before 'tofu apply'/'tofu destroy'.
-        pre_run_script = <<-EOT
-          echo "hello world"
-        EOT
+        pre_run_script = "echo \"hello world\""
       }
     }
 

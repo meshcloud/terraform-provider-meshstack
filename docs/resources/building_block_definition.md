@@ -106,6 +106,9 @@ resource "meshstack_building_block_definition" "example_01_terraform" {
           key_type  = "ssh-rsa"
           key_value = "AAAAB3NzaC1yc2EAAAABIwAAAQEAq2A7hRGmdnm9tUDbO9IDSwBK6TbQa+..."
         }
+
+        # Optional: Shell script executed after 'tofu init' and before 'tofu apply'/'tofu destroy'.
+        pre_run_script = "echo \"hello world\""
       }
     }
 
@@ -502,6 +505,7 @@ Required:
 Optional:
 
 - `async` (Boolean) Whether to run Terraform asynchronously.
+- `pre_run_script` (String) Shell script executed after `tofu init` and before `tofu apply`/`tofu destroy` in the runner container.
 - `ref_name` (String) Git reference (branch, tag, or commit) to use.
 - `repository_path` (String) Path within the repository to the Terraform module.
 - `ssh_known_host` (Attributes) SSH known host configuration. (see [below for nested schema](#nestedatt--version_spec--implementation--terraform--ssh_known_host))

@@ -1,4 +1,4 @@
-## v0.19.4
+## v0.19.5
 
 FEATURES:
 - `meshstack_building_block_definition`: Add `pre_run_script` field to the `terraform` implementation block. Requires meshStack 2026.10.0 or later.
