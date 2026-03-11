@@ -151,6 +151,9 @@ func awsReplicationConfigSchema() schema.Attribute {
 			"aws_sso": schema.SingleNestedAttribute{
 				MarkdownDescription: "AWS SSO configuration",
 				Optional:            true,
+				Validators: []validator.Object{
+					objectvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("aws_identity_store")),
+				},
 				Attributes: map[string]schema.Attribute{
 					"scim_endpoint": schema.StringAttribute{
 						MarkdownDescription: "The SCIM endpoint you can find in your AWS IAM Identity Center Automatic provisioning config.",
@@ -187,6 +190,58 @@ func awsReplicationConfigSchema() schema.Attribute {
 					},
 					"sign_in_url": schema.StringAttribute{
 						MarkdownDescription: "The AWS IAM Identity Center sign in Url, that must be used by end-users to log in via AWS IAM Identity Center to AWS Management Console.",
+						Required:            true,
+					},
+				},
+			},
+			"aws_identity_store": schema.SingleNestedAttribute{
+				MarkdownDescription: "AWS IAM Identity Store configuration. Alternative to `aws_sso` that uses the AWS Identity Store API directly, without a SCIM token.",
+				Optional:            true,
+				Validators: []validator.Object{
+					objectvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("aws_sso")),
+				},
+				Attributes: map[string]schema.Attribute{
+					"identity_store_id": schema.StringAttribute{
+						MarkdownDescription: "The ID of the AWS IAM Identity Center Identity Store, e.g. `d-1234567890`.",
+						Required:            true,
+					},
+					"arn": schema.StringAttribute{
+						MarkdownDescription: "The ARN of the AWS IAM Identity Center Instance, e.g. `arn:aws:sso:::instance/ssoins-123456789abc`.",
+						Required:            true,
+					},
+					"group_name_pattern": schema.StringAttribute{
+						MarkdownDescription: "Configures the pattern that defines the desired name of AWS IAM Identity Center groups managed by meshStack. It supports the `platformGroupAlias` replacement. meshStack will additionally prefix the group name with `mst-` to identify groups it manages.",
+						Required:            true,
+					},
+					"aws_role_mappings": schema.ListNestedAttribute{
+						MarkdownDescription: "AWS role mappings for AWS IAM Identity Store",
+						Required:            true,
+						NestedObject: schema.NestedAttributeObject{
+							Attributes: map[string]schema.Attribute{
+								"project_role_ref": schema.SingleNestedAttribute{
+									MarkdownDescription: "Reference to a meshProject role. The kind is always `meshProjectRole` and does not need to be specified.",
+									Required:            true,
+									Attributes: map[string]schema.Attribute{
+										"name": schema.StringAttribute{
+											MarkdownDescription: "The identifier of the meshProjectRole, e.g. `admin`, `user`, `reader`.",
+											Required:            true,
+										},
+									},
+								},
+								"aws_role": schema.StringAttribute{
+									MarkdownDescription: "AWS role alias used as suffix in the group name pattern.",
+									Required:            true,
+								},
+								"permission_set_arns": schema.ListAttribute{
+									MarkdownDescription: "ARNs of IAM Identity Center permission sets to assign to the group. At least one is required.",
+									ElementType:         types.StringType,
+									Required:            true,
+								},
+							},
+						},
+					},
+					"sign_in_url": schema.StringAttribute{
+						MarkdownDescription: "The AWS IAM Identity Center sign-in URL for end-users.",
 						Required:            true,
 					},
 				},
