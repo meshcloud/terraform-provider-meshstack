@@ -652,7 +652,7 @@ func checkTerraformImplementation() knownvalue.Check {
 			"secret_hash":    KnownValueNotEmptyString(),
 			"secret_version": KnownValueNotEmptyString(),
 		}),
-		"pre_run_script": knownvalue.StringExact("echo \"hello world\""),
+		"pre_run_script": knownvalue.StringExact(`echo "hello world"`),
 	})
 }
 
