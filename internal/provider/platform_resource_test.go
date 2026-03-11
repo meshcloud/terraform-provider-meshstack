@@ -184,9 +184,6 @@ func checkPlatformConfigState(resourceAddress, exampleSuffix string) []statechec
 	case "08_custom":
 		platformType = "custom"
 		configCheck = checkCustomPlatformConfig()
-	case "09_aws_identity_store":
-		platformType = "aws"
-		configCheck = checkAwsIdentityStorePlatformConfig()
 	default:
 		platformType = "azure"
 		configCheck = knownvalue.NotNull()
@@ -346,28 +343,22 @@ func checkAwsPlatformConfig() knownvalue.Check {
 			"skip_user_group_permission_cleanup":                knownvalue.Bool(false),
 			"allow_hierarchical_organizational_unit_assignment": knownvalue.Bool(false),
 			"enrollment_configuration":                          knownvalue.Null(),
-			"aws_sso": xknownvalue.MapExact(map[string]knownvalue.Check{
+			"aws_sso":                                           knownvalue.Null(),
+			"aws_identity_store": xknownvalue.MapExact(map[string]knownvalue.Check{
+				"identity_store_id":  knownvalue.StringExact("d-1234567890"),
 				"arn":                knownvalue.StringExact("arn:aws:sso:::instance/ssoins-1234567890abcdef"),
-				"scim_endpoint":      knownvalue.StringExact("https://scim.us-east-1.amazonaws.com/abcd1234-5678-90ab-cdef-example12345/scim/v2/"),
 				"group_name_pattern": knownvalue.StringExact("#{workspaceIdentifier}.#{projectIdentifier}-#{platformGroupAlias}"),
-				"sso_access_token": knownvalue.MapExact(map[string]knownvalue.Check{
-					"secret_value":   knownvalue.Null(),
-					"secret_hash":    KnownValueNotEmptyString(),
-					"secret_version": KnownValueNotEmptyString(),
-				}),
-				"sign_in_url": knownvalue.StringExact("https://my-sso-portal.awsapps.com/start"),
+				"sign_in_url":        knownvalue.StringExact("https://d-1234567890.awsapps.com/start"),
 				"aws_role_mappings": knownvalue.ListExact([]knownvalue.Check{
 					knownvalue.MapExact(map[string]knownvalue.Check{
 						"project_role_ref": knownvalue.MapExact(map[string]knownvalue.Check{
 							"name": knownvalue.StringExact("admin"),
-							"kind": knownvalue.StringExact("meshProjectRole"),
 						}),
 						"aws_role":            knownvalue.StringExact("admin"),
 						"permission_set_arns": knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("arn:aws:sso:::permissionSet/ssoins-1234567890abcdef/ps-1234567890abcdef")}),
 					}),
 				}),
 			}),
-			"aws_identity_store": knownvalue.Null(),
 			"tenant_tags": knownvalue.MapExact(map[string]knownvalue.Check{
 				"namespace_prefix": knownvalue.StringExact("meshstack_"),
 				"tag_mappers":      knownvalue.SetSizeExact(2),
@@ -624,53 +615,5 @@ func checkCustomPlatformConfig() knownvalue.Check {
 		"metering": knownvalue.MapExact(map[string]knownvalue.Check{
 			"processing": checkMeteringProcessingConfig(),
 		}),
-	})
-}
-
-func checkAwsIdentityStorePlatformConfig() knownvalue.Check {
-	return knownvalue.MapExact(map[string]knownvalue.Check{
-		"region": knownvalue.StringExact("us-east-1"),
-		"replication": xknownvalue.MapExact(map[string]knownvalue.Check{
-			"access_config": knownvalue.MapExact(map[string]knownvalue.Check{
-				"organization_root_account_role":        knownvalue.StringExact("OrganizationAccountAccessRole"),
-				"organization_root_account_external_id": knownvalue.Null(),
-				"auth": knownvalue.MapExact(map[string]knownvalue.Check{
-					"type":       knownvalue.StringExact("workloadIdentity"),
-					"credential": knownvalue.Null(),
-					"workload_identity": knownvalue.MapExact(map[string]knownvalue.Check{
-						"role_arn": knownvalue.StringExact("arn:aws:iam::123456789:role/MeshfedServiceRole"),
-					}),
-				}),
-			}),
-			"account_alias_pattern":                             knownvalue.StringExact("#{workspaceIdentifier}-#{projectIdentifier}"),
-			"account_email_pattern":                             knownvalue.StringExact("aws+#{workspaceIdentifier}.#{projectIdentifier}@example.com"),
-			"automation_account_role":                           knownvalue.StringExact("OrganizationAccountAccessRole"),
-			"automation_account_external_id":                    knownvalue.Null(),
-			"account_access_role":                               knownvalue.StringExact("OrganizationAccountAccessRole"),
-			"self_downgrade_access_role":                        knownvalue.Bool(false),
-			"enforce_account_alias":                             knownvalue.Bool(false),
-			"wait_for_external_avm":                             knownvalue.Bool(false),
-			"skip_user_group_permission_cleanup":                knownvalue.Bool(false),
-			"allow_hierarchical_organizational_unit_assignment": knownvalue.Bool(false),
-			"enrollment_configuration":                          knownvalue.Null(),
-			"aws_sso":                                           knownvalue.Null(),
-			"aws_identity_store": knownvalue.MapExact(map[string]knownvalue.Check{
-				"identity_store_id":  knownvalue.StringExact("d-1234567890"),
-				"arn":                knownvalue.StringExact("arn:aws:sso:::instance/ssoins-123456789abc"),
-				"group_name_pattern": knownvalue.StringExact("#{workspaceIdentifier}.#{projectIdentifier}-#{platformGroupAlias}"),
-				"sign_in_url":        knownvalue.StringExact("https://d-1234567890.awsapps.com/start"),
-				"aws_role_mappings": knownvalue.ListExact([]knownvalue.Check{
-					knownvalue.MapExact(map[string]knownvalue.Check{
-						"project_role_ref": knownvalue.MapExact(map[string]knownvalue.Check{
-							"name": knownvalue.StringExact("admin"),
-						}),
-						"aws_role":            knownvalue.StringExact("admin"),
-						"permission_set_arns": knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("arn:aws:sso:::permissionSet/ssoins-123456789abc/ps-abc123")}),
-					}),
-				}),
-			}),
-			"tenant_tags": knownvalue.Null(),
-		}),
-		"metering": knownvalue.Null(),
 	})
 }

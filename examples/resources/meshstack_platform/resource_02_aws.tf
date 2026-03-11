@@ -47,14 +47,11 @@ resource "meshstack_platform" "example_aws" {
           skip_user_group_permission_cleanup                = false
           allow_hierarchical_organizational_unit_assignment = false
 
-          aws_sso = {
+          aws_identity_store = {
+            identity_store_id  = "d-1234567890"
             arn                = "arn:aws:sso:::instance/ssoins-1234567890abcdef"
-            scim_endpoint      = "https://scim.us-east-1.amazonaws.com/abcd1234-5678-90ab-cdef-example12345/scim/v2/"
             group_name_pattern = "#{workspaceIdentifier}.#{projectIdentifier}-#{platformGroupAlias}"
-            sso_access_token = {
-              secret_value = "top-secret-ephemeral"
-            }
-            sign_in_url = "https://my-sso-portal.awsapps.com/start"
+            sign_in_url        = "https://d-1234567890.awsapps.com/start"
 
             aws_role_mappings = [
               {
