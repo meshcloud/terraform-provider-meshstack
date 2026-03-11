@@ -5,6 +5,9 @@ FEATURES:
 
 ## v0.19.4
 
+FEATURES:
+- `meshstack_platform`: Add `aws_identity_store` optional block to the AWS replication config as an alternative to `aws_sso`. It uses the AWS Identity Store API directly and does not require a SCIM token, making it compatible with Workload Identity Federation (WIF). Setting both `aws_sso` and `aws_identity_store` is not allowed.
+
 FIXES:
 - Properly support specifying non-null `secret_version` along `secret_value`.
 - Document `nonsensitive(sha256(...))` workaround for non-ephemeral `secret_value` inputs.

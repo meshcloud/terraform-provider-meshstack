@@ -19,6 +19,7 @@ type AwsReplicationConfig struct {
 	AccountEmailPattern                           string                      `json:"accountEmailPattern" tfsdk:"account_email_pattern"`
 	TenantTags                                    *MeshTenantTags             `json:"tenantTags,omitempty" tfsdk:"tenant_tags"`
 	AwsSso                                        *AwsSsoConfig               `json:"awsSso,omitempty" tfsdk:"aws_sso"`
+	AwsIdentityStore                              *AwsIdentityStoreConfig     `json:"awsIdentityStore,omitempty" tfsdk:"aws_identity_store"`
 	EnrollmentConfiguration                       *AwsEnrollmentConfiguration `json:"enrollmentConfiguration,omitempty" tfsdk:"enrollment_configuration"`
 	SelfDowngradeAccessRole                       bool                        `json:"selfDowngradeAccessRole" tfsdk:"self_downgrade_access_role"`
 	SkipUserGroupPermissionCleanup                bool                        `json:"skipUserGroupPermissionCleanup" tfsdk:"skip_user_group_permission_cleanup"`
@@ -64,6 +65,24 @@ type AwsSsoRoleMapping struct {
 type AwsEnrollmentConfiguration struct {
 	ManagementAccountId     string `json:"managementAccountId" tfsdk:"management_account_id"`
 	AccountFactoryProductId string `json:"accountFactoryProductId" tfsdk:"account_factory_product_id"`
+}
+
+type AwsIdentityStoreConfig struct {
+	IdentityStoreId  string                        `json:"identityStoreId" tfsdk:"identity_store_id"`
+	Arn              string                        `json:"arn" tfsdk:"arn"`
+	GroupNamePattern string                        `json:"groupNamePattern" tfsdk:"group_name_pattern"`
+	AwsRoleMappings  []AwsIdentityStoreRoleMapping `json:"awsRoleMappings" tfsdk:"aws_role_mappings"`
+	SignInUrl        string                        `json:"signInUrl" tfsdk:"sign_in_url"`
+}
+
+type AwsIdentityStoreRoleMapping struct {
+	ProjectRoleRef    AwsIdentityStoreProjectRoleRef `json:"projectRoleRef" tfsdk:"project_role_ref"`
+	AwsRole           string                         `json:"awsRole" tfsdk:"aws_role"`
+	PermissionSetArns []string                       `json:"permissionSetArns" tfsdk:"permission_set_arns"`
+}
+
+type AwsIdentityStoreProjectRoleRef struct {
+	Name string `json:"name" tfsdk:"name"`
 }
 
 type AwsMeteringConfig struct {
