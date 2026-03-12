@@ -230,14 +230,11 @@ resource "meshstack_platform" "example_aws" {
           skip_user_group_permission_cleanup                = false
           allow_hierarchical_organizational_unit_assignment = false
 
-          aws_sso = {
+          aws_identity_store = {
+            identity_store_id  = "d-1234567890"
             arn                = "arn:aws:sso:::instance/ssoins-1234567890abcdef"
-            scim_endpoint      = "https://scim.us-east-1.amazonaws.com/abcd1234-5678-90ab-cdef-example12345/scim/v2/"
             group_name_pattern = "#{workspaceIdentifier}.#{projectIdentifier}-#{platformGroupAlias}"
-            sso_access_token = {
-              secret_value = "top-secret-ephemeral"
-            }
-            sign_in_url = "https://my-sso-portal.awsapps.com/start"
+            sign_in_url        = "https://d-1234567890.awsapps.com/start"
 
             aws_role_mappings = [
               {
@@ -1045,6 +1042,7 @@ Required:
 Optional:
 
 - `automation_account_external_id` (String) ExternalId to enhance security in a multi account setup when assuming the automation account role.
+- `aws_identity_store` (Attributes) AWS IAM Identity Store configuration. Alternative to `aws_sso` that uses the AWS Identity Store API directly, without a SCIM token. (see [below for nested schema](#nestedatt--spec--config--aws--replication--aws_identity_store))
 - `aws_sso` (Attributes) AWS SSO configuration (see [below for nested schema](#nestedatt--spec--config--aws--replication--aws_sso))
 - `enrollment_configuration` (Attributes) AWS account enrollment configuration. (see [below for nested schema](#nestedatt--spec--config--aws--replication--enrollment_configuration))
 - `tenant_tags` (Attributes) Tenant tags configuration (see [below for nested schema](#nestedatt--spec--config--aws--replication--tenant_tags))
@@ -1104,6 +1102,40 @@ Read-Only:
 Required:
 
 - `role_arn` (String) ARN of the role that should be used as the entry point for meshStack by assuming it via web identity.
+
+
+
+
+<a id="nestedatt--spec--config--aws--replication--aws_identity_store"></a>
+### Nested Schema for `spec.config.aws.replication.aws_identity_store`
+
+Required:
+
+- `arn` (String) The ARN of the AWS IAM Identity Center Instance, e.g. `arn:aws:sso:::instance/ssoins-123456789abc`.
+- `aws_role_mappings` (Attributes List) AWS role mappings for AWS IAM Identity Store (see [below for nested schema](#nestedatt--spec--config--aws--replication--aws_identity_store--aws_role_mappings))
+- `group_name_pattern` (String) Configures the pattern that defines the desired name of AWS IAM Identity Center groups managed by meshStack. It supports the `platformGroupAlias` replacement. meshStack will additionally prefix the group name with `mst-` to identify groups it manages.
+- `identity_store_id` (String) The ID of the AWS IAM Identity Center Identity Store, e.g. `d-1234567890`.
+- `sign_in_url` (String) The AWS IAM Identity Center sign-in URL for end-users.
+
+<a id="nestedatt--spec--config--aws--replication--aws_identity_store--aws_role_mappings"></a>
+### Nested Schema for `spec.config.aws.replication.aws_identity_store.aws_role_mappings`
+
+Required:
+
+- `aws_role` (String) AWS role alias used as suffix in the group name pattern.
+- `permission_set_arns` (List of String) ARNs of IAM Identity Center permission sets to assign to the group. At least one is required.
+- `project_role_ref` (Attributes) the meshProject role (see [below for nested schema](#nestedatt--spec--config--aws--replication--aws_identity_store--aws_role_mappings--project_role_ref))
+
+<a id="nestedatt--spec--config--aws--replication--aws_identity_store--aws_role_mappings--project_role_ref"></a>
+### Nested Schema for `spec.config.aws.replication.aws_identity_store.aws_role_mappings.project_role_ref`
+
+Required:
+
+- `name` (String) The identifier of the meshProjectRole
+
+Read-Only:
+
+- `kind` (String) meshObject type, always `meshProjectRole`.
 
 
 
