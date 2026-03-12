@@ -76,13 +76,9 @@ type AwsIdentityStoreConfig struct {
 }
 
 type AwsIdentityStoreRoleMapping struct {
-	ProjectRoleRef    AwsIdentityStoreProjectRoleRef `json:"projectRoleRef" tfsdk:"project_role_ref"`
-	AwsRole           string                         `json:"awsRole" tfsdk:"aws_role"`
-	PermissionSetArns []string                       `json:"permissionSetArns" tfsdk:"permission_set_arns"`
-}
-
-type AwsIdentityStoreProjectRoleRef struct {
-	Name string `json:"name" tfsdk:"name"`
+	ProjectRoleRef    MeshProjectRoleRefV2 `json:"projectRoleRef" tfsdk:"project_role_ref"`
+	AwsRole           string               `json:"awsRole" tfsdk:"aws_role"`
+	PermissionSetArns []string             `json:"permissionSetArns" tfsdk:"permission_set_arns"`
 }
 
 type AwsMeteringConfig struct {
