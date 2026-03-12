@@ -1,12 +1,12 @@
-## v0.19.5
+## v0.20.0
+
+Requires meshStack 2026.10.0 or later.
 
 FEATURES:
-- `meshstack_building_block_definition`: Add `pre_run_script` field to the `terraform` implementation block. Requires meshStack 2026.10.0 or later.
+- `meshstack_building_block_definition`: Add `pre_run_script` field to the `terraform` implementation block. 
+- `meshstack_platform`: Add `aws_identity_store` optional block to the AWS replication config as an alternative to `aws_sso`. It uses the AWS Identity Store API directly and does not require a SCIM token, making it compatible with Workload Identity Federation (WIF). Setting both `aws_sso` and `aws_identity_store` is not allowed.
 
 ## v0.19.4
-
-FEATURES:
-- `meshstack_platform`: Add `aws_identity_store` optional block to the AWS replication config as an alternative to `aws_sso`. It uses the AWS Identity Store API directly and does not require a SCIM token, making it compatible with Workload Identity Federation (WIF). Setting both `aws_sso` and `aws_identity_store` is not allowed.
 
 FIXES:
 - Properly support specifying non-null `secret_version` along `secret_value`.
