@@ -164,7 +164,7 @@ func awsReplicationConfigSchema() schema.Attribute {
 						Required:            true,
 					},
 					"group_name_pattern": schema.StringAttribute{
-						MarkdownDescription: "Configures the pattern that defines the desired name of AWS IAM Identity Center groups managed by meshStack. It follows the usual replicator string pattern features and provides the additional replacement 'platformGroupAlias', which contains the role name suffix, which is configurable via Role Mappings in this platform config or via a meshLandingZone. Operators must ensure the group names will be unique within the same AWS IAM Identity Center Instance with that configuration. meshStack will additionally prefix the group name with 'mst-' to be able to identify the groups that are managed by meshStack.",
+						MarkdownDescription: "Configures the pattern that defines the desired name of AWS IAM Identity Center groups managed by meshStack. It follows the usual replicator string pattern features and provides the additional replacement 'platformGroupAlias', which contains the role name suffix, which is configurable via Role Mappings in this platform config or via a meshLandingZone. Operators must ensure the group names will be unique within the same AWS IAM Identity Center Instance with that configuration.",
 						Required:            true,
 					},
 					"sso_access_token": secret.ResourceSchema(secret.ResourceSchemaOptions{
@@ -218,16 +218,7 @@ func awsReplicationConfigSchema() schema.Attribute {
 						Required:            true,
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
-								"project_role_ref": schema.SingleNestedAttribute{
-									MarkdownDescription: "Reference to a meshProject role. The kind is always `meshProjectRole` and does not need to be specified.",
-									Required:            true,
-									Attributes: map[string]schema.Attribute{
-										"name": schema.StringAttribute{
-											MarkdownDescription: "The identifier of the meshProjectRole, e.g. `admin`, `user`, `reader`.",
-											Required:            true,
-										},
-									},
-								},
+								"project_role_ref": meshProjectRoleAttribute(false),
 								"aws_role": schema.StringAttribute{
 									MarkdownDescription: "AWS role alias used as suffix in the group name pattern.",
 									Required:            true,
