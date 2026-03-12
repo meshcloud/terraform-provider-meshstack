@@ -8,7 +8,7 @@ For general information about Terraform, visit the [official website](https://ww
 
 Please submit support questions via email to support@meshcloud.io. Support questions submitted under the Issues section of this repo will be handled on a "best effort" basis.
 
-Feature requests can be submitted at [canny.io](https://meshcloud.canny.io).
+Feature requests can be submitted at [feedback.meshcloud.io](https://feedback.meshcloud.io).
 
 ## Local Development
 
