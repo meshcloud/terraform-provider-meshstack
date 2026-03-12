@@ -353,6 +353,7 @@ func checkAwsPlatformConfig() knownvalue.Check {
 					knownvalue.MapExact(map[string]knownvalue.Check{
 						"project_role_ref": knownvalue.MapExact(map[string]knownvalue.Check{
 							"name": knownvalue.StringExact("admin"),
+							"kind": knownvalue.StringExact("meshProjectRole"),
 						}),
 						"aws_role":            knownvalue.StringExact("admin"),
 						"permission_set_arns": knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("arn:aws:sso:::permissionSet/ssoins-1234567890abcdef/ps-1234567890abcdef")}),
