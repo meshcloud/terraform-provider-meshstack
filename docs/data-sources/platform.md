@@ -271,6 +271,7 @@ Read-Only:
 - `allow_hierarchical_organizational_unit_assignment` (Boolean) Configuration flag to enable or disable hierarchical organizational unit assignment in AWS. If set to true: Accounts can be moved to child organizational units of the organizational unit defined in the Landing Zone. This is useful if you want to manage the account location with a deeper and more granular hierarchy. If set to false: Accounts will always be moved directly to the organizational unit defined in the Landing Zone.
 - `automation_account_external_id` (String) ExternalId to enhance security in a multi account setup when assuming the automation account role.
 - `automation_account_role` (String) ARN of the Automation Account Role. The Automation Account contains all AWS StackSets and Lambda Functions that shall be executed via meshLandingZones. E.g. `arn:aws:iam::123456789:role/MeshfedAutomationRole`.
+- `aws_identity_store` (Attributes) AWS IAM Identity Store configuration. Alternative to `aws_sso` that uses the AWS Identity Store API directly, without a SCIM token. (see [below for nested schema](#nestedatt--spec--config--aws--replication--aws_identity_store))
 - `aws_sso` (Attributes) AWS SSO configuration. (see [below for nested schema](#nestedatt--spec--config--aws--replication--aws_sso))
 - `enforce_account_alias` (Boolean) Flag to enforce account alias. If set, meshStack will guarantee on every replication that the configured Account Alias is applied. Otherwise it will only set the Account Alias once during tenant creation.
 - `enrollment_configuration` (Attributes) AWS account enrollment configuration. (see [below for nested schema](#nestedatt--spec--config--aws--replication--enrollment_configuration))
@@ -320,6 +321,40 @@ Read-Only:
 Read-Only:
 
 - `role_arn` (String) ARN of the role that should be used as the entry point for meshStack by assuming it via web identity.
+
+
+
+
+<a id="nestedatt--spec--config--aws--replication--aws_identity_store"></a>
+### Nested Schema for `spec.config.aws.replication.aws_identity_store`
+
+Read-Only:
+
+- `arn` (String) The ARN of the AWS IAM Identity Center Instance, e.g. `arn:aws:sso:::instance/ssoins-123456789abc`.
+- `aws_role_mappings` (Attributes List) AWS role mappings for AWS IAM Identity Store (see [below for nested schema](#nestedatt--spec--config--aws--replication--aws_identity_store--aws_role_mappings))
+- `group_name_pattern` (String) Configures the pattern that defines the desired name of AWS IAM Identity Center groups managed by meshStack. It supports the `platformGroupAlias` replacement. meshStack will additionally prefix the group name with `mst-` to identify groups it manages.
+- `identity_store_id` (String) The ID of the AWS IAM Identity Center Identity Store, e.g. `d-1234567890`.
+- `sign_in_url` (String) The AWS IAM Identity Center sign-in URL for end-users.
+
+<a id="nestedatt--spec--config--aws--replication--aws_identity_store--aws_role_mappings"></a>
+### Nested Schema for `spec.config.aws.replication.aws_identity_store.aws_role_mappings`
+
+Required:
+
+- `project_role_ref` (Attributes) the meshProject role (see [below for nested schema](#nestedatt--spec--config--aws--replication--aws_identity_store--aws_role_mappings--project_role_ref))
+
+Read-Only:
+
+- `aws_role` (String) AWS role alias used as suffix in the group name pattern.
+- `permission_set_arns` (List of String) ARNs of IAM Identity Center permission sets to assign to the group. At least one is required.
+
+<a id="nestedatt--spec--config--aws--replication--aws_identity_store--aws_role_mappings--project_role_ref"></a>
+### Nested Schema for `spec.config.aws.replication.aws_identity_store.aws_role_mappings.project_role_ref`
+
+Read-Only:
+
+- `kind` (String) meshObject type, always `meshProjectRole`.
+- `name` (String) The identifier of the meshProjectRole
 
 
 
