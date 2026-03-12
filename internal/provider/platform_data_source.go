@@ -676,6 +676,46 @@ func awsReplicationConfigDataSourceSchema() schema.Attribute {
 					},
 				},
 			},
+			"aws_identity_store": schema.SingleNestedAttribute{
+				MarkdownDescription: "AWS IAM Identity Store configuration. Alternative to `aws_sso` that uses the AWS Identity Store API directly, without a SCIM token.",
+				Computed:            true,
+				Attributes: map[string]schema.Attribute{
+					"identity_store_id": schema.StringAttribute{
+						MarkdownDescription: "The ID of the AWS IAM Identity Center Identity Store, e.g. `d-1234567890`.",
+						Computed:            true,
+					},
+					"arn": schema.StringAttribute{
+						MarkdownDescription: "The ARN of the AWS IAM Identity Center Instance, e.g. `arn:aws:sso:::instance/ssoins-123456789abc`.",
+						Computed:            true,
+					},
+					"group_name_pattern": schema.StringAttribute{
+						MarkdownDescription: "Configures the pattern that defines the desired name of AWS IAM Identity Center groups managed by meshStack. It supports the `platformGroupAlias` replacement. meshStack will additionally prefix the group name with `mst-` to identify groups it manages.",
+						Computed:            true,
+					},
+					"aws_role_mappings": schema.ListNestedAttribute{
+						MarkdownDescription: "AWS role mappings for AWS IAM Identity Store",
+						Computed:            true,
+						NestedObject: schema.NestedAttributeObject{
+							Attributes: map[string]schema.Attribute{
+								"project_role_ref": meshProjectRoleAttribute(true),
+								"aws_role": schema.StringAttribute{
+									MarkdownDescription: "AWS role alias used as suffix in the group name pattern.",
+									Computed:            true,
+								},
+								"permission_set_arns": schema.ListAttribute{
+									MarkdownDescription: "ARNs of IAM Identity Center permission sets to assign to the group. At least one is required.",
+									ElementType:         types.StringType,
+									Computed:            true,
+								},
+							},
+						},
+					},
+					"sign_in_url": schema.StringAttribute{
+						MarkdownDescription: "The AWS IAM Identity Center sign-in URL for end-users.",
+						Computed:            true,
+					},
+				},
+			},
 			"enrollment_configuration": schema.SingleNestedAttribute{
 				MarkdownDescription: "AWS account enrollment configuration.",
 				Computed:            true,
