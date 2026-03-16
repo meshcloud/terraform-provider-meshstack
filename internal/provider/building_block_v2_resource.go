@@ -50,7 +50,7 @@ func (r *buildingBlockV2Resource) Configure(_ context.Context, req resource.Conf
 
 func (r *buildingBlockV2Resource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Manage a workspace or tenant building block.\n\n~> **Note:** This resource is in preview. It's incomplete and will change in the near future.",
+		MarkdownDescription: "Manage a workspace or tenant building block." + previewDisclaimer(),
 
 		Attributes: map[string]schema.Attribute{
 			"api_version": schema.StringAttribute{

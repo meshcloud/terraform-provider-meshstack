@@ -33,7 +33,7 @@ func (d *buildingBlockV2DataSource) Metadata(ctx context.Context, req datasource
 
 func (d *buildingBlockV2DataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Single building block by UUID.\n\n~> **Note:** This resource is in preview. It's incomplete and will change in the near future.",
+		MarkdownDescription: "Single building block by UUID." + previewDisclaimer(),
 
 		Attributes: map[string]schema.Attribute{
 			"api_version": schema.StringAttribute{
