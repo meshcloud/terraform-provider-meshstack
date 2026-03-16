@@ -4,14 +4,14 @@ page_title: "meshstack_building_block_v2 Data Source - terraform-provider-meshst
 subcategory: ""
 description: |-
   Single building block by UUID.
-  ~> Note: This resource is in preview. It's incomplete and will change in the near future.
+  ~> Preview: This resource is in preview. Breaking changes are possible without prior notice due to changes in the underlying meshStack preview API https://docs.meshcloud.io/api/technical-specifications#preview-endpoints or due to changes in this provider. Please ensure you are running the latest version of the provider and report any bugs via GitHub issues https://github.com/meshcloud/terraform-provider-meshstack/issues or via support@meshcloud.io.
 ---
 
 # meshstack_building_block_v2 (Data Source)
 
 Single building block by UUID.
 
-~> **Note:** This resource is in preview. It's incomplete and will change in the near future.
+~> **Preview:** This resource is in preview. Breaking changes are possible without prior notice due to changes in the underlying [meshStack preview API](https://docs.meshcloud.io/api/technical-specifications#preview-endpoints) or due to changes in this provider. Please ensure you are running the latest version of the provider and report any bugs via [GitHub issues](https://github.com/meshcloud/terraform-provider-meshstack/issues) or via support@meshcloud.io.
 
 ## Example Usage
 

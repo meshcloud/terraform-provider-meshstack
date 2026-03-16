@@ -37,7 +37,7 @@ func (d *tenantV4DataSource) Configure(_ context.Context, req datasource.Configu
 
 func (d *tenantV4DataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Fetches details of a single tenant by UUID.\n\n~> **Note:** This resource is in preview and may change in the near future.",
+		MarkdownDescription: "Fetches details of a single tenant by UUID." + previewDisclaimer(),
 		Attributes: map[string]schema.Attribute{
 			"api_version": schema.StringAttribute{
 				MarkdownDescription: "Tenant datatype version",

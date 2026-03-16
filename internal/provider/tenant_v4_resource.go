@@ -82,7 +82,7 @@ func (r *tenantV4Resource) Configure(_ context.Context, req resource.ConfigureRe
 
 func (r *tenantV4Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Manages a `meshTenant` with API version 4.\n\n~> **Note:** This resource is in preview and may change in the near future.",
+		MarkdownDescription: "Manages a `meshTenant` with API version 4." + previewDisclaimer(),
 
 		Attributes: map[string]schema.Attribute{
 			"api_version": schema.StringAttribute{
