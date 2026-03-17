@@ -84,10 +84,26 @@ Optional:
 
 Import is supported using the following syntax:
 
-The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+In OpenTofu and Terraform v1.5.0 and later, the [`import` block](https://developer.hashicorp.com/terraform/language/import) can be used with the `id` attribute, for example:
+
+```terraform
+# import via workspace and payment method identifier <workspace-identifier>.<payment-method-identifier>
+import {
+  to = meshstack_payment_method.example
+  id = "my-workspace-identifier.my-payment-method"
+}
+```
+
+To generate the full resource configuration from the existing remote state, add the `import` block above to your configuration and then run:
 
 ```shell
-#!/bin/bash
-# import via workspace and payment method identifier <workspace-identifier>.<payment-method-identifier>
-terraform import 'meshstack_payment_method.example' 'my-workspace-identifier.my-payment-method'
+tofu plan -generate-config-out=generated_resources.tf
+# Terraform equivalent:
+terraform plan -generate-config-out=generated_resources.tf
 ```
+
+Copy the generated configuration into your root module to start managing the resource with OpenTofu or Terraform.
+Note that the generated configuration may require minor adjustments or cleanup — always run `tofu plan` / `terraform plan` afterwards to verify 
+that the configuration fully matches the imported state and that no unintended changes are pending.
+If the plan only shows the import of the resource (no other changes), you can run `tofu apply` / `terraform apply` to complete the import — from that point on, 
+the resource is fully managed via OpenTofu or Terraform.
