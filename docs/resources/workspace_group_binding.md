@@ -82,9 +82,26 @@ Required:
 
 Import is supported using the following syntax:
 
-The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+In OpenTofu and Terraform v1.5.0 and later, the [`import` block](https://developer.hashicorp.com/terraform/language/import) can be used with the `id` attribute, for example:
+
+```terraform
+# import via workspace binding name
+import {
+  to = meshstack_workspace_group_binding.example
+  id = "my-binding-name"
+}
+```
+
+To generate the full resource configuration from the existing remote state, add the `import` block above to your configuration and then run:
 
 ```shell
-# import via workspace binding name
-terraform import 'meshstack_workspace_group_binding.example' 'my-binding-name'
+tofu plan -generate-config-out=generated_resources.tf
+# Terraform equivalent:
+terraform plan -generate-config-out=generated_resources.tf
 ```
+
+Copy the generated configuration into your root module to start managing the resource with OpenTofu or Terraform.
+Note that the generated configuration may require minor adjustments or cleanup — always run `tofu plan` / `terraform plan` afterwards to verify 
+that the configuration fully matches the imported state and that no unintended changes are pending.
+If the plan only shows the import of the resource (no other changes), you can run `tofu apply` / `terraform apply` to complete the import — from that point on, 
+the resource is fully managed via OpenTofu or Terraform.
