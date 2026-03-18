@@ -47,6 +47,20 @@ For references to other meshEntities (e.g., `project_role_ref`):
 5. Run `go generate` for docs
 6. Update `CHANGELOG.md` with appropriate entry
 
+### Preview API Resources
+Resources and data sources that use a preview API must include a standardized disclaimer in their `MarkdownDescription`. Use the `previewDisclaimer()` helper from `internal/provider/schema_utils.go`:
+
+```go
+resp.Schema = schema.Schema{
+    MarkdownDescription: "Describe the resource here." + previewDisclaimer(),
+    // ...
+}
+```
+
+Do **not** inline a custom disclaimer string.
+
+Identify if a resource or data source uses a preview API by checking if the HTTP client is constructed with an `apiVersion` that has a `-preview` suffix.
+
 ### Data Structure Rules
 - **Use pointers & `omitempty`** only for fields that are **actually nullable** in the backend API
 - **Non-nullable fields**: Use value types (`string`, `int64`, `bool`) without `omitempty`
