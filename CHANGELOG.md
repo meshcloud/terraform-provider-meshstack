@@ -1,3 +1,8 @@
+## vNext
+
+FIXES:
+- `meshstack_building_block_definition`: Restrict the allowed `type` values for outputs to `STRING`, `CODE`, `INTEGER`, `BOOLEAN`. The types `FILE`, `LIST`, `SINGLE_SELECT`, and `MULTI_SELECT` are only valid for inputs and were incorrectly accepted for outputs before.
+
 ## v0.20.0
 
 Requires meshStack 2026.10.0 or later.
