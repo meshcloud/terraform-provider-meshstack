@@ -237,6 +237,9 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 						PlanModifiers: []planmodifier.String{
 							stringplanmodifier.UseStateForUnknown(),
 						},
+						Validators: []validator.String{
+							validators.SymbolSize{},
+						},
 					},
 					"description": schema.StringAttribute{
 						MarkdownDescription: "Description of the building block definition as shown in meshPanel.",

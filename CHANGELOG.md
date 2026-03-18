@@ -1,4 +1,7 @@
-## Unreleased
+## v0.20.2
+
+FEATURES:
+- `meshstack_building_block_definition`: Validate that the `symbol` field does not exceed 100 KiB when decoded from base64. Configurations exceeding this limit will receive a descriptive error during `plan`.
 
 FIXES:
 - `meshstack_building_block_definition`: Validate that `spec.description` does not exceed 255 characters.
