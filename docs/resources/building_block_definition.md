@@ -621,7 +621,7 @@ Read-Only:
 Required:
 
 - `display_name` (String) Human-readable display name for the output.
-- `type` (String) Data type of the output. One of `STRING`, `CODE`, `INTEGER`, `BOOLEAN`, `FILE`, `LIST`, `SINGLE_SELECT`, `MULTI_SELECT`.
+- `type` (String) Data type of the output. One of `STRING`, `CODE`, `INTEGER`, `BOOLEAN`.
 
 Optional:
 

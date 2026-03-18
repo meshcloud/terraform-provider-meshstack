@@ -43,6 +43,13 @@ var (
 	MeshBuildingBlockIOTypeMultiSelect  = MeshBuildingBlockIOTypes.Entry("MULTI_SELECT")
 )
 
+var MeshBuildingBlockOutputIOTypes = enum.Of(
+	MeshBuildingBlockIOTypeString,
+	MeshBuildingBlockIOTypeCode,
+	MeshBuildingBlockIOTypeInteger,
+	MeshBuildingBlockIOTypeBoolean,
+)
+
 type MeshBuildingBlockInputAssignmentType string
 
 var (

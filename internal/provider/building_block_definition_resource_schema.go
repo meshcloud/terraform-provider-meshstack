@@ -174,10 +174,10 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 			},
 		},
 		"type": schema.StringAttribute{
-			MarkdownDescription: "Data type of the output. One of " + client.MeshBuildingBlockIOTypes.Markdown() + ".",
+			MarkdownDescription: "Data type of the output. One of " + client.MeshBuildingBlockOutputIOTypes.Markdown() + ".",
 			Required:            true,
 			Validators: []validator.String{
-				stringvalidator.OneOf(client.MeshBuildingBlockIOTypes.Strings()...),
+				stringvalidator.OneOf(client.MeshBuildingBlockOutputIOTypes.Strings()...),
 			},
 		},
 	},
