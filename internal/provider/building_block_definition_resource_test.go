@@ -2,7 +2,9 @@ package provider
 
 import (
 	_ "embed"
+	"encoding/base64"
 	"fmt"
+	"regexp"
 	"slices"
 	"strings"
 	"testing"
@@ -701,4 +703,87 @@ func checkAzureDevopsPipelineImplementation() knownvalue.Check {
 			"kind": knownvalue.StringExact("meshIntegration"),
 		}),
 	})
+}
+
+func TestBuildingBlockDefinitionSymbolValidation(t *testing.T) {
+	// symbolConfig wraps a symbol value into a minimal valid BBD config.
+	symbolConfig := func(symbol string) string {
+		return fmt.Sprintf(`
+resource "meshstack_building_block_definition" "test" {
+  metadata = { owned_by_workspace = "my-workspace" }
+  spec = {
+    display_name = "Test"
+    description  = "Test"
+    symbol       = %q
+  }
+  version_spec = {
+    draft = true
+    implementation = { manual = {} }
+  }
+}`, symbol)
+	}
+
+	tests := []struct {
+		name        string
+		symbol      string
+		expectError *regexp.Regexp
+	}{
+		{
+			name:   "https URL",
+			symbol: "https://example.com/icon.png",
+		},
+		{
+			name:   "http URL",
+			symbol: "http://example.com/icon.png",
+		},
+		{
+			name:        "plain string is rejected",
+			symbol:      "not-a-url-or-data-uri",
+			expectError: regexp.MustCompile(`Invalid Symbol Format`),
+		},
+		{
+			name:        "disallowed image type is rejected",
+			symbol:      "data:image/bmp;base64," + base64.StdEncoding.EncodeToString([]byte(strings.Repeat("x", 50))),
+			expectError: regexp.MustCompile(`Invalid Symbol Format`),
+		},
+		{
+			name:        "invalid base64 is rejected",
+			symbol:      "data:image/png;base64,!!!not-valid-base64!!!",
+			expectError: regexp.MustCompile(`Invalid Base64 in Symbol Data URI`),
+		},
+		{
+			name:   "data URI decoded size exactly at 100 KiB limit",
+			symbol: "data:image/png;base64," + base64.StdEncoding.EncodeToString([]byte(strings.Repeat("x", 100*1024))),
+		},
+		{
+			name:        "data URI decoded size exceeds 100 KiB limit",
+			symbol:      "data:image/png;base64," + base64.StdEncoding.EncodeToString([]byte(strings.Repeat("x", 100*1024+1))),
+			expectError: regexp.MustCompile(`Symbol Image Too Large`),
+		},
+		{
+			name:   "raw (no-padding) base64",
+			symbol: "data:image/jpeg;base64," + base64.RawStdEncoding.EncodeToString([]byte(strings.Repeat("x", 100*1024))),
+		},
+		{
+			name:   "svg+xml image type",
+			symbol: "data:image/svg+xml;base64," + base64.StdEncoding.EncodeToString([]byte(strings.Repeat("y", 50))),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			step := resource.TestStep{
+				Config: symbolConfig(tt.symbol),
+			}
+			if tt.expectError != nil {
+				step.ExpectError = tt.expectError
+			}
+			ResourceTestCaseModifiers([]ResourceTestCaseModifier{
+				SetupMockClient(),
+			}).ApplyAndTest(t, resource.TestCase{
+				Steps: []resource.TestStep{step},
+			})
+		})
+	}
 }
