@@ -1,7 +1,12 @@
+## Unreleased
+
+FIXES:
+- `meshstack_building_block_definition`: Validate that `spec.description` does not exceed 255 characters.
+
 ## v0.20.1
 
 FEATURES:
-- Document `import` support for resources.<br>
+- Document `import` for all resources (also previously missing ones like `meshstack_building_block_definition`) via import block instead of shell script.<br>
   Note: Import is not yet supported for `meshstack_building_block` and `meshstack_building_block_v2`.
 
 FIXES:
