@@ -1,3 +1,8 @@
+## Unreleased
+
+FIXES:
+- `meshstack_building_block_definition`: Validate that `spec.description` does not exceed 255 characters.
+
 ## v0.20.0
 
 Requires meshStack 2026.10.0 or later.
