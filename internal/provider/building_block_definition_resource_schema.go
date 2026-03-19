@@ -241,6 +241,9 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 					"description": schema.StringAttribute{
 						MarkdownDescription: "Description of the building block definition as shown in meshPanel.",
 						Required:            true,
+						Validators: []validator.String{
+							stringvalidator.LengthAtMost(255),
+						},
 					},
 					"readme": schema.StringAttribute{
 						MarkdownDescription: "Detailed readme/documentation in markdown format.",
