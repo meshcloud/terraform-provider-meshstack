@@ -1,10 +1,12 @@
-## vNext
+## v0.20.1
 
 FEATURES:
-- Document `import` support for resources. Note: importing is not yet supported for `meshstack_building_block` and `meshstack_building_block_v2`.
+- Document `import` support for resources.<br>
+  Note: Import is not yet supported for `meshstack_building_block` and `meshstack_building_block_v2`.
 
 FIXES:
-- `meshstack_building_block_definition`: Restrict the allowed `type` values for outputs to `STRING`, `CODE`, `INTEGER`, `BOOLEAN`. The types `FILE`, `LIST`, `SINGLE_SELECT`, and `MULTI_SELECT` are only valid for inputs and were incorrectly accepted for outputs before.
+- `meshstack_building_block_definition`: Restrict the allowed `type` values for outputs to `STRING`, `CODE`, `INTEGER`, `BOOLEAN`. 
+  The types `FILE`, `LIST`, `SINGLE_SELECT`, and `MULTI_SELECT` are only valid for inputs and were incorrectly accepted for outputs before.
 
 ## v0.20.0
 
