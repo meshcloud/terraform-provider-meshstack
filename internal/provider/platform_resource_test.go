@@ -37,22 +37,31 @@ func runPlatformTestCases(t *testing.T, modifiers ...ResourceTestCaseModifier) {
 		exampleSuffix := strings.TrimPrefix(exampleResource.Suffix, "_")
 		t.Run(exampleSuffix, func(t *testing.T) {
 			t.Parallel()
-			var resourceAddress, nameSuffixAddress examples.Identifier
+			var resourceAddress examples.Identifier
 			config := exampleResource.Config().
 				SingleResourceAddress(&resourceAddress).
-				OwnedByAdminWorkspace().
-				Join(
-					platformExamples.TestSupportConfig("_random").SingleResourceAddress(&nameSuffixAddress),
-				).ReplaceAll(`name               = "my-platform"`, nameSuffixAddress.Format(`name = "my-platform-${%s.result}"`))
+				OwnedByAdminWorkspace()
 
-			if exampleSuffix == "08_custom" {
+			switch exampleSuffix {
+			case "08_custom":
 				var platformTypeAddress examples.Identifier
 				config = config.Join(
 					exampleResource.TestSupportConfig("_platform_type").
 						OwnedByAdminWorkspace().
 						SingleResourceAddressWithType("meshstack_platform_type", &platformTypeAddress),
 				).ReplaceAll(`platform_type_ref = { name = "my-custom-platform-type" }`, platformTypeAddress.Format(`platform_type_ref = %s.ref`))
+			default:
+				// Make all boolean flags true to test non-default behavior with API
+				// Keeping them default in the examples is fine though.
+				// Note: all platforms except custom have at least one boolean flag to change to true
+				config = config.ReplaceAll(" = false", " = true")
 			}
+
+			// finally, make platform identifies randomly suffixed to avoid name collisions due to soft deletion
+			var nameSuffixAddress examples.Identifier
+			config = config.Join(
+				platformExamples.TestSupportConfig("_random").SingleResourceAddress(&nameSuffixAddress),
+			).ReplaceAll(`name               = "my-platform"`, nameSuffixAddress.Format(`name = "my-platform-${%s.result}"`))
 
 			var resourceUuid string
 			testSteps := []resource.TestStep{
@@ -248,7 +257,7 @@ func checkAzurePlatformConfig() knownvalue.Check {
 					"credential": knownvalue.Null(),
 				}),
 			}),
-			"update_subscription_name": knownvalue.Bool(false),
+			"update_subscription_name": knownvalue.Bool(true),
 			"provisioning": knownvalue.MapExact(map[string]knownvalue.Check{
 				"subscription_owner_object_ids": knownvalue.SetExact([]knownvalue.Check{
 					KnownValueNotEmptyString(),
@@ -261,7 +270,7 @@ func checkAzurePlatformConfig() knownvalue.Check {
 			}),
 			"b2b_user_invitation": knownvalue.MapExact(map[string]knownvalue.Check{
 				"redirect_url":               knownvalue.StringExact("https://portal.azure.com/#home"),
-				"send_azure_invitation_mail": knownvalue.Bool(false),
+				"send_azure_invitation_mail": knownvalue.Bool(true),
 			}),
 			"subscription_name_pattern":   knownvalue.StringExact("#{workspaceIdentifier}.#{projectIdentifier}"),
 			"group_name_pattern":          knownvalue.StringExact("#{workspaceIdentifier}.#{projectIdentifier}-#{platformGroupAlias}"),
@@ -304,8 +313,8 @@ func checkAzurePlatformConfig() knownvalue.Check {
 				"tag_mappers":      knownvalue.SetSizeExact(7),
 			}),
 			"user_lookup_strategy":                           knownvalue.StringExact("UserByMailLookupStrategy"),
-			"skip_user_group_permission_cleanup":             knownvalue.Bool(false),
-			"allow_hierarchical_management_group_assignment": knownvalue.Bool(false),
+			"skip_user_group_permission_cleanup":             knownvalue.Bool(true),
+			"allow_hierarchical_management_group_assignment": knownvalue.Bool(true),
 			"administrative_unit_id":                         knownvalue.Null(),
 		}),
 		"metering": knownvalue.Null(),
@@ -337,11 +346,11 @@ func checkAwsPlatformConfig() knownvalue.Check {
 			"automation_account_role":                           knownvalue.StringExact("OrganizationAccountAccessRole"),
 			"automation_account_external_id":                    knownvalue.Null(),
 			"account_access_role":                               knownvalue.StringExact("OrganizationAccountAccessRole"),
-			"self_downgrade_access_role":                        knownvalue.Bool(false),
-			"enforce_account_alias":                             knownvalue.Bool(false),
-			"wait_for_external_avm":                             knownvalue.Bool(false),
-			"skip_user_group_permission_cleanup":                knownvalue.Bool(false),
-			"allow_hierarchical_organizational_unit_assignment": knownvalue.Bool(false),
+			"self_downgrade_access_role":                        knownvalue.Bool(true),
+			"enforce_account_alias":                             knownvalue.Bool(true),
+			"wait_for_external_avm":                             knownvalue.Bool(true),
+			"skip_user_group_permission_cleanup":                knownvalue.Bool(true),
+			"allow_hierarchical_organizational_unit_assignment": knownvalue.Bool(true),
 			"enrollment_configuration":                          knownvalue.Null(),
 			"aws_sso":                                           knownvalue.Null(),
 			"aws_identity_store": xknownvalue.MapExact(map[string]knownvalue.Check{
@@ -383,8 +392,8 @@ func checkAwsPlatformConfig() knownvalue.Check {
 				}),
 			}),
 			"filter":                            knownvalue.StringExact("NONE"),
-			"reserved_instance_fair_chargeback": knownvalue.Bool(false),
-			"savings_plan_fair_chargeback":      knownvalue.Bool(false),
+			"reserved_instance_fair_chargeback": knownvalue.Bool(true),
+			"savings_plan_fair_chargeback":      knownvalue.Bool(true),
 			"processing":                        checkMeteringProcessingConfig(),
 		}),
 	})
@@ -410,8 +419,8 @@ func checkGcpPlatformConfig() knownvalue.Check {
 			"customer_id":                          knownvalue.StringExact("C01234567"),
 			"user_lookup_strategy":                 knownvalue.StringExact("email"),
 			"used_external_id_type":                knownvalue.Null(),
-			"allow_hierarchical_folder_assignment": knownvalue.Bool(false),
-			"skip_user_group_permission_cleanup":   knownvalue.Bool(false),
+			"allow_hierarchical_folder_assignment": knownvalue.Bool(true),
+			"skip_user_group_permission_cleanup":   knownvalue.Bool(true),
 			"gcp_role_mappings": knownvalue.ListExact([]knownvalue.Check{
 				knownvalue.MapExact(map[string]knownvalue.Check{
 					"gcp_role": knownvalue.StringExact("roles/editor"),
@@ -456,7 +465,7 @@ func checkGcpPlatformConfig() knownvalue.Check {
 func checkKubernetesPlatformConfig() knownvalue.Check {
 	return knownvalue.MapExact(map[string]knownvalue.Check{
 		"base_url":               knownvalue.StringExact("https://k8s.dev.eu-de-central.msh.host:6443"),
-		"disable_ssl_validation": knownvalue.Bool(false),
+		"disable_ssl_validation": knownvalue.Bool(true),
 		"replication": knownvalue.MapExact(map[string]knownvalue.Check{
 			"client_config": knownvalue.MapExact(map[string]knownvalue.Check{
 				"access_token": knownvalue.MapExact(map[string]knownvalue.Check{
@@ -483,7 +492,7 @@ func checkKubernetesPlatformConfig() knownvalue.Check {
 func checkAksPlatformConfig() knownvalue.Check {
 	return knownvalue.MapExact(map[string]knownvalue.Check{
 		"base_url":               knownvalue.StringExact("https://myaks-dns.westeurope.azmk8s.io:443"),
-		"disable_ssl_validation": knownvalue.Bool(false),
+		"disable_ssl_validation": knownvalue.Bool(true),
 		"replication": xknownvalue.MapExact(map[string]knownvalue.Check{
 			"access_token": knownvalue.MapExact(map[string]knownvalue.Check{
 				"secret_value":   knownvalue.Null(),
@@ -504,7 +513,7 @@ func checkAksPlatformConfig() knownvalue.Check {
 			"aks_subscription_id":        KnownValueNotEmptyString(),
 			"aks_cluster_name":           knownvalue.StringExact("my-aks-cluster"),
 			"aks_resource_group":         knownvalue.StringExact("my-aks-rg"),
-			"send_azure_invitation_mail": knownvalue.Bool(false),
+			"send_azure_invitation_mail": knownvalue.Bool(true),
 			"user_lookup_strategy":       knownvalue.StringExact("UserByMailLookupStrategy"),
 			"administrative_unit_id":     knownvalue.Null(),
 			"redirect_url":               knownvalue.Null(),
@@ -542,12 +551,12 @@ func checkAzureRgPlatformConfig() knownvalue.Check {
 			"resource_group_name_pattern":                    knownvalue.StringExact("#{workspaceIdentifier}-#{projectIdentifier}"),
 			"user_group_name_pattern":                        knownvalue.StringExact("#{workspaceIdentifier}.#{projectIdentifier}-#{platformGroupAlias}"),
 			"user_lookup_strategy":                           knownvalue.StringExact("UserByMailLookupStrategy"),
-			"skip_user_group_permission_cleanup":             knownvalue.Bool(false),
-			"allow_hierarchical_management_group_assignment": knownvalue.Bool(false),
+			"skip_user_group_permission_cleanup":             knownvalue.Bool(true),
+			"allow_hierarchical_management_group_assignment": knownvalue.Bool(true),
 			"administrative_unit_id":                         knownvalue.Null(),
 			"b2b_user_invitation": knownvalue.MapExact(map[string]knownvalue.Check{
 				"redirect_url":               knownvalue.StringExact("https://meshcloud.io"),
-				"send_azure_invitation_mail": knownvalue.Bool(false),
+				"send_azure_invitation_mail": knownvalue.Bool(true),
 			}),
 			"tenant_tags": knownvalue.MapExact(map[string]knownvalue.Check{
 				"namespace_prefix": knownvalue.StringExact("meshstack_"),
@@ -560,7 +569,7 @@ func checkAzureRgPlatformConfig() knownvalue.Check {
 func checkOpenshiftPlatformConfig() knownvalue.Check {
 	return knownvalue.MapExact(map[string]knownvalue.Check{
 		"base_url":               knownvalue.StringExact("https://api.okd4.dev.eu-de-central.msh.host:6443"),
-		"disable_ssl_validation": knownvalue.Bool(false),
+		"disable_ssl_validation": knownvalue.Bool(true),
 		"replication": knownvalue.MapExact(map[string]knownvalue.Check{
 			"client_config": knownvalue.MapExact(map[string]knownvalue.Check{
 				"access_token": knownvalue.MapExact(map[string]knownvalue.Check{
@@ -571,7 +580,7 @@ func checkOpenshiftPlatformConfig() knownvalue.Check {
 			}),
 			"web_console_url":               knownvalue.StringExact("https://console-openshift-console.apps.okd4.dev.eu-de-central.msh.host"),
 			"project_name_pattern":          knownvalue.StringExact("#{workspaceIdentifier}-#{projectIdentifier}"),
-			"enable_template_instantiation": knownvalue.Bool(false),
+			"enable_template_instantiation": knownvalue.Bool(true),
 			"identity_provider_name":        knownvalue.StringExact("meshStack"),
 			"openshift_role_mappings": knownvalue.SetExact([]knownvalue.Check{
 				knownvalue.MapExact(map[string]knownvalue.Check{
