@@ -1042,10 +1042,6 @@ func azureRgReplicationConfigDataSourceSchema() schema.Attribute {
 				MarkdownDescription: "If you enter an administrative unit ID the replicated (and potentially existing) groups will be put into this AU. This can be used to limit the permission scopes which are required for the replicator principal. If you remove the AU ID again or change it, the groups will not be removed from the old AU.",
 				Computed:            true,
 			},
-			"allow_hierarchical_management_group_assignment": schema.BoolAttribute{
-				MarkdownDescription: "Configuration flag to enable or disable hierarchical management group assignment in Azure. If set to true: Subscriptions can be moved to child management groups of the management group defined in the Landing Zone. This is useful if you want to manage the subscription location with a deeper and more granular hierarchy. If set to false: Subscriptions will always be moved directly to the management group defined in the Landing Zone.",
-				Computed:            true,
-			},
 		},
 	}
 }

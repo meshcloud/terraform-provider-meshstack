@@ -57,7 +57,7 @@ func runPlatformTestCases(t *testing.T, modifiers ...ResourceTestCaseModifier) {
 				config = config.ReplaceAll(" = false", " = true")
 			}
 
-			// finally, make platform identifies randomly suffixed to avoid name collisions due to soft deletion
+			// finally, make platform identifiers randomly suffixed to avoid name collisions due to soft deletion
 			var nameSuffixAddress examples.Identifier
 			config = config.Join(
 				platformExamples.TestSupportConfig("_random").SingleResourceAddress(&nameSuffixAddress),
@@ -547,13 +547,12 @@ func checkAzureRgPlatformConfig() knownvalue.Check {
 					}),
 				}),
 			}),
-			"subscription":                                   KnownValueNotEmptyString(),
-			"resource_group_name_pattern":                    knownvalue.StringExact("#{workspaceIdentifier}-#{projectIdentifier}"),
-			"user_group_name_pattern":                        knownvalue.StringExact("#{workspaceIdentifier}.#{projectIdentifier}-#{platformGroupAlias}"),
-			"user_lookup_strategy":                           knownvalue.StringExact("UserByMailLookupStrategy"),
-			"skip_user_group_permission_cleanup":             knownvalue.Bool(true),
-			"allow_hierarchical_management_group_assignment": knownvalue.Bool(true),
-			"administrative_unit_id":                         knownvalue.Null(),
+			"subscription":                       KnownValueNotEmptyString(),
+			"resource_group_name_pattern":        knownvalue.StringExact("#{workspaceIdentifier}-#{projectIdentifier}"),
+			"user_group_name_pattern":            knownvalue.StringExact("#{workspaceIdentifier}.#{projectIdentifier}-#{platformGroupAlias}"),
+			"user_lookup_strategy":               knownvalue.StringExact("UserByMailLookupStrategy"),
+			"skip_user_group_permission_cleanup": knownvalue.Bool(true),
+			"administrative_unit_id":             knownvalue.Null(),
 			"b2b_user_invitation": knownvalue.MapExact(map[string]knownvalue.Check{
 				"redirect_url":               knownvalue.StringExact("https://meshcloud.io"),
 				"send_azure_invitation_mail": knownvalue.Bool(true),

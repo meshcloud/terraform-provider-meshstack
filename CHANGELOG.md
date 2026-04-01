@@ -1,3 +1,10 @@
+## v0.20.3
+
+BREAKING CHANGES:
+- `meshstack_platform`: Remove the `allow_hierarchical_management_group_assignment` attribute from the `azurerg` platform
+  config. This field was never functional in the meshStack API (always returned `false`) and has been removed from the
+  meshStack API. Remove this attribute from your Terraform configurations if present.
+
 ## v0.20.2
 
 FEATURES:
