@@ -34,12 +34,11 @@ resource "meshstack_platform" "example_azurerg" {
             }
           }
 
-          subscription                                   = "12345678-1234-1234-1234-123456789abc"
-          resource_group_name_pattern                    = "#{workspaceIdentifier}-#{projectIdentifier}"
-          user_group_name_pattern                        = "#{workspaceIdentifier}.#{projectIdentifier}-#{platformGroupAlias}"
-          user_lookup_strategy                           = "UserByMailLookupStrategy"
-          skip_user_group_permission_cleanup             = false
-          allow_hierarchical_management_group_assignment = false
+          subscription                       = "12345678-1234-1234-1234-123456789abc"
+          resource_group_name_pattern        = "#{workspaceIdentifier}-#{projectIdentifier}"
+          user_group_name_pattern            = "#{workspaceIdentifier}.#{projectIdentifier}-#{platformGroupAlias}"
+          user_lookup_strategy               = "UserByMailLookupStrategy"
+          skip_user_group_permission_cleanup = false
 
           b2b_user_invitation = {
             redirect_url               = "https://meshcloud.io"

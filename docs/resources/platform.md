@@ -562,12 +562,11 @@ resource "meshstack_platform" "example_azurerg" {
             }
           }
 
-          subscription                                   = "12345678-1234-1234-1234-123456789abc"
-          resource_group_name_pattern                    = "#{workspaceIdentifier}-#{projectIdentifier}"
-          user_group_name_pattern                        = "#{workspaceIdentifier}.#{projectIdentifier}-#{platformGroupAlias}"
-          user_lookup_strategy                           = "UserByMailLookupStrategy"
-          skip_user_group_permission_cleanup             = false
-          allow_hierarchical_management_group_assignment = false
+          subscription                       = "12345678-1234-1234-1234-123456789abc"
+          resource_group_name_pattern        = "#{workspaceIdentifier}-#{projectIdentifier}"
+          user_group_name_pattern            = "#{workspaceIdentifier}.#{projectIdentifier}-#{platformGroupAlias}"
+          user_lookup_strategy               = "UserByMailLookupStrategy"
+          skip_user_group_permission_cleanup = false
 
           b2b_user_invitation = {
             redirect_url               = "https://meshcloud.io"
@@ -1539,7 +1538,6 @@ Optional:
 
 Required:
 
-- `allow_hierarchical_management_group_assignment` (Boolean) Configuration flag to enable or disable hierarchical management group assignment in Azure. If set to true: Subscriptions can be moved to child management groups of the management group defined in the Landing Zone. This is useful if you want to manage the subscription location with a deeper and more granular hierarchy. If set to false: Subscriptions will always be moved directly to the management group defined in the Landing Zone.
 - `resource_group_name_pattern` (String) Configures the pattern that defines the desired name Resource Group managed by meshStack. It follows the usual replicator string pattern features. Operators must ensure the group names are unique within the Subscription.
 - `service_principal` (Attributes) Service principal configuration for Azure Resource Group access. (see [below for nested schema](#nestedatt--spec--config--azurerg--replication--service_principal))
 - `skip_user_group_permission_cleanup` (Boolean) For certain use cases you might want to preserve user groups and replicated permission after a tenant was deleted on the Azure platform. Checking this option preserves those permissions. Please keep in mind that the platform operator is then responsible for cleaning them up later.
