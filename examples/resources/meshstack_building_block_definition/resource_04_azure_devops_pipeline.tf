@@ -24,6 +24,7 @@ resource "meshstack_building_block_definition" "example_04_azure_devops_pipeline
       azure_devops_pipeline = {
         project         = "MyProject"
         pipeline_id     = "42"
+        ref_name        = "refs/heads/main"
         integration_ref = { uuid = "550e8400-e29b-41d4-a716-446655440000" }
       }
     }

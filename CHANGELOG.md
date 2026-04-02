@@ -5,6 +5,9 @@ BREAKING CHANGES:
   config. This field was never functional in the meshStack API (always returned `false`) and has been removed from the
   meshStack API. Remove this attribute from your Terraform configurations if present.
 
+FEATURES:
+- `meshstack_building_block_definition`: Add `ref_name` field to the `azure_devops_pipeline` implementation block to specify the Git reference name (branch, tag, or commit) to use for the Azure DevOps pipeline run.
+
 ## v0.20.2
 
 FEATURES:
