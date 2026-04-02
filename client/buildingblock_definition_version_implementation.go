@@ -61,6 +61,7 @@ type MeshBuildingBlockDefinitionGitLabPipelineImplementation struct {
 type MeshBuildingBlockDefinitionAzureDevOpsPipelineImplementation struct {
 	Project        string             `json:"project" tfsdk:"project"`
 	PipelineID     string             `json:"pipelineId" tfsdk:"pipeline_id"`
+	RefName        *string            `json:"refName,omitempty" tfsdk:"ref_name"`
 	Async          bool               `json:"async" tfsdk:"async"`
 	IntegrationRef MeshIntegrationRef `json:"integrationRef" tfsdk:"integration_ref"`
 }

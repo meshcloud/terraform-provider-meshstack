@@ -1,3 +1,8 @@
+## v0.20.5
+
+FEATURES:
+- `meshstack_building_block_definition`: Add `ref_name` field to the `azure_devops_pipeline` implementation block to specify the Git reference name (branch, tag, or commit) to use for the Azure DevOps pipeline run.
+
 ## v0.20.4
 
 BREAKING CHANGES:

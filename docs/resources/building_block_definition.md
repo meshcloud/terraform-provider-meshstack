@@ -255,6 +255,7 @@ resource "meshstack_building_block_definition" "example_04_azure_devops_pipeline
         project         = "MyProject"
         pipeline_id     = "42"
         integration_ref = { uuid = one(data.meshstack_integrations.all.integrations).metadata.uuid }
+        ref_name        = "refs/heads/main"
       }
     }
 
@@ -426,6 +427,7 @@ Required:
 Optional:
 
 - `async` (Boolean) Whether to run pipeline asynchronously.
+- `ref_name` (String) The Git reference name (branch, tag, or commit) to use for the Azure DevOps pipeline run. Example: `refs/heads/my-branch`.
 
 <a id="nestedatt--version_spec--implementation--azure_devops_pipeline--integration_ref"></a>
 ### Nested Schema for `version_spec.implementation.azure_devops_pipeline.integration_ref`

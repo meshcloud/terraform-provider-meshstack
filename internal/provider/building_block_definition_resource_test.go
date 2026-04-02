@@ -745,6 +745,7 @@ func checkAzureDevopsPipelineImplementation() knownvalue.Check {
 	return xknownvalue.MapExact(map[string]knownvalue.Check{
 		"project":     knownvalue.StringExact("MyProject"),
 		"pipeline_id": knownvalue.StringExact("42"),
+		"ref_name":    knownvalue.StringExact("refs/heads/main"),
 		"async":       knownvalue.Bool(false),
 		"integration_ref": xknownvalue.MapExact(map[string]knownvalue.Check{
 			"uuid": xknownvalue.NotEmptyString(),

@@ -558,6 +558,10 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 										MarkdownDescription: "Azure DevOps pipeline ID.",
 										Required:            true,
 									},
+									"ref_name": schema.StringAttribute{
+										MarkdownDescription: "The Git reference name (branch, tag, or commit) to use for the Azure DevOps pipeline run. Example: `refs/heads/my-branch`.",
+										Optional:            true,
+									},
 									"async": schema.BoolAttribute{
 										MarkdownDescription: "Whether to run pipeline asynchronously.",
 										Optional:            true,
