@@ -704,3 +704,16 @@ Note that the generated configuration may require minor adjustments or cleanup �
 that the configuration fully matches the imported state and that no unintended changes are pending.
 If the plan only shows the import of the resource (no other changes), you can run `tofu apply` / `terraform apply` to complete the import — from that point on, 
 the resource is fully managed via OpenTofu or Terraform.
+
+### Handling Write-Only Attributes (Secrets)
+
+This resource uses write-only attributes for secret values (`secret_value`). Because OpenTofu and Terraform cannot
+read write-only values back from the provider, the generated configuration will contain `secret_value = null` placeholders
+that must be replaced before `tofu plan` / `terraform plan` can succeed.
+
+You must replace each `secret_value = null` with an actual value and decide how to manage `secret_version`
+before running `tofu plan` / `terraform plan`. See the schema documentation above for details on `secret_value`,
+`secret_version`, and `secret_hash`.
+
+For a detailed step-by-step walkthrough — including secret handling options — see
+[How to Import an Existing Building Block Definition into OpenTofu](https://docs.meshcloud.io/guides/core/how-to-import-bbd-into-opentofu/).
