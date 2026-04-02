@@ -74,9 +74,7 @@ Optional:
 
 ## Import
 
-Import is supported using the following syntax:
-
-In OpenTofu and Terraform v1.5.0 and later, the [`import` block](https://developer.hashicorp.com/terraform/language/import) can be used with the `id` attribute, for example:
+Use the [`import` block](https://developer.hashicorp.com/terraform/language/import) with an appropriate `id` attribute, for example:
 
 ```terraform
 # import via workspace identifier
