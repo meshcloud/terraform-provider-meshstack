@@ -1,5 +1,4 @@
-# import via platform type name
 import {
+  id = "MY-PLATFORM-TYPE" # platform type identifier
   to = meshstack_platform_type.example
-  id = "MY-PLATFORM-TYPE"
 }

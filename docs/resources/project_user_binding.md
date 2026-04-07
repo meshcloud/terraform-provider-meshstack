@@ -85,10 +85,9 @@ Required:
 Use the [`import` block](https://developer.hashicorp.com/terraform/language/import) with an appropriate `id` attribute, for example:
 
 ```terraform
-# import via project user binding name
 import {
+  id = "my-binding-name" # project user binding identifier
   to = meshstack_project_user_binding.example
-  id = "my-binding-name"
 }
 ```
 

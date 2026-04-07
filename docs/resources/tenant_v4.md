@@ -117,10 +117,9 @@ Read-Only:
 Use the [`import` block](https://developer.hashicorp.com/terraform/language/import) with an appropriate `id` attribute, for example:
 
 ```terraform
-# import via tenant uuid
 import {
+  id = "00000000-0000-0000-0000-000000000000" # tenant uuid
   to = meshstack_tenant_v4.example
-  id = "00000000-0000-0000-0000-000000000000"
 }
 ```
 

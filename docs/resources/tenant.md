@@ -83,10 +83,10 @@ Read-Only:
 Use the [`import` block](https://developer.hashicorp.com/terraform/language/import) with an appropriate `id` attribute, for example:
 
 ```terraform
-# import via full tenant identifier <workspace-identifier>.<project-identifier>.<full-platform-identifier>
 import {
+  # full tenant identifier <workspace-identifier>.<project-identifier>.<platform-identifier>
+  id = "my-workspace.my-project.my-location.my-platform"
   to = meshstack_tenant.example
-  id = "my-workspace-identifier.my-project-identifier.my-platform-identifier"
 }
 ```
 

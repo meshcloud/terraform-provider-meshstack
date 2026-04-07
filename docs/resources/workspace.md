@@ -77,10 +77,9 @@ Optional:
 Use the [`import` block](https://developer.hashicorp.com/terraform/language/import) with an appropriate `id` attribute, for example:
 
 ```terraform
-# import via workspace identifier
 import {
+  id = "my-workspace-identifier" # workspace identifier
   to = meshstack_workspace.example
-  id = "my-workspace-identifier"
 }
 ```
 

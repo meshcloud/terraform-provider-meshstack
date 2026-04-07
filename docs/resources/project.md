@@ -77,10 +77,10 @@ Optional:
 Use the [`import` block](https://developer.hashicorp.com/terraform/language/import) with an appropriate `id` attribute, for example:
 
 ```terraform
-# import via full project identifier <workspace-identifier>.<project-identifier>
 import {
-  to = meshstack_project.example
+  # full project identifier <workspace-identifier>.<project-identifier>
   id = "my-workspace-identifier.my-project-identifier"
+  to = meshstack_project.example
 }
 ```
 

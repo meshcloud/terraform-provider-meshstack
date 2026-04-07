@@ -1,5 +1,4 @@
-# import via landingzone identifier
 import {
+  id = "my-landingzone-identifier" # landingzone identifier
   to = meshstack_landingzone.example
-  id = "my-landingzone-identifier"
 }

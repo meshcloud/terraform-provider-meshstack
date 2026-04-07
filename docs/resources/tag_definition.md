@@ -151,10 +151,10 @@ Read-Only:
 Use the [`import` block](https://developer.hashicorp.com/terraform/language/import) with an appropriate `id` attribute, for example:
 
 ```terraform
-# import via tag definition identifier <target_kind>.<key>
 import {
-  to = meshstack_tag_definition.example
+  # tag definition identifier <target_kind>.<key>
   id = "meshProject.example-key"
+  to = meshstack_tag_definition.example
 }
 ```
 
