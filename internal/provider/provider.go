@@ -212,6 +212,8 @@ func (p *MeshStackProvider) DataSources(ctx context.Context) []func() datasource
 func (p *MeshStackProvider) Functions(ctx context.Context) []func() function.Function {
 	return []func() function.Function{
 		NewLoadImageFileFunction,
+		NewLoadFileFunction,
+		NewEncodeFileFunction,
 	}
 }
 

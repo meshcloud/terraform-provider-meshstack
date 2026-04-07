@@ -63,8 +63,12 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 					Optional:            true,
 				},
 				"type": schema.StringAttribute{
-					MarkdownDescription: "Data type of the input. One of " + client.MeshBuildingBlockIOTypes.Markdown() + ".",
-					Required:            true,
+					MarkdownDescription: "Data type of the input. One of " + client.MeshBuildingBlockIOTypes.Markdown() + ". " +
+						client.MeshBuildingBlockIOTypeList.Markdown() + " is deprecated, use " + client.MeshBuildingBlockIOTypeCode.Markdown() + " instead. " +
+						"For type " + client.MeshBuildingBlockIOTypeFile.Markdown() + ", the value must be a MIME-typed base64 data blob. " +
+						"Use `provider::meshstack::load_file` or `provider::meshstack::encode_file` to produce such a data blob. " +
+						"When providing this value via `argument` or `default_value`, wrap the blob in `jsonencode(...)`, for example `argument = jsonencode(provider::meshstack::load_file(...))`.",
+					Required: true,
 					Validators: []validator.String{
 						stringvalidator.OneOf(client.MeshBuildingBlockIOTypes.Strings()...),
 					},

@@ -1,3 +1,9 @@
+## v0.20.4
+
+FEATURES:
+- Add `provider::meshstack::load_file`/`provider::meshstack::encode_file` functions for convenient Building Block definition `FILE` input.
+  Improve related documentation.
+
 ## v0.20.3
 
 BREAKING CHANGES:
