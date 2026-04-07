@@ -684,10 +684,9 @@ Read-Only:
 Use the [`import` block](https://developer.hashicorp.com/terraform/language/import) with an appropriate `id` attribute, for example:
 
 ```terraform
-# import via building block definition uuid
 import {
+  id = "00000000-0000-0000-0000-000000000000" # building block definition uuid
   to = meshstack_building_block_definition.example_01_terraform
-  id = "00000000-0000-0000-0000-000000000000"
 }
 ```
 

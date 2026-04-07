@@ -83,10 +83,9 @@ Required:
 Use the [`import` block](https://developer.hashicorp.com/terraform/language/import) with an appropriate `id` attribute, for example:
 
 ```terraform
-# import via workspace binding name
 import {
+  id = "my-binding-name" # workspace group binding identifier
   to = meshstack_workspace_group_binding.example
-  id = "my-binding-name"
 }
 ```
 

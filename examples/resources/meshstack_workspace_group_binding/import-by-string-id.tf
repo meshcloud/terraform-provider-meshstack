@@ -1,5 +1,4 @@
-# import via workspace binding name
 import {
+  id = "my-binding-name" # workspace group binding identifier
   to = meshstack_workspace_group_binding.example
-  id = "my-binding-name"
 }

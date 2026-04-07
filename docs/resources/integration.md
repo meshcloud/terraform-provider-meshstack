@@ -273,10 +273,9 @@ Read-Only:
 Use the [`import` block](https://developer.hashicorp.com/terraform/language/import) with an appropriate `id` attribute, for example:
 
 ```terraform
-# import via integration uuid
 import {
+  id = "00000000-0000-0000-0000-000000000000" # integration uuid
   to = meshstack_integration.example_github
-  id = "00000000-0000-0000-0000-000000000000"
 }
 ```
 

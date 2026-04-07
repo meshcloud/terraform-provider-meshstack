@@ -432,10 +432,9 @@ Read-Only:
 Use the [`import` block](https://developer.hashicorp.com/terraform/language/import) with an appropriate `id` attribute, for example:
 
 ```terraform
-# import via landingzone identifier
 import {
+  id = "my-landingzone-identifier" # landingzone identifier
   to = meshstack_landingzone.example
-  id = "my-landingzone-identifier"
 }
 ```
 
