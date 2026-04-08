@@ -68,6 +68,12 @@ resource "meshstack_building_block_definition" "example_01_terraform" {
           }
         }
       }
+      "some-file.yaml" = {
+        display_name    = "Some input file"
+        type            = "FILE"
+        assignment_type = "STATIC"
+        argument        = jsonencode(provider::meshstack::load_file("${path.module}/some-file.yaml"))
+      }
     }
 
     implementation = {

@@ -109,6 +109,10 @@ func runBuildingBlockDefinitionTestCases(t *testing.T, testCaseModifiers ...Reso
 			config, resourceAddress := buildingBlockDefinitionConfig(exampleResource, exampleSuffix)
 			const bbdDescription = "An example building block definition"
 
+			if exampleSuffix == "01_terraform" {
+				config = config.ReplaceAll(`provider::meshstack::load_file("${path.module}/some-file.yaml")`, `provider::meshstack::encode_file("some-content")`)
+			}
+
 			var resourceUuid string
 			testSteps := []resource.TestStep{
 				// Step 1: Create resource and validate state thoroughly!
@@ -487,6 +491,20 @@ func checksForImplementation(exampleSuffix string) (checkInputs, checkImplementa
 					"selectable_values":              knownvalue.Null(),
 					"argument":                       knownvalue.Null(),
 					"default_value":                  knownvalue.Null(),
+				}),
+				"some-file.yaml": knownvalue.MapExact(map[string]knownvalue.Check{
+					"display_name":                   knownvalue.StringExact("Some input file"),
+					"type":                           knownvalue.StringExact("FILE"),
+					"assignment_type":                knownvalue.StringExact("STATIC"),
+					"is_environment":                 knownvalue.Bool(false),
+					"updateable_by_consumer":         knownvalue.Bool(false),
+					"description":                    knownvalue.Null(),
+					"argument":                       KnownValueNotEmptyString(),
+					"default_value":                  knownvalue.Null(),
+					"value_validation_regex":         knownvalue.Null(),
+					"validation_regex_error_message": knownvalue.Null(),
+					"selectable_values":              knownvalue.Null(),
+					"sensitive":                      knownvalue.Null(),
 				}),
 			}),
 			knownvalue.MapExact(map[string]knownvalue.Check{
