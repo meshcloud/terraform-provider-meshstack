@@ -29,8 +29,6 @@ data "meshstack_project_group_binding" "example" {
 
 ### Read-Only
 
-- `api_version` (String) Project group binding datatype version
-- `kind` (String) meshObject type, always `meshProjectGroupBinding`.
 - `role_ref` (Attributes) Project role assigned by this binding. (see [below for nested schema](#nestedatt--role_ref))
 - `subject` (Attributes) Group assigned by this binding. (see [below for nested schema](#nestedatt--subject))
 - `target_ref` (Attributes) Project, identified by workspace and project identifier. (see [below for nested schema](#nestedatt--target_ref))

@@ -35,16 +35,6 @@ func (d *projectDataSource) Schema(ctx context.Context, req datasource.SchemaReq
 		MarkdownDescription: "Single project by name and workspace.",
 
 		Attributes: map[string]schema.Attribute{
-			"api_version": schema.StringAttribute{
-				MarkdownDescription: "Project datatype version",
-				Computed:            true,
-			},
-
-			"kind": schema.StringAttribute{
-				MarkdownDescription: "meshObject type, always `meshProject`.",
-				Computed:            true,
-			},
-
 			"metadata": schema.SingleNestedAttribute{
 				MarkdownDescription: "Project metadata. Name and workspace of the target Project must be set here.",
 				Required:            true,

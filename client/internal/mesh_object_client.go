@@ -2,6 +2,7 @@ package internal
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -31,31 +32,31 @@ type MeshObjectClient[M any] struct {
 // The API URL is constructed from explicitApiPathElems if provided,
 // otherwise the pluralized and lowercased kind is used as a single element.
 func NewMeshObjectClient[M any](ctx context.Context, httpClient *HttpClient, apiVersion string, explicitApiPathElems ...string) MeshObjectClient[M] {
-	kind, typeName := inferMeshObjectKindFromType[M]()
+	kind := InferKind[M]()
 
 	if len(explicitApiPathElems) == 0 {
 		explicitApiPathElems = []string{strings.ToLower(pluralizeKind(kind))}
 	}
 	explicitApiPathElems = slices.Insert(explicitApiPathElems, 0, "/api/meshobjects")
 	apiUrl := httpClient.RootUrl.JoinPath(explicitApiPathElems...)
-	Log.Info(ctx, fmt.Sprintf("initialized %s client", typeName), "url", apiUrl.String(), "kind", kind, "version", apiVersion)
+	Log.Info(ctx, fmt.Sprintf("initialized %s client", reflect.TypeFor[M]().Name()), "url", apiUrl.String(), "kind", kind, "version", apiVersion)
 	return MeshObjectClient[M]{httpClient, kind, apiVersion, apiUrl}
 }
 
-func inferMeshObjectKindFromType[M any]() (lowercase, typeName string) {
-	var zero M
-	typeName = reflect.TypeOf(zero).Name()
-	lowercase = lowercaseFirst(typeName)
-	return regexp.MustCompile(`V\d+$`).ReplaceAllString(lowercase, ""), typeName
-}
+var versionSuffixRe = regexp.MustCompile(`V\d+$`)
 
-func lowercaseFirst(s string) string {
-	if s == "" {
-		return s
-	}
-	runes := []rune(s)
+// InferKind infers the meshObject kind from a struct type name using the same convention
+// as the meshObject API: MeshWorkspace → "meshWorkspace", MeshTenantV4 → "meshTenant".
+// Version suffixes (V\d+) are stripped.
+// Tested when client.Kind is statically initialized.
+func InferKind[M any]() string {
+	typeName := reflect.TypeFor[M]().Name()
+
+	runes := []rune(typeName)
 	runes[0] = unicode.ToLower(runes[0])
-	return string(runes)
+	kind := string(runes)
+
+	return versionSuffixRe.ReplaceAllString(kind, "")
 }
 
 func pluralizeKind(kind string) string {
@@ -80,13 +81,38 @@ func (c MeshObjectClient[M]) Get(ctx context.Context, id string) (*M, error) {
 }
 
 // Post creates a new meshObject with the given payload.
+// Automatically injects apiVersion and kind into the JSON payload.
 func (c MeshObjectClient[M]) Post(ctx context.Context, payload any) (*M, error) {
-	return unmarshalBody[M](c.doAuthorizedRequest(ctx, http.MethodPost, c.ApiUrl, withPayload(payload, c.meshObjectMimeType())))
+	return unmarshalBody[M](c.doAuthorizedRequest(ctx, http.MethodPost, c.ApiUrl, c.withMeshObjectPayload(payload)))
 }
 
 // Put updates an existing meshObject by ID with the given payload.
+// Automatically injects apiVersion and kind into the JSON payload.
 func (c MeshObjectClient[M]) Put(ctx context.Context, id string, payload any) (*M, error) {
-	return unmarshalBody[M](c.doAuthorizedRequest(ctx, http.MethodPut, c.ApiUrl.JoinPath(id), withPayload(payload, c.meshObjectMimeType())))
+	return unmarshalBody[M](c.doAuthorizedRequest(ctx, http.MethodPut, c.ApiUrl.JoinPath(id), c.withMeshObjectPayload(payload)))
+}
+
+// withMeshObjectPayload returns a RequestOption that sets the payload with apiVersion and kind injected,
+// using the meshObject MIME type for content negotiation.
+// Panics on marshal errors which indicates a programming error (payload is always a well-typed struct).
+//
+// The double marshal/unmarshal round-trip converts the typed struct to a map[string]any so we can
+// inject the top-level apiVersion and kind fields without coupling the struct type to those fields.
+func (c MeshObjectClient[M]) withMeshObjectPayload(payload any) RequestOption {
+	intermediate, err := json.Marshal(payload)
+	if err != nil {
+		panic(fmt.Sprintf("failed to marshal %T: %v", payload, err))
+	}
+
+	var m map[string]any
+	if err := json.Unmarshal(intermediate, &m); err != nil {
+		panic(fmt.Sprintf("failed to unmarshal %T to map: %v", payload, err))
+	}
+
+	m["apiVersion"] = c.ApiVersion
+	m["kind"] = c.Kind
+
+	return withPayload(m, c.meshObjectMimeType())
 }
 
 // Delete removes a meshObject by ID.

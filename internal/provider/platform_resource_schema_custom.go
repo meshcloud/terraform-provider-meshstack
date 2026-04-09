@@ -5,6 +5,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+
+	"github.com/meshcloud/terraform-provider-meshstack/client"
 )
 
 func customPlatformSchema() schema.Attribute {
@@ -24,7 +26,7 @@ func customPlatformSchema() schema.Attribute {
 						MarkdownDescription: "Kind of the platform type. Always `meshPlatformType`.",
 						Computed:            true,
 						Optional:            true,
-						Default:             stringdefault.StaticString("meshPlatformType"),
+						Default:             stringdefault.StaticString(client.MeshObjectKind.PlatformType),
 						PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 					},
 				},

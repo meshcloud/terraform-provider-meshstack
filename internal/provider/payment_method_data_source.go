@@ -34,15 +34,6 @@ func (d *paymentMethodDataSource) Schema(_ context.Context, _ datasource.SchemaR
 		MarkdownDescription: "Read a single payment method by workspace and identifier.",
 
 		Attributes: map[string]schema.Attribute{
-			"api_version": schema.StringAttribute{
-				MarkdownDescription: "Payment method API version.",
-				Computed:            true,
-			},
-			"kind": schema.StringAttribute{
-				MarkdownDescription: "meshObject type, always `meshPaymentMethod`.",
-				Computed:            true,
-			},
-
 			"metadata": schema.SingleNestedAttribute{
 				Required: true,
 				Attributes: map[string]schema.Attribute{

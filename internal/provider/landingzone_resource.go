@@ -143,7 +143,7 @@ func (r *landingZoneResource) Schema(_ context.Context, _ resource.SchemaRequest
 								MarkdownDescription: "Must always be set to meshPlatform",
 								Computed:            true,
 								PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-								Default:             stringdefault.StaticString("meshPlatform"),
+								Default:             stringdefault.StaticString(client.MeshObjectKind.Platform),
 							},
 						},
 					},
@@ -469,8 +469,7 @@ func customPlatformConfigSchema() schema.Attribute {
 
 func (r *landingZoneResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	landingZone := client.MeshLandingZoneCreate{
-		ApiVersion: "v1",
-		Metadata:   client.MeshLandingZoneMetadata{},
+		Metadata: client.MeshLandingZoneMetadata{},
 	}
 
 	// Retrieve values from plan
@@ -524,8 +523,7 @@ func (r *landingZoneResource) Read(ctx context.Context, req resource.ReadRequest
 
 func (r *landingZoneResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	landingZone := client.MeshLandingZoneCreate{
-		ApiVersion: "v1",
-		Metadata:   client.MeshLandingZoneMetadata{},
+		Metadata: client.MeshLandingZoneMetadata{},
 	}
 
 	// Retrieve values from plan

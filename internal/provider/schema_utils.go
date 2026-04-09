@@ -11,6 +11,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"github.com/meshcloud/terraform-provider-meshstack/client"
 )
 
 // nestedObjectToObjectType converts a schema.NestedAttributeObject into a types.ObjectType
@@ -44,7 +46,7 @@ func meshProjectRoleAttribute(computed bool) schema.SingleNestedAttribute {
 			"kind": schema.StringAttribute{
 				MarkdownDescription: "meshObject type, always `meshProjectRole`.",
 				Computed:            true,
-				Default:             stringdefault.StaticString("meshProjectRole"),
+				Default:             stringdefault.StaticString(client.MeshObjectKind.ProjectRole),
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 		},
@@ -56,7 +58,7 @@ func meshBuildingBlockDefinitionRefAttribute(computed bool) map[string]schema.At
 		"kind": schema.StringAttribute{
 			MarkdownDescription: "meshObject type, always `meshBuildingBlockDefinition`.",
 			Computed:            true,
-			Default:             stringdefault.StaticString("meshBuildingBlockDefinition"),
+			Default:             stringdefault.StaticString(client.MeshObjectKind.BuildingBlockDefinition),
 			PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 		},
 		"uuid": schema.StringAttribute{

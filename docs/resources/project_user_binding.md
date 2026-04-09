@@ -43,11 +43,6 @@ resource "meshstack_project_user_binding" "example" {
 - `subject` (Attributes) Selects the user for this binding. (see [below for nested schema](#nestedatt--subject))
 - `target_ref` (Attributes) Selects the project to which this binding applies. (see [below for nested schema](#nestedatt--target_ref))
 
-### Read-Only
-
-- `api_version` (String) Project user binding datatype version
-- `kind` (String) meshObject type, always `meshProjectUserBinding`.
-
 <a id="nestedatt--metadata"></a>
 ### Nested Schema for `metadata`
 

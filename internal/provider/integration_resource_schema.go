@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 
+	"github.com/meshcloud/terraform-provider-meshstack/client"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/types/secret"
 )
 
@@ -131,7 +132,7 @@ func (r *integrationResource) Schema(_ context.Context, _ resource.SchemaRequest
 											"If omitted, the pre-defined shared runner is used.",
 										Optional:   true,
 										Computed:   true,
-										Attributes: meshUuidRefAttribute("meshBuildingBlockRunner"),
+										Attributes: meshUuidRefAttribute(client.MeshObjectKind.BuildingBlockRunner),
 									},
 								},
 							},
@@ -149,7 +150,7 @@ func (r *integrationResource) Schema(_ context.Context, _ resource.SchemaRequest
 											"If omitted, the pre-defined shared runner is used.",
 										Optional:   true,
 										Computed:   true,
-										Attributes: meshUuidRefAttribute("meshBuildingBlockRunner"),
+										Attributes: meshUuidRefAttribute(client.MeshObjectKind.BuildingBlockRunner),
 									},
 								},
 							},
@@ -175,7 +176,7 @@ func (r *integrationResource) Schema(_ context.Context, _ resource.SchemaRequest
 											"If omitted, the pre-defined shared runner is used.",
 										Optional:   true,
 										Computed:   true,
-										Attributes: meshUuidRefAttribute("meshBuildingBlockRunner"),
+										Attributes: meshUuidRefAttribute(client.MeshObjectKind.BuildingBlockRunner),
 									},
 								},
 							},
@@ -202,7 +203,7 @@ func (r *integrationResource) Schema(_ context.Context, _ resource.SchemaRequest
 			"ref": schema.SingleNestedAttribute{
 				MarkdownDescription: "Reference to integration, can be used in building block definitions.",
 				Computed:            true,
-				Attributes:          meshUuidRefOutputAttribute("meshIntegration"),
+				Attributes:          meshUuidRefOutputAttribute(client.MeshObjectKind.Integration),
 				PlanModifiers: []planmodifier.Object{
 					objectplanmodifier.UseStateForUnknown(),
 				},

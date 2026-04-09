@@ -33,11 +33,11 @@ var (
 )
 
 var targetKinds = []string{
-	"meshProject",
-	"meshWorkspace",
-	"meshLandingZone",
-	"meshPaymentMethod",
-	"meshBuildingBlockDefinition",
+	client.MeshObjectKind.Project,
+	client.MeshObjectKind.Workspace,
+	client.MeshObjectKind.LandingZone,
+	client.MeshObjectKind.PaymentMethod,
+	client.MeshObjectKind.BuildingBlockDefinition,
 }
 
 // NewTagDefinitionResource is a helper function to simplify the provider implementation.
@@ -136,18 +136,6 @@ func (r *tagDefinitionResource) Schema(_ context.Context, _ resource.SchemaReque
 		MarkdownDescription: "Manage tag definitions",
 
 		Attributes: map[string]schema.Attribute{
-			"api_version": schema.StringAttribute{
-				MarkdownDescription: "Tag definition datatype version",
-				Computed:            true,
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-			},
-
-			"kind": schema.StringAttribute{
-				MarkdownDescription: "meshObject type, always `meshTagDefinition`.",
-				Computed:            true,
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-			},
-
 			"metadata": schema.SingleNestedAttribute{
 				MarkdownDescription: "Tag definition metadata. Name of the target tag definition must be `target_kind.key` and will be set automatically.",
 				Computed:            true,
@@ -339,8 +327,6 @@ func (r *tagDefinitionResource) Create(ctx context.Context, req resource.CreateR
 	name := spec.TargetKind.ValueString() + "." + spec.Key.ValueString()
 
 	create := client.MeshTagDefinition{
-		ApiVersion: client.API_VERSION_TAG_DEFINITION,
-		Kind:       "meshTagDefinition",
 		Metadata: client.MeshTagDefinitionMetadata{
 			Name: name,
 		},
@@ -465,8 +451,6 @@ func (r *tagDefinitionResource) Update(ctx context.Context, req resource.UpdateR
 	name := spec.TargetKind.ValueString() + "." + spec.Key.ValueString()
 
 	update := client.MeshTagDefinition{
-		ApiVersion: client.API_VERSION_TAG_DEFINITION,
-		Kind:       "meshTagDefinition",
 		Metadata: client.MeshTagDefinitionMetadata{
 			Name: name,
 		},

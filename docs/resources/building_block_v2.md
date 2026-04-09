@@ -89,8 +89,6 @@ resource "meshstack_building_block_v2" "example_tenant" {
 
 ### Read-Only
 
-- `api_version` (String) Building block datatype version
-- `kind` (String) meshObject type, always `meshBuildingBlock`.
 - `metadata` (Attributes) Building block metadata. (see [below for nested schema](#nestedatt--metadata))
 - `status` (Attributes) Current building block status. (see [below for nested schema](#nestedatt--status))
 
@@ -99,7 +97,7 @@ resource "meshstack_building_block_v2" "example_tenant" {
 
 Required:
 
-- `building_block_definition_version_ref` (Attributes) References the building block definition this building block is based on. (see [below for nested schema](#nestedatt--spec--building_block_definition_version_ref))
+- `building_block_definition_version_ref` (Attributes) References the building block definition this building block is based on. Can be set to the `version_latest` or `version_latest_release` output of a `meshstack_building_block_definition` resource. (see [below for nested schema](#nestedatt--spec--building_block_definition_version_ref))
 - `display_name` (String) Display name for the building block as shown in meshPanel.
 - `target_ref` (Attributes) References the building block target. Depending on the building block definition this will be a workspace or a tenant (see [below for nested schema](#nestedatt--spec--target_ref))
 

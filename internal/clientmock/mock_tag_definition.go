@@ -28,10 +28,8 @@ func (m MeshTagDefinitionClient) Read(_ context.Context, name string) (*client.M
 
 func (m MeshTagDefinitionClient) Create(_ context.Context, tagDefinition *client.MeshTagDefinition) (*client.MeshTagDefinition, error) {
 	created := &client.MeshTagDefinition{
-		ApiVersion: client.API_VERSION_TAG_DEFINITION,
-		Kind:       "meshTagDefinition",
-		Metadata:   tagDefinition.Metadata,
-		Spec:       tagDefinition.Spec,
+		Metadata: tagDefinition.Metadata,
+		Spec:     tagDefinition.Spec,
 	}
 	m.Store[created.Metadata.Name] = created
 	return created, nil

@@ -43,8 +43,6 @@ data "meshstack_service_instances" "all" {
 
 Read-Only:
 
-- `api_version` (String) Service instance API version.
-- `kind` (String) meshObject type, always `meshServiceInstance`.
 - `metadata` (Attributes) Service instance metadata. Instance ID of the target service instance must be set here. (see [below for nested schema](#nestedatt--service_instances--metadata))
 - `spec` (Attributes) Service instance specification. (see [below for nested schema](#nestedatt--service_instances--spec))
 

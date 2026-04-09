@@ -47,14 +47,6 @@ func (d *projectsDataSource) Schema(ctx context.Context, req datasource.SchemaRe
 				Computed:            true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"api_version": schema.StringAttribute{
-							MarkdownDescription: "API version",
-							Computed:            true,
-						},
-						"kind": schema.StringAttribute{
-							MarkdownDescription: "Kind of project",
-							Computed:            true,
-						},
 						"metadata": schema.SingleNestedAttribute{
 							MarkdownDescription: "Metadata of the project",
 							Computed:            true,

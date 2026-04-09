@@ -29,8 +29,6 @@ data "meshstack_buildingblock" "example" {
 
 ### Read-Only
 
-- `api_version` (String) Building block datatype version
-- `kind` (String) meshObject type, always `meshBuildingBlock`.
 - `spec` (Attributes) Building Block specification. (see [below for nested schema](#nestedatt--spec))
 - `status` (Attributes) Current Building Block status. (see [below for nested schema](#nestedatt--status))
 

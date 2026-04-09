@@ -8,10 +8,8 @@ import (
 )
 
 type MeshPlatform struct {
-	ApiVersion string               `json:"apiVersion" tfsdk:"-"`
-	Kind       string               `json:"kind" tfsdk:"-"`
-	Metadata   MeshPlatformMetadata `json:"metadata" tfsdk:"metadata"`
-	Spec       MeshPlatformSpec     `json:"spec" tfsdk:"spec"`
+	Metadata MeshPlatformMetadata `json:"metadata" tfsdk:"metadata"`
+	Spec     MeshPlatformSpec     `json:"spec" tfsdk:"spec"`
 }
 
 type MeshPlatformMetadata struct {
@@ -101,14 +99,10 @@ func (c meshPlatformClient) Read(ctx context.Context, uuid string) (*MeshPlatfor
 }
 
 func (c meshPlatformClient) Create(ctx context.Context, platform MeshPlatform) (*MeshPlatform, error) {
-	platform.Kind = c.meshObject.Kind
-	platform.ApiVersion = c.meshObject.ApiVersion
 	return c.meshObject.Post(ctx, platform)
 }
 
 func (c meshPlatformClient) Update(ctx context.Context, uuid string, platform MeshPlatform) (*MeshPlatform, error) {
-	platform.Kind = c.meshObject.Kind
-	platform.ApiVersion = c.meshObject.ApiVersion
 	return c.meshObject.Put(ctx, uuid, platform)
 }
 

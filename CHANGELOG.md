@@ -1,8 +1,19 @@
 ## v0.20.4
 
+BREAKING CHANGES:
+- Remove `api_version` and `kind` attributes from all resource and data source schemas:
+  `meshstack_project`, `meshstack_tenant_v4`, `meshstack_workspace`, `meshstack_payment_method`,
+  `meshstack_tag_definition`, `meshstack_building_block_v2`, `meshstack_buildingblock`,
+  `meshstack_service_instance`, `meshstack_project_user_binding`, `meshstack_project_group_binding`,
+  `meshstack_workspace_user_binding`, `meshstack_workspace_group_binding`.
+
 FEATURES:
 - Add `provider::meshstack::load_file`/`provider::meshstack::encode_file` functions for convenient Building Block definition `FILE` input.
   Improve related documentation.
+
+IMPROVEMENTS:
+- `meshstack_workspace`: Add computed `ref` field to resource and data source for use as cross-resource reference.
+- `meshstack_tenant_v4`: Add computed `ref` field to resource for use as `target_ref` in `meshstack_building_block_v2`.
 
 ## v0.20.3
 

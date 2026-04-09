@@ -44,8 +44,6 @@ resource "meshstack_tag_definition" "example" {
 
 ### Read-Only
 
-- `api_version` (String) Tag definition datatype version
-- `kind` (String) meshObject type, always `meshTagDefinition`.
 - `metadata` (Attributes) Tag definition metadata. Name of the target tag definition must be `target_kind.key` and will be set automatically. (see [below for nested schema](#nestedatt--metadata))
 
 <a id="nestedatt--spec"></a>

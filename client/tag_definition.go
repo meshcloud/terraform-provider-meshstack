@@ -9,10 +9,8 @@ import (
 const API_VERSION_TAG_DEFINITION = "v1"
 
 type MeshTagDefinition struct {
-	ApiVersion string                    `json:"apiVersion" tfsdk:"api_version"`
-	Kind       string                    `json:"kind" tfsdk:"kind"`
-	Metadata   MeshTagDefinitionMetadata `json:"metadata" tfsdk:"metadata"`
-	Spec       MeshTagDefinitionSpec     `json:"spec" tfsdk:"spec"`
+	Metadata MeshTagDefinitionMetadata `json:"metadata" tfsdk:"metadata"`
+	Spec     MeshTagDefinitionSpec     `json:"spec" tfsdk:"spec"`
 }
 
 type MeshTagDefinitionMetadata struct {

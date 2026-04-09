@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/google/uuid"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
 	"github.com/meshcloud/terraform-provider-meshstack/client/types/ptr"
@@ -33,7 +33,7 @@ func (m MeshBuildingBlockDefinitionClient) Read(_ context.Context, uuid string) 
 }
 
 func (m MeshBuildingBlockDefinitionClient) Create(_ context.Context, definition client.MeshBuildingBlockDefinition) (*client.MeshBuildingBlockDefinition, error) {
-	definitionUuid := acctest.RandString(32)
+	definitionUuid := uuid.NewString()
 	definition.Metadata.Uuid = ptr.To(definitionUuid)
 	if definition.Spec.Symbol == nil {
 		definition.Spec.Symbol = ptr.To("mock-default-symbol")
@@ -41,7 +41,7 @@ func (m MeshBuildingBlockDefinitionClient) Create(_ context.Context, definition 
 	m.Store[definitionUuid] = &definition
 
 	// Create initial empty version (as the backend does)
-	versionUuid := acctest.RandString(32)
+	versionUuid := uuid.NewString()
 	m.StoreVersion[versionUuid] = &client.MeshBuildingBlockDefinitionVersion{
 		Metadata: client.MeshBuildingBlockDefinitionVersionMetadata{
 			Uuid:             versionUuid,

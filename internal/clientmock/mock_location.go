@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/google/uuid"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
 )
@@ -21,9 +21,8 @@ func (m MeshLocationClient) Read(_ context.Context, name string) (*client.MeshLo
 }
 
 func (m MeshLocationClient) Create(_ context.Context, location *client.MeshLocationCreate) (*client.MeshLocation, error) {
-	locationUuid := acctest.RandString(32)
+	locationUuid := uuid.NewString()
 	created := &client.MeshLocation{
-		ApiVersion: location.ApiVersion,
 		Metadata: client.MeshLocationMetadata{
 			Name:             location.Metadata.Name,
 			OwnedByWorkspace: location.Metadata.OwnedByWorkspace,

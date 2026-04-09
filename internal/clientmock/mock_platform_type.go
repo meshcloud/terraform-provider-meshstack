@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/google/uuid"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
 	"github.com/meshcloud/terraform-provider-meshstack/client/types/ptr"
@@ -22,10 +22,8 @@ func (m MeshPlatformTypeClient) Read(_ context.Context, identifier string) (*cli
 }
 
 func (m MeshPlatformTypeClient) Create(_ context.Context, platformType *client.MeshPlatformTypeCreate) (*client.MeshPlatformType, error) {
-	platformTypeUuid := acctest.RandString(32)
+	platformTypeUuid := uuid.NewString()
 	created := &client.MeshPlatformType{
-		ApiVersion: platformType.ApiVersion,
-		Kind:       platformType.Kind,
 		Metadata: client.MeshPlatformTypeMetadata{
 			Name:             platformType.Metadata.Name,
 			OwnedByWorkspace: platformType.Metadata.OwnedByWorkspace,

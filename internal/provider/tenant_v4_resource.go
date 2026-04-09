@@ -28,11 +28,10 @@ var (
 )
 
 type tenantV4ResourceModel struct {
-	ApiVersion types.String                  `tfsdk:"api_version"`
-	Kind       types.String                  `tfsdk:"kind"`
-	Metadata   tenantV4ResourceMetadataModel `tfsdk:"metadata"`
-	Spec       tenantV4ResourceSpecModel     `tfsdk:"spec"`
-	Status     types.Object                  `tfsdk:"status"`
+	Ref      types.Object                  `tfsdk:"ref"`
+	Metadata tenantV4ResourceMetadataModel `tfsdk:"metadata"`
+	Spec     tenantV4ResourceSpecModel     `tfsdk:"spec"`
+	Status   types.Object                  `tfsdk:"status"`
 
 	// additional attributes not part of the API
 	WaitForCompletion types.Bool `tfsdk:"wait_for_completion"`
@@ -85,16 +84,22 @@ func (r *tenantV4Resource) Schema(_ context.Context, _ resource.SchemaRequest, r
 		MarkdownDescription: "Manages a `meshTenant` with API version 4." + previewDisclaimer(),
 
 		Attributes: map[string]schema.Attribute{
-			"api_version": schema.StringAttribute{
-				MarkdownDescription: "API version of the tenant resource.",
+			"ref": schema.SingleNestedAttribute{
+				MarkdownDescription: "Reference to this tenant, can be used as `target_ref` in building block resources.",
 				Computed:            true,
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-			},
-
-			"kind": schema.StringAttribute{
-				MarkdownDescription: "The kind of the meshObject, always `meshTenant`.",
-				Computed:            true,
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers:       []planmodifier.Object{objectplanmodifier.UseStateForUnknown()},
+				Attributes: map[string]schema.Attribute{
+					"kind": schema.StringAttribute{
+						MarkdownDescription: "The kind of the object. Always `meshTenant`.",
+						Computed:            true,
+						PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+					},
+					"uuid": schema.StringAttribute{
+						MarkdownDescription: "UUID of the tenant.",
+						Computed:            true,
+						PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+					},
+				},
 			},
 
 			"metadata": schema.SingleNestedAttribute{
@@ -213,8 +218,7 @@ func (r *tenantV4Resource) Schema(_ context.Context, _ resource.SchemaRequest, r
 }
 
 func (r *tenantV4Resource) setStateFromResponse(ctx context.Context, tenant *client.MeshTenantV4, knownQuotas types.Set, state *tfsdk.State, diags *diag.Diagnostics) {
-	diags.Append(state.SetAttribute(ctx, path.Root("api_version"), tenant.ApiVersion)...)
-	diags.Append(state.SetAttribute(ctx, path.Root("kind"), tenant.Kind)...)
+	diags.Append(state.SetAttribute(ctx, path.Root("ref"), tenantV4Ref{Kind: client.MeshObjectKind.Tenant, Uuid: tenant.Metadata.Uuid})...)
 
 	diags.Append(state.SetAttribute(ctx, path.Root("metadata"), tenant.Metadata)...)
 

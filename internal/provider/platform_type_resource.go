@@ -132,7 +132,7 @@ func (r *platformTypeResource) Schema(_ context.Context, _ resource.SchemaReques
 					"kind": schema.StringAttribute{
 						MarkdownDescription: "The kind of the object. Always `meshPlatformType`.",
 						Computed:            true,
-						Default:             stringdefault.StaticString("meshPlatformType"),
+						Default:             stringdefault.StaticString(client.MeshObjectKind.PlatformType),
 						PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 					},
 					"name": schema.StringAttribute{
@@ -166,8 +166,6 @@ func (r *platformTypeResource) Create(ctx context.Context, req resource.CreateRe
 	}
 
 	platformType := client.MeshPlatformTypeCreate{
-		ApiVersion: "v1",
-		Kind:       "meshPlatformType",
 		Metadata: client.MeshPlatformTypeCreateMetadata{
 			Name:             name,
 			OwnedByWorkspace: ownedByWorkspace,
@@ -239,8 +237,6 @@ func (r *platformTypeResource) Update(ctx context.Context, req resource.UpdateRe
 	}
 
 	platformType := client.MeshPlatformTypeCreate{
-		ApiVersion: "v1",
-		Kind:       "meshPlatformType",
 		Metadata: client.MeshPlatformTypeCreateMetadata{
 			Name:             planName,
 			OwnedByWorkspace: planOwnedByWorkspace,

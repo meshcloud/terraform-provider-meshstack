@@ -187,7 +187,7 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 	},
 	}
 
-	dependencyRefs := schema.NestedAttributeObject{Attributes: meshUuidRefAttribute("meshBuildingBlockDefinition")}
+	dependencyRefs := schema.NestedAttributeObject{Attributes: meshUuidRefAttribute(client.MeshObjectKind.BuildingBlockDefinition)}
 
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Manages a meshBuildingBlockDefinition in meshStack. " +
@@ -276,7 +276,7 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 									MarkdownDescription: "Kind of the platform ref. Always `meshPlatformType` for now.",
 									Optional:            true,
 									Computed:            true,
-									Default:             stringdefault.StaticString("meshPlatformType"),
+									Default:             stringdefault.StaticString(client.MeshObjectKind.PlatformType),
 									Validators: []validator.String{
 										stringvalidator.OneOf(`meshPlatformType`),
 									},
@@ -355,7 +355,7 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 							"If omitted, the pre-defined shared runner is used suitable for the given `implementation` choice",
 						Optional:   true,
 						Computed:   true,
-						Attributes: meshUuidRefAttribute("meshBuildingBlockRunner"),
+						Attributes: meshUuidRefAttribute(client.MeshObjectKind.BuildingBlockRunner),
 						PlanModifiers: []planmodifier.Object{
 							objectplanmodifier.UseStateForUnknown(),
 						},
@@ -518,7 +518,7 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 									"integration_ref": schema.SingleNestedAttribute{
 										MarkdownDescription: "Reference to the integration to use.",
 										Required:            true,
-										Attributes:          meshUuidRefAttribute("meshIntegration"),
+										Attributes:          meshUuidRefAttribute(client.MeshObjectKind.Integration),
 									},
 								},
 							},
@@ -540,7 +540,7 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 									"integration_ref": schema.SingleNestedAttribute{
 										MarkdownDescription: "Reference to the integration to use.",
 										Required:            true,
-										Attributes:          meshUuidRefAttribute("meshIntegration"),
+										Attributes:          meshUuidRefAttribute(client.MeshObjectKind.Integration),
 									},
 								},
 							},
@@ -565,7 +565,7 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 									"integration_ref": schema.SingleNestedAttribute{
 										MarkdownDescription: "Reference to the integration to use",
 										Required:            true,
-										Attributes:          meshUuidRefAttribute("meshIntegration"),
+										Attributes:          meshUuidRefAttribute(client.MeshObjectKind.Integration),
 									},
 								},
 							},
@@ -596,7 +596,7 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 			"ref": schema.SingleNestedAttribute{
 				MarkdownDescription: "Reference to this building block definition, can be used as dependency ref in other building block definitions.",
 				Computed:            true,
-				Attributes:          meshUuidRefOutputAttribute("meshBuildingBlockDefinition"),
+				Attributes:          meshUuidRefOutputAttribute(client.MeshObjectKind.BuildingBlockDefinition),
 				PlanModifiers: []planmodifier.Object{
 					objectplanmodifier.UseStateForUnknown(),
 				},

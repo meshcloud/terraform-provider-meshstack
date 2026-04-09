@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
@@ -46,18 +45,6 @@ func (r *tenantResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 		MarkdownDescription: "Single tenant by workspace, project, and platform.",
 
 		Attributes: map[string]schema.Attribute{
-			"api_version": schema.StringAttribute{
-				MarkdownDescription: "Tenant datatype version",
-				Computed:            true,
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-			},
-
-			"kind": schema.StringAttribute{
-				MarkdownDescription: "meshObject type, always `meshTenant`.",
-				Computed:            true,
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-			},
-
 			"metadata": schema.SingleNestedAttribute{
 				MarkdownDescription: "Tenant metadata. Workspace, project and platform of the target tenant must be set here.",
 				Required:            true,

@@ -34,8 +34,6 @@ data "meshstack_tag_definition" "example" {
 
 Read-Only:
 
-- `api_version` (String) API Version of meshTagDefinition datatype. Matches the version part provided within the Accept request header.
-- `kind` (String) As a common meshObject structure exists, every meshObject has a kind. This is always meshTagDefinition for this endpoint.
 - `metadata` (Attributes) Always contains the 'name' to uniquely identify the meshTagDefinition. (see [below for nested schema](#nestedatt--tag_definition--metadata))
 - `spec` (Attributes) Specification for the meshTagDefinition. (see [below for nested schema](#nestedatt--tag_definition--spec))
 
@@ -57,6 +55,7 @@ Read-Only:
 - `immutable` (Boolean) Indicates whether the tag value is not editable after initially set.
 - `key` (String) The key of the tag.
 - `mandatory` (Boolean) Indicates whether the tag is mandatory.
+- `replication_key` (String) The replication key of the tag.
 - `restricted` (Boolean) Indicates whether only admins can edit this tag.
 - `sort_order` (Number) The sort order for this tag when displayed in the UI. meshPanel sorts tags in ascending order.
 - `target_kind` (String) The kind of meshObject this tag is defined for. Must be one of: meshProject, meshWorkspace, meshLandingZone, meshPaymentMethod or meshBuildingBlockDefinition.

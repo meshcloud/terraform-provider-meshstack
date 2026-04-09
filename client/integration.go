@@ -7,11 +7,9 @@ import (
 )
 
 type MeshIntegration struct {
-	ApiVersion string                  `json:"apiVersion" tfsdk:"-"`
-	Kind       string                  `json:"kind" tfsdk:"-"`
-	Metadata   MeshIntegrationMetadata `json:"metadata" tfsdk:"metadata"`
-	Spec       MeshIntegrationSpec     `json:"spec" tfsdk:"spec"`
-	Status     *MeshIntegrationStatus  `json:"status" tfsdk:"status"`
+	Metadata MeshIntegrationMetadata `json:"metadata" tfsdk:"metadata"`
+	Spec     MeshIntegrationSpec     `json:"spec" tfsdk:"spec"`
+	Status   *MeshIntegrationStatus  `json:"status" tfsdk:"status"`
 }
 
 type MeshIntegrationMetadata struct {
@@ -63,8 +61,6 @@ func newIntegrationClient(ctx context.Context, httpClient *internal.HttpClient) 
 }
 
 func (c meshIntegrationClientImpl) Create(ctx context.Context, integration MeshIntegration) (*MeshIntegration, error) {
-	integration.Kind = c.meshObject.Kind
-	integration.ApiVersion = c.meshObject.ApiVersion
 	return c.meshObject.Post(ctx, integration)
 }
 
@@ -73,8 +69,6 @@ func (c meshIntegrationClientImpl) Read(ctx context.Context, uuid string) (*Mesh
 }
 
 func (c meshIntegrationClientImpl) Update(ctx context.Context, integration MeshIntegration) (*MeshIntegration, error) {
-	integration.Kind = c.meshObject.Kind
-	integration.ApiVersion = c.meshObject.ApiVersion
 	return c.meshObject.Put(ctx, *integration.Metadata.Uuid, integration)
 }
 

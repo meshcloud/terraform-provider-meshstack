@@ -17,7 +17,7 @@ var (
 
 func getSharedBuildingBlockRunnerRef(implementationType enum.Entry[client.MeshBuildingBlockImplementationType]) *client.BuildingBlockRunnerRef {
 	return &client.BuildingBlockRunnerRef{
-		Kind: "meshBuildingBlockRunner",
+		Kind: client.MeshObjectKind.BuildingBlockRunner,
 		Uuid: SharedBuildingBlockRunnerUuids[implementationType],
 	}
 }

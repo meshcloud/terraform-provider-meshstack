@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/google/uuid"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
 )
@@ -21,8 +21,7 @@ func (m MeshPlatformClient) Read(_ context.Context, uuid string) (*client.MeshPl
 }
 
 func (m MeshPlatformClient) Create(_ context.Context, platform client.MeshPlatform) (*client.MeshPlatform, error) {
-	platformUuid := acctest.RandString(32)
-	platform.Kind = "meshPlatform"
+	platformUuid := uuid.NewString()
 	platform.Metadata.Uuid = &platformUuid
 	backendSecretBehavior(true, &platform, nil)
 	m.Store[platformUuid] = &platform

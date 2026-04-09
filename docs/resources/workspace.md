@@ -41,8 +41,7 @@ resource "meshstack_workspace" "example" {
 
 ### Read-Only
 
-- `api_version` (String) Workspace datatype version
-- `kind` (String) meshObject type, always `meshWorkspace`.
+- `ref` (Attributes) Reference to this workspace, can be used as `target_ref` in building block resources. (see [below for nested schema](#nestedatt--ref))
 
 <a id="nestedatt--metadata"></a>
 ### Nested Schema for `metadata`
@@ -71,6 +70,15 @@ Required:
 Optional:
 
 - `platform_builder_access_enabled` (Boolean) Whether platform builder access is enabled for the workspace.
+
+
+<a id="nestedatt--ref"></a>
+### Nested Schema for `ref`
+
+Read-Only:
+
+- `identifier` (String) Identifier of the workspace.
+- `kind` (String) The kind of the object. Always `meshWorkspace`.
 
 ## Import
 

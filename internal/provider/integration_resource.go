@@ -72,7 +72,7 @@ func (model integrationModel) ToClientDto() client.MeshIntegration {
 
 func (model *integrationModel) SetFromClientDto(dto *client.MeshIntegration) {
 	model.MeshIntegration = *dto
-	model.Ref.Kind = "meshIntegration"
+	model.Ref.Kind = client.MeshObjectKind.Integration
 	model.Ref.Uuid = *dto.Metadata.Uuid
 }
 

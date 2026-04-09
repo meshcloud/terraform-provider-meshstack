@@ -1,12 +1,12 @@
 package provider
 
 import (
+	"context"
 	_ "embed"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
 	clientTypes "github.com/meshcloud/terraform-provider-meshstack/client/types"
@@ -14,15 +14,18 @@ import (
 	"github.com/meshcloud/terraform-provider-meshstack/internal/clientmock"
 )
 
+// TestAccServiceInstancesDataSource tests the service instances data source.
+// Service instances are read-only (no TF resource), so unit tests must pre-populate the mock store.
+// We use resource.UnitTest directly instead of ApplyAndTest because pre-population requires
+// access to the mock client before the test runs.
 func TestServiceInstancesDataSource(t *testing.T) {
-	// Run acceptance tests as unit tests with mock
-	runServiceInstancesDataSourceTestCase(t, SetupMockClient(func(t *testing.T, testCase *resource.TestCase, mockClient clientmock.Client) {
-		t.Helper()
+	t.Parallel()
 
-		// Pre-populate the mock store with service instances
+	t.Run("basic", func(t *testing.T) {
+		t.Parallel()
+
+		mockClient := clientmock.NewMock()
 		mockClient.ServiceInstance.Store["instance-1"] = &client.MeshServiceInstance{
-			ApiVersion: "v1",
-			Kind:       "meshServiceInstance",
 			Metadata: client.MeshServiceInstanceMetadata{
 				InstanceId:            "instance-1",
 				OwnedByWorkspace:      "test-workspace",
@@ -37,10 +40,7 @@ func TestServiceInstancesDataSource(t *testing.T) {
 				Parameters:  map[string]clientTypes.Any{},
 			},
 		}
-
 		mockClient.ServiceInstance.Store["instance-2"] = &client.MeshServiceInstance{
-			ApiVersion: "v1",
-			Kind:       "meshServiceInstance",
 			Metadata: client.MeshServiceInstanceMetadata{
 				InstanceId:            "instance-2",
 				OwnedByWorkspace:      "test-workspace",
@@ -56,25 +56,27 @@ func TestServiceInstancesDataSource(t *testing.T) {
 			},
 		}
 
-		testCase.Steps[0].PostApplyFunc = func() {
-			// Verify the service instances are in the store
-			assert.Len(t, mockClient.ServiceInstance.Store, 2)
-			instance1, exists := mockClient.ServiceInstance.Store["instance-1"]
-			require.True(t, exists)
-			assert.Equal(t, "First Instance", instance1.Spec.DisplayName)
-		}
-	}))
-}
+		config := examples.DataSource{Name: "service_instances"}.Config()
 
-func TestServiceInstancesDataSourceWithParameters(t *testing.T) {
-	// Test that service instance parameters with different types are properly converted to JSON strings
-	runServiceInstancesDataSourceTestCase(t, SetupMockClient(func(t *testing.T, testCase *resource.TestCase, mockClient clientmock.Client) {
-		t.Helper()
+		resource.UnitTest(t, resource.TestCase{
+			ProtoV6ProviderFactories: ProviderFactoriesForTest(func(provider *MeshStackProvider) {
+				provider.clientFactory = func(ctx context.Context, data MeshStackProviderModel, providerVersion string) (client.Client, diag.Diagnostics) {
+					return mockClient.AsClient(), nil
+				}
+			}),
+			Steps: []resource.TestStep{
+				{
+					Config: config.String(),
+				},
+			},
+		})
+	})
 
-		// Pre-populate the mock store with service instances containing various parameter types
+	t.Run("with_parameters", func(t *testing.T) {
+		t.Parallel()
+
+		mockClient := clientmock.NewMock()
 		mockClient.ServiceInstance.Store["instance-1"] = &client.MeshServiceInstance{
-			ApiVersion: "v1",
-			Kind:       "meshServiceInstance",
 			Metadata: client.MeshServiceInstanceMetadata{
 				InstanceId:            "instance-1",
 				OwnedByWorkspace:      "test-workspace",
@@ -97,31 +99,28 @@ func TestServiceInstancesDataSourceWithParameters(t *testing.T) {
 			},
 		}
 
-		testCase.Steps[0].Check = resource.ComposeAggregateTestCheckFunc(
-			resource.TestCheckResourceAttr("data.meshstack_service_instances.all", "service_instances.#", "1"),
-			resource.TestCheckResourceAttr("data.meshstack_service_instances.all", "service_instances.0.metadata.instance_id", "instance-1"),
-			resource.TestCheckResourceAttr("data.meshstack_service_instances.all", "service_instances.0.spec.display_name", "Instance with Parameters"),
-			// Verify parameters are properly converted to JSON
-			resource.TestCheckResourceAttr("data.meshstack_service_instances.all", "service_instances.0.spec.parameters.string_param", `"value"`),
-			resource.TestCheckResourceAttr("data.meshstack_service_instances.all", "service_instances.0.spec.parameters.number_param", "42"),
-			resource.TestCheckResourceAttr("data.meshstack_service_instances.all", "service_instances.0.spec.parameters.bool_param", "true"),
-			resource.TestCheckResourceAttr("data.meshstack_service_instances.all", "service_instances.0.spec.parameters.object_param", `{"key":"value"}`),
-		)
-	}))
-}
+		config := examples.DataSource{Name: "service_instances"}.Config()
 
-func runServiceInstancesDataSourceTestCase(t *testing.T, modifiers ...ResourceTestCaseModifier) {
-	t.Helper()
-
-	config := examples.DataSource{Name: "service_instances"}.Config()
-
-	testCase := resource.TestCase{
-		Steps: []resource.TestStep{
-			{
-				Config: config.String(),
+		resource.UnitTest(t, resource.TestCase{
+			ProtoV6ProviderFactories: ProviderFactoriesForTest(func(provider *MeshStackProvider) {
+				provider.clientFactory = func(ctx context.Context, data MeshStackProviderModel, providerVersion string) (client.Client, diag.Diagnostics) {
+					return mockClient.AsClient(), nil
+				}
+			}),
+			Steps: []resource.TestStep{
+				{
+					Config: config.String(),
+					Check: resource.ComposeAggregateTestCheckFunc(
+						resource.TestCheckResourceAttr("data.meshstack_service_instances.all", "service_instances.#", "1"),
+						resource.TestCheckResourceAttr("data.meshstack_service_instances.all", "service_instances.0.metadata.instance_id", "instance-1"),
+						resource.TestCheckResourceAttr("data.meshstack_service_instances.all", "service_instances.0.spec.display_name", "Instance with Parameters"),
+						resource.TestCheckResourceAttr("data.meshstack_service_instances.all", "service_instances.0.spec.parameters.string_param", `"value"`),
+						resource.TestCheckResourceAttr("data.meshstack_service_instances.all", "service_instances.0.spec.parameters.number_param", "42"),
+						resource.TestCheckResourceAttr("data.meshstack_service_instances.all", "service_instances.0.spec.parameters.bool_param", "true"),
+						resource.TestCheckResourceAttr("data.meshstack_service_instances.all", "service_instances.0.spec.parameters.object_param", `{"key":"value"}`),
+					),
+				},
 			},
-		},
-	}
-
-	ResourceTestCaseModifiers(modifiers).ApplyAndTest(t, testCase)
+		})
+	})
 }

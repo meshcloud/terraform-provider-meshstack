@@ -48,11 +48,6 @@ resource "meshstack_payment_method" "example" {
 - `metadata` (Attributes) (see [below for nested schema](#nestedatt--metadata))
 - `spec` (Attributes) (see [below for nested schema](#nestedatt--spec))
 
-### Read-Only
-
-- `api_version` (String) Payment method datatype version
-- `kind` (String) meshObject type, always `meshPaymentMethod`.
-
 <a id="nestedatt--metadata"></a>
 ### Nested Schema for `metadata`
 
