@@ -8,6 +8,7 @@ BREAKING CHANGES:
   `meshstack_workspace_user_binding`, `meshstack_workspace_group_binding`.
 
 FEATURES:
+- New `meshstack_tenants` data source for listing tenants with optional workspace/project/platform filters.
 - Add `provider::meshstack::load_file`/`provider::meshstack::encode_file` functions for convenient Building Block definition `FILE` input.
   Improve related documentation.
 

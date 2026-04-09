@@ -53,9 +53,19 @@ type MeshTenantV4CreateSpec struct {
 	Quotas                *[]MeshTenantQuota `json:"quotas" tfsdk:"quotas"`
 }
 
+type MeshTenantV4Query struct {
+	Workspace      string
+	Project        *string
+	Platform       *string
+	PlatformType   *string
+	LandingZone    *string
+	PlatformTenant *string
+}
+
 type MeshTenantV4Client interface {
 	Read(ctx context.Context, uuid string) (*MeshTenantV4, error)
 	ReadFunc(uuid string) func(ctx context.Context) (*MeshTenantV4, error)
+	List(ctx context.Context, query *MeshTenantV4Query) ([]MeshTenantV4, error)
 	Create(ctx context.Context, tenant *MeshTenantV4Create) (*MeshTenantV4, error)
 	Delete(ctx context.Context, uuid string) error
 }
@@ -80,6 +90,28 @@ func (c meshTenantV4Client) ReadFunc(uuid string) func(ctx context.Context) (*Me
 
 func (c meshTenantV4Client) Create(ctx context.Context, tenant *MeshTenantV4Create) (*MeshTenantV4, error) {
 	return c.meshObject.Post(ctx, tenant)
+}
+
+func (c meshTenantV4Client) List(ctx context.Context, query *MeshTenantV4Query) ([]MeshTenantV4, error) {
+	options := []internal.RequestOption{
+		internal.WithUrlQuery("workspaceIdentifier", query.Workspace),
+	}
+	if query.Project != nil {
+		options = append(options, internal.WithUrlQuery("projectIdentifier", *query.Project))
+	}
+	if query.Platform != nil {
+		options = append(options, internal.WithUrlQuery("platformIdentifier", *query.Platform))
+	}
+	if query.PlatformType != nil {
+		options = append(options, internal.WithUrlQuery("platformTypeIdentifier", *query.PlatformType))
+	}
+	if query.LandingZone != nil {
+		options = append(options, internal.WithUrlQuery("landingZoneIdentifier", *query.LandingZone))
+	}
+	if query.PlatformTenant != nil {
+		options = append(options, internal.WithUrlQuery("platformTenantId", *query.PlatformTenant))
+	}
+	return c.meshObject.List(ctx, options...)
 }
 
 func (c meshTenantV4Client) Delete(ctx context.Context, uuid string) error {
