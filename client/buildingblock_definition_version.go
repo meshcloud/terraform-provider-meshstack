@@ -179,11 +179,9 @@ type MeshBuildingBlockDefinitionVersionStatus struct {
 }
 
 type MeshBuildingBlockDefinitionVersion struct {
-	ApiVersion string                                     `json:"apiVersion" tfsdk:"api_version"`
-	Kind       string                                     `json:"kind" tfsdk:"kind"`
-	Metadata   MeshBuildingBlockDefinitionVersionMetadata `json:"metadata" tfsdk:"metadata"`
-	Spec       MeshBuildingBlockDefinitionVersionSpec     `json:"spec" tfsdk:"spec"`
-	Status     *MeshBuildingBlockDefinitionVersionStatus  `json:"status,omitempty" tfsdk:"status"`
+	Metadata MeshBuildingBlockDefinitionVersionMetadata `json:"metadata" tfsdk:"metadata"`
+	Spec     MeshBuildingBlockDefinitionVersionSpec     `json:"spec" tfsdk:"spec"`
+	Status   *MeshBuildingBlockDefinitionVersionStatus  `json:"status,omitempty" tfsdk:"status"`
 }
 
 // MeshBuildingBlockDefinitionVersionClient manages a version of a building block definition.
@@ -211,8 +209,6 @@ func (c meshBuildingBlockDefinitionVersionClient) List(ctx context.Context, buil
 
 func (c meshBuildingBlockDefinitionVersionClient) Create(ctx context.Context, ownedByWorkspace string, versionSpec MeshBuildingBlockDefinitionVersionSpec) (*MeshBuildingBlockDefinitionVersion, error) {
 	return c.meshObject.Post(ctx, MeshBuildingBlockDefinitionVersion{
-		ApiVersion: c.meshObject.ApiVersion,
-		Kind:       c.meshObject.Kind,
 		Metadata: MeshBuildingBlockDefinitionVersionMetadata{
 			OwnedByWorkspace: ownedByWorkspace,
 		},
@@ -222,8 +218,6 @@ func (c meshBuildingBlockDefinitionVersionClient) Create(ctx context.Context, ow
 
 func (c meshBuildingBlockDefinitionVersionClient) Update(ctx context.Context, uuid, ownedByWorkspace string, versionSpec MeshBuildingBlockDefinitionVersionSpec) (*MeshBuildingBlockDefinitionVersion, error) {
 	return c.meshObject.Put(ctx, uuid, MeshBuildingBlockDefinitionVersion{
-		ApiVersion: c.meshObject.ApiVersion,
-		Kind:       c.meshObject.Kind,
 		Metadata: MeshBuildingBlockDefinitionVersionMetadata{
 			Uuid:             uuid,
 			OwnedByWorkspace: ownedByWorkspace,

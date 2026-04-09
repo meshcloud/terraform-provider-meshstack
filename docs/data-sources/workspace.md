@@ -29,8 +29,7 @@ data "meshstack_workspace" "example" {
 
 ### Read-Only
 
-- `api_version` (String) Workspace API version.
-- `kind` (String) meshObject type, always `meshWorkspace`.
+- `ref` (Attributes) Reference to this workspace, can be used as `target_ref` in building block resources. (see [below for nested schema](#nestedatt--ref))
 - `spec` (Attributes) (see [below for nested schema](#nestedatt--spec))
 
 <a id="nestedatt--metadata"></a>
@@ -45,6 +44,15 @@ Read-Only:
 - `created_on` (String) Creation date of the workspace.
 - `deleted_on` (String) Deletion date of the workspace.
 - `tags` (Map of List of String) Tags of the workspace.
+
+
+<a id="nestedatt--ref"></a>
+### Nested Schema for `ref`
+
+Read-Only:
+
+- `identifier` (String) Identifier of the workspace.
+- `kind` (String) The kind of the object. Always `meshWorkspace`.
 
 
 <a id="nestedatt--spec"></a>

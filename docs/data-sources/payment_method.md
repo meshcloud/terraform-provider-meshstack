@@ -30,8 +30,6 @@ data "meshstack_payment_method" "example" {
 
 ### Read-Only
 
-- `api_version` (String) Payment method API version.
-- `kind` (String) meshObject type, always `meshPaymentMethod`.
 - `spec` (Attributes) (see [below for nested schema](#nestedatt--spec))
 
 <a id="nestedatt--metadata"></a>

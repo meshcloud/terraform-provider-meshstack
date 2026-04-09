@@ -8,11 +8,9 @@ import (
 )
 
 type MeshTenantV4 struct {
-	ApiVersion string               `json:"apiVersion" tfsdk:"api_version"`
-	Kind       string               `json:"kind" tfsdk:"kind"`
-	Metadata   MeshTenantV4Metadata `json:"metadata" tfsdk:"metadata"`
-	Spec       MeshTenantV4Spec     `json:"spec" tfsdk:"spec"`
-	Status     MeshTenantV4Status   `json:"status" tfsdk:"status"`
+	Metadata MeshTenantV4Metadata `json:"metadata" tfsdk:"metadata"`
+	Spec     MeshTenantV4Spec     `json:"spec" tfsdk:"spec"`
+	Status   MeshTenantV4Status   `json:"status" tfsdk:"status"`
 }
 
 type MeshTenantV4Metadata struct {
@@ -55,29 +53,36 @@ type MeshTenantV4CreateSpec struct {
 	Quotas                *[]MeshTenantQuota `json:"quotas" tfsdk:"quotas"`
 }
 
-type MeshTenantV4Client struct {
+type MeshTenantV4Client interface {
+	Read(ctx context.Context, uuid string) (*MeshTenantV4, error)
+	ReadFunc(uuid string) func(ctx context.Context) (*MeshTenantV4, error)
+	Create(ctx context.Context, tenant *MeshTenantV4Create) (*MeshTenantV4, error)
+	Delete(ctx context.Context, uuid string) error
+}
+
+type meshTenantV4Client struct {
 	meshObject internal.MeshObjectClient[MeshTenantV4]
 }
 
 func newTenantV4Client(ctx context.Context, httpClient *internal.HttpClient) MeshTenantV4Client {
-	return MeshTenantV4Client{internal.NewMeshObjectClient[MeshTenantV4](ctx, httpClient, "v4-preview")}
+	return meshTenantV4Client{internal.NewMeshObjectClient[MeshTenantV4](ctx, httpClient, "v4-preview")}
 }
 
-func (c MeshTenantV4Client) Read(ctx context.Context, uuid string) (*MeshTenantV4, error) {
+func (c meshTenantV4Client) Read(ctx context.Context, uuid string) (*MeshTenantV4, error) {
 	return c.ReadFunc(uuid)(ctx)
 }
 
-func (c MeshTenantV4Client) ReadFunc(uuid string) func(ctx context.Context) (*MeshTenantV4, error) {
+func (c meshTenantV4Client) ReadFunc(uuid string) func(ctx context.Context) (*MeshTenantV4, error) {
 	return func(ctx context.Context) (*MeshTenantV4, error) {
 		return c.meshObject.Get(ctx, uuid)
 	}
 }
 
-func (c MeshTenantV4Client) Create(ctx context.Context, tenant *MeshTenantV4Create) (*MeshTenantV4, error) {
+func (c meshTenantV4Client) Create(ctx context.Context, tenant *MeshTenantV4Create) (*MeshTenantV4, error) {
 	return c.meshObject.Post(ctx, tenant)
 }
 
-func (c MeshTenantV4Client) Delete(ctx context.Context, uuid string) error {
+func (c meshTenantV4Client) Delete(ctx context.Context, uuid string) error {
 	return c.meshObject.Delete(ctx, uuid)
 }
 

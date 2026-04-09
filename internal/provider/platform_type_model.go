@@ -1,6 +1,8 @@
 package provider
 
-import "github.com/meshcloud/terraform-provider-meshstack/client"
+import (
+	"github.com/meshcloud/terraform-provider-meshstack/client"
+)
 
 type platformTypeModel struct {
 	*client.MeshPlatformType
@@ -16,7 +18,7 @@ func newPlatformTypeModel(meshPlatformType *client.MeshPlatformType) platformTyp
 	return platformTypeModel{
 		MeshPlatformType: meshPlatformType,
 		Ref: platformTypeRef{
-			Kind: meshPlatformType.Kind,
+			Kind: client.MeshObjectKind.PlatformType,
 			Name: meshPlatformType.Metadata.Name,
 		},
 	}

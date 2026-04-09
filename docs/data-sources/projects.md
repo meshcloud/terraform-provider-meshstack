@@ -47,8 +47,6 @@ data "meshstack_projects" "example_all_projects_in_workspace_with_payment_method
 
 Read-Only:
 
-- `api_version` (String) API version
-- `kind` (String) Kind of project
 - `metadata` (Attributes) Metadata of the project (see [below for nested schema](#nestedatt--projects--metadata))
 - `spec` (Attributes) Specifications of the project (see [below for nested schema](#nestedatt--projects--spec))
 

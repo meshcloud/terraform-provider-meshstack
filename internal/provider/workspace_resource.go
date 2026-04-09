@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -55,15 +54,21 @@ func (r *workspaceResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 		MarkdownDescription: "Represents a meshStack workspace.\n\n~> **Note:** Managing workspaces requires an API key with sufficient admin permissions.",
 
 		Attributes: map[string]schema.Attribute{
-			"api_version": schema.StringAttribute{
-				MarkdownDescription: "Workspace datatype version",
+			"ref": schema.SingleNestedAttribute{
+				MarkdownDescription: "Reference to this workspace, can be used as `target_ref` in building block resources.",
 				Computed:            true,
-				Default:             stringdefault.StaticString("v2"),
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-			},
-			"kind": schema.StringAttribute{
-				MarkdownDescription: "meshObject type, always `meshWorkspace`.",
-				Computed:            true,
+				Attributes: map[string]schema.Attribute{
+					"kind": schema.StringAttribute{
+						MarkdownDescription: "The kind of the object. Always `meshWorkspace`.",
+						Computed:            true,
+						PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+					},
+					"identifier": schema.StringAttribute{
+						MarkdownDescription: "Identifier of the workspace.",
+						Computed:            true,
+						PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+					},
+				},
 			},
 
 			"metadata": schema.SingleNestedAttribute{
@@ -127,7 +132,6 @@ func (r *workspaceResource) Create(ctx context.Context, req resource.CreateReque
 	}
 
 	// Retrieve values from plan
-	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("api_version"), &workspace.ApiVersion)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec"), &workspace.Spec)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("metadata").AtName("name"), &workspace.Metadata.Name)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("metadata").AtName("tags"), &workspace.Metadata.Tags)...)
@@ -145,7 +149,7 @@ func (r *workspaceResource) Create(ctx context.Context, req resource.CreateReque
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, createdWorkspace)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, newWorkspaceModel(createdWorkspace))...)
 }
 
 func (r *workspaceResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -174,7 +178,7 @@ func (r *workspaceResource) Read(ctx context.Context, req resource.ReadRequest, 
 	}
 
 	// client data maps directly to the schema so we just need to set the state
-	resp.Diagnostics.Append(resp.State.Set(ctx, workspace)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, newWorkspaceModel(workspace))...)
 }
 
 func (r *workspaceResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -183,7 +187,6 @@ func (r *workspaceResource) Update(ctx context.Context, req resource.UpdateReque
 	}
 
 	// Retrieve values from plan
-	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("api_version"), &workspace.ApiVersion)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec"), &workspace.Spec)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("metadata").AtName("name"), &workspace.Metadata.Name)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("metadata").AtName("tags"), &workspace.Metadata.Tags)...)
@@ -201,7 +204,7 @@ func (r *workspaceResource) Update(ctx context.Context, req resource.UpdateReque
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, updatedWorkspace)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, newWorkspaceModel(updatedWorkspace))...)
 }
 
 func (r *workspaceResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {

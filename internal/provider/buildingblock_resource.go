@@ -15,7 +15,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -51,20 +50,6 @@ func (r *buildingBlockResource) Schema(ctx context.Context, req resource.SchemaR
 		MarkdownDescription: "Manage Building Block assignment.",
 
 		Attributes: map[string]schema.Attribute{
-			"api_version": schema.StringAttribute{
-				MarkdownDescription: "Building block datatype version",
-				Computed:            true,
-				Default:             stringdefault.StaticString("v1"),
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-			},
-
-			"kind": schema.StringAttribute{
-				MarkdownDescription: "meshObject type, always `meshBuildingBlock`.",
-				Computed:            true,
-				Default:             stringdefault.StaticString("meshBuildingBlock"),
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-			},
-
 			"metadata": schema.SingleNestedAttribute{
 				MarkdownDescription: "Building Block metadata.",
 				Required:            true,
@@ -173,9 +158,6 @@ func (r *buildingBlockResource) Schema(ctx context.Context, req resource.SchemaR
 }
 
 type buildingBlockResourceModel struct {
-	ApiVersion types.String `tfsdk:"api_version"`
-	Kind       types.String `tfsdk:"kind"`
-
 	Metadata struct {
 		Uuid                types.String `tfsdk:"uuid"`
 		DefinitionUuid      types.String `tfsdk:"definition_uuid"`
@@ -202,8 +184,6 @@ func (r *buildingBlockResource) Create(ctx context.Context, req resource.CreateR
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 
 	bb := client.MeshBuildingBlockCreate{
-		ApiVersion: plan.ApiVersion.ValueString(),
-		Kind:       plan.Kind.ValueString(),
 
 		Metadata: client.MeshBuildingBlockCreateMetadata{
 			DefinitionUuid:    plan.Metadata.DefinitionUuid.ValueString(),
@@ -387,9 +367,6 @@ func toResourceModel(io client.MeshBuildingBlockIO, diags *diag.Diagnostics) (re
 }
 
 func (r *buildingBlockResource) setStateFromResponse(ctx *context.Context, state *tfsdk.State, bb *client.MeshBuildingBlock) (diags diag.Diagnostics) {
-	diags.Append(state.SetAttribute(*ctx, path.Root("api_version"), bb.ApiVersion)...)
-	diags.Append(state.SetAttribute(*ctx, path.Root("kind"), bb.Kind)...)
-
 	diags.Append(state.SetAttribute(*ctx, path.Root("metadata"), bb.Metadata)...)
 
 	diags.Append(state.SetAttribute(*ctx, path.Root("spec").AtName("display_name"), bb.Spec.DisplayName)...)

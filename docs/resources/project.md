@@ -40,11 +40,6 @@ resource "meshstack_project" "example" {
 - `metadata` (Attributes) Project metadata. Name and workspace of the target Project must be set here. (see [below for nested schema](#nestedatt--metadata))
 - `spec` (Attributes) Project specification. (see [below for nested schema](#nestedatt--spec))
 
-### Read-Only
-
-- `api_version` (String) Project datatype version
-- `kind` (String) meshObject type, always `meshProject`.
-
 <a id="nestedatt--metadata"></a>
 ### Nested Schema for `metadata`
 

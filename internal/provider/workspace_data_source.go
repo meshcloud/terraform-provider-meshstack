@@ -36,13 +36,19 @@ func (d *workspaceDataSource) Schema(_ context.Context, _ datasource.SchemaReque
 		MarkdownDescription: "Read a single workspace by identifier.",
 
 		Attributes: map[string]schema.Attribute{
-			"api_version": schema.StringAttribute{
-				MarkdownDescription: "Workspace API version.",
+			"ref": schema.SingleNestedAttribute{
+				MarkdownDescription: "Reference to this workspace, can be used as `target_ref` in building block resources.",
 				Computed:            true,
-			},
-			"kind": schema.StringAttribute{
-				MarkdownDescription: "meshObject type, always `meshWorkspace`.",
-				Computed:            true,
+				Attributes: map[string]schema.Attribute{
+					"kind": schema.StringAttribute{
+						MarkdownDescription: "The kind of the object. Always `meshWorkspace`.",
+						Computed:            true,
+					},
+					"identifier": schema.StringAttribute{
+						MarkdownDescription: "Identifier of the workspace.",
+						Computed:            true,
+					},
+				},
 			},
 
 			"metadata": schema.SingleNestedAttribute{
@@ -121,5 +127,5 @@ func (d *workspaceDataSource) Read(ctx context.Context, req datasource.ReadReque
 	}
 
 	// client data maps directly to the schema so we just need to set the state
-	resp.Diagnostics.Append(resp.State.Set(ctx, workspace)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, newWorkspaceModel(workspace))...)
 }

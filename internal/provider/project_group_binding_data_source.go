@@ -36,16 +36,6 @@ func (d *projectGroupBindingDataSource) Schema(ctx context.Context, req datasour
 		MarkdownDescription: "Single project group binding by name.",
 
 		Attributes: map[string]schema.Attribute{
-			"api_version": schema.StringAttribute{
-				MarkdownDescription: "Project group binding datatype version",
-				Computed:            true,
-			},
-
-			"kind": schema.StringAttribute{
-				MarkdownDescription: "meshObject type, always `meshProjectGroupBinding`.",
-				Computed:            true,
-			},
-
 			"metadata": schema.SingleNestedAttribute{
 				MarkdownDescription: "Project role assigned by this binding.",
 				Required:            true,

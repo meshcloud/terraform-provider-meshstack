@@ -42,11 +42,6 @@ resource "meshstack_workspace_group_binding" "example" {
 - `subject` (Attributes) Selects the group for this binding. (see [below for nested schema](#nestedatt--subject))
 - `target_ref` (Attributes) Selects the workspace to which this binding applies. (see [below for nested schema](#nestedatt--target_ref))
 
-### Read-Only
-
-- `api_version` (String) Workspace group binding datatype version
-- `kind` (String) meshObject type, always `meshWorkspaceGroupBinding`.
-
 <a id="nestedatt--metadata"></a>
 ### Nested Schema for `metadata`
 

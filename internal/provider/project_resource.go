@@ -52,18 +52,6 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 		MarkdownDescription: "Single project by name and workspace.",
 
 		Attributes: map[string]schema.Attribute{
-			"api_version": schema.StringAttribute{
-				MarkdownDescription: "Project datatype version",
-				Computed:            true,
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-			},
-
-			"kind": schema.StringAttribute{
-				MarkdownDescription: "meshObject type, always `meshProject`.",
-				Computed:            true,
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-			},
-
 			"metadata": schema.SingleNestedAttribute{
 				MarkdownDescription: "Project metadata. Name and workspace of the target Project must be set here.",
 				Required:            true,
@@ -113,10 +101,8 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 
 // These structs use Terraform types so that we can read the plan and check for unknown/null values.
 type projectCreate struct {
-	ApiVersion types.String    `json:"apiVersion" tfsdk:"api_version"`
-	Kind       types.String    `json:"kind" tfsdk:"kind"`
-	Metadata   projectMetadata `json:"metadata" tfsdk:"metadata"`
-	Spec       projectSpec     `json:"spec" tfsdk:"spec"`
+	Metadata projectMetadata `json:"metadata" tfsdk:"metadata"`
+	Spec     projectSpec     `json:"spec" tfsdk:"spec"`
 }
 
 type projectMetadata struct {
@@ -276,15 +262,15 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 
 // Delete deletes the resource and removes the Terraform state on success.
 func (r *projectResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var state client.MeshProject
+	var workspace, name string
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("metadata").AtName("owned_by_workspace"), &workspace)...)
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("metadata").AtName("name"), &name)...)
 
-	diags := req.State.Get(ctx, &state)
-	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	err := r.meshProjectClient.Delete(ctx, state.Metadata.OwnedByWorkspace, state.Metadata.Name)
+	err := r.meshProjectClient.Delete(ctx, workspace, name)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error deleting project",

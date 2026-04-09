@@ -7,10 +7,8 @@ import (
 )
 
 type MeshPaymentMethod struct {
-	ApiVersion string                    `json:"apiVersion" tfsdk:"api_version"`
-	Kind       string                    `json:"kind" tfsdk:"kind"`
-	Metadata   MeshPaymentMethodMetadata `json:"metadata" tfsdk:"metadata"`
-	Spec       MeshPaymentMethodSpec     `json:"spec" tfsdk:"spec"`
+	Metadata MeshPaymentMethodMetadata `json:"metadata" tfsdk:"metadata"`
+	Spec     MeshPaymentMethodSpec     `json:"spec" tfsdk:"spec"`
 }
 
 type MeshPaymentMethodMetadata struct {
@@ -28,9 +26,8 @@ type MeshPaymentMethodSpec struct {
 }
 
 type MeshPaymentMethodCreate struct {
-	ApiVersion string                          `json:"apiVersion" tfsdk:"api_version"`
-	Metadata   MeshPaymentMethodCreateMetadata `json:"metadata" tfsdk:"metadata"`
-	Spec       MeshPaymentMethodSpec           `json:"spec" tfsdk:"spec"`
+	Metadata MeshPaymentMethodCreateMetadata `json:"metadata" tfsdk:"metadata"`
+	Spec     MeshPaymentMethodSpec           `json:"spec" tfsdk:"spec"`
 }
 
 type MeshPaymentMethodCreateMetadata struct {
@@ -38,26 +35,33 @@ type MeshPaymentMethodCreateMetadata struct {
 	OwnedByWorkspace string `json:"ownedByWorkspace" tfsdk:"owned_by_workspace"`
 }
 
-type MeshPaymentMethodClient struct {
+type MeshPaymentMethodClient interface {
+	Read(ctx context.Context, workspace string, identifier string) (*MeshPaymentMethod, error)
+	Create(ctx context.Context, paymentMethod *MeshPaymentMethodCreate) (*MeshPaymentMethod, error)
+	Update(ctx context.Context, identifier string, paymentMethod *MeshPaymentMethodCreate) (*MeshPaymentMethod, error)
+	Delete(ctx context.Context, identifier string) error
+}
+
+type meshPaymentMethodClient struct {
 	meshObject internal.MeshObjectClient[MeshPaymentMethod]
 }
 
 func newPaymentMethodClient(ctx context.Context, httpClient *internal.HttpClient) MeshPaymentMethodClient {
-	return MeshPaymentMethodClient{internal.NewMeshObjectClient[MeshPaymentMethod](ctx, httpClient, "v2")}
+	return meshPaymentMethodClient{internal.NewMeshObjectClient[MeshPaymentMethod](ctx, httpClient, "v2")}
 }
 
-func (c MeshPaymentMethodClient) Read(ctx context.Context, workspace string, identifier string) (*MeshPaymentMethod, error) {
+func (c meshPaymentMethodClient) Read(ctx context.Context, workspace string, identifier string) (*MeshPaymentMethod, error) {
 	return c.meshObject.Get(ctx, identifier)
 }
 
-func (c MeshPaymentMethodClient) Create(ctx context.Context, paymentMethod *MeshPaymentMethodCreate) (*MeshPaymentMethod, error) {
+func (c meshPaymentMethodClient) Create(ctx context.Context, paymentMethod *MeshPaymentMethodCreate) (*MeshPaymentMethod, error) {
 	return c.meshObject.Post(ctx, paymentMethod)
 }
 
-func (c MeshPaymentMethodClient) Update(ctx context.Context, identifier string, paymentMethod *MeshPaymentMethodCreate) (*MeshPaymentMethod, error) {
+func (c meshPaymentMethodClient) Update(ctx context.Context, identifier string, paymentMethod *MeshPaymentMethodCreate) (*MeshPaymentMethod, error) {
 	return c.meshObject.Put(ctx, identifier, paymentMethod)
 }
 
-func (c MeshPaymentMethodClient) Delete(ctx context.Context, identifier string) error {
+func (c meshPaymentMethodClient) Delete(ctx context.Context, identifier string) error {
 	return c.meshObject.Delete(ctx, identifier)
 }

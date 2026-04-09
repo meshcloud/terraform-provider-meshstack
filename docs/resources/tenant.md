@@ -41,11 +41,6 @@ resource "meshstack_tenant" "example" {
 - `metadata` (Attributes) Tenant metadata. Workspace, project and platform of the target tenant must be set here. (see [below for nested schema](#nestedatt--metadata))
 - `spec` (Attributes) Tenant specification. (see [below for nested schema](#nestedatt--spec))
 
-### Read-Only
-
-- `api_version` (String) Tenant datatype version
-- `kind` (String) meshObject type, always `meshTenant`.
-
 <a id="nestedatt--metadata"></a>
 ### Nested Schema for `metadata`
 

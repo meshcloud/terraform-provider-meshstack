@@ -52,7 +52,7 @@ type buildingBlockDefinitionRef struct {
 
 func newBuildingBlockDefinitionRef(uuid string) buildingBlockDefinitionRef {
 	return buildingBlockDefinitionRef{
-		Kind: "meshBuildingBlockDefinition",
+		Kind: client.MeshObjectKind.BuildingBlockDefinition,
 		Uuid: uuid,
 	}
 }
@@ -62,7 +62,7 @@ func buildingBlockDefinitionConverterOptions() generic.ConverterOptions {
 		// Transform ref input in schema to simple string (aka the platform type).
 		generic.WithValueFromConverterFor[client.BuildingBlockDefinitionSupportedPlatform](generic.ValueFromConverterForTypedNilHandler[supportedPlatformRef](),
 			func(_ path.Path, value client.BuildingBlockDefinitionSupportedPlatform) (tftypes.Value, error) {
-				return generic.ValueFrom(supportedPlatformRef{Kind: "meshPlatformType", Name: string(value)})
+				return generic.ValueFrom(supportedPlatformRef{Kind: client.MeshObjectKind.PlatformType, Name: string(value)})
 			},
 		),
 		generic.WithValueToConverterFor[client.BuildingBlockDefinitionSupportedPlatform](func(_ path.Path, in tftypes.Value) (client.BuildingBlockDefinitionSupportedPlatform, error) {
@@ -71,7 +71,7 @@ func buildingBlockDefinitionConverterOptions() generic.ConverterOptions {
 			if err != nil {
 				return "", err
 			}
-			if ref.Kind != "meshPlatformType" {
+			if ref.Kind != client.MeshObjectKind.PlatformType {
 				return "", fmt.Errorf("expected meshPlatformType for kind in given supported platform ref, got %s", ref.Kind)
 			}
 			return client.BuildingBlockDefinitionSupportedPlatform(ref.Name), nil
@@ -89,7 +89,7 @@ type buildingBlockDefinitionVersionSpec struct {
 func (model buildingBlockDefinitionVersionSpec) ToClientDto(buildingBlockDefinitionUuid string) (dto client.MeshBuildingBlockDefinitionVersionSpec) {
 	dto = model.MeshBuildingBlockDefinitionVersionSpec
 	dto.BuildingBlockDefinitionRef = &client.BuildingBlockDefinitionRef{
-		Kind: "meshBuildingBlockDefinition",
+		Kind: client.MeshObjectKind.BuildingBlockDefinition,
 		Uuid: buildingBlockDefinitionUuid,
 	}
 	if dto.RunnerRef == nil {

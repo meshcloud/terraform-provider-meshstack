@@ -36,16 +36,6 @@ func (d *buildingBlockV2DataSource) Schema(ctx context.Context, req datasource.S
 		MarkdownDescription: "Single building block by UUID." + previewDisclaimer(),
 
 		Attributes: map[string]schema.Attribute{
-			"api_version": schema.StringAttribute{
-				MarkdownDescription: "Building block datatype version",
-				Computed:            true,
-			},
-
-			"kind": schema.StringAttribute{
-				MarkdownDescription: "meshObject type, always `meshBuildingBlock`.",
-				Computed:            true,
-			},
-
 			"metadata": schema.SingleNestedAttribute{
 				MarkdownDescription: "Building block metadata.",
 				Required:            true,
@@ -187,9 +177,6 @@ func (d *buildingBlockV2DataSource) Read(ctx context.Context, req datasource.Rea
 		)
 		return
 	}
-
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("api_version"), bb.ApiVersion)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("kind"), bb.Kind)...)
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("metadata"), bb.Metadata)...)
 

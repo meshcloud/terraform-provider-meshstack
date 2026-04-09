@@ -41,8 +41,6 @@ resource "meshstack_buildingblock" "my_buildingblock" {
 
 ### Read-Only
 
-- `api_version` (String) Building block datatype version
-- `kind` (String) meshObject type, always `meshBuildingBlock`.
 - `status` (Attributes) Current Building Block status. (see [below for nested schema](#nestedatt--status))
 
 <a id="nestedatt--metadata"></a>

@@ -57,11 +57,9 @@ type MeshBuildingBlockDefinitionStatus struct {
 }
 
 type MeshBuildingBlockDefinition struct {
-	ApiVersion string                              `json:"apiVersion"`
-	Kind       string                              `json:"kind"`
-	Metadata   MeshBuildingBlockDefinitionMetadata `json:"metadata"`
-	Spec       MeshBuildingBlockDefinitionSpec     `json:"spec"`
-	Status     *MeshBuildingBlockDefinitionStatus  `json:"status,omitempty"`
+	Metadata MeshBuildingBlockDefinitionMetadata `json:"metadata"`
+	Spec     MeshBuildingBlockDefinitionSpec     `json:"spec"`
+	Status   *MeshBuildingBlockDefinitionStatus  `json:"status,omitempty"`
 }
 
 type MeshBuildingBlockDefinitionClient interface {
@@ -95,14 +93,10 @@ func (c meshBuildingBlockDefinitionClient) Read(ctx context.Context, uuid string
 }
 
 func (c meshBuildingBlockDefinitionClient) Create(ctx context.Context, definition MeshBuildingBlockDefinition) (*MeshBuildingBlockDefinition, error) {
-	definition.Kind = c.meshObject.Kind
-	definition.ApiVersion = c.meshObject.ApiVersion
 	return c.meshObject.Post(ctx, definition)
 }
 
 func (c meshBuildingBlockDefinitionClient) Update(ctx context.Context, uuid string, definition MeshBuildingBlockDefinition) (*MeshBuildingBlockDefinition, error) {
-	definition.Kind = c.meshObject.Kind
-	definition.ApiVersion = c.meshObject.ApiVersion
 	return c.meshObject.Put(ctx, uuid, definition)
 }
 

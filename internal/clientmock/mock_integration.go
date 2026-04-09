@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/google/uuid"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
 	"github.com/meshcloud/terraform-provider-meshstack/client/types/ptr"
@@ -15,10 +15,8 @@ type MeshIntegrationClient struct {
 }
 
 func (m MeshIntegrationClient) Create(_ context.Context, integration client.MeshIntegration) (*client.MeshIntegration, error) {
-	integrationUuid := acctest.RandString(32)
+	integrationUuid := uuid.NewString()
 	created := &client.MeshIntegration{
-		ApiVersion: integration.ApiVersion,
-		Kind:       integration.Kind,
 		Metadata: client.MeshIntegrationMetadata{
 			Uuid:             ptr.To(integrationUuid),
 			OwnedByWorkspace: integration.Metadata.OwnedByWorkspace,

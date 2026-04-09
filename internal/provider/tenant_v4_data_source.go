@@ -39,16 +39,6 @@ func (d *tenantV4DataSource) Schema(_ context.Context, _ datasource.SchemaReques
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Fetches details of a single tenant by UUID." + previewDisclaimer(),
 		Attributes: map[string]schema.Attribute{
-			"api_version": schema.StringAttribute{
-				MarkdownDescription: "Tenant datatype version",
-				Computed:            true,
-			},
-
-			"kind": schema.StringAttribute{
-				MarkdownDescription: "meshObject type, always `meshTenant`.",
-				Computed:            true,
-			},
-
 			"metadata": schema.SingleNestedAttribute{
 				MarkdownDescription: "Tenant metadata.",
 				Required:            true,

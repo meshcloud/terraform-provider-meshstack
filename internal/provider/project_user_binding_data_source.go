@@ -36,16 +36,6 @@ func (d *projectUserBindingDataSource) Schema(ctx context.Context, req datasourc
 		MarkdownDescription: "Single project user binding by name.",
 
 		Attributes: map[string]schema.Attribute{
-			"api_version": schema.StringAttribute{
-				MarkdownDescription: "Project user binding datatype version",
-				Computed:            true,
-			},
-
-			"kind": schema.StringAttribute{
-				MarkdownDescription: "meshObject type, always `meshProjectUserBinding`.",
-				Computed:            true,
-			},
-
 			"metadata": schema.SingleNestedAttribute{
 				MarkdownDescription: "Project role assigned by this binding.",
 				Required:            true,

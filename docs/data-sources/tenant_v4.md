@@ -32,8 +32,6 @@ data "meshstack_tenant_v4" "example" {
 
 ### Read-Only
 
-- `api_version` (String) Tenant datatype version
-- `kind` (String) meshObject type, always `meshTenant`.
 - `spec` (Attributes) Tenant specification. (see [below for nested schema](#nestedatt--spec))
 - `status` (Attributes) Tenant status. (see [below for nested schema](#nestedatt--status))
 

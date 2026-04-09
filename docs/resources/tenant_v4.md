@@ -50,8 +50,7 @@ resource "meshstack_tenant_v4" "example" {
 
 ### Read-Only
 
-- `api_version` (String) API version of the tenant resource.
-- `kind` (String) The kind of the meshObject, always `meshTenant`.
+- `ref` (Attributes) Reference to this tenant, can be used as `target_ref` in building block resources. (see [below for nested schema](#nestedatt--ref))
 - `status` (Attributes) Tenant status. (see [below for nested schema](#nestedatt--status))
 
 <a id="nestedatt--metadata"></a>
@@ -91,6 +90,15 @@ Required:
 - `key` (String)
 - `value` (Number)
 
+
+
+<a id="nestedatt--ref"></a>
+### Nested Schema for `ref`
+
+Read-Only:
+
+- `kind` (String) The kind of the object. Always `meshTenant`.
+- `uuid` (String) UUID of the tenant.
 
 
 <a id="nestedatt--status"></a>

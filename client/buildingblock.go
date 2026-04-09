@@ -18,11 +18,9 @@ const (
 )
 
 type MeshBuildingBlock struct {
-	ApiVersion string                    `json:"apiVersion" tfsdk:"api_version"`
-	Kind       string                    `json:"kind" tfsdk:"kind"`
-	Metadata   MeshBuildingBlockMetadata `json:"metadata" tfsdk:"metadata"`
-	Spec       MeshBuildingBlockSpec     `json:"spec" tfsdk:"spec"`
-	Status     MeshBuildingBlockStatus   `json:"status" tfsdk:"status"`
+	Metadata MeshBuildingBlockMetadata `json:"metadata" tfsdk:"metadata"`
+	Spec     MeshBuildingBlockSpec     `json:"spec" tfsdk:"spec"`
+	Status   MeshBuildingBlockStatus   `json:"status" tfsdk:"status"`
 }
 
 type MeshBuildingBlockMetadata struct {
@@ -59,10 +57,8 @@ type MeshBuildingBlockStatus struct {
 }
 
 type MeshBuildingBlockCreate struct {
-	ApiVersion string                          `json:"apiVersion" tfsdk:"api_version"`
-	Kind       string                          `json:"kind" tfsdk:"kind"`
-	Metadata   MeshBuildingBlockCreateMetadata `json:"metadata" tfsdk:"metadata"`
-	Spec       MeshBuildingBlockSpec           `json:"spec" tfsdk:"spec"`
+	Metadata MeshBuildingBlockCreateMetadata `json:"metadata" tfsdk:"metadata"`
+	Spec     MeshBuildingBlockSpec           `json:"spec" tfsdk:"spec"`
 }
 
 type MeshBuildingBlockCreateMetadata struct {
@@ -76,22 +72,28 @@ type MeshBuildingBlockDefinitionRef struct {
 	Uuid string `json:"uuid" tfsdk:"uuid"`
 }
 
-type MeshBuildingBlockClient struct {
+type MeshBuildingBlockClient interface {
+	Read(ctx context.Context, uuid string) (*MeshBuildingBlock, error)
+	Create(ctx context.Context, bb *MeshBuildingBlockCreate) (*MeshBuildingBlock, error)
+	Delete(ctx context.Context, uuid string) error
+}
+
+type meshBuildingBlockClient struct {
 	meshObject internal.MeshObjectClient[MeshBuildingBlock]
 }
 
 func newBuildingBlockClient(ctx context.Context, httpClient *internal.HttpClient) MeshBuildingBlockClient {
-	return MeshBuildingBlockClient{internal.NewMeshObjectClient[MeshBuildingBlock](ctx, httpClient, "v1")}
+	return meshBuildingBlockClient{internal.NewMeshObjectClient[MeshBuildingBlock](ctx, httpClient, "v1")}
 }
 
-func (c MeshBuildingBlockClient) Read(ctx context.Context, uuid string) (*MeshBuildingBlock, error) {
+func (c meshBuildingBlockClient) Read(ctx context.Context, uuid string) (*MeshBuildingBlock, error) {
 	return c.meshObject.Get(ctx, uuid)
 }
 
-func (c MeshBuildingBlockClient) Create(ctx context.Context, bb *MeshBuildingBlockCreate) (*MeshBuildingBlock, error) {
+func (c meshBuildingBlockClient) Create(ctx context.Context, bb *MeshBuildingBlockCreate) (*MeshBuildingBlock, error) {
 	return c.meshObject.Post(ctx, bb)
 }
 
-func (c MeshBuildingBlockClient) Delete(ctx context.Context, uuid string) error {
+func (c meshBuildingBlockClient) Delete(ctx context.Context, uuid string) error {
 	return c.meshObject.Delete(ctx, uuid)
 }

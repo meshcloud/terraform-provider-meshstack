@@ -140,7 +140,6 @@ func (r *locationResource) Create(ctx context.Context, req resource.CreateReques
 	}
 
 	location := client.MeshLocationCreate{
-		ApiVersion: "v1",
 		Metadata: client.MeshLocationCreateMetadata{
 			Name:             name,
 			OwnedByWorkspace: ownedByWorkspace,
@@ -220,7 +219,6 @@ func (r *locationResource) Update(ctx context.Context, req resource.UpdateReques
 	}
 
 	location := client.MeshLocationCreate{
-		ApiVersion: "v1",
 		Metadata: client.MeshLocationCreateMetadata{
 			Name:             planName,
 			OwnedByWorkspace: planOwnedByWorkspace,

@@ -15,7 +15,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
@@ -53,20 +52,6 @@ func (r *buildingBlockV2Resource) Schema(ctx context.Context, req resource.Schem
 		MarkdownDescription: "Manage a workspace or tenant building block." + previewDisclaimer(),
 
 		Attributes: map[string]schema.Attribute{
-			"api_version": schema.StringAttribute{
-				MarkdownDescription: "Building block datatype version",
-				Computed:            true,
-				Default:             stringdefault.StaticString("v2-preview"),
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-			},
-
-			"kind": schema.StringAttribute{
-				MarkdownDescription: "meshObject type, always `meshBuildingBlock`.",
-				Computed:            true,
-				Default:             stringdefault.StaticString("meshBuildingBlock"),
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-			},
-
 			"metadata": schema.SingleNestedAttribute{
 				MarkdownDescription: "Building block metadata.",
 				Computed:            true,
@@ -106,8 +91,9 @@ func (r *buildingBlockV2Resource) Schema(ctx context.Context, req resource.Schem
 					},
 
 					"building_block_definition_version_ref": schema.SingleNestedAttribute{
-						MarkdownDescription: "References the building block definition this building block is based on.",
-						Required:            true,
+						MarkdownDescription: "References the building block definition this building block is based on. " +
+							"Can be set to the `version_latest` or `version_latest_release` output of a `meshstack_building_block_definition` resource.",
+						Required: true,
 						Attributes: map[string]schema.Attribute{
 							"uuid": schema.StringAttribute{
 								MarkdownDescription: "UUID of the building block definition version.",
@@ -124,7 +110,7 @@ func (r *buildingBlockV2Resource) Schema(ctx context.Context, req resource.Schem
 								MarkdownDescription: "Target kind for this building block, depends on building block definition type. One of `meshTenant`, `meshWorkspace`.",
 								Required:            true,
 								Validators: []validator.String{
-									stringvalidator.OneOf([]string{"meshTenant", "meshWorkspace"}...),
+									stringvalidator.OneOf([]string{client.MeshObjectKind.Tenant, client.MeshObjectKind.Workspace}...),
 								},
 							},
 							"uuid": schema.StringAttribute{
@@ -221,8 +207,6 @@ func (r *buildingBlockV2Resource) Create(ctx context.Context, req resource.Creat
 	}
 
 	// Retrieve values from plan
-	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("api_version"), &bb.ApiVersion)...)
-	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("kind"), &bb.Kind)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec").AtName("display_name"), &bb.Spec.DisplayName)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec").AtName("building_block_definition_version_ref"), &bb.Spec.BuildingBlockDefinitionVersionRef)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec").AtName("parent_building_blocks"), &bb.Spec.ParentBuildingBlocks)...)
@@ -354,9 +338,6 @@ func (r *buildingBlockV2Resource) Delete(ctx context.Context, req resource.Delet
 // }
 
 func setStateFromResponseV2(ctx context.Context, state *tfsdk.State, bb *client.MeshBuildingBlockV2) (diags diag.Diagnostics) {
-	diags.Append(state.SetAttribute(ctx, path.Root("api_version"), bb.ApiVersion)...)
-	diags.Append(state.SetAttribute(ctx, path.Root("kind"), bb.Kind)...)
-
 	diags.Append(state.SetAttribute(ctx, path.Root("metadata"), bb.Metadata)...)
 
 	diags.Append(state.SetAttribute(ctx, path.Root("spec").AtName("display_name"), bb.Spec.DisplayName)...)

@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/google/uuid"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
 	"github.com/meshcloud/terraform-provider-meshstack/client/types/ptr"
@@ -26,7 +26,7 @@ func (m MeshBuildingBlockDefinitionVersionClient) List(_ context.Context, buildi
 
 func (m MeshBuildingBlockDefinitionVersionClient) Create(_ context.Context, ownedByWorkspace string, versionSpec client.MeshBuildingBlockDefinitionVersionSpec) (*client.MeshBuildingBlockDefinitionVersion, error) {
 	nextNum := m.getNextVersionNumber()
-	versionUuid := acctest.RandString(32)
+	versionUuid := uuid.NewString()
 	// Compute hashes for all secrets in the spec
 	backendSecretBehavior(true, &versionSpec, nil)
 
@@ -36,8 +36,6 @@ func (m MeshBuildingBlockDefinitionVersionClient) Create(_ context.Context, owne
 	}
 
 	created := &client.MeshBuildingBlockDefinitionVersion{
-		ApiVersion: "v1",
-		Kind:       "meshBuildingBlockDefinitionVersion",
 		Metadata: client.MeshBuildingBlockDefinitionVersionMetadata{
 			Uuid:             versionUuid,
 			OwnedByWorkspace: ownedByWorkspace,

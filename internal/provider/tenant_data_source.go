@@ -35,16 +35,6 @@ func (d *tenantDataSource) Schema(ctx context.Context, req datasource.SchemaRequ
 		MarkdownDescription: "Single tenant by workspace, project, and platform.",
 
 		Attributes: map[string]schema.Attribute{
-			"api_version": schema.StringAttribute{
-				MarkdownDescription: "Tenant datatype version",
-				Computed:            true,
-			},
-
-			"kind": schema.StringAttribute{
-				MarkdownDescription: "meshObject type, always `meshTenant`.",
-				Computed:            true,
-			},
-
 			"metadata": schema.SingleNestedAttribute{
 				MarkdownDescription: "Tenant metadata. Workspace, project and platform of the target tenant must be set here.",
 				Required:            true,

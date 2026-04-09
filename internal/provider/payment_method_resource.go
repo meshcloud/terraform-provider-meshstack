@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -50,17 +49,6 @@ func (r *paymentMethodResource) Schema(_ context.Context, _ resource.SchemaReque
 		MarkdownDescription: "Represents a meshStack payment method.\n\n~> **Note:** Managing payment methods requires an API key with sufficient admin permissions.",
 
 		Attributes: map[string]schema.Attribute{
-			"api_version": schema.StringAttribute{
-				MarkdownDescription: "Payment method datatype version",
-				Computed:            true,
-				Default:             stringdefault.StaticString("v2"),
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-			},
-			"kind": schema.StringAttribute{
-				MarkdownDescription: "meshObject type, always `meshPaymentMethod`.",
-				Computed:            true,
-			},
-
 			"metadata": schema.SingleNestedAttribute{
 				Required: true,
 				Attributes: map[string]schema.Attribute{
@@ -130,7 +118,6 @@ func (r *paymentMethodResource) Create(ctx context.Context, req resource.CreateR
 		Metadata: client.MeshPaymentMethodCreateMetadata{},
 	}
 
-	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("api_version"), &paymentMethod.ApiVersion)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec"), &paymentMethod.Spec)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("metadata").AtName("name"), &paymentMethod.Metadata.Name)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("metadata").AtName("owned_by_workspace"), &paymentMethod.Metadata.OwnedByWorkspace)...)
@@ -191,7 +178,6 @@ func (r *paymentMethodResource) Update(ctx context.Context, req resource.UpdateR
 		Metadata: client.MeshPaymentMethodCreateMetadata{},
 	}
 
-	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("api_version"), &paymentMethod.ApiVersion)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec"), &paymentMethod.Spec)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("metadata").AtName("name"), &paymentMethod.Metadata.Name)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("metadata").AtName("owned_by_workspace"), &paymentMethod.Metadata.OwnedByWorkspace)...)

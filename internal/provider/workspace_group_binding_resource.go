@@ -8,7 +8,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 
@@ -50,20 +49,6 @@ func (r *workspaceGroupBindingResource) Schema(_ context.Context, _ resource.Sch
 		MarkdownDescription: "Workspace group binding assigns a group with a specific role to a workspace.",
 
 		Attributes: map[string]schema.Attribute{
-			"api_version": schema.StringAttribute{
-				MarkdownDescription: "Workspace group binding datatype version",
-				Computed:            true,
-				Default:             stringdefault.StaticString("v2"),
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-			},
-
-			"kind": schema.StringAttribute{
-				MarkdownDescription: "meshObject type, always `meshWorkspaceGroupBinding`.",
-				Computed:            true,
-				Default:             stringdefault.StaticString("meshWorkspaceGroupBinding"),
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-			},
-
 			"metadata": schema.SingleNestedAttribute{
 				Required:            true,
 				MarkdownDescription: "Workspace group binding metadata.",

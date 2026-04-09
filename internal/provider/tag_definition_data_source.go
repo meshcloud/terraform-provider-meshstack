@@ -36,14 +36,6 @@ func (d *tagDefinitionDataSource) Schema(ctx context.Context, req datasource.Sch
 				MarkdownDescription: "Tag definition details",
 				Computed:            true,
 				Attributes: map[string]schema.Attribute{
-					"kind": schema.StringAttribute{
-						MarkdownDescription: "As a common meshObject structure exists, every meshObject has a kind. This is always meshTagDefinition for this endpoint.",
-						Computed:            true,
-					},
-					"api_version": schema.StringAttribute{
-						MarkdownDescription: "API Version of meshTagDefinition datatype. Matches the version part provided within the Accept request header.",
-						Computed:            true,
-					},
 					"metadata": schema.SingleNestedAttribute{
 						MarkdownDescription: "Always contains the 'name' to uniquely identify the meshTagDefinition.",
 						Computed:            true,
@@ -173,6 +165,10 @@ func (d *tagDefinitionDataSource) Schema(ctx context.Context, req datasource.Sch
 							},
 							"restricted": schema.BoolAttribute{
 								MarkdownDescription: "Indicates whether only admins can edit this tag.",
+								Computed:            true,
+							},
+							"replication_key": schema.StringAttribute{
+								MarkdownDescription: "The replication key of the tag.",
 								Computed:            true,
 							},
 						},

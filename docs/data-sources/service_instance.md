@@ -29,8 +29,6 @@ data "meshstack_service_instance" "example" {
 
 ### Read-Only
 
-- `api_version` (String) Service instance API version.
-- `kind` (String) meshObject type, always `meshServiceInstance`.
 - `spec` (Attributes) Service instance specification. (see [below for nested schema](#nestedatt--spec))
 
 <a id="nestedatt--metadata"></a>

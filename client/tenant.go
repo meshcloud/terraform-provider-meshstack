@@ -7,10 +7,8 @@ import (
 )
 
 type MeshTenant struct {
-	ApiVersion string             `json:"apiVersion" tfsdk:"api_version"`
-	Kind       string             `json:"kind" tfsdk:"kind"`
-	Metadata   MeshTenantMetadata `json:"metadata" tfsdk:"metadata"`
-	Spec       MeshTenantSpec     `json:"spec" tfsdk:"spec"`
+	Metadata MeshTenantMetadata `json:"metadata" tfsdk:"metadata"`
+	Spec     MeshTenantSpec     `json:"spec" tfsdk:"spec"`
 }
 
 type MeshTenantMetadata struct {
@@ -49,26 +47,32 @@ type MeshTenantCreateSpec struct {
 	Quotas                *[]MeshTenantQuota `json:"quotas" tfsdk:"quotas"`
 }
 
-type MeshTenantClient struct {
+type MeshTenantClient interface {
+	Read(ctx context.Context, workspace string, project string, platform string) (*MeshTenant, error)
+	Create(ctx context.Context, tenant *MeshTenantCreate) (*MeshTenant, error)
+	Delete(ctx context.Context, workspace string, project string, platform string) error
+}
+
+type meshTenantClient struct {
 	meshObject internal.MeshObjectClient[MeshTenant]
 }
 
 func newTenantClient(ctx context.Context, httpClient *internal.HttpClient) MeshTenantClient {
-	return MeshTenantClient{internal.NewMeshObjectClient[MeshTenant](ctx, httpClient, "v3")}
+	return meshTenantClient{internal.NewMeshObjectClient[MeshTenant](ctx, httpClient, "v3")}
 }
 
-func (c MeshTenantClient) tenantId(workspace string, project string, platform string) string {
+func (c meshTenantClient) tenantId(workspace string, project string, platform string) string {
 	return workspace + "." + project + "." + platform
 }
 
-func (c MeshTenantClient) Read(ctx context.Context, workspace string, project string, platform string) (*MeshTenant, error) {
+func (c meshTenantClient) Read(ctx context.Context, workspace string, project string, platform string) (*MeshTenant, error) {
 	return c.meshObject.Get(ctx, c.tenantId(workspace, project, platform))
 }
 
-func (c MeshTenantClient) Create(ctx context.Context, tenant *MeshTenantCreate) (*MeshTenant, error) {
+func (c meshTenantClient) Create(ctx context.Context, tenant *MeshTenantCreate) (*MeshTenant, error) {
 	return c.meshObject.Post(ctx, tenant)
 }
 
-func (c MeshTenantClient) Delete(ctx context.Context, workspace string, project string, platform string) error {
+func (c meshTenantClient) Delete(ctx context.Context, workspace string, project string, platform string) error {
 	return c.meshObject.Delete(ctx, c.tenantId(workspace, project, platform))
 }

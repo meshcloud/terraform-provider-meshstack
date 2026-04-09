@@ -8,10 +8,8 @@ import (
 )
 
 type MeshServiceInstance struct {
-	ApiVersion string                      `json:"apiVersion" tfsdk:"api_version"`
-	Kind       string                      `json:"kind" tfsdk:"kind"`
-	Metadata   MeshServiceInstanceMetadata `json:"metadata" tfsdk:"metadata"`
-	Spec       MeshServiceInstanceSpec     `json:"spec" tfsdk:"spec"`
+	Metadata MeshServiceInstanceMetadata `json:"metadata" tfsdk:"metadata"`
+	Spec     MeshServiceInstanceSpec     `json:"spec" tfsdk:"spec"`
 }
 
 type MeshServiceInstanceMetadata struct {

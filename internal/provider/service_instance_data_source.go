@@ -45,16 +45,6 @@ func (d *serviceInstanceDataSource) Schema(ctx context.Context, req datasource.S
 
 func serviceInstanceSchemaAttributes(computed bool) map[string]schema.Attribute {
 	return map[string]schema.Attribute{
-		"api_version": schema.StringAttribute{
-			MarkdownDescription: "Service instance API version.",
-			Computed:            true,
-		},
-
-		"kind": schema.StringAttribute{
-			MarkdownDescription: "meshObject type, always `meshServiceInstance`.",
-			Computed:            true,
-		},
-
 		"metadata": schema.SingleNestedAttribute{
 			MarkdownDescription: "Service instance metadata. Instance ID of the target service instance must be set here.",
 			Required:            !computed,
