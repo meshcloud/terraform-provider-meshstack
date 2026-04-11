@@ -9,6 +9,7 @@ BREAKING CHANGES:
 
 FEATURES:
 - New `meshstack_tenants` data source for listing tenants with optional workspace/project/platform filters.
+- New `meshstack_building_block_definitions` data source for listing Building Block Definitions.
 - Add `provider::meshstack::load_file`/`provider::meshstack::encode_file` functions for convenient Building Block definition `FILE` input.
   Improve related documentation.
 
