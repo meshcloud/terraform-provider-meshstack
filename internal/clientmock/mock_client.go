@@ -16,9 +16,11 @@ import (
 
 type Client struct {
 	BuildingBlock                  meshBuildingBlockClient
+	BuildingBlockRun               MeshBuildingBlockRunClient
 	BuildingBlockDefinition        meshBuildingBlockDefinitionClient
 	BuildingBlockDefinitionVersion meshBuildingBlockDefinitionVersionClient
 	BuildingBlockV2                MeshBuildingBlockV2Client
+	BuildingBlockV3                MeshBuildingBlockV3Client
 	Integration                    MeshIntegrationClient
 	LandingZone                    MeshLandingZoneClient
 	Location                       MeshLocationClient
@@ -40,9 +42,11 @@ type Client struct {
 func (c Client) AsClient() client.Client {
 	return client.Client{
 		BuildingBlock:                  c.BuildingBlock,
+		BuildingBlockRun:               c.BuildingBlockRun,
 		BuildingBlockDefinition:        c.BuildingBlockDefinition,
 		BuildingBlockDefinitionVersion: c.BuildingBlockDefinitionVersion,
 		BuildingBlockV2:                c.BuildingBlockV2,
+		BuildingBlockV3:                c.BuildingBlockV3,
 		Integration:                    c.Integration,
 		LandingZone:                    c.LandingZone,
 		Location:                       c.Location,
@@ -64,11 +68,14 @@ func (c Client) AsClient() client.Client {
 
 func NewMock() Client {
 	bbdVersionStore := NewStore[client.MeshBuildingBlockDefinitionVersion]()
+	buildingBlockRunStore := NewStore[client.MeshBuildingBlockRun]()
 	return Client{
 		BuildingBlock:                  meshBuildingBlockClient{Store: NewStore[client.MeshBuildingBlock]()},
+		BuildingBlockRun:               MeshBuildingBlockRunClient{Store: buildingBlockRunStore},
 		BuildingBlockDefinition:        meshBuildingBlockDefinitionClient{Store: NewStore[client.MeshBuildingBlockDefinition](), StoreVersion: bbdVersionStore},
 		BuildingBlockDefinitionVersion: meshBuildingBlockDefinitionVersionClient{Store: bbdVersionStore},
 		BuildingBlockV2:                MeshBuildingBlockV2Client{Store: NewStore[client.MeshBuildingBlockV2]()},
+		BuildingBlockV3:                MeshBuildingBlockV3Client{Store: NewStore[client.MeshBuildingBlockV3](), RunStore: buildingBlockRunStore},
 		Integration:                    MeshIntegrationClient{Store: NewStore[client.MeshIntegration]()},
 		LandingZone:                    MeshLandingZoneClient{Store: NewStore[client.MeshLandingZone]()},
 		Location:                       MeshLocationClient{Store: NewStore[client.MeshLocation]()},

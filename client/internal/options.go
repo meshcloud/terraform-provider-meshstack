@@ -8,9 +8,12 @@ import (
 type (
 	// RequestOption is a functional option for configuring HTTP requests.
 	RequestOption func(opts *requestOptions)
+	// RequestModifier is an alias for [RequestOption], exposed for semantic clarity in option factories.
+	RequestModifier = RequestOption
 
 	requestOptions struct {
 		urlQueryParams   map[string]string
+		extraPathElems   []string
 		requestPayload   any
 		requestModifiers []requestModifier
 	}
@@ -31,6 +34,13 @@ func WithUrlQuery(key string, value any) RequestOption {
 			opts.urlQueryParams = map[string]string{}
 		}
 		opts.urlQueryParams[key] = valueStr
+	}
+}
+
+// WithPathElems appends path elements to the request URL path.
+func WithPathElems(pathElems ...string) RequestModifier {
+	return func(opts *requestOptions) {
+		opts.extraPathElems = append(opts.extraPathElems, pathElems...)
 	}
 }
 

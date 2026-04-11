@@ -19,6 +19,8 @@ var MinMeshStackVersion = version.MustParse("2026.10.0")
 type Client struct {
 	BuildingBlock                  MeshBuildingBlockClient
 	BuildingBlockV2                MeshBuildingBlockV2Client
+	BuildingBlockV3                MeshBuildingBlockV3Client
+	BuildingBlockRun               MeshBuildingBlockRunClient
 	BuildingBlockDefinition        MeshBuildingBlockDefinitionClient
 	BuildingBlockDefinitionVersion MeshBuildingBlockDefinitionVersionClient
 	Integration                    MeshIntegrationClient
@@ -72,6 +74,8 @@ func New(ctx context.Context, rootUrl *url.URL, userAgent, apiKey, apiSecret str
 	return Client{
 		newBuildingBlockClient(ctx, httpClient),
 		newBuildingBlockV2Client(ctx, httpClient),
+		newBuildingBlockV3Client(ctx, httpClient),
+		newBuildingBlockRunClient(ctx, httpClient),
 		newBuildingBlockDefinitionClient(ctx, httpClient),
 		newBuildingBlockDefinitionVersionClient(ctx, httpClient),
 		newIntegrationClient(ctx, httpClient),
