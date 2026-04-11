@@ -50,6 +50,7 @@ func (r *buildingBlockV2Resource) Configure(_ context.Context, req resource.Conf
 func (r *buildingBlockV2Resource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Manage a workspace or tenant building block." + previewDisclaimer(),
+		DeprecationMessage:  "Use `meshstack_building_block_v3` instead. You can migrate state with a Terraform `moved` block from `meshstack_building_block_v2` to `meshstack_building_block_v3`.",
 
 		Attributes: map[string]schema.Attribute{
 			"metadata": schema.SingleNestedAttribute{

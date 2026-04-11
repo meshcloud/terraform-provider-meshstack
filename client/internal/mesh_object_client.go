@@ -82,8 +82,13 @@ func (c MeshObjectClient[M]) Get(ctx context.Context, id string) (*M, error) {
 
 // Post creates a new meshObject with the given payload.
 // Automatically injects apiVersion and kind into the JSON payload.
-func (c MeshObjectClient[M]) Post(ctx context.Context, payload any) (*M, error) {
-	return unmarshalBody[M](c.doAuthorizedRequest(ctx, http.MethodPost, c.ApiUrl, c.withMeshObjectPayload(payload)))
+func (c MeshObjectClient[M]) Post(ctx context.Context, payload any, options ...RequestOption) (*M, error) {
+	return unmarshalBody[M](c.doAuthorizedRequest(
+		ctx,
+		http.MethodPost,
+		c.ApiUrl,
+		append(options, c.withMeshObjectPayload(payload))...,
+	))
 }
 
 // Put updates an existing meshObject by ID with the given payload.
@@ -116,8 +121,8 @@ func (c MeshObjectClient[M]) withMeshObjectPayload(payload any) RequestOption {
 }
 
 // Delete removes a meshObject by ID.
-func (c MeshObjectClient[M]) Delete(ctx context.Context, id string) (err error) {
-	_, err = c.doAuthorizedRequest(ctx, http.MethodDelete, c.ApiUrl.JoinPath(id), withAccept(c.meshObjectMimeType()))
+func (c MeshObjectClient[M]) Delete(ctx context.Context, id string, options ...RequestOption) (err error) {
+	_, err = c.doAuthorizedRequest(ctx, http.MethodDelete, c.ApiUrl.JoinPath(id), append(options, withAccept(c.meshObjectMimeType()))...)
 	return
 }
 
