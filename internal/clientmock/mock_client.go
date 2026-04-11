@@ -18,6 +18,7 @@ type Client struct {
 	BuildingBlockDefinition        MeshBuildingBlockDefinitionClient
 	BuildingBlockDefinitionVersion MeshBuildingBlockDefinitionVersionClient
 	BuildingBlockV2                MeshBuildingBlockV2Client
+	BuildingBlockV3                MeshBuildingBlockV3Client
 	Integration                    MeshIntegrationClient
 	LandingZone                    MeshLandingZoneClient
 	Location                       MeshLocationClient
@@ -42,6 +43,7 @@ func (c Client) AsClient() client.Client {
 		BuildingBlockDefinition:        c.BuildingBlockDefinition,
 		BuildingBlockDefinitionVersion: c.BuildingBlockDefinitionVersion,
 		BuildingBlockV2:                c.BuildingBlockV2,
+		BuildingBlockV3:                c.BuildingBlockV3,
 		Integration:                    c.Integration,
 		LandingZone:                    c.LandingZone,
 		Location:                       c.Location,
@@ -68,6 +70,7 @@ func NewMock() Client {
 		BuildingBlockDefinition:        MeshBuildingBlockDefinitionClient{make(Store[client.MeshBuildingBlockDefinition]), bbdVersionStore},
 		BuildingBlockDefinitionVersion: MeshBuildingBlockDefinitionVersionClient{bbdVersionStore},
 		BuildingBlockV2:                MeshBuildingBlockV2Client{make(Store[client.MeshBuildingBlockV2])},
+		BuildingBlockV3:                MeshBuildingBlockV3Client{make(Store[client.MeshBuildingBlockV3])},
 		Integration:                    MeshIntegrationClient{make(Store[client.MeshIntegration])},
 		LandingZone:                    MeshLandingZoneClient{make(Store[client.MeshLandingZone])},
 		Location:                       MeshLocationClient{make(Store[client.MeshLocation])},

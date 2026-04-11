@@ -10,6 +10,7 @@ BREAKING CHANGES:
 FEATURES:
 - New `meshstack_tenants` data source for listing tenants with optional workspace/project/platform filters.
 - New `meshstack_building_block_definitions` data source for listing Building Block Definitions.
+- New `meshstack_building_block_v3` preview resource with in-place input updates (no force-replace), run retrigger controls (`retrigger_run`, `content_hash`), `moved` block migration support from `meshstack_buildingblock`/`meshstack_building_block_v2`, optional `purge_on_delete`, and computed `latest_run` status.
 - Add `provider::meshstack::load_file`/`provider::meshstack::encode_file` functions for convenient Building Block definition `FILE` input.
   Improve related documentation.
 
