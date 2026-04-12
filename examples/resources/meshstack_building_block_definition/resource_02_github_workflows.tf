@@ -26,7 +26,7 @@ resource "meshstack_building_block_definition" "example_02_github_workflows" {
         repository      = "example/building-block"
         branch          = "main"
         apply_workflow  = "apply.yml"
-        integration_ref = { uuid = "550e8400-e29b-41d4-a716-446655440000" }
+        integration_ref = { uuid = one(data.meshstack_integrations.all.integrations).metadata.uuid }
         # Optional flags, default false
         async                 = true
         omit_run_object_input = true

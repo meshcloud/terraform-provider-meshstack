@@ -1,7 +1,7 @@
 resource "meshstack_tag_definition" "environment" {
   spec = {
     target_kind  = "meshBuildingBlockDefinition"
-    key          = "environment-${random_string.tag_suffix.result}"
+    key          = "environment-my-suffix"
     display_name = "Environment"
 
     value_type = {

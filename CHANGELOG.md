@@ -18,6 +18,9 @@ IMPROVEMENTS:
 - `meshstack_tenant_v4`: Add computed `ref` field to resource for use as `target_ref` in `meshstack_building_block_v2`.
 - `meshstack_platform`: Add computed `identifier` field (`<platform-name>.<location-name>`) to resource and data source
   suitable for direct use as `platform_identifier` in `meshstack_tenant_v4`.
+- Add broad provider test coverage with 26 new mock-based unit + acceptance test files across 15 resource/data source domains.
+- Refactor test infrastructure into `internal/provider/acctest/testconfig/` with fluent immutable config operations and shared `xknownvalue` helpers.
+- Add concise dependency-wiring guidance in examples and docs, including `one(...)` patterns and `version_latest`/`version_latest_release` usage.
 
 ## v0.20.3
 

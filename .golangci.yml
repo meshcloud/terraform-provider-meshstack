@@ -61,7 +61,8 @@ linters:
             - "!$test"
             - "!**/client/**/*.go"
             - "!**/internal/clientmock/*.go"
-            - "!**/internal/util/xknownvalue/*.go"
+            - "!**/internal/provider/acctest/**/*.go"
+            - "!**/examples/*.go"
           list-mode: strict
           deny:
             - pkg: log # as $gostd is allowed
@@ -85,7 +86,8 @@ linters:
           files:
             - "$test"
             - "**/internal/clientmock/**/*.go"
-            - "**/internal/util/xknownvalue/*.go"
+            - "**/internal/provider/acctest/**/*.go"
+            - "**/examples/*.go"
             - "!**/internal/types/**/*.go"
             - "!**/client/*_test.go"
             - "!**/client/**/*_test.go"
@@ -99,6 +101,8 @@ linters:
             - github.com/meshcloud/terraform-provider-meshstack # any packages are included in tests
             - github.com/hashicorp/terraform-plugin-testing
             - github.com/hashicorp/terraform-plugin-framework/diag
+            - github.com/hashicorp/hcl/v2 # hclwrite-based config manipulation in examples/
+            - github.com/zclconf/go-cty/cty # hclwrite value types
             - github.com/stretchr/testify
         types:
           files:

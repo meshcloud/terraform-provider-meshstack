@@ -16,61 +16,46 @@ Manage a workspace or tenant building block.
 ## Example Usage
 
 ```terraform
-# Workspace Building Block
 resource "meshstack_building_block_v2" "example_workspace" {
   spec = {
+    # Alternatively, use version_latest_release to target only released versions
     building_block_definition_version_ref = {
-      uuid = "00000000-0000-0000-0000-000000000000" # Replace with actual definition version UUID
+      uuid = "00000000-0000-0000-0000-000000000000"
     }
 
-    display_name = "my-building-block"
+    display_name = "my-workspace-building-block"
     target_ref = {
-      kind       = "meshWorkspace"
-      identifier = "my-workspace-identifier" # Replace with actual workspace identifier
+      kind = "meshWorkspace"
+      uuid = "00000000-0000-0000-0000-000000000000"
     }
 
     inputs = {
-      name = { value_string = "my-name" }
-      size = { value_int = 16 }
+      name        = { value_string = "my-name" }
+      size        = { value_int = 16 }
+      environment = { value_single_select = "dev" }
     }
   }
 }
+```
 
-# Tenant Building Block
-data "meshstack_project" "example" {
-  metadata = {
-    name               = "my-project-identifier"
-    owned_by_workspace = "my-workspace-identifier"
-  }
-}
-
-resource "meshstack_tenant_v4" "example" {
-  metadata = {
-    owned_by_workspace = data.meshstack_project.example.metadata.owned_by_workspace
-    owned_by_project   = data.meshstack_project.example.metadata.name
-  }
-
-  spec = {
-    platform_identifier     = "my-platform-identifier"
-    landing_zone_identifier = "platform-landing-zone-identifier"
-  }
-}
-
+```terraform
 resource "meshstack_building_block_v2" "example_tenant" {
   spec = {
+    # Alternatively, use version_latest_release to target only released versions
     building_block_definition_version_ref = {
-      uuid = "00000000-0000-0000-0000-000000000001" # Replace with actual definition version UUID
+      uuid = "00000000-0000-0000-0000-000000000000"
     }
 
     display_name = "my-tenant-building-block"
     target_ref = {
-      kind = "meshTenant"
-      uuid = meshstack_tenant_v4.example.metadata.uuid
+      kind       = "meshTenant"
+      identifier = "my-workspace.my-project.my-location.my-platform"
     }
 
     inputs = {
-      name = { value_string = "my-name" }
-      size = { value_int = 16 }
+      name        = { value_string = "my-name" }
+      size        = { value_int = 16 }
+      environment = { value_single_select = "dev" }
     }
   }
 }
@@ -97,9 +82,9 @@ resource "meshstack_building_block_v2" "example_tenant" {
 
 Required:
 
-- `building_block_definition_version_ref` (Attributes) References the building block definition this building block is based on. Can be set to the `version_latest` or `version_latest_release` output of a `meshstack_building_block_definition` resource. (see [below for nested schema](#nestedatt--spec--building_block_definition_version_ref))
+- `building_block_definition_version_ref` (Attributes) References the building block definition version this building block is based on. Use `version_latest` or `version_latest_release` from `meshstack_building_block_definition`, or `one(data.meshstack_building_block_definitions.<name>.building_block_definitions).version_latest`. (see [below for nested schema](#nestedatt--spec--building_block_definition_version_ref))
 - `display_name` (String) Display name for the building block as shown in meshPanel.
-- `target_ref` (Attributes) References the building block target. Depending on the building block definition this will be a workspace or a tenant (see [below for nested schema](#nestedatt--spec--target_ref))
+- `target_ref` (Attributes) References the building block target. Depending on the definition this must be a workspace or tenant ref. For example `data.meshstack_workspace.<name>.ref` or `one(data.meshstack_tenants.<name>.tenants).ref`. (see [below for nested schema](#nestedatt--spec--target_ref))
 
 Optional:
 

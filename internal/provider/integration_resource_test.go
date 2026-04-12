@@ -10,56 +10,29 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
-	"github.com/stretchr/testify/assert"
 
-	"github.com/meshcloud/terraform-provider-meshstack/examples"
-	"github.com/meshcloud/terraform-provider-meshstack/internal/clientmock"
+	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
+	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/xknownvalue"
 )
 
-func TestAccIntegrationResource(t *testing.T) {
-	runIntegrationTestCases(t)
-}
-
-func TestIntegrationResource(t *testing.T) {
-	runIntegrationTestCases(t, SetupMockClient(func(t *testing.T, testCase *resource.TestCase, mockClient clientmock.Client) {
-		t.Helper()
-		testCase.Steps[0].PostApplyFunc = func() {
-			assert.Len(t, mockClient.Integration.Store, 1)
-		}
-	}))
-}
-
-func runIntegrationTestCases(t *testing.T, modifiers ...ResourceTestCaseModifier) {
+// updateIntegrationDisplayName clones the config and replaces "Integration" with "Updated Integration"
+// in the integration resource's spec.display_name.
+func updateIntegrationDisplayName(t *testing.T, config testconfig.Config, originalName string) string {
 	t.Helper()
-	for exampleResource := range (examples.Resource{Name: "integration"}).All() {
-		exampleSuffix := strings.TrimPrefix(exampleResource.Suffix, "_")
-		t.Run(exampleSuffix, func(t *testing.T) {
-			t.Parallel()
-			var resourceAddress examples.Identifier
-			config := exampleResource.Config().SingleResourceAddress(&resourceAddress).OwnedByAdminWorkspace()
+	updatedName := strings.Replace(originalName, "Integration", "Updated Integration", 1)
+	return config.WithFirstBlock(t,
+		testconfig.Traverse(t, "spec", "display_name")(testconfig.SetString(updatedName))).String()
+}
 
-			type DisplayName struct {
-				Value        string
-				UpdatedValue string
-			}
+func TestAccIntegrationResource(t *testing.T) {
+	t.Parallel()
 
-			var displayNamesByExample = map[string]DisplayName{
-				"01_github": {
-					Value:        "GitHub Integration",
-					UpdatedValue: "GitHub Updated Integration",
-				},
-				"02_azure_devops": {
-					Value:        "Azure DevOps Integration",
-					UpdatedValue: "Azure DevOps Updated Integration",
-				},
-				"03_gitlab": {
-					Value:        "GitLab Integration",
-					UpdatedValue: "GitLab Updated Integration",
-				},
-			}
+	t.Run("01_github", func(t *testing.T) {
+		config, resourceAddress := testconfig.BuildIntegrationConfig(t, "_01_github")
+		var resourceUuid string
 
-			var resourceUuid string
-			testSteps := []resource.TestStep{
+		ApplyAndTest(t, resource.TestCase{
+			Steps: []resource.TestStep{
 				{
 					Config: config.String(),
 					ConfigPlanChecks: resource.ConfigPlanChecks{
@@ -69,21 +42,21 @@ func runIntegrationTestCases(t *testing.T, modifiers ...ResourceTestCaseModifier
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("metadata"), checkIntegrationMetadata()),
-						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("spec"), checkIntegrationSpec(exampleSuffix, displayNamesByExample[exampleSuffix].Value)),
+						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("spec"), checkIntegrationSpec("01_github", "GitHub Integration")),
 						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("status"), checkIntegrationStatus()),
-						KnownValueRef(resourceAddress, "meshIntegration", &resourceUuid),
+						xknownvalue.Ref(resourceAddress, "meshIntegration", &resourceUuid),
 					},
 				},
 				{
-					Config: config.ReplaceAll(` Integration"`, ` Updated Integration"`).String(),
+					Config: updateIntegrationDisplayName(t, config, "GitHub Integration"),
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectResourceAction(resourceAddress.String(), plancheck.ResourceActionUpdate),
 						},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("spec"), checkIntegrationSpec(exampleSuffix, displayNamesByExample[exampleSuffix].UpdatedValue)),
-						KnownValueRef(resourceAddress, "meshIntegration", &resourceUuid),
+						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("spec"), checkIntegrationSpec("01_github", "GitHub Updated Integration")),
+						xknownvalue.Ref(resourceAddress, "meshIntegration", &resourceUuid),
 					},
 				},
 				{
@@ -94,47 +67,130 @@ func runIntegrationTestCases(t *testing.T, modifiers ...ResourceTestCaseModifier
 					},
 					ResourceName: resourceAddress.String(),
 				},
-			}
+			},
+		})
+	})
 
-			if exampleSuffix == "02_azure_devops" {
-				// Step 4: Change a secret value and apply:
-				testSteps = append(testSteps,
-					resource.TestStep{
-						Config: config.
-							ReplaceAll(`secret_version = null`, `secret_version = "v1"`).
-							ReplaceAll(`secret_value   = "mock-pat-token-12345"`, `secret_value   = "updated-plaintext-secret"`).
-							String(),
-						ConfigPlanChecks: resource.ConfigPlanChecks{
-							PreApply: []plancheck.PlanCheck{
-								plancheck.ExpectResourceAction(resourceAddress.String(), plancheck.ResourceActionUpdate),
-							},
-						},
-						ConfigStateChecks: []statecheck.StateCheck{
-							statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("metadata"), checkIntegrationMetadata()),
-							statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("spec"), checkIntegrationSpec(exampleSuffix, displayNamesByExample[exampleSuffix].Value)),
-							statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("status"), checkIntegrationStatus()),
-							KnownValueRef(resourceAddress, "meshIntegration", &resourceUuid),
+	t.Run("02_azure_devops", func(t *testing.T) {
+		config, resourceAddress := testconfig.BuildIntegrationConfig(t, "_02_azure_devops")
+		var resourceUuid string
+
+		ApplyAndTest(t, resource.TestCase{
+			Steps: []resource.TestStep{
+				{
+					Config: config.String(),
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PreApply: []plancheck.PlanCheck{
+							plancheck.ExpectResourceAction(resourceAddress.String(), plancheck.ResourceActionCreate),
 						},
 					},
-				)
-			}
-
-			ResourceTestCaseModifiers(modifiers).ApplyAndTest(t, resource.TestCase{
-				Steps: testSteps,
-			})
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("metadata"), checkIntegrationMetadata()),
+						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("spec"), checkIntegrationSpec("02_azure_devops", "Azure DevOps Integration")),
+						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("status"), checkIntegrationStatus()),
+						xknownvalue.Ref(resourceAddress, "meshIntegration", &resourceUuid),
+					},
+				},
+				{
+					Config: updateIntegrationDisplayName(t, config, "Azure DevOps Integration"),
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PreApply: []plancheck.PlanCheck{
+							plancheck.ExpectResourceAction(resourceAddress.String(), plancheck.ResourceActionUpdate),
+						},
+					},
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("spec"), checkIntegrationSpec("02_azure_devops", "Azure DevOps Updated Integration")),
+						xknownvalue.Ref(resourceAddress, "meshIntegration", &resourceUuid),
+					},
+				},
+				{
+					ImportState:     true,
+					ImportStateKind: resource.ImportBlockWithID,
+					ImportStateIdFunc: func(state *terraform.State) (string, error) {
+						return resourceUuid, nil
+					},
+					ResourceName: resourceAddress.String(),
+				},
+				// Step 4: Change a secret value and apply
+				{
+					Config: func() string {
+						u := config.WithFirstBlock(t,
+							testconfig.Traverse(t, "spec", "config", "azuredevops", "personal_access_token")(
+								testconfig.Traverse(t, "secret_value")(testconfig.SetString("updated-plaintext-secret")),
+								testconfig.Traverse(t, "secret_version")(testconfig.SetRawExpr(`"v1"`)),
+							))
+						return u.String()
+					}(),
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PreApply: []plancheck.PlanCheck{
+							plancheck.ExpectResourceAction(resourceAddress.String(), plancheck.ResourceActionUpdate),
+						},
+					},
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("metadata"), checkIntegrationMetadata()),
+						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("spec"), checkIntegrationSpec("02_azure_devops", "Azure DevOps Integration")),
+						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("status"), checkIntegrationStatus()),
+						xknownvalue.Ref(resourceAddress, "meshIntegration", &resourceUuid),
+					},
+				},
+			},
 		})
-	}
+	})
+
+	t.Run("03_gitlab", func(t *testing.T) {
+		config, resourceAddress := testconfig.BuildIntegrationConfig(t, "_03_gitlab")
+		var resourceUuid string
+
+		ApplyAndTest(t, resource.TestCase{
+			Steps: []resource.TestStep{
+				{
+					Config: config.String(),
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PreApply: []plancheck.PlanCheck{
+							plancheck.ExpectResourceAction(resourceAddress.String(), plancheck.ResourceActionCreate),
+						},
+					},
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("metadata"), checkIntegrationMetadata()),
+						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("spec"), checkIntegrationSpec("03_gitlab", "GitLab Integration")),
+						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("status"), checkIntegrationStatus()),
+						xknownvalue.Ref(resourceAddress, "meshIntegration", &resourceUuid),
+					},
+				},
+				{
+					Config: updateIntegrationDisplayName(t, config, "GitLab Integration"),
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PreApply: []plancheck.PlanCheck{
+							plancheck.ExpectResourceAction(resourceAddress.String(), plancheck.ResourceActionUpdate),
+						},
+					},
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("spec"), checkIntegrationSpec("03_gitlab", "GitLab Updated Integration")),
+						xknownvalue.Ref(resourceAddress, "meshIntegration", &resourceUuid),
+					},
+				},
+				{
+					ImportState:     true,
+					ImportStateKind: resource.ImportBlockWithID,
+					ImportStateIdFunc: func(state *terraform.State) (string, error) {
+						return resourceUuid, nil
+					},
+					ResourceName: resourceAddress.String(),
+				},
+			},
+		})
+	})
 }
 
 func checkIntegrationMetadata() knownvalue.Check {
-	return knownvalue.MapExact(map[string]knownvalue.Check{
-		"uuid":               KnownValueNotEmptyString(),
-		"owned_by_workspace": knownvalue.StringExact("managed-customer"),
+	return xknownvalue.MapExact(map[string]knownvalue.Check{
+		"uuid":               xknownvalue.NotEmptyString(),
+		"owned_by_workspace": xknownvalue.NotEmptyString(),
 	})
 }
 
 func checkIntegrationSpec(exampleSuffix string, displayName string) knownvalue.Check {
-	return knownvalue.MapExact(map[string]knownvalue.Check{
+	return xknownvalue.MapExact(map[string]knownvalue.Check{
 		"display_name": knownvalue.StringExact(displayName),
 		"config":       checkIntegrationConfig(exampleSuffix),
 	})
@@ -143,17 +199,17 @@ func checkIntegrationSpec(exampleSuffix string, displayName string) knownvalue.C
 func checkIntegrationConfig(exampleSuffix string) knownvalue.Check {
 	switch exampleSuffix {
 	case "01_github":
-		return knownvalue.MapExact(map[string]knownvalue.Check{
-			"github": knownvalue.MapExact(map[string]knownvalue.Check{
+		return xknownvalue.MapExact(map[string]knownvalue.Check{
+			"github": xknownvalue.MapExact(map[string]knownvalue.Check{
 				"owner":    knownvalue.StringExact("my-org"),
 				"base_url": knownvalue.StringExact("https://github.com"),
 				"app_id":   knownvalue.StringExact("123456"),
-				"app_private_key": knownvalue.MapExact(map[string]knownvalue.Check{
+				"app_private_key": xknownvalue.MapExact(map[string]knownvalue.Check{
 					"secret_value":   knownvalue.Null(),
-					"secret_hash":    KnownValueNotEmptyString(),
-					"secret_version": KnownValueNotEmptyString(),
+					"secret_hash":    xknownvalue.NotEmptyString(),
+					"secret_version": xknownvalue.NotEmptyString(),
 				}),
-				"runner_ref": knownvalue.MapExact(map[string]knownvalue.Check{
+				"runner_ref": xknownvalue.MapExact(map[string]knownvalue.Check{
 					"uuid": knownvalue.StringExact("dc8c57a1-823f-4e96-8582-0275fa27dc7b"),
 					"kind": knownvalue.StringExact("meshBuildingBlockRunner"),
 				}),
@@ -162,17 +218,17 @@ func checkIntegrationConfig(exampleSuffix string) knownvalue.Check {
 			"gitlab":      knownvalue.Null(),
 		})
 	case "02_azure_devops":
-		return knownvalue.MapExact(map[string]knownvalue.Check{
+		return xknownvalue.MapExact(map[string]knownvalue.Check{
 			"github": knownvalue.Null(),
-			"azuredevops": knownvalue.MapExact(map[string]knownvalue.Check{
+			"azuredevops": xknownvalue.MapExact(map[string]knownvalue.Check{
 				"base_url":     knownvalue.StringExact("https://dev.azure.com"),
 				"organization": knownvalue.StringExact("my-organization"),
-				"personal_access_token": knownvalue.MapExact(map[string]knownvalue.Check{
+				"personal_access_token": xknownvalue.MapExact(map[string]knownvalue.Check{
 					"secret_value":   knownvalue.Null(),
-					"secret_hash":    KnownValueNotEmptyString(),
-					"secret_version": KnownValueNotEmptyString(),
+					"secret_hash":    xknownvalue.NotEmptyString(),
+					"secret_version": xknownvalue.NotEmptyString(),
 				}),
-				"runner_ref": knownvalue.MapExact(map[string]knownvalue.Check{
+				"runner_ref": xknownvalue.MapExact(map[string]knownvalue.Check{
 					"uuid": knownvalue.StringExact("05cfa85f-2818-4bdd-b193-620e0187d7de"),
 					"kind": knownvalue.StringExact("meshBuildingBlockRunner"),
 				}),
@@ -180,12 +236,12 @@ func checkIntegrationConfig(exampleSuffix string) knownvalue.Check {
 			"gitlab": knownvalue.Null(),
 		})
 	case "03_gitlab":
-		return knownvalue.MapExact(map[string]knownvalue.Check{
+		return xknownvalue.MapExact(map[string]knownvalue.Check{
 			"github":      knownvalue.Null(),
 			"azuredevops": knownvalue.Null(),
-			"gitlab": knownvalue.MapExact(map[string]knownvalue.Check{
+			"gitlab": xknownvalue.MapExact(map[string]knownvalue.Check{
 				"base_url": knownvalue.StringExact("https://gitlab.com"),
-				"runner_ref": knownvalue.MapExact(map[string]knownvalue.Check{
+				"runner_ref": xknownvalue.MapExact(map[string]knownvalue.Check{
 					"uuid": knownvalue.StringExact("f4f4402b-f54d-4ab9-93ae-c07e997041e9"),
 					"kind": knownvalue.StringExact("meshBuildingBlockRunner"),
 				}),
@@ -197,7 +253,7 @@ func checkIntegrationConfig(exampleSuffix string) knownvalue.Check {
 }
 
 func checkIntegrationStatus() knownvalue.Check {
-	return knownvalue.MapExact(map[string]knownvalue.Check{
+	return xknownvalue.MapExact(map[string]knownvalue.Check{
 		"is_built_in":                  knownvalue.Bool(false),
 		"workload_identity_federation": knownvalue.Null(),
 	})

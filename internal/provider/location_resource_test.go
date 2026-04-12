@@ -1,8 +1,6 @@
 package provider
 
 import (
-	_ "embed"
-	"fmt"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -11,36 +9,28 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
-	"github.com/stretchr/testify/assert"
 
-	"github.com/meshcloud/terraform-provider-meshstack/examples"
-	"github.com/meshcloud/terraform-provider-meshstack/internal/clientmock"
+	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
+	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/xknownvalue"
 )
 
 func TestAccLocation(t *testing.T) {
-	runLocationResourceTestCase(t)
-}
+	workspaceConfig, workspaceAddr := testconfig.BuildWorkspaceConfig(t)
 
-func TestLocation(t *testing.T) {
-	// Run acceptance tests as unit tests with mock
-	runLocationResourceTestCase(t, SetupMockClient(func(t *testing.T, testCase *resource.TestCase, mockClient clientmock.Client) {
-		t.Helper()
-		testCase.Steps[0].PostApplyFunc = func() {
-			assert.Len(t, mockClient.Location.Store, 1)
-		}
-	}))
-}
-
-func runLocationResourceTestCase(t *testing.T, modifiers ...ResourceTestCaseModifier) {
-	t.Helper()
-	var resourceAddress examples.Identifier
 	locationName := "my-location-" + acctest.RandString(32)
-	config := examples.Resource{Name: "location"}.Config().
-		SingleResourceAddress(&resourceAddress).
-		ReplaceAll(`name               = "my-location"`, fmt.Sprintf(`name = "%s"`, locationName)).
-		OwnedByAdminWorkspace()
+	locationConfig := testconfig.Resource{Name: "location"}.Config(t)
+	var resourceAddress testconfig.Traversal
+	locationConfig = locationConfig.WithFirstBlock(t, testconfig.OwnedByWorkspace(t, workspaceAddr))
+	locationConfig = locationConfig.WithFirstBlock(t,
+		testconfig.ExtractIdentifier(&resourceAddress),
+		testconfig.Traverse(t, "metadata", "name")(testconfig.SetString(locationName)))
 
-	testCase := resource.TestCase{
+	config := locationConfig.Join(workspaceConfig)
+
+	updateConfig := config.WithFirstBlock(t,
+		testconfig.Traverse(t, "spec", "display_name")(testconfig.SetString("My Updated Location")))
+
+	ApplyAndTest(t, resource.TestCase{
 		Steps: []resource.TestStep{
 			{
 				Config: config.String(),
@@ -57,7 +47,7 @@ func runLocationResourceTestCase(t *testing.T, modifiers ...ResourceTestCaseModi
 				},
 			},
 			{
-				Config: config.ReplaceAll(`"My Cloud Location"`, `"My Updated Location"`).String(),
+				Config: updateConfig.String(),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectResourceAction(resourceAddress.String(), plancheck.ResourceActionUpdate),
@@ -74,34 +64,32 @@ func runLocationResourceTestCase(t *testing.T, modifiers ...ResourceTestCaseModi
 				ResourceName:    resourceAddress.String(),
 			},
 		},
-	}
-
-	ResourceTestCaseModifiers(modifiers).ApplyAndTest(t, testCase)
+	})
 }
 
 func checkLocationMetadata(name string) knownvalue.Check {
-	return knownvalue.MapExact(map[string]knownvalue.Check{
+	return xknownvalue.MapExact(map[string]knownvalue.Check{
 		"name":               knownvalue.StringExact(name),
-		"owned_by_workspace": knownvalue.StringExact("managed-customer"),
-		"uuid":               KnownValueNotEmptyString(),
+		"owned_by_workspace": xknownvalue.NotEmptyString(),
+		"uuid":               xknownvalue.NotEmptyString(),
 	})
 }
 
 func checkLocationSpec(displayName string) knownvalue.Check {
-	return knownvalue.MapExact(map[string]knownvalue.Check{
+	return xknownvalue.MapExact(map[string]knownvalue.Check{
 		"display_name": knownvalue.StringExact(displayName),
 		"description":  knownvalue.StringExact("A location for managing cloud resources"),
 	})
 }
 
 func checkLocationStatus() knownvalue.Check {
-	return knownvalue.MapExact(map[string]knownvalue.Check{
+	return xknownvalue.MapExact(map[string]knownvalue.Check{
 		"is_public": knownvalue.Bool(false),
 	})
 }
 
 func checkLocationRef(name string) knownvalue.Check {
-	return knownvalue.MapExact(map[string]knownvalue.Check{
+	return xknownvalue.MapExact(map[string]knownvalue.Check{
 		"name": knownvalue.StringExact(name),
 	})
 }
