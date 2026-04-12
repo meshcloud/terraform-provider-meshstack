@@ -16,6 +16,8 @@ FEATURES:
 IMPROVEMENTS:
 - `meshstack_workspace`: Add computed `ref` field to resource and data source for use as cross-resource reference.
 - `meshstack_tenant_v4`: Add computed `ref` field to resource for use as `target_ref` in `meshstack_building_block_v2`.
+- `meshstack_platform`: Add computed `identifier` field (`<platform-name>.<location-name>`) to resource and data source
+  suitable for direct use as `platform_identifier` in `meshstack_tenant_v4`.
 
 ## v0.20.3
 

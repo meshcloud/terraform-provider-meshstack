@@ -2,9 +2,14 @@ package provider
 
 import (
 	_ "embed"
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/meshcloud/terraform-provider-meshstack/examples"
@@ -43,6 +48,15 @@ func runPlatformDataSourceTestCase(t *testing.T, modifiers ...ResourceTestCaseMo
 		Steps: []resource.TestStep{
 			{
 				Config: config.String(),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue("data.meshstack_platform.example", tfjsonpath.New("identifier"), knownvalue.StringFunc(func(value string) error {
+						parts := strings.SplitN(value, ".", 2)
+						if len(parts) != 2 || !strings.HasPrefix(parts[0], "my-platform-") || parts[1] == "" {
+							return fmt.Errorf("expected identifier format <platform>.<location>, got %q", value)
+						}
+						return nil
+					})),
+				},
 			},
 		},
 	}
