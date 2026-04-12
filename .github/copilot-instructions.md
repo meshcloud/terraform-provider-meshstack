@@ -61,6 +61,33 @@ Do **not** inline a custom disclaimer string.
 
 Identify if a resource or data source uses a preview API by checking if the HTTP client is constructed with an `apiVersion` that has a `-preview` suffix.
 
+### Adding Computed-Only Output Fields to Resources/Data Sources
+
+When a resource or data source needs a computed output field that is **derived from API response fields** (not stored in the client struct), use the **TF model struct embedding pattern** instead of modifying client types or calling `SetAttribute` after `generic.Set`.
+
+**Pattern:**
+1. Define a local model struct with the same `tfsdk:`-tagged fields as the client struct, plus the extra computed field(s):
+   ```go
+   type myResourceModel struct {
+       Metadata client.MeshFooMetadata `tfsdk:"metadata"`
+       Spec     client.MeshFooSpec     `tfsdk:"spec"`
+       MyOutput string                 `tfsdk:"my_output"` // extra computed field
+   }
+   ```
+2. Add a helper to populate it from the API DTO:
+   ```go
+   func myResourceModelFromDto(p *client.MeshFoo) myResourceModel {
+       return myResourceModel{
+           Metadata: p.Metadata,
+           Spec:     p.Spec,
+           MyOutput: p.Metadata.Name + "." + p.Spec.SomeName, // derived
+       }
+   }
+   ```
+3. Use the model struct for `generic.Set` (writing state) and `generic.Get` (reading plan/config). When passing to API calls, extract the embedded client fields explicitly: `client.MeshFoo{Metadata: model.Metadata, Spec: model.Spec}`.
+4. The same model struct can be shared between resource and data source if the TF schema shape is identical.
+5. **Do not** add `json:"-"` fields to client structs — keep client structs clean and API-aligned.
+
 ### Data Structure Rules
 - **Use pointers & `omitempty`** only for fields that are **actually nullable** in the backend API
 - **Non-nullable fields**: Use value types (`string`, `int64`, `bool`) without `omitempty`

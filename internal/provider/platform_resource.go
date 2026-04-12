@@ -109,6 +109,12 @@ func (r *platformResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				},
 			},
 
+			"identifier": schema.StringAttribute{
+				MarkdownDescription: "Full platform identifier (`<platform-name>.<location-name>`), suitable for use as `platform_identifier` in tenant resources.",
+				Computed:            true,
+				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+			},
+
 			"spec": schema.SingleNestedAttribute{
 				Required: true,
 				Attributes: map[string]schema.Attribute{
@@ -249,6 +255,20 @@ func meteringProcessingConfigSchema() schema.Attribute {
 	}
 }
 
+type platformModel struct {
+	Metadata   client.MeshPlatformMetadata `tfsdk:"metadata"`
+	Spec       client.MeshPlatformSpec     `tfsdk:"spec"`
+	Identifier string                      `tfsdk:"identifier"`
+}
+
+func platformModelFromDto(p *client.MeshPlatform) platformModel {
+	return platformModel{
+		Metadata:   p.Metadata,
+		Spec:       p.Spec,
+		Identifier: p.Metadata.Name + "." + p.Spec.LocationRef.Name,
+	}
+}
+
 func platformConverterOptions(ctx context.Context, config, plan, state generic.AttributeGetter) generic.ConverterOptions {
 	return secret.WithConverterSupport(ctx, config, plan, state).Append(
 		generic.WithSliceTypeAsSet(clientTypes.IsSet),
@@ -256,21 +276,17 @@ func platformConverterOptions(ctx context.Context, config, plan, state generic.A
 }
 
 func (r *platformResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	// Retrieve values from plan
 	converterOptions := platformConverterOptions(ctx, req.Config, req.Plan, nil)
-	createDto := generic.Get[client.MeshPlatform](ctx, req.Plan, &resp.Diagnostics, converterOptions.Append(generic.WithSetUnknownValueToZero())...)
+	model := generic.Get[platformModel](ctx, req.Plan, &resp.Diagnostics, converterOptions.Append(generic.WithSetUnknownValueToZero())...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	createdPlatform, err := r.meshPlatformClient.Create(ctx, createDto)
+	createdPlatform, err := r.meshPlatformClient.Create(ctx, client.MeshPlatform{Metadata: model.Metadata, Spec: model.Spec})
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error Creating Platform",
-			"Could not create platform, unexpected error: "+err.Error(),
-		)
+		resp.Diagnostics.AddError("Error Creating Platform", "Could not create platform, unexpected error: "+err.Error())
 		return
 	}
-	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, createdPlatform, converterOptions...)...)
+	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, platformModelFromDto(createdPlatform), converterOptions...)...)
 }
 
 func (r *platformResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -291,7 +307,7 @@ func (r *platformResource) Read(ctx context.Context, req resource.ReadRequest, r
 		resp.State.RemoveResource(ctx)
 		return
 	}
-	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, readPlatform, platformConverterOptions(ctx, nil, nil, req.State)...)...)
+	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, platformModelFromDto(readPlatform), platformConverterOptions(ctx, nil, nil, req.State)...)...)
 }
 
 func (r *platformResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
@@ -307,17 +323,14 @@ func (r *platformResource) ModifyPlan(ctx context.Context, req resource.ModifyPl
 func (r *platformResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	converterOptions := platformConverterOptions(ctx, req.Config, req.Plan, req.State)
 
-	platform := generic.Get[client.MeshPlatform](ctx, req.Plan, &resp.Diagnostics, converterOptions...)
+	model := generic.Get[platformModel](ctx, req.Plan, &resp.Diagnostics, converterOptions...)
 
-	updatedPlatform, err := r.meshPlatformClient.Update(ctx, *platform.Metadata.Uuid, platform)
+	updatedPlatform, err := r.meshPlatformClient.Update(ctx, *model.Metadata.Uuid, client.MeshPlatform{Metadata: model.Metadata, Spec: model.Spec})
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error Updating Platform",
-			"Could not update platform, unexpected error: "+err.Error(),
-		)
+		resp.Diagnostics.AddError("Error Updating Platform", "Could not update platform, unexpected error: "+err.Error())
 		return
 	}
-	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, updatedPlatform, converterOptions...)...)
+	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, platformModelFromDto(updatedPlatform), converterOptions...)...)
 }
 
 func (r *platformResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {

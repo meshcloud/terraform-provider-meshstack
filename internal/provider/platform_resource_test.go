@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -76,6 +77,13 @@ func runPlatformTestCases(t *testing.T, modifiers ...ResourceTestCaseModifier) {
 						[]statecheck.StateCheck{
 							statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("metadata"), checkPlatformMetadata(&resourceUuid)),
 							statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("Example Platform")),
+							statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("identifier"), knownvalue.StringFunc(func(value string) error {
+								parts := strings.SplitN(value, ".", 2)
+								if len(parts) != 2 || !strings.HasPrefix(parts[0], "my-platform-") || parts[1] == "" {
+									return fmt.Errorf("expected identifier format <platform>.<location>, got %q", value)
+								}
+								return nil
+							})),
 						},
 						checkPlatformConfigState(resourceAddress.String(), exampleSuffix)...,
 					),
