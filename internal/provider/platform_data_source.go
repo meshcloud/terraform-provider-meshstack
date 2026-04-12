@@ -66,6 +66,11 @@ func (d *platformDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 				},
 			},
 
+			"identifier": schema.StringAttribute{
+				MarkdownDescription: "Full platform identifier (`<platform-name>.<location-name>`), suitable for use as `platform_identifier` in tenant resources.",
+				Computed:            true,
+			},
+
 			"spec": schema.SingleNestedAttribute{
 				Computed: true,
 				Attributes: map[string]schema.Attribute{
@@ -1314,7 +1319,7 @@ func (d *platformDataSource) Read(ctx context.Context, req datasource.ReadReques
 		return
 	}
 
-	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, platform,
+	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, platformModelFromDto(platform),
 		secret.WithDatasourceConverter(),
 		generic.WithSliceTypeAsSet(clientTypes.IsSet),
 	)...)

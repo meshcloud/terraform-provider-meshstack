@@ -732,6 +732,10 @@ resource "meshstack_platform" "example_custom" {
 - `metadata` (Attributes) (see [below for nested schema](#nestedatt--metadata))
 - `spec` (Attributes) (see [below for nested schema](#nestedatt--spec))
 
+### Read-Only
+
+- `identifier` (String) Full platform identifier (`<platform-name>.<location-name>`), suitable for use as `platform_identifier` in tenant resources.
+
 <a id="nestedatt--metadata"></a>
 ### Nested Schema for `metadata`
 
