@@ -117,7 +117,7 @@ resource "meshstack_building_block_definition" "example_01_terraform" {
       }
     }
 
-    # Optional: Dependencies on other building blocks, prefer using using the .ref output attribute instead of hardcoding UUIDs
-    dependency_refs = [{ uuid = "d161e3bf-c3e7-45f2-aa21-28de14593a74" }]
+    # Optional: Dependencies on other building blocks, prefer using .ref output attributes.
+    dependency_refs = [one(data.meshstack_building_block_definitions.example.building_block_definitions).ref]
   }
 }

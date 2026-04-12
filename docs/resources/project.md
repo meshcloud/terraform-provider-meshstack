@@ -15,11 +15,11 @@ Single project by name and workspace.
 ```terraform
 resource "meshstack_project" "example" {
   metadata = {
-    name               = "my-project-identifier"
-    owned_by_workspace = "my-workspace-identifier"
+    name               = "my-project"
+    owned_by_workspace = "my-workspace"
   }
   spec = {
-    payment_method_identifier = "my-payment-method-identifier"
+    payment_method_identifier = "my-payment-method"
     display_name              = "My Project's Display Name"
     tags = {
       "tag-key" = [
@@ -74,7 +74,7 @@ Use the [`import` block](https://developer.hashicorp.com/terraform/language/impo
 ```terraform
 import {
   # full project identifier <workspace-identifier>.<project-identifier>
-  id = "my-workspace-identifier.my-project-identifier"
+  id = "my-workspace.my-project"
   to = meshstack_project.example
 }
 ```

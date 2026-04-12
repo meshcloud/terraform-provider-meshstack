@@ -16,7 +16,7 @@ Represents a meshStack landing zone.
 resource "meshstack_landingzone" "example" {
   metadata = {
     name               = "my-landing-zone-identifier"
-    owned_by_workspace = "my-workspace-identifier"
+    owned_by_workspace = "my-workspace"
     tags = {
       "confidentiality" = ["internal"],
       "environment"     = ["dev", "qa", "test"],
@@ -52,17 +52,19 @@ resource "meshstack_landingzone" "example" {
     }
   }
 }
+```
 
-resource "meshstack_landingzone" "custom_example" {
+```terraform
+resource "meshstack_landingzone" "example" {
   metadata = {
-    name               = "new-landing-zone-custom-1"
-    owned_by_workspace = "managed-customer"
+    name               = "my-landing-zone-custom"
+    owned_by_workspace = "my-workspace"
     tags               = {}
   }
 
   spec = {
-    display_name                  = "New Landing Zone custom"
-    description                   = "A new custom landing zone for testing"
+    display_name                  = "My Custom Landing Zone"
+    description                   = "A custom landing zone"
     automate_deletion_approval    = false
     automate_deletion_replication = false
     info_link                     = "https://example.com"

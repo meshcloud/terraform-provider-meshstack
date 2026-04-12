@@ -1,10 +1,8 @@
 resource "meshstack_workspace" "example" {
   metadata = {
-    name = "my-workspace-identifier"
+    name = "my-workspace"
     tags = {
-      "cost-center" = [
-        "12345"
-      ]
+      "cost-center" = ["12345"]
     }
   }
   spec = {

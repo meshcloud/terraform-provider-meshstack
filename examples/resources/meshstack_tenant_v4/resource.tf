@@ -1,18 +1,13 @@
-data "meshstack_project" "example" {
-  metadata = {
-    name               = "my-project-identifier"
-    owned_by_workspace = "my-workspace-identifier"
-  }
-}
-
 resource "meshstack_tenant_v4" "example" {
   metadata = {
-    owned_by_workspace = data.meshstack_project.example.metadata.owned_by_workspace
-    owned_by_project   = data.meshstack_project.example.metadata.name
+    owned_by_workspace = "my-workspace"
+    owned_by_project   = "my-project"
   }
 
   spec = {
-    platform_identifier     = "my-platform-identifier"
-    landing_zone_identifier = "platform-landing-zone-identifier"
+    platform_identifier     = "my-location.my-platform"
+    landing_zone_identifier = "my-landing-zone"
   }
+
+  # wait_for_completion = true
 }

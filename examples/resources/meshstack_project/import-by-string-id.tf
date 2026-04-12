@@ -1,5 +1,5 @@
 import {
   # full project identifier <workspace-identifier>.<project-identifier>
-  id = "my-workspace-identifier.my-project-identifier"
+  id = "my-workspace.my-project"
   to = meshstack_project.example
 }

@@ -14,40 +14,76 @@ import (
 )
 
 type Client struct {
+	BuildingBlock                  MeshBuildingBlockClient
 	BuildingBlockDefinition        MeshBuildingBlockDefinitionClient
 	BuildingBlockDefinitionVersion MeshBuildingBlockDefinitionVersionClient
-	TagDefinition                  MeshTagDefinitionClient
+	BuildingBlockV2                MeshBuildingBlockV2Client
+	Integration                    MeshIntegrationClient
+	LandingZone                    MeshLandingZoneClient
+	Location                       MeshLocationClient
+	PaymentMethod                  MeshPaymentMethodClient
 	Platform                       MeshPlatformClient
 	PlatformType                   MeshPlatformTypeClient
-	Location                       MeshLocationClient
-	Integration                    MeshIntegrationClient
+	Project                        MeshProjectClient
+	ProjectGroupBinding            MeshProjectGroupBindingClient
+	ProjectUserBinding             MeshProjectUserBindingClient
 	ServiceInstance                MeshServiceInstanceClient
+	TagDefinition                  MeshTagDefinitionClient
+	Tenant                         MeshTenantClient
+	TenantV4                       MeshTenantV4Client
+	Workspace                      MeshWorkspaceClient
+	WorkspaceGroupBinding          MeshWorkspaceGroupBindingClient
+	WorkspaceUserBinding           MeshWorkspaceUserBindingClient
 }
 
 func (c Client) AsClient() client.Client {
 	return client.Client{
+		BuildingBlock:                  c.BuildingBlock,
 		BuildingBlockDefinition:        c.BuildingBlockDefinition,
 		BuildingBlockDefinitionVersion: c.BuildingBlockDefinitionVersion,
-		TagDefinition:                  c.TagDefinition,
+		BuildingBlockV2:                c.BuildingBlockV2,
+		Integration:                    c.Integration,
+		LandingZone:                    c.LandingZone,
+		Location:                       c.Location,
+		PaymentMethod:                  c.PaymentMethod,
 		Platform:                       c.Platform,
 		PlatformType:                   c.PlatformType,
-		Location:                       c.Location,
-		Integration:                    c.Integration,
+		Project:                        c.Project,
+		ProjectGroupBinding:            c.ProjectGroupBinding,
+		ProjectUserBinding:             c.ProjectUserBinding,
 		ServiceInstance:                c.ServiceInstance,
+		TagDefinition:                  c.TagDefinition,
+		Tenant:                         c.Tenant,
+		TenantV4:                       c.TenantV4,
+		Workspace:                      c.Workspace,
+		WorkspaceGroupBinding:          c.WorkspaceGroupBinding,
+		WorkspaceUserBinding:           c.WorkspaceUserBinding,
 	}
 }
 
 func NewMock() Client {
 	bbdVersionStore := make(Store[client.MeshBuildingBlockDefinitionVersion])
 	return Client{
+		BuildingBlock:                  MeshBuildingBlockClient{make(Store[client.MeshBuildingBlock])},
 		BuildingBlockDefinition:        MeshBuildingBlockDefinitionClient{make(Store[client.MeshBuildingBlockDefinition]), bbdVersionStore},
 		BuildingBlockDefinitionVersion: MeshBuildingBlockDefinitionVersionClient{bbdVersionStore},
-		TagDefinition:                  MeshTagDefinitionClient{make(Store[client.MeshTagDefinition])},
+		BuildingBlockV2:                MeshBuildingBlockV2Client{make(Store[client.MeshBuildingBlockV2])},
+		Integration:                    MeshIntegrationClient{make(Store[client.MeshIntegration])},
+		LandingZone:                    MeshLandingZoneClient{make(Store[client.MeshLandingZone])},
+		Location:                       MeshLocationClient{make(Store[client.MeshLocation])},
+		PaymentMethod:                  MeshPaymentMethodClient{make(Store[client.MeshPaymentMethod])},
 		Platform:                       MeshPlatformClient{make(Store[client.MeshPlatform])},
 		PlatformType:                   MeshPlatformTypeClient{make(Store[client.MeshPlatformType])},
-		Location:                       MeshLocationClient{make(Store[client.MeshLocation])},
-		Integration:                    MeshIntegrationClient{make(Store[client.MeshIntegration])},
+		Project:                        MeshProjectClient{make(Store[client.MeshProject])},
+		ProjectGroupBinding:            MeshProjectGroupBindingClient{make(Store[client.MeshProjectGroupBinding])},
+		ProjectUserBinding:             MeshProjectUserBindingClient{make(Store[client.MeshProjectUserBinding])},
 		ServiceInstance:                MeshServiceInstanceClient{make(Store[client.MeshServiceInstance])},
+		TagDefinition:                  MeshTagDefinitionClient{make(Store[client.MeshTagDefinition])},
+		Tenant:                         MeshTenantClient{make(Store[client.MeshTenant])},
+		TenantV4:                       MeshTenantV4Client{make(Store[client.MeshTenantV4])},
+		Workspace:                      MeshWorkspaceClient{make(Store[client.MeshWorkspace])},
+		WorkspaceGroupBinding:          MeshWorkspaceGroupBindingClient{make(Store[client.MeshWorkspaceGroupBinding])},
+		WorkspaceUserBinding:           MeshWorkspaceUserBindingClient{make(Store[client.MeshWorkspaceUserBinding])},
 	}
 }
 

@@ -10,8 +10,8 @@ import (
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
 	clientTypes "github.com/meshcloud/terraform-provider-meshstack/client/types"
-	"github.com/meshcloud/terraform-provider-meshstack/examples"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/clientmock"
+	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
 )
 
 // TestAccServiceInstanceDataSource tests the service instance data source.
@@ -42,8 +42,8 @@ func TestServiceInstanceDataSource(t *testing.T) {
 			},
 		}
 
-		config := examples.DataSource{Name: "service_instance"}.Config().
-			ReplaceAll(`instance_id = "my-service-instance-id"`, `instance_id = "`+instanceId+`"`)
+		config := testconfig.DataSource{Name: "service_instance"}.Config(t).WithFirstBlock(t,
+			testconfig.Traverse(t, "metadata", "instance_id")(testconfig.SetString(instanceId)))
 
 		resource.UnitTest(t, resource.TestCase{
 			ProtoV6ProviderFactories: ProviderFactoriesForTest(func(provider *MeshStackProvider) {
@@ -91,8 +91,8 @@ func TestServiceInstanceDataSource(t *testing.T) {
 			},
 		}
 
-		config := examples.DataSource{Name: "service_instance"}.Config().
-			ReplaceAll(`instance_id = "my-service-instance-id"`, `instance_id = "`+instanceId+`"`)
+		config := testconfig.DataSource{Name: "service_instance"}.Config(t).WithFirstBlock(t,
+			testconfig.Traverse(t, "metadata", "instance_id")(testconfig.SetString(instanceId)))
 
 		resource.UnitTest(t, resource.TestCase{
 			ProtoV6ProviderFactories: ProviderFactoriesForTest(func(provider *MeshStackProvider) {

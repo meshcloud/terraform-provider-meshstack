@@ -28,7 +28,7 @@ resource "meshstack_building_block_definition" "example_05_gitlab_pipeline" {
           secret_value   = "glptt-..."
           secret_version = null
         }
-        integration_ref = { uuid = "550e8400-e29b-41d4-a716-446655440000" }
+        integration_ref = { uuid = "00000000-0000-0000-0000-000000000000" }
       }
     }
 

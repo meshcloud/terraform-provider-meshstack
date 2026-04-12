@@ -3,31 +3,31 @@ package provider
 import (
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"github.com/stretchr/testify/assert"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 
-	"github.com/meshcloud/terraform-provider-meshstack/examples"
-	"github.com/meshcloud/terraform-provider-meshstack/internal/clientmock"
+	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
+	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/xknownvalue"
 )
 
-func TestTagDefinitionResource(t *testing.T) {
-	// Run acceptance tests as unit tests with mock
-	runTagDefinitionResourceTestCase(t, SetupMockClient(func(t *testing.T, testCase *resource.TestCase, mockClient clientmock.Client) {
-		t.Helper()
-		testCase.Steps[0].PostApplyFunc = func() {
-			assert.Equal(t, []string{"meshProject.example-key"}, mockClient.TagDefinition.Store.SortedKeys())
-		}
-	}))
-}
+func TestAccTagDefinitionResource(t *testing.T) {
+	suffix := acctest.RandString(8)
 
-func runTagDefinitionResourceTestCase(t *testing.T, modifiers ...ResourceTestCaseModifier) {
-	t.Helper()
-	testCase := resource.TestCase{
+	config := testconfig.Resource{Name: "tag_definition"}.Config(t).WithFirstBlock(t,
+		testconfig.Traverse(t, "spec", "key")(testconfig.SetString("test-key-"+suffix)),
+		testconfig.Traverse(t, "spec", "display_name")(testconfig.SetString("Example "+suffix)),
+	)
+
+	ApplyAndTest(t, resource.TestCase{
 		Steps: []resource.TestStep{
 			{
-				Config: examples.Resource{Name: "tag_definition"}.Config().String(),
+				Config: config.String(),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue("meshstack_tag_definition.example", tfjsonpath.New("spec").AtMapKey("display_name"), xknownvalue.KnownStringWithPrefix("Example")),
+				},
 			},
 		},
-	}
-	ResourceTestCaseModifiers(modifiers).ApplyAndTest(t, testCase)
+	})
 }

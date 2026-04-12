@@ -6,17 +6,14 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 
-	"github.com/meshcloud/terraform-provider-meshstack/examples"
+	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
 )
 
 func TestAccIntegrationsDataSource(t *testing.T) {
-	// this very minimal test is already useful as it runs a request against the API to receive integrations
-	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: ProviderFactoriesForTest(),
-		PreCheck:                 func() { DefaultTestPreCheck(t) },
+	ApplyAndTest(t, resource.TestCase{
 		Steps: []resource.TestStep{
 			{
-				Config: examples.DataSource{Name: "integrations"}.Config().String(),
+				Config: testconfig.DataSource{Name: "integrations"}.Config(t).String(),
 			},
 		},
 	})

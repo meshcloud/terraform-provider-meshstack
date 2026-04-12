@@ -11,6 +11,31 @@ The meshStack terraform provider is an open-source tool, licensed under the MPL-
 
 **Note:** This provider version requires meshStack version 2026.10.0 or higher. The provider automatically validates version compatibility during initialization.
 
+## Dependency wiring patterns
+
+Many meshStack resources depend on other meshStack objects. Prefer reusable references from data sources and computed outputs:
+
+- Prefer plural data sources with `one(...)` when your filter selects exactly one match.
+- Use singular data sources mainly for existence checks where `metadata.uuid` is enough.
+- Reuse computed outputs such as `ref`, `identifier`, `version_latest`, and `version_latest_release` to avoid hardcoded identifiers.
+
+Example dependency graphs:
+
+```text
+BBD -> BB
+meshstack_building_block_definition
+  └─ version_latest / version_latest_release
+     └─ meshstack_building_block_v2.spec.building_block_definition_version_ref
+
+Tenant BB dependency chain
+meshstack_workspace
+  └─ meshstack_location
+     └─ meshstack_platform (identifier)
+        └─ meshstack_landingzone
+           └─ meshstack_tenant_v4
+              └─ meshstack_building_block_v2 (target_ref)
+```
+
 ## Example Usage
 
 ```terraform
