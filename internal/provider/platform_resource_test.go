@@ -92,7 +92,7 @@ func runPlatformTestCases(t *testing.T, modifiers ...ResourceTestCaseModifier) {
 			// Only test update with Azure example to keep tests fast
 			if exampleSuffix == "01_azure" {
 				testSteps = append(testSteps, resource.TestStep{
-					Config: config.ReplaceAll(`display_name      = "Example Platform"`, `display_name      = "Example Platform Updated"`).String(),
+					Config: config.ReplaceAll(`display_name       = "Example Platform"`, `display_name       = "Example Platform Updated"`).String(),
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectResourceAction(resourceAddress.String(), plancheck.ResourceActionUpdate),
@@ -206,7 +206,7 @@ func checkPlatformConfigState(resourceAddress, exampleSuffix string) []statechec
 		configCheck = knownvalue.NotNull()
 	}
 
-	return []statecheck.StateCheck{
+	checks := []statecheck.StateCheck{
 		statecheck.ExpectKnownValue(
 			resourceAddress,
 			tfjsonpath.New("spec").AtMapKey("config").AtMapKey(platformType),
@@ -214,6 +214,16 @@ func checkPlatformConfigState(resourceAddress, exampleSuffix string) []statechec
 		),
 		checkPlatformQuotas(resourceAddress, exampleSuffix),
 	}
+
+	if exampleSuffix == "01_azure" {
+		checks = append(checks, statecheck.ExpectKnownValue(
+			resourceAddress,
+			tfjsonpath.New("spec").AtMapKey("access_information"),
+			knownvalue.StringExact("Login via [Azure Portal](https://portal.azure.com) using your corporate credentials."),
+		))
+	}
+
+	return checks
 }
 
 func checkPlatformQuotas(resourceAddress, exampleSuffix string) statecheck.StateCheck {

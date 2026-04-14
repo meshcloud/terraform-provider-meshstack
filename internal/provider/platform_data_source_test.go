@@ -56,6 +56,7 @@ func runPlatformDataSourceTestCase(t *testing.T, modifiers ...ResourceTestCaseMo
 						}
 						return nil
 					})),
+					statecheck.ExpectKnownValue("data.meshstack_platform.example", tfjsonpath.New("spec").AtMapKey("access_information"), knownvalue.StringExact("Login via [Azure Portal](https://portal.azure.com) using your corporate credentials.")),
 				},
 			},
 		},

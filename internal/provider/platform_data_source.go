@@ -94,6 +94,10 @@ func (d *platformDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 						MarkdownDescription: "URL for platform documentation.",
 						Computed:            true,
 					},
+					"access_information": schema.StringAttribute{
+						MarkdownDescription: "Free-text access information shown to users when accessing tenants on this platform. Supports markdown formatting.",
+						Computed:            true,
+					},
 					"location_ref": schema.SingleNestedAttribute{
 						MarkdownDescription: "Reference to the location where this platform is situated.",
 						Computed:            true,
