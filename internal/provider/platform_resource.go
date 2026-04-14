@@ -138,6 +138,10 @@ func (r *platformResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						MarkdownDescription: "URL for platform documentation.",
 						Optional:            true,
 					},
+					"access_information": schema.StringAttribute{
+						MarkdownDescription: "Free-text access information shown to users when accessing tenants on this platform. Supports markdown formatting.",
+						Optional:            true,
+					},
 					"location_ref": schema.SingleNestedAttribute{
 						MarkdownDescription: "Reference to the location where this platform is situated.",
 						Required:            true,

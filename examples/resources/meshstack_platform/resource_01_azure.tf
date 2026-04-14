@@ -5,10 +5,11 @@ resource "meshstack_platform" "example_azure" {
   }
 
   spec = {
-    display_name      = "Example Platform"
-    description       = "Azure is the Public Cloud Service provided by Microsoft."
-    endpoint          = "https://azure.microsoft.com"
-    documentation_url = "https://azure.microsoft.com"
+    display_name       = "Example Platform"
+    description        = "Azure is the Public Cloud Service provided by Microsoft."
+    endpoint           = "https://azure.microsoft.com"
+    documentation_url  = "https://azure.microsoft.com"
+    access_information = "Login via [Azure Portal](https://portal.azure.com) using your corporate credentials."
 
     location_ref = { name = "meshcloud-azure-dev" }
 

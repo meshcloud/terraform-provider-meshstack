@@ -50,6 +50,7 @@ Read-Only:
 
 Read-Only:
 
+- `access_information` (String) Free-text access information shown to users when accessing tenants on this platform. Supports markdown formatting.
 - `availability` (Attributes) Availability configuration for the meshPlatform. (see [below for nested schema](#nestedatt--spec--availability))
 - `config` (Attributes) Platform-specific configuration options. (see [below for nested schema](#nestedatt--spec--config))
 - `contributing_workspaces` (Set of String) A list of workspace identifiers that contribute to this meshPlatform.

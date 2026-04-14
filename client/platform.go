@@ -24,6 +24,7 @@ type MeshPlatformSpec struct {
 	Endpoint               string                     `json:"endpoint" tfsdk:"endpoint"`
 	SupportUrl             *string                    `json:"supportUrl,omitempty" tfsdk:"support_url"`
 	DocumentationUrl       *string                    `json:"documentationUrl,omitempty" tfsdk:"documentation_url"`
+	AccessInformation      *string                    `json:"accessInformation,omitempty" tfsdk:"access_information"`
 	LocationRef            LocationRef                `json:"locationRef" tfsdk:"location_ref"`
 	ContributingWorkspaces types.Set[string]          `json:"contributingWorkspaces" tfsdk:"contributing_workspaces"`
 	Availability           PlatformAvailability       `json:"availability" tfsdk:"availability"`

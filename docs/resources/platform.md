@@ -26,10 +26,11 @@ resource "meshstack_platform" "example_azure" {
   }
 
   spec = {
-    display_name      = "Example Platform"
-    description       = "Azure is the Public Cloud Service provided by Microsoft."
-    endpoint          = "https://azure.microsoft.com"
-    documentation_url = "https://azure.microsoft.com"
+    display_name       = "Example Platform"
+    description        = "Azure is the Public Cloud Service provided by Microsoft."
+    endpoint           = "https://azure.microsoft.com"
+    documentation_url  = "https://azure.microsoft.com"
+    access_information = "Login via [Azure Portal](https://portal.azure.com) using your corporate credentials."
 
     location_ref = { name = "meshcloud-azure-dev" }
 
@@ -763,6 +764,7 @@ Required:
 
 Optional:
 
+- `access_information` (String) Free-text access information shown to users when accessing tenants on this platform. Supports markdown formatting.
 - `contributing_workspaces` (Set of String) A list of workspace identifiers that may contribute to this meshPlatform.
 - `documentation_url` (String) URL for platform documentation.
 - `quota_definitions` (Set of Object) List of quota definitions for the platform. (see [below for nested schema](#nestedatt--spec--quota_definitions))
