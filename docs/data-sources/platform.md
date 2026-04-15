@@ -30,6 +30,7 @@ data "meshstack_platform" "example" {
 ### Read-Only
 
 - `identifier` (String) Full platform identifier (`<platform-name>.<location-name>`), suitable for use as `platform_identifier` in tenant resources.
+- `ref` (Attributes) Reference to this platform, can be used as `platform_ref` in landing zone resources. (see [below for nested schema](#nestedatt--ref))
 - `spec` (Attributes) (see [below for nested schema](#nestedatt--spec))
 
 <a id="nestedatt--metadata"></a>
@@ -43,6 +44,15 @@ Read-Only:
 
 - `name` (String) Platform identifier.
 - `owned_by_workspace` (String) The identifier of the workspace that owns this meshPlatform.
+
+
+<a id="nestedatt--ref"></a>
+### Nested Schema for `ref`
+
+Read-Only:
+
+- `kind` (String) The kind of the object. Always `meshPlatform`.
+- `uuid` (String) UUID of the platform.
 
 
 <a id="nestedatt--spec"></a>

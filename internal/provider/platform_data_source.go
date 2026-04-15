@@ -71,6 +71,21 @@ func (d *platformDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 				Computed:            true,
 			},
 
+			"ref": schema.SingleNestedAttribute{
+				MarkdownDescription: "Reference to this platform, can be used as `platform_ref` in landing zone resources.",
+				Computed:            true,
+				Attributes: map[string]schema.Attribute{
+					"kind": schema.StringAttribute{
+						MarkdownDescription: "The kind of the object. Always `meshPlatform`.",
+						Computed:            true,
+					},
+					"uuid": schema.StringAttribute{
+						MarkdownDescription: "UUID of the platform.",
+						Computed:            true,
+					},
+				},
+			},
+
 			"spec": schema.SingleNestedAttribute{
 				Computed: true,
 				Attributes: map[string]schema.Attribute{
