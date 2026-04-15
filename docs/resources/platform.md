@@ -736,6 +736,7 @@ resource "meshstack_platform" "example_custom" {
 ### Read-Only
 
 - `identifier` (String) Full platform identifier (`<platform-name>.<location-name>`), suitable for use as `platform_identifier` in tenant resources.
+- `ref` (Attributes) Reference to this platform, can be used as `platform_ref` in landing zone resources. (see [below for nested schema](#nestedatt--ref))
 
 <a id="nestedatt--metadata"></a>
 ### Nested Schema for `metadata`
@@ -2103,6 +2104,16 @@ Required:
 - `min_value` (Number)
 - `quota_key` (String)
 - `unit` (String)
+
+
+
+<a id="nestedatt--ref"></a>
+### Nested Schema for `ref`
+
+Read-Only:
+
+- `kind` (String) The kind of the object. Always `meshPlatform`.
+- `uuid` (String) UUID of the platform.
 
 ## Import
 

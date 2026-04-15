@@ -115,6 +115,23 @@ func (r *platformResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 
+			"ref": schema.SingleNestedAttribute{
+				MarkdownDescription: "Reference to this platform, can be used as `platform_ref` in landing zone resources.",
+				Computed:            true,
+				Attributes: map[string]schema.Attribute{
+					"kind": schema.StringAttribute{
+						MarkdownDescription: "The kind of the object. Always `meshPlatform`.",
+						Computed:            true,
+						PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+					},
+					"uuid": schema.StringAttribute{
+						MarkdownDescription: "UUID of the platform.",
+						Computed:            true,
+						PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+					},
+				},
+			},
+
 			"spec": schema.SingleNestedAttribute{
 				Required: true,
 				Attributes: map[string]schema.Attribute{
@@ -263,13 +280,27 @@ type platformModel struct {
 	Metadata   client.MeshPlatformMetadata `tfsdk:"metadata"`
 	Spec       client.MeshPlatformSpec     `tfsdk:"spec"`
 	Identifier string                      `tfsdk:"identifier"`
+	Ref        platformRef                 `tfsdk:"ref"`
+}
+
+type platformRef struct {
+	Kind string `tfsdk:"kind"`
+	Uuid string `tfsdk:"uuid"`
 }
 
 func platformModelFromDto(p *client.MeshPlatform) platformModel {
+	uuid := ""
+	if p.Metadata.Uuid != nil {
+		uuid = *p.Metadata.Uuid
+	}
 	return platformModel{
 		Metadata:   p.Metadata,
 		Spec:       p.Spec,
 		Identifier: p.Metadata.Name + "." + p.Spec.LocationRef.Name,
+		Ref: platformRef{
+			Kind: client.MeshObjectKind.Platform,
+			Uuid: uuid,
+		},
 	}
 }
 
@@ -327,7 +358,7 @@ func (r *platformResource) ModifyPlan(ctx context.Context, req resource.ModifyPl
 func (r *platformResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	converterOptions := platformConverterOptions(ctx, req.Config, req.Plan, req.State)
 
-	model := generic.Get[platformModel](ctx, req.Plan, &resp.Diagnostics, converterOptions...)
+	model := generic.Get[platformModel](ctx, req.Plan, &resp.Diagnostics, converterOptions.Append(generic.WithSetUnknownValueToZero())...)
 
 	updatedPlatform, err := r.meshPlatformClient.Update(ctx, *model.Metadata.Uuid, client.MeshPlatform{Metadata: model.Metadata, Spec: model.Spec})
 	if err != nil {
