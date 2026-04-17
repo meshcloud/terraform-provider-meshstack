@@ -91,8 +91,9 @@ func (r *buildingBlockV2Resource) Schema(ctx context.Context, req resource.Schem
 					},
 
 					"building_block_definition_version_ref": schema.SingleNestedAttribute{
-						MarkdownDescription: "References the building block definition this building block is based on. " +
-							"Can be set to the `version_latest` or `version_latest_release` output of a `meshstack_building_block_definition` resource.",
+						MarkdownDescription: "References the building block definition version this building block is based on. " +
+							"Use `version_latest` or `version_latest_release` from `meshstack_building_block_definition`, or " +
+							"`one(data.meshstack_building_block_definitions.<name>.building_block_definitions).version_latest`.",
 						Required: true,
 						Attributes: map[string]schema.Attribute{
 							"uuid": schema.StringAttribute{
@@ -103,8 +104,9 @@ func (r *buildingBlockV2Resource) Schema(ctx context.Context, req resource.Schem
 					},
 
 					"target_ref": schema.SingleNestedAttribute{
-						MarkdownDescription: "References the building block target. Depending on the building block definition this will be a workspace or a tenant",
-						Required:            true,
+						MarkdownDescription: "References the building block target. Depending on the definition this must be a workspace or tenant ref. " +
+							"For example `data.meshstack_workspace.<name>.ref` or `one(data.meshstack_tenants.<name>.tenants).ref`.",
+						Required: true,
 						Attributes: map[string]schema.Attribute{
 							"kind": schema.StringAttribute{
 								MarkdownDescription: "Target kind for this building block, depends on building block definition type. One of `meshTenant`, `meshWorkspace`.",

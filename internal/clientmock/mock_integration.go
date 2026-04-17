@@ -11,7 +11,7 @@ import (
 )
 
 type MeshIntegrationClient struct {
-	Store Store[client.MeshIntegration]
+	Store *Store[client.MeshIntegration]
 }
 
 func (m MeshIntegrationClient) Create(_ context.Context, integration client.MeshIntegration) (*client.MeshIntegration, error) {
@@ -27,19 +27,19 @@ func (m MeshIntegrationClient) Create(_ context.Context, integration client.Mesh
 		},
 	}
 	backendSecretBehavior(true, created, nil)
-	m.Store[integrationUuid] = created
+	m.Store.Set(integrationUuid, created)
 	return created, nil
 }
 
 func (m MeshIntegrationClient) Read(_ context.Context, uuid string) (*client.MeshIntegration, error) {
-	if integration, ok := m.Store[uuid]; ok {
+	if integration, ok := m.Store.Get(uuid); ok {
 		return integration, nil
 	}
 	return nil, nil
 }
 
 func (m MeshIntegrationClient) Update(_ context.Context, integration client.MeshIntegration) (*client.MeshIntegration, error) {
-	if existing, ok := m.Store[*integration.Metadata.Uuid]; ok {
+	if existing, ok := m.Store.Get(*integration.Metadata.Uuid); ok {
 		backendSecretBehavior(false, &integration, existing)
 		existing.Spec = integration.Spec
 		return existing, nil
@@ -48,13 +48,13 @@ func (m MeshIntegrationClient) Update(_ context.Context, integration client.Mesh
 }
 
 func (m MeshIntegrationClient) Delete(_ context.Context, uuid string) error {
-	delete(m.Store, uuid)
+	m.Store.Delete(uuid)
 	return nil
 }
 
 func (m MeshIntegrationClient) List(_ context.Context) ([]client.MeshIntegration, error) {
 	var result []client.MeshIntegration
-	for _, integration := range m.Store {
+	for _, integration := range m.Store.Values() {
 		result = append(result, *integration)
 	}
 	return result, nil

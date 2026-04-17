@@ -18,11 +18,9 @@ Represents a meshStack workspace.
 ```terraform
 resource "meshstack_workspace" "example" {
   metadata = {
-    name = "my-workspace-identifier"
+    name = "my-workspace"
     tags = {
-      "cost-center" = [
-        "12345"
-      ]
+      "cost-center" = ["12345"]
     }
   }
   spec = {
@@ -86,7 +84,7 @@ Use the [`import` block](https://developer.hashicorp.com/terraform/language/impo
 
 ```terraform
 import {
-  id = "my-workspace-identifier" # workspace identifier
+  id = "my-workspace" # workspace identifier
   to = meshstack_workspace.example
 }
 ```

@@ -16,7 +16,7 @@ Read a single payment method by workspace and identifier.
 data "meshstack_payment_method" "example" {
   metadata = {
     name               = "my-payment-method"
-    owned_by_workspace = "my-workspace-identifier"
+    owned_by_workspace = "my-workspace"
   }
 }
 ```

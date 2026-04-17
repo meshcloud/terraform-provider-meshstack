@@ -1,10 +1,10 @@
 resource "meshstack_project" "example" {
   metadata = {
-    name               = "my-project-identifier"
-    owned_by_workspace = "my-workspace-identifier"
+    name               = "my-project"
+    owned_by_workspace = data.meshstack_workspace.example.metadata.name
   }
   spec = {
-    payment_method_identifier = "my-payment-method-identifier"
+    payment_method_identifier = data.meshstack_payment_method.example.metadata.name
     display_name              = "My Project's Display Name"
     tags = {
       "tag-key" = [
