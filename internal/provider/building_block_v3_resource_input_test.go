@@ -1,6 +1,8 @@
 package provider
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -104,5 +106,111 @@ func TestOperatorInputWarnings(t *testing.T) {
 		warning := diags.Warnings()[0]
 		require.Equal(t, "Platform operator inputs missing", warning.Summary())
 		require.Contains(t, warning.Detail(), "approval_ticket")
+	})
+}
+
+func TestFormatRunFailureDiagnostics(t *testing.T) {
+	ptr := func(s string) *string { return &s }
+
+	t.Run("fallback when no steps available", func(t *testing.T) {
+		var diags diag.Diagnostics
+		formatRunFailureDiagnostics(&diags, "Creation failed", fmt.Errorf("building block reached FAILED state"), nil)
+
+		require.Equal(t, 1, diags.ErrorsCount())
+		require.Contains(t, diags.Errors()[0].Detail(), "Run logs could not be retrieved")
+		require.Equal(t, 0, diags.WarningsCount())
+	})
+
+	t.Run("fallback when steps are empty", func(t *testing.T) {
+		var diags diag.Diagnostics
+		formatRunFailureDiagnostics(&diags, "Creation failed", fmt.Errorf("building block reached FAILED state"), &buildingBlockV3LatestRunModel{
+			Steps: []buildingBlockV3RunStepModel{},
+		})
+
+		require.Equal(t, 1, diags.ErrorsCount())
+		require.Contains(t, diags.Errors()[0].Detail(), "Run logs could not be retrieved")
+	})
+
+	t.Run("formats step summary and per-step warnings", func(t *testing.T) {
+		var diags diag.Diagnostics
+		formatRunFailureDiagnostics(&diags, "Creation failed", fmt.Errorf("building block reached FAILED state"), &buildingBlockV3LatestRunModel{
+			Uuid:      "run-abc",
+			RunNumber: 3,
+			Status:    "FAILED",
+			Steps: []buildingBlockV3RunStepModel{
+				{DisplayName: "Init", Status: "SUCCEEDED"},
+				{DisplayName: "Plan", Status: "SUCCEEDED"},
+				{DisplayName: "Apply", Status: "FAILED", UserMessage: ptr("terraform apply failed"), SystemMessage: ptr("Error: resource not found\n\ndetails here")},
+			},
+		})
+
+		require.Equal(t, 1, diags.ErrorsCount())
+		errDetail := diags.Errors()[0].Detail()
+		require.Contains(t, errDetail, "Run #3 (run-abc)")
+		require.Contains(t, errDetail, "Init ✓ SUCCEEDED")
+		require.Contains(t, errDetail, "Apply ✗ FAILED")
+
+		require.Equal(t, 2, diags.WarningsCount())
+		require.Equal(t, `Step "Apply" — user message`, diags.Warnings()[0].Summary())
+		require.Equal(t, "terraform apply failed", diags.Warnings()[0].Detail())
+		require.Equal(t, `Step "Apply" — system message`, diags.Warnings()[1].Summary())
+		require.Contains(t, diags.Warnings()[1].Detail(), "resource not found")
+	})
+
+	t.Run("skips warnings for succeeded steps", func(t *testing.T) {
+		var diags diag.Diagnostics
+		formatRunFailureDiagnostics(&diags, "Update failed", fmt.Errorf("timeout"), &buildingBlockV3LatestRunModel{
+			Uuid:      "run-xyz",
+			RunNumber: 1,
+			Status:    "FAILED",
+			Steps: []buildingBlockV3RunStepModel{
+				{DisplayName: "Init", Status: "SUCCEEDED", UserMessage: ptr("all good"), SystemMessage: ptr("detailed logs")},
+				{DisplayName: "Apply", Status: "FAILED", UserMessage: ptr("broke")},
+			},
+		})
+
+		require.Equal(t, 1, diags.ErrorsCount())
+		require.Equal(t, 1, diags.WarningsCount())
+		require.Equal(t, `Step "Apply" — user message`, diags.Warnings()[0].Summary())
+	})
+
+	t.Run("truncates long messages", func(t *testing.T) {
+		longMsg := strings.Repeat("x", 5000)
+		var diags diag.Diagnostics
+		formatRunFailureDiagnostics(&diags, "Failed", fmt.Errorf("err"), &buildingBlockV3LatestRunModel{
+			Uuid:      "run-1",
+			RunNumber: 1,
+			Status:    "FAILED",
+			Steps: []buildingBlockV3RunStepModel{
+				{DisplayName: "Apply", Status: "FAILED", SystemMessage: &longMsg},
+			},
+		})
+
+		require.Equal(t, 1, diags.WarningsCount())
+		detail := diags.Warnings()[0].Detail()
+		require.Contains(t, detail, "... truncated")
+		require.LessOrEqual(t, len(detail), maxStepMessageLength+100)
+	})
+
+	t.Run("includes warning steps", func(t *testing.T) {
+		var diags diag.Diagnostics
+		formatRunFailureDiagnostics(&diags, "Failed", fmt.Errorf("err"), &buildingBlockV3LatestRunModel{
+			Uuid:      "run-w",
+			RunNumber: 2,
+			Status:    "FAILED",
+			Steps: []buildingBlockV3RunStepModel{
+				{DisplayName: "Validate", Status: "WARNING", UserMessage: ptr("drift detected")},
+				{DisplayName: "Apply", Status: "FAILED", UserMessage: ptr("error")},
+			},
+		})
+
+		require.Equal(t, 1, diags.ErrorsCount())
+		errDetail := diags.Errors()[0].Detail()
+		require.Contains(t, errDetail, "Validate ⚠ WARNING")
+		require.Contains(t, errDetail, "Apply ✗ FAILED")
+
+		require.Equal(t, 2, diags.WarningsCount())
+		require.Equal(t, `Step "Validate" — user message`, diags.Warnings()[0].Summary())
+		require.Equal(t, `Step "Apply" — user message`, diags.Warnings()[1].Summary())
 	})
 }

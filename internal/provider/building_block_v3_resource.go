@@ -254,6 +254,26 @@ func (r *buildingBlockV3Resource) Schema(ctx context.Context, req resource.Schem
 							"behavior": schema.StringAttribute{
 								Computed: true,
 							},
+							"steps": schema.ListNestedAttribute{
+								MarkdownDescription: "Run steps with their display names, statuses, and messages. Populated from the download-logs actions endpoint.",
+								Computed:            true,
+								NestedObject: schema.NestedAttributeObject{
+									Attributes: map[string]schema.Attribute{
+										"display_name": schema.StringAttribute{
+											Computed: true,
+										},
+										"status": schema.StringAttribute{
+											Computed: true,
+										},
+										"user_message": schema.StringAttribute{
+											Computed: true,
+										},
+										"system_message": schema.StringAttribute{
+											Computed: true,
+										},
+									},
+								},
+							},
 						},
 					},
 				},
@@ -423,7 +443,7 @@ func (r *buildingBlockV3Resource) Create(ctx context.Context, req resource.Creat
 				)
 				return
 			}
-			resp.Diagnostics.AddError("Failed to await building block creation", err.Error())
+			r.addRunFailureDiagnostics(ctx, &resp.Diagnostics, "Failed to await building block creation", err, created.Metadata.Uuid)
 			return
 		}
 	} else if created.Status.Status == client.BUILDING_BLOCK_STATUS_WAITING_FOR_OPERATOR_INPUT {
@@ -545,6 +565,12 @@ func (r *buildingBlockV3Resource) ModifyPlan(ctx context.Context, req resource.M
 		"run_number": types.Int64Type,
 		"status":     types.StringType,
 		"behavior":   types.StringType,
+		"steps": types.ListType{ElemType: types.ObjectType{AttrTypes: map[string]attr.Type{
+			"display_name":   types.StringType,
+			"status":         types.StringType,
+			"user_message":   types.StringType,
+			"system_message": types.StringType,
+		}}},
 	}))...)
 }
 
@@ -701,7 +727,7 @@ func (r *buildingBlockV3Resource) Update(ctx context.Context, req resource.Updat
 				)
 				return
 			}
-			resp.Diagnostics.AddError("Failed to await building block update", err.Error())
+			r.addRunFailureDiagnostics(ctx, &resp.Diagnostics, "Failed to await building block update", err, uuid)
 			return
 		}
 		return
@@ -765,7 +791,7 @@ func (r *buildingBlockV3Resource) Delete(ctx context.Context, req resource.Delet
 	if waitForCompletionValue {
 		if err := poll.AtMostFor(30*time.Minute, r.meshBuildingBlockV3Client.ReadFunc(uuid)).
 			Until(ctx, (*client.MeshBuildingBlockV3).DeletionSuccessful); err != nil {
-			resp.Diagnostics.AddError("Failed to await building block deletion", err.Error())
+			r.addRunFailureDiagnostics(ctx, &resp.Diagnostics, "Failed to await building block deletion", err, uuid)
 			return
 		}
 	}
@@ -1020,10 +1046,18 @@ type buildingBlockV3MoveStateStatusModel struct {
 }
 
 type buildingBlockV3LatestRunModel struct {
-	Uuid      string `tfsdk:"uuid"`
-	RunNumber int64  `tfsdk:"run_number"`
-	Status    string `tfsdk:"status"`
-	Behavior  string `tfsdk:"behavior"`
+	Uuid      string                        `tfsdk:"uuid"`
+	RunNumber int64                         `tfsdk:"run_number"`
+	Status    string                        `tfsdk:"status"`
+	Behavior  string                        `tfsdk:"behavior"`
+	Steps     []buildingBlockV3RunStepModel `tfsdk:"steps"`
+}
+
+type buildingBlockV3RunStepModel struct {
+	DisplayName   string  `tfsdk:"display_name"`
+	Status        string  `tfsdk:"status"`
+	UserMessage   *string `tfsdk:"user_message"`
+	SystemMessage *string `tfsdk:"system_message"`
 }
 
 type buildingBlockV3InputModel struct {
@@ -1324,6 +1358,7 @@ func (r *buildingBlockV3Resource) deriveLatestRunFromRuns(ctx context.Context, b
 		RunNumber: latestRun.Spec.RunNumber,
 		Status:    latestRun.Status,
 		Behavior:  latestRun.Spec.Behavior,
+		Steps:     r.fetchRunSteps(ctx, latestRun.Metadata.Uuid, diags),
 	}
 }
 
@@ -1361,6 +1396,99 @@ func isCreatedAfter(a string, b string) bool {
 		return false
 	default:
 		return a > b
+	}
+}
+
+// fetchRunSteps downloads the step logs for a run via the download-logs actions endpoint.
+// Gracefully returns an empty slice if the endpoint is unavailable or returns an error.
+func (r *buildingBlockV3Resource) fetchRunSteps(ctx context.Context, runUUID string, diags *diag.Diagnostics) []buildingBlockV3RunStepModel {
+	if runUUID == "" || r.meshBuildingBlockRunClient == nil {
+		return nil
+	}
+
+	logs, err := r.meshBuildingBlockRunClient.DownloadLogs(ctx, runUUID)
+	if err != nil {
+		diags.AddWarning(
+			"Unable to fetch run logs",
+			fmt.Sprintf(
+				"Could not download logs for building block run %q: %s. Step details in `status.latest_run.steps` will be empty.",
+				runUUID, err.Error(),
+			),
+		)
+		return nil
+	}
+	if logs == nil {
+		return nil
+	}
+
+	steps := make([]buildingBlockV3RunStepModel, 0, len(logs.Steps))
+	for _, step := range logs.Steps {
+		steps = append(steps, buildingBlockV3RunStepModel{
+			DisplayName:   step.DisplayName,
+			Status:        step.Status,
+			UserMessage:   step.UserMessage,
+			SystemMessage: step.SystemMessage,
+		})
+	}
+	return steps
+}
+
+const maxStepMessageLength = 4000
+
+// addRunFailureDiagnostics fetches and displays detailed run logs when a building block run fails.
+// It adds the original error as the main diagnostic, then appends per-step warnings with messages.
+// If log download fails, it gracefully falls back to advising the user to check the meshStack panel.
+func (r *buildingBlockV3Resource) addRunFailureDiagnostics(ctx context.Context, diags *diag.Diagnostics, summary string, pollErr error, bbUUID string) {
+	latestRun := r.deriveLatestRunFromRuns(ctx, bbUUID, diags)
+	formatRunFailureDiagnostics(diags, summary, pollErr, latestRun)
+}
+
+// formatRunFailureDiagnostics formats run step details as Terraform diagnostics.
+// If latestRun is nil or has no steps, it falls back to the poll error with a generic message.
+func formatRunFailureDiagnostics(diags *diag.Diagnostics, summary string, pollErr error, latestRun *buildingBlockV3LatestRunModel) {
+	if latestRun == nil || len(latestRun.Steps) == 0 {
+		diags.AddError(summary, pollErr.Error()+"\n\nRun logs could not be retrieved. Check the building block run details in the meshStack panel for more information.")
+		return
+	}
+
+	var detail strings.Builder
+	fmt.Fprintf(&detail, "Run #%d (%s) — %s\n\n", latestRun.RunNumber, latestRun.Uuid, latestRun.Status)
+
+	for i, step := range latestRun.Steps {
+		icon := "✓"
+		switch step.Status {
+		case "FAILED", "ABORTED":
+			icon = "✗"
+		case "WARNING":
+			icon = "⚠"
+		case "PENDING", "IN_PROGRESS":
+			icon = "…"
+		}
+		fmt.Fprintf(&detail, "Step %d/%d: %s %s %s\n", i+1, len(latestRun.Steps), step.DisplayName, icon, step.Status)
+	}
+
+	diags.AddError(summary, detail.String())
+
+	for _, step := range latestRun.Steps {
+		if step.Status != "FAILED" && step.Status != "ABORTED" && step.Status != "WARNING" {
+			continue
+		}
+
+		if step.UserMessage != nil && *step.UserMessage != "" {
+			msg := *step.UserMessage
+			if len(msg) > maxStepMessageLength {
+				msg = msg[:maxStepMessageLength] + "\n\n... truncated. See full logs in the meshStack panel."
+			}
+			diags.AddWarning(fmt.Sprintf("Step %q — user message", step.DisplayName), msg)
+		}
+
+		if step.SystemMessage != nil && *step.SystemMessage != "" {
+			msg := *step.SystemMessage
+			if len(msg) > maxStepMessageLength {
+				msg = msg[:maxStepMessageLength] + "\n\n... truncated. See full logs in the meshStack panel."
+			}
+			diags.AddWarning(fmt.Sprintf("Step %q — system message", step.DisplayName), msg)
+		}
 	}
 }
 
