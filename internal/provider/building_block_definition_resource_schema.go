@@ -394,11 +394,13 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 						},
 					},
 					"dependency_refs": schema.SetNestedAttribute{
-						MarkdownDescription: "Set of refs to building block definitions this definition depends on.",
-						Optional:            true,
-						Computed:            true,
-						Default:             emptySetDefault(dependencyRefs),
-						NestedObject:        dependencyRefs,
+						MarkdownDescription: "Set of refs to building block definitions this definition depends on. " +
+							"Prefer reusable refs from `meshstack_building_block_definition.<name>.ref` or " +
+							"`one(data.meshstack_building_block_definitions.<name>.building_block_definitions).ref`.",
+						Optional:     true,
+						Computed:     true,
+						Default:      emptySetDefault(dependencyRefs),
+						NestedObject: dependencyRefs,
 					},
 					"inputs": inputsAttribute,
 					"outputs": schema.MapNestedAttribute{
@@ -575,12 +577,12 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 			},
 
 			"version_latest": schema.SingleNestedAttribute{
-				MarkdownDescription: "Latest version (including drafts).",
+				MarkdownDescription: "Latest version (including drafts). Useful for wiring `meshstack_building_block_v2.spec.building_block_definition_version_ref`.",
 				Computed:            true,
 				Attributes:          versionAttributes,
 			},
 			"version_latest_release": schema.SingleNestedAttribute{
-				MarkdownDescription: "Latest released version (excludes drafts) and is null if BBD is initially created in draft mode.",
+				MarkdownDescription: "Latest released version (excludes drafts). Null if no released version exists yet.",
 				Computed:            true,
 				Optional:            true,
 				Attributes:          versionAttributes,
@@ -594,7 +596,7 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 			},
 
 			"ref": schema.SingleNestedAttribute{
-				MarkdownDescription: "Reference to this building block definition, can be used as dependency ref in other building block definitions.",
+				MarkdownDescription: "Reference to this building block definition. Reuse in `version_spec.dependency_refs` of other building block definitions.",
 				Computed:            true,
 				Attributes:          meshUuidRefOutputAttribute(client.MeshObjectKind.BuildingBlockDefinition),
 				PlanModifiers: []planmodifier.Object{

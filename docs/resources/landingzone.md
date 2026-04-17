@@ -16,7 +16,7 @@ Represents a meshStack landing zone.
 resource "meshstack_landingzone" "example" {
   metadata = {
     name               = "my-landing-zone-identifier"
-    owned_by_workspace = "my-workspace-identifier"
+    owned_by_workspace = data.meshstack_workspace.example.metadata.name
     tags = {
       "confidentiality" = ["internal"],
       "environment"     = ["dev", "qa", "test"],
@@ -28,10 +28,7 @@ resource "meshstack_landingzone" "example" {
     automate_deletion_approval    = false
     automate_deletion_replication = false
     info_link                     = "https://example.com/info-about-aws-landing-zone"
-    platform_ref = {
-      uuid = "4af5864a-da15-11ed-98c8-0242ac190003"
-      kind = "meshPlatform"
-    }
+    platform_ref                  = data.meshstack_platform.example.ref
     platform_properties = {
       aws = {
         aws_target_org_unit_id = "ou-lpzq-kmf17bec"
@@ -52,25 +49,24 @@ resource "meshstack_landingzone" "example" {
     }
   }
 }
+```
 
-resource "meshstack_landingzone" "custom_example" {
+```terraform
+resource "meshstack_landingzone" "example" {
   metadata = {
-    name               = "new-landing-zone-custom-1"
-    owned_by_workspace = "managed-customer"
+    name               = "my-landing-zone-custom"
+    owned_by_workspace = data.meshstack_workspace.example.metadata.name
     tags               = {}
   }
 
   spec = {
-    display_name                  = "New Landing Zone custom"
-    description                   = "A new custom landing zone for testing"
+    display_name                  = "My Custom Landing Zone"
+    description                   = "A custom landing zone"
     automate_deletion_approval    = false
     automate_deletion_replication = false
     info_link                     = "https://example.com"
 
-    platform_ref = {
-      // UUID of an existing custom platform.
-      uuid = "7035ad04-f912-44d5-98ce-ddcc2cf84b10"
-    }
+    platform_ref = data.meshstack_platform.example.ref
 
     platform_properties = {
       // Nothing to be specified for custom platforms, but the block must be present.

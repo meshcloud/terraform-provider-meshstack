@@ -22,7 +22,7 @@ Please note that for the meshPlatform, the following limitations apply:
 resource "meshstack_platform" "example_azure" {
   metadata = {
     name               = "my-platform"
-    owned_by_workspace = "my-workspace"
+    owned_by_workspace = data.meshstack_workspace.example.metadata.name
   }
 
   spec = {
@@ -185,7 +185,7 @@ resource "meshstack_platform" "example_azure" {
 resource "meshstack_platform" "example_aws" {
   metadata = {
     name               = "my-platform"
-    owned_by_workspace = "my-workspace"
+    owned_by_workspace = data.meshstack_workspace.example.metadata.name
   }
 
   spec = {
@@ -297,7 +297,7 @@ resource "meshstack_platform" "example_aws" {
 resource "meshstack_platform" "example_gcp" {
   metadata = {
     name               = "my-platform"
-    owned_by_workspace = "my-workspace"
+    owned_by_workspace = data.meshstack_workspace.example.metadata.name
   }
 
   spec = {
@@ -393,7 +393,7 @@ resource "meshstack_platform" "example_gcp" {
 resource "meshstack_platform" "example_kubernetes" {
   metadata = {
     name               = "my-platform"
-    owned_by_workspace = "my-workspace"
+    owned_by_workspace = data.meshstack_workspace.example.metadata.name
   }
 
   spec = {
@@ -450,7 +450,7 @@ resource "meshstack_platform" "example_kubernetes" {
 resource "meshstack_platform" "example_aks" {
   metadata = {
     name               = "my-platform"
-    owned_by_workspace = "my-workspace"
+    owned_by_workspace = data.meshstack_workspace.example.metadata.name
   }
 
   spec = {
@@ -530,7 +530,7 @@ resource "meshstack_platform" "example_aks" {
 resource "meshstack_platform" "example_azurerg" {
   metadata = {
     name               = "my-platform"
-    owned_by_workspace = "my-workspace"
+    owned_by_workspace = data.meshstack_workspace.example.metadata.name
   }
 
   spec = {
@@ -601,7 +601,7 @@ resource "meshstack_platform" "example_azurerg" {
 resource "meshstack_platform" "example_openshift" {
   metadata = {
     name               = "my-platform"
-    owned_by_workspace = "my-workspace"
+    owned_by_workspace = data.meshstack_workspace.example.metadata.name
   }
 
   spec = {
@@ -690,7 +690,7 @@ resource "meshstack_platform" "example_openshift" {
 resource "meshstack_platform" "example_custom" {
   metadata = {
     name               = "my-platform"
-    owned_by_workspace = "my-workspace"
+    owned_by_workspace = data.meshstack_workspace.example.metadata.name
   }
 
   spec = {
@@ -710,7 +710,7 @@ resource "meshstack_platform" "example_custom" {
 
     config = {
       custom = {
-        platform_type_ref = { name = "my-custom-platform-type" }
+        platform_type_ref = data.meshstack_platform_type.example.ref
 
         metering = {
           processing = {

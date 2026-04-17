@@ -13,22 +13,15 @@ Single tenant by workspace, project, and platform.
 ## Example Usage
 
 ```terraform
-data "meshstack_project" "example" {
-  metadata = {
-    name               = "my-project-identifier"
-    owned_by_workspace = "my-workspace-identifier"
-  }
-}
-
 resource "meshstack_tenant" "example" {
   metadata = {
-    owned_by_workspace  = data.meshstack_project.example.metadata.owned_by_workspace
+    owned_by_workspace  = data.meshstack_workspace.example.metadata.name
     owned_by_project    = data.meshstack_project.example.metadata.name
-    platform_identifier = "my-platform-identifier"
+    platform_identifier = data.meshstack_platform.example.identifier
   }
 
   spec = {
-    landing_zone_identifier = "platform-landing-zone-identifier"
+    landing_zone_identifier = data.meshstack_landingzone.example.metadata.name
   }
 }
 ```

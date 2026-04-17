@@ -7,11 +7,11 @@ import (
 )
 
 type MeshServiceInstanceClient struct {
-	Store Store[client.MeshServiceInstance]
+	Store *Store[client.MeshServiceInstance]
 }
 
 func (m MeshServiceInstanceClient) Read(_ context.Context, instanceId string) (*client.MeshServiceInstance, error) {
-	if serviceInstance, ok := m.Store[instanceId]; ok {
+	if serviceInstance, ok := m.Store.Get(instanceId); ok {
 		return serviceInstance, nil
 	}
 	return nil, nil
@@ -19,7 +19,7 @@ func (m MeshServiceInstanceClient) Read(_ context.Context, instanceId string) (*
 
 func (m MeshServiceInstanceClient) List(_ context.Context, filter *client.MeshServiceInstanceFilter) ([]client.MeshServiceInstance, error) {
 	var result []client.MeshServiceInstance
-	for _, serviceInstance := range m.Store {
+	for _, serviceInstance := range m.Store.Values() {
 		// Apply filters if provided
 		if filter != nil {
 			if filter.WorkspaceIdentifier != nil && serviceInstance.Metadata.OwnedByWorkspace != *filter.WorkspaceIdentifier {

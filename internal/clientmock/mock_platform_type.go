@@ -11,11 +11,11 @@ import (
 )
 
 type MeshPlatformTypeClient struct {
-	Store Store[client.MeshPlatformType]
+	Store *Store[client.MeshPlatformType]
 }
 
 func (m MeshPlatformTypeClient) Read(_ context.Context, identifier string) (*client.MeshPlatformType, error) {
-	if platformType, ok := m.Store[identifier]; ok {
+	if platformType, ok := m.Store.Get(identifier); ok {
 		return platformType, nil
 	}
 	return nil, nil
@@ -36,12 +36,12 @@ func (m MeshPlatformTypeClient) Create(_ context.Context, platformType *client.M
 			},
 		},
 	}
-	m.Store[created.Metadata.Name] = created
+	m.Store.Set(created.Metadata.Name, created)
 	return created, nil
 }
 
 func (m MeshPlatformTypeClient) Update(_ context.Context, name string, platformType *client.MeshPlatformTypeCreate) (*client.MeshPlatformType, error) {
-	if existing, ok := m.Store[name]; ok {
+	if existing, ok := m.Store.Get(name); ok {
 		existing.Spec = platformType.Spec
 		return existing, nil
 	}
@@ -49,13 +49,13 @@ func (m MeshPlatformTypeClient) Update(_ context.Context, name string, platformT
 }
 
 func (m MeshPlatformTypeClient) Delete(_ context.Context, name string) error {
-	delete(m.Store, name)
+	m.Store.Delete(name)
 	return nil
 }
 
 func (m MeshPlatformTypeClient) List(_ context.Context, category *string, lifecycleStatus *string) ([]client.MeshPlatformType, error) {
 	var result []client.MeshPlatformType
-	for _, platformType := range m.Store {
+	for _, platformType := range m.Store.Values() {
 		if category != nil && platformType.Spec.Category != *category {
 			continue
 		}

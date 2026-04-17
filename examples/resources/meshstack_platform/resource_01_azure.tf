@@ -1,7 +1,7 @@
 resource "meshstack_platform" "example_azure" {
   metadata = {
     name               = "my-platform"
-    owned_by_workspace = "my-workspace"
+    owned_by_workspace = data.meshstack_workspace.example.metadata.name
   }
 
   spec = {

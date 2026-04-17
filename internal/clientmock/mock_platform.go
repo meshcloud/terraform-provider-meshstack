@@ -10,11 +10,11 @@ import (
 )
 
 type MeshPlatformClient struct {
-	Store Store[client.MeshPlatform]
+	Store *Store[client.MeshPlatform]
 }
 
 func (m MeshPlatformClient) Read(_ context.Context, uuid string) (*client.MeshPlatform, error) {
-	if platform, ok := m.Store[uuid]; ok {
+	if platform, ok := m.Store.Get(uuid); ok {
 		return platform, nil
 	}
 	return nil, nil
@@ -24,12 +24,12 @@ func (m MeshPlatformClient) Create(_ context.Context, platform client.MeshPlatfo
 	platformUuid := uuid.NewString()
 	platform.Metadata.Uuid = &platformUuid
 	backendSecretBehavior(true, &platform, nil)
-	m.Store[platformUuid] = &platform
+	m.Store.Set(platformUuid, &platform)
 	return &platform, nil
 }
 
 func (m MeshPlatformClient) Update(_ context.Context, uuid string, platform client.MeshPlatform) (*client.MeshPlatform, error) {
-	if existing, ok := m.Store[uuid]; ok {
+	if existing, ok := m.Store.Get(uuid); ok {
 		backendSecretBehavior(false, &platform.Spec, &existing.Spec)
 		existing.Spec = platform.Spec
 		return existing, nil
@@ -38,6 +38,6 @@ func (m MeshPlatformClient) Update(_ context.Context, uuid string, platform clie
 }
 
 func (m MeshPlatformClient) Delete(_ context.Context, uuid string) error {
-	delete(m.Store, uuid)
+	m.Store.Delete(uuid)
 	return nil
 }

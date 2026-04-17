@@ -8,19 +8,19 @@ import (
 )
 
 type MeshTagDefinitionClient struct {
-	Store Store[client.MeshTagDefinition]
+	Store *Store[client.MeshTagDefinition]
 }
 
 func (m MeshTagDefinitionClient) List(_ context.Context) ([]client.MeshTagDefinition, error) {
 	var result []client.MeshTagDefinition
-	for _, def := range m.Store {
+	for _, def := range m.Store.Values() {
 		result = append(result, *def)
 	}
 	return result, nil
 }
 
 func (m MeshTagDefinitionClient) Read(_ context.Context, name string) (*client.MeshTagDefinition, error) {
-	if def, ok := m.Store[name]; ok {
+	if def, ok := m.Store.Get(name); ok {
 		return def, nil
 	}
 	return nil, nil
@@ -31,13 +31,13 @@ func (m MeshTagDefinitionClient) Create(_ context.Context, tagDefinition *client
 		Metadata: tagDefinition.Metadata,
 		Spec:     tagDefinition.Spec,
 	}
-	m.Store[created.Metadata.Name] = created
+	m.Store.Set(created.Metadata.Name, created)
 	return created, nil
 }
 
 func (m MeshTagDefinitionClient) Update(_ context.Context, tagDefinition *client.MeshTagDefinition) (*client.MeshTagDefinition, error) {
 	name := tagDefinition.Metadata.Name
-	if existing, ok := m.Store[name]; ok {
+	if existing, ok := m.Store.Get(name); ok {
 		existing.Spec = tagDefinition.Spec
 		return existing, nil
 	}
@@ -45,6 +45,6 @@ func (m MeshTagDefinitionClient) Update(_ context.Context, tagDefinition *client
 }
 
 func (m MeshTagDefinitionClient) Delete(_ context.Context, name string) error {
-	delete(m.Store, name)
+	m.Store.Delete(name)
 	return nil
 }

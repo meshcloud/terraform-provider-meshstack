@@ -15,7 +15,7 @@ Manages a meshIntegration in meshStack. Integrations configure external CI/CD sy
 ```terraform
 resource "meshstack_integration" "example_github" {
   metadata = {
-    owned_by_workspace = "my-workspace"
+    owned_by_workspace = data.meshstack_workspace.example.metadata.name
   }
 
   spec = {
@@ -36,7 +36,7 @@ resource "meshstack_integration" "example_github" {
 ```terraform
 resource "meshstack_integration" "example_azure_devops" {
   metadata = {
-    owned_by_workspace = "my-workspace"
+    owned_by_workspace = data.meshstack_workspace.example.metadata.name
   }
 
   spec = {
@@ -58,7 +58,7 @@ resource "meshstack_integration" "example_azure_devops" {
 ```terraform
 resource "meshstack_integration" "example_gitlab" {
   metadata = {
-    owned_by_workspace = "my-workspace"
+    owned_by_workspace = data.meshstack_workspace.example.metadata.name
   }
 
   spec = {

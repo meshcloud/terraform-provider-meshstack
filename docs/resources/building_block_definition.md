@@ -19,7 +19,7 @@ Manages a meshBuildingBlockDefinition in meshStack. Building Block Definitions d
 # This example uses the Terraform implementation and defines all optional attributes
 resource "meshstack_building_block_definition" "example_01_terraform" {
   metadata = {
-    owned_by_workspace = "my-workspace"
+    owned_by_workspace = data.meshstack_workspace.example.metadata.name
     tags = { # Optional
       "environment" = ["dev", "prod"]
       "cost-center" = ["cc-123"]
@@ -135,8 +135,8 @@ resource "meshstack_building_block_definition" "example_01_terraform" {
       }
     }
 
-    # Optional: Dependencies on other building blocks, prefer using using the .ref output attribute instead of hardcoding UUIDs
-    dependency_refs = [{ uuid = "d161e3bf-c3e7-45f2-aa21-28de14593a74" }]
+    # Optional: Dependencies on other building blocks, prefer using .ref output attributes.
+    dependency_refs = [one(data.meshstack_building_block_definitions.example.building_block_definitions).ref]
   }
 }
 ```
@@ -145,7 +145,7 @@ resource "meshstack_building_block_definition" "example_01_terraform" {
 # An example for github_workflows implementation with required attributes only
 resource "meshstack_building_block_definition" "example_02_github_workflows" {
   metadata = {
-    owned_by_workspace = "my-workspace"
+    owned_by_workspace = data.meshstack_workspace.example.metadata.name
   }
 
   spec = {
@@ -170,7 +170,7 @@ resource "meshstack_building_block_definition" "example_02_github_workflows" {
         repository      = "example/building-block"
         branch          = "main"
         apply_workflow  = "apply.yml"
-        integration_ref = { uuid = "550e8400-e29b-41d4-a716-446655440000" }
+        integration_ref = { uuid = one(data.meshstack_integrations.all.integrations).metadata.uuid }
         # Optional flags, default false
         async                 = true
         omit_run_object_input = true
@@ -192,7 +192,7 @@ resource "meshstack_building_block_definition" "example_02_github_workflows" {
 # An example for manual implementation with required attributes only
 resource "meshstack_building_block_definition" "example_03_manual" {
   metadata = {
-    owned_by_workspace = "my-workspace"
+    owned_by_workspace = data.meshstack_workspace.example.metadata.name
   }
 
   spec = {
@@ -231,7 +231,7 @@ resource "meshstack_building_block_definition" "example_03_manual" {
 # An example for manual implementation with required attributes only
 resource "meshstack_building_block_definition" "example_04_azure_devops_pipeline" {
   metadata = {
-    owned_by_workspace = "my-workspace"
+    owned_by_workspace = data.meshstack_workspace.example.metadata.name
   }
 
   spec = {
@@ -254,7 +254,7 @@ resource "meshstack_building_block_definition" "example_04_azure_devops_pipeline
       azure_devops_pipeline = {
         project         = "MyProject"
         pipeline_id     = "42"
-        integration_ref = { uuid = "550e8400-e29b-41d4-a716-446655440000" }
+        integration_ref = { uuid = one(data.meshstack_integrations.all.integrations).metadata.uuid }
       }
     }
 
@@ -273,7 +273,7 @@ resource "meshstack_building_block_definition" "example_04_azure_devops_pipeline
 # An example for gitlab_pipeline implementation with required attributes only
 resource "meshstack_building_block_definition" "example_05_gitlab_pipeline" {
   metadata = {
-    owned_by_workspace = "my-workspace"
+    owned_by_workspace = data.meshstack_workspace.example.metadata.name
   }
 
   spec = {
@@ -300,7 +300,7 @@ resource "meshstack_building_block_definition" "example_05_gitlab_pipeline" {
           secret_value   = "glptt-..."
           secret_version = null
         }
-        integration_ref = { uuid = "550e8400-e29b-41d4-a716-446655440000" }
+        integration_ref = { uuid = one(data.meshstack_integrations.all.integrations).metadata.uuid }
       }
     }
 
@@ -326,12 +326,12 @@ resource "meshstack_building_block_definition" "example_05_gitlab_pipeline" {
 
 ### Optional
 
-- `version_latest_release` (Attributes) Latest released version (excludes drafts) and is null if BBD is initially created in draft mode. (see [below for nested schema](#nestedatt--version_latest_release))
+- `version_latest_release` (Attributes) Latest released version (excludes drafts). Null if no released version exists yet. (see [below for nested schema](#nestedatt--version_latest_release))
 
 ### Read-Only
 
-- `ref` (Attributes) Reference to this building block definition, can be used as dependency ref in other building block definitions. (see [below for nested schema](#nestedatt--ref))
-- `version_latest` (Attributes) Latest version (including drafts). (see [below for nested schema](#nestedatt--version_latest))
+- `ref` (Attributes) Reference to this building block definition. Reuse in `version_spec.dependency_refs` of other building block definitions. (see [below for nested schema](#nestedatt--ref))
+- `version_latest` (Attributes) Latest version (including drafts). Useful for wiring `meshstack_building_block_v2.spec.building_block_definition_version_ref`. (see [below for nested schema](#nestedatt--version_latest))
 - `versions` (Attributes List) List of all available versions of this building block definition. Never empty. (see [below for nested schema](#nestedatt--versions))
 
 <a id="nestedatt--metadata"></a>
@@ -391,7 +391,7 @@ Required:
 Optional:
 
 - `deletion_mode` (String) Deletion behavior. One of `DELETE`, `PURGE`.
-- `dependency_refs` (Attributes Set) Set of refs to building block definitions this definition depends on. (see [below for nested schema](#nestedatt--version_spec--dependency_refs))
+- `dependency_refs` (Attributes Set) Set of refs to building block definitions this definition depends on. Prefer reusable refs from `meshstack_building_block_definition.<name>.ref` or `one(data.meshstack_building_block_definitions.<name>.building_block_definitions).ref`. (see [below for nested schema](#nestedatt--version_spec--dependency_refs))
 - `inputs` (Attributes Map) Map of input definitions for the building block. Keys are input names, values are input configuration objects. Inputs define parameters that building blocks can receive. (see [below for nested schema](#nestedatt--version_spec--inputs))
 - `only_apply_once_per_tenant` (Boolean) Whether this building block can only be applied once per tenant.
 - `outputs` (Attributes Map) Map of output definitions for the building block. Keys are output names, values are output configuration objects. Outputs define values that building blocks produce and can be consumed by other building blocks. (see [below for nested schema](#nestedatt--version_spec--outputs))

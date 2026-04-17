@@ -10,13 +10,13 @@ import (
 	"github.com/meshcloud/terraform-provider-meshstack/client/types/ptr"
 )
 
-type MeshBuildingBlockDefinitionVersionClient struct {
-	Store Store[client.MeshBuildingBlockDefinitionVersion]
+type meshBuildingBlockDefinitionVersionClient struct {
+	Store *Store[client.MeshBuildingBlockDefinitionVersion]
 }
 
-func (m MeshBuildingBlockDefinitionVersionClient) List(_ context.Context, buildingBlockDefinitionUuid string) ([]client.MeshBuildingBlockDefinitionVersion, error) {
+func (m meshBuildingBlockDefinitionVersionClient) List(_ context.Context, buildingBlockDefinitionUuid string) ([]client.MeshBuildingBlockDefinitionVersion, error) {
 	var result []client.MeshBuildingBlockDefinitionVersion
-	for _, version := range m.Store {
+	for _, version := range m.Store.Values() {
 		if version.Spec.BuildingBlockDefinitionRef.Uuid == buildingBlockDefinitionUuid {
 			result = append(result, *version)
 		}
@@ -24,7 +24,7 @@ func (m MeshBuildingBlockDefinitionVersionClient) List(_ context.Context, buildi
 	return result, nil
 }
 
-func (m MeshBuildingBlockDefinitionVersionClient) Create(_ context.Context, ownedByWorkspace string, versionSpec client.MeshBuildingBlockDefinitionVersionSpec) (*client.MeshBuildingBlockDefinitionVersion, error) {
+func (m meshBuildingBlockDefinitionVersionClient) Create(_ context.Context, ownedByWorkspace string, versionSpec client.MeshBuildingBlockDefinitionVersionSpec) (*client.MeshBuildingBlockDefinitionVersion, error) {
 	nextNum := m.getNextVersionNumber()
 	versionUuid := uuid.NewString()
 	// Compute hashes for all secrets in the spec
@@ -44,12 +44,12 @@ func (m MeshBuildingBlockDefinitionVersionClient) Create(_ context.Context, owne
 		Spec: versionSpec,
 	}
 
-	m.Store[versionUuid] = created
+	m.Store.Set(versionUuid, created)
 	return created, nil
 }
 
-func (m MeshBuildingBlockDefinitionVersionClient) Update(_ context.Context, uuid string, ownedByWorkspace string, versionSpec client.MeshBuildingBlockDefinitionVersionSpec) (*client.MeshBuildingBlockDefinitionVersion, error) {
-	if existing, ok := m.Store[uuid]; ok {
+func (m meshBuildingBlockDefinitionVersionClient) Update(_ context.Context, uuid string, ownedByWorkspace string, versionSpec client.MeshBuildingBlockDefinitionVersionSpec) (*client.MeshBuildingBlockDefinitionVersion, error) {
+	if existing, ok := m.Store.Get(uuid); ok {
 		// Compute hashes for all secrets in the spec
 		backendSecretBehavior(false, &versionSpec, &existing.Spec)
 		if existing.Metadata.OwnedByWorkspace != ownedByWorkspace {
@@ -61,9 +61,9 @@ func (m MeshBuildingBlockDefinitionVersionClient) Update(_ context.Context, uuid
 	return nil, fmt.Errorf("building block definition version not found: %s", uuid)
 }
 
-func (m MeshBuildingBlockDefinitionVersionClient) getNextVersionNumber() int {
+func (m meshBuildingBlockDefinitionVersionClient) getNextVersionNumber() int {
 	maxNum := 0
-	for _, v := range m.Store {
+	for _, v := range m.Store.Values() {
 		if v.Spec.VersionNumber != nil {
 			num := int(*v.Spec.VersionNumber)
 			if num > maxNum {
