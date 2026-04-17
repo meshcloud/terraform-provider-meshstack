@@ -10,8 +10,8 @@ import (
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
 	clientTypes "github.com/meshcloud/terraform-provider-meshstack/client/types"
-	"github.com/meshcloud/terraform-provider-meshstack/examples"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/clientmock"
+	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
 )
 
 // TestAccServiceInstancesDataSource tests the service instances data source.
@@ -25,7 +25,7 @@ func TestServiceInstancesDataSource(t *testing.T) {
 		t.Parallel()
 
 		mockClient := clientmock.NewMock()
-		mockClient.ServiceInstance.Store["instance-1"] = &client.MeshServiceInstance{
+		mockClient.ServiceInstance.Store.Set("instance-1", &client.MeshServiceInstance{
 			Metadata: client.MeshServiceInstanceMetadata{
 				InstanceId:            "instance-1",
 				OwnedByWorkspace:      "test-workspace",
@@ -39,8 +39,8 @@ func TestServiceInstancesDataSource(t *testing.T) {
 				ServiceId:   "test-service",
 				Parameters:  map[string]clientTypes.Any{},
 			},
-		}
-		mockClient.ServiceInstance.Store["instance-2"] = &client.MeshServiceInstance{
+		})
+		mockClient.ServiceInstance.Store.Set("instance-2", &client.MeshServiceInstance{
 			Metadata: client.MeshServiceInstanceMetadata{
 				InstanceId:            "instance-2",
 				OwnedByWorkspace:      "test-workspace",
@@ -54,9 +54,9 @@ func TestServiceInstancesDataSource(t *testing.T) {
 				ServiceId:   "test-service",
 				Parameters:  map[string]clientTypes.Any{},
 			},
-		}
+		})
 
-		config := examples.DataSource{Name: "service_instances"}.Config()
+		config := testconfig.DataSource{Name: "service_instances"}.Config(t)
 
 		resource.UnitTest(t, resource.TestCase{
 			ProtoV6ProviderFactories: ProviderFactoriesForTest(func(provider *MeshStackProvider) {
@@ -76,7 +76,7 @@ func TestServiceInstancesDataSource(t *testing.T) {
 		t.Parallel()
 
 		mockClient := clientmock.NewMock()
-		mockClient.ServiceInstance.Store["instance-1"] = &client.MeshServiceInstance{
+		mockClient.ServiceInstance.Store.Set("instance-1", &client.MeshServiceInstance{
 			Metadata: client.MeshServiceInstanceMetadata{
 				InstanceId:            "instance-1",
 				OwnedByWorkspace:      "test-workspace",
@@ -97,9 +97,9 @@ func TestServiceInstancesDataSource(t *testing.T) {
 					},
 				},
 			},
-		}
+		})
 
-		config := examples.DataSource{Name: "service_instances"}.Config()
+		config := testconfig.DataSource{Name: "service_instances"}.Config(t)
 
 		resource.UnitTest(t, resource.TestCase{
 			ProtoV6ProviderFactories: ProviderFactoriesForTest(func(provider *MeshStackProvider) {

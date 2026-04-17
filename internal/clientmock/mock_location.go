@@ -10,11 +10,11 @@ import (
 )
 
 type MeshLocationClient struct {
-	Store Store[client.MeshLocation]
+	Store *Store[client.MeshLocation]
 }
 
 func (m MeshLocationClient) Read(_ context.Context, name string) (*client.MeshLocation, error) {
-	if location, ok := m.Store[name]; ok {
+	if location, ok := m.Store.Get(name); ok {
 		return location, nil
 	}
 	return nil, nil
@@ -33,12 +33,12 @@ func (m MeshLocationClient) Create(_ context.Context, location *client.MeshLocat
 			IsPublic: false,
 		},
 	}
-	m.Store[created.Metadata.Name] = created
+	m.Store.Set(created.Metadata.Name, created)
 	return created, nil
 }
 
 func (m MeshLocationClient) Update(_ context.Context, name string, location *client.MeshLocationCreate) (*client.MeshLocation, error) {
-	if existing, ok := m.Store[name]; ok {
+	if existing, ok := m.Store.Get(name); ok {
 		existing.Spec = location.Spec
 		return existing, nil
 	}
@@ -46,6 +46,6 @@ func (m MeshLocationClient) Update(_ context.Context, name string, location *cli
 }
 
 func (m MeshLocationClient) Delete(_ context.Context, name string) error {
-	delete(m.Store, name)
+	m.Store.Delete(name)
 	return nil
 }

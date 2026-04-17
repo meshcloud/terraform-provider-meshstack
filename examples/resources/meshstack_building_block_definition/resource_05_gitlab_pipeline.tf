@@ -1,7 +1,7 @@
 # An example for gitlab_pipeline implementation with required attributes only
 resource "meshstack_building_block_definition" "example_05_gitlab_pipeline" {
   metadata = {
-    owned_by_workspace = "my-workspace"
+    owned_by_workspace = data.meshstack_workspace.example.metadata.name
   }
 
   spec = {
@@ -28,7 +28,7 @@ resource "meshstack_building_block_definition" "example_05_gitlab_pipeline" {
           secret_value   = "glptt-..."
           secret_version = null
         }
-        integration_ref = { uuid = "550e8400-e29b-41d4-a716-446655440000" }
+        integration_ref = { uuid = one(data.meshstack_integrations.all.integrations).metadata.uuid }
       }
     }
 

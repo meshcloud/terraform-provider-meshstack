@@ -1,7 +1,7 @@
 # An example for manual implementation with required attributes only
 resource "meshstack_building_block_definition" "example_04_azure_devops_pipeline" {
   metadata = {
-    owned_by_workspace = "my-workspace"
+    owned_by_workspace = data.meshstack_workspace.example.metadata.name
   }
 
   spec = {
@@ -24,7 +24,7 @@ resource "meshstack_building_block_definition" "example_04_azure_devops_pipeline
       azure_devops_pipeline = {
         project         = "MyProject"
         pipeline_id     = "42"
-        integration_ref = { uuid = "550e8400-e29b-41d4-a716-446655440000" }
+        integration_ref = { uuid = one(data.meshstack_integrations.all.integrations).metadata.uuid }
       }
     }
 

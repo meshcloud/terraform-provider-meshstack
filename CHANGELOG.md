@@ -20,6 +20,9 @@ IMPROVEMENTS:
   suitable for direct use as `platform_identifier` in `meshstack_tenant_v4`.
 - `meshstack_platform`: Expose `spec.access_information` on resource and data source, backed by platform
   `accessInformation` from the meshPlatform v2 API.
+- Add broad provider test coverage with 26 new mock-based unit + acceptance test files across 15 resource/data source domains.
+- Refactor test infrastructure into `internal/provider/acctest/testconfig/` with fluent immutable config operations and shared `xknownvalue` helpers.
+- Add concise dependency-wiring guidance in examples and docs, including `one(...)` patterns and `version_latest`/`version_latest_release` usage.
 
 ## v0.20.3
 

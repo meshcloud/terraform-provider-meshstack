@@ -1,7 +1,7 @@
 # An example for manual implementation with required attributes only
 resource "meshstack_building_block_definition" "example_03_manual" {
   metadata = {
-    owned_by_workspace = "my-workspace"
+    owned_by_workspace = data.meshstack_workspace.example.metadata.name
   }
 
   spec = {

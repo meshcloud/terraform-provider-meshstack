@@ -1,7 +1,7 @@
 resource "meshstack_platform" "example_custom" {
   metadata = {
     name               = "my-platform"
-    owned_by_workspace = "my-workspace"
+    owned_by_workspace = data.meshstack_workspace.example.metadata.name
   }
 
   spec = {
@@ -21,7 +21,7 @@ resource "meshstack_platform" "example_custom" {
 
     config = {
       custom = {
-        platform_type_ref = { name = "my-custom-platform-type" }
+        platform_type_ref = data.meshstack_platform_type.example.ref
 
         metering = {
           processing = {

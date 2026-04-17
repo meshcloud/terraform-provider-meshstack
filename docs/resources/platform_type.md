@@ -16,7 +16,7 @@ Represents a meshStack platform type.
 resource "meshstack_platform_type" "example" {
   metadata = {
     name               = "MY-PLATFORM-TYPE"
-    owned_by_workspace = "my-workspace"
+    owned_by_workspace = data.meshstack_workspace.example.metadata.name
   }
 
   spec = {
