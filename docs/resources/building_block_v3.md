@@ -218,7 +218,19 @@ Read-Only:
 - `behavior` (String)
 - `run_number` (Number)
 - `status` (String)
+- `steps` (Attributes List) Run steps with their display names, statuses, and messages. Populated from the download-logs actions endpoint. (see [below for nested schema](#nestedatt--status--latest_run--steps))
 - `uuid` (String)
+
+<a id="nestedatt--status--latest_run--steps"></a>
+### Nested Schema for `status.latest_run.steps`
+
+Read-Only:
+
+- `display_name` (String)
+- `status` (String)
+- `system_message` (String)
+- `user_message` (String)
+
 
 
 <a id="nestedatt--status--outputs"></a>

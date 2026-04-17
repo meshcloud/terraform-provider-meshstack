@@ -80,6 +80,17 @@ func (c MeshObjectClient[M]) Get(ctx context.Context, id string) (*M, error) {
 	return unmarshalBody[M](body, err)
 }
 
+// GetActionAs performs an authorized GET to an actions sub-path of a meshObject and unmarshals
+// the response into type R (which may differ from the meshObject type M).
+// Returns nil without error if the endpoint returns 404.
+func GetActionAs[M any, R any](ctx context.Context, c MeshObjectClient[M], id string, action string) (*R, error) {
+	body, err := c.doAuthorizedRequest(ctx, http.MethodGet, c.ApiUrl.JoinPath(id, "actions", action))
+	if errors.Is(err, errNotFound) {
+		return nil, nil
+	}
+	return unmarshalBody[R](body, err)
+}
+
 // Post creates a new meshObject with the given payload.
 // Automatically injects apiVersion and kind into the JSON payload.
 func (c MeshObjectClient[M]) Post(ctx context.Context, payload any, options ...RequestOption) (*M, error) {
