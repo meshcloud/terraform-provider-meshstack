@@ -188,6 +188,7 @@ type MeshBuildingBlockDefinitionVersion struct {
 // As such a version is tightly coupled to the definition, there's no single Get or Delete implemented.
 // A Get is not required as we always expose all versions of a definition anyway, and a Delete happens together when the definition is deleted.
 type MeshBuildingBlockDefinitionVersionClient interface {
+	Read(ctx context.Context, uuid string) (*MeshBuildingBlockDefinitionVersion, error)
 	List(ctx context.Context, buildingBlockDefinitionUuid string) ([]MeshBuildingBlockDefinitionVersion, error)
 	Create(ctx context.Context, ownedByWorkspace string, versionSpec MeshBuildingBlockDefinitionVersionSpec) (*MeshBuildingBlockDefinitionVersion, error)
 	Update(ctx context.Context, uuid, ownedByWorkspace string, versionSpec MeshBuildingBlockDefinitionVersionSpec) (*MeshBuildingBlockDefinitionVersion, error)
@@ -201,6 +202,10 @@ func newBuildingBlockDefinitionVersionClient(ctx context.Context, httpClient *in
 	return meshBuildingBlockDefinitionVersionClient{
 		meshObject: internal.NewMeshObjectClient[MeshBuildingBlockDefinitionVersion](ctx, httpClient, "v1-preview"),
 	}
+}
+
+func (c meshBuildingBlockDefinitionVersionClient) Read(ctx context.Context, uuid string) (*MeshBuildingBlockDefinitionVersion, error) {
+	return c.meshObject.Get(ctx, uuid)
 }
 
 func (c meshBuildingBlockDefinitionVersionClient) List(ctx context.Context, buildingBlockDefinitionUuid string) ([]MeshBuildingBlockDefinitionVersion, error) {

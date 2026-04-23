@@ -1,3 +1,10 @@
+<<<<<<< HEAD
+
+## v0.21.0
+
+FEATURES:
+- New `meshstack_building_block_v3` preview resource with in-place input updates (no force-replace), run retrigger controls (`retrigger_run`, `content_hash`), `moved` block migration support from `meshstack_buildingblock`/`meshstack_building_block_v2`, optional `purge_on_delete`, and computed `latest_run` status.
+
 ## v0.20.5
 
 FEATURES:
@@ -5,25 +12,6 @@ FEATURES:
 
 IMPROVEMENTS:
 - Update dependencies, such as Go to 1.26
-
-## v0.20.4
-
-BREAKING CHANGES:
-- Remove `api_version` and `kind` attributes from all resource and data source schemas:
-  `meshstack_project`, `meshstack_tenant_v4`, `meshstack_workspace`, `meshstack_payment_method`,
-  `meshstack_tag_definition`, `meshstack_building_block_v2`, `meshstack_buildingblock`,
-  `meshstack_service_instance`, `meshstack_project_user_binding`, `meshstack_project_group_binding`,
-  `meshstack_workspace_user_binding`, `meshstack_workspace_group_binding`.
-
-FEATURES:
-- New `meshstack_tenants` data source for listing tenants with optional workspace/project/platform filters.
-- New `meshstack_building_block_definitions` data source for listing Building Block Definitions.
-- Add `provider::meshstack::load_file`/`provider::meshstack::encode_file` functions for convenient Building Block definition `FILE` input.
-  Improve related documentation.
-
-IMPROVEMENTS:
-- `meshstack_workspace`: Add computed `ref` field to resource and data source for use as cross-resource reference.
-- `meshstack_tenant_v4`: Add computed `ref` field to resource for use as `target_ref` in `meshstack_building_block_v2`.
 - `meshstack_platform`: Add computed `identifier` field (`<platform-name>.<location-name>`) to resource and data source
   suitable for direct use as `platform_identifier` in `meshstack_tenant_v4`.
 - `meshstack_platform`: Expose `spec.access_information` on resource and data source, backed by platform

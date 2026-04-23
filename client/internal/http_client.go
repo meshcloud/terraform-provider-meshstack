@@ -75,6 +75,10 @@ func (c *HttpClient) readBodyAndCheckSuccess(ctx context.Context, res *http.Resp
 }
 
 func (c *HttpClient) buildRequest(ctx context.Context, method string, url url.URL, opts requestOptions) (*http.Request, error) {
+	if len(opts.extraPathElems) > 0 {
+		url = *url.JoinPath(opts.extraPathElems...)
+	}
+
 	if len(opts.urlQueryParams) > 0 {
 		query := url.Query()
 		for k, v := range opts.urlQueryParams {

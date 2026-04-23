@@ -13,6 +13,13 @@ type meshBuildingBlockDefinitionVersionClient struct {
 	Store *Store[client.MeshBuildingBlockDefinitionVersion]
 }
 
+func (m meshBuildingBlockDefinitionVersionClient) Read(_ context.Context, uuid string) (*client.MeshBuildingBlockDefinitionVersion, error) {
+	if version, ok := m.Store.Get(uuid); ok {
+		return version, nil
+	}
+	return nil, nil
+}
+
 func (m meshBuildingBlockDefinitionVersionClient) List(_ context.Context, buildingBlockDefinitionUuid string) ([]client.MeshBuildingBlockDefinitionVersion, error) {
 	var result []client.MeshBuildingBlockDefinitionVersion
 	for _, version := range m.Store.Values() {
