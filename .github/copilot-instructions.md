@@ -393,6 +393,45 @@ config = config.Join(workspaceConfig)
 ### Code Review Requirements
 - Verify that `CHANGELOG.md` includes entries for all changes (features, fixes, breaking changes)
 
+### CI/CD Best Practices
+
+The GitHub Actions workflows follow the [HashiCorp terraform-provider-scaffolding-framework](https://github.com/hashicorp/terraform-provider-scaffolding-framework) template with minor adjustments.
+
+**Key differences from HashiCorp template:**
+- **No Terraform version matrix** — tests run against the single Terraform version installed by `hashicorp/setup-terraform`
+- **Separate linting job** — `golangci-lint` runs in its own job (`golangci`) rather than being integrated into the build job
+
+**Action pinning rules:**
+- **Always pin actions to full SHA** (40 characters), not version tags
+- **Add version comment** after the SHA for readability: `@<sha> # v1.2.3`
+- **Use latest stable versions** — check for updates periodically
+
+```yaml
+# Good: SHA-pinned with version comment
+- uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+- uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+- uses: golangci/golangci-lint-action@1e7e51e771db61008b38414a730f564565cf7c20 # v9.2.0
+- uses: hashicorp/setup-terraform@5e8dbf3c6d9deaf4193ca7a8fb23f2ac83bb6c85 # v4.0.0
+
+# Bad: version tag only (mutable, security risk)
+- uses: actions/checkout@v4
+```
+
+**Standard actions used:**
+| Action | Purpose |
+|--------|---------|
+| `actions/checkout` | Clone repository |
+| `actions/setup-go` | Install Go from `go.mod` |
+| `golangci/golangci-lint-action` | Lint and format check |
+| `hashicorp/setup-terraform` | Install Terraform CLI (for doc generation) |
+| `goreleaser/goreleaser-action` | Build and release binaries |
+| `crazy-max/ghaction-import-gpg` | Import GPG key for release signing |
+
+**To update action versions:**
+1. Check latest release on GitHub (e.g., `gh api repos/actions/checkout/releases/latest --jq '.tag_name'`)
+2. Get SHA for tag: `gh api repos/actions/checkout/git/refs/tags/v6.0.2 --jq '.object.sha'`
+3. Update workflow with new SHA and version comment
+
 ### Adding New Resources
 1. Create `*_resource.go` in `/internal/provider/` with CRUD + Schema methods
 2. Add API client methods in `/client/`
