@@ -422,16 +422,17 @@ The GitHub Actions workflows follow the [HashiCorp terraform-provider-scaffoldin
 |--------|---------|
 | `actions/checkout` | Clone repository |
 | `actions/setup-go` | Install Go from `go.mod` |
-| `golangci/golangci-lint-action` | Lint and format check |
+| `golangci/golangci-lint-action` | Lint and format check (provides inline annotations) |
 | `hashicorp/setup-terraform` | Install Terraform CLI (for doc generation) |
-| `mikepenz/action-junit-report` | Test failure annotations in PRs |
 | `goreleaser/goreleaser-action` | Build and release binaries |
 | `crazy-max/ghaction-import-gpg` | Import GPG key for release signing |
 
 **Testing with gotestsum:**
 - Tests use [gotestsum](https://github.com/gotestyourself/gotestsum) for better output and JUnit XML generation
-- Installed via `go install gotest.tools/gotestsum@v1.13.0` (pinned version)
-- Generates `junit.xml` for test reporting and `coverage.out` for coverage
+- Installed as Go tool dependency in `go.mod` (`tool gotest.tools/gotestsum`)
+- Run via `go tool gotestsum` (version managed by Dependabot via gomod ecosystem)
+- Uses `-coverpkg=./...` for accurate cross-package coverage measurement
+- Coverage posted to PRs via `gh pr comment` (official GitHub CLI, no third-party actions)
 - Coverage summary displayed in GitHub job summary via `GITHUB_STEP_SUMMARY`
 
 **To update action versions:**
