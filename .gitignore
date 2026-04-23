@@ -21,3 +21,5 @@ providers-schema.json
 .nix-go/
 
 .env
+
+dist/
