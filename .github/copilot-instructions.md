@@ -424,8 +424,15 @@ The GitHub Actions workflows follow the [HashiCorp terraform-provider-scaffoldin
 | `actions/setup-go` | Install Go from `go.mod` |
 | `golangci/golangci-lint-action` | Lint and format check |
 | `hashicorp/setup-terraform` | Install Terraform CLI (for doc generation) |
+| `mikepenz/action-junit-report` | Test failure annotations in PRs |
 | `goreleaser/goreleaser-action` | Build and release binaries |
 | `crazy-max/ghaction-import-gpg` | Import GPG key for release signing |
+
+**Testing with gotestsum:**
+- Tests use [gotestsum](https://github.com/gotestyourself/gotestsum) for better output and JUnit XML generation
+- Installed via `go install gotest.tools/gotestsum@v1.13.0` (pinned version)
+- Generates `junit.xml` for test reporting and `coverage.out` for coverage
+- Coverage summary displayed in GitHub job summary via `GITHUB_STEP_SUMMARY`
 
 **To update action versions:**
 1. Check latest release on GitHub (e.g., `gh api repos/actions/checkout/releases/latest --jq '.tag_name'`)
