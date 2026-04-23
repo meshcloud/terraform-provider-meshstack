@@ -15,7 +15,6 @@ import (
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
 	clientTypes "github.com/meshcloud/terraform-provider-meshstack/client/types"
-	"github.com/meshcloud/terraform-provider-meshstack/client/types/ptr"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/types/generic"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/types/secret"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/util/hash"
@@ -102,7 +101,7 @@ func (model buildingBlockDefinitionVersionSpec) ToClientDto(buildingBlockDefinit
 		dto.State = client.MeshBuildingBlockDefinitionVersionStateReleased.Ptr()
 	}
 	if dto.VersionNumber == nil {
-		dto.VersionNumber = ptr.To(int64(1))
+		dto.VersionNumber = new(int64(1))
 	}
 
 	// Backend doesn't accept null inputs/outputs, so work around this
@@ -206,10 +205,10 @@ func buildingBlockDefinitionVersionConverterOptions(ctx context.Context, config,
 					}
 					sensitive := buildingBlockDefinitionVersionInputSensitive{}
 					if in.Argument.HasX() {
-						sensitive.Argument = ptr.To(convertSecret(in.Argument.X, "argument"))
+						sensitive.Argument = new(convertSecret(in.Argument.X, "argument"))
 					}
 					if in.DefaultValue.HasX() {
-						sensitive.DefaultValue = ptr.To(convertSecret(in.DefaultValue.X, "default_value"))
+						sensitive.DefaultValue = new(convertSecret(in.DefaultValue.X, "default_value"))
 					}
 					if err := errors.Join(errs...); err != nil {
 						return tftypes.Value{}, err
@@ -341,10 +340,10 @@ func (model *buildingBlockDefinition) SetFromVersionClientDtos(diags *diag.Diagn
 	model.VersionLatest = model.Versions[latestIndex]
 
 	if model.VersionLatest.State.Get() == client.MeshBuildingBlockDefinitionVersionStateReleased.Unwrap() {
-		model.VersionLatestRelease = ptr.To(model.VersionLatest)
+		model.VersionLatestRelease = new(model.VersionLatest)
 	} else if len(model.Versions) > 1 {
 		if latestButOneVersion := model.Versions[latestIndex-1]; latestButOneVersion.State.Get() == client.MeshBuildingBlockDefinitionVersionStateReleased.Unwrap() {
-			model.VersionLatestRelease = ptr.To(latestButOneVersion)
+			model.VersionLatestRelease = new(latestButOneVersion)
 		} else {
 			diags.AddError("version_latest_release points to non-release version", fmt.Sprintf(
 				"The attribute version_latest_release has state %s and not expected %s. The API shows unexpected behavior.",

@@ -510,3 +510,24 @@ When a resource or data source needs a computed output field that is **derived f
       OptionalField *string `json:"optionalField,omitempty" tfsdk:"optional_field"` // Nullable
   }
   ```
+
+### Go 1.26 `new(value)` for Pointers
+Go 1.26 extended the `new` builtin to accept an expression, not just a type. Use `new(value)` to create a pointer to a value in a single expression:
+
+```go
+// Before Go 1.26: required a helper function or intermediate variable
+func ptrTo[T any](v T) *T { return &v }
+s := ptrTo("hello")
+
+// Go 1.26+: use new(value) directly
+s := new("hello")           // *string pointing to "hello"
+n := new(42)                // *int pointing to 42
+n := new(int64(1))          // *int64 pointing to 1
+p := new(myStruct{A: "x"})  // *myStruct
+```
+
+**Guidelines:**
+- **Prefer `new(value)`** over helper functions like `ptr.To(value)` — the helper package was removed
+- **Use for inline pointer creation**: struct literals, function arguments, return values
+- **Chaining works**: `new(new(new("value")))` creates `***string`
+- **Works with expressions**: `new(a + b)`, `new(fmt.Sprintf("sha256:%s", hash))`

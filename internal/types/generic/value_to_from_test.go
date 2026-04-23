@@ -120,11 +120,10 @@ func TestValueToFrom(t *testing.T) {
 			"empty": tftypes.Object{AttributeTypes: map[string]tftypes.Type{}},
 		}
 		t.Run("all non-nil", func(t *testing.T) {
-			aValue := "test-value"
 			TestValueToFromTestcase[testStruct]{
 				Value: testStruct{
 					embeddedStruct: embeddedStruct{C: "embedded-c", D: 99},
-					A:              &aValue,
+					A:              new("test-value"),
 					B:              true,
 					E:              []int64{},
 					Nested:         &nestedStruct{A: "nested-name", B: 200},
@@ -211,7 +210,7 @@ func TestValueToFrom(t *testing.T) {
 	t.Run("ValueTo Ptr-Ptr-Ptr", func(t *testing.T) {
 		out, err := ValueTo[***string](tftypes.NewValue(tftypes.String, "value1"))
 		require.NoError(t, err)
-		require.Equal(t, ptrTo(ptrTo(ptrTo("value1"))), out)
+		require.Equal(t, new(new(new("value1"))), out)
 	})
 
 	t.Run("nested complex object", func(t *testing.T) {
@@ -284,7 +283,7 @@ func TestValueToFrom(t *testing.T) {
 			F *int64          `tfsdk:"f"`
 		}
 		var convertedNestedStruct, convertedInt64 int
-		out, err := ValueFrom(testStruct{F: ptrTo(int64(0))},
+		out, err := ValueFrom(testStruct{F: new(int64(0))},
 			WithValueFromConverterFor[nestedStruct](nil, func(attributePath path.Path, value nestedStruct) (tftypes.Value, error) {
 				convertedNestedStruct++
 				return ValueFrom(value)
@@ -412,8 +411,4 @@ func TestValueToFrom(t *testing.T) {
 			},
 		), out)
 	})
-}
-
-func ptrTo[T any](v T) *T {
-	return &v
 }

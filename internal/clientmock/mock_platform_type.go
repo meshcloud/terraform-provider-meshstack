@@ -7,7 +7,6 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
-	"github.com/meshcloud/terraform-provider-meshstack/client/types/ptr"
 )
 
 type MeshPlatformTypeClient struct {
@@ -27,7 +26,7 @@ func (m MeshPlatformTypeClient) Create(_ context.Context, platformType *client.M
 		Metadata: client.MeshPlatformTypeMetadata{
 			Name:             platformType.Metadata.Name,
 			OwnedByWorkspace: platformType.Metadata.OwnedByWorkspace,
-			Uuid:             ptr.To(platformTypeUuid),
+			Uuid:             new(platformTypeUuid),
 		},
 		Spec: platformType.Spec,
 		Status: client.MeshPlatformTypeStatus{

@@ -7,7 +7,6 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
-	"github.com/meshcloud/terraform-provider-meshstack/client/types/ptr"
 )
 
 type MeshIntegrationClient struct {
@@ -18,7 +17,7 @@ func (m MeshIntegrationClient) Create(_ context.Context, integration client.Mesh
 	integrationUuid := uuid.NewString()
 	created := &client.MeshIntegration{
 		Metadata: client.MeshIntegrationMetadata{
-			Uuid:             ptr.To(integrationUuid),
+			Uuid:             new(integrationUuid),
 			OwnedByWorkspace: integration.Metadata.OwnedByWorkspace,
 		},
 		Spec: integration.Spec,

@@ -212,8 +212,7 @@ func (p WalkPath) WrapError(err error) error {
 	if err == nil {
 		return nil
 	}
-	var walkErr walkPathError
-	if errors.As(err, &walkErr) {
+	if _, ok := errors.AsType[walkPathError](err); ok {
 		return err
 	}
 	return walkPathError{WalkPath: p, Wrapped: err}

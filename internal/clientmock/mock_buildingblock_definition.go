@@ -7,7 +7,6 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
-	"github.com/meshcloud/terraform-provider-meshstack/client/types/ptr"
 )
 
 type meshBuildingBlockDefinitionClient struct {
@@ -34,9 +33,9 @@ func (m meshBuildingBlockDefinitionClient) Read(_ context.Context, uuid string) 
 
 func (m meshBuildingBlockDefinitionClient) Create(_ context.Context, definition client.MeshBuildingBlockDefinition) (*client.MeshBuildingBlockDefinition, error) {
 	definitionUuid := uuid.NewString()
-	definition.Metadata.Uuid = ptr.To(definitionUuid)
+	definition.Metadata.Uuid = new(definitionUuid)
 	if definition.Spec.Symbol == nil {
-		definition.Spec.Symbol = ptr.To("mock-default-symbol")
+		definition.Spec.Symbol = new("mock-default-symbol")
 	}
 	m.Store.Set(definitionUuid, &definition)
 
@@ -53,7 +52,7 @@ func (m meshBuildingBlockDefinitionClient) Create(_ context.Context, definition 
 				Kind: "meshBuildingBlockDefinition",
 			},
 			DeletionMode:  client.BuildingBlockDeletionModeDelete.Unwrap(),
-			VersionNumber: ptr.To(int64(1)),
+			VersionNumber: new(int64(1)),
 			State:         client.MeshBuildingBlockDefinitionVersionStateDraft.Ptr(),
 		},
 	})

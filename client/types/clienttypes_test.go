@@ -7,8 +7,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/meshcloud/terraform-provider-meshstack/client/types/ptr"
 )
 
 func TestSecretOrAny(t *testing.T) {
@@ -21,7 +19,7 @@ func TestSecretOrAny(t *testing.T) {
 	}
 	tests := []testCase{
 		{"empty", `null`, SecretOrAny{}, false, false},
-		{"X plaintext", `{"plaintext":"some-secret"}`, SecretOrAny{X: Secret{Plaintext: ptr.To("some-secret")}}, true, false},
+		{"X plaintext", `{"plaintext":"some-secret"}`, SecretOrAny{X: Secret{Plaintext: new("some-secret")}}, true, false},
 		{"Y string", `"some-string"`, SecretOrAny{Y: "some-string"}, false, true},
 		{"Y bool", `true`, SecretOrAny{Y: true}, false, true},
 		{"Y number", `1.23123`, SecretOrAny{Y: 1.23123}, false, true},

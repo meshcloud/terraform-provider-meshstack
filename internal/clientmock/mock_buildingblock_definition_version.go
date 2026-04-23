@@ -7,7 +7,6 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
-	"github.com/meshcloud/terraform-provider-meshstack/client/types/ptr"
 )
 
 type meshBuildingBlockDefinitionVersionClient struct {
@@ -32,7 +31,7 @@ func (m meshBuildingBlockDefinitionVersionClient) Create(_ context.Context, owne
 
 	// Set version number if not already set
 	if versionSpec.VersionNumber == nil {
-		versionSpec.VersionNumber = ptr.To(int64(nextNum))
+		versionSpec.VersionNumber = new(int64(nextNum))
 	}
 
 	created := &client.MeshBuildingBlockDefinitionVersion{

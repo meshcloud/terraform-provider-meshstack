@@ -223,8 +223,7 @@ func (d *buildingBlockDefinitionsDataSource) Read(ctx context.Context, req datas
 			Ref:           versionModel.Ref,
 		})
 		if versionModel.VersionLatestRelease != nil {
-			latestRelease := convertBBDVersionRef(&resp.Diagnostics, "version_latest_release", *versionModel.VersionLatestRelease)
-			result[len(result)-1].VersionLatestRelease = &latestRelease
+			result[len(result)-1].VersionLatestRelease = new(convertBBDVersionRef(&resp.Diagnostics, "version_latest_release", *versionModel.VersionLatestRelease))
 		}
 		if resp.Diagnostics.HasError() {
 			return

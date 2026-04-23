@@ -98,8 +98,8 @@ func TestHasher_Hash(t *testing.T) {
 		// Nested maps
 		{"nested map with nil value", map[string]any{"outer": map[string]any{"inner": nil}}, nestedMapNilHash},
 		{"nested map with empty value", map[string]any{"outer": map[string]any{"inner": map[string]any{}}}, nestedMapNilHash},
-		{"nested map with empty string pointer", map[string]any{"outer": map[string]any{"inner": func() *string { s := ""; return &s }()}}, "68d25e73adcdbdbd079c051e2367fdb31cad9658b11c07a7ff196106c5cb792f"},
-		{"nested map with non-empty string pointer", map[string]any{"outer": map[string]any{"inner": func() *string { s := "not-empty"; return &s }()}}, "da604108fc59fb7b34a27eaba98ab6efade2527911efb6798ff8c2fed3ace130"},
+		{"nested map with empty string pointer", map[string]any{"outer": map[string]any{"inner": func() *string { return new("") }()}}, "68d25e73adcdbdbd079c051e2367fdb31cad9658b11c07a7ff196106c5cb792f"},
+		{"nested map with non-empty string pointer", map[string]any{"outer": map[string]any{"inner": func() *string { return new("not-empty") }()}}, "da604108fc59fb7b34a27eaba98ab6efade2527911efb6798ff8c2fed3ace130"},
 	}
 	var allHashes []string
 	allOk := true
@@ -132,8 +132,7 @@ func TestHasher_Hash(t *testing.T) {
 func TestHasher_Hash_writtenBytes(t *testing.T) {
 	// Helper to create expected byte sequences
 	mkBytes := func(bytes ...byte) *writtenBytesHash {
-		h := writtenBytesHash(bytes)
-		return &h
+		return new(writtenBytesHash(bytes))
 	}
 
 	tests := []struct {

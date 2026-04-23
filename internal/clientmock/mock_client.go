@@ -10,7 +10,6 @@ import (
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
 	clientTypes "github.com/meshcloud/terraform-provider-meshstack/client/types"
-	"github.com/meshcloud/terraform-provider-meshstack/client/types/ptr"
 	reflectwalk "github.com/meshcloud/terraform-provider-meshstack/internal/util/reflect"
 )
 
@@ -139,7 +138,7 @@ func (s *Store[M]) SortedKeys() []string {
 func backendSecretBehavior[T any](allowSecretHashOnlyOnCreate bool, dto, existingDto *T) {
 	handleSecret := func(secret, existingSecret *clientTypes.Secret) {
 		if secret != nil && secret.Plaintext != nil && *secret.Plaintext != "" {
-			secret.Hash = ptr.To(fmt.Sprintf("sha256:%s", *secret.Plaintext))
+			secret.Hash = new(fmt.Sprintf("sha256:%s", *secret.Plaintext))
 			secret.Plaintext = nil
 		} else if existingSecret != nil {
 			switch {

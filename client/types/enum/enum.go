@@ -3,8 +3,6 @@ package enum
 import (
 	"fmt"
 	"strings"
-
-	"github.com/meshcloud/terraform-provider-meshstack/client/types/ptr"
 )
 
 func Of[T ~string](entries ...Entry[T]) Enum[T] {
@@ -37,7 +35,7 @@ func (e Enum[T]) Markdown() string {
 type Entry[T ~string] string
 
 func (ee Entry[T]) Ptr() *T {
-	return ptr.To(ee.Unwrap())
+	return new(ee.Unwrap())
 }
 
 func (ee Entry[T]) Unwrap() T {

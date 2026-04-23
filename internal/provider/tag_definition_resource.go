@@ -406,8 +406,7 @@ func buildValueType(valueType tagDefinitionValueType) client.MeshTagDefinitionVa
 			Options: extractStringValues(valueType.MultiSelect.Options),
 		}
 		if valueType.MultiSelect.DefaultValue != nil {
-			v := extractStringValues(valueType.MultiSelect.DefaultValue)
-			result.MultiSelect.DefaultValue = &v
+			result.MultiSelect.DefaultValue = new(extractStringValues(valueType.MultiSelect.DefaultValue))
 		}
 	}
 

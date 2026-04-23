@@ -84,12 +84,12 @@ func TestWalk(t *testing.T) {
 	)
 
 	var (
-		v1          = "v1"
-		i42         = 42
-		str1        = "value1"
-		str2        = "value2"
-		int1        = 10
-		int2        = 20
+		v1   = "v1"
+		i42  = 42
+		str1 = "value1"
+
+		int1 = 10
+
 		stringSlice = []string{"a", "b"}
 		intMap      = map[string]int{"x": 1, "y": 2}
 	)
@@ -134,7 +134,7 @@ func TestWalk(t *testing.T) {
 					Inner: &innerStruct{Name: "test", Value: &int1},
 					Inners: []innerStruct{
 						{Name: "first"},
-						{Name: "second", Value: &int2},
+						{Name: "second", Value: new(20)},
 					},
 				},
 				Items: []*innerStruct{
@@ -214,7 +214,7 @@ func TestWalk(t *testing.T) {
 			name: "slices of various types populated",
 			v: sliceStruct{
 				Strings:    []string{"a", "b"},
-				Pointers:   []*string{&str1, nil, &str2},
+				Pointers:   []*string{&str1, nil, new("value2")},
 				Structs:    []innerStruct{{Name: "s1"}, {Name: "s2", Value: &int1}},
 				StructPtrs: []*innerStruct{{Name: "p1"}, nil},
 				InterfaceVals: []any{

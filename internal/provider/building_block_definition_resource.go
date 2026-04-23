@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
-	"github.com/meshcloud/terraform-provider-meshstack/client/types/ptr"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/types/generic"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/types/secret"
 )
@@ -207,13 +206,12 @@ func (r *buildingBlockDefinitionResource) ModifyPlan(ctx context.Context, req re
 			return
 		}
 		if tfValue.IsFullyKnown() {
-			versionSpecDtoContentHash := versionContentHash(
+			result.Value = new(versionContentHash(
 				generic.GetAttribute[client.MeshBuildingBlockDefinitionVersionSpec](
 					ctx, req.Plan, versionSpecPath, &resp.Diagnostics,
 					buildingBlockDefinitionVersionConverterOptions(ctx, req.Config, req.Plan, req.State)...),
 				&resp.Diagnostics,
-			)
-			result.Value = &versionSpecDtoContentHash
+			))
 		}
 		return
 	}()
@@ -308,7 +306,7 @@ func (r *buildingBlockDefinitionResource) Update(ctx context.Context, req resour
 	switch {
 	case !state.VersionSpec.Draft && plan.VersionSpec.Draft:
 		// changing draft=false->true means creating a new draft version from the existing one with increased version number
-		versionSpecDto.VersionNumber = ptr.To(state.VersionLatest.Number.Get() + 1)
+		versionSpecDto.VersionNumber = new(state.VersionLatest.Number.Get() + 1)
 		updatedVersionDto, err = r.buildingBlockDefinitionVersionClient.Create(ctx, plan.Metadata.OwnedByWorkspace, versionSpecDto)
 		if err != nil {
 			resp.Diagnostics.AddError("Error creating new version", fmt.Sprintf(

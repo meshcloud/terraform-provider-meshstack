@@ -31,7 +31,6 @@ func (m MeshTenantV4Client) Create(_ context.Context, tenant *client.MeshTenantV
 	id := uuid.NewString()
 
 	// Simulate a successful tenant creation with platformTenantId set
-	platformTenantId := acctest.RandString(16)
 	tenantName := tenant.Metadata.OwnedByWorkspace + "." + tenant.Metadata.OwnedByProject + "." + tenant.Spec.PlatformIdentifier
 
 	created := &client.MeshTenantV4{
@@ -43,7 +42,7 @@ func (m MeshTenantV4Client) Create(_ context.Context, tenant *client.MeshTenantV
 		},
 		Spec: client.MeshTenantV4Spec{
 			PlatformIdentifier:    tenant.Spec.PlatformIdentifier,
-			PlatformTenantId:      &platformTenantId,
+			PlatformTenantId:      new(acctest.RandString(16)),
 			LandingZoneIdentifier: tenant.Spec.LandingZoneIdentifier,
 			Quotas:                tenant.Spec.Quotas,
 		},
