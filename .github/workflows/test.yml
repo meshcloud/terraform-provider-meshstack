@@ -89,7 +89,7 @@ jobs:
           go-version-file: 'go.mod'
           cache: true
       - name: Run tests with gotestsum
-        run: go tool gotestsum --junitfile junit.xml --format testdox -- -coverprofile=coverage.out ./...
+        run: go tool gotestsum --junitfile junit.xml --format testdox -- -coverprofile=coverage.out -coverpkg=./... ./...
       - name: Test Report
         if: always()
         uses: mikepenz/action-junit-report@bccf2e31636835cf0874589931c4116687171386 # v6
