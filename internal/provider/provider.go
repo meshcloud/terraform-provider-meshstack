@@ -8,6 +8,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
 	"github.com/hashicorp/terraform-plugin-framework/function"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
@@ -20,6 +21,7 @@ import (
 
 // Ensure MeshStackProvider satisfies various provider interfaces.
 var _ provider.ProviderWithFunctions = &MeshStackProvider{}
+var _ provider.ProviderWithEphemeralResources = &MeshStackProvider{}
 
 type MeshStackProvider struct {
 	// version is set to the provider version on release, "dev" when the
@@ -83,6 +85,7 @@ func (p *MeshStackProvider) Configure(ctx context.Context, req provider.Configur
 	resp.Diagnostics.Append(diags...)
 	resp.DataSourceData = providerClient
 	resp.ResourceData = providerClient
+	resp.EphemeralResourceData = providerClient
 }
 
 func configureProviderClient(providerData any, consumer func(client client.Client)) (diags diag.Diagnostics) {
@@ -216,6 +219,12 @@ func (p *MeshStackProvider) Functions(ctx context.Context) []func() function.Fun
 		NewLoadImageFileFunction,
 		NewLoadFileFunction,
 		NewEncodeFileFunction,
+	}
+}
+
+func (p *MeshStackProvider) EphemeralResources(ctx context.Context) []func() ephemeral.EphemeralResource {
+	return []func() ephemeral.EphemeralResource{
+		NewApiKeyEphemeralResource,
 	}
 }
 
