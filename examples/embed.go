@@ -13,8 +13,6 @@ import (
 var (
 	//go:embed data-sources
 	dataSources embed.FS
-	//go:embed ephemeral-resources
-	ephemeralResources embed.FS
 	//go:embed resources
 	resources embed.FS
 )
@@ -22,9 +20,8 @@ var (
 type Example string
 
 const (
-	DataSource        Example = "data-source"
-	EphemeralResource Example = "ephemeral-resource"
-	Resource          Example = "resource"
+	DataSource Example = "data-source"
+	Resource   Example = "resource"
 )
 
 // Read reads the embedded example Terraform code for the named resource/datasource,
@@ -39,8 +36,6 @@ func (e Example) Read(t *testing.T, name string, fileNameParts ...string) []byte
 	switch e {
 	case DataSource:
 		fsys = dataSources
-	case EphemeralResource:
-		fsys = ephemeralResources
 	case Resource:
 		fsys = resources
 	default:
