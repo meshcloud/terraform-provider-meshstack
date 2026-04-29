@@ -79,12 +79,26 @@ nohup ./gradlew :buildingblocks:block-coordinator-api:start --console=plain > /t
 nohup ./gradlew :buildingblocks:manual-block-runner:start --console=plain > /tmp/manual-runner.log 2>&1 &
 nohup ./gradlew :meshfed:replicator:replicator-api:start --console=plain > /tmp/replicator.log 2>&1 &
 
-# 3. Wait for meshfed-api to be ready (takes ~60-120s for first start)
+# 3. Wait for ALL services to be ready before running tests
+#    meshfed-api: port 8080 (takes ~60-120s for first start)
+#    block-coordinator: port 8083
+#    replicator: port 7080
+#    manual-block-runner: no HTTP port (check log for "Started BlockRunnerApplicationKt")
 until curl -sf http://localhost:8080/mesh/info > /dev/null 2>&1; do sleep 5; done
 echo "meshfed-api ready"
+until curl -sf http://localhost:8083/actuator/health > /dev/null 2>&1; do sleep 5; done
+echo "block-coordinator ready"
+until curl -sf http://localhost:7080/actuator/health > /dev/null 2>&1; do sleep 5; done
+echo "replicator ready"
+until grep -q "Started BlockRunnerApplicationKt" /tmp/manual-runner.log 2>/dev/null; do sleep 5; done
+echo "manual-runner ready"
 ```
 
 **Run tests:**
+
+Individual acceptance tests complete in seconds. The full suite should finish in under 5 minutes.
+If tests hang or the 600s timeout is reached, a service is likely down — check logs immediately
+rather than waiting for the timeout.
 
 ```bash
 cd terraform-provider-meshstack/
@@ -472,6 +486,7 @@ go test -count=1 -parallel 4 -timeout 300s ./internal/provider/ 2>&1 | tee /tmp/
 - `TF_ACC` must be **unset** — the Terraform Plugin SDK then skips real provider startup and the mock client injected via `SetupMockClient()` is used instead.
 - Always use `-parallel 4` since the mock-backed tests run the full acceptance test harness and are slow without it.
 - Always tee to a file so errors can be inspected without re-running.
+- Mock clients must use **value receivers** (not pointer receivers). This avoids needing to pass pointers when constructing the `client.Client` struct.
 
 **Acceptance tests** (real local meshStack):
 ```bash

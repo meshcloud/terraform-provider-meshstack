@@ -17,6 +17,7 @@ import (
 var MinMeshStackVersion = version.MustParse("2026.10.0")
 
 type Client struct {
+	ApiKey                         MeshApiKeyClient
 	BuildingBlock                  MeshBuildingBlockClient
 	BuildingBlockV2                MeshBuildingBlockV2Client
 	BuildingBlockDefinition        MeshBuildingBlockDefinitionClient
@@ -26,6 +27,7 @@ type Client struct {
 	Location                       MeshLocationClient
 	PaymentMethod                  MeshPaymentMethodClient
 	Platform                       MeshPlatformClient
+	PlatformType                   MeshPlatformTypeClient
 	Project                        MeshProjectClient
 	ProjectGroupBinding            MeshProjectGroupBindingClient
 	ProjectUserBinding             MeshProjectUserBindingClient
@@ -36,7 +38,6 @@ type Client struct {
 	Workspace                      MeshWorkspaceClient
 	WorkspaceGroupBinding          MeshWorkspaceGroupBindingClient
 	WorkspaceUserBinding           MeshWorkspaceUserBindingClient
-	PlatformType                   MeshPlatformTypeClient
 }
 
 func New(ctx context.Context, rootUrl *url.URL, userAgent, apiKey, apiSecret string, apiToken string) (Client, error) {
@@ -70,26 +71,27 @@ func New(ctx context.Context, rootUrl *url.URL, userAgent, apiKey, apiSecret str
 	}
 
 	return Client{
-		newBuildingBlockClient(ctx, httpClient),
-		newBuildingBlockV2Client(ctx, httpClient),
-		newBuildingBlockDefinitionClient(ctx, httpClient),
-		newBuildingBlockDefinitionVersionClient(ctx, httpClient),
-		newIntegrationClient(ctx, httpClient),
-		newLandingZoneClient(ctx, httpClient),
-		newLocationClient(ctx, httpClient),
-		newPaymentMethodClient(ctx, httpClient),
-		newPlatformClient(ctx, httpClient),
-		newProjectClient(ctx, httpClient),
-		newProjectGroupBindingClient(ctx, httpClient),
-		newProjectUserBindingClient(ctx, httpClient),
-		newServiceInstanceClient(ctx, httpClient),
-		newTagDefinitionClient(ctx, httpClient),
-		newTenantClient(ctx, httpClient),
-		newTenantV4Client(ctx, httpClient),
-		newWorkspaceClient(ctx, httpClient),
-		newWorkspaceGroupBindingClient(ctx, httpClient),
-		newWorkspaceUserBindingClient(ctx, httpClient),
-		newPlatformTypeClient(ctx, httpClient),
+		ApiKey:                         newApiKeyClient(ctx, httpClient),
+		BuildingBlock:                  newBuildingBlockClient(ctx, httpClient),
+		BuildingBlockV2:                newBuildingBlockV2Client(ctx, httpClient),
+		BuildingBlockDefinition:        newBuildingBlockDefinitionClient(ctx, httpClient),
+		BuildingBlockDefinitionVersion: newBuildingBlockDefinitionVersionClient(ctx, httpClient),
+		Integration:                    newIntegrationClient(ctx, httpClient),
+		LandingZone:                    newLandingZoneClient(ctx, httpClient),
+		Location:                       newLocationClient(ctx, httpClient),
+		PaymentMethod:                  newPaymentMethodClient(ctx, httpClient),
+		Platform:                       newPlatformClient(ctx, httpClient),
+		PlatformType:                   newPlatformTypeClient(ctx, httpClient),
+		Project:                        newProjectClient(ctx, httpClient),
+		ProjectGroupBinding:            newProjectGroupBindingClient(ctx, httpClient),
+		ProjectUserBinding:             newProjectUserBindingClient(ctx, httpClient),
+		ServiceInstance:                newServiceInstanceClient(ctx, httpClient),
+		TagDefinition:                  newTagDefinitionClient(ctx, httpClient),
+		Tenant:                         newTenantClient(ctx, httpClient),
+		TenantV4:                       newTenantV4Client(ctx, httpClient),
+		Workspace:                      newWorkspaceClient(ctx, httpClient),
+		WorkspaceGroupBinding:          newWorkspaceGroupBindingClient(ctx, httpClient),
+		WorkspaceUserBinding:           newWorkspaceUserBindingClient(ctx, httpClient),
 	}, nil
 }
 

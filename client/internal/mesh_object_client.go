@@ -59,12 +59,15 @@ func InferKind[M any]() string {
 	return versionSuffixRe.ReplaceAllString(kind, "")
 }
 
+var pluralExceptions = map[string]string{
+	// Add exceptions here as needed, e.g. "meshPolicy": "meshPolicies"
+}
+
 func pluralizeKind(kind string) string {
-	if strings.HasSuffix(kind, "y") {
-		// this is ok, as we don't have meshObjects ending in 'y' yet, so take this shortcut
-		panic(fmt.Sprintf("Correctly pluralizing meshObject kind '%s' is not supported yet", kind))
+	if plural, ok := pluralExceptions[kind]; ok {
+		return plural
 	}
-	return fmt.Sprintf("%ss", kind)
+	return kind + "s"
 }
 
 func (c MeshObjectClient[M]) meshObjectMimeType() string {

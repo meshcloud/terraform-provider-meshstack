@@ -5,6 +5,9 @@ BREAKING CHANGES:
 - `meshstack_platform` (OpenShift): Remove `enable_template_instantiation` field from the replication config. This field has been removed from the meshStack API.
 - `meshstack_landingzone`: Remove `openshift_template` field from OpenShift platform properties. This field has been removed from the meshStack API.
 
+FEATURES:
+- New `meshstack_api_key` resource for managing meshStack API keys with automatic secret rotation on expiry change.
+
 ## v0.20.5
 
 FEATURES:
