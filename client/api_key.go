@@ -7,31 +7,34 @@ import (
 )
 
 type MeshApiKey struct {
-	Metadata MeshApiKeyMetadata `json:"metadata" tfsdk:"metadata"`
-	Spec     MeshApiKeySpec     `json:"spec" tfsdk:"spec"`
-	Token    *string            `json:"token,omitempty" tfsdk:"token"`
+	Metadata MeshApiKeyMetadata `json:"metadata"`
+	Spec     MeshApiKeySpec     `json:"spec"`
+	Status   *MeshApiKeyStatus  `json:"status,omitempty"`
 }
 
 type MeshApiKeyMetadata struct {
-	Uuid             *string `json:"uuid,omitempty" tfsdk:"uuid"`
-	Name             string  `json:"name" tfsdk:"name"`
-	OwnedByWorkspace string  `json:"ownedByWorkspace" tfsdk:"owned_by_workspace"`
-	CreatedOn        string  `json:"createdOn" tfsdk:"created_on"`
+	Uuid             *string `json:"uuid,omitempty"`
+	OwnedByWorkspace string  `json:"ownedByWorkspace"`
 }
 
 type MeshApiKeySpec struct {
-	Authorities []string `json:"authorities" tfsdk:"authorities"`
-	ExpiryDate  string   `json:"expiryDate" tfsdk:"expiry_date"`
+	DisplayName string   `json:"displayName"`
+	Authorities []string `json:"authorities"`
+	ExpiresAt   *string  `json:"expiresAt,omitempty"`
+}
+
+type MeshApiKeyStatus struct {
+	Token *string `json:"token,omitempty"`
 }
 
 type MeshApiKeyCreate struct {
-	Metadata MeshApiKeyCreateMetadata `json:"metadata" tfsdk:"metadata"`
-	Spec     MeshApiKeySpec           `json:"spec" tfsdk:"spec"`
+	Metadata MeshApiKeyCreateMetadata `json:"metadata"`
+	Spec     MeshApiKeySpec           `json:"spec"`
 }
 
 type MeshApiKeyCreateMetadata struct {
-	Name             string `json:"name" tfsdk:"name"`
-	OwnedByWorkspace string `json:"ownedByWorkspace" tfsdk:"owned_by_workspace"`
+	Uuid             *string `json:"uuid,omitempty"`
+	OwnedByWorkspace string  `json:"ownedByWorkspace"`
 }
 
 type MeshApiKeyClient interface {
@@ -46,7 +49,7 @@ type meshApiKeyClient struct {
 }
 
 func newApiKeyClient(ctx context.Context, httpClient *internal.HttpClient) MeshApiKeyClient {
-	return meshApiKeyClient{internal.NewMeshObjectClient[MeshApiKey](ctx, httpClient, "v1")}
+	return meshApiKeyClient{internal.NewMeshObjectClient[MeshApiKey](ctx, httpClient, "v1-preview")}
 }
 
 func (c meshApiKeyClient) Create(ctx context.Context, apiKey *MeshApiKeyCreate) (*MeshApiKey, error) {

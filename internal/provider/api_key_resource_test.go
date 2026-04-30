@@ -32,33 +32,32 @@ func TestApiKeyResource_Lifecycle(t *testing.T) {
 				Config: `
 resource "meshstack_api_key" "test" {
   workspace_identifier = "workspace-1"
-  name                 = "my-api-key"
-  authorities          = ["workspace.read", "project.read"]
-  expiry_date          = "2030-12-31"
+  display_name         = "my-api-key"
+  authorities          = ["LANDINGZONE_LIST"]
+  expires_at           = "2030-12-31"
 }
 `,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("meshstack_api_key.test", "uuid"),
 					resource.TestCheckResourceAttrSet("meshstack_api_key.test", "token"),
 					resource.TestCheckResourceAttr("meshstack_api_key.test", "workspace_identifier", "workspace-1"),
-					resource.TestCheckResourceAttr("meshstack_api_key.test", "name", "my-api-key"),
-					resource.TestCheckResourceAttrSet("meshstack_api_key.test", "created_on"),
+					resource.TestCheckResourceAttr("meshstack_api_key.test", "display_name", "my-api-key"),
 				),
 			},
-			// Update: change name and expiry_date (does not recreate)
+			// Update: change display_name and expires_at (does not recreate, but rotates token)
 			{
 				Config: `
 resource "meshstack_api_key" "test" {
   workspace_identifier = "workspace-1"
-  name                 = "my-api-key-updated"
-  authorities          = ["workspace.read", "project.read"]
-  expiry_date          = "2031-06-30"
+  display_name         = "my-api-key-updated"
+  authorities          = ["LANDINGZONE_LIST"]
+  expires_at           = "2031-06-30"
 }
 `,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("meshstack_api_key.test", "name", "my-api-key-updated"),
-					resource.TestCheckResourceAttr("meshstack_api_key.test", "expiry_date", "2031-06-30"),
-					// Token should still be set from create
+					resource.TestCheckResourceAttr("meshstack_api_key.test", "display_name", "my-api-key-updated"),
+					resource.TestCheckResourceAttr("meshstack_api_key.test", "expires_at", "2031-06-30"),
+					// Token should be set (rotated because expires_at changed)
 					resource.TestCheckResourceAttrSet("meshstack_api_key.test", "token"),
 				),
 			},
@@ -90,9 +89,9 @@ func TestApiKeyResource_Import(t *testing.T) {
 				Config: `
 resource "meshstack_api_key" "test" {
   workspace_identifier = "workspace-1"
-  name                 = "import-test-key"
-  authorities          = ["workspace.read"]
-  expiry_date          = "2030-12-31"
+  display_name         = "import-test-key"
+  authorities          = ["LANDINGZONE_LIST"]
+  expires_at           = "2030-12-31"
 }
 `,
 			},

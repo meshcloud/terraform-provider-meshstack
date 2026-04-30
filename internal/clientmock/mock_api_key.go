@@ -3,7 +3,6 @@ package clientmock
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/google/uuid"
 
@@ -26,9 +25,7 @@ func (m *MeshApiKeyClient) Create(_ context.Context, apiKey *client.MeshApiKeyCr
 	stored := &client.MeshApiKey{
 		Metadata: client.MeshApiKeyMetadata{
 			Uuid:             &apiKeyUuid,
-			Name:             apiKey.Metadata.Name,
 			OwnedByWorkspace: apiKey.Metadata.OwnedByWorkspace,
-			CreatedOn:        time.Now().UTC().Format(time.RFC3339),
 		},
 		Spec: apiKey.Spec,
 	}
@@ -36,7 +33,7 @@ func (m *MeshApiKeyClient) Create(_ context.Context, apiKey *client.MeshApiKeyCr
 	m.Store.Set(apiKeyUuid, stored)
 
 	created := *stored
-	created.Token = &token
+	created.Status = &client.MeshApiKeyStatus{Token: &token}
 	return &created, nil
 }
 
@@ -55,11 +52,18 @@ func (m *MeshApiKeyClient) Update(_ context.Context, uuid string, apiKey *client
 		return nil, fmt.Errorf("api key not found: %s", uuid)
 	}
 
-	existing.Metadata.Name = apiKey.Metadata.Name
-	existing.Metadata.OwnedByWorkspace = apiKey.Metadata.OwnedByWorkspace
+	// Simulate secret rotation when expiresAt changes
+	var rotatedToken *client.MeshApiKeyStatus
+	if apiKey.Spec.ExpiresAt != nil && existing.Spec.ExpiresAt != nil && *apiKey.Spec.ExpiresAt != *existing.Spec.ExpiresAt {
+		newToken := "rotated-token-" + uuid
+		rotatedToken = &client.MeshApiKeyStatus{Token: &newToken}
+	}
+
 	existing.Spec = apiKey.Spec
 
-	return existing, nil
+	result := *existing
+	result.Status = rotatedToken
+	return &result, nil
 }
 
 func (m *MeshApiKeyClient) Delete(_ context.Context, uuid string) error {

@@ -2,12 +2,13 @@ package provider
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -31,13 +32,12 @@ type apiKeyResource struct {
 
 type apiKeyResourceModel struct {
 	WorkspaceIdentifier types.String `tfsdk:"workspace_identifier"`
-	Name                types.String `tfsdk:"name"`
+	DisplayName         types.String `tfsdk:"display_name"`
 	Authorities         types.List   `tfsdk:"authorities"`
-	ExpiryDate          types.String `tfsdk:"expiry_date"`
+	ExpiresAt           types.String `tfsdk:"expires_at"`
 
-	Uuid      types.String `tfsdk:"uuid"`
-	Token     types.String `tfsdk:"token"`
-	CreatedOn types.String `tfsdk:"created_on"`
+	Uuid  types.String `tfsdk:"uuid"`
+	Token types.String `tfsdk:"token"`
 }
 
 func (r *apiKeyResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -53,8 +53,8 @@ func (r *apiKeyResource) Configure(_ context.Context, req resource.ConfigureRequ
 func (r *apiKeyResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Manages a meshStack API key.\n\n" +
-			"The API key token is only available after initial creation and is stored " +
-			"(sensitive) in the Terraform state. It cannot be retrieved again from the API.",
+			"The API key token is returned in `status.token` after creation and after updates that " +
+			"rotate the secret (e.g. changing `expires_at`). It is stored (sensitive) in the Terraform state.",
 
 		Attributes: map[string]schema.Attribute{
 			"workspace_identifier": schema.StringAttribute{
@@ -62,19 +62,20 @@ func (r *apiKeyResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				MarkdownDescription: "Identifier of the workspace that owns the API key.",
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
-			"name": schema.StringAttribute{
+			"display_name": schema.StringAttribute{
 				Required:            true,
 				MarkdownDescription: "Display name of the API key.",
 			},
 			"authorities": schema.ListAttribute{
-				Required:            true,
-				ElementType:         types.StringType,
-				MarkdownDescription: "Authorities (permission shortcodes) assigned to the API key.",
-				PlanModifiers:       []planmodifier.List{listplanmodifier.RequiresReplace()},
+				Required:    true,
+				ElementType: types.StringType,
+				MarkdownDescription: "Authorities (permission shortcodes) assigned to the API key. " +
+					"Valid values: " + client.WorkspacePermissions.Markdown() + " (workspace-scoped), " +
+					client.AdminPermissions.Markdown() + " (admin-scoped).",
 			},
-			"expiry_date": schema.StringAttribute{
+			"expires_at": schema.StringAttribute{
 				Required:            true,
-				MarkdownDescription: "Expiry date of the API key (ISO date, e.g. `2025-12-31`).",
+				MarkdownDescription: "Expiry date of the API key (ISO date, e.g. `2025-12-31`). Changing this rotates the secret and a new token is returned.",
 			},
 			"uuid": schema.StringAttribute{
 				Computed:            true,
@@ -84,13 +85,7 @@ func (r *apiKeyResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 			"token": schema.StringAttribute{
 				Computed:            true,
 				Sensitive:           true,
-				MarkdownDescription: "Secret token of the API key. Only available after creation; cannot be retrieved again.",
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-			},
-			"created_on": schema.StringAttribute{
-				Computed:            true,
-				MarkdownDescription: "Creation timestamp of the API key.",
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				MarkdownDescription: "Secret token of the API key. Available after creation and after secret rotation (when `expires_at` changes).",
 			},
 		},
 	}
@@ -108,14 +103,20 @@ func (r *apiKeyResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
+	if diags := validateAuthorities(authorities); diags.HasError() {
+		resp.Diagnostics.Append(diags...)
+		return
+	}
+
+	expiresAt := data.ExpiresAt.ValueString()
 	created, err := r.meshApiKeyClient.Create(ctx, &client.MeshApiKeyCreate{
 		Metadata: client.MeshApiKeyCreateMetadata{
-			Name:             data.Name.ValueString(),
 			OwnedByWorkspace: data.WorkspaceIdentifier.ValueString(),
 		},
 		Spec: client.MeshApiKeySpec{
+			DisplayName: data.DisplayName.ValueString(),
 			Authorities: authorities,
-			ExpiryDate:  data.ExpiryDate.ValueString(),
+			ExpiresAt:   &expiresAt,
 		},
 	})
 	if err != nil {
@@ -128,14 +129,20 @@ func (r *apiKeyResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	if created.Token == nil || *created.Token == "" {
-		resp.Diagnostics.AddError("Unable to create API key", "The API did not return a token.")
+	data.Uuid = types.StringPointerValue(created.Metadata.Uuid)
+	data.Token = extractToken(created)
+
+	// Sync back server-authoritative fields
+	data.DisplayName = types.StringValue(created.Spec.DisplayName)
+	if created.Spec.ExpiresAt != nil {
+		data.ExpiresAt = types.StringValue(*created.Spec.ExpiresAt)
+	}
+	authList, diags := types.ListValueFrom(ctx, types.StringType, created.Spec.Authorities)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
 		return
 	}
-
-	data.Uuid = types.StringPointerValue(created.Metadata.Uuid)
-	data.Token = types.StringPointerValue(created.Token)
-	data.CreatedOn = types.StringValue(created.Metadata.CreatedOn)
+	data.Authorities = authList
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -160,9 +167,10 @@ func (r *apiKeyResource) Read(ctx context.Context, req resource.ReadRequest, res
 	}
 
 	data.WorkspaceIdentifier = types.StringValue(apiKey.Metadata.OwnedByWorkspace)
-	data.Name = types.StringValue(apiKey.Metadata.Name)
-	data.CreatedOn = types.StringValue(apiKey.Metadata.CreatedOn)
-	data.ExpiryDate = types.StringValue(apiKey.Spec.ExpiryDate)
+	data.DisplayName = types.StringValue(apiKey.Spec.DisplayName)
+	if apiKey.Spec.ExpiresAt != nil {
+		data.ExpiresAt = types.StringValue(*apiKey.Spec.ExpiresAt)
+	}
 
 	authList, diags := types.ListValueFrom(ctx, types.StringType, apiKey.Spec.Authorities)
 	resp.Diagnostics.Append(diags...)
@@ -171,8 +179,7 @@ func (r *apiKeyResource) Read(ctx context.Context, req resource.ReadRequest, res
 	}
 	data.Authorities = authList
 
-	// Token is never returned by GET — preserve existing state value (UseStateForUnknown handles plan,
-	// but we must not overwrite state here).
+	// Token is never returned by GET — preserve existing state value.
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -189,15 +196,22 @@ func (r *apiKeyResource) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
+	if diags := validateAuthorities(authorities); diags.HasError() {
+		resp.Diagnostics.Append(diags...)
+		return
+	}
+
 	uuid := data.Uuid.ValueString()
+	expiresAt := data.ExpiresAt.ValueString()
 	updated, err := r.meshApiKeyClient.Update(ctx, uuid, &client.MeshApiKeyCreate{
 		Metadata: client.MeshApiKeyCreateMetadata{
-			Name:             data.Name.ValueString(),
+			Uuid:             &uuid,
 			OwnedByWorkspace: data.WorkspaceIdentifier.ValueString(),
 		},
 		Spec: client.MeshApiKeySpec{
+			DisplayName: data.DisplayName.ValueString(),
 			Authorities: authorities,
-			ExpiryDate:  data.ExpiryDate.ValueString(),
+			ExpiresAt:   &expiresAt,
 		},
 	})
 	if err != nil {
@@ -206,9 +220,10 @@ func (r *apiKeyResource) Update(ctx context.Context, req resource.UpdateRequest,
 	}
 
 	if updated != nil {
-		data.Name = types.StringValue(updated.Metadata.Name)
-		data.ExpiryDate = types.StringValue(updated.Spec.ExpiryDate)
-		data.CreatedOn = types.StringValue(updated.Metadata.CreatedOn)
+		data.DisplayName = types.StringValue(updated.Spec.DisplayName)
+		if updated.Spec.ExpiresAt != nil {
+			data.ExpiresAt = types.StringValue(*updated.Spec.ExpiresAt)
+		}
 
 		authList, diags := types.ListValueFrom(ctx, types.StringType, updated.Spec.Authorities)
 		resp.Diagnostics.Append(diags...)
@@ -216,15 +231,21 @@ func (r *apiKeyResource) Update(ctx context.Context, req resource.UpdateRequest,
 			return
 		}
 		data.Authorities = authList
-	}
 
-	// Preserve token from prior state (PUT never returns it)
-	var priorState apiKeyResourceModel
-	resp.Diagnostics.Append(req.State.Get(ctx, &priorState)...)
-	if resp.Diagnostics.HasError() {
-		return
+		// If the API rotated the secret (expiresAt changed), capture the new token.
+		token := extractToken(updated)
+		if !token.IsNull() {
+			data.Token = token
+		} else {
+			// Preserve token from prior state when no rotation occurred.
+			var priorState apiKeyResourceModel
+			resp.Diagnostics.Append(req.State.Get(ctx, &priorState)...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+			data.Token = priorState.Token
+		}
 	}
-	data.Token = priorState.Token
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -250,4 +271,40 @@ func extractAuthorities(ctx context.Context, authList types.List, diags *diag.Di
 	var authorities []string
 	diags.Append(authList.ElementsAs(ctx, &authorities, false)...)
 	return authorities
+}
+
+func extractToken(apiKey *client.MeshApiKey) types.String {
+	if apiKey.Status != nil && apiKey.Status.Token != nil && *apiKey.Status.Token != "" {
+		return types.StringValue(*apiKey.Status.Token)
+	}
+	return types.StringNull()
+}
+
+func validateAuthorities(authorities []string) diag.Diagnostics {
+	var diags diag.Diagnostics
+	validPermissions := client.AllApiKeyPermissions()
+	validSet := make(map[string]bool, len(validPermissions))
+	for _, p := range validPermissions {
+		validSet[p] = true
+	}
+
+	var invalid []string
+	for _, a := range authorities {
+		if !validSet[a] {
+			invalid = append(invalid, a)
+		}
+	}
+
+	if len(invalid) > 0 {
+		diags.AddError(
+			"Invalid authorities",
+			fmt.Sprintf(
+				"The following authorities are not valid API key permissions: %s. "+
+					"Valid permissions are: %s",
+				strings.Join(invalid, ", "),
+				strings.Join(validPermissions, ", "),
+			),
+		)
+	}
+	return diags
 }
