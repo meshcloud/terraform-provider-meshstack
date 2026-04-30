@@ -182,6 +182,7 @@ func (p *MeshStackProvider) Resources(ctx context.Context) []func() resource.Res
 		NewLocationResource,
 		NewPlatformTypeResource,
 		NewIntegrationResource,
+		NewApiKeyResource,
 	}
 }
 

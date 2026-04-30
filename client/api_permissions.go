@@ -47,6 +47,9 @@ var (
 	PermissionManagedBuildingBlockRunSave       = WorkspacePermissions.Entry("MANAGED_BUILDINGBLOCKRUN_SAVE")
 	PermissionManagedBuildingBlockList          = WorkspacePermissions.Entry("MANAGED_BUILDINGBLOCK_LIST")
 	PermissionManagedTenantImport               = WorkspacePermissions.Entry("MANAGED_TENANT_IMPORT")
+	PermissionManagedTfStateDelete              = WorkspacePermissions.Entry("MANAGED_TFSTATE_DELETE")
+	PermissionManagedTfStateList                = WorkspacePermissions.Entry("MANAGED_TFSTATE_LIST")
+	PermissionManagedTfStateSave                = WorkspacePermissions.Entry("MANAGED_TFSTATE_SAVE")
 
 	PermissionPaymentMethodList = WorkspacePermissions.Entry("PAYMENTMETHOD_LIST")
 
@@ -84,3 +87,99 @@ var (
 	PermissionWorkspaceList   = WorkspacePermissions.Entry("WORKSPACE_LIST")
 	PermissionWorkspaceSave   = WorkspacePermissions.Entry("WORKSPACE_SAVE")
 )
+
+// Admin Permissions (cross-workspace).
+var (
+	AdminPermissions = enum.Enum[ApiPermission]{}
+
+	PermissionAdmBuildingBlockDefinitionDelete = AdminPermissions.Entry("ADM_BUILDINGBLOCKDEFINITION_DELETE")
+	PermissionAdmBuildingBlockDefinitionList   = AdminPermissions.Entry("ADM_BUILDINGBLOCKDEFINITION_LIST")
+	PermissionAdmBuildingBlockDefinitionSave   = AdminPermissions.Entry("ADM_BUILDINGBLOCKDEFINITION_SAVE")
+
+	PermissionAdmBuildingBlockRunnerDelete = AdminPermissions.Entry("ADM_BUILDINGBLOCKRUNNER_DELETE")
+	PermissionAdmBuildingBlockRunnerList   = AdminPermissions.Entry("ADM_BUILDINGBLOCKRUNNER_LIST")
+	PermissionAdmBuildingBlockRunnerSave   = AdminPermissions.Entry("ADM_BUILDINGBLOCKRUNNER_SAVE")
+
+	PermissionAdmBuildingBlockRunList       = AdminPermissions.Entry("ADM_BUILDINGBLOCKRUN_LIST")
+	PermissionAdmBuildingBlockRunSave       = AdminPermissions.Entry("ADM_BUILDINGBLOCKRUN_SAVE")
+	PermissionAdmBuildingBlockRunSourceSave = AdminPermissions.Entry("ADM_BUILDINGBLOCKRUNSOURCE_SAVE")
+
+	PermissionAdmBuildingBlockDelete = AdminPermissions.Entry("ADM_BUILDINGBLOCK_DELETE")
+	PermissionAdmBuildingBlockList   = AdminPermissions.Entry("ADM_BUILDINGBLOCK_LIST")
+	PermissionAdmBuildingBlockSave   = AdminPermissions.Entry("ADM_BUILDINGBLOCK_SAVE")
+
+	PermissionAdmCommunicationDefinitionDelete = AdminPermissions.Entry("ADM_COMMUNICATIONDEFINITION_DELETE")
+	PermissionAdmCommunicationDefinitionList   = AdminPermissions.Entry("ADM_COMMUNICATIONDEFINITION_LIST")
+	PermissionAdmCommunicationDefinitionSave   = AdminPermissions.Entry("ADM_COMMUNICATIONDEFINITION_SAVE")
+
+	PermissionAdmCommunicationDelete = AdminPermissions.Entry("ADM_COMMUNICATION_DELETE")
+	PermissionAdmCommunicationList   = AdminPermissions.Entry("ADM_COMMUNICATION_LIST")
+	PermissionAdmCommunicationSave   = AdminPermissions.Entry("ADM_COMMUNICATION_SAVE")
+
+	PermissionAdmEventLogList = AdminPermissions.Entry("ADM_EVENTLOG_LIST")
+
+	PermissionAdmIntegrationDelete = AdminPermissions.Entry("ADM_INTEGRATION_DELETE")
+	PermissionAdmIntegrationList   = AdminPermissions.Entry("ADM_INTEGRATION_LIST")
+	PermissionAdmIntegrationSave   = AdminPermissions.Entry("ADM_INTEGRATION_SAVE")
+
+	PermissionAdmLandingZoneDelete = AdminPermissions.Entry("ADM_LANDINGZONE_DELETE")
+	PermissionAdmLandingZoneList   = AdminPermissions.Entry("ADM_LANDINGZONE_LIST")
+	PermissionAdmLandingZoneSave   = AdminPermissions.Entry("ADM_LANDINGZONE_SAVE")
+
+	PermissionAdmPaymentMethodDelete = AdminPermissions.Entry("ADM_PAYMENTMETHOD_DELETE")
+	PermissionAdmPaymentMethodList   = AdminPermissions.Entry("ADM_PAYMENTMETHOD_LIST")
+	PermissionAdmPaymentMethodSave   = AdminPermissions.Entry("ADM_PAYMENTMETHOD_SAVE")
+
+	PermissionAdmPlatformInstanceDelete = AdminPermissions.Entry("ADM_PLATFORMINSTANCE_DELETE")
+	PermissionAdmPlatformInstanceList   = AdminPermissions.Entry("ADM_PLATFORMINSTANCE_LIST")
+	PermissionAdmPlatformInstanceSave   = AdminPermissions.Entry("ADM_PLATFORMINSTANCE_SAVE")
+
+	PermissionAdmProjectPrincipalRoleDelete = AdminPermissions.Entry("ADM_PROJECTPRINCIPALROLE_DELETE")
+	PermissionAdmProjectPrincipalRoleList   = AdminPermissions.Entry("ADM_PROJECTPRINCIPALROLE_LIST")
+	PermissionAdmProjectPrincipalRoleSave   = AdminPermissions.Entry("ADM_PROJECTPRINCIPALROLE_SAVE")
+
+	PermissionAdmProjectRoleDelete = AdminPermissions.Entry("ADM_PROJECTROLE_DELETE")
+	PermissionAdmProjectRoleSave   = AdminPermissions.Entry("ADM_PROJECTROLE_SAVE")
+
+	PermissionAdmProjectDelete = AdminPermissions.Entry("ADM_PROJECT_DELETE")
+	PermissionAdmProjectList   = AdminPermissions.Entry("ADM_PROJECT_LIST")
+	PermissionAdmProjectSave   = AdminPermissions.Entry("ADM_PROJECT_SAVE")
+
+	PermissionAdmReviewPublication = AdminPermissions.Entry("ADM_REVIEW_PUBLICATION")
+
+	PermissionAdmServiceInstanceDelete = AdminPermissions.Entry("ADM_SERVICEINSTANCE_DELETE")
+	PermissionAdmServiceInstanceList   = AdminPermissions.Entry("ADM_SERVICEINSTANCE_LIST")
+	PermissionAdmServiceInstanceSave   = AdminPermissions.Entry("ADM_SERVICEINSTANCE_SAVE")
+
+	PermissionAdmTagDefinitionDelete = AdminPermissions.Entry("ADM_TAGDEFINITION_DELETE")
+	PermissionAdmTagDefinitionList   = AdminPermissions.Entry("ADM_TAGDEFINITION_LIST")
+	PermissionAdmTagDefinitionSave   = AdminPermissions.Entry("ADM_TAGDEFINITION_SAVE")
+
+	PermissionAdmTenantDelete = AdminPermissions.Entry("ADM_TENANT_DELETE")
+	PermissionAdmTenantList   = AdminPermissions.Entry("ADM_TENANT_LIST")
+	PermissionAdmTenantSave   = AdminPermissions.Entry("ADM_TENANT_SAVE")
+
+	PermissionAdmTfStateDelete = AdminPermissions.Entry("ADM_TFSTATE_DELETE")
+	PermissionAdmTfStateList   = AdminPermissions.Entry("ADM_TFSTATE_LIST")
+	PermissionAdmTfStateSave   = AdminPermissions.Entry("ADM_TFSTATE_SAVE")
+
+	PermissionAdmUserDelete = AdminPermissions.Entry("ADM_USER_DELETE")
+	PermissionAdmUserList   = AdminPermissions.Entry("ADM_USER_LIST")
+	PermissionAdmUserSave   = AdminPermissions.Entry("ADM_USER_SAVE")
+
+	PermissionAdmWorkspaceDelete = AdminPermissions.Entry("ADM_WORKSPACE_DELETE")
+	PermissionAdmWorkspaceList   = AdminPermissions.Entry("ADM_WORKSPACE_LIST")
+	PermissionAdmWorkspaceSave   = AdminPermissions.Entry("ADM_WORKSPACE_SAVE")
+
+	PermissionAdmWorkspacePrincipalBindingDelete = AdminPermissions.Entry("ADM_WORKSPACEPRINCIPALBINDING_DELETE")
+	PermissionAdmWorkspacePrincipalBindingList   = AdminPermissions.Entry("ADM_WORKSPACEPRINCIPALBINDING_LIST")
+	PermissionAdmWorkspacePrincipalBindingSave   = AdminPermissions.Entry("ADM_WORKSPACEPRINCIPALBINDING_SAVE")
+
+	PermissionAdmWorkspaceUserGroupList = AdminPermissions.Entry("ADM_WORKSPACEUSERGROUP_LIST")
+)
+
+// AllApiKeyPermissions returns all valid API key permission shortcodes.
+func AllApiKeyPermissions() []string {
+	combined := append(WorkspacePermissions.Strings(), AdminPermissions.Strings()...)
+	return combined
+}

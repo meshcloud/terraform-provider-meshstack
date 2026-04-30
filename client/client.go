@@ -21,6 +21,7 @@ type Client struct {
 	BuildingBlockV2                MeshBuildingBlockV2Client
 	BuildingBlockDefinition        MeshBuildingBlockDefinitionClient
 	BuildingBlockDefinitionVersion MeshBuildingBlockDefinitionVersionClient
+	ApiKey                         MeshApiKeyClient
 	Integration                    MeshIntegrationClient
 	LandingZone                    MeshLandingZoneClient
 	Location                       MeshLocationClient
@@ -74,6 +75,7 @@ func New(ctx context.Context, rootUrl *url.URL, userAgent, apiKey, apiSecret str
 		newBuildingBlockV2Client(ctx, httpClient),
 		newBuildingBlockDefinitionClient(ctx, httpClient),
 		newBuildingBlockDefinitionVersionClient(ctx, httpClient),
+		newApiKeyClient(ctx, httpClient),
 		newIntegrationClient(ctx, httpClient),
 		newLandingZoneClient(ctx, httpClient),
 		newLocationClient(ctx, httpClient),

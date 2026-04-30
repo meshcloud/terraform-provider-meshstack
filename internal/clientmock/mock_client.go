@@ -14,6 +14,7 @@ import (
 )
 
 type Client struct {
+	ApiKey                         MeshApiKeyClient
 	BuildingBlock                  meshBuildingBlockClient
 	BuildingBlockDefinition        meshBuildingBlockDefinitionClient
 	BuildingBlockDefinitionVersion meshBuildingBlockDefinitionVersionClient
@@ -36,8 +37,9 @@ type Client struct {
 	WorkspaceUserBinding           MeshWorkspaceUserBindingClient
 }
 
-func (c Client) AsClient() client.Client {
+func (c *Client) AsClient() client.Client {
 	return client.Client{
+		ApiKey:                         &c.ApiKey,
 		BuildingBlock:                  c.BuildingBlock,
 		BuildingBlockDefinition:        c.BuildingBlockDefinition,
 		BuildingBlockDefinitionVersion: c.BuildingBlockDefinitionVersion,
@@ -64,6 +66,7 @@ func (c Client) AsClient() client.Client {
 func NewMock() Client {
 	bbdVersionStore := NewStore[client.MeshBuildingBlockDefinitionVersion]()
 	return Client{
+		ApiKey:                         MeshApiKeyClient{Store: NewStore[client.MeshApiKey]()},
 		BuildingBlock:                  meshBuildingBlockClient{Store: NewStore[client.MeshBuildingBlock]()},
 		BuildingBlockDefinition:        meshBuildingBlockDefinitionClient{Store: NewStore[client.MeshBuildingBlockDefinition](), StoreVersion: bbdVersionStore},
 		BuildingBlockDefinitionVersion: meshBuildingBlockDefinitionVersionClient{Store: bbdVersionStore},

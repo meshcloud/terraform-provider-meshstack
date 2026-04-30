@@ -2,6 +2,7 @@ package client
 
 // meshObjectKind provides typed constants for meshObject kind strings used across the provider.
 type meshObjectKind struct {
+	ApiKey                         string
 	BuildingBlock                  string
 	BuildingBlockDefinition        string
 	BuildingBlockDefinitionVersion string
@@ -25,6 +26,7 @@ type meshObjectKind struct {
 }
 
 var MeshObjectKind = meshObjectKind{
+	ApiKey:                         "meshApiKey",
 	BuildingBlock:                  "meshBuildingBlock",
 	BuildingBlockDefinition:        "meshBuildingBlockDefinition",
 	BuildingBlockDefinitionVersion: "meshBuildingBlockDefinitionVersion",
