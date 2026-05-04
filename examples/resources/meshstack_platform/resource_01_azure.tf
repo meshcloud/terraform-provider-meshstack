@@ -78,10 +78,8 @@ resource "meshstack_platform" "example_azure" {
             send_azure_invitation_mail = false
           }
 
-          subscription_name_pattern   = "#{workspaceIdentifier}.#{projectIdentifier}"
-          group_name_pattern          = "#{workspaceIdentifier}.#{projectIdentifier}-#{platformGroupAlias}"
-          blueprint_service_principal = "ce0c3688-3247-4083-b49f-33fdbac1ea65"
-          blueprint_location          = "westeurope"
+          subscription_name_pattern = "#{workspaceIdentifier}.#{projectIdentifier}"
+          group_name_pattern        = "#{workspaceIdentifier}.#{projectIdentifier}-#{platformGroupAlias}"
 
           azure_role_mappings = [
             {

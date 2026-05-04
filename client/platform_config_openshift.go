@@ -13,7 +13,6 @@ type OpenShiftReplicationConfig struct {
 	ClientConfig                KubernetesClientConfig                  `json:"clientConfig" tfsdk:"client_config"`
 	WebConsoleUrl               *string                                 `json:"webConsoleUrl,omitempty" tfsdk:"web_console_url"`
 	ProjectNamePattern          string                                  `json:"projectNamePattern" tfsdk:"project_name_pattern"`
-	EnableTemplateInstantiation bool                                    `json:"enableTemplateInstantiation" tfsdk:"enable_template_instantiation"`
 	OpenshiftRoleMappings       types.Set[OpenShiftPlatformRoleMapping] `json:"openshiftRoleMappings" tfsdk:"openshift_role_mappings"`
 	IdentityProviderName        string                                  `json:"identityProviderName" tfsdk:"identity_provider_name"`
 	TenantTags                  *MeshTenantTags                         `json:"tenantTags,omitempty" tfsdk:"tenant_tags"`

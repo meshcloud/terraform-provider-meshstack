@@ -422,10 +422,9 @@ func checkOpenshiftPlatformConfig() knownvalue.Check {
 					"secret_version": xknownvalue.NotEmptyString(),
 				}),
 			}),
-			"web_console_url":               knownvalue.StringExact("https://console-openshift-console.apps.okd4.dev.eu-de-central.msh.host"),
-			"project_name_pattern":          knownvalue.StringExact("#{workspaceIdentifier}-#{projectIdentifier}"),
-			"enable_template_instantiation": knownvalue.Bool(true),
-			"identity_provider_name":        knownvalue.StringExact("meshStack"),
+			"web_console_url":        knownvalue.StringExact("https://console-openshift-console.apps.okd4.dev.eu-de-central.msh.host"),
+			"project_name_pattern":   knownvalue.StringExact("#{workspaceIdentifier}-#{projectIdentifier}"),
+			"identity_provider_name": knownvalue.StringExact("meshStack"),
 			"openshift_role_mappings": knownvalue.SetExact([]knownvalue.Check{
 				xknownvalue.MapExact(map[string]knownvalue.Check{
 					"project_role_ref": xknownvalue.MapExact(map[string]knownvalue.Check{

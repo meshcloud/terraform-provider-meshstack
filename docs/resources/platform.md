@@ -99,10 +99,8 @@ resource "meshstack_platform" "example_azure" {
             send_azure_invitation_mail = false
           }
 
-          subscription_name_pattern   = "#{workspaceIdentifier}.#{projectIdentifier}"
-          group_name_pattern          = "#{workspaceIdentifier}.#{projectIdentifier}-#{platformGroupAlias}"
-          blueprint_service_principal = "ce0c3688-3247-4083-b49f-33fdbac1ea65"
-          blueprint_location          = "westeurope"
+          subscription_name_pattern = "#{workspaceIdentifier}.#{projectIdentifier}"
+          group_name_pattern        = "#{workspaceIdentifier}.#{projectIdentifier}-#{platformGroupAlias}"
 
           azure_role_mappings = [
             {
@@ -631,10 +629,9 @@ resource "meshstack_platform" "example_openshift" {
             }
           }
 
-          web_console_url               = "https://console-openshift-console.apps.okd4.dev.eu-de-central.msh.host"
-          project_name_pattern          = "#{workspaceIdentifier}-#{projectIdentifier}"
-          enable_template_instantiation = false
-          identity_provider_name        = "meshStack"
+          web_console_url        = "https://console-openshift-console.apps.okd4.dev.eu-de-central.msh.host"
+          project_name_pattern   = "#{workspaceIdentifier}-#{projectIdentifier}"
+          identity_provider_name = "meshStack"
 
           openshift_role_mappings = [
             {
@@ -1315,8 +1312,6 @@ Read-Only:
 Required:
 
 - `allow_hierarchical_management_group_assignment` (Boolean) Configuration flag to enable or disable hierarchical management group assignment in Azure. If set to true: Subscriptions can be moved to sub management groups of the management group defined in the Landing Zone. This is useful if you want to manage the subscription location with a deeper and more granular hierarchy. If set to false: Subscriptions will always be moved directly to the management group defined in the Landing Zone.
-- `blueprint_location` (String) The Azure location where replication creates and updates Blueprint Assignments. Note that it's still possible that the Blueprint creates resources in other locations, this is merely the location where the Blueprint Assignment is managed.
-- `blueprint_service_principal` (String) Object ID of the Enterprise Application belonging to the Microsoft Application 'Azure Blueprints'. meshStack will grant the necessary permissions on managed Subscriptions to this SPN so that it can create System Assigned Managed Identities (SAMI) for Blueprint execution.
 - `group_name_pattern` (String) Configures the pattern that defines the desired name of AAD groups managed by meshStack. It follows the usual replicator string pattern features and provides the additional replacement 'platformGroupAlias', which contains the role name suffix, which is configurable via Role Mappings in this platform config or via a meshLandingZone. Operators must ensure the group names are unique in the managed AAD Tenant.
 - `service_principal` (Attributes) Service principal configuration for Azure (see [below for nested schema](#nestedatt--spec--config--azure--replication--service_principal))
 - `skip_user_group_permission_cleanup` (Boolean) Flag to skip user group permission cleanup. For certain use cases you might want to preserve user groups and replicated permission after a tenant was deleted on the Azure platform. Checking this option preserves those permissions. Please keep in mind that the platform operator is then responsible for cleaning them up later.
@@ -2001,7 +1996,6 @@ Optional:
 Required:
 
 - `client_config` (Attributes) Client configuration for OpenShift (see [below for nested schema](#nestedatt--spec--config--openshift--replication--client_config))
-- `enable_template_instantiation` (Boolean) Here you can enable templates not only being rolled out to OpenShift but also instantiated during replication. Templates can be configured in meshLandingZones. Please keep in mind that the replication service account needs all the rights that are required to apply the templates that are configured in meshLandingZones.
 - `identity_provider_name` (String) Identity provider name
 - `project_name_pattern` (String) All the commonly available replicator string template properties are available. OpenShift Project Names must be no longer than 63 characters, must start and end with a lowercase letter or number, and may contain lowercase letters, numbers, and hyphens.
 

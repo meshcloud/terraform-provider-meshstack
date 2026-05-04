@@ -1,3 +1,10 @@
+## v0.20.6
+
+BREAKING CHANGES:
+- `meshstack_platform` (Azure): Remove `blueprint_service_principal` and `blueprint_location` fields from the replication config. These fields have been removed from the meshStack API.
+- `meshstack_platform` (OpenShift): Remove `enable_template_instantiation` field from the replication config. This field has been removed from the meshStack API.
+- `meshstack_landingzone`: Remove `openshift_template` field from OpenShift platform properties. This field has been removed from the meshStack API.
+
 ## v0.20.5
 
 FEATURES:

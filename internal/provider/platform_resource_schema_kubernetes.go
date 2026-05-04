@@ -103,10 +103,6 @@ func openShiftReplicationConfigSchema() schema.Attribute {
 				MarkdownDescription: "All the commonly available replicator string template properties are available. OpenShift Project Names must be no longer than 63 characters, must start and end with a lowercase letter or number, and may contain lowercase letters, numbers, and hyphens.",
 				Required:            true,
 			},
-			"enable_template_instantiation": schema.BoolAttribute{
-				MarkdownDescription: "Here you can enable templates not only being rolled out to OpenShift but also instantiated during replication. Templates can be configured in meshLandingZones. Please keep in mind that the replication service account needs all the rights that are required to apply the templates that are configured in meshLandingZones.",
-				Required:            true,
-			},
 			"openshift_role_mappings": schema.SetNestedAttribute{
 				MarkdownDescription: "OpenShift role mappings for OpenShift roles.",
 				Optional:            true,

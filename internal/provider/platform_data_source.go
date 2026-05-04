@@ -891,14 +891,6 @@ func azureReplicationConfigDataSourceSchema() schema.Attribute {
 				MarkdownDescription: "Configures the pattern that defines the desired name of AAD groups managed by meshStack. It follows the usual replicator string pattern features and provides the additional replacement 'platformGroupAlias', which contains the role name suffix, which is configurable via Role Mappings in this platform config or via a meshLandingZone. Operators must ensure the group names are unique in the managed AAD Tenant.",
 				Computed:            true,
 			},
-			"blueprint_service_principal": schema.StringAttribute{
-				MarkdownDescription: " \t\n\nObject ID of the Enterprise Application belonging to the Microsoft Application 'Azure Blueprints'. meshStack will grant the necessary permissions on managed Subscriptions to this SPN so that it can create System Assigned Managed Identities (SAMI) for Blueprint execution.",
-				Computed:            true,
-			},
-			"blueprint_location": schema.StringAttribute{
-				MarkdownDescription: "The Azure location where replication creates and updates Blueprint Assignments. Note that it's still possible that the Blueprint creates resources in other locations, this is merely the location where the Blueprint Assignment is managed.",
-				Computed:            true,
-			},
 			"azure_role_mappings": schema.SetNestedAttribute{
 				MarkdownDescription: "Azure role mappings for Azure role definitions.",
 				Computed:            true,
@@ -1247,10 +1239,6 @@ func openShiftReplicationConfigDataSourceSchema() schema.Attribute {
 			},
 			"project_name_pattern": schema.StringAttribute{
 				MarkdownDescription: "All the commonly available replicator string template properties are available. OpenShift Project Names must be no longer than 63 characters, must start and end with a lowercase letter or number, and may contain lowercase letters, numbers, and hyphens.",
-				Computed:            true,
-			},
-			"enable_template_instantiation": schema.BoolAttribute{
-				MarkdownDescription: "Here you can enable templates not only being rolled out to OpenShift but also instantiated during replication. Templates can be configured in meshLandingZones. Please keep in mind that the replication service account needs all the rights that are required to apply the templates that are configured in meshLandingZones.",
 				Computed:            true,
 			},
 			"openshift_role_mappings": schema.SetNestedAttribute{

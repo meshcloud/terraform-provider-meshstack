@@ -450,12 +450,7 @@ func openShiftPlatformConfigSchema() schema.Attribute {
 	return schema.SingleNestedAttribute{
 		MarkdownDescription: "OpenShift platform properties.",
 		Optional:            true,
-		Attributes: map[string]schema.Attribute{
-			"openshift_template": schema.StringAttribute{
-				MarkdownDescription: "OpenShift template to use for this landing zone.",
-				Optional:            true,
-			},
-		},
+		Attributes:          map[string]schema.Attribute{},
 	}
 }
 

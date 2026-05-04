@@ -1,5 +1,5 @@
 package client
 
 type OpenShiftPlatformProperties struct {
-	OpenShiftTemplate *string `json:"openShiftTemplate,omitempty" tfsdk:"openshift_template"`
+	// Intentionally left empty, as OpenShift platform properties were removed from the meshStack API.
 }

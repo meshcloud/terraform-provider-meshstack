@@ -15,8 +15,6 @@ type AzureReplicationConfig struct {
 	B2bUserInvitation                          *AzureInviteB2BUserConfig            `json:"b2bUserInvitation,omitempty" tfsdk:"b2b_user_invitation"`
 	SubscriptionNamePattern                    string                               `json:"subscriptionNamePattern" tfsdk:"subscription_name_pattern"`
 	GroupNamePattern                           string                               `json:"groupNamePattern" tfsdk:"group_name_pattern"`
-	BlueprintServicePrincipal                  string                               `json:"blueprintServicePrincipal" tfsdk:"blueprint_service_principal"`
-	BlueprintLocation                          string                               `json:"blueprintLocation" tfsdk:"blueprint_location"`
 	AzureRoleMappings                          types.Set[AzureRoleMapping]          `json:"azureRoleMappings" tfsdk:"azure_role_mappings"`
 	TenantTags                                 *MeshTenantTags                      `json:"tenantTags,omitempty" tfsdk:"tenant_tags"`
 	UserLookUpStrategy                         string                               `json:"userLookUpStrategy" tfsdk:"user_lookup_strategy"`

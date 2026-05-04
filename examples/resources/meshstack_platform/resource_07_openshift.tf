@@ -31,10 +31,9 @@ resource "meshstack_platform" "example_openshift" {
             }
           }
 
-          web_console_url               = "https://console-openshift-console.apps.okd4.dev.eu-de-central.msh.host"
-          project_name_pattern          = "#{workspaceIdentifier}-#{projectIdentifier}"
-          enable_template_instantiation = false
-          identity_provider_name        = "meshStack"
+          web_console_url        = "https://console-openshift-console.apps.okd4.dev.eu-de-central.msh.host"
+          project_name_pattern   = "#{workspaceIdentifier}-#{projectIdentifier}"
+          identity_provider_name = "meshStack"
 
           openshift_role_mappings = [
             {

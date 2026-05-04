@@ -171,14 +171,6 @@ func azureReplicationConfigSchema() schema.Attribute {
 				MarkdownDescription: "Configures the pattern that defines the desired name of AAD groups managed by meshStack. It follows the usual replicator string pattern features and provides the additional replacement 'platformGroupAlias', which contains the role name suffix, which is configurable via Role Mappings in this platform config or via a meshLandingZone. Operators must ensure the group names are unique in the managed AAD Tenant.",
 				Required:            true,
 			},
-			"blueprint_service_principal": schema.StringAttribute{
-				MarkdownDescription: " \t\n\nObject ID of the Enterprise Application belonging to the Microsoft Application 'Azure Blueprints'. meshStack will grant the necessary permissions on managed Subscriptions to this SPN so that it can create System Assigned Managed Identities (SAMI) for Blueprint execution.",
-				Required:            true,
-			},
-			"blueprint_location": schema.StringAttribute{
-				MarkdownDescription: "The Azure location where replication creates and updates Blueprint Assignments. Note that it's still possible that the Blueprint creates resources in other locations, this is merely the location where the Blueprint Assignment is managed.",
-				Required:            true,
-			},
 			"azure_role_mappings": schema.SetNestedAttribute{
 				MarkdownDescription: "Azure role mappings for Azure role definitions.",
 				Optional:            true,

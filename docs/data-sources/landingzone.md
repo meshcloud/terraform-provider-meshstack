@@ -313,10 +313,6 @@ Read-Only:
 <a id="nestedatt--spec--platform_properties--openshift"></a>
 ### Nested Schema for `spec.platform_properties.openshift`
 
-Optional:
-
-- `openshift_template` (String) OpenShift template to use for this landing zone.
-
 
 
 <a id="nestedatt--spec--platform_ref"></a>
