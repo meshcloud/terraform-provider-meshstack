@@ -48,6 +48,13 @@ func (d DataSource) Config(t *testing.T) Config {
 	return newConfig(t, examples.DataSource.Read(t, d.Name, d.Suffix))
 }
 
+// TestSupportConfig loads a test-support .tf file for the data source. Fails the test on error.
+// The file is looked up as data-sources/meshstack_<name>/test-support<Suffix><extraSuffix>.tf.
+func (r DataSource) TestSupportConfig(t *testing.T, extraSuffix string) Config {
+	t.Helper()
+	return newConfig(t, examples.DataSource.Read(t, r.Name, "test-support", r.Suffix, extraSuffix))
+}
+
 // Config wraps a parsed *hclwrite.File. All Config methods return a new Config — the receiver is never mutated.
 // Call [Config.String] only at the test step boundary (i.e. when assigning to [resource.TestStep.Config]).
 type Config struct {

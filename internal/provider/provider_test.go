@@ -22,7 +22,8 @@ import (
 // reattach.
 func ProviderFactoriesForTest(opts ...providerOption) map[string]func() (tfprotov6.ProviderServer, error) {
 	return map[string]func() (tfprotov6.ProviderServer, error){
-		"meshstack": providerserver.NewProtocol6WithError(New("test", opts...)()),
+		"meshstack":       providerserver.NewProtocol6WithError(New("test", opts...)()),
+		"meshstack-other": providerserver.NewProtocol6WithError(New("test-other", opts...)()),
 	}
 }
 

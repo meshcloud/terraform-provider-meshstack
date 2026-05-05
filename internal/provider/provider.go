@@ -38,12 +38,12 @@ type MeshStackProviderModel struct {
 	ApiToken  types.String `tfsdk:"apitoken"`
 }
 
-func (p *MeshStackProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
+func (p *MeshStackProvider) Metadata(_ context.Context, _ provider.MetadataRequest, resp *provider.MetadataResponse) {
 	resp.TypeName = "meshstack"
 	resp.Version = p.version
 }
 
-func (p *MeshStackProvider) Schema(ctx context.Context, req provider.SchemaRequest, resp *provider.SchemaResponse) {
+func (p *MeshStackProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"endpoint": schema.StringAttribute{
@@ -162,7 +162,7 @@ func newProviderClient(ctx context.Context, data MeshStackProviderModel, provide
 	return
 }
 
-func (p *MeshStackProvider) Resources(ctx context.Context) []func() resource.Resource {
+func (p *MeshStackProvider) Resources(_ context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		NewProjectResource,
 		NewTenantResource,
@@ -186,7 +186,7 @@ func (p *MeshStackProvider) Resources(ctx context.Context) []func() resource.Res
 	}
 }
 
-func (p *MeshStackProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
+func (p *MeshStackProvider) DataSources(_ context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		NewBuildingBlockDataSource,
 		NewBuildingBlockV2DataSource,
@@ -212,7 +212,7 @@ func (p *MeshStackProvider) DataSources(ctx context.Context) []func() datasource
 	}
 }
 
-func (p *MeshStackProvider) Functions(ctx context.Context) []func() function.Function {
+func (p *MeshStackProvider) Functions(_ context.Context) []func() function.Function {
 	return []func() function.Function{
 		NewLoadImageFileFunction,
 		NewLoadFileFunction,

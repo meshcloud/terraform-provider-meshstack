@@ -16,6 +16,10 @@ import (
 
 var MinMeshStackVersion = version.MustParse("2026.10.0")
 
+// HttpError represents an HTTP error response with status code.
+// This error is returned when an HTTP request fails with a non-2XX status code.
+type HttpError = internal.HttpError
+
 type Client struct {
 	ApiKey                         MeshApiKeyClient
 	BuildingBlock                  MeshBuildingBlockClient

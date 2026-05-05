@@ -66,7 +66,10 @@ func TestAccSomething(t *testing.T) {
 
 Always start Gradle services in the background with logs redirected to `/tmp/` files.
 The `./gradlew :*:start` tasks block forever (they run Spring Boot apps), so they must
-not be awaited. Use `nohup ... &` and verify health endpoints afterwards.
+not be awaited. Use `nohup ... &` and verify readiness via log output afterwards.
+
+Prefer log-based readiness checks over health endpoint polling — checking logs detects
+startup errors (exceptions, binding failures) immediately rather than silently waiting.
 
 ```bash
 # 1. Start infrastructure (MariaDB, RabbitMQ, Keycloak, RavenDB)
@@ -80,17 +83,27 @@ nohup ./gradlew :buildingblocks:manual-block-runner:start --console=plain > /tmp
 nohup ./gradlew :meshfed:replicator:replicator-api:start --console=plain > /tmp/replicator.log 2>&1 &
 
 # 3. Wait for ALL services to be ready before running tests
-#    meshfed-api: port 8080 (takes ~60-120s for first start)
-#    block-coordinator: port 8083
-#    replicator: port 7080
-#    manual-block-runner: no HTTP port (check log for "Started BlockRunnerApplicationKt")
-until curl -sf http://localhost:8080/mesh/info > /dev/null 2>&1; do sleep 5; done
+#    Check logs for "Started <AppName>" messages (takes ~60-120s for first start).
+#    Also watch for ERROR/Exception lines which indicate startup failures.
+until grep -q "Started ApplicationKt" /tmp/meshstack-api.log 2>/dev/null; do
+  grep -i "exception\|error\|fatal" /tmp/meshstack-api.log 2>/dev/null | tail -1 && break
+  sleep 5
+done
 echo "meshfed-api ready"
-until curl -sf http://localhost:8083/actuator/health > /dev/null 2>&1; do sleep 5; done
+until grep -q "Started BlockCoordinatorApiApplicationKt" /tmp/block-coordinator.log 2>/dev/null; do
+  grep -i "exception\|error\|fatal" /tmp/block-coordinator.log 2>/dev/null | tail -1 && break
+  sleep 5
+done
 echo "block-coordinator ready"
-until curl -sf http://localhost:7080/actuator/health > /dev/null 2>&1; do sleep 5; done
+until grep -q "Started ApplicationKt" /tmp/replicator.log 2>/dev/null; do
+  grep -i "exception\|error\|fatal" /tmp/replicator.log 2>/dev/null | tail -1 && break
+  sleep 5
+done
 echo "replicator ready"
-until grep -q "Started BlockRunnerApplicationKt" /tmp/manual-runner.log 2>/dev/null; do sleep 5; done
+until grep -q "Started BlockRunnerApplicationKt" /tmp/manual-runner.log 2>/dev/null; do
+  grep -i "exception\|error\|fatal" /tmp/manual-runner.log 2>/dev/null | tail -1 && break
+  sleep 5
+done
 echo "manual-runner ready"
 ```
 

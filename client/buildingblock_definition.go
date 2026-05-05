@@ -82,8 +82,9 @@ func newBuildingBlockDefinitionClient(ctx context.Context, httpClient *internal.
 
 func (c meshBuildingBlockDefinitionClient) List(ctx context.Context, workspaceIdentifier *string) ([]MeshBuildingBlockDefinition, error) {
 	var options []internal.RequestOption
+	options = append(options, internal.WithUrlQuery("includeAllPublished", "true"))
 	if workspaceIdentifier != nil {
-		options = append(options, internal.WithUrlQuery("workspaceIdentifier", *workspaceIdentifier))
+		options = append(options, internal.WithUrlQuery("ownedByWorkspace", *workspaceIdentifier))
 	}
 	return c.meshObject.List(ctx, options...)
 }

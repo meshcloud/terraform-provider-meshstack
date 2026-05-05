@@ -3,6 +3,7 @@ package provider
 import (
 	"cmp"
 	"context"
+	"errors"
 	"slices"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -52,10 +53,10 @@ type buildingBlockDefinitionDataSourceSpecModel struct {
 }
 
 type buildingBlockDefinitionDataSourceVersionRefModel struct {
-	Uuid        string `tfsdk:"uuid"`
-	Number      int64  `tfsdk:"number"`
-	State       string `tfsdk:"state"`
-	ContentHash string `tfsdk:"content_hash"`
+	Uuid        string  `tfsdk:"uuid"`
+	Number      int64   `tfsdk:"number"`
+	State       string  `tfsdk:"state"`
+	ContentHash *string `tfsdk:"content_hash"`
 }
 
 func (d *buildingBlockDefinitionsDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -84,8 +85,9 @@ func (d *buildingBlockDefinitionsDataSource) Schema(_ context.Context, _ datasou
 			Computed:            true,
 		},
 		"content_hash": schema.StringAttribute{
-			MarkdownDescription: "Content hash of the version.",
+			MarkdownDescription: "Content hash of the version. Null when accessing cross-workspace definitions without sufficient permissions.",
 			Computed:            true,
+			Optional:            true,
 		},
 	}
 
@@ -93,10 +95,16 @@ func (d *buildingBlockDefinitionsDataSource) Schema(_ context.Context, _ datasou
 		MarkdownDescription: "List building block definitions with optional workspace filter. " +
 			"Prefer this plural data source with `one(...)` for reusable wiring in examples. " +
 			"For each returned definition, this data source performs an additional API call to load all versions; " +
-			"use `workspace_identifier` to narrow scope where possible. " + previewDisclaimer(),
+			"use `workspace_identifier` to narrow scope where possible. " +
+			"\n\n" +
+			"**Cross-Workspace Access**: When accessing building block definitions from workspaces other than your own " +
+			"using a workspace-scoped API key, the `content_hash` attribute will be null as it requires detailed version " +
+			"information that is not accessible without workspace permissions. The `versions`, `version_latest`, and " +
+			"`version_latest_release` attributes will still be populated with uuid, number, and state." +
+			"\n\n" + previewDisclaimer(),
 		Attributes: map[string]schema.Attribute{
 			"workspace_identifier": schema.StringAttribute{
-				MarkdownDescription: "Optional workspace identifier filter (maps to `workspaceIdentifier` query param).",
+				MarkdownDescription: "Optional workspace identifier filter (maps to `ownedByWorkspace` query param).",
 				Optional:            true,
 			},
 			"building_block_definitions": schema.ListNestedAttribute{
@@ -195,6 +203,18 @@ func (d *buildingBlockDefinitionsDataSource) Read(ctx context.Context, req datas
 		}
 
 		versions, err := d.meshBuildingBlockDefinitionVersionClient.List(ctx, *definition.Metadata.Uuid)
+
+		// Check if the error is a 403 Forbidden - if so, fall back to status.Versions
+		if httpErr, ok := errors.AsType[client.HttpError](err); ok && httpErr.IsForbidden() {
+			// Fall back to status.Versions from the definition (no content_hash available)
+			defModel := buildVersionRefsFromStatus(&resp.Diagnostics, definition)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+			result = append(result, defModel)
+			continue
+		}
+
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Unable to list building block definition versions",
@@ -238,6 +258,81 @@ func (d *buildingBlockDefinitionsDataSource) Read(ctx context.Context, req datas
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
+// buildVersionRefsFromStatus builds version refs from definition status when full version details are not accessible.
+// This is used as a fallback when the versions API returns 403 (cross-workspace access without permission).
+// Content hash will be empty since it requires full version spec which is not available in status.
+func buildVersionRefsFromStatus(diags *diag.Diagnostics, definition client.MeshBuildingBlockDefinition) buildingBlockDefinitionDataSourceModel {
+	if definition.Status == nil {
+		diags.AddError(
+			"Building block definition status missing",
+			"API returned a building block definition without status, which is required to build version references.",
+		)
+		return buildingBlockDefinitionDataSourceModel{}
+	}
+
+	status := definition.Status
+
+	// Convert status.Versions to version refs (no content_hash available)
+	versions := make([]buildingBlockDefinitionDataSourceVersionRefModel, len(status.Versions))
+	for i, v := range status.Versions {
+		versions[i] = buildingBlockDefinitionDataSourceVersionRefModel{
+			Uuid:        v.VersionUuid,
+			Number:      v.VersionNumber,
+			State:       string(v.State),
+			ContentHash: nil, // Not available without full version spec
+		}
+	}
+
+	// Sort versions ascending by number
+	slices.SortFunc(versions, func(a, b buildingBlockDefinitionDataSourceVersionRefModel) int {
+		return cmp.Compare(a.Number, b.Number)
+	})
+
+	// Build latest version ref
+	latestVersion := buildingBlockDefinitionDataSourceVersionRefModel{
+		Uuid:        status.LatestVersionUuid,
+		Number:      status.LatestVersion,
+		State:       findVersionState(status.Versions, status.LatestVersionUuid),
+		ContentHash: nil, // Not available without full version spec
+	}
+
+	// Build latest released version ref (if exists)
+	var latestReleasedVersion *buildingBlockDefinitionDataSourceVersionRefModel
+	if status.LatestReleasedVersionUuid != nil && status.LatestReleasedVersion != nil {
+		latestReleasedVersion = &buildingBlockDefinitionDataSourceVersionRefModel{
+			Uuid:        *status.LatestReleasedVersionUuid,
+			Number:      *status.LatestReleasedVersion,
+			State:       string(client.MeshBuildingBlockDefinitionVersionStateReleased.Unwrap()),
+			ContentHash: nil, // Not available without full version spec
+		}
+	}
+
+	return buildingBlockDefinitionDataSourceModel{
+		Metadata: buildingBlockDefinitionDataSourceMetadataModel{
+			Uuid:             *definition.Metadata.Uuid,
+			OwnedByWorkspace: definition.Metadata.OwnedByWorkspace,
+		},
+		Spec: buildingBlockDefinitionDataSourceSpecModel{
+			DisplayName: definition.Spec.DisplayName,
+			TargetType:  definition.Spec.TargetType,
+		},
+		Versions:             versions,
+		VersionLatest:        latestVersion,
+		VersionLatestRelease: latestReleasedVersion,
+		Ref:                  newBuildingBlockDefinitionRef(*definition.Metadata.Uuid),
+	}
+}
+
+// findVersionState finds the state of a version by UUID from the status versions list.
+func findVersionState(versions []client.MeshBuildingBlockDefinitionStatusVersion, uuid string) string {
+	for _, v := range versions {
+		if v.VersionUuid == uuid {
+			return string(v.State)
+		}
+	}
+	return ""
+}
+
 func convertBBDVersionRef(diags *diag.Diagnostics, field string, ref buildingBlockDefinitionVersionRef) buildingBlockDefinitionDataSourceVersionRefModel {
 	if ref.Uuid.IsUnknown() || ref.Number.IsUnknown() || ref.State.IsUnknown() || ref.ContentHash.IsUnknown() {
 		diags.AddError(
@@ -250,7 +345,7 @@ func convertBBDVersionRef(diags *diag.Diagnostics, field string, ref buildingBlo
 		Uuid:        ref.Uuid.Get(),
 		Number:      ref.Number.Get(),
 		State:       string(ref.State.Get()),
-		ContentHash: ref.ContentHash.Get(),
+		ContentHash: new(ref.ContentHash.Get()),
 	}
 }
 
