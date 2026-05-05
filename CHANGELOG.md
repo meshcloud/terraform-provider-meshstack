@@ -1,3 +1,10 @@
+## Unreleased
+
+IMPROVEMENTS:
+- All resources and data sources backed by meshStack preview APIs now include a visible **Preview API** callout in their tfdocs.
+  Affected resources: `meshstack_building_block_definition`, `meshstack_building_block_v2`, `meshstack_tenant_v4`.
+  Affected data sources: `meshstack_building_block_definitions`, `meshstack_building_block_v2`, `meshstack_tenant_v4`, `meshstack_tenants`.
+
 ## v0.20.6
 
 BREAKING CHANGES:
