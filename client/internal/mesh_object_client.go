@@ -77,7 +77,7 @@ func (c MeshObjectClient[M]) meshObjectMimeType() string {
 // Get retrieves a meshObject by ID. Returns nil if not found.
 func (c MeshObjectClient[M]) Get(ctx context.Context, id string) (*M, error) {
 	body, err := c.doAuthorizedRequest(ctx, http.MethodGet, c.ApiUrl.JoinPath(id), withAccept(c.meshObjectMimeType()))
-	if errors.Is(err, errNotFound) {
+	if httpErr, ok := errors.AsType[HttpError](err); ok && httpErr.IsNotFound() {
 		return nil, nil
 	}
 	return unmarshalBody[M](body, err)

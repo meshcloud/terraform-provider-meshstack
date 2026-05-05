@@ -4,12 +4,17 @@ page_title: "meshstack_building_block_definitions Data Source - terraform-provid
 subcategory: ""
 description: |-
   List building block definitions with optional workspace filter. Prefer this plural data source with one(...) for reusable wiring in examples. For each returned definition, this data source performs an additional API call to load all versions; use workspace_identifier to narrow scope where possible.
+  Cross-Workspace Access: When accessing building block definitions from workspaces other than your own using a workspace-scoped API key, the content_hash attribute will be null as it requires detailed version information that is not accessible without workspace permissions. The versions, version_latest, and version_latest_release attributes will still be populated with uuid, number, and state.
   ~> Preview: This resource is in preview. Breaking changes are possible without prior notice due to changes in the underlying meshStack preview API https://docs.meshcloud.io/api/technical-specifications#preview-endpoints or due to changes in this provider. Please ensure you are running the latest version of the provider and report any bugs via GitHub issues https://github.com/meshcloud/terraform-provider-meshstack/issues or via support@meshcloud.io.
 ---
 
 # meshstack_building_block_definitions (Data Source)
 
 List building block definitions with optional workspace filter. Prefer this plural data source with `one(...)` for reusable wiring in examples. For each returned definition, this data source performs an additional API call to load all versions; use `workspace_identifier` to narrow scope where possible. 
+
+**Cross-Workspace Access**: When accessing building block definitions from workspaces other than your own using a workspace-scoped API key, the `content_hash` attribute will be null as it requires detailed version information that is not accessible without workspace permissions. The `versions`, `version_latest`, and `version_latest_release` attributes will still be populated with uuid, number, and state.
+
+
 
 ~> **Preview:** This resource is in preview. Breaking changes are possible without prior notice due to changes in the underlying [meshStack preview API](https://docs.meshcloud.io/api/technical-specifications#preview-endpoints) or due to changes in this provider. Please ensure you are running the latest version of the provider and report any bugs via [GitHub issues](https://github.com/meshcloud/terraform-provider-meshstack/issues) or via support@meshcloud.io.
 
@@ -37,7 +42,7 @@ locals {
 
 ### Optional
 
-- `workspace_identifier` (String) Optional workspace identifier filter (maps to `workspaceIdentifier` query param).
+- `workspace_identifier` (String) Optional workspace identifier filter (maps to `ownedByWorkspace` query param).
 
 ### Read-Only
 
@@ -61,9 +66,12 @@ Read-Only:
 <a id="nestedatt--building_block_definitions--version_latest_release"></a>
 ### Nested Schema for `building_block_definitions.version_latest_release`
 
+Optional:
+
+- `content_hash` (String) Content hash of the version. Null when accessing cross-workspace definitions without sufficient permissions.
+
 Read-Only:
 
-- `content_hash` (String) Content hash of the version.
 - `number` (Number) Version number.
 - `state` (String) State of the version.
 - `uuid` (String) UUID of the version.
@@ -99,9 +107,12 @@ Read-Only:
 <a id="nestedatt--building_block_definitions--version_latest"></a>
 ### Nested Schema for `building_block_definitions.version_latest`
 
+Optional:
+
+- `content_hash` (String) Content hash of the version. Null when accessing cross-workspace definitions without sufficient permissions.
+
 Read-Only:
 
-- `content_hash` (String) Content hash of the version.
 - `number` (Number) Version number.
 - `state` (String) State of the version.
 - `uuid` (String) UUID of the version.
@@ -110,9 +121,12 @@ Read-Only:
 <a id="nestedatt--building_block_definitions--versions"></a>
 ### Nested Schema for `building_block_definitions.versions`
 
+Optional:
+
+- `content_hash` (String) Content hash of the version. Null when accessing cross-workspace definitions without sufficient permissions.
+
 Read-Only:
 
-- `content_hash` (String) Content hash of the version.
 - `number` (Number) Version number.
 - `state` (String) State of the version.
 - `uuid` (String) UUID of the version.

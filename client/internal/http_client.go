@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -15,9 +14,26 @@ import (
 	"github.com/meshcloud/terraform-provider-meshstack/client/version"
 )
 
-var (
-	errNotFound = errors.New("request failed with status Not Found (404)")
-)
+// HttpError represents an HTTP error response with status code.
+// This error is returned when an HTTP request fails with a non-2XX status code.
+type HttpError struct {
+	StatusCode int
+	Message    string
+}
+
+func (e HttpError) Error() string {
+	return fmt.Sprintf("HTTP %d: %s", e.StatusCode, e.Message)
+}
+
+// IsForbidden returns true if the error is a 403 Forbidden response.
+func (e HttpError) IsForbidden() bool {
+	return e.StatusCode == http.StatusForbidden
+}
+
+// IsNotFound returns true if the error is a 404 Not Found response.
+func (e HttpError) IsNotFound() bool {
+	return e.StatusCode == http.StatusNotFound
+}
 
 // HttpClient wraps [http.Client] with convenient request handling thanks to RequestOption.
 type HttpClient struct {
@@ -63,15 +79,11 @@ func (c *HttpClient) readBodyAndCheckSuccess(ctx context.Context, res *http.Resp
 	if res.StatusCode >= 200 && res.StatusCode <= 299 {
 		return responseBody, nil
 	}
-	var errs []error
-	if res.StatusCode == http.StatusNotFound {
-		errs = append(errs, errNotFound)
+
+	return responseBody, HttpError{
+		StatusCode: res.StatusCode,
+		Message:    string(responseBody),
 	}
-	errs = append(errs,
-		fmt.Errorf("request failed with status %d (not 2XX successful)", res.StatusCode),
-		fmt.Errorf("error response: %s", string(responseBody)),
-	)
-	return responseBody, errors.Join(errs...)
 }
 
 func (c *HttpClient) buildRequest(ctx context.Context, method string, url url.URL, opts requestOptions) (*http.Request, error) {
