@@ -48,18 +48,6 @@ func (d *buildingBlockV2DataSource) Schema(ctx context.Context, req datasource.S
 						MarkdownDescription: "The workspace containing this building block.",
 						Computed:            true,
 					},
-					"created_on": schema.StringAttribute{
-						MarkdownDescription: "Timestamp of building block creation.",
-						Computed:            true,
-					},
-					"marked_for_deletion_on": schema.StringAttribute{
-						MarkdownDescription: "For deleted building blocks: timestamp of deletion.",
-						Computed:            true,
-					},
-					"marked_for_deletion_by": schema.StringAttribute{
-						MarkdownDescription: "For deleted building blocks: user who requested deletion.",
-						Computed:            true,
-					},
 				},
 			},
 
@@ -146,6 +134,28 @@ func (d *buildingBlockV2DataSource) Schema(ctx context.Context, req datasource.S
 						Computed:            true,
 					},
 					"outputs": buildingBlockOutputs(),
+					"lifecycle": schema.SingleNestedAttribute{
+						MarkdownDescription: "Lifecycle information for this Building Block.",
+						Computed:            true,
+						Attributes: map[string]schema.Attribute{
+							"state": schema.StringAttribute{
+								MarkdownDescription: "Lifecycle state of the building block.",
+								Computed:            true,
+							},
+							"created_on": schema.StringAttribute{
+								MarkdownDescription: "Timestamp of building block creation.",
+								Computed:            true,
+							},
+							"marked_for_deletion_on": schema.StringAttribute{
+								MarkdownDescription: "For deleted building blocks: timestamp of deletion.",
+								Computed:            true,
+							},
+							"marked_for_deletion_by": schema.StringAttribute{
+								MarkdownDescription: "For deleted building blocks: user who requested deletion.",
+								Computed:            true,
+							},
+						},
+					},
 				},
 			},
 		},
@@ -199,6 +209,7 @@ func (d *buildingBlockV2DataSource) Read(ctx context.Context, req datasource.Rea
 	// Set all status values except for outputs
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("status").AtName("status"), bb.Status.Status)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("status").AtName("force_purge"), bb.Status.ForcePurge)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("status").AtName("lifecycle"), bb.Status.Lifecycle)...)
 
 	// Read outputs
 	outputs := make(map[string]buildingBlockOutputModel)
