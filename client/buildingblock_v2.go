@@ -24,11 +24,8 @@ type MeshBuildingBlockV2 struct {
 }
 
 type MeshBuildingBlockV2Metadata struct {
-	Uuid                string  `json:"uuid" tfsdk:"uuid"`
-	OwnedByWorkspace    string  `json:"ownedByWorkspace" tfsdk:"owned_by_workspace"`
-	CreatedOn           string  `json:"createdOn" tfsdk:"created_on"`
-	MarkedForDeletionOn *string `json:"markedForDeletionOn" tfsdk:"marked_for_deletion_on"`
-	MarkedForDeletionBy *string `json:"markedForDeletionBy" tfsdk:"marked_for_deletion_by"`
+	Uuid             string `json:"uuid" tfsdk:"uuid"`
+	OwnedByWorkspace string `json:"ownedByWorkspace" tfsdk:"owned_by_workspace"`
 }
 
 type MeshBuildingBlockV2Spec struct {
@@ -54,10 +51,18 @@ type MeshBuildingBlockV2Create struct {
 	Spec MeshBuildingBlockV2Spec `json:"spec" tfsdk:"spec"`
 }
 
+type MeshBuildingBlockV2Lifecycle struct {
+	State               string  `json:"state" tfsdk:"state"`
+	CreatedOn           string  `json:"createdOn" tfsdk:"created_on"`
+	MarkedForDeletionOn *string `json:"markedForDeletionOn" tfsdk:"marked_for_deletion_on"`
+	MarkedForDeletionBy *string `json:"markedForDeletionBy" tfsdk:"marked_for_deletion_by"`
+}
+
 type MeshBuildingBlockV2Status struct {
-	Status     string                `json:"status" tfsdk:"status"`
-	Outputs    []MeshBuildingBlockIO `json:"outputs" tfsdk:"outputs"`
-	ForcePurge bool                  `json:"forcePurge" tfsdk:"force_purge"`
+	Status     string                       `json:"status" tfsdk:"status"`
+	Outputs    []MeshBuildingBlockIO        `json:"outputs" tfsdk:"outputs"`
+	ForcePurge bool                         `json:"forcePurge" tfsdk:"force_purge"`
+	Lifecycle  MeshBuildingBlockV2Lifecycle `json:"lifecycle" tfsdk:"lifecycle"`
 }
 
 type MeshBuildingBlockV2Client interface {
