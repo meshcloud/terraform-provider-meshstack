@@ -32,11 +32,6 @@ type buildingBlockDefinition struct {
 	Ref buildingBlockDefinitionRef `tfsdk:"ref"`
 }
 
-type supportedPlatformRef struct {
-	Kind string `tfsdk:"kind"`
-	Name string `tfsdk:"name"` // for kind meshPlatformType
-}
-
 type buildingBlockDefinitionVersionRef struct {
 	Uuid        generic.NullIsUnknown[string]                                         `tfsdk:"uuid"`
 	Number      generic.NullIsUnknown[int64]                                          `tfsdk:"number"`
@@ -58,23 +53,6 @@ func newBuildingBlockDefinitionRef(uuid string) buildingBlockDefinitionRef {
 
 func buildingBlockDefinitionConverterOptions() generic.ConverterOptions {
 	return generic.ConverterOptions{
-		// Transform ref input in schema to simple string (aka the platform type).
-		generic.WithValueFromConverterFor[client.BuildingBlockDefinitionSupportedPlatform](generic.ValueFromConverterForTypedNilHandler[supportedPlatformRef](),
-			func(_ path.Path, value client.BuildingBlockDefinitionSupportedPlatform) (tftypes.Value, error) {
-				return generic.ValueFrom(supportedPlatformRef{Kind: client.MeshObjectKind.PlatformType, Name: string(value)})
-			},
-		),
-		generic.WithValueToConverterFor[client.BuildingBlockDefinitionSupportedPlatform](func(_ path.Path, in tftypes.Value) (client.BuildingBlockDefinitionSupportedPlatform, error) {
-			// Handling this Ref (struct) to simple String Value could be extracted into re-usable converter I suppose (similar to schema_utils.go functions)
-			ref, err := generic.ValueTo[supportedPlatformRef](in)
-			if err != nil {
-				return "", err
-			}
-			if ref.Kind != client.MeshObjectKind.PlatformType {
-				return "", fmt.Errorf("expected meshPlatformType for kind in given supported platform ref, got %s", ref.Kind)
-			}
-			return client.BuildingBlockDefinitionSupportedPlatform(ref.Name), nil
-		}),
 		generic.WithSliceTypeAsSet(clientTypes.IsSet),
 	}
 }
