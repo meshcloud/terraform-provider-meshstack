@@ -1,3 +1,10 @@
+## Unreleased
+
+Requires meshStack 2026.20.0 or later.
+
+BREAKING CHANGES:
+- `meshstack_building_block_definition`: The `supported_platforms` field has changed its structure due to an upstream API change.
+
 ## v0.20.7
 
 IMPROVEMENTS:
