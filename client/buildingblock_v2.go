@@ -71,7 +71,7 @@ type meshBuildingBlockV2Client struct {
 	meshObject internal.MeshObjectClient[MeshBuildingBlockV2]
 }
 
-func newBuildingBlockV2Client(ctx context.Context, httpClient *internal.HttpClient) MeshBuildingBlockV2Client {
+func newBuildingBlockV2Client(ctx context.Context, httpClient internal.HttpClient) MeshBuildingBlockV2Client {
 	return meshBuildingBlockV2Client{internal.NewMeshObjectClient[MeshBuildingBlockV2](ctx, httpClient, "v2-preview")}
 }
 

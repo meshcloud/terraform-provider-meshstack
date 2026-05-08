@@ -11,7 +11,6 @@ import (
 	"regexp"
 	"slices"
 	"strings"
-	"time"
 	"unicode"
 )
 
@@ -21,7 +20,7 @@ import (
 // Also handles authentication in doAuthorizedRequest using the ApiKey/ApiSecret values,
 // which are embedded in HttpClient for convenient construction with NewMeshObjectClient.
 type MeshObjectClient[M any] struct {
-	*HttpClient
+	HttpClient
 	Kind       string
 	ApiVersion string
 	ApiUrl     *url.URL
@@ -31,7 +30,7 @@ type MeshObjectClient[M any] struct {
 // The meshObject kind is inferred from type M. T
 // The API URL is constructed from explicitApiPathElems if provided,
 // otherwise the pluralized and lowercased kind is used as a single element.
-func NewMeshObjectClient[M any](ctx context.Context, httpClient *HttpClient, apiVersion string, explicitApiPathElems ...string) MeshObjectClient[M] {
+func NewMeshObjectClient[M any](ctx context.Context, httpClient HttpClient, apiVersion string, explicitApiPathElems ...string) MeshObjectClient[M] {
 	kind := InferKind[M]()
 
 	if len(explicitApiPathElems) == 0 {
@@ -75,12 +74,12 @@ func (c MeshObjectClient[M]) meshObjectMimeType() string {
 }
 
 // Get retrieves a meshObject by ID. Returns nil if not found.
-func (c MeshObjectClient[M]) Get(ctx context.Context, id string) (*M, error) {
-	body, err := c.doAuthorizedRequest(ctx, http.MethodGet, c.ApiUrl.JoinPath(id), withAccept(c.meshObjectMimeType()))
+func (c MeshObjectClient[M]) Get(ctx context.Context, id string) (resp *M, err error) {
+	resp, err = unmarshalBody[M](c.doAuthorizedRequest(ctx, http.MethodGet, c.ApiUrl.JoinPath(id), withAccept(c.meshObjectMimeType())))
 	if httpErr, ok := errors.AsType[HttpError](err); ok && httpErr.IsNotFound() {
 		return nil, nil
 	}
-	return unmarshalBody[M](body, err)
+	return
 }
 
 // Post creates a new meshObject with the given payload.
@@ -132,13 +131,6 @@ func (c MeshObjectClient[M]) List(ctx context.Context, options ...RequestOption)
 	pageNumber := 0
 
 	for {
-		body, err := c.doAuthorizedRequest(ctx, http.MethodGet, c.ApiUrl, append(options,
-			withAccept(c.meshObjectMimeType()),
-			WithUrlQuery("page", pageNumber),
-		)...)
-		if err != nil {
-			return result, fmt.Errorf("cannot fetch page %d: %w", pageNumber, err)
-		}
 		type paginatedResponse struct {
 			Embedded map[string][]M `json:"_embedded"`
 			Page     struct {
@@ -146,9 +138,12 @@ func (c MeshObjectClient[M]) List(ctx context.Context, options ...RequestOption)
 				Number     int `json:"number"`
 			} `json:"page"`
 		}
-		response, err := unmarshalBody[paginatedResponse](body, err)
+		response, err := unmarshalBody[paginatedResponse](c.doAuthorizedRequest(ctx, http.MethodGet, c.ApiUrl, append(options,
+			withAccept(c.meshObjectMimeType()),
+			WithUrlQuery("page", pageNumber),
+		)...))
 		if err != nil {
-			return result, fmt.Errorf("cannot unmarshal paginated response, page %d: %w", pageNumber, err)
+			return result, fmt.Errorf("error getting page %d: %w", pageNumber, err)
 		} else if items, ok := response.Embedded[embeddedKey]; !ok {
 			return result, fmt.Errorf("embedded key %s not found in paginated response", embeddedKey)
 		} else {
@@ -159,40 +154,4 @@ func (c MeshObjectClient[M]) List(ctx context.Context, options ...RequestOption)
 		}
 		pageNumber++
 	}
-}
-
-func (c MeshObjectClient[M]) doAuthorizedRequest(ctx context.Context, method string, url *url.URL, options ...RequestOption) ([]byte, error) {
-	if err := c.ensureAuthorization(ctx); err != nil {
-		return nil, err
-	}
-	return c.doRequest(ctx, method, url, append(options, withHeader("Authorization", c.Authorization))...)
-}
-
-func (c MeshObjectClient[M]) ensureAuthorization(ctx context.Context) error {
-	if c.Authorization != "" && time.Until(c.AuthorizationExpiresAt) > 30*time.Second {
-		return nil
-	}
-
-	loginApiUrl := c.RootUrl.JoinPath("/api/login")
-
-	type loginRequest struct {
-		ClientId     string `json:"clientId"`
-		ClientSecret string `json:"clientSecret"`
-	}
-
-	type loginResponse struct {
-		Token     string `json:"access_token"`
-		ExpireSec int    `json:"expires_in"`
-	}
-
-	loginResult, err := unmarshalBody[loginResponse](c.doRequest(ctx, "POST", loginApiUrl,
-		withPayload(loginRequest{ClientId: c.ApiKey, ClientSecret: c.ApiSecret}, "application/json")),
-	)
-	if err != nil {
-		return fmt.Errorf("login request to %s with API Key '%s' failed: %w", loginApiUrl, c.ApiKey, err)
-	}
-
-	c.Authorization = fmt.Sprintf("Bearer %s", loginResult.Token)
-	c.AuthorizationExpiresAt = time.Now().Add(time.Duration(loginResult.ExpireSec) * time.Second)
-	return nil
 }

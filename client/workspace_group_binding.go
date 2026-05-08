@@ -20,7 +20,7 @@ type meshWorkspaceGroupBindingClient struct {
 	meshObject internal.MeshObjectClient[MeshWorkspaceGroupBinding]
 }
 
-func newWorkspaceGroupBindingClient(ctx context.Context, httpClient *internal.HttpClient) MeshWorkspaceGroupBindingClient {
+func newWorkspaceGroupBindingClient(ctx context.Context, httpClient internal.HttpClient) MeshWorkspaceGroupBindingClient {
 	return meshWorkspaceGroupBindingClient{internal.NewMeshObjectClient[MeshWorkspaceGroupBinding](ctx, httpClient, "v2", "meshworkspacebindings", "groupbindings")}
 }
 

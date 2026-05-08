@@ -91,7 +91,7 @@ type meshPlatformClient struct {
 	meshObject internal.MeshObjectClient[MeshPlatform]
 }
 
-func newPlatformClient(ctx context.Context, httpClient *internal.HttpClient) MeshPlatformClient {
+func newPlatformClient(ctx context.Context, httpClient internal.HttpClient) MeshPlatformClient {
 	return meshPlatformClient{internal.NewMeshObjectClient[MeshPlatform](ctx, httpClient, "v2")}
 }
 

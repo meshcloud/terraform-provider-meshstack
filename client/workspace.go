@@ -43,7 +43,7 @@ type meshWorkspaceClient struct {
 	meshObject internal.MeshObjectClient[MeshWorkspace]
 }
 
-func newWorkspaceClient(ctx context.Context, httpClient *internal.HttpClient) meshWorkspaceClient {
+func newWorkspaceClient(ctx context.Context, httpClient internal.HttpClient) meshWorkspaceClient {
 	return meshWorkspaceClient{internal.NewMeshObjectClient[MeshWorkspace](ctx, httpClient, "v2")}
 }
 

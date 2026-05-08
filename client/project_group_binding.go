@@ -20,7 +20,7 @@ type meshProjectGroupBindingClient struct {
 	meshObject internal.MeshObjectClient[MeshProjectGroupBinding]
 }
 
-func newProjectGroupBindingClient(ctx context.Context, httpClient *internal.HttpClient) MeshProjectGroupBindingClient {
+func newProjectGroupBindingClient(ctx context.Context, httpClient internal.HttpClient) MeshProjectGroupBindingClient {
 	return meshProjectGroupBindingClient{internal.NewMeshObjectClient[MeshProjectGroupBinding](ctx, httpClient, "v3", "meshprojectbindings", "groupbindings")}
 }
 

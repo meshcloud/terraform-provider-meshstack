@@ -40,7 +40,7 @@ type meshApiKeyClient struct {
 	meshObject internal.MeshObjectClient[MeshApiKey]
 }
 
-func newApiKeyClient(ctx context.Context, httpClient *internal.HttpClient) MeshApiKeyClient {
+func newApiKeyClient(ctx context.Context, httpClient internal.HttpClient) MeshApiKeyClient {
 	return meshApiKeyClient{internal.NewMeshObjectClient[MeshApiKey](ctx, httpClient, "v1-preview")}
 }
 

@@ -46,7 +46,7 @@ type meshPaymentMethodClient struct {
 	meshObject internal.MeshObjectClient[MeshPaymentMethod]
 }
 
-func newPaymentMethodClient(ctx context.Context, httpClient *internal.HttpClient) MeshPaymentMethodClient {
+func newPaymentMethodClient(ctx context.Context, httpClient internal.HttpClient) MeshPaymentMethodClient {
 	return meshPaymentMethodClient{internal.NewMeshObjectClient[MeshPaymentMethod](ctx, httpClient, "v2")}
 }
 

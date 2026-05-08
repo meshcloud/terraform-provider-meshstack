@@ -499,7 +499,7 @@ go test -count=1 -parallel 4 -timeout 300s ./internal/provider/ 2>&1 | tee /tmp/
 - `TF_ACC` must be **unset** — the Terraform Plugin SDK then skips real provider startup and the mock client injected via `SetupMockClient()` is used instead.
 - Always use `-parallel 4` since the mock-backed tests run the full acceptance test harness and are slow without it.
 - Always tee to a file so errors can be inspected without re-running.
-- Mock clients must use **value receivers** (not pointer receivers). This avoids needing to pass pointers when constructing the `client.Client` struct.
+- Mock clients must use **value receivers** (not pointer receivers) — see [Client Receiver Rules](#client-receiver-rules).
 
 **Acceptance tests** (real local meshStack):
 ```bash
@@ -535,6 +535,10 @@ When a resource or data source needs a computed output field that is **derived f
 3. Use the model struct for `generic.Set` (writing state) and `generic.Get` (reading plan/config). When passing to API calls, extract the embedded client fields explicitly: `client.MeshFoo{Metadata: model.Metadata, Spec: model.Spec}`.
 4. The same model struct can be shared between resource and data source if the TF schema shape is identical.
 5. **Do not** add `json:"-"` fields to client structs — keep client structs clean and API-aligned.
+
+### Client Receiver Rules
+- **Use value receivers** (not pointer receivers) for all client implementation structs and mock clients. This avoids needing to pass pointers when constructing the `client.Client` struct.
+- **Do not return pointers** to client implementation structs from `new*Client` functions — return the value directly (the interface is satisfied by value receivers).
 
 ### Data Structure Rules
 - **Use pointers & `omitempty`** only for fields that are **actually nullable** in the backend API

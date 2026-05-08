@@ -56,8 +56,8 @@ type meshIntegrationClientImpl struct {
 	meshObject internal.MeshObjectClient[MeshIntegration]
 }
 
-func newIntegrationClient(ctx context.Context, httpClient *internal.HttpClient) MeshIntegrationClient {
-	return &meshIntegrationClientImpl{internal.NewMeshObjectClient[MeshIntegration](ctx, httpClient, "v1")}
+func newIntegrationClient(ctx context.Context, httpClient internal.HttpClient) MeshIntegrationClient {
+	return meshIntegrationClientImpl{internal.NewMeshObjectClient[MeshIntegration](ctx, httpClient, "v1")}
 }
 
 func (c meshIntegrationClientImpl) Create(ctx context.Context, integration MeshIntegration) (*MeshIntegration, error) {

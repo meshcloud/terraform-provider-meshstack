@@ -79,7 +79,7 @@ type meshTagDefinitionClient struct {
 	meshObject internal.MeshObjectClient[MeshTagDefinition]
 }
 
-func newTagDefinitionClient(ctx context.Context, httpClient *internal.HttpClient) MeshTagDefinitionClient {
+func newTagDefinitionClient(ctx context.Context, httpClient internal.HttpClient) MeshTagDefinitionClient {
 	return meshTagDefinitionClient{internal.NewMeshObjectClient[MeshTagDefinition](ctx, httpClient, "v1")}
 }
 

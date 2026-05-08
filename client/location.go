@@ -48,7 +48,7 @@ type meshLocationClient struct {
 	meshObject internal.MeshObjectClient[MeshLocation]
 }
 
-func newLocationClient(ctx context.Context, httpClient *internal.HttpClient) MeshLocationClient {
+func newLocationClient(ctx context.Context, httpClient internal.HttpClient) MeshLocationClient {
 	return meshLocationClient{internal.NewMeshObjectClient[MeshLocation](ctx, httpClient, "v1")}
 }
 
