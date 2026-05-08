@@ -1,0 +1,306 @@
+package internal
+
+import (
+	"context"
+	"fmt"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/meshcloud/terraform-provider-meshstack/client/version"
+)
+
+func TestHttpClient(t *testing.T) {
+	t.Run("GetMeshInfo success", func(t *testing.T) {
+		testLogger := installTestLogger(t)
+		client := newTestClientWithServer(t, func(resp http.ResponseWriter, req *http.Request) {
+			resp.WriteHeader(http.StatusOK)
+			_, _ = resp.Write([]byte(`{"version": "2026.10.0"}`))
+
+			assert.Equal(t, "/mesh/info", req.URL.Path)
+			assert.Equal(t, http.MethodGet, req.Method)
+			assert.Equal(t, "test-agent", req.Header.Get("User-Agent"))
+		})
+		info, err := client.GetMeshInfo(t.Context())
+		require.NoError(t, err)
+		assert.Equal(t, &MeshInfo{Version: version.Version{Major: 2026, Minor: 10}}, info)
+		assert.Equal(t, []string{
+			fmt.Sprintf("request [url %s/mesh/info method GET headers User-Agent=test-agent body <empty>]", client.RootUrl),
+			"response [status 200 body {\n  \"version\": \"2026.10.0\"\n}]",
+		}, testLogger.Debugs)
+		assert.Empty(t, testLogger.Warns)
+	})
+
+	t.Run("GetMeshInfo with successful retry", func(t *testing.T) {
+		for _, retryableStatusCode := range []int{429, 502, 503, 504} {
+			t.Run(fmt.Sprintf("after code %d", retryableStatusCode), func(t *testing.T) {
+				nowUTC := mockTimeNowAsUTC(t)
+
+				testLogger := installTestLogger(t)
+				retryTestBackoff := retryTestBackoff{WaitTime: 1 * time.Second}
+				retried := false
+				client := WithRetry(newTestClientWithServer(t, func(resp http.ResponseWriter, req *http.Request) {
+					if !retried {
+						if retryableStatusCode == 429 {
+							resp.Header().Set("Retry-After", nowUTC.Add(1*time.Second).Format(http.TimeFormat))
+						}
+						resp.WriteHeader(retryableStatusCode)
+						retried = true
+						return
+					}
+					resp.WriteHeader(http.StatusOK)
+					_, _ = resp.Write([]byte(`{}`))
+				}), RetryOptions{MaxRetries: 3, Backoff: &retryTestBackoff})
+
+				_, err := client.GetMeshInfo(t.Context())
+				require.NoError(t, err)
+				if retryableStatusCode == 429 {
+					assert.Equal(t, 0, retryTestBackoff.Called)
+				} else {
+					assert.Equal(t, 1, retryTestBackoff.Called)
+				}
+				assert.Equal(t, []string{
+					fmt.Sprintf("retrying request [status %d method GET path /mesh/info attempt 1/3 waitTime 1s]", retryableStatusCode),
+				}, testLogger.Warns)
+			})
+		}
+	})
+
+	t.Run("GetMeshInfo with 2 retries exhausted", func(t *testing.T) {
+		testLogger := installTestLogger(t)
+		retryTestBackoff := retryTestBackoff{}
+		client := WithRetry(newTestClientWithServer(t, func(resp http.ResponseWriter, req *http.Request) {
+			resp.WriteHeader(502)
+		}), RetryOptions{MaxRetries: 2, Backoff: &retryTestBackoff})
+		_, err := client.GetMeshInfo(t.Context())
+		var httpErr HttpError
+		require.ErrorAs(t, err, &httpErr)
+		assert.Equal(t, 502, httpErr.StatusCode)
+		assert.Equal(t, 2, retryTestBackoff.Called)
+		assert.Equal(t, []string{
+			"retrying request [status 502 method GET path /mesh/info attempt 1/2 waitTime 0s]",
+			"retrying request [status 502 method GET path /mesh/info attempt 2/2 waitTime 0s]",
+		}, testLogger.Warns)
+		assert.Equal(t, []string{
+			fmt.Sprintf("request [url %s/mesh/info method GET headers User-Agent=test-agent body <empty>]", client.RootUrl),
+			"response [status 502 body <empty>]",
+		}, testLogger.Debugs)
+
+	})
+
+	t.Run("GetMeshInfo with context cancelled during backoff", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(t.Context())
+		client := WithRetry(newTestClientWithServer(t, func(resp http.ResponseWriter, req *http.Request) {
+			resp.WriteHeader(502)
+			cancel() // cancel context so the backoff wait is interrupted
+		}), RetryOptions{MaxRetries: 3, Backoff: &retryTestBackoff{WaitTime: 10 * time.Second}})
+		_, err := client.GetMeshInfo(ctx)
+		require.ErrorIs(t, err, context.Canceled)
+	})
+
+	t.Run("doRequest with PATCH (not retried)", func(t *testing.T) {
+		client := WithRetry(newTestClientWithServer(t, func(resp http.ResponseWriter, req *http.Request) {
+			resp.WriteHeader(200)
+		}), RetryOptions{MaxRetries: 3, Backoff: &retryTestBackoff{WaitTime: 10 * time.Second}})
+		_, err := client.doRequest(t.Context(), http.MethodPatch, client.RootUrl)
+		require.NoError(t, err)
+	})
+
+	t.Run("doRequest with PUT replays body on retry", func(t *testing.T) {
+		attempt := 0
+		client := WithRetry(newTestClientWithServer(t, func(resp http.ResponseWriter, req *http.Request) {
+			body, _ := io.ReadAll(req.Body)
+			assert.JSONEq(t, `{"key":"value"}`, string(body))
+			attempt++
+			if attempt == 1 {
+				resp.WriteHeader(502)
+				return
+			}
+			resp.WriteHeader(200)
+		}), RetryOptions{MaxRetries: 2, Backoff: &retryTestBackoff{}})
+		_, err := client.doRequest(t.Context(), http.MethodPut, client.RootUrl, withPayload(map[string]string{"key": "value"}, "application/json"))
+		require.NoError(t, err)
+		assert.Equal(t, 2, attempt)
+	})
+
+	t.Run("doAuthorizedRequest with BearerTokenAuthorization", func(t *testing.T) {
+		client := newTestClientWithServer(t, func(resp http.ResponseWriter, req *http.Request) {
+			assert.Equal(t, "Bearer my-static-token", req.Header.Get("Authorization"))
+			resp.WriteHeader(http.StatusAccepted)
+		})
+		client.Authorization = BearerTokenAuthorization{Token: "my-static-token"}
+		_, err := client.doAuthorizedRequest(t.Context(), http.MethodPost, client.RootUrl.JoinPath("create"), withPayload("content", "text/plain"))
+		require.NoError(t, err)
+	})
+
+	t.Run("doAuthorizedRequest with clientSecretAuthorization and retries", func(t *testing.T) {
+		t.Run("succeeds after second attempt", func(t *testing.T) {
+			retryTestBackoff := retryTestBackoff{}
+			requestsSeen := map[string]int{} // key is request path
+			client := WithRetry(newTestClientWithServer(t, func(resp http.ResponseWriter, req *http.Request) {
+				defer func() {
+					requestsSeen[req.URL.Path]++
+				}()
+				if requestsSeen[req.URL.Path] == 0 {
+					resp.WriteHeader(502)
+					return
+				}
+				switch req.URL.Path {
+				case "/login":
+					resp.WriteHeader(http.StatusOK)
+					// expires_in must be less than minimumTokenLifetime to trigger relogin on second doAuthorizedRequest call
+					_, _ = resp.Write([]byte(`{"access_token":"some-token", "expires_in": 10}`))
+				case "/edit":
+					assert.Equal(t, "Bearer some-token", req.Header.Get("Authorization"))
+					resp.WriteHeader(http.StatusAccepted)
+				default:
+					t.Fatal("unexpected request", req.URL.Path)
+				}
+			}), RetryOptions{MaxRetries: 2, Backoff: &retryTestBackoff, WhitelistedPaths: map[string][]string{http.MethodPost: {"/login"}}})
+			client.Authorization = NewClientSecretAuthorization("login", "test-client", "test-client-secret")
+			resp, err := client.doAuthorizedRequest(t.Context(), http.MethodPut, client.RootUrl.JoinPath("edit"))
+			require.NoError(t, err)
+			require.NotNil(t, resp)
+			assert.Equal(t, map[string]int{
+				"/login": 2,
+				"/edit":  2,
+			}, requestsSeen)
+
+			t.Run("expired token is refreshed with relogin", func(t *testing.T) {
+				_, err := client.doAuthorizedRequest(t.Context(), http.MethodPut, client.RootUrl.JoinPath("edit"))
+				require.NoError(t, err)
+				assert.Equal(t, 2, retryTestBackoff.Called)
+				assert.Equal(t, map[string]int{
+					"/login": 3,
+					"/edit":  3,
+				}, requestsSeen)
+			})
+
+			// two different paths with one retry each, so backoff called twice in total
+			assert.Equal(t, 2, retryTestBackoff.Called)
+		})
+
+		t.Run("succeeds after redirect and retries", func(t *testing.T) {
+			retryTestBackoff := retryTestBackoff{}
+			requestsSeen := map[string]int{}
+			client := WithRetry(newTestClientWithServer(t, func(resp http.ResponseWriter, req *http.Request) {
+				defer func() {
+					requestsSeen[req.URL.Path]++
+				}()
+				if requestsSeen[req.URL.Path] == 0 {
+					resp.WriteHeader(502)
+					return
+				}
+				switch req.URL.Path {
+				case "/login":
+					body, _ := io.ReadAll(req.Body)
+					assert.JSONEq(t, `{"clientId":"test-client","clientSecret":"test-client-secret"}`, string(body))
+					http.Redirect(resp, req, "/login-target", http.StatusTemporaryRedirect)
+				case "/login-target":
+					body, _ := io.ReadAll(req.Body)
+					assert.JSONEq(t, `{"clientId":"test-client","clientSecret":"test-client-secret"}`, string(body))
+					resp.WriteHeader(http.StatusOK)
+					_, _ = resp.Write([]byte(`{"access_token":"redirected-token", "expires_in": 3600}`))
+				case "/edit":
+					assert.Equal(t, "Bearer redirected-token", req.Header.Get("Authorization"))
+					resp.WriteHeader(http.StatusAccepted)
+				default:
+					t.Fatal("unexpected request", req.URL.Path)
+				}
+			}), RetryOptions{MaxRetries: 2, Backoff: &retryTestBackoff, WhitelistedPaths: map[string][]string{http.MethodPost: {"/login"}}})
+			client.Authorization = NewClientSecretAuthorization("login", "test-client", "test-client-secret")
+			_, err := client.doAuthorizedRequest(t.Context(), http.MethodPut, client.RootUrl.JoinPath("edit"))
+			require.NoError(t, err)
+			assert.Equal(t, map[string]int{
+				"/login":        2, // 1st: 502, 2nd: 307 redirect
+				"/login-target": 2, // 1st: 502, 2nd: 200
+				"/edit":         2, // 1st: 502, 2nd: 202
+			}, requestsSeen)
+			assert.Equal(t, 3, retryTestBackoff.Called) // one retry each for /login, /login-target, /edit
+		})
+
+		t.Run("fails constantly at login", func(t *testing.T) {
+			retryTestBackoff := retryTestBackoff{}
+			client := WithRetry(newTestClientWithServer(t, func(resp http.ResponseWriter, r *http.Request) {
+				resp.WriteHeader(503)
+			}), RetryOptions{MaxRetries: 2, Backoff: &retryTestBackoff, WhitelistedPaths: map[string][]string{http.MethodPost: {"/login"}}})
+			client.Authorization = NewClientSecretAuthorization("login", "test-client", "test-client-secret")
+			_, err := client.doAuthorizedRequest(t.Context(), http.MethodPut, client.RootUrl.JoinPath("edit"))
+			require.ErrorContains(t, err, fmt.Sprintf("login at %s/login with client id 'test-client' failed", client.RootUrl))
+			var httpErr HttpError
+			require.ErrorAs(t, err, &httpErr)
+			assert.Equal(t, 503, httpErr.StatusCode)
+			assert.Equal(t, 2, retryTestBackoff.Called)
+		})
+
+	})
+}
+
+func mockTimeNowAsUTC(t *testing.T) time.Time {
+	t.Helper()
+	now := time.Now().UTC().Truncate(time.Second)
+	timeNow = func() time.Time { return now }
+	t.Cleanup(func() {
+		timeNow = time.Now
+	})
+	return now
+}
+
+func newTestClientWithServer(t *testing.T, handlerFunc http.HandlerFunc) HttpClient {
+	t.Helper()
+	server := httptest.NewServer(handlerFunc)
+	t.Cleanup(server.Close)
+	rootUrl, err := url.Parse(server.URL)
+	require.NoError(t, err)
+	client := server.Client()
+	return HttpClient{
+		Client:    client,
+		RootUrl:   rootUrl,
+		UserAgent: "test-agent",
+	}
+}
+
+func installTestLogger(t *testing.T) *testLogger {
+	t.Helper()
+	testLogger := &testLogger{}
+	previousLog := Log
+	Log = testLogger
+	t.Cleanup(func() {
+		Log = previousLog
+	})
+	return testLogger
+}
+
+type testLogger struct {
+	Debugs []string
+	Infos  []string
+	Warns  []string
+}
+
+func (c *testLogger) Debug(_ context.Context, msg string, args ...any) {
+	c.Debugs = append(c.Debugs, fmt.Sprintf("%s %v", msg, args))
+}
+
+func (c *testLogger) Info(_ context.Context, msg string, args ...any) {
+	c.Infos = append(c.Infos, fmt.Sprintf("%s %v", msg, args))
+}
+
+func (c *testLogger) Warn(_ context.Context, msg string, args ...any) {
+	c.Warns = append(c.Warns, fmt.Sprintf("%s %v", msg, args))
+}
+
+type retryTestBackoff struct {
+	WaitTime time.Duration
+	Called   int
+}
+
+func (b *retryTestBackoff) Calculate(int) time.Duration {
+	b.Called++
+	return b.WaitTime
+}

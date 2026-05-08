@@ -19,6 +19,10 @@ func (l TerraformClientLogger) Info(ctx context.Context, msg string, args ...any
 	tflog.Info(ctx, l.MessagePrefix+msg, convertArgsForLogging(args))
 }
 
+func (l TerraformClientLogger) Warn(ctx context.Context, msg string, args ...any) {
+	tflog.Warn(ctx, l.MessagePrefix+msg, convertArgsForLogging(args))
+}
+
 func (l TerraformClientLogger) Debug(ctx context.Context, msg string, args ...any) {
 	tflog.Debug(ctx, l.MessagePrefix+msg, convertArgsForLogging(args))
 }

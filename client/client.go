@@ -3,7 +3,6 @@ package client
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"net/url"
 	"time"
 
@@ -47,17 +46,21 @@ func NewApiTokenAuthorization(apiToken string) Authorization {
 	return internal.BearerTokenAuthorization{Token: apiToken}
 }
 
+const apiLoginPath = "/api/login"
+
 func NewApiKeyAuthorization(apiKey, apiSecret string) Authorization {
-	return internal.NewClientSecretAuthorization("api/login", apiKey, apiSecret)
+	return internal.NewClientSecretAuthorization(apiLoginPath, apiKey, apiSecret)
 }
 
 func New(ctx context.Context, rootUrl *url.URL, userAgent string, auth Authorization) (Client, error) {
-	httpClient := internal.HttpClient{
-		Client:        &http.Client{Timeout: 5 * time.Minute},
-		RootUrl:       rootUrl,
-		UserAgent:     userAgent,
-		Authorization: auth,
-	}
+	httpClient := internal.WithRetry(
+		internal.NewHttpClient(rootUrl, userAgent, auth),
+		internal.RetryOptions{
+			MaxRetries:       10,
+			Backoff:          internal.ExponentialBackoff{MinWait: 1 * time.Second, MaxWait: 10 * time.Second},
+			WhitelistedPaths: map[string][]string{"POST": {apiLoginPath}},
+		},
+	)
 
 	// Check meshStack version compatibility
 	if meshInfo, err := httpClient.GetMeshInfo(ctx); err != nil {
