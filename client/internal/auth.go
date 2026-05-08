@@ -3,6 +3,8 @@ package internal
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"sync"
 	"time"
 )
 
@@ -12,10 +14,9 @@ type Authorization interface {
 
 func NewClientSecretAuthorization(loginApiPath, clientId, clientSecret string) Authorization {
 	return &clientSecretAuthorization{
-		BearerTokenAuthorization{}, // empty token initially, is refreshed on demand in ensureValidToken
-		loginApiPath,
-		clientId, clientSecret,
-		time.Time{}, // expiry also set in ensureValidToken
+		LoginApiPath: loginApiPath,
+		ClientId:     clientId,
+		ClientSecret: clientSecret,
 	}
 }
 
@@ -33,9 +34,12 @@ type clientSecretAuthorization struct {
 	ClientId     string
 	ClientSecret string
 	ExpiresAt    time.Time
+	mu           sync.Mutex
 }
 
 func (auth *clientSecretAuthorization) Header(ctx context.Context, client HttpClient) (string, error) {
+	auth.mu.Lock()
+	defer auth.mu.Unlock()
 	if err := auth.ensureValidToken(ctx, client); err != nil {
 		return "", err
 	}
@@ -43,7 +47,8 @@ func (auth *clientSecretAuthorization) Header(ctx context.Context, client HttpCl
 }
 
 func (auth *clientSecretAuthorization) ensureValidToken(ctx context.Context, client HttpClient) error {
-	if auth.Token != "" && time.Until(auth.ExpiresAt) > 30*time.Second {
+	const minimumTokenLifetime = 30 * time.Second
+	if auth.Token != "" && time.Until(auth.ExpiresAt) > minimumTokenLifetime {
 		return nil
 	}
 
@@ -59,7 +64,7 @@ func (auth *clientSecretAuthorization) ensureValidToken(ctx context.Context, cli
 		ExpireSec int    `json:"expires_in"`
 	}
 
-	loginResult, err := unmarshalBody[loginResponse](client.doRequest(ctx, "POST", loginApiUrl,
+	loginResult, err := unmarshalBody[loginResponse](client.doRequest(ctx, http.MethodPost, loginApiUrl,
 		withPayload(loginRequest{ClientId: auth.ClientId, ClientSecret: auth.ClientSecret}, "application/json")),
 	)
 	if err != nil {
@@ -67,5 +72,6 @@ func (auth *clientSecretAuthorization) ensureValidToken(ctx context.Context, cli
 	}
 	auth.Token = loginResult.Token
 	auth.ExpiresAt = time.Now().Add(time.Duration(loginResult.ExpireSec) * time.Second)
+	Log.Debug(ctx, "login successful", "url", loginApiUrl, "clientId", auth.ClientId, "expiresAt", auth.ExpiresAt)
 	return nil
 }

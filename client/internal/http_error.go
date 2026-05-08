@@ -8,12 +8,12 @@ import (
 // HttpError represents an HTTP error response with status code.
 // This error is returned when an HTTP request fails with a non-2XX status code.
 type HttpError struct {
-	StatusCode int
-	Message    string
+	StatusCode   int
+	ResponseBody []byte
 }
 
 func (e HttpError) Error() string {
-	return fmt.Sprintf("http error %d: %s", e.StatusCode, e.Message)
+	return fmt.Sprintf("http error %d, response '%s'", e.StatusCode, string(e.ResponseBody))
 }
 
 // IsForbidden returns true if the error is a 403 Forbidden response.

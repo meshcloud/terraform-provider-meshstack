@@ -9,9 +9,15 @@ import (
 	"net/http"
 	"net/url"
 	"slices"
+	"time"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client/version"
 )
+
+// NewHttpClient creates a new client with an underlying http.Client being a pointer to be modified by WithRetry.
+func NewHttpClient(rootUrl *url.URL, userAgent string, auth Authorization) HttpClient {
+	return HttpClient{&http.Client{Timeout: 5 * time.Minute}, rootUrl, userAgent, auth}
+}
 
 // HttpClient wraps [http.Client] with convenient request handling thanks to RequestOption.
 type HttpClient struct {
@@ -44,6 +50,9 @@ func (c HttpClient) doRequest(ctx context.Context, method string, url *url.URL, 
 }
 
 func (c HttpClient) doAuthorizedRequest(ctx context.Context, method string, url *url.URL, options ...RequestOption) ([]byte, error) {
+	if c.Authorization == nil {
+		return nil, fmt.Errorf("authorization is not configured")
+	}
 	authHeader, err := c.Authorization.Header(ctx, c)
 	if err != nil {
 		return nil, err
@@ -63,8 +72,8 @@ func (c HttpClient) readBodyAndCheckSuccess(ctx context.Context, res *http.Respo
 	}
 
 	return responseBody, HttpError{
-		StatusCode: res.StatusCode,
-		Message:    string(responseBody),
+		StatusCode:   res.StatusCode,
+		ResponseBody: responseBody,
 	}
 }
 

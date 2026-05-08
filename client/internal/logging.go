@@ -14,19 +14,25 @@ import (
 
 var Log Logger = noopLogger{}
 
-// Logger only supports Debug and Info log levels.
+// Logger supports Debug, Info, and Warn log levels.
+// Note that msg is a short, descriptive statement what is logged, and args are key value pairs (values are string or implement fmt.Stringer).
 type Logger interface {
-	Info(ctx context.Context, msg string, args ...any)
 	Debug(ctx context.Context, msg string, args ...any)
+	Info(ctx context.Context, msg string, args ...any)
+	Warn(ctx context.Context, msg string, args ...any)
 }
 
 type noopLogger struct{}
+
+func (n noopLogger) Debug(context.Context, string, ...any) {
+	// do nothing
+}
 
 func (n noopLogger) Info(context.Context, string, ...any) {
 	// do nothing
 }
 
-func (n noopLogger) Debug(context.Context, string, ...any) {
+func (n noopLogger) Warn(context.Context, string, ...any) {
 	// do nothing
 }
 

@@ -1,3 +1,9 @@
+## v0.20.7
+
+IMPROVEMENTS:
+- Refactor HTTP client: extract auth into `Authorization` interface, add retry support with exponential backoff and `Retry-After` header parsing, and make request bodies replayable for retries.
+- Add mutex to client secret authorization to prevent data races during concurrent token refresh.
+
 ## v0.20.6
 
 BREAKING CHANGES:
