@@ -141,6 +141,8 @@ func newProviderClient(ctx context.Context, data MeshStackProviderModel, provide
 		apiSecret = os.Getenv(envKeyMeshstackApiSecret)
 	}
 
+	// Either apiToken or apiKey/apiSecret must be set for authorization against backend.
+	var auth client.Authorization
 	if apiToken == "" {
 		if apiKey == "" {
 			diags.AddError("Provider API key missing.", "Set provider.meshstack.apikey or use MESHSTACK_API_KEY environment variable.")
@@ -151,10 +153,13 @@ func newProviderClient(ctx context.Context, data MeshStackProviderModel, provide
 		if diags.HasError() {
 			return
 		}
+		auth = client.NewApiKeyAuthorization(apiKey, apiSecret)
+	} else {
+		auth = client.NewApiTokenAuthorization(apiToken)
 	}
 
 	userAgent := fmt.Sprintf("terraform-provider-meshstack/%s", providerVersion)
-	providerClient, err = client.New(ctx, parsedEndpoint, userAgent, apiKey, apiSecret, apiToken)
+	providerClient, err = client.New(ctx, parsedEndpoint, userAgent, auth)
 	if err != nil {
 		diags.AddError("Failed to create meshStack client.", err.Error())
 		return

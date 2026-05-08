@@ -74,7 +74,7 @@ type meshLandingZoneClient struct {
 	meshObject internal.MeshObjectClient[MeshLandingZone]
 }
 
-func newLandingZoneClient(ctx context.Context, httpClient *internal.HttpClient) MeshLandingZoneClient {
+func newLandingZoneClient(ctx context.Context, httpClient internal.HttpClient) MeshLandingZoneClient {
 	return meshLandingZoneClient{internal.NewMeshObjectClient[MeshLandingZone](ctx, httpClient, "v1")}
 }
 

@@ -20,7 +20,7 @@ type meshWorkspaceUserBindingClient struct {
 	meshObject internal.MeshObjectClient[MeshWorkspaceUserBinding]
 }
 
-func newWorkspaceUserBindingClient(ctx context.Context, httpClient *internal.HttpClient) MeshWorkspaceUserBindingClient {
+func newWorkspaceUserBindingClient(ctx context.Context, httpClient internal.HttpClient) MeshWorkspaceUserBindingClient {
 	return meshWorkspaceUserBindingClient{internal.NewMeshObjectClient[MeshWorkspaceUserBinding](ctx, httpClient, "v2", "meshworkspacebindings", "userbindings")}
 }
 

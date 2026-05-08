@@ -74,7 +74,7 @@ type meshTenantV4Client struct {
 	meshObject internal.MeshObjectClient[MeshTenantV4]
 }
 
-func newTenantV4Client(ctx context.Context, httpClient *internal.HttpClient) MeshTenantV4Client {
+func newTenantV4Client(ctx context.Context, httpClient internal.HttpClient) MeshTenantV4Client {
 	return meshTenantV4Client{internal.NewMeshObjectClient[MeshTenantV4](ctx, httpClient, "v4-preview")}
 }
 

@@ -2,12 +2,9 @@ package client
 
 import (
 	"context"
-	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client/internal"
@@ -44,27 +41,22 @@ type Client struct {
 	WorkspaceUserBinding           MeshWorkspaceUserBindingClient
 }
 
-func New(ctx context.Context, rootUrl *url.URL, userAgent, apiKey, apiSecret string, apiToken string) (Client, error) {
-	httpClient := &internal.HttpClient{
-		Client:    http.Client{Timeout: 5 * time.Minute},
-		RootUrl:   rootUrl,
-		UserAgent: userAgent,
+type Authorization = internal.Authorization
 
-		// Putting authentication with meshStack API into HttpClient
-		// saves use from passing ApiKey/ApiSecret down to client factory methods below.
-		ApiKey:    apiKey,
-		ApiSecret: apiSecret,
-	}
+func NewApiTokenAuthorization(apiToken string) Authorization {
+	return internal.BearerTokenAuthorization{Token: apiToken}
+}
 
-	if apiToken != "" {
-		httpClient.Authorization = "Bearer " + apiToken
+func NewApiKeyAuthorization(apiKey, apiSecret string) Authorization {
+	return internal.NewClientSecretAuthorization("api/login", apiKey, apiSecret)
+}
 
-		if expiresAt, err := parseTokenExpiration(apiToken); err == nil {
-			httpClient.AuthorizationExpiresAt = expiresAt
-		} else {
-			// If token has no expiration we assume it is valid for the default duration.
-			httpClient.AuthorizationExpiresAt = time.Now().Add(6 * time.Hour)
-		}
+func New(ctx context.Context, rootUrl *url.URL, userAgent string, auth Authorization) (Client, error) {
+	httpClient := internal.HttpClient{
+		Client:        &http.Client{Timeout: 5 * time.Minute},
+		RootUrl:       rootUrl,
+		UserAgent:     userAgent,
+		Authorization: auth,
 	}
 
 	// Check meshStack version compatibility
@@ -97,29 +89,4 @@ func New(ctx context.Context, rootUrl *url.URL, userAgent, apiKey, apiSecret str
 		WorkspaceGroupBinding:          newWorkspaceGroupBindingClient(ctx, httpClient),
 		WorkspaceUserBinding:           newWorkspaceUserBindingClient(ctx, httpClient),
 	}, nil
-}
-
-func parseTokenExpiration(token string) (time.Time, error) {
-	parts := strings.Split(token, ".")
-	if len(parts) != 3 {
-		return time.Time{}, fmt.Errorf("invalid token format")
-	}
-
-	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
-	if err != nil {
-		return time.Time{}, err
-	}
-
-	var claims struct {
-		Exp int64 `json:"exp"`
-	}
-	if err := json.Unmarshal(payload, &claims); err != nil {
-		return time.Time{}, err
-	}
-
-	if claims.Exp == 0 {
-		return time.Time{}, fmt.Errorf("expiration claim missing")
-	}
-
-	return time.Unix(claims.Exp, 0), nil
 }
