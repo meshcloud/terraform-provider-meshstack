@@ -1,7 +1,9 @@
 ## v0.20.8
 
 BREAKING CHANGES:
-- `meshstack_building_block_definition`: The `supported_platforms` field has changed its structure due to an upstream API change.
+- `meshstack_building_block_definition`:
+  The field `supported_platforms` in the Client DTO is now aligned with an upstream API change.
+  The resource schema itself is unaffected.
 
 ## v0.20.7
 
