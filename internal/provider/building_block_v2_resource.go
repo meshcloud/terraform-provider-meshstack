@@ -174,28 +174,6 @@ func (r *buildingBlockV2Resource) Schema(ctx context.Context, req resource.Schem
 						Computed:            true,
 					},
 					"outputs": buildingBlockOutputs(),
-					"lifecycle": schema.SingleNestedAttribute{
-						MarkdownDescription: "Lifecycle information for this Building Block.",
-						Computed:            true,
-						Attributes: map[string]schema.Attribute{
-							"state": schema.StringAttribute{
-								MarkdownDescription: "Lifecycle state of the building block.",
-								Computed:            true,
-							},
-							"created_on": schema.StringAttribute{
-								MarkdownDescription: "Timestamp of building block creation.",
-								Computed:            true,
-							},
-							"marked_for_deletion_on": schema.StringAttribute{
-								MarkdownDescription: "For deleted building blocks: timestamp of deletion.",
-								Computed:            true,
-							},
-							"marked_for_deletion_by": schema.StringAttribute{
-								MarkdownDescription: "For deleted building blocks: user who requested deletion.",
-								Computed:            true,
-							},
-						},
-					},
 				},
 			},
 			"wait_for_completion": schema.BoolAttribute{
@@ -376,7 +354,6 @@ func setStateFromResponseV2(ctx context.Context, state *tfsdk.State, bb *client.
 		return
 	}
 	diags.Append(state.SetAttribute(ctx, path.Root("status").AtName("outputs"), outputs)...)
-	diags.Append(state.SetAttribute(ctx, path.Root("status").AtName("lifecycle"), bb.Status.Lifecycle)...)
 
 	return diags
 }

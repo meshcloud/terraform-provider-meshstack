@@ -2,7 +2,6 @@ package clientmock
 
 import (
 	"context"
-	"time"
 
 	"github.com/google/uuid"
 
@@ -43,10 +42,6 @@ func (m MeshBuildingBlockV2Client) Create(_ context.Context, bb *client.MeshBuil
 		Status: client.MeshBuildingBlockV2Status{
 			Status:  client.BUILDING_BLOCK_STATUS_SUCCEEDED,
 			Outputs: make([]client.MeshBuildingBlockIO, 0),
-			Lifecycle: client.MeshBuildingBlockV2Lifecycle{
-				State:     "ACTIVE",
-				CreatedOn: time.Now().UTC().Format(time.RFC3339),
-			},
 		},
 	}
 

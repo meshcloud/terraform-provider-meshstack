@@ -107,20 +107,8 @@ Read-Only:
 Read-Only:
 
 - `force_purge` (Boolean) Indicates whether an operator has requested purging of this Building Block.
-- `lifecycle` (Attributes) Lifecycle information for this Building Block. (see [below for nested schema](#nestedatt--status--lifecycle))
 - `outputs` (Attributes Map) Building block outputs. Each output has exactly one value attribute set. (see [below for nested schema](#nestedatt--status--outputs))
 - `status` (String) Execution status. One of `WAITING_FOR_DEPENDENT_INPUT`, `WAITING_FOR_OPERATOR_INPUT`, `PENDING`, `IN_PROGRESS`, `SUCCEEDED`, `FAILED`.
-
-<a id="nestedatt--status--lifecycle"></a>
-### Nested Schema for `status.lifecycle`
-
-Read-Only:
-
-- `created_on` (String) Timestamp of building block creation.
-- `marked_for_deletion_by` (String) For deleted building blocks: user who requested deletion.
-- `marked_for_deletion_on` (String) For deleted building blocks: timestamp of deletion.
-- `state` (String) Lifecycle state of the building block.
-
 
 <a id="nestedatt--status--outputs"></a>
 ### Nested Schema for `status.outputs`

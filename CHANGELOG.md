@@ -4,6 +4,7 @@ BREAKING CHANGES:
 - `meshstack_building_block_definition`:
   The field `supported_platforms` in the Client DTO is now aligned with an upstream API change.
   The resource schema itself is unaffected.
+- `building_block_v2`: remove `created_on`, `marked_for_deletion_on`, `marked_for_deletion_by` from resource and datasource schema.
 
 ## v0.20.7
 
