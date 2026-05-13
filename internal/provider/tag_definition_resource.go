@@ -18,7 +18,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/modifiers/tagdefinitionmodifier"
@@ -104,7 +103,7 @@ func (r *tagDefinitionResource) ValidateConfig(ctx context.Context, req resource
 
 	if valueType.SingleSelect != nil && !valueType.SingleSelect.DefaultValue.IsNull() && !valueType.SingleSelect.DefaultValue.IsUnknown() {
 		defaultValue := valueType.SingleSelect.DefaultValue.ValueString()
-		options := extractStringValues(valueType.SingleSelect.Options)
+		options := extractStringValuesFromList(ctx, valueType.SingleSelect.Options)
 		if !slices.Contains(options, defaultValue) {
 			resp.Diagnostics.AddAttributeError(
 				path.Root("spec").AtName("value_type").AtName("single_select").AtName("default_value"),
@@ -114,9 +113,9 @@ func (r *tagDefinitionResource) ValidateConfig(ctx context.Context, req resource
 		}
 	}
 
-	if valueType.MultiSelect != nil && valueType.MultiSelect.DefaultValue != nil && len(valueType.MultiSelect.DefaultValue) > 0 {
-		defaultValues := extractStringValues(valueType.MultiSelect.DefaultValue)
-		options := extractStringValues(valueType.MultiSelect.Options)
+	if valueType.MultiSelect != nil && !valueType.MultiSelect.DefaultValue.IsNull() && !valueType.MultiSelect.DefaultValue.IsUnknown() {
+		defaultValues := extractStringValuesFromList(ctx, valueType.MultiSelect.DefaultValue)
+		options := extractStringValuesFromList(ctx, valueType.MultiSelect.Options)
 
 		for _, dv := range defaultValues {
 			if !slices.Contains(options, dv) {
@@ -303,13 +302,13 @@ type tagValueNumber struct {
 }
 
 type tagValueSingleSelect struct {
-	Options      []types.String `json:"options,omitempty" tfsdk:"options"`
-	DefaultValue types.String   `json:"defaultValue" tfsdk:"default_value"`
+	Options      types.List   `json:"options,omitempty" tfsdk:"options"`
+	DefaultValue types.String `json:"defaultValue" tfsdk:"default_value"`
 }
 
 type tagValueMultiSelect struct {
-	Options      []types.String `json:"options,omitempty" tfsdk:"options"`
-	DefaultValue []types.String `json:"defaultValue,omitempty" tfsdk:"default_value"`
+	Options      types.List `json:"options,omitempty" tfsdk:"options"`
+	DefaultValue types.List `json:"defaultValue,omitempty" tfsdk:"default_value"`
 }
 
 // Create creates the resource and sets the initial Terraform state.
@@ -322,7 +321,7 @@ func (r *tagDefinitionResource) Create(ctx context.Context, req resource.CreateR
 		return
 	}
 
-	valueType := buildValueType(spec.ValueType)
+	valueType := buildValueType(ctx, spec.ValueType)
 
 	name := spec.TargetKind.ValueString() + "." + spec.Key.ValueString()
 
@@ -357,15 +356,20 @@ func (r *tagDefinitionResource) Create(ctx context.Context, req resource.CreateR
 	resp.Diagnostics.Append(diags...)
 }
 
-func extractStringValues(values []basetypes.StringValue) []string {
-	result := make([]string, len(values))
-	for i, v := range values {
+func extractStringValuesFromList(ctx context.Context, list types.List) []string {
+	if list.IsNull() || list.IsUnknown() {
+		return nil
+	}
+	elements := make([]types.String, 0, len(list.Elements()))
+	list.ElementsAs(ctx, &elements, false)
+	result := make([]string, len(elements))
+	for i, v := range elements {
 		result[i] = v.ValueString()
 	}
 	return result
 }
 
-func buildValueType(valueType tagDefinitionValueType) client.MeshTagDefinitionValueType {
+func buildValueType(ctx context.Context, valueType tagDefinitionValueType) client.MeshTagDefinitionValueType {
 	var result client.MeshTagDefinitionValueType
 
 	if valueType.String != nil {
@@ -396,17 +400,18 @@ func buildValueType(valueType tagDefinitionValueType) client.MeshTagDefinitionVa
 
 	if valueType.SingleSelect != nil {
 		result.SingleSelect = &client.TagValueSingleSelect{
-			Options:      extractStringValues(valueType.SingleSelect.Options),
+			Options:      extractStringValuesFromList(ctx, valueType.SingleSelect.Options),
 			DefaultValue: valueType.SingleSelect.DefaultValue.ValueStringPointer(),
 		}
 	}
 
 	if valueType.MultiSelect != nil {
 		result.MultiSelect = &client.TagValueMultiSelect{
-			Options: extractStringValues(valueType.MultiSelect.Options),
+			Options: extractStringValuesFromList(ctx, valueType.MultiSelect.Options),
 		}
-		if valueType.MultiSelect.DefaultValue != nil {
-			result.MultiSelect.DefaultValue = new(extractStringValues(valueType.MultiSelect.DefaultValue))
+		if !valueType.MultiSelect.DefaultValue.IsNull() && !valueType.MultiSelect.DefaultValue.IsUnknown() {
+			defaultValues := extractStringValuesFromList(ctx, valueType.MultiSelect.DefaultValue)
+			result.MultiSelect.DefaultValue = &defaultValues
 		}
 	}
 
@@ -446,7 +451,7 @@ func (r *tagDefinitionResource) Update(ctx context.Context, req resource.UpdateR
 		return
 	}
 
-	valueType := buildValueType(spec.ValueType)
+	valueType := buildValueType(ctx, spec.ValueType)
 	name := spec.TargetKind.ValueString() + "." + spec.Key.ValueString()
 
 	update := client.MeshTagDefinition{
