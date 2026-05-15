@@ -26,7 +26,7 @@ func TestAccWorkspaceDataSource(t *testing.T) {
 				Config: config.String(),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("ref").AtMapKey("kind"), knownvalue.StringExact("meshWorkspace")),
-					statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("ref").AtMapKey("identifier"), xknownvalue.NotEmptyString()),
+					statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("ref").AtMapKey("name"), xknownvalue.NotEmptyString()),
 					statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("metadata").AtMapKey("name"), xknownvalue.NotEmptyString()),
 					statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("My Workspace's Display Name")),
 				},

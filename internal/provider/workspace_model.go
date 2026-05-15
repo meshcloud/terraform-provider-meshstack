@@ -10,16 +10,16 @@ type workspaceModel struct {
 }
 
 type workspaceRef struct {
-	Kind       string `tfsdk:"kind"`
-	Identifier string `tfsdk:"identifier"`
+	Kind string `tfsdk:"kind"`
+	Name string `tfsdk:"name"`
 }
 
 func newWorkspaceModel(workspace *client.MeshWorkspace) workspaceModel {
 	return workspaceModel{
 		MeshWorkspace: workspace,
 		Ref: workspaceRef{
-			Kind:       client.MeshObjectKind.Workspace,
-			Identifier: workspace.Metadata.Name,
+			Kind: client.MeshObjectKind.Workspace,
+			Name: workspace.Metadata.Name,
 		},
 	}
 }

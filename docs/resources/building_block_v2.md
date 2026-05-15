@@ -102,8 +102,8 @@ Required:
 
 Optional:
 
-- `identifier` (String) Identifier of the target workspace.
-- `uuid` (String) UUID of the target workspace or tenant.
+- `name` (String) Identifier of the target workspace.
+- `uuid` (String) UUID of the target tenant.
 
 
 <a id="nestedatt--spec--inputs"></a>

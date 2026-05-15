@@ -104,15 +104,15 @@ func (r *buildingBlockV2Resource) Schema(ctx context.Context, req resource.Schem
 								},
 							},
 							"uuid": schema.StringAttribute{
-								MarkdownDescription: "UUID of the target workspace or tenant.",
+								MarkdownDescription: "UUID of the target tenant.",
 								Optional:            true,
 								Default:             nil,
 								Validators: []validator.String{stringvalidator.ExactlyOneOf(
 									path.MatchRelative().AtParent().AtName("uuid"),
-									path.MatchRelative().AtParent().AtName("identifier"),
+									path.MatchRelative().AtParent().AtName("name"),
 								)},
 							},
-							"identifier": schema.StringAttribute{
+							"name": schema.StringAttribute{
 								MarkdownDescription: "Identifier of the target workspace.",
 								Optional:            true,
 								Default:             nil,

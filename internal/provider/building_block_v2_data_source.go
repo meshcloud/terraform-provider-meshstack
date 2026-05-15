@@ -84,10 +84,10 @@ func (d *buildingBlockV2DataSource) Schema(ctx context.Context, req datasource.S
 								Computed:            true,
 								Validators: []validator.String{stringvalidator.ExactlyOneOf(
 									path.MatchRelative().AtParent().AtName("uuid"),
-									path.MatchRelative().AtParent().AtName("identifier"),
+									path.MatchRelative().AtParent().AtName("name"),
 								)},
 							},
-							"identifier": schema.StringAttribute{
+							"name": schema.StringAttribute{
 								MarkdownDescription: "Identifier of the target workspace.",
 								Computed:            true,
 							},
