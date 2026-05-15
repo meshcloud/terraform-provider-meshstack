@@ -51,8 +51,8 @@ Read-Only:
 
 Read-Only:
 
-- `identifier` (String) Identifier of the workspace.
 - `kind` (String) The kind of the object. Always `meshWorkspace`.
+- `name` (String) Identifier of the workspace.
 
 
 <a id="nestedatt--spec"></a>

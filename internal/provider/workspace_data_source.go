@@ -44,7 +44,7 @@ func (d *workspaceDataSource) Schema(_ context.Context, _ datasource.SchemaReque
 						MarkdownDescription: "The kind of the object. Always `meshWorkspace`.",
 						Computed:            true,
 					},
-					"identifier": schema.StringAttribute{
+					"name": schema.StringAttribute{
 						MarkdownDescription: "Identifier of the workspace.",
 						Computed:            true,
 					},

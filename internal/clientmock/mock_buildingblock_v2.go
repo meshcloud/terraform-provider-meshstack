@@ -29,8 +29,8 @@ func (m MeshBuildingBlockV2Client) Create(_ context.Context, bb *client.MeshBuil
 	id := uuid.NewString()
 
 	ownedByWorkspace := ""
-	if bb.Spec.TargetRef.Identifier != nil {
-		ownedByWorkspace = *bb.Spec.TargetRef.Identifier
+	if bb.Spec.TargetRef.Name != nil {
+		ownedByWorkspace = *bb.Spec.TargetRef.Name
 	}
 
 	created := &client.MeshBuildingBlockV2{

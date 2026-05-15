@@ -45,9 +45,9 @@ type MeshBuildingBlockV2DefinitionVersionRef struct {
 }
 
 type MeshBuildingBlockV2TargetRef struct {
-	Kind       string  `json:"kind" tfsdk:"kind"`
-	Uuid       *string `json:"uuid" tfsdk:"uuid"`
-	Identifier *string `json:"identifier" tfsdk:"identifier"`
+	Kind string  `json:"kind" tfsdk:"kind"`
+	Uuid *string `json:"uuid" tfsdk:"uuid"`
+	Name *string `json:"name" tfsdk:"name"`
 }
 
 type MeshBuildingBlockV2Create struct {

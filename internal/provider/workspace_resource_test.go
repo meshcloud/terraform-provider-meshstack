@@ -40,7 +40,7 @@ func TestAccWorkspace(t *testing.T) {
 
 					// Ref
 					statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("ref").AtMapKey("kind"), knownvalue.StringExact("meshWorkspace")),
-					statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("ref").AtMapKey("identifier"), xknownvalue.NotEmptyString()),
+					statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("ref").AtMapKey("name"), xknownvalue.NotEmptyString()),
 				},
 			},
 			{
@@ -62,7 +62,7 @@ func TestAccWorkspace(t *testing.T) {
 					if rs == nil {
 						return "", fmt.Errorf("resource not found: %s", resourceAddress.String())
 					}
-					return rs.Primary.Attributes["ref.identifier"], nil
+					return rs.Primary.Attributes["ref.name"], nil
 				},
 				ResourceName: resourceAddress.String(),
 			},

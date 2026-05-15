@@ -1,3 +1,13 @@
+## UNRELEASED
+
+Requires meshStack 2026.22.0 or later (previously 2026.10.0).
+
+BREAKING CHANGES:
+- `meshstack_building_block_v2`: Renamed `target_ref.identifier` to `target_ref.name` to align with upstream API changes.
+  Update configurations to use `name` instead of `identifier` when specifying the target workspace.
+- `meshstack_workspace`: Renamed `ref.identifier` to `ref.name` to align with upstream API changes.
+  Update any references to the workspace's `ref` field to use `name` instead of `identifier`.
+
 ## v0.20.10
 
 FIXES:
@@ -7,12 +17,12 @@ FIXES:
 
 BREAKING CHANGES:
 - `meshstack_building_block_v2`: Building blocks in meshStack versions higher than v2026.20.0 are now soft-deleted instead of hard-deleted.
-  The Terraform provider has been updated to correctly detect soft-deleted building blocks by inspecting the 
-  lifecycle state. To ensure correct deletion detection, upgrade the Terraform provider when using meshStack 
+  The Terraform provider has been updated to correctly detect soft-deleted building blocks by inspecting the
+  lifecycle state. To ensure correct deletion detection, upgrade the Terraform provider when using meshStack
   versions higher than v2026.20.0.
 
 NOTE:
-- This version is backwards-compatible and can be used with older versions of meshStack. If you are using a meshStack version 
+- This version is backwards-compatible and can be used with older versions of meshStack. If you are using a meshStack version
   v2026.20.0 or lower, the provider will continue to work as expected with hard-deleted building blocks.
 
 ## v0.20.8

@@ -95,8 +95,8 @@ Read-Only:
 
 Read-Only:
 
-- `identifier` (String) Identifier of the target workspace.
 - `kind` (String) Target kind for this building block, depends on building block definition type. One of `meshTenant`, `meshWorkspace`.
+- `name` (String) Identifier of the target workspace.
 - `uuid` (String) UUID of the target tenant.
 
 

@@ -63,7 +63,7 @@ func (r *workspaceResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 						Computed:            true,
 						PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 					},
-					"identifier": schema.StringAttribute{
+					"name": schema.StringAttribute{
 						MarkdownDescription: "Identifier of the workspace.",
 						Computed:            true,
 						PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
