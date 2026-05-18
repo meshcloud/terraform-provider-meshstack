@@ -168,7 +168,7 @@ Read-Only:
 
 Read-Only:
 
-- `state` (String) Lifecycle state. `DELETED` indicates the building block has been deleted.
+- `state` (String) Lifecycle state. One of `ACTIVE`, `MARKED_FOR_DELETION`, `DELETED`.
 
 
 <a id="nestedatt--status--outputs"></a>

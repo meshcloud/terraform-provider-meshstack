@@ -139,8 +139,11 @@ func (d *buildingBlockV2DataSource) Schema(ctx context.Context, req datasource.S
 						Computed:            true,
 						Attributes: map[string]schema.Attribute{
 							"state": schema.StringAttribute{
-								MarkdownDescription: "Lifecycle state. `DELETED` indicates the building block has been deleted.",
-								Computed:            true,
+								MarkdownDescription: fmt.Sprintf("Lifecycle state. One of `%s`, `%s`, `%s`.",
+									client.BUILDING_BLOCK_LIFECYCLE_STATE_ACTIVE,
+									client.BUILDING_BLOCK_LIFECYCLE_STATE_MARKED_FOR_DELETION,
+									client.BUILDING_BLOCK_LIFECYCLE_STATE_DELETED),
+								Computed: true,
 							},
 						},
 					},
