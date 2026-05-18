@@ -134,6 +134,16 @@ func (d *buildingBlockV2DataSource) Schema(ctx context.Context, req datasource.S
 						Computed:            true,
 					},
 					"outputs": buildingBlockOutputs(),
+					"lifecycle": schema.SingleNestedAttribute{
+						MarkdownDescription: "Lifecycle state of this building block.",
+						Computed:            true,
+						Attributes: map[string]schema.Attribute{
+							"state": schema.StringAttribute{
+								MarkdownDescription: "Lifecycle state. `DELETED` indicates the building block has been deleted.",
+								Computed:            true,
+							},
+						},
+					},
 				},
 			},
 		},
@@ -187,6 +197,7 @@ func (d *buildingBlockV2DataSource) Read(ctx context.Context, req datasource.Rea
 	// Set all status values except for outputs
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("status").AtName("status"), bb.Status.Status)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("status").AtName("force_purge"), bb.Status.ForcePurge)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("status").AtName("lifecycle"), bb.Status.Lifecycle)...)
 
 	// Read outputs
 	outputs := make(map[string]buildingBlockOutputModel)

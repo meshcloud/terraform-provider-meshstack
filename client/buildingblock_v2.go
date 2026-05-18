@@ -15,6 +15,7 @@ const (
 	BUILDING_BLOCK_STATUS_IN_PROGRESS                 = "IN_PROGRESS"
 	BUILDING_BLOCK_STATUS_SUCCEEDED                   = "SUCCEEDED"
 	BUILDING_BLOCK_STATUS_FAILED                      = "FAILED"
+	BUILDING_BLOCK_LIFECYCLE_STATE_DELETED            = "DELETED"
 )
 
 type MeshBuildingBlockV2 struct {
@@ -51,10 +52,15 @@ type MeshBuildingBlockV2Create struct {
 	Spec MeshBuildingBlockV2Spec `json:"spec" tfsdk:"spec"`
 }
 
+type MeshBuildingBlockV2Lifecycle struct {
+	State string `json:"state" tfsdk:"state"`
+}
+
 type MeshBuildingBlockV2Status struct {
-	Status     string                `json:"status" tfsdk:"status"`
-	Outputs    []MeshBuildingBlockIO `json:"outputs" tfsdk:"outputs"`
-	ForcePurge bool                  `json:"forcePurge" tfsdk:"force_purge"`
+	Status     string                       `json:"status" tfsdk:"status"`
+	Outputs    []MeshBuildingBlockIO        `json:"outputs" tfsdk:"outputs"`
+	ForcePurge bool                         `json:"forcePurge" tfsdk:"force_purge"`
+	Lifecycle  MeshBuildingBlockV2Lifecycle `json:"lifecycle" tfsdk:"lifecycle"`
 }
 
 type MeshBuildingBlockV2Client interface {
@@ -105,6 +111,8 @@ func (bb *MeshBuildingBlockV2) CreateSuccessful() (done bool, err error) {
 func (bb *MeshBuildingBlockV2) DeletionSuccessful() (done bool, err error) {
 	switch {
 	case bb == nil:
+		done = true
+	case bb.Status.Lifecycle.State == BUILDING_BLOCK_LIFECYCLE_STATE_DELETED:
 		done = true
 	case bb.Status.Status == BUILDING_BLOCK_STATUS_FAILED:
 		err = fmt.Errorf("building block %s reached FAILED state during deletion. For more details, check the building block run logs in meshStack", bb.Metadata.Uuid)
