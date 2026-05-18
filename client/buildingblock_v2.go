@@ -9,13 +9,15 @@ import (
 
 const (
 	// Building Block Status Constants.
-	BUILDING_BLOCK_STATUS_WAITING_FOR_DEPENDENT_INPUT = "WAITING_FOR_DEPENDENT_INPUT"
-	BUILDING_BLOCK_STATUS_WAITING_FOR_OPERATOR_INPUT  = "WAITING_FOR_OPERATOR_INPUT"
-	BUILDING_BLOCK_STATUS_PENDING                     = "PENDING"
-	BUILDING_BLOCK_STATUS_IN_PROGRESS                 = "IN_PROGRESS"
-	BUILDING_BLOCK_STATUS_SUCCEEDED                   = "SUCCEEDED"
-	BUILDING_BLOCK_STATUS_FAILED                      = "FAILED"
-	BUILDING_BLOCK_LIFECYCLE_STATE_DELETED            = "DELETED"
+	BUILDING_BLOCK_STATUS_WAITING_FOR_DEPENDENT_INPUT  = "WAITING_FOR_DEPENDENT_INPUT"
+	BUILDING_BLOCK_STATUS_WAITING_FOR_OPERATOR_INPUT   = "WAITING_FOR_OPERATOR_INPUT"
+	BUILDING_BLOCK_STATUS_PENDING                      = "PENDING"
+	BUILDING_BLOCK_STATUS_IN_PROGRESS                  = "IN_PROGRESS"
+	BUILDING_BLOCK_STATUS_SUCCEEDED                    = "SUCCEEDED"
+	BUILDING_BLOCK_STATUS_FAILED                       = "FAILED"
+	BUILDING_BLOCK_LIFECYCLE_STATE_ACTIVE              = "ACTIVE"
+	BUILDING_BLOCK_LIFECYCLE_STATE_MARKED_FOR_DELETION = "MARKED_FOR_DELETION"
+	BUILDING_BLOCK_LIFECYCLE_STATE_DELETED             = "DELETED"
 )
 
 type MeshBuildingBlockV2 struct {
@@ -111,6 +113,8 @@ func (bb *MeshBuildingBlockV2) CreateSuccessful() (done bool, err error) {
 func (bb *MeshBuildingBlockV2) DeletionSuccessful() (done bool, err error) {
 	switch {
 	case bb == nil:
+		// Expected when receiving a 404 (hard deletion), default behavior until meshStack v2026.20.0.
+		// For versions higher than that, we get a building block back with a lifecycle state to inspect.
 		done = true
 	case bb.Status.Lifecycle.State == BUILDING_BLOCK_LIFECYCLE_STATE_DELETED:
 		done = true
