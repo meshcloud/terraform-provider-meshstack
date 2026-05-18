@@ -174,6 +174,16 @@ func (r *buildingBlockV2Resource) Schema(ctx context.Context, req resource.Schem
 						Computed:            true,
 					},
 					"outputs": buildingBlockOutputs(),
+					"lifecycle": schema.SingleNestedAttribute{
+						MarkdownDescription: "Lifecycle state of this building block.",
+						Computed:            true,
+						Attributes: map[string]schema.Attribute{
+							"state": schema.StringAttribute{
+								MarkdownDescription: "Lifecycle state. `DELETED` indicates the building block has been deleted.",
+								Computed:            true,
+							},
+						},
+					},
 				},
 			},
 			"wait_for_completion": schema.BoolAttribute{
@@ -277,7 +287,7 @@ func (r *buildingBlockV2Resource) Read(ctx context.Context, req resource.ReadReq
 		resp.Diagnostics.AddError("Unable to read building block", err.Error())
 	}
 
-	if bb == nil {
+	if bb == nil || bb.Status.Lifecycle.State == client.BUILDING_BLOCK_LIFECYCLE_STATE_DELETED {
 		resp.State.RemoveResource(ctx)
 		return
 	}
@@ -345,6 +355,8 @@ func setStateFromResponseV2(ctx context.Context, state *tfsdk.State, bb *client.
 	diags.Append(state.SetAttribute(ctx, path.Root("spec").AtName("combined_inputs"), combinedInputs)...)
 
 	diags.Append(state.SetAttribute(ctx, path.Root("status").AtName("status"), bb.Status.Status)...)
+	diags.Append(state.SetAttribute(ctx, path.Root("status").AtName("force_purge"), bb.Status.ForcePurge)...)
+	diags.Append(state.SetAttribute(ctx, path.Root("status").AtName("lifecycle"), bb.Status.Lifecycle)...)
 
 	outputs := make(map[string]buildingBlockOutputModel)
 	for _, output := range bb.Status.Outputs {
