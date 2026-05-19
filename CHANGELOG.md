@@ -1,3 +1,15 @@
+## v0.20.9
+
+BREAKING CHANGES:
+- `meshstack_building_block_v2`: Building blocks in meshStack versions higher than v2026.20.0 are now soft-deleted instead of hard-deleted.
+  The Terraform provider has been updated to correctly detect soft-deleted building blocks by inspecting the 
+  lifecycle state. To ensure correct deletion detection, upgrade the Terraform provider when using meshStack 
+  versions higher than v2026.20.0.
+
+NOTE:
+- This version is backwards-compatible and can be used with older versions of meshStack. If you are using a meshStack version 
+  v2026.20.0 or lower, the provider will continue to work as expected with hard-deleted building blocks.
+
 ## v0.20.8
 
 BREAKING CHANGES:
