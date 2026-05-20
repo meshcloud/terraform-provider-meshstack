@@ -1,3 +1,8 @@
+## v0.20.10
+
+FIXES:
+- `meshstack_tag_definition`: Fixed a bug where `options` fields in `single_select` and `multi_select` value types could not be populated from Terraform expressions (e.g. `local.tag_options`). The internal representation has been changed from `[]types.String` to `types.List`, enabling correct handling of dynamic list references and proper propagation of diagnostics during configuration validation and resource creation.
+
 ## v0.20.9
 
 BREAKING CHANGES:
