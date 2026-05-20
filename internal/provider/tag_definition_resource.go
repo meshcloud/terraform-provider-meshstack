@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -103,7 +104,11 @@ func (r *tagDefinitionResource) ValidateConfig(ctx context.Context, req resource
 
 	if valueType.SingleSelect != nil && !valueType.SingleSelect.DefaultValue.IsNull() && !valueType.SingleSelect.DefaultValue.IsUnknown() {
 		defaultValue := valueType.SingleSelect.DefaultValue.ValueString()
-		options := extractStringValuesFromList(ctx, valueType.SingleSelect.Options)
+		options, diags := extractStringValuesFromList(ctx, valueType.SingleSelect.Options)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 		if !slices.Contains(options, defaultValue) {
 			resp.Diagnostics.AddAttributeError(
 				path.Root("spec").AtName("value_type").AtName("single_select").AtName("default_value"),
@@ -114,8 +119,16 @@ func (r *tagDefinitionResource) ValidateConfig(ctx context.Context, req resource
 	}
 
 	if valueType.MultiSelect != nil && !valueType.MultiSelect.DefaultValue.IsNull() && !valueType.MultiSelect.DefaultValue.IsUnknown() {
-		defaultValues := extractStringValuesFromList(ctx, valueType.MultiSelect.DefaultValue)
-		options := extractStringValuesFromList(ctx, valueType.MultiSelect.Options)
+		defaultValues, diags := extractStringValuesFromList(ctx, valueType.MultiSelect.DefaultValue)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		options, diags := extractStringValuesFromList(ctx, valueType.MultiSelect.Options)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 
 		for _, dv := range defaultValues {
 			if !slices.Contains(options, dv) {
@@ -321,7 +334,11 @@ func (r *tagDefinitionResource) Create(ctx context.Context, req resource.CreateR
 		return
 	}
 
-	valueType := buildValueType(ctx, spec.ValueType)
+	valueType, diags := buildValueType(ctx, spec.ValueType)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	name := spec.TargetKind.ValueString() + "." + spec.Key.ValueString()
 
@@ -356,21 +373,18 @@ func (r *tagDefinitionResource) Create(ctx context.Context, req resource.CreateR
 	resp.Diagnostics.Append(diags...)
 }
 
-func extractStringValuesFromList(ctx context.Context, list types.List) []string {
+func extractStringValuesFromList(ctx context.Context, list types.List) ([]string, diag.Diagnostics) {
 	if list.IsNull() || list.IsUnknown() {
-		return nil
+		return nil, nil
 	}
-	elements := make([]types.String, 0, len(list.Elements()))
-	list.ElementsAs(ctx, &elements, false)
-	result := make([]string, len(elements))
-	for i, v := range elements {
-		result[i] = v.ValueString()
-	}
-	return result
+	var result []string
+	diags := list.ElementsAs(ctx, &result, false)
+	return result, diags
 }
 
-func buildValueType(ctx context.Context, valueType tagDefinitionValueType) client.MeshTagDefinitionValueType {
+func buildValueType(ctx context.Context, valueType tagDefinitionValueType) (client.MeshTagDefinitionValueType, diag.Diagnostics) {
 	var result client.MeshTagDefinitionValueType
+	var diags diag.Diagnostics
 
 	if valueType.String != nil {
 		result.String = &client.TagValueString{
@@ -399,23 +413,28 @@ func buildValueType(ctx context.Context, valueType tagDefinitionValueType) clien
 	}
 
 	if valueType.SingleSelect != nil {
+		options, d := extractStringValuesFromList(ctx, valueType.SingleSelect.Options)
+		diags.Append(d...)
 		result.SingleSelect = &client.TagValueSingleSelect{
-			Options:      extractStringValuesFromList(ctx, valueType.SingleSelect.Options),
+			Options:      options,
 			DefaultValue: valueType.SingleSelect.DefaultValue.ValueStringPointer(),
 		}
 	}
 
 	if valueType.MultiSelect != nil {
+		options, d := extractStringValuesFromList(ctx, valueType.MultiSelect.Options)
+		diags.Append(d...)
 		result.MultiSelect = &client.TagValueMultiSelect{
-			Options: extractStringValuesFromList(ctx, valueType.MultiSelect.Options),
+			Options: options,
 		}
 		if !valueType.MultiSelect.DefaultValue.IsNull() && !valueType.MultiSelect.DefaultValue.IsUnknown() {
-			defaultValues := extractStringValuesFromList(ctx, valueType.MultiSelect.DefaultValue)
+			defaultValues, d := extractStringValuesFromList(ctx, valueType.MultiSelect.DefaultValue)
+			diags.Append(d...)
 			result.MultiSelect.DefaultValue = &defaultValues
 		}
 	}
 
-	return result
+	return result, diags
 }
 
 // Read refreshes the Terraform state with the latest data.
@@ -451,7 +470,11 @@ func (r *tagDefinitionResource) Update(ctx context.Context, req resource.UpdateR
 		return
 	}
 
-	valueType := buildValueType(ctx, spec.ValueType)
+	valueType, diags := buildValueType(ctx, spec.ValueType)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	name := spec.TargetKind.ValueString() + "." + spec.Key.ValueString()
 
 	update := client.MeshTagDefinition{
