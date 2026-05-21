@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"os"
 	"time"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client/internal"
@@ -66,7 +67,11 @@ func New(ctx context.Context, rootUrl *url.URL, userAgent string, auth Authoriza
 	if meshInfo, err := httpClient.GetMeshInfo(ctx); err != nil {
 		return Client{}, fmt.Errorf("failed to retrieve meshStack version information from /mesh/info endpoint: %w", err)
 	} else if meshInfo.Version.Less(MinMeshStackVersion) {
-		return Client{}, fmt.Errorf("unsupported meshStack version: meshStack is running version %s, but this client requires version %s or higher", meshInfo.Version, MinMeshStackVersion)
+		skipVersionCheck := os.Getenv("MESHSTACK_SKIP_VERSION_CHECK") == "true"
+
+		if !skipVersionCheck {
+			return Client{}, fmt.Errorf("unsupported meshStack version: meshStack is running version %s, but this client requires version %s or higher", meshInfo.Version, MinMeshStackVersion)
+		}
 	}
 
 	return Client{
