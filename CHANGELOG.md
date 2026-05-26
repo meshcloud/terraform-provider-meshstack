@@ -10,6 +10,9 @@ BREAKING CHANGES:
 
 Requires meshStack 2026.22.0 or later (previously 2026.10.0).
 
+FEATURES:
+- New resource `meshstack_building_block_runner`: Manages a meshBuildingBlockRunner. Building block runners are agents that execute building block runs. Supports all implementation types (`TERRAFORM`, `GITHUB_WORKFLOW`, `GITLAB_PIPELINE`, `AZURE_DEVOPS_PIPELINE`, `MANUAL`), visibility restrictions, and optional workload identity federation configuration.
+
 BREAKING CHANGES:
 - `meshstack_building_block_v2`: Renamed `target_ref.identifier` to `target_ref.name` to align with upstream API changes.
   Update configurations to use `name` instead of `identifier` when specifying the target workspace.
