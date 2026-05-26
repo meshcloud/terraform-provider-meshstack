@@ -187,6 +187,7 @@ func (p *MeshStackProvider) Resources(_ context.Context) []func() resource.Resou
 		NewLocationResource,
 		NewPlatformTypeResource,
 		NewIntegrationResource,
+		NewBuildingBlockRunnerResource,
 		NewApiKeyResource,
 	}
 }
