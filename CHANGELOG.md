@@ -1,4 +1,4 @@
-## UNRELEASED
+## v0.20.11
 
 Requires meshStack 2026.22.0 or later (previously 2026.10.0).
 
