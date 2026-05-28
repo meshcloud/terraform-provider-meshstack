@@ -1,3 +1,11 @@
+# UNRELEASED
+
+Requires meshStack 2026.23.0 or later (previously 2026.22.0).
+
+BREAKING CHANGES:
+- `meshstack_building_block_v2`: The `spec.inputs` and `status.outputs` fields have changed from arrays to maps in the upstream API.
+  The internal client representation has been updated accordingly. No Terraform schema changes are required, but this requires meshStack 2026.23.0 or later.
+
 ## v0.20.11
 
 Requires meshStack 2026.22.0 or later (previously 2026.10.0).
