@@ -41,7 +41,7 @@ func (m MeshBuildingBlockV2Client) Create(_ context.Context, bb *client.MeshBuil
 		Spec: bb.Spec,
 		Status: client.MeshBuildingBlockV2Status{
 			Status:  client.BUILDING_BLOCK_STATUS_SUCCEEDED,
-			Outputs: make([]client.MeshBuildingBlockIO, 0),
+			Outputs: make(map[string]client.MeshBuildingBlockV2Output),
 		},
 	}
 
