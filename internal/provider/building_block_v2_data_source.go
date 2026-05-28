@@ -189,8 +189,8 @@ func (d *buildingBlockV2DataSource) Read(ctx context.Context, req datasource.Rea
 
 	// Read inputs
 	inputs := make(map[string]buildingBlockIoModel)
-	for _, input := range bb.Spec.Inputs {
-		inputs[input.Key] = toResourceModel(input, &resp.Diagnostics)
+	for key, input := range bb.Spec.Inputs {
+		inputs[key] = toResourceModelV2Input(key, input, &resp.Diagnostics)
 	}
 	if resp.Diagnostics.HasError() {
 		return
@@ -204,8 +204,8 @@ func (d *buildingBlockV2DataSource) Read(ctx context.Context, req datasource.Rea
 
 	// Read outputs
 	outputs := make(map[string]buildingBlockOutputModel)
-	for _, output := range bb.Status.Outputs {
-		outputs[output.Key] = toResourceModel(output, &resp.Diagnostics).toOutputModel()
+	for key, output := range bb.Status.Outputs {
+		outputs[key] = toResourceModelV2Output(key, output, &resp.Diagnostics)
 	}
 	if resp.Diagnostics.HasError() {
 		return

@@ -1,3 +1,11 @@
+# UNRELEASED
+
+Requires meshStack 2026.23.0 or later (previously 2026.22.0).
+
+BREAKING CHANGES:
+- `meshstack_building_block_v2`: The `spec.inputs` and `status.outputs` fields have changed from arrays to maps in the upstream API.
+  The internal client representation has been updated accordingly. No Terraform schema changes are required, but this requires meshStack 2026.23.0 or later.
+
 ## v0.20.13
 
 FIXES:
@@ -16,7 +24,6 @@ FEATURES:
 
 FIXES:
 - `meshstack_building_block_v2`: `parent_building_blocks` is now treated as a set instead of a list to avoid ordering issues. The API may return `parent_building_blocks` in a different order than sent, which previously caused "Provider produced inconsistent result after apply" errors.
-
 
 ## v0.20.11
 
