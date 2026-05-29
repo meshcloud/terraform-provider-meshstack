@@ -83,7 +83,7 @@ func (d *buildingBlockDataSource) Schema(ctx context.Context, req datasource.Sch
 
 					"inputs": buildingBlockCombinedInputs(),
 
-					"parent_building_blocks": schema.ListNestedAttribute{
+					"parent_building_blocks": schema.SetNestedAttribute{
 						MarkdownDescription: "List of parent Building Blocks.",
 						Computed:            true,
 						NestedObject: schema.NestedAttributeObject{

@@ -12,9 +12,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -110,12 +110,12 @@ func (r *buildingBlockResource) Schema(ctx context.Context, req resource.SchemaR
 					"inputs":          buildingBlockUserInputs(),
 					"combined_inputs": buildingBlockCombinedInputs(),
 
-					"parent_building_blocks": schema.ListNestedAttribute{
+					"parent_building_blocks": schema.SetNestedAttribute{
 						Optional:            true,
 						Computed:            true,
 						MarkdownDescription: "List of parent Building Blocks.",
-						Default: listdefault.StaticValue(
-							types.ListValueMust(
+						Default: setdefault.StaticValue(
+							types.SetValueMust(
 								types.ObjectType{
 									AttrTypes: map[string]attr.Type{
 										"buildingblock_uuid": types.StringType,
@@ -171,7 +171,7 @@ type buildingBlockResourceModel struct {
 
 	Spec struct {
 		DisplayName          types.String                           `tfsdk:"display_name"`
-		ParentBuildingBlocks types.List                             `tfsdk:"parent_building_blocks"`
+		ParentBuildingBlocks types.Set                              `tfsdk:"parent_building_blocks"`
 		Inputs               map[string]buildingBlockUserInputModel `tfsdk:"inputs"`
 		CombinedInputs       types.Map                              `tfsdk:"combined_inputs"`
 	} `tfsdk:"spec"`

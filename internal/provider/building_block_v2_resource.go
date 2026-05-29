@@ -12,9 +12,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
@@ -123,12 +123,12 @@ func (r *buildingBlockV2Resource) Schema(ctx context.Context, req resource.Schem
 					"inputs":          buildingBlockUserInputs(),
 					"combined_inputs": buildingBlockCombinedInputs(),
 
-					"parent_building_blocks": schema.ListNestedAttribute{
+					"parent_building_blocks": schema.SetNestedAttribute{
 						Optional:            true,
 						Computed:            true,
 						MarkdownDescription: "List of parent building blocks.",
-						Default: listdefault.StaticValue(
-							types.ListValueMust(
+						Default: setdefault.StaticValue(
+							types.SetValueMust(
 								types.ObjectType{
 									AttrTypes: map[string]attr.Type{
 										"buildingblock_uuid": types.StringType,
