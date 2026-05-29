@@ -205,7 +205,7 @@ func (r *buildingBlockV2Resource) Create(ctx context.Context, req resource.Creat
 			ParentBuildingBlocks:              make([]client.MeshBuildingBlockParent, 0),
 			BuildingBlockDefinitionVersionRef: client.MeshBuildingBlockV2DefinitionVersionRef{},
 			TargetRef:                         client.MeshBuildingBlockV2TargetRef{},
-			Inputs:                            make(map[string]client.MeshBuildingBlockV2Input),
+			Inputs:                            make([]client.MeshBuildingBlockIO, 0),
 		},
 	}
 
@@ -228,11 +228,12 @@ func (r *buildingBlockV2Resource) Create(ctx context.Context, req resource.Creat
 				fmt.Sprintf("Input '%s' must have one value field set.", key),
 			)
 		}
-		input := client.MeshBuildingBlockV2Input{
+		input := client.MeshBuildingBlockIO{
+			Key:       key,
 			Value:     value,
 			ValueType: valueType,
 		}
-		bb.Spec.Inputs[key] = input
+		bb.Spec.Inputs = append(bb.Spec.Inputs, input)
 	}
 
 	var waitForCompletion bool
@@ -339,14 +340,6 @@ func (r *buildingBlockV2Resource) Delete(ctx context.Context, req resource.Delet
 // 	resource.ImportStatePassthroughID(ctx, path.Root("metadata").AtName("uuid"), req, resp)
 // }
 
-func toResourceModelV2Input(key string, io client.MeshBuildingBlockV2Input, diags *diag.Diagnostics) buildingBlockIoModel {
-	return toResourceModel(client.MeshBuildingBlockIO{Key: key, Value: io.Value, ValueType: io.ValueType}, diags)
-}
-
-func toResourceModelV2Output(key string, io client.MeshBuildingBlockV2Output, diags *diag.Diagnostics) buildingBlockOutputModel {
-	return toResourceModel(client.MeshBuildingBlockIO{Key: key, Value: io.Value, ValueType: io.ValueType}, diags).toOutputModel()
-}
-
 func setStateFromResponseV2(ctx context.Context, state *tfsdk.State, bb *client.MeshBuildingBlockV2) (diags diag.Diagnostics) {
 	diags.Append(state.SetAttribute(ctx, path.Root("metadata"), bb.Metadata)...)
 
@@ -356,8 +349,8 @@ func setStateFromResponseV2(ctx context.Context, state *tfsdk.State, bb *client.
 	diags.Append(state.SetAttribute(ctx, path.Root("spec").AtName("parent_building_blocks"), bb.Spec.ParentBuildingBlocks)...)
 
 	combinedInputs := make(map[string]buildingBlockIoModel)
-	for key, input := range bb.Spec.Inputs {
-		combinedInputs[key] = toResourceModelV2Input(key, input, &diags)
+	for _, input := range bb.Spec.Inputs {
+		combinedInputs[input.Key] = toResourceModel(input, &diags)
 	}
 	if diags.HasError() {
 		return
@@ -369,8 +362,8 @@ func setStateFromResponseV2(ctx context.Context, state *tfsdk.State, bb *client.
 	diags.Append(state.SetAttribute(ctx, path.Root("status").AtName("lifecycle"), bb.Status.Lifecycle)...)
 
 	outputs := make(map[string]buildingBlockOutputModel)
-	for key, output := range bb.Status.Outputs {
-		outputs[key] = toResourceModelV2Output(key, output, &diags)
+	for _, output := range bb.Status.Outputs {
+		outputs[output.Key] = toResourceModel(output, &diags).toOutputModel()
 	}
 	if diags.HasError() {
 		return

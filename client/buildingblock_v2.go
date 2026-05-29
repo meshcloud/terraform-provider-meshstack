@@ -36,22 +36,8 @@ type MeshBuildingBlockV2Spec struct {
 	TargetRef                         MeshBuildingBlockV2TargetRef            `json:"targetRef" tfsdk:"target_ref"`
 	DisplayName                       string                                  `json:"displayName" tfsdk:"display_name"`
 
-	Inputs               map[string]MeshBuildingBlockV2Input `json:"inputs" tfsdk:"-"`
-	ParentBuildingBlocks []MeshBuildingBlockParent           `json:"parentBuildingBlocks" tfsdk:"parent_building_blocks"`
-}
-
-type MeshBuildingBlockV2Input struct {
-	Value                any     `json:"value"`
-	ValueType            string  `json:"valueType"`
-	IsSensitive          bool    `json:"isSensitive"`
-	AssignmentType       *string `json:"assignmentType"`
-	UpdateableByConsumer bool    `json:"updateableByConsumer"`
-}
-
-type MeshBuildingBlockV2Output struct {
-	Value          any     `json:"value"`
-	ValueType      string  `json:"valueType"`
-	AssignmentType *string `json:"assignmentType"`
+	Inputs               []MeshBuildingBlockIO     `json:"inputs" tfsdk:"inputs"`
+	ParentBuildingBlocks []MeshBuildingBlockParent `json:"parentBuildingBlocks" tfsdk:"parent_building_blocks"`
 }
 
 type MeshBuildingBlockV2DefinitionVersionRef struct {
@@ -73,10 +59,10 @@ type MeshBuildingBlockV2Lifecycle struct {
 }
 
 type MeshBuildingBlockV2Status struct {
-	Status     string                               `json:"status" tfsdk:"status"`
-	Outputs    map[string]MeshBuildingBlockV2Output `json:"outputs" tfsdk:"-"`
-	ForcePurge bool                                 `json:"forcePurge" tfsdk:"force_purge"`
-	Lifecycle  MeshBuildingBlockV2Lifecycle         `json:"lifecycle" tfsdk:"lifecycle"`
+	Status     string                       `json:"status" tfsdk:"status"`
+	Outputs    []MeshBuildingBlockIO        `json:"outputs" tfsdk:"outputs"`
+	ForcePurge bool                         `json:"forcePurge" tfsdk:"force_purge"`
+	Lifecycle  MeshBuildingBlockV2Lifecycle `json:"lifecycle" tfsdk:"lifecycle"`
 }
 
 type MeshBuildingBlockV2Client interface {
