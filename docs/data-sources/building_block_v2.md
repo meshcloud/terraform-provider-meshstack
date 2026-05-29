@@ -55,7 +55,7 @@ Read-Only:
 - `building_block_definition_version_ref` (Attributes) References the building block definition this building block is based on. (see [below for nested schema](#nestedatt--spec--building_block_definition_version_ref))
 - `display_name` (String) Display name for the building block as shown in meshPanel.
 - `inputs` (Attributes Map) Contains all building block inputs. Each input has exactly one value attribute set according to its' type. (see [below for nested schema](#nestedatt--spec--inputs))
-- `parent_building_blocks` (Attributes Set) List of parent building blocks. (see [below for nested schema](#nestedatt--spec--parent_building_blocks))
+- `parent_building_blocks` (Attributes Set) Set of parent building blocks. (see [below for nested schema](#nestedatt--spec--parent_building_blocks))
 - `target_ref` (Attributes) References the building block target. Depending on the building block definition this will be a workspace or a tenant (see [below for nested schema](#nestedatt--spec--target_ref))
 
 <a id="nestedatt--spec--building_block_definition_version_ref"></a>
