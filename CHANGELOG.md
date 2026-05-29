@@ -1,12 +1,15 @@
-# UNRELEASED
+## v0.20.13
+
+FIXES:
+- `meshstack_building_block_v2`: Reverted the change to `spec.inputs` and `status.outputs` from arrays to maps that was accidentally released in v0.20.12. This change requires meshStack 2026.23.0 or later and was not yet intended for release.
+
+## v0.20.12
 
 Requires meshStack 2026.23.0 or later (previously 2026.22.0).
 
 BREAKING CHANGES:
 - `meshstack_building_block_v2`: The `spec.inputs` and `status.outputs` fields have changed from arrays to maps in the upstream API.
   The internal client representation has been updated accordingly. No Terraform schema changes are required, but this requires meshStack 2026.23.0 or later.
-
-## v0.20.12
 
 FEATURES:
 - New resource `meshstack_building_block_runner`: Manages a meshBuildingBlockRunner. Building block runners are agents that execute building block runs. Supports all implementation types (`TERRAFORM`, `GITHUB_WORKFLOW`, `GITLAB_PIPELINE`, `AZURE_DEVOPS_PIPELINE`, `MANUAL`), visibility restrictions, and optional workload identity federation configuration.
