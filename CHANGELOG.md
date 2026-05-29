@@ -11,6 +11,9 @@ BREAKING CHANGES:
 FEATURES:
 - New resource `meshstack_building_block_runner`: Manages a meshBuildingBlockRunner. Building block runners are agents that execute building block runs. Supports all implementation types (`TERRAFORM`, `GITHUB_WORKFLOW`, `GITLAB_PIPELINE`, `AZURE_DEVOPS_PIPELINE`, `MANUAL`), visibility restrictions, and optional workload identity federation configuration.
 
+FIXES:
+- `meshstack_building_block_v2`: `parent_building_blocks` is now treated as a set instead of a list to avoid ordering issues. The API may return `parent_building_blocks` in a different order than sent, which previously caused "Provider produced inconsistent result after apply" errors.
+
 
 ## v0.20.11
 
