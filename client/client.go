@@ -11,7 +11,7 @@ import (
 	"github.com/meshcloud/terraform-provider-meshstack/client/version"
 )
 
-var MinMeshStackVersion = version.MustParse("2026.22.0")
+var MinMeshStackVersion = version.MustParse("2026.23.0")
 
 // HttpError represents an HTTP error response with status code.
 // This error is returned when an HTTP request fails with a non-2XX status code.
@@ -23,6 +23,7 @@ type Client struct {
 	BuildingBlockV2                MeshBuildingBlockV2Client
 	BuildingBlockDefinition        MeshBuildingBlockDefinitionClient
 	BuildingBlockDefinitionVersion MeshBuildingBlockDefinitionVersionClient
+	BuildingBlockRunner            MeshBuildingBlockRunnerClient
 	Integration                    MeshIntegrationClient
 	LandingZone                    MeshLandingZoneClient
 	Location                       MeshLocationClient
@@ -80,6 +81,7 @@ func New(ctx context.Context, rootUrl *url.URL, userAgent string, auth Authoriza
 		BuildingBlockV2:                newBuildingBlockV2Client(ctx, httpClient),
 		BuildingBlockDefinition:        newBuildingBlockDefinitionClient(ctx, httpClient),
 		BuildingBlockDefinitionVersion: newBuildingBlockDefinitionVersionClient(ctx, httpClient),
+		BuildingBlockRunner:            newBuildingBlockRunnerClient(ctx, httpClient),
 		Integration:                    newIntegrationClient(ctx, httpClient),
 		LandingZone:                    newLandingZoneClient(ctx, httpClient),
 		Location:                       newLocationClient(ctx, httpClient),
