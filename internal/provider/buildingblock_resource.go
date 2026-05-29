@@ -113,7 +113,7 @@ func (r *buildingBlockResource) Schema(ctx context.Context, req resource.SchemaR
 					"parent_building_blocks": schema.SetNestedAttribute{
 						Optional:            true,
 						Computed:            true,
-						MarkdownDescription: "List of parent Building Blocks.",
+						MarkdownDescription: "Set of parent Building Blocks.",
 						Default: setdefault.StaticValue(
 							types.SetValueMust(
 								types.ObjectType{

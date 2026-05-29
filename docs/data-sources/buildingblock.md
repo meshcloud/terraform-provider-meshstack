@@ -57,7 +57,7 @@ Read-Only:
 
 - `display_name` (String) Display name for the Building Block as shown in meshPanel.
 - `inputs` (Attributes Map) Contains all building block inputs. Each input has exactly one value attribute set according to its' type. (see [below for nested schema](#nestedatt--spec--inputs))
-- `parent_building_blocks` (Attributes Set) List of parent Building Blocks. (see [below for nested schema](#nestedatt--spec--parent_building_blocks))
+- `parent_building_blocks` (Attributes Set) Set of parent Building Blocks. (see [below for nested schema](#nestedatt--spec--parent_building_blocks))
 
 <a id="nestedatt--spec--inputs"></a>
 ### Nested Schema for `spec.inputs`
