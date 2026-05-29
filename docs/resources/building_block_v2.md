@@ -79,7 +79,7 @@ Required:
 Optional:
 
 - `inputs` (Attributes Map) Building block user inputs. Each input has exactly one value. Use the value attribute that corresponds to the desired input type, e.g. `value_int` to set an integer input, and leave the remaining attributes empty. (see [below for nested schema](#nestedatt--spec--inputs))
-- `parent_building_blocks` (Attributes List) List of parent building blocks. (see [below for nested schema](#nestedatt--spec--parent_building_blocks))
+- `parent_building_blocks` (Attributes Set) List of parent building blocks. (see [below for nested schema](#nestedatt--spec--parent_building_blocks))
 
 Read-Only:
 
