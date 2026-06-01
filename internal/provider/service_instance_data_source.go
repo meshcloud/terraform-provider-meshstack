@@ -2,18 +2,14 @@ package provider
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"reflect"
 
 	"github.com/hashicorp/terraform-plugin-framework-jsontypes/jsontypes"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
-	"github.com/hashicorp/terraform-plugin-go/tftypes"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
-	clientTypes "github.com/meshcloud/terraform-provider-meshstack/client/types"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/types/generic"
 )
 
@@ -127,35 +123,4 @@ func (d *serviceInstanceDataSource) Read(ctx context.Context, req datasource.Rea
 	}
 
 	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, serviceInstance, withValueFromConverterForClientTypeAny())...)
-}
-
-/*
- * We have to map between the models used by the client and the Terraform schema. Most fields can be mapped automatically by the
- * generic.Set function, but for fields of type clientTypes.Any we need to provide a custom converter that marshals the value to a JSON string.
- *
- * In the client model, Parameters is map[string]types.Any where values can be any JSON type (string, number, boolean, object, array, null).
- * This converter marshals each value to JSON so it becomes a jsontypes.NormalizedType element in Terraform's MapAttribute.
- *
- * In Terraform, users access parameters as a map where each value is a JSON-encoded string:
- *   jsondecode(data.meshstack_service_instance.example.spec.parameters["database_name"])  // "mydb" (string)
- *   jsondecode(data.meshstack_service_instance.example.spec.parameters["max_connections"]) // 100 (number)
- *   jsondecode(data.meshstack_service_instance.example.spec.parameters["features"])        // {...} (object/map)
- *
- * This approach preserves type information - numbers remain numbers, booleans remain booleans, and complex nested
- * objects/arrays maintain their structure. Without JSON encoding, all values would have to be strings, losing type information.
- */
-func withValueFromConverterForClientTypeAny() generic.ConverterOption {
-	clientTypeAny := reflect.TypeFor[clientTypes.Any]()
-	return generic.WithValueFromConverter(func(attributePath path.Path, in reflect.Value, haveNil, haveUnknown bool) (out tftypes.Value, matched bool, err error) {
-		if in.Type() == clientTypeAny {
-			matched = true
-			var marshalled []byte
-			marshalled, err = json.Marshal(in.Interface())
-			if err != nil {
-				return
-			}
-			out, err = generic.ValueFrom(string(marshalled))
-		}
-		return
-	})
 }

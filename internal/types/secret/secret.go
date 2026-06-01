@@ -16,10 +16,20 @@ import (
 	"github.com/meshcloud/terraform-provider-meshstack/internal/types/generic"
 )
 
+// Secret is the Terraform representation of a secret that a resource manages: the caller supplies a
+// write-only value and controls rotation via the version, while the backend-stored hash is computed
+// and read back. Use it for resource attributes that are created/updated through Terraform.
 type Secret struct {
 	Value   *string `tfsdk:"secret_value"`
 	Version *string `tfsdk:"secret_version"`
 	Hash    *string `tfsdk:"secret_hash"`
+}
+
+// HashOnly is the read-only Terraform representation of a secret: it exposes only the backend hash,
+// never a value. Use it for data sources and for read-only resource attributes where the secret is
+// surfaced for drift detection but is not managed through that attribute.
+type HashOnly struct {
+	Hash string `tfsdk:"secret_hash"`
 }
 
 const (
@@ -45,12 +55,9 @@ func WithConverterSupport(ctx context.Context, config, plan, state generic.Attri
 // WithDatasourceConverter converts read in hashes from the backend to the Terraform DatasourceSchema representation.
 // As data sources are read-only, only generic.ValueFrom conversion is supported.
 func WithDatasourceConverter() generic.ConverterOption {
-	type datasourceSecret struct {
-		Hash string `tfsdk:"secret_hash"`
-	}
-	return generic.WithValueFromConverterFor[clientTypes.Secret](generic.ValueFromConverterForTypedNilHandler[datasourceSecret](),
+	return generic.WithValueFromConverterFor[clientTypes.Secret](generic.ValueFromConverterForTypedNilHandler[HashOnly](),
 		func(attributePath path.Path, in clientTypes.Secret) (tftypes.Value, error) {
-			return generic.ValueFrom(datasourceSecret{Hash: *in.Hash})
+			return generic.ValueFrom(HashOnly{Hash: *in.Hash})
 		})
 }
 
@@ -235,6 +242,63 @@ func SetToUnknownIfVersionChangedOrCreated(ctx context.Context, plan, state gene
 		}
 		return
 	}
+}
+
+// VersionChanged reports whether the secret at attributePath is being rotated/re-applied — i.e. its
+// secret_version differs between state and plan, its version is unknown (known-after-apply), or the secret
+// is newly added. It is the READ-ONLY counterpart of SetToUnknownIfVersionChangedOrCreated's boolean
+// decision and MUST stay in sync with it: the latter mutates the plan (sets secret_hash unknown) for the
+// same conditions, while this one only reports the decision so callers (e.g. a resource's rerun gate) can
+// reuse it without a response plan.
+func VersionChanged(ctx context.Context, plan, state generic.AttributeGetter, attributePath path.Path, diags *diag.Diagnostics) bool {
+	if isAttributeValueNull(ctx, plan, diags, attributePath) {
+		// the plan removes the whole secret → not a rotation
+		return false
+	}
+
+	var versionFromPlan types.String
+	diags.Append(plan.GetAttribute(ctx, attributePath.AtName(versionAttributeKey), &versionFromPlan)...)
+	if diags.HasError() {
+		return false
+	}
+
+	if versionFromPlan.IsUnknown() {
+		// version is known-after-apply → triggers a re-apply of the secret_value
+		return true
+	}
+	if versionFromPlan.IsNull() {
+		// version omitted in config: a change only when there is no stored hash yet (newly added secret)
+		var hashFromState types.String
+		diags.Append(state.GetAttribute(ctx, attributePath.AtName(hashAttributeKey), &hashFromState)...)
+		if diags.HasError() {
+			return false
+		}
+		return hashFromState.IsNull()
+	}
+	if isAttributeValueNull(ctx, state, diags, attributePath) {
+		// secret newly added (no prior state for it)
+		return true
+	}
+
+	var versionFromState types.String
+	diags.Append(state.GetAttribute(ctx, attributePath.AtName(versionAttributeKey), &versionFromState)...)
+	if diags.HasError() {
+		return false
+	}
+	return !versionFromPlan.Equal(versionFromState)
+}
+
+// AnyVersionChangedIn walks every secret in planRaw and reports whether any of them is being rotated/
+// re-applied or newly added, relative to state (see VersionChanged). Read-only — intended for deciding
+// whether an update must trigger a run.
+func AnyVersionChangedIn(ctx context.Context, planRaw tftypes.Value, plan, state generic.AttributeGetter, diags *diag.Diagnostics) bool {
+	changed := false
+	WalkSecretPathsIn(planRaw, diags, func(attributePath path.Path, diags *diag.Diagnostics) {
+		if VersionChanged(ctx, plan, state, attributePath, diags) {
+			changed = true
+		}
+	})
+	return changed
 }
 
 // WalkSecretPathsIn finds all secrets matching the Secret object representation in the given raw Terraform value (usually a req.Plan.Raw).
