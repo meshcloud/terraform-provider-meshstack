@@ -11,6 +11,7 @@ type (
 
 	requestOptions struct {
 		urlQueryParams   map[string]string
+		extraPathElems   []string
 		requestPayload   any
 		requestModifiers []requestModifier
 	}
@@ -34,13 +35,20 @@ func WithUrlQuery(key string, value any) RequestOption {
 	}
 }
 
+// WithPathElems appends path elements to the request URL path.
+func WithPathElems(pathElems ...string) RequestOption {
+	return func(opts *requestOptions) {
+		opts.extraPathElems = append(opts.extraPathElems, pathElems...)
+	}
+}
+
 func appendRequestModifier(modifier requestModifier) RequestOption {
 	return func(opts *requestOptions) {
 		opts.requestModifiers = append(opts.requestModifiers, modifier)
 	}
 }
 
-func withAccept(accept string) RequestOption {
+func WithAccept(accept string) RequestOption {
 	return withHeader("Accept", accept)
 }
 
@@ -52,7 +60,7 @@ func withHeader(key, value string) RequestOption {
 
 func withPayload(payload any, contentType string) RequestOption {
 	return func(opts *requestOptions) {
-		withAccept(contentType)(opts)
+		WithAccept(contentType)(opts)
 		withHeader("Content-Type", contentType)(opts)
 		opts.requestPayload = payload
 	}

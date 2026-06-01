@@ -10,8 +10,6 @@ import (
 	"net/url"
 	"slices"
 	"time"
-
-	"github.com/meshcloud/terraform-provider-meshstack/client/version"
 )
 
 // NewHttpClient creates a new client with an underlying http.Client being a pointer to be modified by WithRetry.
@@ -27,7 +25,31 @@ type HttpClient struct {
 	Authorization Authorization
 }
 
-func (c HttpClient) doRequest(ctx context.Context, method string, url *url.URL, options ...RequestOption) ([]byte, error) {
+func DoAuthorizedRequest[R any](ctx context.Context, c HttpClient, method string, url *url.URL, options ...RequestOption) (result R, err error) {
+	if c.Authorization == nil {
+		return result, fmt.Errorf("cannot do authorized request with unconfigured authorization")
+	}
+	authHeader, err := c.Authorization.Header(ctx, c)
+	if err != nil {
+		return result, err
+	}
+	return DoRequest[R](ctx, c, method, url, append(options, withHeader("Authorization", authHeader))...)
+}
+
+func DoRequest[R any](ctx context.Context, c HttpClient, method string, url *url.URL, options ...RequestOption) (result R, err error) {
+	var body []byte
+	body, err = c.doRequest(ctx, method, url, options)
+	if err != nil {
+		return
+	}
+	if len(body) == 0 {
+		return
+	}
+	err = json.Unmarshal(body, &result)
+	return
+}
+
+func (c HttpClient) doRequest(ctx context.Context, method string, url *url.URL, options []RequestOption) ([]byte, error) {
 	options = slices.Insert(options, 0,
 		withHeader("User-Agent", c.UserAgent),
 	)
@@ -49,17 +71,6 @@ func (c HttpClient) doRequest(ctx context.Context, method string, url *url.URL, 
 	return c.readBodyAndCheckSuccess(ctx, res)
 }
 
-func (c HttpClient) doAuthorizedRequest(ctx context.Context, method string, url *url.URL, options ...RequestOption) ([]byte, error) {
-	if c.Authorization == nil {
-		return nil, fmt.Errorf("authorization is not configured")
-	}
-	authHeader, err := c.Authorization.Header(ctx, c)
-	if err != nil {
-		return nil, err
-	}
-	return c.doRequest(ctx, method, url, append(options, withHeader("Authorization", authHeader))...)
-}
-
 func (c HttpClient) readBodyAndCheckSuccess(ctx context.Context, res *http.Response) ([]byte, error) {
 	responseBody, err := io.ReadAll(res.Body)
 	if err != nil {
@@ -78,6 +89,10 @@ func (c HttpClient) readBodyAndCheckSuccess(ctx context.Context, res *http.Respo
 }
 
 func (c HttpClient) buildRequest(ctx context.Context, method string, url url.URL, opts requestOptions) (*http.Request, error) {
+	if len(opts.extraPathElems) > 0 {
+		url = *url.JoinPath(opts.extraPathElems...)
+	}
+
 	if len(opts.urlQueryParams) > 0 {
 		query := url.Query()
 		for k, v := range opts.urlQueryParams {
@@ -103,26 +118,4 @@ func (c HttpClient) buildRequest(ctx context.Context, method string, url url.URL
 	}
 	Log.Debug(ctx, "request", "url", req.URL.String(), "method", req.Method, "headers", loggedHeaders(req.Header), "body", loggedBody{requestBody})
 	return req, err
-}
-
-// unmarshalBody is a generic helper to unmarshal a JSON response.
-// It intentionally takes err as second argument to match doAuthorizedRequest and doRequest signatures.
-func unmarshalBody[T any](body []byte, err error) (*T, error) {
-	if err != nil {
-		return nil, err
-	}
-	var target T
-	if err := json.Unmarshal(body, &target); err != nil {
-		return nil, fmt.Errorf("cannot unmarshal body: %w", err)
-	}
-	return &target, nil
-}
-
-type MeshInfo struct {
-	Version version.Version `json:"version"`
-}
-
-func (c HttpClient) GetMeshInfo(ctx context.Context) (*MeshInfo, error) {
-	meshInfoUrl := c.RootUrl.JoinPath("/mesh/info")
-	return unmarshalBody[MeshInfo](c.doRequest(ctx, "GET", meshInfoUrl))
 }
