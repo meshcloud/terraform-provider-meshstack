@@ -22,7 +22,7 @@ func TestMeshBuildingBlockV2_DeletionSuccessful(t *testing.T) {
 		{
 			name: "lifecycle state DELETED",
 			bb: &MeshBuildingBlockV2{
-				Status: MeshBuildingBlockV2Status{
+				Status: &MeshBuildingBlockV2Status{
 					Lifecycle: MeshBuildingBlockV2Lifecycle{State: BUILDING_BLOCK_LIFECYCLE_STATE_DELETED},
 				},
 			},
@@ -32,9 +32,9 @@ func TestMeshBuildingBlockV2_DeletionSuccessful(t *testing.T) {
 		{
 			name: "status FAILED during deletion",
 			bb: &MeshBuildingBlockV2{
-				Metadata: MeshBuildingBlockV2Metadata{Uuid: "test-uuid"},
-				Status: MeshBuildingBlockV2Status{
-					Status: BUILDING_BLOCK_STATUS_FAILED,
+				Metadata: MeshBuildingBlockV2Metadata{Uuid: new("test-uuid")},
+				Status: &MeshBuildingBlockV2Status{
+					Status: BuildingBlockStatusFailed,
 				},
 			},
 			wantDone: false,
@@ -43,8 +43,7 @@ func TestMeshBuildingBlockV2_DeletionSuccessful(t *testing.T) {
 		{
 			name: "still in progress (MARKED_FOR_DELETION lifecycle, non-failed status)",
 			bb: &MeshBuildingBlockV2{
-				Status: MeshBuildingBlockV2Status{
-					Status:    BUILDING_BLOCK_STATUS_IN_PROGRESS,
+				Status: &MeshBuildingBlockV2Status{
 					Lifecycle: MeshBuildingBlockV2Lifecycle{State: BUILDING_BLOCK_LIFECYCLE_STATE_MARKED_FOR_DELETION},
 				},
 			},
