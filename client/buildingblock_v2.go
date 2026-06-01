@@ -131,10 +131,11 @@ func (c meshBuildingBlockV2Client) Create(ctx context.Context, bb *MeshBuildingB
 }
 
 func (c meshBuildingBlockV2Client) Delete(ctx context.Context, uuid string, purge bool) error {
+	var options []internal.RequestOption
 	if purge {
-		return c.meshObject.Purge(ctx, uuid)
+		options = append(options, internal.WithPathElems("purge"))
 	}
-	return c.meshObject.Delete(ctx, uuid)
+	return c.meshObject.Delete(ctx, uuid, options...)
 }
 
 func (bb *MeshBuildingBlockV2) CreateSuccessful() (done bool, err error) {

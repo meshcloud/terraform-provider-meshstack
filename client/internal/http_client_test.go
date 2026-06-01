@@ -12,32 +12,46 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/meshcloud/terraform-provider-meshstack/client/version"
 )
 
 func TestHttpClient(t *testing.T) {
-	t.Run("GetMeshInfo success", func(t *testing.T) {
+	t.Run("DoRequest success", func(t *testing.T) {
 		testLogger := installTestLogger(t)
 		client := newTestClientWithServer(t, func(resp http.ResponseWriter, req *http.Request) {
 			resp.WriteHeader(http.StatusOK)
-			_, _ = resp.Write([]byte(`{"version": "2026.10.0"}`))
-
-			assert.Equal(t, "/mesh/info", req.URL.Path)
+			_, _ = resp.Write([]byte(`"some-answer"`))
+			assert.Equal(t, "/get", req.URL.Path)
 			assert.Equal(t, http.MethodGet, req.Method)
 			assert.Equal(t, "test-agent", req.Header.Get("User-Agent"))
 		})
-		info, err := client.GetMeshInfo(t.Context())
+		resp, err := DoRequest[string](t.Context(), client, http.MethodGet, client.RootUrl.JoinPath("get"))
 		require.NoError(t, err)
-		assert.Equal(t, &MeshInfo{Version: version.Version{Major: 2026, Minor: 10}}, info)
+		assert.Equal(t, "some-answer", resp)
 		assert.Equal(t, []string{
-			fmt.Sprintf("request [url %s/mesh/info method GET headers User-Agent=test-agent body <empty>]", client.RootUrl),
-			"response [status 200 body {\n  \"version\": \"2026.10.0\"\n}]",
+			fmt.Sprintf("request [url %s/get method GET headers User-Agent=test-agent body <empty>]", client.RootUrl),
+			`response [status 200 body "some-answer"]`,
 		}, testLogger.Debugs)
 		assert.Empty(t, testLogger.Warns)
 	})
 
-	t.Run("GetMeshInfo with successful retry", func(t *testing.T) {
+	t.Run("DoRequest object call with empty 2xx body errors", func(t *testing.T) {
+		client := newTestClientWithServer(t, func(resp http.ResponseWriter, req *http.Request) {
+			resp.WriteHeader(http.StatusOK) // 200 with no body
+		})
+		_, err := DoRequest[*string](t.Context(), client, http.MethodGet, client.RootUrl.JoinPath("get"))
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "unexpected empty response body")
+	})
+
+	t.Run("DoRequest no-content call (any) tolerates an empty 2xx body", func(t *testing.T) {
+		client := newTestClientWithServer(t, func(resp http.ResponseWriter, req *http.Request) {
+			resp.WriteHeader(http.StatusAccepted) // e.g. trigger-run / delete: empty body by design
+		})
+		_, err := DoRequest[any](t.Context(), client, http.MethodPost, client.RootUrl.JoinPath("trigger-run"))
+		require.NoError(t, err)
+	})
+
+	t.Run("DoRequest with successful retry", func(t *testing.T) {
 		for _, retryableStatusCode := range []int{429, 502, 503, 504} {
 			t.Run(fmt.Sprintf("after code %d", retryableStatusCode), func(t *testing.T) {
 				nowUTC := mockTimeNowAsUTC(t)
@@ -58,7 +72,7 @@ func TestHttpClient(t *testing.T) {
 					_, _ = resp.Write([]byte(`{}`))
 				}), RetryOptions{MaxRetries: 3, Backoff: &retryTestBackoff})
 
-				_, err := client.GetMeshInfo(t.Context())
+				_, err := DoRequest[any](t.Context(), client, http.MethodGet, client.RootUrl.JoinPath("get"))
 				require.NoError(t, err)
 				if retryableStatusCode == 429 {
 					assert.Equal(t, 0, retryTestBackoff.Called)
@@ -66,53 +80,56 @@ func TestHttpClient(t *testing.T) {
 					assert.Equal(t, 1, retryTestBackoff.Called)
 				}
 				assert.Equal(t, []string{
-					fmt.Sprintf("retrying request [status %d method GET path /mesh/info attempt 1/3 waitTime 1s]", retryableStatusCode),
+					fmt.Sprintf("retrying request [status %d method GET path /get attempt 1/3 waitTime 1s]", retryableStatusCode),
 				}, testLogger.Warns)
 			})
 		}
 	})
 
-	t.Run("GetMeshInfo with 2 retries exhausted", func(t *testing.T) {
+	t.Run("DoRequest with 2 retries exhausted", func(t *testing.T) {
 		testLogger := installTestLogger(t)
 		retryTestBackoff := retryTestBackoff{}
 		client := WithRetry(newTestClientWithServer(t, func(resp http.ResponseWriter, req *http.Request) {
 			resp.WriteHeader(502)
 		}), RetryOptions{MaxRetries: 2, Backoff: &retryTestBackoff})
-		_, err := client.GetMeshInfo(t.Context())
+		_, err := DoRequest[any](t.Context(), client, http.MethodGet, client.RootUrl.JoinPath("get"))
 		var httpErr HttpError
 		require.ErrorAs(t, err, &httpErr)
 		assert.Equal(t, 502, httpErr.StatusCode)
 		assert.Equal(t, 2, retryTestBackoff.Called)
 		assert.Equal(t, []string{
-			"retrying request [status 502 method GET path /mesh/info attempt 1/2 waitTime 0s]",
-			"retrying request [status 502 method GET path /mesh/info attempt 2/2 waitTime 0s]",
+			"retrying request [status 502 method GET path /get attempt 1/2 waitTime 0s]",
+			"retrying request [status 502 method GET path /get attempt 2/2 waitTime 0s]",
 		}, testLogger.Warns)
 		assert.Equal(t, []string{
-			fmt.Sprintf("request [url %s/mesh/info method GET headers User-Agent=test-agent body <empty>]", client.RootUrl),
+			fmt.Sprintf("request [url %s/get method GET headers User-Agent=test-agent body <empty>]", client.RootUrl),
 			"response [status 502 body <empty>]",
 		}, testLogger.Debugs)
 
 	})
 
-	t.Run("GetMeshInfo with context cancelled during backoff", func(t *testing.T) {
+	t.Run("DoRequest with context cancelled during backoff", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(t.Context())
 		client := WithRetry(newTestClientWithServer(t, func(resp http.ResponseWriter, req *http.Request) {
 			resp.WriteHeader(502)
 			cancel() // cancel context so the backoff wait is interrupted
 		}), RetryOptions{MaxRetries: 3, Backoff: &retryTestBackoff{WaitTime: 10 * time.Second}})
-		_, err := client.GetMeshInfo(ctx)
+		_, err := DoRequest[any](ctx, client, http.MethodGet, client.RootUrl.JoinPath("get"))
 		require.ErrorIs(t, err, context.Canceled)
 	})
 
-	t.Run("doRequest with PATCH (not retried)", func(t *testing.T) {
+	t.Run("DoRequest with PATCH (not retried)", func(t *testing.T) {
+		attempts := 0
 		client := WithRetry(newTestClientWithServer(t, func(resp http.ResponseWriter, req *http.Request) {
-			resp.WriteHeader(200)
+			attempts++
+			resp.WriteHeader(502)
 		}), RetryOptions{MaxRetries: 3, Backoff: &retryTestBackoff{WaitTime: 10 * time.Second}})
-		_, err := client.doRequest(t.Context(), http.MethodPatch, client.RootUrl)
-		require.NoError(t, err)
+		_, err := DoRequest[any](t.Context(), client, http.MethodPatch, client.RootUrl)
+		require.Error(t, err)
+		assert.Equal(t, 1, attempts, "PATCH must not be retried")
 	})
 
-	t.Run("doRequest with PUT replays body on retry", func(t *testing.T) {
+	t.Run("DoRequest with PUT replays body on retry", func(t *testing.T) {
 		attempt := 0
 		client := WithRetry(newTestClientWithServer(t, func(resp http.ResponseWriter, req *http.Request) {
 			body, _ := io.ReadAll(req.Body)
@@ -124,22 +141,22 @@ func TestHttpClient(t *testing.T) {
 			}
 			resp.WriteHeader(200)
 		}), RetryOptions{MaxRetries: 2, Backoff: &retryTestBackoff{}})
-		_, err := client.doRequest(t.Context(), http.MethodPut, client.RootUrl, withPayload(map[string]string{"key": "value"}, "application/json"))
+		_, err := DoRequest[any](t.Context(), client, http.MethodPut, client.RootUrl, withPayload(map[string]string{"key": "value"}, "application/json"))
 		require.NoError(t, err)
 		assert.Equal(t, 2, attempt)
 	})
 
-	t.Run("doAuthorizedRequest with BearerTokenAuthorization", func(t *testing.T) {
+	t.Run("DoAuthorizedRequest with BearerTokenAuthorization", func(t *testing.T) {
 		client := newTestClientWithServer(t, func(resp http.ResponseWriter, req *http.Request) {
 			assert.Equal(t, "Bearer my-static-token", req.Header.Get("Authorization"))
 			resp.WriteHeader(http.StatusAccepted)
 		})
 		client.Authorization = BearerTokenAuthorization{Token: "my-static-token"}
-		_, err := client.doAuthorizedRequest(t.Context(), http.MethodPost, client.RootUrl.JoinPath("create"), withPayload("content", "text/plain"))
+		_, err := DoAuthorizedRequest[any](t.Context(), client, http.MethodPost, client.RootUrl.JoinPath("create"), withPayload("content", "text/plain"))
 		require.NoError(t, err)
 	})
 
-	t.Run("doAuthorizedRequest with clientSecretAuthorization and retries", func(t *testing.T) {
+	t.Run("DoAuthorizedRequest with clientSecretAuthorization and retries", func(t *testing.T) {
 		t.Run("succeeds after second attempt", func(t *testing.T) {
 			retryTestBackoff := retryTestBackoff{}
 			requestsSeen := map[string]int{} // key is request path
@@ -164,16 +181,16 @@ func TestHttpClient(t *testing.T) {
 				}
 			}), RetryOptions{MaxRetries: 2, Backoff: &retryTestBackoff, WhitelistedPaths: map[string][]string{http.MethodPost: {"/login"}}})
 			client.Authorization = NewClientSecretAuthorization("login", "test-client", "test-client-secret")
-			resp, err := client.doAuthorizedRequest(t.Context(), http.MethodPut, client.RootUrl.JoinPath("edit"))
+			resp, err := DoAuthorizedRequest[any](t.Context(), client, http.MethodPut, client.RootUrl.JoinPath("edit"))
 			require.NoError(t, err)
-			require.NotNil(t, resp)
+			_ = resp
 			assert.Equal(t, map[string]int{
 				"/login": 2,
 				"/edit":  2,
 			}, requestsSeen)
 
 			t.Run("expired token is refreshed with relogin", func(t *testing.T) {
-				_, err := client.doAuthorizedRequest(t.Context(), http.MethodPut, client.RootUrl.JoinPath("edit"))
+				_, err := DoAuthorizedRequest[any](t.Context(), client, http.MethodPut, client.RootUrl.JoinPath("edit"))
 				require.NoError(t, err)
 				assert.Equal(t, 2, retryTestBackoff.Called)
 				assert.Equal(t, map[string]int{
@@ -215,7 +232,7 @@ func TestHttpClient(t *testing.T) {
 				}
 			}), RetryOptions{MaxRetries: 2, Backoff: &retryTestBackoff, WhitelistedPaths: map[string][]string{http.MethodPost: {"/login"}}})
 			client.Authorization = NewClientSecretAuthorization("login", "test-client", "test-client-secret")
-			_, err := client.doAuthorizedRequest(t.Context(), http.MethodPut, client.RootUrl.JoinPath("edit"))
+			_, err := DoAuthorizedRequest[any](t.Context(), client, http.MethodPut, client.RootUrl.JoinPath("edit"))
 			require.NoError(t, err)
 			assert.Equal(t, map[string]int{
 				"/login":        2, // 1st: 502, 2nd: 307 redirect
@@ -231,7 +248,7 @@ func TestHttpClient(t *testing.T) {
 				resp.WriteHeader(503)
 			}), RetryOptions{MaxRetries: 2, Backoff: &retryTestBackoff, WhitelistedPaths: map[string][]string{http.MethodPost: {"/login"}}})
 			client.Authorization = NewClientSecretAuthorization("login", "test-client", "test-client-secret")
-			_, err := client.doAuthorizedRequest(t.Context(), http.MethodPut, client.RootUrl.JoinPath("edit"))
+			_, err := DoAuthorizedRequest[any](t.Context(), client, http.MethodPut, client.RootUrl.JoinPath("edit"))
 			require.ErrorContains(t, err, fmt.Sprintf("login at %s/login with client id 'test-client' failed", client.RootUrl))
 			var httpErr HttpError
 			require.ErrorAs(t, err, &httpErr)

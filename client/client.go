@@ -64,15 +64,8 @@ func New(ctx context.Context, rootUrl *url.URL, userAgent string, auth Authoriza
 		},
 	)
 
-	// Check meshStack version compatibility
-	if meshInfo, err := httpClient.GetMeshInfo(ctx); err != nil {
-		return Client{}, fmt.Errorf("failed to retrieve meshStack version information from /mesh/info endpoint: %w", err)
-	} else if meshInfo.Version.Less(MinMeshStackVersion) {
-		skipVersionCheck := os.Getenv("MESHSTACK_SKIP_VERSION_CHECK") == "true"
-
-		if !skipVersionCheck {
-			return Client{}, fmt.Errorf("unsupported meshStack version: meshStack is running version %s, but this client requires version %s or higher", meshInfo.Version, MinMeshStackVersion)
-		}
+	if err := checkMeshVersion(ctx, httpClient); err != nil {
+		return Client{}, err
 	}
 
 	return Client{
@@ -99,4 +92,21 @@ func New(ctx context.Context, rootUrl *url.URL, userAgent string, auth Authoriza
 		WorkspaceGroupBinding:          newWorkspaceGroupBindingClient(ctx, httpClient),
 		WorkspaceUserBinding:           newWorkspaceUserBindingClient(ctx, httpClient),
 	}, nil
+}
+
+func checkMeshVersion(ctx context.Context, httpClient internal.HttpClient) error {
+	type MeshInfo struct {
+		Version version.Version `json:"version"`
+	}
+
+	meshInfoEndpoint := httpClient.RootUrl.JoinPath("/mesh/info")
+	if meshInfo, err := internal.DoRequest[MeshInfo](ctx, httpClient, "GET", meshInfoEndpoint); err != nil {
+		return fmt.Errorf("failed to retrieve meshStack version information from %s endpoint: %w", meshInfoEndpoint, err)
+	} else if meshInfo.Version.Less(MinMeshStackVersion) {
+		if os.Getenv("MESHSTACK_SKIP_VERSION_CHECK") == "true" {
+			return nil
+		}
+		return fmt.Errorf("unsupported meshStack version: meshStack is running version %s, but this client requires version %s or higher", meshInfo.Version, MinMeshStackVersion)
+	}
+	return nil
 }
