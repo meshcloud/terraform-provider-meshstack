@@ -34,6 +34,16 @@ func IsMockClientTest() bool {
 	return os.Getenv("TF_ACC") == ""
 }
 
+// skipInMock skips a TestStep when running against the in-memory mock (TF_ACC unset). Use it for
+// steps that need the real meshStack backend inside an otherwise mock-runnable scenario; a skipped
+// step's ConfigStateChecks do not run, and the next step diffs against the last applied state.
+func skipInMock() (bool, error) { return IsMockClientTest(), nil }
+
+// skipInAcc skips a TestStep when running against the real backend (TF_ACC set). Use it for steps
+// that assert pure provider-side plan behaviour the real backend would reject before the plan can
+// be observed (e.g. a forced replace driven by synthetic, non-existent references).
+func skipInAcc() (bool, error) { return !IsMockClientTest(), nil }
+
 // envKeyScratchDump, when non-empty, makes ApplyAndTest dump each step's HCL config to disk
 // (as a standalone, re-runnable config) instead of running the test. Set it to "1"/"true" to
 // dump into the repo-root scratch/ dir, or to a directory path to dump there. See the

@@ -1,3 +1,21 @@
+# v0.23.0
+
+FEATURES:
+- New `meshstack_building_block` resource with in-place input updates (no force-replace), rerun triggered by `content_hash` changes in `building_block_definition_version_ref`, `moved` block migration support from `meshstack_buildingblock`/`meshstack_building_block_v2`, optional `purge_on_delete`, and computed `all_inputs` and `status`.
+- `meshstack_building_block`: `spec.display_name` is now updated in place. Renaming the building block no longer forces a destroy-and-recreate and does not trigger a building block run.
+- `meshstack_building_block`: Rotating a sensitive input's secret (changing its `secret_version`) now triggers a building block rerun so the new value is applied, instead of being silently ignored.
+- `meshstack_building_block`: Added a `timeouts` block to configure how long the provider waits for a building block run to complete on create, update, and delete (defaults to 30m).
+- `meshstack_building_block`: Added a computed `status.latest_dry_run_uuid` exposing the latest dry (DETECT) run when it is the most recent run. Note: `status.latest_run_uuid` now tracks only modifying (apply/destroy) runs and excludes dry runs.
+- `meshstack_building_block`: A configuration now manages only the inputs it declares in `spec.inputs`. An input set by another party but omitted from your configuration is preserved (the backend patches only the inputs the request carries) and surfaced read-only in `all_inputs` instead of showing as drift — symmetric for user and platform-operator inputs. This enables shared ownership of a single building block: the consumer manages user inputs while a platform operator (with `MANAGED_BUILDINGBLOCK_SAVE`) manages operator inputs, each declaring only its own. On import, set input values are still populated into `spec.inputs`.
+
+FIXES:
+- `meshstack_building_block`: An update that supplies a previously-missing input (e.g. a platform operator providing an operator input that unblocks a block parked in `WAITING_FOR_OPERATOR_INPUT`) now waits for the resulting run to complete instead of returning early on the transient WAITING state. The provider polls briefly for the asynchronously-created run to start, then awaits it to a terminal state; if no run starts (the block is genuinely waiting for input this configuration does not supply) it still finishes with the waiting-for-input warning. This removes the need for a second apply to observe the completed run and its outputs.
+- `meshstack_building_block`: Changing `spec.parent_building_blocks` on its own (without a definition version change) now forces a replacement instead of attempting an in-place update that the backend rejects. When the definition version also changes, the parent change is carried by the in-place upgrade and no replacement occurs.
+- `meshstack_building_block`: A definition version change while the building block is not in a completed state (`SUCCEEDED`/`FAILED`/`ABORTED`) now fails with a clear, actionable error instead of an opaque backend conflict (409). Resolve any pending input or run first, then retry the upgrade.
+- `meshstack_building_block`: After a rerun-triggering update, the provider now waits for the newly triggered run to complete instead of returning early on the previous run's stale `SUCCEEDED` status, so `status` and `outputs` reflect the new run.
+- `meshstack_building_block`: When a create or update short-circuits because the run is parked waiting for operator input, the provider now emits the "waiting for input" warning instead of reporting a clean apply on a stuck block.
+- `meshstack_building_block`: Migrating from `meshstack_building_block_v2` via a `moved` block now warns to re-supply sensitive inputs (whose write-only values cannot be carried through state) instead of silently dropping them.
+
 # v0.22.1
 
 FIXES:
