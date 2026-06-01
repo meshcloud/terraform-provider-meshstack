@@ -177,7 +177,7 @@ func (p *MeshStackProvider) Resources(_ context.Context) []func() resource.Resou
 		NewWorkspaceUserBindingResource,
 		NewWorkspaceGroupBindingResource,
 		NewWorkspaceResource,
-		NewBuildingBlockResource,
+		NewBuildingblockResource,
 		NewBuildingBlockV2Resource,
 		NewBuildingBlockDefinitionResource,
 		NewTagDefinitionResource,
