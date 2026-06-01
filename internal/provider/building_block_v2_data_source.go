@@ -120,14 +120,8 @@ func (d *buildingBlockV2DataSource) Schema(ctx context.Context, req datasource.S
 				Computed:            true,
 				Attributes: map[string]schema.Attribute{
 					"status": schema.StringAttribute{
-						MarkdownDescription: fmt.Sprintf("Execution status. One of `%s`, `%s`, `%s`, `%s`, `%s`, `%s`.",
-							client.BUILDING_BLOCK_STATUS_WAITING_FOR_DEPENDENT_INPUT,
-							client.BUILDING_BLOCK_STATUS_WAITING_FOR_OPERATOR_INPUT,
-							client.BUILDING_BLOCK_STATUS_PENDING,
-							client.BUILDING_BLOCK_STATUS_IN_PROGRESS,
-							client.BUILDING_BLOCK_STATUS_SUCCEEDED,
-							client.BUILDING_BLOCK_STATUS_FAILED),
-						Computed: true,
+						MarkdownDescription: "Execution status. One of " + client.BuildingBlockStatuses.Markdown() + ".",
+						Computed:            true,
 					},
 					"force_purge": schema.BoolAttribute{
 						MarkdownDescription: "Indicates whether an operator has requested purging of this Building Block.",
@@ -139,11 +133,8 @@ func (d *buildingBlockV2DataSource) Schema(ctx context.Context, req datasource.S
 						Computed:            true,
 						Attributes: map[string]schema.Attribute{
 							"state": schema.StringAttribute{
-								MarkdownDescription: fmt.Sprintf("Lifecycle state. One of `%s`, `%s`, `%s`.",
-									client.BUILDING_BLOCK_LIFECYCLE_STATE_ACTIVE,
-									client.BUILDING_BLOCK_LIFECYCLE_STATE_MARKED_FOR_DELETION,
-									client.BUILDING_BLOCK_LIFECYCLE_STATE_DELETED),
-								Computed: true,
+								MarkdownDescription: "Lifecycle state. One of " + client.BuildingBlockLifecycleStates.Markdown() + ".",
+								Computed:            true,
 							},
 						},
 					},
@@ -183,21 +174,23 @@ func (d *buildingBlockV2DataSource) Read(ctx context.Context, req datasource.Rea
 
 	// Set all spec values except for inputs
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("spec").AtName("display_name"), bb.Spec.DisplayName)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("spec").AtName("building_block_definition_version_ref"), bb.Spec.BuildingBlockDefinitionVersionRef)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("spec").AtName("building_block_definition_version_ref").AtName("uuid"), bb.Spec.BuildingBlockDefinitionVersionRef.Uuid)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("spec").AtName("target_ref"), bb.Spec.TargetRef)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("spec").AtName("parent_building_blocks"), bb.Spec.ParentBuildingBlocks)...)
 
 	// Read inputs
 	inputs := make(map[string]buildingBlockIoModel)
 	for key, input := range bb.Spec.Inputs {
-		inputs[key] = toResourceModelV2Input(key, input, &resp.Diagnostics)
+		inputs[key] = toResourceModelV2Input(key, *input, &resp.Diagnostics)
 	}
 	if resp.Diagnostics.HasError() {
 		return
 	}
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("spec").AtName("inputs"), inputs)...)
 
-	// Set all status values except for outputs
+	// Set all status values except for outputs. Status is a response-only object that the backend
+	// always populates on a GET (the pointer exists only so it can be omitted from requests), so no
+	// nil check is needed here.
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("status").AtName("status"), bb.Status.Status)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("status").AtName("force_purge"), bb.Status.ForcePurge)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("status").AtName("lifecycle"), bb.Status.Lifecycle)...)
@@ -205,7 +198,7 @@ func (d *buildingBlockV2DataSource) Read(ctx context.Context, req datasource.Rea
 	// Read outputs
 	outputs := make(map[string]buildingBlockOutputModel)
 	for key, output := range bb.Status.Outputs {
-		outputs[key] = toResourceModelV2Output(key, output, &resp.Diagnostics)
+		outputs[key] = toResourceModel(client.MeshBuildingBlockIO{Key: key, Value: output.Value, ValueType: string(output.ValueType)}, &resp.Diagnostics).toOutputModel()
 	}
 	if resp.Diagnostics.HasError() {
 		return
