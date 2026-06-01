@@ -92,8 +92,23 @@ stored on the client struct), use a local model struct holding the client's `tfs
 fields plus the derived field — do **not** modify client types or call `SetAttribute` after
 `generic.Set`. Full pattern and example in `REFERENCE.md`.
 
+## Conventions worth flagging in review
+
+- **Response-only pointer fields are never nil in responses.** Client DTO structs are reused for
+  both requests and responses, so system-managed, response-only fields (e.g. a `Status *...`) are
+  pointers *only* so they can be omitted from request payloads. On a GET the backend always
+  populates them. Do **not** add `if dto.Status == nil` guards in response→state mapping; a review
+  should flag a newly added one. (Genuine guards in polling loops, where a transient read may
+  precede status, are a different case.)
+- **Mock secret behaviour goes through `backendSecretBehavior`.** The mock client
+  (`internal/clientmock`) must hash/validate sensitive inputs via the shared
+  `backendSecretBehavior` helper, not a bespoke sha256 routine, so every resource hashes secrets
+  identically. It walks the DTO via reflection and only mutates **addressable** fields, so secrets
+  that live in a `map` value must be reachable by address — model such inputs as
+  `map[string]*T` (pointer values) so the walker can reach and rewrite them.
+
 ## Running it
 
 Iterate with the mock client first (`task test -- -run TestAcc<Name>`), then against a real
-backend (`task testacc -- -run TestAcc<Name>`). For the local backend + suite runbooks see the
-**`meshstack-services`** and **`acceptance-testing`** skills.
+backend (`task testacc -- -run TestAcc<Name>`). For the local backend bring-up + suite runbook see
+the **`acceptance-testing`** skill.

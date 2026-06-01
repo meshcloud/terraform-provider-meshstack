@@ -24,6 +24,7 @@ import (
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
 	clientTypes "github.com/meshcloud/terraform-provider-meshstack/client/types"
+	"github.com/meshcloud/terraform-provider-meshstack/client/types/enum"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/util/poll"
 )
 
@@ -119,6 +120,7 @@ func (r *buildingBlockV2Resource) Configure(_ context.Context, req resource.Conf
 func (r *buildingBlockV2Resource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Manage a workspace or tenant building block." + previewDisclaimer(),
+		DeprecationMessage:  "Use `meshstack_building_block` instead. You can migrate state with a `moved` block from `meshstack_building_block_v2` to `meshstack_building_block`.",
 
 		Attributes: map[string]schema.Attribute{
 			"metadata": schema.SingleNestedAttribute{
@@ -229,14 +231,8 @@ func (r *buildingBlockV2Resource) Schema(ctx context.Context, req resource.Schem
 				PlanModifiers:       []planmodifier.Object{objectplanmodifier.UseStateForUnknown()},
 				Attributes: map[string]schema.Attribute{
 					"status": schema.StringAttribute{
-						MarkdownDescription: fmt.Sprintf("Execution status. One of `%s`, `%s`, `%s`, `%s`, `%s`, `%s`.",
-							client.BUILDING_BLOCK_STATUS_WAITING_FOR_DEPENDENT_INPUT,
-							client.BUILDING_BLOCK_STATUS_WAITING_FOR_OPERATOR_INPUT,
-							client.BUILDING_BLOCK_STATUS_PENDING,
-							client.BUILDING_BLOCK_STATUS_IN_PROGRESS,
-							client.BUILDING_BLOCK_STATUS_SUCCEEDED,
-							client.BUILDING_BLOCK_STATUS_FAILED),
-						Computed: true,
+						MarkdownDescription: "Execution status. One of " + client.BuildingBlockStatuses.Markdown() + ".",
+						Computed:            true,
 					},
 					"force_purge": schema.BoolAttribute{
 						MarkdownDescription: "Indicates whether an operator has requested purging of this Building Block.",
@@ -248,11 +244,8 @@ func (r *buildingBlockV2Resource) Schema(ctx context.Context, req resource.Schem
 						Computed:            true,
 						Attributes: map[string]schema.Attribute{
 							"state": schema.StringAttribute{
-								MarkdownDescription: fmt.Sprintf("Lifecycle state. One of `%s`, `%s`, `%s`.",
-									client.BUILDING_BLOCK_LIFECYCLE_STATE_ACTIVE,
-									client.BUILDING_BLOCK_LIFECYCLE_STATE_MARKED_FOR_DELETION,
-									client.BUILDING_BLOCK_LIFECYCLE_STATE_DELETED),
-								Computed: true,
+								MarkdownDescription: "Lifecycle state. One of " + client.BuildingBlockLifecycleStates.Markdown() + ".",
+								Computed:            true,
 							},
 						},
 					},
@@ -275,18 +268,17 @@ func (r *buildingBlockV2Resource) Schema(ctx context.Context, req resource.Schem
 }
 
 func (r *buildingBlockV2Resource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	bb := client.MeshBuildingBlockV2Create{
+	bb := client.MeshBuildingBlockV2{
 		Spec: client.MeshBuildingBlockV2Spec{
-			ParentBuildingBlocks:              make([]client.MeshBuildingBlockParent, 0),
 			BuildingBlockDefinitionVersionRef: client.MeshBuildingBlockV2DefinitionVersionRef{},
 			TargetRef:                         client.MeshBuildingBlockV2TargetRef{},
-			Inputs:                            make(map[string]client.MeshBuildingBlockV2Input),
+			Inputs:                            make(map[string]*client.MeshBuildingBlockInput),
 		},
 	}
 
 	// Retrieve values from plan
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec").AtName("display_name"), &bb.Spec.DisplayName)...)
-	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec").AtName("building_block_definition_version_ref"), &bb.Spec.BuildingBlockDefinitionVersionRef)...)
+	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec").AtName("building_block_definition_version_ref").AtName("uuid"), &bb.Spec.BuildingBlockDefinitionVersionRef.Uuid)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec").AtName("parent_building_blocks"), &bb.Spec.ParentBuildingBlocks)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec").AtName("target_ref"), &bb.Spec.TargetRef)...)
 
@@ -319,12 +311,10 @@ func (r *buildingBlockV2Resource) Create(ctx context.Context, req resource.Creat
 			inputValue = clientTypes.SecretOrAny{Y: value}
 			valueType = vt
 		}
-
-		input := client.MeshBuildingBlockV2Input{
+		bb.Spec.Inputs[key] = &client.MeshBuildingBlockInput{
 			Value:     inputValue,
-			ValueType: valueType,
+			ValueType: new(enum.Entry[client.MeshBuildingBlockIOType](valueType)),
 		}
-		bb.Spec.Inputs[key] = input
 	}
 
 	var waitForCompletion bool
@@ -359,7 +349,7 @@ func (r *buildingBlockV2Resource) Create(ctx context.Context, req resource.Creat
 	// Pollable for completion if wait_for_completion is true
 	if waitForCompletion {
 		var lastPollOutput *client.MeshBuildingBlockV2
-		err := poll.AtMostFor(30*time.Minute, r.meshBuildingBlockV2Client.ReadFunc(created.Metadata.Uuid), poll.WithLastResultTo(&lastPollOutput)).
+		err := poll.AtMostFor(30*time.Minute, r.meshBuildingBlockV2Client.ReadFunc(*created.Metadata.Uuid), poll.WithLastResultTo(&lastPollOutput)).
 			Until(ctx, (*client.MeshBuildingBlockV2).CreateSuccessful)
 		if lastPollOutput != nil {
 			// Always set last known building block state, no matter what error!
@@ -368,6 +358,12 @@ func (r *buildingBlockV2Resource) Create(ctx context.Context, req resource.Creat
 		if err != nil {
 			resp.Diagnostics.AddError("Failed to await building block creation", err.Error())
 			return
+		}
+		if lastPollOutput.IsWaitingForInput() {
+			resp.Diagnostics.AddWarning(
+				"Building block run is waiting for input",
+				fmt.Sprintf("Building block %s is in status %s. Provide the required inputs in meshPanel to complete the run.", *created.Metadata.Uuid, lastPollOutput.Status.Status),
+			)
 		}
 	}
 }
@@ -384,7 +380,9 @@ func (r *buildingBlockV2Resource) Read(ctx context.Context, req resource.ReadReq
 		resp.Diagnostics.AddError("Unable to read building block", err.Error())
 	}
 
-	if bb == nil || bb.Status.Lifecycle.State == client.BUILDING_BLOCK_LIFECYCLE_STATE_DELETED {
+	// The block is gone when the read 404s (nil, e.g. after a hard delete/purge) or when the backend
+	// returns it soft-deleted (lifecycle DELETED — a soft delete does not 404). Either way, drop it.
+	if bb == nil || (bb.Status != nil && bb.Status.Lifecycle.State == client.BuildingBlockLifecycleStateDeleted) {
 		resp.State.RemoveResource(ctx)
 		return
 	}
@@ -431,44 +429,46 @@ func (r *buildingBlockV2Resource) Delete(ctx context.Context, req resource.Delet
 // 	resource.ImportStatePassthroughID(ctx, path.Root("metadata").AtName("uuid"), req, resp)
 // }
 
-func toResourceModelV2Input(key string, io client.MeshBuildingBlockV2Input, diags *diag.Diagnostics) buildingBlockIoModel {
+func toResourceModelV2Input(key string, io client.MeshBuildingBlockInput, diags *diag.Diagnostics) buildingBlockIoModel {
 	value := io.Value.Y
 	if io.Value.HasX() && io.Value.X.Hash != nil {
 		// Sensitive inputs: the API returns only the secret hash (never plaintext).
 		// Surface it so the input is represented in state instead of silently dropped.
 		value = *io.Value.X.Hash
 	}
-	return toResourceModel(client.MeshBuildingBlockIO{Key: key, Value: value, ValueType: io.ValueType}, diags)
-}
-
-func toResourceModelV2Output(key string, io client.MeshBuildingBlockV2Output, diags *diag.Diagnostics) buildingBlockOutputModel {
-	return toResourceModel(client.MeshBuildingBlockIO{Key: key, Value: io.Value, ValueType: io.ValueType}, diags).toOutputModel()
+	var vt string
+	if io.ValueType != nil {
+		vt = string(*io.ValueType)
+	}
+	return toResourceModel(client.MeshBuildingBlockIO{Key: key, Value: value, ValueType: vt}, diags)
 }
 
 func setStateFromResponseV2(ctx context.Context, state *tfsdk.State, bb *client.MeshBuildingBlockV2) (diags diag.Diagnostics) {
 	diags.Append(state.SetAttribute(ctx, path.Root("metadata"), bb.Metadata)...)
 
 	diags.Append(state.SetAttribute(ctx, path.Root("spec").AtName("display_name"), bb.Spec.DisplayName)...)
-	diags.Append(state.SetAttribute(ctx, path.Root("spec").AtName("building_block_definition_version_ref"), bb.Spec.BuildingBlockDefinitionVersionRef)...)
+	diags.Append(state.SetAttribute(ctx, path.Root("spec").AtName("building_block_definition_version_ref").AtName("uuid"), bb.Spec.BuildingBlockDefinitionVersionRef.Uuid)...)
 	diags.Append(state.SetAttribute(ctx, path.Root("spec").AtName("target_ref"), bb.Spec.TargetRef)...)
 	diags.Append(state.SetAttribute(ctx, path.Root("spec").AtName("parent_building_blocks"), bb.Spec.ParentBuildingBlocks)...)
 
 	combinedInputs := make(map[string]buildingBlockIoModel)
 	for key, input := range bb.Spec.Inputs {
-		combinedInputs[key] = toResourceModelV2Input(key, input, &diags)
+		combinedInputs[key] = toResourceModelV2Input(key, *input, &diags)
 	}
 	if diags.HasError() {
 		return
 	}
 	diags.Append(state.SetAttribute(ctx, path.Root("spec").AtName("combined_inputs"), combinedInputs)...)
 
+	// Status is a response-only object that the backend always populates on a GET (the pointer exists
+	// only so it can be omitted from requests), so no nil check is needed here.
 	diags.Append(state.SetAttribute(ctx, path.Root("status").AtName("status"), bb.Status.Status)...)
 	diags.Append(state.SetAttribute(ctx, path.Root("status").AtName("force_purge"), bb.Status.ForcePurge)...)
 	diags.Append(state.SetAttribute(ctx, path.Root("status").AtName("lifecycle"), bb.Status.Lifecycle)...)
 
 	outputs := make(map[string]buildingBlockOutputModel)
 	for key, output := range bb.Status.Outputs {
-		outputs[key] = toResourceModelV2Output(key, output, &diags)
+		outputs[key] = toResourceModel(client.MeshBuildingBlockIO{Key: key, Value: output.Value, ValueType: string(output.ValueType)}, &diags).toOutputModel()
 	}
 	if diags.HasError() {
 		return

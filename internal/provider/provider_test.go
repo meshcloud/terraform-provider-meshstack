@@ -29,7 +29,9 @@ func ProviderFactoriesForTest(opts ...providerOption) map[string]func() (tfproto
 	}
 }
 
-// IsMockClientTest returns true when TF_ACC is not set, meaning tests run with a mock client.
+// IsMockClientTest reports whether tests run against the in-memory mock client (TF_ACC unset)
+// instead of a real backend. Mock and acceptance runs must stay in lock-step; see the
+// acceptance-testing skill for when gating a step or assertion on this is warranted.
 func IsMockClientTest() bool {
 	return os.Getenv("TF_ACC") == ""
 }

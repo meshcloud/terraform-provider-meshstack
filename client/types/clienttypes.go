@@ -11,8 +11,10 @@ type (
 	Set[T any] []T
 
 	Secret struct {
+		// Plaintext is optionally set if secret is initially created (or rotated later)
 		Plaintext *string `json:"plaintext,omitempty" tfsdk:"plaintext"`
-		Hash      *string `json:"hash,omitempty" tfsdk:"-"`
+		// Hash is always present in responses (Plaintext is never returned) and set in requests if secret is supposed to be kept.
+		Hash *string `json:"hash,omitempty" tfsdk:"-"`
 	}
 
 	SecretOrAny = variant.Variant[Secret, any]
