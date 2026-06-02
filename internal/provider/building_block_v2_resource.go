@@ -21,6 +21,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
+	clientTypes "github.com/meshcloud/terraform-provider-meshstack/client/types"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/util/poll"
 )
 
@@ -235,7 +236,7 @@ func (r *buildingBlockV2Resource) Create(ctx context.Context, req resource.Creat
 			)
 		}
 		input := client.MeshBuildingBlockV2Input{
-			Value:     value,
+			Value:     clientTypes.SecretOrAny{Y: value},
 			ValueType: valueType,
 		}
 		bb.Spec.Inputs[key] = input
@@ -346,7 +347,13 @@ func (r *buildingBlockV2Resource) Delete(ctx context.Context, req resource.Delet
 // }
 
 func toResourceModelV2Input(key string, io client.MeshBuildingBlockV2Input, diags *diag.Diagnostics) buildingBlockIoModel {
-	return toResourceModel(client.MeshBuildingBlockIO{Key: key, Value: io.Value, ValueType: io.ValueType}, diags)
+	value := io.Value.Y
+	if io.Value.HasX() && io.Value.X.Hash != nil {
+		// Sensitive inputs: the API returns only the secret hash (never plaintext).
+		// Surface it so the input is represented in state instead of silently dropped.
+		value = *io.Value.X.Hash
+	}
+	return toResourceModel(client.MeshBuildingBlockIO{Key: key, Value: value, ValueType: io.ValueType}, diags)
 }
 
 func toResourceModelV2Output(key string, io client.MeshBuildingBlockV2Output, diags *diag.Diagnostics) buildingBlockOutputModel {

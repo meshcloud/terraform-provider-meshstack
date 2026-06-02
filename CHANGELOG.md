@@ -1,9 +1,11 @@
-# UNRELEASED
+# v0.21.0
 
 Requires meshStack 2026.23.0 or later (previously 2026.22.0).
 
 BREAKING CHANGES:
 - `meshstack_building_block_v2`: The `spec.inputs` and `status.outputs` fields have changed from arrays to maps in the upstream API.
+  The internal client representation has been updated accordingly. No Terraform schema changes are required, but this requires meshStack 2026.23.0 or later.
+- `meshstack_building_block_v2`: The upstream API handles sensitive inputs as embedded secrets to align with the Building Block Definition API.
   The internal client representation has been updated accordingly. No Terraform schema changes are required, but this requires meshStack 2026.23.0 or later.
 
 ## v0.20.13
