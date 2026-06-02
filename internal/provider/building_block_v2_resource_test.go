@@ -51,6 +51,49 @@ func TestAccBuildingBlockV2(t *testing.T) {
 			},
 		})
 	})
+	t.Run("03_sensitive_input", func(t *testing.T) {
+		if IsMockClientTest() {
+			// The in-memory mock does not resolve STATIC inputs from the BBD, so the
+			// static secret never appears in combined_inputs in mock mode.
+			t.Skip("requires real meshStack to resolve static secret inputs")
+		}
+
+		workspaceConfig, workspaceAddr := testconfig.Workspace(t)
+		exampleResource := testconfig.Resource{Name: "building_block_v2", Suffix: "_03_sensitive_input"}
+
+		var buildingBlockDefinitionAddr testconfig.Traversal
+		buildingBlockDefinitionConfig := exampleResource.TestSupportConfig(t, "_bbd").WithFirstBlock(
+			testconfig.ExtractAddress(&buildingBlockDefinitionAddr),
+			testconfig.OwnedByWorkspace(workspaceAddr),
+		)
+
+		var buildingBlockAddr testconfig.Traversal
+		config := exampleResource.TestSupportConfig(t, "").WithFirstBlock(
+			testconfig.ExtractAddress(&buildingBlockAddr),
+			testconfig.Descend("spec", "building_block_definition_version_ref")(testconfig.SetAddr(buildingBlockDefinitionAddr, "version_latest")),
+			testconfig.Descend("spec", "target_ref")(testconfig.SetAddr(workspaceAddr, "ref")),
+		).Join(workspaceConfig, buildingBlockDefinitionConfig)
+
+		ApplyAndTest(t, resource.TestCase{
+			Steps: []resource.TestStep{
+				{
+					Config: config.String(),
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PreApply: []plancheck.PlanCheck{
+							plancheck.ExpectResourceAction(buildingBlockAddr.String(), plancheck.ResourceActionCreate),
+						},
+					},
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("metadata").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
+						// The read fix surfaces the embedded-secret hash here; without it this is null.
+						statecheck.ExpectKnownValue(buildingBlockAddr.String(),
+							tfjsonpath.New("spec").AtMapKey("combined_inputs").AtMapKey("static_secret").AtMapKey("value_string"),
+							xknownvalue.NotEmptyString()),
+					},
+				},
+			},
+		})
+	})
 }
 
 func bbv2StateChecks(buildingBlockAddr testconfig.Traversal, displayName string) []statecheck.StateCheck {

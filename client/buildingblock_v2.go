@@ -2,9 +2,11 @@ package client
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client/internal"
+	types "github.com/meshcloud/terraform-provider-meshstack/client/types"
 )
 
 const (
@@ -41,11 +43,31 @@ type MeshBuildingBlockV2Spec struct {
 }
 
 type MeshBuildingBlockV2Input struct {
-	Value                any     `json:"value"`
-	ValueType            string  `json:"valueType"`
-	IsSensitive          bool    `json:"isSensitive"`
-	AssignmentType       *string `json:"assignmentType"`
-	UpdateableByConsumer bool    `json:"updateableByConsumer"`
+	Value                types.SecretOrAny `json:"value"`
+	ValueType            string            `json:"valueType"`
+	IsSensitive          bool              `json:"isSensitive"`
+	AssignmentType       *string           `json:"assignmentType"`
+	UpdateableByConsumer bool              `json:"updateableByConsumer"`
+}
+
+func (m *MeshBuildingBlockV2Input) UnmarshalJSON(bytes []byte) error {
+	type wrapped MeshBuildingBlockV2Input
+	var target wrapped
+	if err := json.Unmarshal(bytes, &target); err != nil {
+		return err
+	}
+	*m = MeshBuildingBlockV2Input(target)
+	// Non-sensitive values must live in the Variant's Y branch; the Variant prefers X and
+	// types.Secret fields are omitempty, so move any accidental X match to Y when not sensitive.
+	if !m.IsSensitive && m.Value.HasX() {
+		xJson, err := json.Marshal(m.Value.X)
+		if err != nil {
+			return err
+		}
+		m.Value.X = types.Secret{}
+		return json.Unmarshal(xJson, &m.Value.Y)
+	}
+	return nil
 }
 
 type MeshBuildingBlockV2Output struct {
