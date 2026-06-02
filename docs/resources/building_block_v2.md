@@ -60,6 +60,7 @@ resource "meshstack_building_block_v2" "example_tenant" {
 
 ### Optional
 
+- `purge_on_delete` (Boolean) When `true`, deletion skips the Building Block's configured deletion run and immediately removes it from meshStack. Useful when the Building Block is stuck in a non-final state and cannot be deleted normally. Requires `ADM_BUILDINGBLOCK_DELETE` permission. (Defaults to `false`)
 - `wait_for_completion` (Boolean) Whether to wait for the Building Block to reach a terminal state (SUCCEEDED or FAILED) before completing the resource creation or deletion. If false, the resource creation completes immediately after the Building Block is created. (Defaults to `true`)
 
 ### Read-Only
