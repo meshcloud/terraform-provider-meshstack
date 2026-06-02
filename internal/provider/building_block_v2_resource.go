@@ -12,6 +12,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapdefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
@@ -29,6 +31,72 @@ var (
 	_ resource.Resource              = &buildingBlockV2Resource{}
 	_ resource.ResourceWithConfigure = &buildingBlockV2Resource{}
 )
+
+// buildingBlockV2UserInputModel extends buildingBlockUserInputModel with sensitive input variants
+// specific to the BB v2 resource. Embedding flattens tfsdk tags so the framework sees all fields.
+type buildingBlockV2UserInputModel struct {
+	buildingBlockUserInputModel
+	ValueStringSensitive types.String `tfsdk:"value_string_sensitive"`
+	ValueCodeSensitive   types.String `tfsdk:"value_code_sensitive"`
+}
+
+// buildingBlockV2UserInputs extends the base user-inputs schema with sensitive STRING and CODE
+// variants. Only used by the BB v2 resource; the v1 buildingblock resource uses the base schema.
+func buildingBlockV2UserInputs() schema.MapNestedAttribute {
+	inputs := buildingBlockUserInputs()
+
+	// Replace Default with the extended object type (adds the two sensitive fields).
+	inputs.Default = mapdefault.StaticValue(
+		types.MapValueMust(
+			types.ObjectType{
+				AttrTypes: map[string]attr.Type{
+					"value_string":           types.StringType,
+					"value_single_select":    types.StringType,
+					"value_multi_select":     types.ListType{ElemType: types.StringType},
+					"value_int":              types.Int64Type,
+					"value_bool":             types.BoolType,
+					"value_code":             types.StringType,
+					"value_string_sensitive": types.StringType,
+					"value_code_sensitive":   types.StringType,
+				},
+			},
+			map[string]attr.Value{},
+		),
+	)
+	inputs.PlanModifiers = []planmodifier.Map{mapplanmodifier.RequiresReplace()}
+
+	// Extend the ExactlyOneOf validator on value_string to include the sensitive variants.
+	inputs.NestedObject.Attributes["value_string"] = schema.StringAttribute{
+		Optional: true,
+		Computed: false,
+		Validators: []validator.String{stringvalidator.ExactlyOneOf(
+			path.MatchRelative().AtParent().AtName("value_string"),
+			path.MatchRelative().AtParent().AtName("value_single_select"),
+			path.MatchRelative().AtParent().AtName("value_multi_select"),
+			path.MatchRelative().AtParent().AtName("value_int"),
+			path.MatchRelative().AtParent().AtName("value_bool"),
+			path.MatchRelative().AtParent().AtName("value_code"),
+			path.MatchRelative().AtParent().AtName("value_string_sensitive"),
+			path.MatchRelative().AtParent().AtName("value_code_sensitive"),
+		)},
+	}
+
+	inputs.NestedObject.Attributes["value_string_sensitive"] = schema.StringAttribute{
+		MarkdownDescription: "Plaintext value for a sensitive STRING user input. Stored in state but masked in output. " +
+			"Use this instead of `value_string` when the building block definition marks the input as sensitive.",
+		Optional:  true,
+		Sensitive: true,
+	}
+
+	inputs.NestedObject.Attributes["value_code_sensitive"] = schema.StringAttribute{
+		MarkdownDescription: "Plaintext value for a sensitive CODE user input. Stored in state but masked in output. " +
+			"Use this instead of `value_code` when the building block definition marks the input as sensitive.",
+		Optional:  true,
+		Sensitive: true,
+	}
+
+	return inputs
+}
 
 func NewBuildingBlockV2Resource() resource.Resource {
 	return &buildingBlockV2Resource{}
@@ -121,7 +189,7 @@ func (r *buildingBlockV2Resource) Schema(ctx context.Context, req resource.Schem
 						},
 					},
 
-					"inputs":          buildingBlockUserInputs(),
+					"inputs":          buildingBlockV2UserInputs(),
 					"combined_inputs": buildingBlockCombinedInputs(),
 
 					"parent_building_blocks": schema.SetNestedAttribute{
@@ -222,8 +290,8 @@ func (r *buildingBlockV2Resource) Create(ctx context.Context, req resource.Creat
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec").AtName("parent_building_blocks"), &bb.Spec.ParentBuildingBlocks)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec").AtName("target_ref"), &bb.Spec.TargetRef)...)
 
-	// Set user inputs
-	var userInputs map[string]buildingBlockUserInputModel
+	// Set user inputs — use the v2-extended model to capture sensitive variants.
+	var userInputs map[string]buildingBlockV2UserInputModel
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec").AtName("inputs"), &userInputs)...)
 
 	for key, values := range userInputs {
