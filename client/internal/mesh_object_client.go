@@ -123,6 +123,12 @@ func (c MeshObjectClient[M]) Delete(ctx context.Context, id string) (err error) 
 	return
 }
 
+// Purge removes a meshObject by ID without running any cloud-side cleanup, by calling DELETE /{id}/purge.
+func (c MeshObjectClient[M]) Purge(ctx context.Context, id string) (err error) {
+	_, err = c.doAuthorizedRequest(ctx, http.MethodDelete, c.ApiUrl.JoinPath(id, "purge"), withAccept(c.meshObjectMimeType()))
+	return
+}
+
 // List retrieves all meshObjects with automatic pagination handling.
 // Accepts optional [RequestOption] parameters for filtering and querying.
 func (c MeshObjectClient[M]) List(ctx context.Context, options ...RequestOption) ([]M, error) {

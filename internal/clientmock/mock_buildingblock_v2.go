@@ -49,7 +49,7 @@ func (m MeshBuildingBlockV2Client) Create(_ context.Context, bb *client.MeshBuil
 	return created, nil
 }
 
-func (m MeshBuildingBlockV2Client) Delete(_ context.Context, uuid string) error {
+func (m MeshBuildingBlockV2Client) Delete(_ context.Context, uuid string, _ bool) error {
 	m.Store.Delete(uuid)
 	return nil
 }
