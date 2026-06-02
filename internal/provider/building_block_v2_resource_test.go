@@ -94,6 +94,54 @@ func TestAccBuildingBlockV2(t *testing.T) {
 			},
 		})
 	})
+
+	t.Run("04_sensitive_user_input", func(t *testing.T) {
+		if IsMockClientTest() {
+			// The in-memory mock does not process SecretEmbedded plaintext, so the hash
+			// never appears in combined_inputs in mock mode.
+			t.Skip("requires real meshStack to process sensitive user inputs")
+		}
+
+		workspaceConfig, workspaceAddr := testconfig.Workspace(t)
+		exampleResource := testconfig.Resource{Name: "building_block_v2", Suffix: "_04_sensitive_user_input"}
+
+		var buildingBlockDefinitionAddr testconfig.Traversal
+		buildingBlockDefinitionConfig := exampleResource.TestSupportConfig(t, "_bbd").WithFirstBlock(
+			testconfig.ExtractAddress(&buildingBlockDefinitionAddr),
+			testconfig.OwnedByWorkspace(workspaceAddr),
+		)
+
+		var buildingBlockAddr testconfig.Traversal
+		config := exampleResource.TestSupportConfig(t, "").WithFirstBlock(
+			testconfig.ExtractAddress(&buildingBlockAddr),
+			testconfig.Descend("spec", "building_block_definition_version_ref")(testconfig.SetAddr(buildingBlockDefinitionAddr, "version_latest")),
+			testconfig.Descend("spec", "target_ref")(testconfig.SetAddr(workspaceAddr, "ref")),
+		).Join(workspaceConfig, buildingBlockDefinitionConfig)
+
+		ApplyAndTest(t, resource.TestCase{
+			Steps: []resource.TestStep{
+				{
+					Config: config.String(),
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PreApply: []plancheck.PlanCheck{
+							plancheck.ExpectResourceAction(buildingBlockAddr.String(), plancheck.ResourceActionCreate),
+						},
+					},
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("metadata").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
+						// Sensitive user inputs are sent as {"plaintext":...}; the API returns the hash.
+						// The hash surfaces in combined_inputs (the STRING hash in value_string, the CODE hash in value_code).
+						statecheck.ExpectKnownValue(buildingBlockAddr.String(),
+							tfjsonpath.New("spec").AtMapKey("combined_inputs").AtMapKey("secret_str").AtMapKey("value_string"),
+							xknownvalue.NotEmptyString()),
+						statecheck.ExpectKnownValue(buildingBlockAddr.String(),
+							tfjsonpath.New("spec").AtMapKey("combined_inputs").AtMapKey("secret_code").AtMapKey("value_code"),
+							xknownvalue.NotEmptyString()),
+					},
+				},
+			},
+		})
+	})
 }
 
 func bbv2StateChecks(buildingBlockAddr testconfig.Traversal, displayName string) []statecheck.StateCheck {

@@ -227,16 +227,33 @@ func (r *buildingBlockV2Resource) Create(ctx context.Context, req resource.Creat
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec").AtName("inputs"), &userInputs)...)
 
 	for key, values := range userInputs {
-		value, valueType := values.extractIoValue()
-		if value == nil {
-			resp.Diagnostics.AddAttributeError(
-				path.Root("spec").AtName("inputs"),
-				"Input with missing value",
-				fmt.Sprintf("Input '%s' must have one value field set.", key),
-			)
+		var inputValue clientTypes.SecretOrAny
+		var valueType string
+
+		// Sensitive inputs must be sent as SecretEmbedded {"plaintext": "..."} per the v2-preview API.
+		if !values.ValueStringSensitive.IsNull() && !values.ValueStringSensitive.IsUnknown() {
+			plaintext := values.ValueStringSensitive.ValueString()
+			inputValue = clientTypes.SecretOrAny{X: clientTypes.Secret{Plaintext: &plaintext}}
+			valueType = client.MESH_BUILDING_BLOCK_IO_TYPE_STRING
+		} else if !values.ValueCodeSensitive.IsNull() && !values.ValueCodeSensitive.IsUnknown() {
+			plaintext := values.ValueCodeSensitive.ValueString()
+			inputValue = clientTypes.SecretOrAny{X: clientTypes.Secret{Plaintext: &plaintext}}
+			valueType = client.MESH_BUILDING_BLOCK_IO_TYPE_CODE
+		} else {
+			value, vt := values.extractIoValue()
+			if value == nil {
+				resp.Diagnostics.AddAttributeError(
+					path.Root("spec").AtName("inputs"),
+					"Input with missing value",
+					fmt.Sprintf("Input '%s' must have one value field set.", key),
+				)
+			}
+			inputValue = clientTypes.SecretOrAny{Y: value}
+			valueType = vt
 		}
+
 		input := client.MeshBuildingBlockV2Input{
-			Value:     clientTypes.SecretOrAny{Y: value},
+			Value:     inputValue,
 			ValueType: valueType,
 		}
 		bb.Spec.Inputs[key] = input

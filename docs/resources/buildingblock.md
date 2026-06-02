@@ -84,10 +84,12 @@ Optional:
 
 - `value_bool` (Boolean)
 - `value_code` (String) Code value.
+- `value_code_sensitive` (String, Sensitive) Plaintext value for a sensitive CODE user input. Stored in state but masked in output. Use this instead of `value_code` when the building block definition marks the input as sensitive.
 - `value_int` (Number)
 - `value_multi_select` (List of String) Multi-select value (list of strings).
 - `value_single_select` (String)
 - `value_string` (String)
+- `value_string_sensitive` (String, Sensitive) Plaintext value for a sensitive STRING user input. Stored in state but masked in output. Use this instead of `value_string` when the building block definition marks the input as sensitive.
 
 
 <a id="nestedatt--spec--parent_building_blocks"></a>

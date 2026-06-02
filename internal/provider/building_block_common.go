@@ -59,12 +59,14 @@ func buildingBlockUserInputs() schema.MapNestedAttribute {
 		types.MapValueMust(
 			types.ObjectType{
 				AttrTypes: map[string]attr.Type{
-					"value_string":        types.StringType,
-					"value_single_select": types.StringType,
-					"value_multi_select":  types.ListType{ElemType: types.StringType},
-					"value_int":           types.Int64Type,
-					"value_bool":          types.BoolType,
-					"value_code":          types.StringType,
+					"value_string":           types.StringType,
+					"value_single_select":    types.StringType,
+					"value_multi_select":     types.ListType{ElemType: types.StringType},
+					"value_int":              types.Int64Type,
+					"value_bool":             types.BoolType,
+					"value_code":             types.StringType,
+					"value_string_sensitive": types.StringType,
+					"value_code_sensitive":   types.StringType,
 				},
 			},
 			map[string]attr.Value{},
@@ -82,7 +84,23 @@ func buildingBlockUserInputs() schema.MapNestedAttribute {
 			path.MatchRelative().AtParent().AtName("value_int"),
 			path.MatchRelative().AtParent().AtName("value_bool"),
 			path.MatchRelative().AtParent().AtName("value_code"),
+			path.MatchRelative().AtParent().AtName("value_string_sensitive"),
+			path.MatchRelative().AtParent().AtName("value_code_sensitive"),
 		)},
+	}
+
+	inputs.NestedObject.Attributes["value_string_sensitive"] = schema.StringAttribute{
+		MarkdownDescription: "Plaintext value for a sensitive STRING user input. Stored in state but masked in output. " +
+			"Use this instead of `value_string` when the building block definition marks the input as sensitive.",
+		Optional:  true,
+		Sensitive: true,
+	}
+
+	inputs.NestedObject.Attributes["value_code_sensitive"] = schema.StringAttribute{
+		MarkdownDescription: "Plaintext value for a sensitive CODE user input. Stored in state but masked in output. " +
+			"Use this instead of `value_code` when the building block definition marks the input as sensitive.",
+		Optional:  true,
+		Sensitive: true,
 	}
 
 	return inputs
@@ -117,12 +135,14 @@ func buildingBlockOutputs() schema.MapNestedAttribute {
 // Resource models and functions
 
 type buildingBlockUserInputModel struct {
-	ValueString       types.String   `tfsdk:"value_string"`
-	ValueSingleSelect types.String   `tfsdk:"value_single_select"`
-	ValueMultiSelect  []types.String `tfsdk:"value_multi_select"`
-	ValueInt          types.Int64    `tfsdk:"value_int"`
-	ValueBool         types.Bool     `tfsdk:"value_bool"`
-	ValueCode         types.String   `tfsdk:"value_code"`
+	ValueString          types.String   `tfsdk:"value_string"`
+	ValueSingleSelect    types.String   `tfsdk:"value_single_select"`
+	ValueMultiSelect     []types.String `tfsdk:"value_multi_select"`
+	ValueInt             types.Int64    `tfsdk:"value_int"`
+	ValueBool            types.Bool     `tfsdk:"value_bool"`
+	ValueCode            types.String   `tfsdk:"value_code"`
+	ValueStringSensitive types.String   `tfsdk:"value_string_sensitive"`
+	ValueCodeSensitive   types.String   `tfsdk:"value_code_sensitive"`
 }
 
 type buildingBlockOutputModel struct {
