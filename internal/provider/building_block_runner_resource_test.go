@@ -1,6 +1,7 @@
 package provider
 
 import (
+	_ "embed"
 	"regexp"
 	"testing"
 
@@ -15,11 +16,18 @@ import (
 	xknownvalue "github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/xknownvalue"
 )
 
+// runnerPublicKey is a throwaway RSA public key (no private key) used so the backend can parse
+// spec.public_key. The published example uses a truncated placeholder, so tests inject this real key.
+//
+//go:embed testdata/pubkey.txt
+var runnerPublicKey string
+
 func TestAccBuildingBlockRunnerResource(t *testing.T) {
 	t.Parallel()
 
 	t.Run("basic", func(t *testing.T) {
 		config, runnerAddr, _ := testconfig.BuildingBlockRunnerAndWorkspace(t)
+		config = config.WithFirstBlock(testconfig.Descend("spec", "public_key")(testconfig.SetString(runnerPublicKey)))
 		var runnerUuid string
 		var replacedRunnerUuid string
 
@@ -84,6 +92,7 @@ func TestAccBuildingBlockRunnerResource(t *testing.T) {
 
 	t.Run("wif", func(t *testing.T) {
 		config, runnerAddr, _ := testconfig.BuildingBlockRunnerAndWorkspace(t)
+		config = config.WithFirstBlock(testconfig.Descend("spec", "public_key")(testconfig.SetString(runnerPublicKey)))
 		var runnerUuid string
 
 		ApplyAndTest(t, resource.TestCase{
