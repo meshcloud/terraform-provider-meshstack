@@ -50,6 +50,7 @@ resource "meshstack_building_block_definition" "example" {
       manual = {}
     }
 
+    # Output keys must match with inputs, as the backend copies over inputs to outputs for manual implementations.
     outputs = {
       name = {
         display_name    = "Name"
@@ -59,6 +60,11 @@ resource "meshstack_building_block_definition" "example" {
       size = {
         display_name    = "Size"
         type            = "INTEGER"
+        assignment_type = "NONE"
+      }
+      environment = {
+        display_name    = "Environment"
+        type            = "STRING"
         assignment_type = "NONE"
       }
       region = {
