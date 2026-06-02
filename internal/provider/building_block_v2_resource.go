@@ -195,6 +195,12 @@ func (r *buildingBlockV2Resource) Schema(ctx context.Context, req resource.Schem
 				Computed:            true,
 				Default:             booldefault.StaticBool(true),
 			},
+			"purge_on_delete": schema.BoolAttribute{
+				MarkdownDescription: "When `true`, deletion skips the Building Block's configured deletion run and immediately removes it from meshStack. Useful when the Building Block is stuck in a non-final state and cannot be deleted normally. Requires `ADM_BUILDINGBLOCK_DELETE` permission. (Defaults to `false`)",
+				Optional:            true,
+				Computed:            true,
+				Default:             booldefault.StaticBool(false),
+			},
 		},
 	}
 }
@@ -237,6 +243,8 @@ func (r *buildingBlockV2Resource) Create(ctx context.Context, req resource.Creat
 
 	var waitForCompletion bool
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("wait_for_completion"), &waitForCompletion)...)
+	var purgeOnDelete bool
+	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("purge_on_delete"), &purgeOnDelete)...)
 
 	// Check errors after reading plan
 	if resp.Diagnostics.HasError() {
@@ -253,9 +261,10 @@ func (r *buildingBlockV2Resource) Create(ctx context.Context, req resource.Creat
 	}
 	resp.Diagnostics.Append(setStateFromResponseV2(ctx, &resp.State, created)...)
 
-	// ensure that user inputs and wait_for_completion are passed along from the plan
+	// ensure that user inputs, wait_for_completion, and purge_on_delete are passed along from the plan
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("spec").AtName("inputs"), userInputs)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("wait_for_completion"), waitForCompletion)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("purge_on_delete"), purgeOnDelete)...)
 
 	if resp.Diagnostics.HasError() {
 		return
@@ -308,14 +317,14 @@ func (r *buildingBlockV2Resource) Delete(ctx context.Context, req resource.Delet
 		return
 	}
 
-	// Get the wait_for_completion setting from the current state
-	var waitForCompletion types.Bool
-	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("wait_for_completion"), &waitForCompletion)...)
+	// Get the purge_on_delete setting from the current state
+	var purgeOnDelete types.Bool
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("purge_on_delete"), &purgeOnDelete)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	err := r.meshBuildingBlockV2Client.Delete(ctx, uuid)
+	err := r.meshBuildingBlockV2Client.Delete(ctx, uuid, purgeOnDelete.ValueBool())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error deleting building block",
@@ -324,13 +333,10 @@ func (r *buildingBlockV2Resource) Delete(ctx context.Context, req resource.Delet
 		return
 	}
 
-	// Poll for completion if wait_for_completion is true (and not null)
-	if waitForCompletion.ValueBool() {
-		if err := poll.AtMostFor(30*time.Minute, r.meshBuildingBlockV2Client.ReadFunc(uuid)).
-			Until(ctx, (*client.MeshBuildingBlockV2).DeletionSuccessful); err != nil {
-			resp.Diagnostics.AddError("Failed to await building block deletion", err.Error())
-			return
-		}
+	// Always poll for deletion completion so dependent resources (e.g. the BBD) can be cleaned up safely.
+	if err := poll.AtMostFor(30*time.Minute, r.meshBuildingBlockV2Client.ReadFunc(uuid)).
+		Until(ctx, (*client.MeshBuildingBlockV2).DeletionSuccessful); err != nil {
+		resp.Diagnostics.AddError("Failed to await building block deletion", err.Error())
 	}
 }
 

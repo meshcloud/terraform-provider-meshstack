@@ -83,7 +83,7 @@ type MeshBuildingBlockV2Client interface {
 	Read(ctx context.Context, uuid string) (*MeshBuildingBlockV2, error)
 	ReadFunc(uuid string) func(ctx context.Context) (*MeshBuildingBlockV2, error)
 	Create(ctx context.Context, bb *MeshBuildingBlockV2Create) (*MeshBuildingBlockV2, error)
-	Delete(ctx context.Context, uuid string) error
+	Delete(ctx context.Context, uuid string, purge bool) error
 }
 
 type meshBuildingBlockV2Client struct {
@@ -108,7 +108,10 @@ func (c meshBuildingBlockV2Client) Create(ctx context.Context, bb *MeshBuildingB
 	return c.meshObject.Post(ctx, bb)
 }
 
-func (c meshBuildingBlockV2Client) Delete(ctx context.Context, uuid string) error {
+func (c meshBuildingBlockV2Client) Delete(ctx context.Context, uuid string, purge bool) error {
+	if purge {
+		return c.meshObject.Purge(ctx, uuid)
+	}
 	return c.meshObject.Delete(ctx, uuid)
 }
 
