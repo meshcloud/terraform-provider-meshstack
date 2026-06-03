@@ -87,7 +87,7 @@ Read-Only:
 Required:
 
 - `display_name` (String) Human-readable display name of the runner.
-- `implementation_type` (String) Type of building block implementation this runner handles. One of: `TERRAFORM`, `GITHUB_WORKFLOW`, `GITLAB_PIPELINE`, `AZURE_DEVOPS_PIPELINE`, `MANUAL`.
+- `implementation_type` (String) Type of building block implementation this runner handles. One of: `TERRAFORM`, `GITHUB_WORKFLOW`, `GITLAB_PIPELINE`, `AZURE_DEVOPS_PIPELINE`, `MANUAL`, `ALL`. Use `ALL` to handle building blocks of any implementation type.
 - `public_key` (String) RSA public key in PEM format (`BEGIN PUBLIC KEY`) or an X.509 certificate (`BEGIN CERTIFICATE`). meshStack uses this key to encrypt secrets sent to the runner.
 
 Optional:
