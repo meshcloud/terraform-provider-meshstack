@@ -6,11 +6,14 @@ BREAKING CHANGES:
 - `meshstack_building_block_v2`: The `spec.inputs` and `status.outputs` fields have changed from arrays to maps in the upstream API.
   The internal client representation has been updated accordingly. No Terraform schema changes are required, but this requires meshStack 2026.23.0 or later.
 - `meshstack_building_block_v2`: The upstream API handles sensitive inputs as embedded secrets to align with the Building Block Definition API.
-  The internal client representation has been updated accordingly. No Terraform schema changes are required, but this requires meshStack 2026.23.0 or later.
+  Added `value_string_sensitive` and `value_code_sensitive` input attributes for
+  setting sensitive USER_INPUT values. The plaintext is sent to meshStack as an embedded secret and is stored masked
+  in Terraform state. Use these instead of `value_string`/`value_code` when the building block definition marks the
+  input as sensitive. See the [known issue](https://feedback.meshcloud.io/knownissues/p/meshbuildingblock-api-update-requires-terraform-provider-upgrade-to-v0210)
+  for migration guidance of existing configuration.
 
 FEATURES:
 - `meshstack_building_block_v2`: Added an optional `purge_on_delete` attribute (defaults to `false`). When set to `true`, deletion purges the Building Block from meshStack without running its configured deletion run, which is useful when a Building Block is stuck in a non-final state. Requires the `ADM_BUILDINGBLOCK_DELETE` permission.
-- `meshstack_building_block_v2`: Added `value_string_sensitive` and `value_code_sensitive` input attributes for setting sensitive USER_INPUT values. The plaintext is sent to meshStack as an embedded secret and is stored masked in Terraform state. Use these instead of `value_string`/`value_code` when the building block definition marks the input as sensitive.
 
 ## v0.20.13
 
