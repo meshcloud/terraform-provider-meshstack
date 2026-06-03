@@ -15,6 +15,7 @@ const (
 	MeshBuildingBlockRunnerImplementationTypeGitlabPipeline      MeshBuildingBlockRunnerImplementationType = "GITLAB_PIPELINE"
 	MeshBuildingBlockRunnerImplementationTypeAzureDevopsPipeline MeshBuildingBlockRunnerImplementationType = "AZURE_DEVOPS_PIPELINE"
 	MeshBuildingBlockRunnerImplementationTypeManual              MeshBuildingBlockRunnerImplementationType = "MANUAL"
+	MeshBuildingBlockRunnerImplementationTypeAll                 MeshBuildingBlockRunnerImplementationType = "ALL"
 )
 
 var MeshBuildingBlockRunnerImplementationTypes = []string{
@@ -23,6 +24,7 @@ var MeshBuildingBlockRunnerImplementationTypes = []string{
 	string(MeshBuildingBlockRunnerImplementationTypeGitlabPipeline),
 	string(MeshBuildingBlockRunnerImplementationTypeAzureDevopsPipeline),
 	string(MeshBuildingBlockRunnerImplementationTypeManual),
+	string(MeshBuildingBlockRunnerImplementationTypeAll),
 }
 
 type BuildingBlockRunnerRef struct {
