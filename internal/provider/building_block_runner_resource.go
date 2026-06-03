@@ -158,7 +158,7 @@ func (r *buildingBlockRunnerResource) Schema(_ context.Context, _ resource.Schem
 						Required:            true,
 					},
 					"implementation_type": schema.StringAttribute{
-						MarkdownDescription: "Type of building block implementation this runner handles. One of: `TERRAFORM`, `GITHUB_WORKFLOW`, `GITLAB_PIPELINE`, `AZURE_DEVOPS_PIPELINE`, `MANUAL`.",
+						MarkdownDescription: "Type of building block implementation this runner handles. One of: `TERRAFORM`, `GITHUB_WORKFLOW`, `GITLAB_PIPELINE`, `AZURE_DEVOPS_PIPELINE`, `MANUAL`, `ALL`. Use `ALL` to handle building blocks of any implementation type.",
 						Required:            true,
 						PlanModifiers: []planmodifier.String{
 							// TODO: Switch to in-place update once meshStack supports updating implementation type.
