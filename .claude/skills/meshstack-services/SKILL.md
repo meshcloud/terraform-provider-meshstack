@@ -44,10 +44,10 @@ nohup ./gradlew :meshfed:replicator:replicator-api:start --console=plain > /tmp/
 
 ### 2b. Manual block runner (from the `building-block-runner` repo)
 
-The manual block runner was **extracted out of `meshfed-release`** into the separate
-`building-block-runner` repo (it may sit relatively at `../building-block-runner`). Start it
-from there — **not** via the old `meshfed-release` `:buildingblocks:manual-block-runner:start`
-task, which is being removed.
+The manual block runner has been **moved out of `meshfed-release`** into the separate
+`building-block-runner` repo (it may sit relatively at `../building-block-runner`); the old
+`meshfed-release` `:buildingblocks:manual-block-runner:start` task no longer exists. Start the
+runner from the `building-block-runner` repo.
 
 ```bash
 cd ../building-block-runner   # extracted from meshfed-release

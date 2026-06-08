@@ -7,5 +7,6 @@ Deeper, on-demand procedures live as skills under `.claude/skills/`:
 - **`new-resource-datasource`** — add a resource/data source + its TestAcc test, with code exemplars.
 - **`github-ci`** — GitHub Actions workflow conventions and action SHA-pinning.
 - **`modern-go`** — Go 1.26 `new(expression)` and the codebase's generics.
+- **`changelog-management`** — pick the next version and maintain `CHANGELOG.md`.
 - **`meshstack-services`** — bring up a clean local meshStack backend (the legacy `meshfed-release` repo).
 - **`acceptance-testing`** — run and debug the acceptance test suite.
