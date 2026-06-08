@@ -1,7 +1,12 @@
 # AGENTS.md — meshStack Terraform Provider
 
 Conventions for working in this repo. This is the single source of truth for both AI agents
-and humans. `AGENTS_extra.md` holds verbose examples and reference material trimmed from here.
+and humans. Deeper, on-demand procedures live in skills under `.claude/skills/` and are
+referenced from the relevant sections below:
+- **`new-resource-datasource`** — end-to-end walkthrough for adding a resource/data source + its TestAcc test.
+- **`github-ci`** — GitHub Actions workflow conventions and action SHA-pinning.
+- **`modern-go`** — Go 1.26 `new(expression)` and the codebase's generics.
+- **`meshstack-services`** / **`acceptance-testing`** — bring up the local backend and run/debug the suite.
 
 Official Terraform Provider for managing meshStack resources via the meshObject API
 (`/api/meshobjects`). Standard [terraform-plugin-framework](https://github.com/hashicorp/terraform-plugin-framework) v1.
@@ -99,8 +104,8 @@ Builder rules:
 Modifier preference order: `SetString`/`SetValue` (literals) → `SetAddr(addr, "metadata", "name")`
 (resource references) → `SetRawExpr(format, args...)` (complex HCL, last resort). For
 `SetRawExpr`, pass `Traversal` values directly as `%s` args (it calls `fmt.Sprintf` internally —
-do not wrap), and use raw backtick strings when the expression contains HCL quotes. See
-`AGENTS_extra.md` for worked examples and the full `SetRawExpr`/`Descend` style rules.
+do not wrap), and use raw backtick strings when the expression contains HCL quotes. See the
+**`new-resource-datasource`** skill for worked examples and the full walkthrough.
 
 Data source tests must reference a **resource attribute** (so Terraform infers the dependency),
 and should fluent-chain `.Config(t).WithFirstBlock(t, ...).Join(...)` in one expression:
@@ -237,17 +242,14 @@ Verify `CHANGELOG.md` has entries for all changes (features, fixes, breaking cha
 
 ## CI/CD & action pinning
 
-Workflows follow the HashiCorp terraform-provider-scaffolding-framework template (no Terraform
-version matrix; `golangci-lint` runs in its own `golangci` job).
-
-- **Pin every action to a full 40-char SHA**, with a version comment: `@<sha> # v1.2.3`.
-  Never use mutable version tags.
-- To update: `gh api repos/<owner>/<repo>/releases/latest --jq '.tag_name'`, then
-  `gh api repos/<owner>/<repo>/git/refs/tags/<tag> --jq '.object.sha'`.
-
-Full action table and gotestsum/coverage notes are in `AGENTS_extra.md`.
+GitHub Actions workflows pin every action to a full 40-char SHA with a `# vX.Y.Z` comment —
+never mutable tags. Full conventions (jobs, update procedure, action table, gotestsum coverage)
+are in the **`github-ci`** skill.
 
 ## Adding a new resource
+
+See the **`new-resource-datasource`** skill for the full walkthrough (implementation, example
+`.tf`, testconfig builder, and a good TestAcc test) with code exemplars. In short:
 
 1. Create `*_resource.go` in `internal/provider/` with CRUD + Schema methods.
 2. Add API client methods in `client/`.
@@ -270,23 +272,10 @@ resp.Schema = schema.Schema{ MarkdownDescription: "Describe the resource." + pre
 ## Computed-only output fields (TF model struct embedding)
 
 When a resource/data source needs a computed output **derived from API response fields** (not
-stored in the client struct), use a local model struct that embeds/holds the client fields plus
-the extra computed field — do **not** modify client types or call `SetAttribute` after
-`generic.Set`.
-
-```go
-type myResourceModel struct {
-    Metadata client.MeshFooMetadata `tfsdk:"metadata"`
-    Spec     client.MeshFooSpec     `tfsdk:"spec"`
-    MyOutput string                 `tfsdk:"my_output"` // derived
-}
-func myResourceModelFromDto(p *client.MeshFoo) myResourceModel { /* populate, derive MyOutput */ }
-```
-
-Use the model struct for `generic.Set`/`generic.Get`; extract embedded client fields explicitly
-when calling the API (`client.MeshFoo{Metadata: model.Metadata, Spec: model.Spec}`). The same
-struct can be shared between resource and data source if the schema shape matches. Do **not** add
-`json:"-"` fields to client structs.
+stored in the client struct), use a local model struct that holds the client fields plus the
+extra computed field — do **not** modify client types or call `SetAttribute` after `generic.Set`.
+Use the model struct for `generic.Set`/`generic.Get`; extract the embedded client fields when
+calling the API. Full pattern and example in the **`new-resource-datasource`** skill.
 
 ## Client receiver & data structure rules
 
@@ -295,13 +284,10 @@ struct can be shared between resource and data source if the schema shape matche
 - **Pointers + `omitempty`** only for fields actually nullable in the backend API; non-nullable
   fields use value types without `omitempty`.
 
-## Go 1.26 `new(value)`
+## Modern Go (Go 1.26 + generics)
 
-`new` accepts an expression, not just a type. Prefer `new(value)` over helper functions like
-`ptr.To` (removed):
-
-```go
-s := new("hello")              // *string
-n := new(int64(1))             // *int64
-p := new(fmt.Sprintf("x:%s", h))
-```
+`go.mod` targets Go 1.26. Prefer the `new(expression)` builtin for inline pointers
+(`new("hello")`, `new(int64(1))`, `new(fmt.Sprintf(...))`) over removed helpers like `ptr.To`.
+Reuse the codebase's generics (`MeshObjectClient[M]`, mock `Store[M]`, `Variant[X,Y]`,
+`Pollable[T]`, and the `generic.Set`/`generic.Get`/`ValueTo`/`ValueFrom` TF conversion layer)
+rather than `any`/reflection. See the **`modern-go`** skill for details and real examples.
