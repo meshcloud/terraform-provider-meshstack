@@ -131,6 +131,15 @@ ending in `-preview`) must append the standard disclaimer to their `MarkdownDesc
 resp.Schema = schema.Schema{ MarkdownDescription: "Describe the resource." + previewDisclaimer() }
 ```
 
+**Cross-repo compatibility handshake.** When a change here is driven by a **breaking** change to a
+`-preview` meshObject API (renamed/removed field, changed type, changed required/optional), it must
+be coordinated with the backend in `meshfed-release`. That repo's `terraform-provider-compat` skill
+requires (a) a matching provider PR to land alongside the API change — otherwise already-released
+provider versions silently break against the new backend — and (b) a minimum-compatible-version
+entry in `TerraformProviderVersionRequirements.kt` (keyed by the media type in
+`MeshHalMediaTypes.kt`), so meshStack can surface a clear "needs provider ≥ vX.Y.Z" message instead
+of a cryptic failure. Communicate the provider version carrying the adaptation back to that side.
+
 ## Computed-only output fields (TF model struct embedding)
 
 When a resource/data source needs a computed output **derived from API response fields** (not
