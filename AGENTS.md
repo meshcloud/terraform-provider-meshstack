@@ -6,6 +6,7 @@ referenced from the relevant sections below:
 - **`new-resource-datasource`** — end-to-end walkthrough for adding a resource/data source + its TestAcc test.
 - **`github-ci`** — GitHub Actions workflow conventions and action SHA-pinning.
 - **`modern-go`** — Go 1.26 `new(expression)` and the codebase's generics.
+- **`changelog-management`** — pick the next version and maintain `CHANGELOG.md`.
 - **`meshstack-services`** / **`acceptance-testing`** — bring up the local backend and run/debug the suite.
 
 Official Terraform Provider for managing meshStack resources via the meshObject API
@@ -238,7 +239,10 @@ directory (e.g. `clientmock` is test-only; use `hclog`, never the `log` package)
 
 ## Code review
 
-Verify `CHANGELOG.md` has entries for all changes (features, fixes, breaking changes).
+Verify `CHANGELOG.md` has entries for all user-facing changes (features, fixes, breaking
+changes). The top section always names the concrete anticipated next version — never
+"Unreleased"; `main` is always ready to tag. See the **`changelog-management`** skill for the
+versioning policy and format.
 
 ## CI/CD & action pinning
 
