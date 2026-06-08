@@ -1,7 +1,7 @@
 # AGENTS.md — meshStack Terraform Provider
 
 Conventions for working in this repo. This is the single source of truth for both AI agents
-and humans. Deeper, on-demand procedures live in skills under `.claude/skills/` and are
+and humans. Deeper, on-demand procedures live in skills under `.agents/skills/` and are
 referenced from the relevant sections below:
 - **`new-resource-datasource`** — end-to-end walkthrough for adding a resource/data source + its TestAcc test.
 - **`github-ci`** — GitHub Actions workflow conventions and action SHA-pinning.
