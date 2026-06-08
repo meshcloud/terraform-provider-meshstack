@@ -5,9 +5,10 @@ description: End-to-end walkthrough for adding a new meshStack resource or data 
 
 # Adding a resource / data source (with a good TestAcc test)
 
-This is the procedure for adding a new meshStack resource or data source end-to-end. For the
-concise testconfig API, builder rules, and builder-chain reference, see **`AGENTS.md`** (Testing
-section) — this skill is the walkthrough plus worked examples and the code exemplars to copy.
+The end-to-end procedure for adding a new meshStack resource or data source. This file is the
+walkthrough; load the companion **`REFERENCE.md`** for the full `testconfig` `Config` API, builder
+rules, the builder-chain table, the `xknownvalue` state-check helpers, and complete worked code
+examples (builder, TestAcc test, data source test, computed-only field).
 
 ## Golden-path exemplars (copy these)
 
@@ -34,110 +35,34 @@ Mid-complexity, clean, and complete — prefer these over the large `building_bl
    `status`. See `project_resource.go`.
 2. **`client/`** — add the API client methods (typed via `MeshObjectClient[M]`).
 3. **`provider.go`** — register the resource/data source in the provider's lists.
-4. **`examples/resources/meshstack_<name>/resource.tf`** — only the single resource block;
-   put any dependencies (data sources, providers) in `test-support_*.tf`. Never hardcode
-   identifiers — reference data sources / resources (see `AGENTS.md` → Dependency-first examples).
+4. **`examples/resources/meshstack_<name>/resource.tf`** — only the single resource block; put
+   any dependencies (data sources, providers) in `test-support_*.tf`. Never hardcode
+   identifiers — reference data sources / resources (see `REFERENCE.md` → Dependency-first).
 5. **`internal/provider/acctest/testconfig/build_<name>.go`** — a public builder (see below).
 6. **`internal/provider/<name>_resource_test.go`** — a `TestAcc<Name>` test (see below).
 7. `task generate` (docs) and update `CHANGELOG.md`.
 
 ## The builder
 
-Public function in `testconfig`, named without `Build`/`Config`, `t` first, named returns
-(`config` first), resource-under-test is the `.Join` receiver. Worked example:
-
-```go
-// internal/provider/acctest/testconfig/build_project.go
-func Project(t *testing.T, workspaceAddr Traversal) (config Config, projectAddr Traversal) {
-    t.Helper()
-    projectName := "test-proj-" + acctest.RandString(8)
-    tagConfig, tagDefinitionAddr, _ := TagDefinition(t, "meshProject")
-    paymentMethodConfig, paymentMethodAddr := PaymentMethod(t, workspaceAddr)
-    return Resource{Name: "project"}.Config(t).WithFirstBlock(
-        ExtractAddress(&projectAddr),
-        OwnedByWorkspace(workspaceAddr),
-        Descend("metadata", "name")(SetString(projectName)),
-        Descend("spec")(
-            Descend("payment_method_identifier")(SetAddr(paymentMethodAddr, "metadata", "name")),
-            Descend("tags")(SetRawExpr(`{(%s) = ["tag-value1", "tag-value2"]}`, tagDefinitionAddr.Join("spec", "key"))),
-        ),
-    ).Join(tagConfig, paymentMethodConfig), projectAddr
-}
-```
-
-Provide a `*AndWorkspace` convenience wrapper when a single resource + its workspace is commonly
-needed (e.g. `ProjectAndWorkspace`). Modifier preference: `SetString`/`SetValue` → `SetAddr` →
-`SetRawExpr` (last resort). `SetRawExpr` calls `fmt.Sprintf` internally (don't wrap), takes
-`Traversal` args via `%s`, and uses raw backtick strings when the HCL contains quotes. `Descend`
-nests only when a parent has multiple children — flatten single-child chains.
+A public function in `testconfig`, named without `Build`/`Config`, `t` first, named returns
+(`config` first), with the resource-under-test as the `.Join` receiver and dependencies as
+arguments. Modifier preference: `SetString`/`SetValue` → `SetAddr` → `SetRawExpr` (last resort).
+`Descend` nests only when a parent has multiple children — flatten single-child chains. Provide a
+`*AndWorkspace` wrapper when a single resource + its workspace is commonly needed. Full rules and
+a worked `build_project.go` are in `REFERENCE.md`.
 
 ## The TestAcc test
 
 A good test is multi-step (create → update → import), uses the builder, and asserts with
-`plancheck` (the planned action) + `statecheck`/`xknownvalue` (resulting state):
-
-```go
-func TestAccProject(t *testing.T) {
-    config, resourceAddress, workspaceAddr := testconfig.ProjectAndWorkspace(t)
-    updateConfig := config.WithFirstBlock(
-        testconfig.Descend("spec", "display_name")(testconfig.SetString("Updated Display Name")),
-    )
-    ApplyAndTest(t, resource.TestCase{
-        Steps: []resource.TestStep{
-            { // create
-                Config: config.String(),
-                ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
-                    plancheck.ExpectResourceAction(resourceAddress.String(), plancheck.ResourceActionCreate)}},
-                ConfigStateChecks: []statecheck.StateCheck{
-                    statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("metadata").AtMapKey("name"), xknownvalue.NotEmptyString()),
-                    statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("My Project's Display Name")),
-                },
-            },
-            { // update
-                Config: updateConfig.String(),
-                ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
-                    plancheck.ExpectResourceAction(resourceAddress.String(), plancheck.ResourceActionUpdate)}},
-                ConfigStateChecks: []statecheck.StateCheck{
-                    statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("Updated Display Name"))},
-            },
-            { // import
-                ResourceName: resourceAddress.String(), ImportState: true, ImportStateKind: resource.ImportBlockWithID,
-                ImportStateIdFunc: func(s *terraform.State) (string, error) {
-                    rs := s.RootModule().Resources[resourceAddress.String()]
-                    ws := s.RootModule().Resources[workspaceAddr.String()]
-                    return ws.Primary.Attributes["metadata.name"] + "." + rs.Primary.Attributes["metadata.name"], nil
-                },
-            },
-        },
-    })
-}
-```
-
-Use `xknownvalue` helpers over raw `knownvalue` where they fit: `NotEmptyString()` (non-blank,
-optional extra assertions), `Ref(addr, kind, &uuidOut)` (asserts a `ref` block's kind + captures
-a stable uuid across steps), `MapExact{...}` (diff-friendly map assertion).
+`plancheck` (the planned action) + `statecheck`/`xknownvalue` (resulting state). Prefer the
+`xknownvalue` helpers (`NotEmptyString`, `Ref`, `MapExact`) over raw `knownvalue` where they fit.
+See `REFERENCE.md` for the full `TestAccProject` example.
 
 ## Data source test
 
 Reference a **resource attribute** (so Terraform infers the dependency — never `depends_on`) and
-fluent-chain in one expression:
-
-```go
-func TestAccProjectDataSource(t *testing.T) {
-    projectConfig, projectAddr, workspaceAddr := testconfig.ProjectAndWorkspace(t)
-    dataSourceAddress := testconfig.Traversal{"data.meshstack_project", "example"}
-    config := testconfig.DataSource{Name: "project"}.Config(t).WithFirstBlock(
-        testconfig.Descend("metadata")(
-            testconfig.Descend("name")(testconfig.SetAddr(projectAddr, "metadata", "name")),
-            testconfig.Descend("owned_by_workspace")(testconfig.SetAddr(workspaceAddr, "metadata", "name")),
-        )).Join(projectConfig)
-    ApplyAndTest(t, resource.TestCase{Steps: []resource.TestStep{{
-        Config: config.String(),
-        ConfigStateChecks: []statecheck.StateCheck{
-            statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("My Project's Display Name"))},
-    }}})
-}
-```
+fluent-chain `.Config(t).WithFirstBlock(...).Join(...)` in one expression. Full example in
+`REFERENCE.md`.
 
 ## Multiple example files → named subtests
 
@@ -160,29 +85,12 @@ func TestAccIntegrationResource(t *testing.T) {
 }
 ```
 
-## Computed-only output fields (TF model struct embedding)
+## Computed-only output fields
 
 When a resource/data source needs a computed output **derived from API response fields** (not
-stored on the client struct), use a local model struct — do **not** modify client types or call
-`SetAttribute` after `generic.Set`:
-
-1. Local model struct with the client's `tfsdk:`-tagged fields plus the extra computed field.
-2. A `…FromDto` helper that populates and derives it.
-3. Use the model struct for `generic.Set`/`generic.Get`; extract embedded client fields when
-   calling the API (`client.MeshFoo{Metadata: model.Metadata, Spec: model.Spec}`).
-4. Share the struct between resource and data source if the schema shape matches.
-5. Do **not** add `json:"-"` fields to client structs.
-
-```go
-type myResourceModel struct {
-    Metadata client.MeshFooMetadata `tfsdk:"metadata"`
-    Spec     client.MeshFooSpec     `tfsdk:"spec"`
-    MyOutput string                 `tfsdk:"my_output"` // derived
-}
-func myResourceModelFromDto(p *client.MeshFoo) myResourceModel {
-    return myResourceModel{Metadata: p.Metadata, Spec: p.Spec, MyOutput: p.Metadata.Name + "." + p.Spec.SomeName}
-}
-```
+stored on the client struct), use a local model struct holding the client's `tfsdk:`-tagged
+fields plus the derived field — do **not** modify client types or call `SetAttribute` after
+`generic.Set`. Full pattern and example in `REFERENCE.md`.
 
 ## Running it
 
