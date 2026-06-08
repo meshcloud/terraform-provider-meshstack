@@ -70,8 +70,10 @@ func (model buildingBlockDefinitionVersionSpec) ToClientDto(buildingBlockDefinit
 		Uuid: buildingBlockDefinitionUuid,
 	}
 	if dto.RunnerRef == nil {
-		implementationType := dto.Implementation.InferTypeFromNonNilField()
-		dto.RunnerRef = getSharedBuildingBlockRunnerRef(implementationType)
+		dto.RunnerRef = &client.BuildingBlockRunnerRef{
+			Kind: client.MeshObjectKind.BuildingBlockRunner,
+			Uuid: SharedBuildingBlockRunnerUuid,
+		}
 	}
 	if model.Draft {
 		dto.State = client.MeshBuildingBlockDefinitionVersionStateDraft.Ptr()

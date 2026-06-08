@@ -26,7 +26,7 @@ resource "meshstack_integration" "example_github" {
         base_url        = "https://github.com"
         app_id          = "123456"
         app_private_key = { secret_value = "-----BEGIN RSA PRIVATE KEY-----\nMOCK_KEY_CONTENT\n-----END RSA PRIVATE KEY-----" }
-        runner_ref      = { uuid = "dc8c57a1-823f-4e96-8582-0275fa27dc7b" } # Optional, by default, pre-defined shared runner is used
+        runner_ref      = { uuid = "98520496-627d-43e6-82da-ce499179ff3f" } # Optional, by default, pre-defined shared runner is used
       }
     }
   }

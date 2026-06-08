@@ -46,7 +46,7 @@ resource "meshstack_building_block_definition" "example_01_terraform" {
     # Optional: Specify runner if necessary (otherwise, shared runner is used)
     runner_ref = {
       kind = "meshBuildingBlockRunner"
-      uuid = "66ddc814-1e69-4dad-b5f1-3a5bce51c01f"
+      uuid = "98520496-627d-43e6-82da-ce499179ff3f"
     }
 
     only_apply_once_per_tenant = true     # Optional: defaults to false

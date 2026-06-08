@@ -420,14 +420,6 @@ func checkBBDSpecMinimal(expectedDescription string) knownvalue.Check {
 }
 
 func checkBuildingBlockVersionSpec(exampleSuffix string, expectedState enum.Entry[client.MeshBuildingBlockDefinitionVersionState], expectedNumber int64) knownvalue.Check {
-	exampleSuffixesToImplementationType := map[string]enum.Entry[client.MeshBuildingBlockImplementationType]{
-		"01_terraform":             client.MeshBuildingBlockImplementationTypeTerraform,
-		"02_github_workflows":      client.MeshBuildingBlockImplementationTypeGithubWorkflows,
-		"03_manual":                client.MeshBuildingBlockImplementationTypeManual,
-		"04_azure_devops_pipeline": client.MeshBuildingBlockImplementationTypeAzureDevOpsPipeline,
-		"05_gitlab_pipeline":       client.MeshBuildingBlockImplementationTypeGitlabPipeline,
-	}
-
 	checkInputs, checkImplementation, checkOutputs := checksForImplementation(exampleSuffix)
 	expectedDeletionMode := "DELETE"
 	if exampleSuffix == "02_github_workflows" {
@@ -441,7 +433,7 @@ func checkBuildingBlockVersionSpec(exampleSuffix string, expectedState enum.Entr
 		"deletion_mode":              knownvalue.StringExact(expectedDeletionMode),
 		"runner_ref": xknownvalue.MapExact(map[string]knownvalue.Check{
 			"kind": knownvalue.StringExact("meshBuildingBlockRunner"),
-			"uuid": knownvalue.StringExact(SharedBuildingBlockRunnerUuids[exampleSuffixesToImplementationType[exampleSuffix]]),
+			"uuid": knownvalue.StringExact(SharedBuildingBlockRunnerUuid),
 		}),
 		"dependency_refs": knownvalue.SetSizeExact(0),
 		"inputs":          checkInputs,

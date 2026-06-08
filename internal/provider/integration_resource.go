@@ -9,7 +9,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
-	"github.com/meshcloud/terraform-provider-meshstack/client/types/enum"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/types/generic"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/types/secret"
 )
@@ -47,25 +46,22 @@ type integrationModel struct {
 	} `tfsdk:"ref"`
 }
 
-var IntegrationConfigTypeToBBDImplType = map[enum.Entry[client.MeshIntegrationConfigType]]enum.Entry[client.MeshBuildingBlockImplementationType]{
-	client.MeshIntegrationConfigTypeGithub:      client.MeshBuildingBlockImplementationTypeGithubWorkflows,
-	client.MeshIntegrationConfigTypeGitlab:      client.MeshBuildingBlockImplementationTypeGitlabPipeline,
-	client.MeshIntegrationConfigTypeAzureDevops: client.MeshBuildingBlockImplementationTypeAzureDevOpsPipeline,
-}
-
 func (model integrationModel) ToClientDto() client.MeshIntegration {
-	setRunnerRefIfNotNil := func(configType enum.Entry[client.MeshIntegrationConfigType], runnerRef **client.BuildingBlockRunnerRef) {
+	setRunnerRefIfNil := func(runnerRef **client.BuildingBlockRunnerRef) {
 		if *runnerRef == nil {
-			*runnerRef = getSharedBuildingBlockRunnerRef(IntegrationConfigTypeToBBDImplType[configType])
+			*runnerRef = &client.BuildingBlockRunnerRef{
+				Kind: client.MeshObjectKind.BuildingBlockRunner,
+				Uuid: SharedBuildingBlockRunnerUuid,
+			}
 		}
 	}
-	switch configType := model.Spec.Config.InferTypeFromNonNilField(); configType {
+	switch model.Spec.Config.InferTypeFromNonNilField() {
 	case client.MeshIntegrationConfigTypeGithub:
-		setRunnerRefIfNotNil(configType, &model.Spec.Config.Github.RunnerRef)
+		setRunnerRefIfNil(&model.Spec.Config.Github.RunnerRef)
 	case client.MeshIntegrationConfigTypeGitlab:
-		setRunnerRefIfNotNil(configType, &model.Spec.Config.Gitlab.RunnerRef)
+		setRunnerRefIfNil(&model.Spec.Config.Gitlab.RunnerRef)
 	case client.MeshIntegrationConfigTypeAzureDevops:
-		setRunnerRefIfNotNil(configType, &model.Spec.Config.AzureDevops.RunnerRef)
+		setRunnerRefIfNil(&model.Spec.Config.AzureDevops.RunnerRef)
 	}
 	return model.MeshIntegration
 }

@@ -1,3 +1,10 @@
+# v0.21.1
+
+FIXES:
+- When no `runner_ref` is provided, the new shared building block runner UUID `98520496-627d-43e6-82da-ce499179ff3f` is used which is suitable for all implementation types.
+  Existing `building_block_definition` resources will see a plan change addressing this migration to a single shared runner. 
+  Using the old shared runner UUIDs is deprecated but handled gracefully by the API.
+
 # v0.21.0
 
 Requires meshStack 2026.23.0 or later (previously 2026.22.0).

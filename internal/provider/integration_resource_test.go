@@ -210,7 +210,7 @@ func checkIntegrationConfig(exampleSuffix string) knownvalue.Check {
 					"secret_version": xknownvalue.NotEmptyString(),
 				}),
 				"runner_ref": xknownvalue.MapExact(map[string]knownvalue.Check{
-					"uuid": knownvalue.StringExact("dc8c57a1-823f-4e96-8582-0275fa27dc7b"),
+					"uuid": knownvalue.StringExact(SharedBuildingBlockRunnerUuid),
 					"kind": knownvalue.StringExact("meshBuildingBlockRunner"),
 				}),
 			}),
@@ -229,7 +229,7 @@ func checkIntegrationConfig(exampleSuffix string) knownvalue.Check {
 					"secret_version": xknownvalue.NotEmptyString(),
 				}),
 				"runner_ref": xknownvalue.MapExact(map[string]knownvalue.Check{
-					"uuid": knownvalue.StringExact("05cfa85f-2818-4bdd-b193-620e0187d7de"),
+					"uuid": knownvalue.StringExact(SharedBuildingBlockRunnerUuid),
 					"kind": knownvalue.StringExact("meshBuildingBlockRunner"),
 				}),
 			}),
@@ -242,7 +242,7 @@ func checkIntegrationConfig(exampleSuffix string) knownvalue.Check {
 			"gitlab": xknownvalue.MapExact(map[string]knownvalue.Check{
 				"base_url": knownvalue.StringExact("https://gitlab.com"),
 				"runner_ref": xknownvalue.MapExact(map[string]knownvalue.Check{
-					"uuid": knownvalue.StringExact("f4f4402b-f54d-4ab9-93ae-c07e997041e9"),
+					"uuid": knownvalue.StringExact(SharedBuildingBlockRunnerUuid),
 					"kind": knownvalue.StringExact("meshBuildingBlockRunner"),
 				}),
 			}),
