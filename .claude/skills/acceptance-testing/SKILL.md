@@ -45,7 +45,7 @@ grep -E -- '--- (PASS|FAIL|SKIP)' /tmp/acc-tests.log
 
 | Symptom                          | Likely cause                                            |
 |----------------------------------|---------------------------------------------------------|
-| BB stuck `PENDING`               | block-coordinator or manual-block-runner not running    |
+| BB stuck `PENDING`               | block-coordinator or manual-block-runner not running, or the manual runner started with the wrong `RUNNER_UUID` (must match `SharedBuildingBlockRunnerUuid`, `98520496-…`) |
 | Tenant delete `400`              | replicator not running, or mandatory BBs still pending  |
 | `409 BuildingBlockConflict` on delete | BB not in a final state                            |
 | `409 Conflict` (other)           | stale data from a previous run (tag definitions, etc.)  |
