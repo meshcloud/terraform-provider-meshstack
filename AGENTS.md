@@ -74,160 +74,18 @@ TF_ACC=1 go test -count=1 -parallel 4 -timeout 600s ./internal/provider/ 2>&1 | 
 To bring up the backend services, see the **`meshstack-services`** skill; to run/debug the
 full acceptance suite, see the **`acceptance-testing`** skill.
 
-### Multiple example files → explicit subtests
+### Acceptance test authoring (testconfig, builders, state checks)
 
-When a resource has multiple suffixed example files (`resource_01_github.tf`,
-`resource_02_azure_devops.tf`), each gets its own **named** `t.Run()` subtest — never collapse
-into a generic loop. The top-level function calls `t.Parallel()`; each `ApplyAndTest` also
-calls `t.Parallel()` internally.
+Adding or reworking a resource/data source means writing a `testconfig` HCL builder, a TestAcc
+test, and example `.tf` files. That reference is **task-specific, not always-on context**, so it
+lives in the **`new-resource-datasource`** skill: `SKILL.md` is the walkthrough; its companion
+`REFERENCE.md` holds the full `testconfig` `Config` API, the builder rules, the builder-chain
+table, the `xknownvalue` state-check helpers, and the dependency-first example conventions.
 
-### Config builder pattern (`internal/provider/acctest/testconfig`)
-
-Each resource has a public builder in `internal/provider/acctest/testconfig/build_<resource>.go`
-that composes `Config` objects from embedded example HCL. `Config` wraps `*hclwrite.File` and is
-**immutable** — every method returns a new `Config`; `WithFirstBlock` clones internally (there
-is no `Clone()`).
-
-Import alias: `import testconfig "github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"`.
-
-Builder rules:
-- Named without `Build` prefix / `Config` suffix: `Workspace`, `Project`, `BBDTerraform`.
-- Take `t *testing.T` as the **first** param; pass `t` to all testconfig calls.
-- Use **named return values**; the first return is always `config testconfig.Config`.
-- Full variable names, no abbreviations (`workspaceConfig`, not `wsConfig`).
-- The **resource under test** is the **receiver** of `.Join()`; dependencies are arguments.
-  Call `config.Join(A, B)`, not chained `.Join(A).Join(B)`.
-- Declare all `Traversal` vars upfront with `var` before `WithFirstBlock` calls that populate them.
-- Return inline (`return expr.Join(...), addr`); consolidate all modifiers into a single `WithFirstBlock`.
-- Use explicit version suffixes in file names when multiple versions exist
-  (`build_building_block_v1.go`, `build_tenant_v4.go`); omit when only one version exists.
-
-Modifier preference order: `SetString`/`SetValue` (literals) → `SetAddr(addr, "metadata", "name")`
-(resource references) → `SetRawExpr(format, args...)` (complex HCL, last resort). For
-`SetRawExpr`, pass `Traversal` values directly as `%s` args (it calls `fmt.Sprintf` internally —
-do not wrap), and use raw backtick strings when the expression contains HCL quotes. See the
-**`new-resource-datasource`** skill for worked examples and the full walkthrough.
-
-Data source tests must reference a **resource attribute** (so Terraform infers the dependency),
-and should fluent-chain `.Config(t).WithFirstBlock(t, ...).Join(...)` in one expression:
-
-```go
-config := testconfig.DataSource{Name: "workspace"}.Config(t).WithFirstBlock(t,
-    testconfig.Descend(t, "metadata", "name")(testconfig.SetAddr(workspaceAddr, "metadata", "name")),
-).Join(workspaceConfig)
-```
-
-### Config API reference
-
-`Config` wraps `*hclwrite.File`; all modifications return a new `Config`. File layout:
-`config.go` (`Config`, `Block`, `Expression`, `Descend`, `WalkAttributes`, `Resource`/`DataSource`
-loaders), `config_expr.go` (`ExpressionConsumer` + constructors), `config_fake_block.go`,
-`traversal.go`, `build_*.go`.
-
-```go
-type Config struct { ... }                              // immutable; stores t from Config(t)
-type Traversal []string                                 // e.g. ["meshstack_workspace", "my_ws"]
-type Expression interface { Get(); Set(); RenameKey() }
-type ExpressionConsumer func(t *testing.T, e Expression)
-
-func NewConfig(t *testing.T, src []byte) Config
-func (c Config) WithFirstBlock(mods ...ExpressionConsumer) Config  // clones, returns new
-func (c Config) Join(others ...Config) Config
-func (c Config) String() string                                   // for TestStep.Config
-
-// Modifier constructors (no t — received at invocation)
-testconfig.SetString("value")
-testconfig.SetValue(cty.NumberIntVal(3))
-testconfig.SetAddr(addr, "metadata", "name")            // preferred for resource attributes
-testconfig.SetRawExpr(`{uuid = %s}`, addr)              // fmt.Sprintf format args
-testconfig.RenameKey("new_name")
-testconfig.ExtractAddress(&addr)
-
-// Higher-order (no t — received from ExpressionConsumer)
-testconfig.Descend("spec", "name")(modifier)            // navigate nested attribute
-testconfig.WalkAttributes()(modifier)
-testconfig.OwnedByWorkspace(workspaceAddr)              // sets metadata.owned_by_workspace
-
-// Traversal helpers
-addr.String()                              // "meshstack_workspace.my_ws"
-addr.Join("metadata", "name")              // appends segments
-
-// Loading .tf files
-testconfig.Resource{Name: "workspace"}.Config(t)                       // examples/resources/meshstack_workspace/resource.tf
-testconfig.Resource{Name: "platform", Suffix: "_01_azure"}.Config(t)
-testconfig.Resource{Name: "landingzone"}.TestSupportConfig(t, "_bbd")  // test-support_bbd.tf
-testconfig.DataSource{Name: "project"}.Config(t)
-```
-
-`Descend` nesting: nest only when a parent has **multiple** children; flatten single-child chains
-(`Descend("spec", "display_name")(...)`, not `Descend("spec")(Descend("display_name")(...))`).
-
-### State check helpers (`xknownvalue`)
-
-Use these instead of raw `knownvalue` functions
-(`import xknownvalue "github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/xknownvalue"`):
-
-| Helper | Description |
-|---|---|
-| `xknownvalue.NotEmptyString(consumers...)` | Non-whitespace string; optional extra assertions |
-| `xknownvalue.Ref(addr, kind, &uuidOut)` | `ref` attribute has expected kind + stable non-empty uuid |
-| `xknownvalue.MapExact(map[string]knownvalue.Check{...})` | `MapExact` with descriptive diff output |
-
-### Builder chain reference (bottom-up)
-
-`*AndWorkspace` builders create a fresh workspace internally — use for single-resource tests.
-For tests with multiple dependent resources, build the workspace once and share via `Config.Join`:
-
-```go
-workspaceConfig, workspaceAddr := testconfig.Workspace(t)
-projectConfig, projectAddr := testconfig.Project(t, workspaceAddr)
-platformConfig, platformAddr, platformTypeAddr := testconfig.CustomPlatform(t, workspaceAddr)
-landingZoneConfig, landingZoneAddr := testconfig.LandingZone(t, workspaceAddr, platformAddr, platformTypeAddr)
-config := landingZoneConfig.Join(platformConfig, projectConfig, workspaceConfig)
-```
-
-```
-testconfig.Workspace(t)                                                    → (config, workspaceAddr)
-testconfig.Project(t, workspaceAddr)                                       → (config, projectAddr)
-testconfig.ProjectAndWorkspace(t)                                          → (config, projectAddr, workspaceAddr)
-testconfig.PlatformType(t, workspaceAddr)                                  → (config, platformTypeAddr)
-testconfig.PlatformTypeAndWorkspace(t)                                     → (config, platformTypeAddr)
-testconfig.CustomPlatform(t, workspaceAddr)                                → (config, platformAddr, platformTypeAddr)
-testconfig.CustomPlatformAndWorkspace(t)                                   → (config, platformAddr, workspaceAddr)
-testconfig.PlatformAndWorkspace(t, suffix)                                 → (config, platformAddr)
-testconfig.LandingZone(t, workspaceAddr, platformAddr, platformTypeAddr)   → (config, landingZoneAddr)
-testconfig.LandingZoneAndWorkspace(t)                                      → (config, landingZoneAddr)
-testconfig.SimpleLandingZone(t, workspaceAddr, platformAddr)               → (config, landingZoneAddr)
-testconfig.PaymentMethod(t, workspaceAddr)                                 → (config, paymentMethodAddr)
-testconfig.PaymentMethodAndWorkspace(t)                                    → (config, paymentMethodAddr, workspaceAddr)
-testconfig.Integration(t, suffix)                                          → (config, integrationAddr)
-testconfig.TenantV4(t, projectAddr, platformAddr, landingZoneAddr)         → (config, tenantAddr)
-testconfig.TenantV4AndWorkspace(t)                                         → (config, tenantAddr)
-testconfig.TenantV3(t, projectAddr, platformAddr, landingZoneAddr)         → (config, tenantAddr)
-testconfig.TagDefinition(t, targetKind)                                    → (config, tagDefinitionAddr, tagKey)
-testconfig.Location(t, workspaceAddr)                                      → (config, locationAddr, locationName)
-testconfig.BBDTerraform(t)                                                 → (config, buildingBlockDefinitionAddr)
-testconfig.BBDWithIntegration(t, suffix)                                   → (config, buildingBlockDefinitionAddr)
-testconfig.BBDManual(t)                                                    → (config, buildingBlockDefinitionAddr)
-testconfig.BBDGitlabPipeline(t)                                            → (config, buildingBlockDefinitionAddr)
-testconfig.BBv1Tenant(t)                                                   → (config, buildingBlockAddr)
-testconfig.BBv2Workspace(t)                                                → (config, buildingBlockAddr)
-testconfig.BBv2Tenant(t)                                                   → (config, buildingBlockAddr)
-```
-
-### Dependency-first examples
-
-- Resource example `.tf` files contain **only the single resource block**. Supporting blocks
-  (data sources, providers) go in `test-support_*.tf` files. Example files reference data
-  sources (e.g. `data.meshstack_workspace.example`) **without declaring them** — by design; the
-  declarations live in `test-support_*.tf` and are loaded alongside during tests. Do **not**
-  flag missing data source blocks in example files or generated docs as issues.
-- **Never hardcode identifiers** (`"my-workspace"`, UUIDs) in example HCL — always use data
-  source / resource references (`data.meshstack_workspace.example.metadata.name`,
-  `data.meshstack_platform.example.ref`).
-- Prefer `one(data.meshstack_<plural>.<name>.<items>)` and reusable computed outputs (`ref`,
-  `identifier`, `version_latest`). When adding/changing a resource, consider whether a new
-  computed read-only reference output would improve cross-resource wiring.
+One always-on rule worth stating here, because it is easy to violate without loading the skill:
+when a resource has several suffixed example files (`resource_01_github.tf`,
+`resource_02_azure_devops.tf`), each gets its own **named** `t.Run()` subtest — never a generic
+loop. The top-level function calls `t.Parallel()`; each `ApplyAndTest` also parallelizes.
 
 ## Lint policy
 
