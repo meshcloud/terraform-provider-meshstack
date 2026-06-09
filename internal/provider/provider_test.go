@@ -2,7 +2,9 @@ package provider
 
 import (
 	"context"
+	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -32,11 +34,41 @@ func IsMockClientTest() bool {
 	return os.Getenv("TF_ACC") == ""
 }
 
+// envKeyScratchDump, when non-empty, makes ApplyAndTest dump each step's HCL config to disk
+// (as a standalone, re-runnable config) instead of running the test. Set it to "1"/"true" to
+// dump into the repo-root scratch/ dir, or to a directory path to dump there. See the
+// scratch-config-testing skill.
+const envKeyScratchDump = "MESHSTACK_SCRATCH_DUMP"
+
+// scratchProviderTf is written alongside each dumped main.tf so the config resolves the
+// dev-built provider via a dev_overrides CLI config (TF_CLI_CONFIG_FILE). Credentials and
+// endpoint come from the MESHSTACK_* environment variables.
+const scratchProviderTf = `terraform {
+  required_providers {
+    meshstack = {
+      source = "meshcloud/meshstack"
+    }
+  }
+}
+
+provider "meshstack" {
+  # endpoint/credentials read from MESHSTACK_ENDPOINT, MESHSTACK_API_KEY, MESHSTACK_API_SECRET
+}
+`
+
 // ApplyAndTest runs a TF test case. When TF_ACC is not set, it uses a mock
 // client (unit test mode). When TF_ACC is set, it runs against a real meshStack.
 // All tests using ApplyAndTest run in parallel.
+//
+// When MESHSTACK_SCRATCH_DUMP is set, it instead dumps each step's config to disk and
+// returns without running the test (see dumpStepConfigs).
 func ApplyAndTest(t *testing.T, testCase resource.TestCase) {
 	t.Helper()
+
+	if target := os.Getenv(envKeyScratchDump); target != "" {
+		dumpStepConfigs(t, target, testCase.Steps)
+		return
+	}
 
 	if IsMockClientTest() {
 		mockClient := clientmock.NewMock()
@@ -62,4 +94,68 @@ func DefaultTestPreCheck(t *testing.T) {
 		"Env %s='%s' does not start with http://localhost, only locally running meshStacks should be used for tests", envKeyMeshstackEndpoint, endpoint)
 	require.NotEmptyf(t, os.Getenv(envKeyMeshstackApiKey), "Env %s empty, please set before running", envKeyMeshstackApiKey)
 	require.NotEmptyf(t, os.Getenv(envKeyMeshstackApiSecret), "Env %s empty, please set before running", envKeyMeshstackApiSecret)
+}
+
+// dumpStepConfigs writes each test step's HCL config to
+// <base>/<sanitized test name>/stepNN/{main.tf,provider.tf} so it can be run standalone
+// against a local meshStack via the dev-built provider. target is either "1"/"true"
+// (dump into the repo-root scratch/ dir) or a directory path. Steps without a Config
+// (e.g. import-only steps) are skipped.
+func dumpStepConfigs(t *testing.T, target string, steps []resource.TestStep) {
+	t.Helper()
+
+	base := target
+	if base == "1" || base == "true" {
+		base = "scratch"
+	}
+	if !filepath.IsAbs(base) {
+		base = filepath.Join(moduleRoot(t), base)
+	}
+
+	testDir := filepath.Join(base, sanitizeTestName(t.Name()))
+
+	written := 0
+	for i, step := range steps {
+		if step.Config == "" {
+			continue
+		}
+		stepDir := filepath.Join(testDir, fmt.Sprintf("step%02d", i+1))
+		require.NoError(t, os.MkdirAll(stepDir, 0o755))
+		require.NoError(t, os.WriteFile(filepath.Join(stepDir, "main.tf"), []byte(step.Config), 0o644))
+		require.NoError(t, os.WriteFile(filepath.Join(stepDir, "provider.tf"), []byte(scratchProviderTf), 0o644))
+		written++
+	}
+
+	t.Logf("dumped %d step config(s) to %s", written, testDir)
+}
+
+// moduleRoot returns the repository root by walking up from the working directory until it
+// finds go.mod (go test runs in the package dir, e.g. internal/provider/).
+func moduleRoot(t *testing.T) string {
+	t.Helper()
+	dir, err := os.Getwd()
+	require.NoError(t, err)
+	for {
+		if _, statErr := os.Stat(filepath.Join(dir, "go.mod")); statErr == nil {
+			return dir
+		}
+		parent := filepath.Dir(dir)
+		require.NotEqualf(t, parent, dir, "could not locate go.mod above %s", dir)
+		dir = parent
+	}
+}
+
+// sanitizeTestName turns a *testing.T name into a relative path. Subtest separators ("/")
+// are kept so subtests nest into directories; any other unsafe character becomes "_".
+func sanitizeTestName(name string) string {
+	return strings.Map(func(r rune) rune {
+		switch {
+		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9':
+			return r
+		case r == '/' || r == '.' || r == '_' || r == '-':
+			return r
+		default:
+			return '_'
+		}
+	}, name)
 }

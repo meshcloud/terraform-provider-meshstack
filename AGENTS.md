@@ -8,6 +8,7 @@ referenced from the relevant sections below:
 - **`modern-go`** — Go 1.26 `new(expression)` and the codebase's generics.
 - **`changelog-management`** — pick the next version and maintain `CHANGELOG.md`.
 - **`meshstack-services`** / **`acceptance-testing`** — bring up the local backend and run/debug the suite.
+- **`scratch-config-testing`** — run a config in git-ignored `scratch/` against a local meshStack via the dev-built binary to reproduce/debug bugs.
 
 Official Terraform Provider for managing meshStack resources via the meshObject API
 (`/api/meshobjects`). Standard [terraform-plugin-framework](https://github.com/hashicorp/terraform-plugin-framework) v1.
@@ -72,7 +73,9 @@ TF_ACC=1 go test -count=1 -parallel 4 -timeout 600s ./internal/provider/ 2>&1 | 
 ```
 
 To bring up the backend services, see the **`meshstack-services`** skill; to run/debug the
-full acceptance suite, see the **`acceptance-testing`** skill.
+full acceptance suite, see the **`acceptance-testing`** skill. To reproduce a single test (or a
+bug) as a standalone, re-runnable config against a local meshStack — dumping a test's HCL with
+`MESHSTACK_SCRATCH_DUMP=1` or hand-writing one — see the **`scratch-config-testing`** skill.
 
 ### Acceptance test authoring (testconfig, builders, state checks)
 
