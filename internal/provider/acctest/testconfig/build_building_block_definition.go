@@ -76,6 +76,43 @@ func BBDWithIntegration(t *testing.T, suffix string) (config Config, buildingBlo
 	).Join(workspaceConfig, integrationConfig), buildingBlockDefinitionAddr
 }
 
+// BBDGithubTwoIntegrations builds a github_workflows BBD wired to a first test integration ("A"),
+// plus a second github integration ("B") owned by the same workspace. It returns the config, the
+// BBD address, and integration B's address so a test can switch the BBD's integration_ref from A to
+// B (e.g. to assert that re-drafting a released version with a new integration keeps the released
+// version immutable). Both integrations reuse the github integration test-support file; the second
+// is renamed and given a distinct display name so the backend treats it as a different integration.
+func BBDGithubTwoIntegrations(t *testing.T) (config Config, buildingBlockDefinitionAddr Traversal, integrationBAddr Traversal) {
+	t.Helper()
+	workspaceConfig, workspaceAddr := Workspace(t)
+	exampleResource := Resource{Name: "building_block_definition", Suffix: "_02_github_workflows"}
+
+	var integrationAAddr Traversal
+	integrationAConfig := exampleResource.TestSupportConfig(t, "_integration").WithFirstBlock(
+		ExtractAddress(&integrationAAddr),
+		OwnedByWorkspace(workspaceAddr),
+	)
+	integrationBConfig := exampleResource.TestSupportConfig(t, "_integration").WithFirstBlock(
+		RenameKey("github_b"),
+		ExtractAddress(&integrationBAddr),
+		OwnedByWorkspace(workspaceAddr),
+		Descend("spec", "display_name")(SetString("GitHub Integration B")),
+	)
+
+	return exampleResource.Config(t).WithFirstBlock(
+		ExtractAddress(&buildingBlockDefinitionAddr),
+		OwnedByWorkspace(workspaceAddr),
+		Descend("version_spec", "implementation", "github_workflows", "integration_ref")(
+			SetAddr(integrationAAddr, "ref"),
+		),
+		// Depend on integration A explicitly: once the BBD switches its integration_ref to B, the
+		// released version still pins A on the backend (which refuses integration deletion while
+		// referenced). This keeps A scheduled for destruction after the BBD so teardown succeeds; B is
+		// already implicitly ordered via the integration_ref reference.
+		Descend("depends_on")(SetRawExpr("[%s]", integrationAAddr)),
+	).Join(workspaceConfig, integrationAConfig, integrationBConfig), buildingBlockDefinitionAddr, integrationBAddr
+}
+
 // BBDManual builds a BBD config with manual implementation type, owned by a new test workspace.
 func BBDManual(t *testing.T) (config Config, buildingBlockDefinitionAddr Traversal) {
 	t.Helper()

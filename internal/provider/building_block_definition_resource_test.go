@@ -609,6 +609,78 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 			},
 		})
 	})
+
+	// Regression test (companion to #131) for the integration reference of CI implementations: github
+	// (like gitlab/azure) carries an integration_ref besides the implementation. Releasing a github
+	// version and then re-drafting it (draft false->true) while switching to a different integration must
+	// create a new draft v2 pointing at the new integration, while the already-released v1 keeps its
+	// original integration and stays immutable (stable content_hash, no "inconsistent result after
+	// apply"). The backend keeps this safe by deep-copying the implementation binding when deriving the
+	// draft, so changing the draft's integration reference does not retroactively repoint the released one.
+	t.Run("11_github_release_redraft_integration_change", func(t *testing.T) {
+		config, addr, integrationBAddr := testconfig.BBDGithubTwoIntegrations(t)
+
+		// The released version's content_hash (which includes integration_ref) must stay identical
+		// across the re-draft, proving the released version was not retroactively repointed.
+		releasedHashStable := statecheck.CompareValue(compare.ValuesSame())
+		releasedHashPath := tfjsonpath.New("version_latest_release").AtMapKey("content_hash")
+
+		// Sanity check that the test actually switches the integration: the draft's integration_ref uuid
+		// must differ between draft v1 (integration A) and draft v2 (integration B).
+		integrationSwitched := statecheck.CompareValue(compare.ValuesDiffer())
+		integrationUuidPath := tfjsonpath.New("version_spec").AtMapKey("implementation").
+			AtMapKey("github_workflows").AtMapKey("integration_ref").AtMapKey("uuid")
+
+		// base defaults to draft=true with integration A; this same config (draft=true) flips back to
+		// draft while switching to integration B -> a new draft version v2.
+		redraftWithIntegrationChange := config.WithFirstBlock(
+			testconfig.Descend("version_spec", "implementation", "github_workflows", "integration_ref")(
+				testconfig.SetAddr(integrationBAddr, "ref"),
+			),
+		)
+
+		ApplyAndTest(t, resource.TestCase{
+			Steps: []resource.TestStep{
+				// Step 1: Create draft v1 with integration A
+				{
+					Config: config.String(),
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest"), expectedVersion(1, versionStateDraft)),
+						integrationSwitched.AddStateValue(addr.String(), integrationUuidPath),
+					},
+				},
+				// Step 2: Release v1 (now immutable)
+				{
+					Config: releaseBBDVersion(t, config).String(),
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest_release"), expectedVersion(1, versionStateReleased)),
+						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest"), expectedVersion(1, versionStateReleased)),
+						releasedHashStable.AddStateValue(addr.String(), releasedHashPath),
+					},
+				},
+				// Step 3: Flip draft false->true AND switch integration A->B -> new draft v2.
+				// Released v1 must keep integration A and stay immutable (same content_hash).
+				{
+					Config: redraftWithIntegrationChange.String(),
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PreApply: []plancheck.PlanCheck{
+							plancheck.ExpectResourceAction(addr.String(), plancheck.ResourceActionUpdate),
+						},
+					},
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest_release"), expectedVersion(1, versionStateReleased)),
+						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest"), expectedVersion(2, versionStateDraft)),
+						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("versions"), knownvalue.ListExact([]knownvalue.Check{
+							expectedVersion(1, versionStateReleased),
+							expectedVersion(2, versionStateDraft),
+						})),
+						releasedHashStable.AddStateValue(addr.String(), releasedHashPath),
+						integrationSwitched.AddStateValue(addr.String(), integrationUuidPath),
+					},
+				},
+			},
+		})
+	})
 }
 
 // checkBBDMetadataFull checks metadata for the 01_terraform example (tags with 2 entries).
