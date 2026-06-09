@@ -24,13 +24,7 @@ resource "meshstack_building_block_definition" "example_03_manual" {
       manual = {}
     }
 
-    # Output keys must match with inputs, as the backend copies over inputs to outputs
-    outputs = {
-      approval_required = {
-        display_name    = "Approval Required"
-        type            = "BOOLEAN"
-        assignment_type = "NONE"
-      }
-    }
+    # Outputs are omitted for manual building blocks: the backend derives them from the inputs
+    # (one output per input), so version_spec.outputs is computed and must not be set here.
   }
 }

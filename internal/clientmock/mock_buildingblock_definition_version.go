@@ -28,6 +28,7 @@ func (m meshBuildingBlockDefinitionVersionClient) Create(_ context.Context, owne
 	versionUuid := uuid.NewString()
 	// Compute hashes for all secrets in the spec
 	backendSecretBehavior(true, &versionSpec, nil)
+	applyManualOutputBehavior(&versionSpec)
 
 	// Set version number if not already set
 	if versionSpec.VersionNumber == nil {
@@ -51,6 +52,7 @@ func (m meshBuildingBlockDefinitionVersionClient) Update(_ context.Context, uuid
 	if existing, ok := m.Store.Get(uuid); ok {
 		// Compute hashes for all secrets in the spec
 		backendSecretBehavior(false, &versionSpec, &existing.Spec)
+		applyManualOutputBehavior(&versionSpec)
 		if existing.Metadata.OwnedByWorkspace != ownedByWorkspace {
 			return nil, fmt.Errorf("mismatching workspace ownership: %s (existing) != %s (expected)", existing.Metadata.OwnedByWorkspace, ownedByWorkspace)
 		}
@@ -58,6 +60,49 @@ func (m meshBuildingBlockDefinitionVersionClient) Update(_ context.Context, uuid
 		return existing, nil
 	}
 	return nil, fmt.Errorf("building block definition version not found: %s", uuid)
+}
+
+// applyManualOutputBehavior mirrors the real backend's ManualBuildingBlockCreationModule: for manual
+// building blocks the outputs are derived from the inputs (one output per input, assignment type NONE,
+// with SINGLE_SELECT/MULTI_SELECT/LIST input types translated to output-compatible types). Any output the
+// caller marked PLATFORM_TENANT_ID keeps that assignment for the matching input; all other supplied
+// outputs are ignored, matching the backend.
+func applyManualOutputBehavior(versionSpec *client.MeshBuildingBlockDefinitionVersionSpec) {
+	if versionSpec.Implementation.Manual == nil {
+		return
+	}
+	platformTenantIdKeys := map[string]bool{}
+	for key, output := range versionSpec.Outputs {
+		if output.AssignmentType == client.MeshBuildingBlockDefinitionOutputAssignmentTypePlatformTenantID.Unwrap() {
+			platformTenantIdKeys[key] = true
+		}
+	}
+	outputs := make(map[string]client.MeshBuildingBlockDefinitionOutput, len(versionSpec.Inputs))
+	for key, input := range versionSpec.Inputs {
+		assignmentType := client.MeshBuildingBlockDefinitionOutputAssignmentTypeNone.Unwrap()
+		if platformTenantIdKeys[key] {
+			assignmentType = client.MeshBuildingBlockDefinitionOutputAssignmentTypePlatformTenantID.Unwrap()
+		}
+		outputs[key] = client.MeshBuildingBlockDefinitionOutput{
+			DisplayName:    input.DisplayName,
+			Type:           translateManualInputTypeToOutput(input.Type),
+			AssignmentType: assignmentType,
+		}
+	}
+	versionSpec.Outputs = outputs
+}
+
+// translateManualInputTypeToOutput mirrors backend ManualIOTypeTranslation: SINGLE_SELECT, MULTI_SELECT
+// and LIST cannot be output types and are translated; all other types are kept as-is.
+func translateManualInputTypeToOutput(inputType client.MeshBuildingBlockIOType) client.MeshBuildingBlockIOType {
+	switch inputType {
+	case client.MeshBuildingBlockIOTypeSingleSelect.Unwrap():
+		return client.MeshBuildingBlockIOTypeString.Unwrap()
+	case client.MeshBuildingBlockIOTypeMultiSelect.Unwrap(), client.MeshBuildingBlockIOTypeList.Unwrap():
+		return client.MeshBuildingBlockIOTypeCode.Unwrap()
+	default:
+		return inputType
+	}
 }
 
 func (m meshBuildingBlockDefinitionVersionClient) getNextVersionNumber() int {

@@ -402,6 +402,86 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 			},
 		})
 	})
+
+	// Regression test for issues #131 and #176: manual building blocks derive their outputs from inputs
+	// on the backend (SINGLE_SELECT/STATIC inputs auto-generate outputs). The config omits version_spec.outputs
+	// entirely (it is computed). Releasing and then re-drafting together with an input change must reconcile
+	// the derived outputs without "Provider produced inconsistent result after apply", and must not change
+	// the already-released version.
+	t.Run("07_manual_computed_outputs", func(t *testing.T) {
+		config, addr := testconfig.BBDManual(t)
+		withInputs := func(inputs string) testconfig.Config {
+			return config.WithFirstBlock(testconfig.Descend("version_spec", "inputs")(testconfig.SetRawExpr("%s", inputs)))
+		}
+
+		// approval (BOOLEAN) mirrors to a BOOLEAN output; region (SINGLE_SELECT) mirrors to a STRING output.
+		base := withInputs(`{
+      approval = { display_name = "Approval", type = "BOOLEAN", assignment_type = "PLATFORM_OPERATOR_MANUAL_INPUT" }
+      region   = { display_name = "Region", type = "SINGLE_SELECT", assignment_type = "USER_INPUT", selectable_values = ["eu", "us"] }
+    }`)
+		redraft := withInputs(`{
+      approval = { display_name = "Approval", type = "BOOLEAN", assignment_type = "PLATFORM_OPERATOR_MANUAL_INPUT" }
+      region   = { display_name = "Region", type = "SINGLE_SELECT", assignment_type = "USER_INPUT", selectable_values = ["eu", "us"] }
+      ticket   = { display_name = "Ticket", type = "STRING", assignment_type = "STATIC", argument = jsonencode("T-1") }
+    }`)
+
+		outputCheck := func(displayName, ioType string) knownvalue.Check {
+			return xknownvalue.MapExact(map[string]knownvalue.Check{
+				"display_name":    knownvalue.StringExact(displayName),
+				"type":            knownvalue.StringExact(ioType),
+				"assignment_type": knownvalue.StringExact("NONE"),
+			})
+		}
+		baseOutputs := knownvalue.MapExact(map[string]knownvalue.Check{
+			"approval": outputCheck("Approval", "BOOLEAN"),
+			"region":   outputCheck("Region", "STRING"),
+		})
+		redraftOutputs := knownvalue.MapExact(map[string]knownvalue.Check{
+			"approval": outputCheck("Approval", "BOOLEAN"),
+			"region":   outputCheck("Region", "STRING"),
+			"ticket":   outputCheck("Ticket", "STRING"),
+		})
+
+		releasedHashStable := statecheck.CompareValue(compare.ValuesSame())
+		releasedHashPath := tfjsonpath.New("version_latest_release").AtMapKey("content_hash")
+
+		ApplyAndTest(t, resource.TestCase{
+			Steps: []resource.TestStep{
+				// Step 1: Create draft v1 with outputs omitted -> outputs computed from inputs
+				{
+					Config: base.String(),
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_spec").AtMapKey("outputs"), baseOutputs),
+						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest"), expectedVersion(1, versionStateDraft)),
+					},
+				},
+				// Step 2: Release v1
+				{
+					Config: releaseBBDVersion(t, base).String(),
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest_release"), expectedVersion(1, versionStateReleased)),
+						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_spec").AtMapKey("outputs"), baseOutputs),
+						releasedHashStable.AddStateValue(addr.String(), releasedHashPath),
+					},
+				},
+				// Step 3: Re-draft (draft false->true) AND add an input -> new draft v2 with reconciled outputs.
+				{
+					Config: redraft.String(),
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PreApply: []plancheck.PlanCheck{
+							plancheck.ExpectResourceAction(addr.String(), plancheck.ResourceActionUpdate),
+						},
+					},
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest_release"), expectedVersion(1, versionStateReleased)),
+						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest"), expectedVersion(2, versionStateDraft)),
+						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_spec").AtMapKey("outputs"), redraftOutputs),
+						releasedHashStable.AddStateValue(addr.String(), releasedHashPath),
+					},
+				},
+			},
+		})
+	})
 }
 
 // checkBBDMetadataFull checks metadata for the 01_terraform example (tags with 2 entries).
@@ -886,6 +966,66 @@ resource "meshstack_building_block_definition" "test" {
 			step := resource.TestStep{
 				Config: symbolConfig(tt.symbol),
 			}
+			if tt.expectError != nil {
+				step.ExpectError = tt.expectError
+			}
+			ApplyAndTest(t, resource.TestCase{
+				Steps: []resource.TestStep{step},
+			})
+		})
+	}
+}
+
+func TestAccBuildingBlockDefinitionManualOutputsValidation(t *testing.T) {
+	// Output configuration rules for manual building blocks are validated client-side only.
+	if !IsMockClientTest() {
+		t.Skip("manual outputs validation is tested with mock client only")
+	}
+
+	t.Parallel()
+
+	manualConfig := func(outputs string) string {
+		return fmt.Sprintf(`
+resource "meshstack_building_block_definition" "test" {
+  metadata = { owned_by_workspace = "my-workspace" }
+  spec     = { display_name = "Test", description = "Test" }
+  version_spec = {
+    draft = true
+    inputs = {
+      tenant = { display_name = "Tenant", type = "STRING", assignment_type = "STATIC", argument = jsonencode("t") }
+    }
+    implementation = { manual = {} }
+    %s
+  }
+}`, outputs)
+	}
+
+	tests := []struct {
+		name        string
+		outputs     string
+		expectError *regexp.Regexp
+	}{
+		{
+			name:        "NONE output rejected for manual",
+			outputs:     `outputs = { tenant = { display_name = "Tenant", type = "STRING", assignment_type = "NONE" } }`,
+			expectError: regexp.MustCompile(`may only assign PLATFORM_TENANT_ID`),
+		},
+		{
+			// Omitting assignment_type defaults it to NONE, which the backend ignores; it must be
+			// rejected the same as an explicit NONE rather than silently accepted.
+			name:        "omitted assignment_type rejected for manual",
+			outputs:     `outputs = { tenant = { display_name = "Tenant", type = "STRING" } }`,
+			expectError: regexp.MustCompile(`may only assign PLATFORM_TENANT_ID`),
+		},
+		{
+			name:    "PLATFORM_TENANT_ID output allowed for manual",
+			outputs: `outputs = { tenant = { display_name = "Tenant", type = "STRING", assignment_type = "PLATFORM_TENANT_ID" } }`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			step := resource.TestStep{Config: manualConfig(tt.outputs)}
 			if tt.expectError != nil {
 				step.ExpectError = tt.expectError
 			}

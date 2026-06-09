@@ -40,23 +40,7 @@ resource "meshstack_building_block_definition" "bb_v2_tenant_bbd" {
       manual = {}
     }
 
-    # Output keys must match with inputs, as the backend copies over inputs to outputs for manual implementations.
-    outputs = {
-      name = {
-        display_name    = "Name"
-        type            = "STRING"
-        assignment_type = "NONE"
-      }
-      size = {
-        display_name    = "Size"
-        type            = "INTEGER"
-        assignment_type = "NONE"
-      }
-      environment = {
-        display_name    = "Environment"
-        type            = "STRING"
-        assignment_type = "NONE"
-      }
-    }
+    # Outputs are omitted for manual building blocks: the backend derives them from the inputs, so
+    # version_spec.outputs is computed and must not be set here.
   }
 }

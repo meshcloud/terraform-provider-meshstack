@@ -215,14 +215,8 @@ resource "meshstack_building_block_definition" "example_03_manual" {
       manual = {}
     }
 
-    # Output keys must match with inputs, as the backend copies over inputs to outputs
-    outputs = {
-      approval_required = {
-        display_name    = "Approval Required"
-        type            = "BOOLEAN"
-        assignment_type = "NONE"
-      }
-    }
+    # Outputs are omitted for manual building blocks: the backend derives them from the inputs
+    # (one output per input), so version_spec.outputs is computed and must not be set here.
   }
 }
 ```
@@ -395,7 +389,7 @@ Optional:
 - `dependency_refs` (Attributes Set) Set of refs to building block definitions this definition depends on. Prefer reusable refs from `meshstack_building_block_definition.<name>.ref` or `one(data.meshstack_building_block_definitions.<name>.building_block_definitions).ref`. (see [below for nested schema](#nestedatt--version_spec--dependency_refs))
 - `inputs` (Attributes Map) Map of input definitions for the building block. Keys are input names, values are input configuration objects. Inputs define parameters that building blocks can receive. (see [below for nested schema](#nestedatt--version_spec--inputs))
 - `only_apply_once_per_tenant` (Boolean) Whether this building block can only be applied once per tenant.
-- `outputs` (Attributes Map) Map of output definitions for the building block. Keys are output names, values are output configuration objects. Outputs define values that building blocks produce and can be consumed by other building blocks. (see [below for nested schema](#nestedatt--version_spec--outputs))
+- `outputs` (Attributes Map) Map of output definitions for the building block. Keys are output names, values are output configuration objects. Outputs define values that building blocks produce and can be consumed by other building blocks. If implementation type is `manual`, outputs are computed from the API response, so omit this attribute entirely unless you want to specify a static `assignment_type = "PLATFORM_TENANT_ID"` as part of a landing zone. (see [below for nested schema](#nestedatt--version_spec--outputs))
 - `permissions` (Set of String) Set of API permissions required by this building block. Will provide building block runs with an ephemeral API token with the specified workspace permissions. See [Workspace Permissions](https://docs.meshcloud.io/api/authentication/api-permissions/) for available values and [documentation on ephemeral API keys](https://docs.dev.meshcloud.io/concepts/building-block/#ephemeral-api-keys).
 - `runner_ref` (Attributes) Reference to the runner to run the implementation. If omitted, the pre-defined shared runner is used suitable for the given `implementation` choice (see [below for nested schema](#nestedatt--version_spec--runner_ref))
 

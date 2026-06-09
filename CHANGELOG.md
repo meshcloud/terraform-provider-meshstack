@@ -1,6 +1,10 @@
 # v0.21.1
 
+BREAKING CHANGES:
+- `meshstack_building_block_definition`: For manual building blocks, `version_spec.outputs` is now computed from the API and must be omitted from configuration — the backend derives one output per input. Configuring an output with any `assignment_type` other than `PLATFORM_TENANT_ID` is now rejected. Remove `outputs` blocks from manual building block definitions; you may still declare an output with `assignment_type = "PLATFORM_TENANT_ID"` to mark which output carries the tenant id.
+
 FIXES:
+- `meshstack_building_block_definition`: Fixed "Provider produced inconsistent result after apply" for manual building blocks whose outputs the backend auto-generates from inputs (e.g. `SINGLE_SELECT`/`STATIC` inputs), including when toggling `version_spec.draft` from `false` to `true` together with input changes ([#131](https://github.com/meshcloud/terraform-provider-meshstack/issues/131), [#176](https://github.com/meshcloud/terraform-provider-meshstack/issues/176)). Outputs are now reconciled from the API response.
 - When no `runner_ref` is provided, the new shared building block runner UUID `98520496-627d-43e6-82da-ce499179ff3f` is used which is suitable for all implementation types.
   Existing `building_block_definition` resources will see a plan change addressing this migration to a single shared runner. 
   Using the old shared runner UUIDs is deprecated but handled gracefully by the API.

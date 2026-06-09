@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapdefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
@@ -405,11 +406,15 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 					"inputs": inputsAttribute,
 					"outputs": schema.MapNestedAttribute{
 						MarkdownDescription: "Map of output definitions for the building block. Keys are output names, values are output configuration objects. " +
-							"Outputs define values that building blocks produce and can be consumed by other building blocks.",
+							"Outputs define values that building blocks produce and can be consumed by other building blocks. " +
+							"If implementation type is " + client.MeshBuildingBlockImplementationTypeManual.Markdown() +
+							", outputs are computed from the API response, so omit this attribute entirely unless you want to specify a static `assignment_type = \"PLATFORM_TENANT_ID\"` as part of a landing zone.",
 						Optional:     true,
 						Computed:     true,
-						Default:      mapdefault.StaticValue(types.MapValueMust(nestedObjectToObjectType(outputs), nil)),
 						NestedObject: outputs,
+						PlanModifiers: []planmodifier.Map{
+							mapplanmodifier.UseStateForUnknown(),
+						},
 					},
 
 					"implementation": schema.SingleNestedAttribute{
