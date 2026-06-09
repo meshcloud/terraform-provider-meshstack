@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-testing/compare"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
@@ -334,6 +335,68 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("spec"), checkBBDSpecMinimal(bbdDescription)),
 						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("versions"), knownvalue.ListExact([]knownvalue.Check{expectedVersion(1, versionStateDraft)})),
 						xknownvalue.Ref(addr, "meshBuildingBlockDefinition", &resourceUuid),
+					},
+				},
+			},
+		})
+	})
+
+	// Regression test for issue #131: releasing a version and then flipping it back to draft
+	// together with a version_spec implementation change must NOT alter the already-released
+	// version. The backend previously shared the implementation object across versions, so editing
+	// the new draft retroactively mutated the released version, making its content_hash change
+	// during apply ("Provider produced inconsistent result after apply"). Uses the Terraform
+	// implementation because its implementation carries mutable fields (e.g. pre_run_script);
+	// the manual implementation could not surface this.
+	t.Run("06_release_redraft_implementation_change", func(t *testing.T) {
+		config, addr := testconfig.BBDTerraform(t)
+
+		// The released version's content_hash must be identical before and after the new draft
+		// is created from it.
+		releasedHashStable := statecheck.CompareValue(compare.ValuesSame())
+		releasedHashPath := tfjsonpath.New("version_latest_release").AtMapKey("content_hash")
+
+		redraftWithImplChange := config.WithFirstBlock(
+			testconfig.Descend("version_spec", "implementation", "terraform", "pre_run_script")(
+				testconfig.SetString(`echo "changed for the second version"`),
+			),
+		)
+
+		ApplyAndTest(t, resource.TestCase{
+			Steps: []resource.TestStep{
+				// Step 1: Create draft v1
+				{
+					Config: config.String(),
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest"), expectedVersion(1, versionStateDraft)),
+					},
+				},
+				// Step 2: Release v1
+				{
+					Config: releaseBBDVersion(t, config).String(),
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest_release"), expectedVersion(1, versionStateReleased)),
+						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest"), expectedVersion(1, versionStateReleased)),
+						releasedHashStable.AddStateValue(addr.String(), releasedHashPath),
+					},
+				},
+				// Step 3: Flip draft false->true AND change the implementation -> new draft v2.
+				// The released v1 must stay immutable (same content_hash, no inconsistent result).
+				{
+					Config: redraftWithImplChange.String(),
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PreApply: []plancheck.PlanCheck{
+							plancheck.ExpectResourceAction(addr.String(), plancheck.ResourceActionUpdate),
+						},
+					},
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest_release"), expectedVersion(1, versionStateReleased)),
+						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest"), expectedVersion(2, versionStateDraft)),
+						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("versions"), knownvalue.ListExact([]knownvalue.Check{
+							expectedVersion(1, versionStateReleased),
+							expectedVersion(2, versionStateDraft),
+						})),
+						releasedHashStable.AddStateValue(addr.String(), releasedHashPath),
 					},
 				},
 			},
