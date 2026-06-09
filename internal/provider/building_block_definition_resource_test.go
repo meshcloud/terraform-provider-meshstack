@@ -482,6 +482,133 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 			},
 		})
 	})
+
+	// Regression test for issue #196: rotating a sensitive input's secret on a released (immutable)
+	// version previously failed with an opaque "Failed to determine content hash ... [plaintext]"
+	// error, because the planned DTO carries the rotated secret's plaintext and the content hash
+	// disallows plaintext keys. Released versions are immutable, so the rotation must be rejected with
+	// a clear, actionable error instead.
+	t.Run("08_release_secret_rotation_rejected", func(t *testing.T) {
+		config, _ := testconfig.BBDTerraform(t)
+		sensitiveInputs := func(version, value string) testconfig.Config {
+			return config.WithFirstBlock(testconfig.Descend("version_spec", "inputs")(testconfig.SetRawExpr("%s", fmt.Sprintf(`{
+      CONNECTOR_SECRET = {
+        display_name    = "Connector Secret"
+        type            = "STRING"
+        assignment_type = "STATIC"
+        sensitive = {
+          argument = {
+            secret_value   = %q
+            secret_version = %q
+          }
+        }
+      }
+    }`, value, version))))
+		}
+		base := sensitiveInputs("v1", "plaintext-secret-v1")
+		rotated := sensitiveInputs("v2", "plaintext-secret-v2")
+
+		ApplyAndTest(t, resource.TestCase{
+			Steps: []resource.TestStep{
+				// Step 1: Create draft v1 with a sensitive input
+				{Config: base.String()},
+				// Step 2: Release v1 (now immutable)
+				{Config: releaseBBDVersion(t, base).String()},
+				// Step 3: Rotate the secret on the released version -> clear error, not an opaque hash failure
+				{
+					Config:      releaseBBDVersion(t, rotated).String(),
+					ExpectError: regexp.MustCompile("Updating a version_spec in non-draft state is not allowed"),
+				},
+			},
+		})
+	})
+
+	// Regression test for issue #196: the released-version secret-rotation guard must key off an actual
+	// secret change, not the presence of a JSON key literally named "plaintext". An input named "plaintext"
+	// (or any STATIC argument whose JSON carries a "plaintext" key) is user data, not a secret. Mutating a
+	// non-version_spec field (the description) on a released version that contains such an input must NOT be
+	// rejected as a secret rotation.
+	t.Run("09_released_plaintext_named_input_is_not_a_secret", func(t *testing.T) {
+		config, addr := testconfig.BBDTerraform(t)
+		withPlaintextInput := func(c testconfig.Config) testconfig.Config {
+			return c.WithFirstBlock(testconfig.Descend("version_spec", "inputs")(testconfig.SetRawExpr("%s", `{
+      plaintext = { display_name = "Plaintext", type = "STRING", assignment_type = "STATIC", argument = jsonencode("hello") }
+    }`)))
+		}
+		base := withPlaintextInput(config)
+		released := releaseBBDVersion(t, base)
+
+		ApplyAndTest(t, resource.TestCase{
+			Steps: []resource.TestStep{
+				// Step 1: Create draft v1 with a non-sensitive input named "plaintext"
+				{Config: base.String()},
+				// Step 2: Release v1 (now immutable)
+				{Config: released.String()},
+				// Step 3: Change only the description on the released version. version_spec is unchanged and
+				// carries no secret, so this must succeed - the old "plaintext" key match wrongly rejected it.
+				{
+					Config: updateBBDDescription(t, released, "updated description, version_spec untouched").String(),
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest"), expectedVersion(1, versionStateReleased)),
+						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("spec").AtMapKey("description"), knownvalue.StringExact("updated description, version_spec untouched")),
+					},
+				},
+			},
+		})
+	})
+
+	// Positive-path companion to issue #196: rotating a secret on a released version is rejected (subtest 08),
+	// but the documented workaround - flip version_spec.draft false->true AND rotate the secret in the same
+	// step - must succeed, creating a new draft version that carries the rotated secret while the released
+	// version stays immutable. Guards the ModifyPlan rejection from over-triggering on the draft-flip path.
+	t.Run("10_redraft_with_secret_rotation_allowed", func(t *testing.T) {
+		config, addr := testconfig.BBDTerraform(t)
+		sensitiveInputs := func(version, value string) testconfig.Config {
+			return config.WithFirstBlock(testconfig.Descend("version_spec", "inputs")(testconfig.SetRawExpr("%s", fmt.Sprintf(`{
+      CONNECTOR_SECRET = {
+        display_name    = "Connector Secret"
+        type            = "STRING"
+        assignment_type = "STATIC"
+        sensitive = {
+          argument = {
+            secret_value   = %q
+            secret_version = %q
+          }
+        }
+      }
+    }`, value, version))))
+		}
+		base := sensitiveInputs("v1", "plaintext-secret-v1")
+		// base defaults to draft=true; after releasing v1 this same config (draft=true) flips back to draft
+		// while also rotating the secret to v2 -> a new draft version v2.
+		redraftRotated := sensitiveInputs("v2", "plaintext-secret-v2")
+
+		ApplyAndTest(t, resource.TestCase{
+			Steps: []resource.TestStep{
+				// Step 1: Create draft v1 with a sensitive input
+				{Config: base.String()},
+				// Step 2: Release v1 (now immutable)
+				{Config: releaseBBDVersion(t, base).String()},
+				// Step 3: Flip back to draft AND rotate the secret in one step -> new draft v2, v1 untouched
+				{
+					Config: redraftRotated.String(),
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PreApply: []plancheck.PlanCheck{
+							plancheck.ExpectResourceAction(addr.String(), plancheck.ResourceActionUpdate),
+						},
+					},
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest_release"), expectedVersion(1, versionStateReleased)),
+						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest"), expectedVersion(2, versionStateDraft)),
+						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("versions"), knownvalue.ListExact([]knownvalue.Check{
+							expectedVersion(1, versionStateReleased),
+							expectedVersion(2, versionStateDraft),
+						})),
+					},
+				},
+			},
+		})
+	})
 }
 
 // checkBBDMetadataFull checks metadata for the 01_terraform example (tags with 2 entries).

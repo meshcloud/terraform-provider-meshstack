@@ -303,6 +303,22 @@ func (r *buildingBlockDefinitionResource) ModifyPlan(ctx context.Context, req re
 		return
 	}
 
+	// Creating or rotating a secret changes the version_spec (the secret machinery above already detected
+	// this as versionSpecSecretsChanged). On a released (non-draft) version that stays released, the
+	// version_spec is immutable, so reject it here at plan time with a clear, actionable error instead of
+	// letting the content-hash safeguard fail opaquely on the planned plaintext later in Update (issue #196).
+	// Flipping draft=false->true (plan draft becomes true) creates a new draft version and is allowed.
+	planDraftKnownReleased := plan.VersionSpec.Draft.Value != nil && !plan.VersionSpec.Draft.Get()
+	if versionSpecSecretsChanged && !state.VersionSpec.Draft.Get() && planDraftKnownReleased {
+		resp.Diagnostics.AddError("Error updating version_spec", fmt.Sprintf(
+			"Updating a version_spec in non-draft state is not allowed. "+
+				"Rotating a secret on the released version %d changes the version_spec, which is immutable. "+
+				"Set version_spec.draft = true to create a new draft version; the secret rotation can be applied in the same step.",
+			state.VersionLatest.Number.Get(),
+		))
+		return
+	}
+
 	// Manual building blocks have backend-derived outputs: the backend mirrors every input into an output
 	// (assignment type NONE), preserving only outputs the user marked PLATFORM_TENANT_ID (see issues #131
 	// and #176, and ValidateConfig). We cannot fully predict the reconciled outputs at plan time, so
@@ -470,7 +486,9 @@ func (r *buildingBlockDefinitionResource) Update(ctx context.Context, req resour
 		}
 	case !state.VersionSpec.Draft:
 		// state (and plan) are in draft=false (aka released), so one should not change version_spec at all
-		// this makes released or in-review versions immutable
+		// this makes released or in-review versions immutable. A secret rotation on a released version is
+		// already rejected at plan time in ModifyPlan with a clear message (issue #196), so it never reaches
+		// here; any remaining version_spec change is caught by the content-hash comparison below.
 		versionSpecDtoContentHash := versionContentHash(versionSpecDto, &resp.Diagnostics)
 		if resp.Diagnostics.HasError() {
 			return

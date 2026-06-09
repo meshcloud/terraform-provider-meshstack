@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"reflect"
 	"slices"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -18,6 +19,7 @@ import (
 	"github.com/meshcloud/terraform-provider-meshstack/internal/types/generic"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/types/secret"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/util/hash"
+	reflectwalk "github.com/meshcloud/terraform-provider-meshstack/internal/util/reflect"
 )
 
 type buildingBlockDefinition struct {
@@ -339,6 +341,14 @@ func (model *buildingBlockDefinition) SetFromVersionClientDtos(diags *diag.Diagn
 
 func versionContentHash(versionSpecDto client.MeshBuildingBlockDefinitionVersionSpec, diags *diag.Diagnostics) string {
 	if result, err := func() (string, error) {
+		// Safeguard against accidentally hashing plaintext secret values (the backend only ever returns
+		// hashes, so plaintext would make the hash unstable). Detection is on the typed DTO so user data -
+		// e.g. an input named "plaintext" or a STATIC argument whose JSON carries a "plaintext" key - is
+		// never mistaken for a secret. Callers leave the hash unknown when a secret rotates (issue #196).
+		if versionSpecContainsPlaintextSecret(versionSpecDto) {
+			return "", errors.New("version_spec carries a plaintext secret value, which must not be hashed")
+		}
+
 		// Ignore version, state, and buildingBlockDefinitionRef fields by setting them to constant values, always!
 		versionSpecDto.VersionNumber = nil
 		versionSpecDto.State = nil
@@ -356,11 +366,7 @@ func versionContentHash(versionSpecDto client.MeshBuildingBlockDefinitionVersion
 			return "", err
 		}
 
-		versionSpecHash, err := hash.Hasher{}.Hash(converted,
-			// Safeguard against accidentally hashing plaintext values
-			// (should never happen as backend never returns plaintext values)
-			hash.DisallowMapKeys("plaintext", "buildingBlockDefinitionRef"),
-		)
+		versionSpecHash, err := hash.Hasher{}.Hash(converted)
 		if err != nil {
 			return "", err
 		}
@@ -375,4 +381,20 @@ func versionContentHash(versionSpecDto client.MeshBuildingBlockDefinitionVersion
 	} else {
 		return result
 	}
+}
+
+// versionSpecContainsPlaintextSecret reports whether the typed version_spec DTO carries a secret whose
+// plaintext value is set, i.e. a secret is being created or rotated. It walks the typed DTO and only
+// inspects clientTypes.Secret values, so arbitrary user JSON (which lands in the variant's "any" branch,
+// never in a Secret) is never mistaken for a secret. The backend only ever returns hashes, so a true
+// result always stems from a locally-planned value.
+func versionSpecContainsPlaintextSecret(versionSpecDto client.MeshBuildingBlockDefinitionVersionSpec) bool {
+	found := false
+	_ = reflectwalk.Walk(reflect.ValueOf(versionSpecDto), func(_ reflectwalk.WalkPath, v reflect.Value) error {
+		if s, ok := v.Interface().(clientTypes.Secret); ok && s.Plaintext != nil {
+			found = true
+		}
+		return nil
+	})
+	return found
 }

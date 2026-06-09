@@ -14,21 +14,13 @@ import (
 
 type Hasher struct {
 	Underlying func() hash.Hash
-
-	// Private fields are modified by Option passed to Hasher.Hash.
-	disallowedMapKeys []reflect.Value
 }
 
 type Sum []byte
 
-type Option func(*Hasher)
-
-func (h Hasher) Hash(v any, opts ...Option) (Sum, error) {
+func (h Hasher) Hash(v any) (Sum, error) {
 	if h.Underlying == nil {
 		h.Underlying = sha256.New
-	}
-	for _, opt := range opts {
-		opt(&h)
 	}
 	sum, _, err := h.hash(nil, reflect.ValueOf(v))
 	return sum, err
@@ -36,14 +28,6 @@ func (h Hasher) Hash(v any, opts ...Option) (Sum, error) {
 
 func (s Sum) Hex() string {
 	return hex.EncodeToString(s)
-}
-
-func DisallowMapKeys[T comparable](keys ...T) Option {
-	return func(h *Hasher) {
-		for _, key := range keys {
-			h.disallowedMapKeys = append(h.disallowedMapKeys, reflect.ValueOf(key))
-		}
-	}
 }
 
 func (h Hasher) hash(root reflectwalk.WalkPath, v reflect.Value) (Sum, bool, error) {
@@ -104,9 +88,6 @@ func (h Hasher) hash(root reflectwalk.WalkPath, v reflect.Value) (Sum, bool, err
 				}
 				// as we're stopping WalkMap immediately (as we've walked the map values via h.hash(value) above)
 				// the provided key pointer should never be nil (otherwise reflectwalk has an implementation bug)
-				if err := h.checkDisallowedMapKeys(path, key.Value); err != nil {
-					return err
-				}
 				if keySum, _, err := h.hash(path, key.Value); err != nil {
 					return err
 				} else {
@@ -145,15 +126,6 @@ func (h Hasher) hash(root reflectwalk.WalkPath, v reflect.Value) (Sum, bool, err
 	}
 	err := reflectwalk.Walk(v, visitor, reflectwalk.WithRoot(root))
 	return w.hasher.Sum(nil), w.written, err
-}
-
-func (h Hasher) checkDisallowedMapKeys(path reflectwalk.WalkPath, key reflect.Value) error {
-	for _, mapKey := range h.disallowedMapKeys {
-		if key.Equal(mapKey) {
-			return fmt.Errorf("key path %s matches one of disallowed keys %s", path, h.disallowedMapKeys)
-		}
-	}
-	return nil
 }
 
 func (s *Sum) addIgnoringOrder(other Sum) {

@@ -240,12 +240,3 @@ func (c *writtenBytesHash) Size() int {
 func (c *writtenBytesHash) BlockSize() int {
 	panic("not implemented for test")
 }
-
-func TestHasher_Hash_disallowedMapKeys(t *testing.T) {
-	v := []any{
-		1.0,
-		&map[string]any{"key1": "value1", "key2": map[string]any{"superillegal": true}},
-	}
-	_, err := Hasher{}.Hash(v, DisallowMapKeys("superillegal"))
-	require.ErrorContains(t, err, "key path **[1]*[key2][superillegal] matches one of disallowed keys [superillegal]")
-}
