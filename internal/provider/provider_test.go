@@ -79,6 +79,8 @@ func ApplyAndTest(t *testing.T, testCase resource.TestCase) {
 			}
 		})
 	} else {
+		// os.Setenv (not t.Setenv) because t.Setenv is incompatible with the t.Parallel() call below.
+		require.NoError(t, os.Setenv("MESHSTACK_SKIP_VERSION_CHECK", "true")) //nolint:usetesting // see comment above
 		t.Parallel()
 		testCase.PreCheck = func() { DefaultTestPreCheck(t) }
 		testCase.ProtoV6ProviderFactories = ProviderFactoriesForTest()

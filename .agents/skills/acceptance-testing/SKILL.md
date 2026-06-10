@@ -28,6 +28,8 @@ nohup bash -c "TF_ACC=1 go test -count=1 ./internal/provider/ -parallel 8 -timeo
 - Target a single test: `-run 'TestAccBuildingBlock$/<subtest>'`.
 - Always tee/redirect output to `/tmp` and **read the log** to investigate — do not re-run the
   suite piped through `grep`.
+- `ApplyAndTest` sets `MESHSTACK_SKIP_VERSION_CHECK` so the provider's anticipated-next-release
+  version floor can run ahead of the local `develop` backend — expected, no action needed.
 
 ## 2. Investigate
 
