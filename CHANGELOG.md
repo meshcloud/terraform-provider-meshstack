@@ -1,4 +1,6 @@
-# v0.21.1
+# v0.22.0
+
+Requires meshStack 2026.24.0 or later due to roll out of one shared meshcloud hosted building block runner.
 
 BREAKING CHANGES:
 - `meshstack_building_block_definition`: For manual building blocks, `version_spec.outputs` is now computed from the API and must be omitted from configuration — the backend derives one output per input. Configuring an output with any `assignment_type` other than `PLATFORM_TENANT_ID` is now rejected. Remove `outputs` blocks from manual building block definitions; you may still declare an output with `assignment_type = "PLATFORM_TENANT_ID"` to mark which output carries the tenant id.
