@@ -1,3 +1,8 @@
+# v0.22.1
+
+FIXES:
+- `meshstack_building_block_definition`: The "version_spec cannot be updated in non-draft state" error now includes actionable next steps: set `draft = true` and apply to create a draft, then set `draft = false` and apply again to release.
+
 # v0.22.0
 
 Requires meshStack 2026.24.0 or later due to roll out of one shared meshcloud hosted building block runner.

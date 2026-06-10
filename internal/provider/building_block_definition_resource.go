@@ -499,7 +499,10 @@ func (r *buildingBlockDefinitionResource) Update(ctx context.Context, req resour
 			return
 		} else {
 			resp.Diagnostics.AddError("Error updating version_spec", fmt.Sprintf(
-				"Updating a version_spec in non-draft state is not allowed. The content hash would change from %s to %s.",
+				"Updating a version_spec in non-draft (released) state is not allowed — released versions are immutable.\n\n"+
+					"To publish your changes as a new version, first set draft = true and apply to create a draft. "+
+					"Once you are happy with the draft, set draft = false and apply again to release it.\n\n"+
+					"(The content hash would change from %s to %s.)",
 				state.VersionLatest.ContentHash.Get(), versionSpecDtoContentHash,
 			))
 			return
