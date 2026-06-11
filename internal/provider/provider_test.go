@@ -34,6 +34,32 @@ func IsMockClientTest() bool {
 	return os.Getenv("TF_ACC") == ""
 }
 
+// envKeyAccTarget controls which acceptance-test target is active. When set to "dev", tests run
+// against the remote dev environment (non-localhost endpoint allowed, local-only tests skipped).
+// When unset or set to "local" (the default), tests require a locally running meshStack and
+// dev-only tests are skipped. Has no effect in mock/unit mode (TF_ACC unset).
+const envKeyAccTarget = "MESHSTACK_ACC_TARGET"
+
+// RequireLocalMeshStack skips the test when running acceptance tests against the dev environment.
+// Call this on any test that requires a locally running meshStack with specific local setup.
+// Tests compatible with both local and dev targets need not call this.
+func RequireLocalMeshStack(t *testing.T) {
+	t.Helper()
+	if !IsMockClientTest() && os.Getenv(envKeyAccTarget) == "dev" {
+		t.Skip("test requires a locally running meshStack; set MESHSTACK_ACC_TARGET=local or unset it")
+	}
+}
+
+// RequireDevMeshStack skips the test when running acceptance tests against a local meshStack.
+// Call this on any test that requires setup only present in the dev environment.
+// Tests compatible with both local and dev targets need not call this.
+func RequireDevMeshStack(t *testing.T) {
+	t.Helper()
+	if !IsMockClientTest() && os.Getenv(envKeyAccTarget) != "dev" {
+		t.Skip("test requires the dev environment; set MESHSTACK_ACC_TARGET=dev")
+	}
+}
+
 // envKeyScratchDump, when non-empty, makes ApplyAndTest dump each step's HCL config to disk
 // (as a standalone, re-runnable config) instead of running the test. Set it to "1"/"true" to
 // dump into the repo-root scratch/ dir, or to a directory path to dump there. See the
@@ -92,8 +118,11 @@ func ApplyAndTest(t *testing.T, testCase resource.TestCase) {
 func DefaultTestPreCheck(t *testing.T) {
 	t.Helper()
 	endpoint := os.Getenv(envKeyMeshstackEndpoint)
-	require.Truef(t, strings.HasPrefix(endpoint, "http://localhost"),
-		"Env %s='%s' does not start with http://localhost, only locally running meshStacks should be used for tests", envKeyMeshstackEndpoint, endpoint)
+	if os.Getenv(envKeyAccTarget) != "dev" {
+		require.Truef(t, strings.HasPrefix(endpoint, "http://localhost"),
+			"Env %s='%s' does not start with http://localhost. Only locally running meshStacks are allowed by default. Set %s=dev to run against the dev environment.",
+			envKeyMeshstackEndpoint, endpoint, envKeyAccTarget)
+	}
 	require.NotEmptyf(t, os.Getenv(envKeyMeshstackApiKey), "Env %s empty, please set before running", envKeyMeshstackApiKey)
 	require.NotEmptyf(t, os.Getenv(envKeyMeshstackApiSecret), "Env %s empty, please set before running", envKeyMeshstackApiSecret)
 }
