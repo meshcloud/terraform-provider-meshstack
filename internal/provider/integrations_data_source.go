@@ -103,7 +103,7 @@ func (d *integrationsDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 									Computed:            true,
 								},
 								"owned_by_workspace": schema.StringAttribute{
-									MarkdownDescription: "Identifier of the workspace that owns this integration.",
+									MarkdownDescription: "Identifier of the workspace that owns this integration. **Note**: Entra ID integrations can only be owned by the admin workspace.",
 									Computed:            true,
 								},
 							},
@@ -117,7 +117,7 @@ func (d *integrationsDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 									Computed:            true,
 								},
 								"config": schema.SingleNestedAttribute{
-									MarkdownDescription: "Configuration for the integration. Specifies one of github, gitlab, or azuredevops integration types.",
+									MarkdownDescription: "Configuration for the integration. Specifies one of github, gitlab, azuredevops, or entraid integration types.",
 									Computed:            true,
 									Attributes: map[string]schema.Attribute{
 										"github": schema.SingleNestedAttribute{
@@ -206,6 +206,27 @@ func (d *integrationsDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 															Computed:            true,
 														},
 													},
+												},
+											},
+										},
+										"entraid": schema.SingleNestedAttribute{
+											MarkdownDescription: "Entra ID SSO integration configuration.",
+											Computed:            true,
+											Optional:            true,
+											Attributes: map[string]schema.Attribute{
+												"tenant_id": schema.StringAttribute{
+													MarkdownDescription: "Entra ID tenant ID.",
+													Computed:            true,
+												},
+												"client_id": schema.StringAttribute{
+													MarkdownDescription: "Entra ID application (client) ID.",
+													Computed:            true,
+												},
+												"client_secret": secret.DatasourceSchema(secret.DatasourceSchemaOptions{}),
+												"redirect_url": schema.StringAttribute{
+													MarkdownDescription: "OAuth2 redirect URL. Computed by meshStack.",
+													Computed:            true,
+													Optional:            true,
 												},
 											},
 										},

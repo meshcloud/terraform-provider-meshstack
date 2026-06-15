@@ -180,6 +180,50 @@ func TestAccIntegrationResource(t *testing.T) {
 			},
 		})
 	})
+
+	t.Run("04_entra_id", func(t *testing.T) {
+		config, resourceAddress := testconfig.Integration(t, "_04_entra_id")
+		var resourceUuid string
+
+		ApplyAndTest(t, resource.TestCase{
+			Steps: []resource.TestStep{
+				{
+					Config: config.String(),
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PreApply: []plancheck.PlanCheck{
+							plancheck.ExpectResourceAction(resourceAddress.String(), plancheck.ResourceActionCreate),
+						},
+					},
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("metadata"), checkIntegrationMetadata()),
+						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("spec"), checkIntegrationSpec("04_entra_id", "Entra ID Integration")),
+						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("status"), checkIntegrationStatus()),
+						xknownvalue.Ref(resourceAddress, "meshIntegration", &resourceUuid),
+					},
+				},
+				{
+					Config: updateIntegrationDisplayName(t, config, "Entra ID Integration"),
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PreApply: []plancheck.PlanCheck{
+							plancheck.ExpectResourceAction(resourceAddress.String(), plancheck.ResourceActionUpdate),
+						},
+					},
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("spec"), checkIntegrationSpec("04_entra_id", "Entra ID Updated Integration")),
+						xknownvalue.Ref(resourceAddress, "meshIntegration", &resourceUuid),
+					},
+				},
+				{
+					ImportState:     true,
+					ImportStateKind: resource.ImportBlockWithID,
+					ImportStateIdFunc: func(state *terraform.State) (string, error) {
+						return resourceUuid, nil
+					},
+					ResourceName: resourceAddress.String(),
+				},
+			},
+		})
+	})
 }
 
 func checkIntegrationMetadata() knownvalue.Check {
@@ -216,6 +260,7 @@ func checkIntegrationConfig(exampleSuffix string) knownvalue.Check {
 			}),
 			"azuredevops": knownvalue.Null(),
 			"gitlab":      knownvalue.Null(),
+			"entraid":     knownvalue.Null(),
 		})
 	case "02_azure_devops":
 		return xknownvalue.MapExact(map[string]knownvalue.Check{
@@ -233,7 +278,8 @@ func checkIntegrationConfig(exampleSuffix string) knownvalue.Check {
 					"kind": knownvalue.StringExact("meshBuildingBlockRunner"),
 				}),
 			}),
-			"gitlab": knownvalue.Null(),
+			"gitlab":  knownvalue.Null(),
+			"entraid": knownvalue.Null(),
 		})
 	case "03_gitlab":
 		return xknownvalue.MapExact(map[string]knownvalue.Check{
@@ -245,6 +291,23 @@ func checkIntegrationConfig(exampleSuffix string) knownvalue.Check {
 					"uuid": knownvalue.StringExact(SharedBuildingBlockRunnerUuid),
 					"kind": knownvalue.StringExact("meshBuildingBlockRunner"),
 				}),
+			}),
+			"entraid": knownvalue.Null(),
+		})
+	case "04_entra_id":
+		return xknownvalue.MapExact(map[string]knownvalue.Check{
+			"github":      knownvalue.Null(),
+			"azuredevops": knownvalue.Null(),
+			"gitlab":      knownvalue.Null(),
+			"entraid": xknownvalue.MapExact(map[string]knownvalue.Check{
+				"tenant_id": knownvalue.StringExact("xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"),
+				"client_id": knownvalue.StringExact("yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy"),
+				"client_secret": xknownvalue.MapExact(map[string]knownvalue.Check{
+					"secret_value":   knownvalue.Null(),
+					"secret_hash":    xknownvalue.NotEmptyString(),
+					"secret_version": xknownvalue.NotEmptyString(),
+				}),
+				"redirect_url": xknownvalue.NotEmptyString(),
 			}),
 		})
 	default:
