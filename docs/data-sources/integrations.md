@@ -89,7 +89,7 @@ Read-Only:
 
 Read-Only:
 
-- `owned_by_workspace` (String) Identifier of the workspace that owns this integration.
+- `owned_by_workspace` (String) Identifier of the workspace that owns this integration. **Note**: Entra ID integrations can only be owned by the admin workspace.
 - `uuid` (String) UUID of the integration.
 
 
@@ -98,7 +98,7 @@ Read-Only:
 
 Read-Only:
 
-- `config` (Attributes) Configuration for the integration. Specifies one of github, gitlab, or azuredevops integration types. (see [below for nested schema](#nestedatt--integrations--spec--config))
+- `config` (Attributes) Configuration for the integration. Specifies one of github, gitlab, azuredevops, or entraid integration types. (see [below for nested schema](#nestedatt--integrations--spec--config))
 - `display_name` (String) Display name of the integration.
 
 <a id="nestedatt--integrations--spec--config"></a>
@@ -107,6 +107,7 @@ Read-Only:
 Optional:
 
 - `azuredevops` (Attributes) Azure DevOps integration configuration. (see [below for nested schema](#nestedatt--integrations--spec--config--azuredevops))
+- `entraid` (Attributes) Entra ID SSO integration configuration. (see [below for nested schema](#nestedatt--integrations--spec--config--entraid))
 - `github` (Attributes) GitHub integration configuration. (see [below for nested schema](#nestedatt--integrations--spec--config--github))
 - `gitlab` (Attributes) GitLab integration configuration. (see [below for nested schema](#nestedatt--integrations--spec--config--gitlab))
 
@@ -135,6 +136,28 @@ Read-Only:
 
 - `kind` (String) meshObject type, always meshBuildingBlockRunner.
 - `uuid` (String) UUID of the meshBuildingBlockRunner.
+
+
+
+<a id="nestedatt--integrations--spec--config--entraid"></a>
+### Nested Schema for `integrations.spec.config.entraid`
+
+Optional:
+
+- `redirect_url` (String) OAuth2 redirect URL. Computed by meshStack.
+
+Read-Only:
+
+- `client_id` (String) Entra ID application (client) ID.
+- `client_secret` (Attributes) (see [below for nested schema](#nestedatt--integrations--spec--config--entraid--client_secret))
+- `tenant_id` (String) Entra ID tenant ID.
+
+<a id="nestedatt--integrations--spec--config--entraid--client_secret"></a>
+### Nested Schema for `integrations.spec.config.entraid.client_secret`
+
+Read-Only:
+
+- `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret was changed externally.
 
 
 

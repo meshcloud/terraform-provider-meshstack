@@ -16,6 +16,7 @@ var (
 	MeshIntegrationConfigTypeGithub      = MeshIntegrationConfigTypes.Entry("github")
 	MeshIntegrationConfigTypeGitlab      = MeshIntegrationConfigTypes.Entry("gitlab")
 	MeshIntegrationConfigTypeAzureDevops = MeshIntegrationConfigTypes.Entry("azuredevops")
+	MeshIntegrationConfigTypeEntraId     = MeshIntegrationConfigTypes.Entry("entraid")
 )
 
 type MeshIntegrationGithubConfig struct {
@@ -38,11 +39,19 @@ type MeshIntegrationAzureDevopsConfig struct {
 	RunnerRef           *BuildingBlockRunnerRef `json:"runnerRef" tfsdk:"runner_ref"`
 }
 
+type MeshIntegrationEntraIdConfig struct {
+	TenantId     string       `json:"tenantId" tfsdk:"tenant_id"`
+	ClientId     string       `json:"clientId" tfsdk:"client_id"`
+	ClientSecret types.Secret `json:"clientSecret" tfsdk:"client_secret"`
+	RedirectUrl  *string      `json:"redirectUrl,omitempty" tfsdk:"redirect_url"`
+}
+
 type MeshIntegrationConfig struct {
 	Type        enum.Entry[MeshIntegrationConfigType] `json:"type" tfsdk:"-"`
 	Github      *MeshIntegrationGithubConfig          `json:"github,omitempty" tfsdk:"github"`
 	Gitlab      *MeshIntegrationGitlabConfig          `json:"gitlab,omitempty" tfsdk:"gitlab"`
 	AzureDevops *MeshIntegrationAzureDevopsConfig     `json:"azuredevops,omitempty" tfsdk:"azuredevops"`
+	EntraId     *MeshIntegrationEntraIdConfig         `json:"entraid,omitempty" tfsdk:"entraid"`
 }
 
 func (m MeshIntegrationConfig) InferTypeFromNonNilField() (result enum.Entry[MeshIntegrationConfigType]) {
@@ -57,6 +66,7 @@ func (m MeshIntegrationConfig) InferTypeFromNonNilField() (result enum.Entry[Mes
 	setResultIfNotNil(MeshIntegrationConfigTypeGithub, m.Github)
 	setResultIfNotNil(MeshIntegrationConfigTypeGitlab, m.Gitlab)
 	setResultIfNotNil(MeshIntegrationConfigTypeAzureDevops, m.AzureDevops)
+	setResultIfNotNil(MeshIntegrationConfigTypeEntraId, m.EntraId)
 	if len(result) == 0 {
 		panic("cannot infer config type")
 	}

@@ -66,10 +66,11 @@ func (r *integrationResource) Schema(_ context.Context, _ resource.SchemaRequest
 		path.MatchRelative().AtParent().AtName("github"),
 		path.MatchRelative().AtParent().AtName("gitlab"),
 		path.MatchRelative().AtParent().AtName("azuredevops"),
+		path.MatchRelative().AtParent().AtName("entraid"),
 	)
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Manages a meshIntegration in meshStack. " +
-			"Integrations configure external CI/CD systems (GitHub, GitLab, Azure DevOps) for building block execution. " +
+			"Integrations configure external CI/CD systems (GitHub, GitLab, Azure DevOps) for building block execution or for Entra ID SSO. " +
 			"Secrets in the integration configurations are encrypted and stored securely. When retrieving the integration, " +
 			"these fields are returned with a hash value instead of the actual secret, enabling drift detection while maintaining security.",
 
@@ -103,7 +104,7 @@ func (r *integrationResource) Schema(_ context.Context, _ resource.SchemaRequest
 						Required:            true,
 					},
 					"config": schema.SingleNestedAttribute{
-						MarkdownDescription: "Configuration for the integration. Must specify exactly one of `github`, `gitlab`, or `azuredevops`.",
+						MarkdownDescription: "Configuration for the integration. Must specify exactly one of `github`, `gitlab`, `azuredevops`, or `entraid`.",
 						Required:            true,
 						Attributes: map[string]schema.Attribute{
 							"github": schema.SingleNestedAttribute{
@@ -177,6 +178,30 @@ func (r *integrationResource) Schema(_ context.Context, _ resource.SchemaRequest
 										Optional:   true,
 										Computed:   true,
 										Attributes: meshUuidRefAttribute(client.MeshObjectKind.BuildingBlockRunner),
+									},
+								},
+							},
+							"entraid": schema.SingleNestedAttribute{
+								MarkdownDescription: "Entra ID SSO integration configuration. **Note**: Entra ID integrations can only be owned by the admin workspace.",
+								Optional:            true,
+								Validators:          []validator.Object{allowSingleImplementation},
+								Attributes: map[string]schema.Attribute{
+									"tenant_id": schema.StringAttribute{
+										MarkdownDescription: "Entra ID tenant ID.",
+										Required:            true,
+									},
+									"client_id": schema.StringAttribute{
+										MarkdownDescription: "Entra ID application (client) ID.",
+										Required:            true,
+									},
+									"client_secret": secret.ResourceSchema(secret.ResourceSchemaOptions{
+										MarkdownDescription: "Client secret for the Entra ID application.",
+										Optional:            false,
+									}),
+									"redirect_url": schema.StringAttribute{
+										MarkdownDescription: "OAuth2 redirect URL. Computed by meshStack.",
+										Optional:            true,
+										Computed:            true,
 									},
 								},
 							},

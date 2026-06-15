@@ -26,6 +26,9 @@ func (m MeshIntegrationClient) Create(_ context.Context, integration client.Mesh
 		},
 	}
 	backendSecretBehavior(true, created, nil)
+	if created.Spec.Config.EntraId != nil && created.Spec.Config.EntraId.RedirectUrl == nil {
+		created.Spec.Config.EntraId.RedirectUrl = new(fmt.Sprintf("https://meshstack.example.com/oauth/redirect/%s", integrationUuid))
+	}
 	m.Store.Set(integrationUuid, created)
 	return created, nil
 }
@@ -40,6 +43,10 @@ func (m MeshIntegrationClient) Read(_ context.Context, uuid string) (*client.Mes
 func (m MeshIntegrationClient) Update(_ context.Context, integration client.MeshIntegration) (*client.MeshIntegration, error) {
 	if existing, ok := m.Store.Get(*integration.Metadata.Uuid); ok {
 		backendSecretBehavior(false, &integration, existing)
+		if integration.Spec.Config.EntraId != nil && integration.Spec.Config.EntraId.RedirectUrl == nil &&
+			existing.Spec.Config.EntraId != nil {
+			integration.Spec.Config.EntraId.RedirectUrl = existing.Spec.Config.EntraId.RedirectUrl
+		}
 		existing.Spec = integration.Spec
 		return existing, nil
 	}
