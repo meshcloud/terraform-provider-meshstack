@@ -8,8 +8,9 @@ tasks:
     env:
       TF_ACC: 1
     cmds:
-      - go test ./... -v {{.CLI_ARGS}} -timeout 120m
-    
+      # -count=1 disables Go's test result cache — acceptance tests test a live service (e.g. meshfed-api), whose changes are invisible to Go's source-based cache
+      - go test ./... -v -count=1 {{.CLI_ARGS}} -timeout 120m
+
   test:
     desc: Run unit tests only
     cmds:
