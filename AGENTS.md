@@ -8,7 +8,7 @@ referenced from the relevant sections below:
 - **`modern-go`** — Go 1.26 `new(expression)` and the codebase's generics.
 - **`changelog-management`** — pick the next version and maintain `CHANGELOG.md`.
 - **`meshstack-services`** / **`acceptance-testing`** — bring up the local backend and run/debug the suite.
-- **`scratch-config-testing`** — run a config in git-ignored `scratch/` against a local meshStack via the dev-built binary to reproduce/debug bugs.
+- **`scratch-config-testing`** — run a config in git-ignored `scratch/` against a local meshStack via the dev-built binary to reproduce/debug bugs; also documents the optional `tf-block-runner` swap for exercising terraform-implementation BBDs (not for acceptance testing).
 
 Official Terraform Provider for managing meshStack resources via the meshObject API
 (`/api/meshobjects`). Standard [terraform-plugin-framework](https://github.com/hashicorp/terraform-plugin-framework) v1.

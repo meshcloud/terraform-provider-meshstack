@@ -79,6 +79,56 @@ terraform destroy      # clean up the meshObjects when done
 Provider-side logs: `TF_LOG_PROVIDER=debug terraform apply`. To step through with a debugger,
 build with `go build -gcflags="all=-N -l"` and attach delve to the running provider process.
 
+## Optional: terraform-implementation BBDs (real `tf-block-runner`)
+
+> **Not needed for acceptance testing.** The acceptance suite (and the default local backend
+> from the **meshstack-services** skill) registers the **manual** block runner — a no-op that
+> echoes inputs as outputs and never executes terraform. Leave that as-is for `task testacc`.
+> This section is only for *playing in `scratch/` with a `meshstack_building_block_definition`
+> whose `implementation.terraform` actually clones a repo and runs OpenTofu*, plus its
+> consuming `meshstack_building_block`.
+
+The manual runner can't run terraform. To exercise a terraform-impl BBD end-to-end, swap it for
+the **`tf-block-runner`** — a Go app in the `building-block-runner` repo (may sit at
+`../building-block-runner/tf-block-runner`; it is *not* a gradle module, so `go run .`):
+
+```bash
+pkill -9 -f "BlockRunnerApplicationKt"          # stop the manual runner (same UUID would race)
+cd ../building-block-runner/tf-block-runner
+RUNNER_UUID=98520496-627d-43e6-82da-ce499179ff3f \
+  nohup go run . > /tmp/tf-runner.log 2>&1 &     # restart the manual runner afterwards for acc tests
+```
+
+`RUNNER_UUID` (env) overrides `runner-config.yml` and **must** equal the
+`SharedBuildingBlockRunnerUuid` (`internal/provider/building_block_runner.go`,
+`98520496-…`) that BBD examples default to, or runs sit unclaimed. The runner polls
+`localhost:8080` (bb-api/guest), downloads OpenTofu via tofudl, clones the BBD's
+`repository_url`, and for a module that declares no backend injects the mesh http backend
+(`use_mesh_http_backend_fallback = true`). Watch `/tmp/tf-runner.log`; the building block
+reaches `SUCCEEDED` with real tofu outputs in TF state. A minimal BBD `implementation`:
+
+```hcl
+implementation = {
+  terraform = {
+    repository_url                 = "https://github.com/meshcloud/meshstack-hub.git"
+    repository_path                = "modules/meshstack/noop/buildingblock"   # NoOp reference module: all input/output types, no real infra
+    ref_name                       = "main"
+    terraform_version              = "1.9.0"                                   # >1.5.5 → OpenTofu via tofudl
+    use_mesh_http_backend_fallback = true
+  }
+}
+```
+
+Two gotchas when hand-writing such a config:
+- **Sensitive STATIC inputs fail to decrypt** (`file input decryption failed`): the local shared
+  runner's registered public key doesn't match the `tf-block-runner`'s `runner-config.yml` key.
+  For play, declare the input as plain STATIC (`argument = jsonencode(...)`) instead of
+  `sensitive = { argument = { secret_value = ... } }`.
+- **`draft = false` versions are immutable** (`Updating a version_spec in non-draft state is not
+  allowed`). Use `draft = true` to iterate — each apply updates the version in place and reruns
+  the block; flip to `false` only to "release". A released version can't return to draft (destroy
+  + recreate).
+
 ## Notes
 
 - The built-in `TF_ACC_PERSIST_WORKING_DIR=1` only *preserves* a test's temp working dir for

@@ -66,6 +66,12 @@ RUNNER_UUID=98520496-627d-43e6-82da-ce499179ff3f \
   (default `bb-api`/`guest`). Override via env or a `runner-config.yml` only if your local
   setup differs.
 
+> The **manual** runner is what acceptance testing uses — it no-ops both manual and
+> terraform-implementation BBDs (echoes inputs as outputs). Keep it for the acceptance suite.
+> To instead run a *terraform-implementation* BBD end-to-end in `scratch/` (real `git clone` +
+> OpenTofu) — only for ad-hoc play, never the acceptance suite — swap this manual runner for the
+> `tf-block-runner`; see the optional section in the **`scratch-config-testing`** skill.
+
 **Readiness markers** (grep the logs; ~60–120s on first build):
 
 | Service           | Log file                    | Marker                                     | Port |
