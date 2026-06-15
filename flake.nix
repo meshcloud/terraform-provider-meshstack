@@ -22,8 +22,8 @@
       devShells = forEachSupportedSystem ({ pkgs }: {
         default = pkgs.mkShell {
           packages = with pkgs; [
-            # go 1.25 (pinned)
-            go_1_25
+            # go 1.26 (pinned)
+            go_1_26
             
             # goimports, godoc, etc.
             gotools
@@ -43,7 +43,7 @@
 
           shellHook = ''
             # Explicitly set GOROOT to Nix-installed Go
-            export GOROOT="${pkgs.go_1_25}/share/go"
+            export GOROOT="${pkgs.go_1_26}/share/go"
             
             # Isolate Go environment from system
             export GOPATH="$PWD/.nix-go"
