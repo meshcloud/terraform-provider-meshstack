@@ -53,22 +53,6 @@ func meshProjectRoleAttribute(computed bool) schema.SingleNestedAttribute {
 	}
 }
 
-func meshBuildingBlockDefinitionRefAttribute(computed bool) map[string]schema.Attribute {
-	return map[string]schema.Attribute{
-		"kind": schema.StringAttribute{
-			MarkdownDescription: "meshObject type, always `meshBuildingBlockDefinition`.",
-			Computed:            true,
-			Default:             stringdefault.StaticString(client.MeshObjectKind.BuildingBlockDefinition),
-			PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-		},
-		"uuid": schema.StringAttribute{
-			MarkdownDescription: "UUID of the building block.",
-			Computed:            computed,
-			Required:            !computed,
-		},
-	}
-}
-
 // TODO reuse this at all other places where UUID refs.
 func meshUuidRefAttribute(kind string) map[string]schema.Attribute {
 	return map[string]schema.Attribute{

@@ -372,21 +372,18 @@ Required:
 
 - `uuid` (String) UUID of the platform.
 
-Read-Only:
+Optional:
 
-- `kind` (String) Must always be set to meshPlatform
+- `kind` (String) meshObject type, always `meshPlatform`.
 
 
 <a id="nestedatt--spec--mandatory_building_block_refs"></a>
 ### Nested Schema for `spec.mandatory_building_block_refs`
 
-Required:
-
-- `uuid` (String) UUID of the building block.
-
-Read-Only:
+Optional:
 
 - `kind` (String) meshObject type, always `meshBuildingBlockDefinition`.
+- `uuid` (String) UUID of the meshBuildingBlockDefinition.
 
 
 <a id="nestedatt--spec--quotas"></a>
@@ -401,13 +398,10 @@ Required:
 <a id="nestedatt--spec--recommended_building_block_refs"></a>
 ### Nested Schema for `spec.recommended_building_block_refs`
 
-Required:
-
-- `uuid` (String) UUID of the building block.
-
-Read-Only:
+Optional:
 
 - `kind` (String) meshObject type, always `meshBuildingBlockDefinition`.
+- `uuid` (String) UUID of the meshBuildingBlockDefinition.
 
 
 
