@@ -1,3 +1,8 @@
+# v0.23.0
+
+FIXES:
+- `meshstack_landingzone`: `spec.platform_ref` and `spec.mandatory_building_block_refs`/`spec.recommended_building_block_refs` now accept a referenced resource's computed `ref` directly (e.g. `platform_ref = meshstack_platform.example.ref`). The `kind` field is now optional (defaulting to its single valid value) instead of read-only, so assigning a full ref object no longer fails with "Cannot set value for this attribute as the provider has marked it as read-only".
+
 # v0.22.1
 
 FEATURES:
