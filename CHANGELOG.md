@@ -15,6 +15,7 @@ FIXES:
 - `meshstack_building_block`: After a rerun-triggering update, the provider now waits for the newly triggered run to complete instead of returning early on the previous run's stale `SUCCEEDED` status, so `status` and `outputs` reflect the new run.
 - `meshstack_building_block`: When a create or update short-circuits because the run is parked waiting for operator input, the provider now emits the "waiting for input" warning instead of reporting a clean apply on a stuck block.
 - `meshstack_building_block`: Migrating from `meshstack_building_block_v2` via a `moved` block now warns to re-supply sensitive inputs (whose write-only values cannot be carried through state) instead of silently dropping them.
+- `meshstack_landingzone`: `spec.platform_ref` and `spec.mandatory_building_block_refs`/`spec.recommended_building_block_refs` now accept a referenced resource's computed `ref` directly (e.g. `platform_ref = meshstack_platform.example.ref`). The `kind` field is now optional (defaulting to its single valid value) instead of read-only, so assigning a full ref object no longer fails with "Cannot set value for this attribute as the provider has marked it as read-only".
 
 # v0.22.1
 
