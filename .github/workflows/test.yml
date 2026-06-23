@@ -17,6 +17,11 @@ on:
 permissions:
   contents: read
 
+# Cancel superseded runs on the same ref (the acceptance job is expensive).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     name: Go Build
@@ -90,44 +95,317 @@ jobs:
         with:
           go-version-file: 'go.mod'
           cache: true
-      - name: Run tests with gotestsum
-        run: go tool gotestsum --junitfile junit.xml --format testdox -- -coverprofile=coverage.out -coverpkg=./... ./...
-      - name: Generate coverage report
-        if: always()
+      # Emit coverage as a binary coverage-data directory (GOCOVERDIR format) rather than a text
+      # profile, so the acceptance job on a different runner can merge it with its own live-backend
+      # coverage via `go tool covdata merge`. `-coverpkg=./...` attributes coverage across all
+      # packages; the test binaries flush coverage on exit even when a test fails.
+      - name: Run unit tests with gotestsum
         run: |
-          # Generate detailed coverage
-          go tool cover -func=coverage.out > coverage-summary.txt
-          TOTAL=$(tail -1 coverage-summary.txt | awk '{print $3}')
-          
-          # Job summary
-          echo "## Test Coverage: $TOTAL" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "<details><summary>Coverage by file</summary>" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          head -50 coverage-summary.txt >> $GITHUB_STEP_SUMMARY
-          echo '...' >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          echo "</details>" >> $GITHUB_STEP_SUMMARY
-      - name: Post coverage to PR
-        if: github.event_name == 'pull_request'
+          mkdir -p covdata/unit
+          go tool gotestsum --junitfile junit.xml --format testdox -- \
+            -coverpkg=./... ./... -args -test.gocoverdir="$PWD/covdata/unit"
+
+      # Hand the unit coverage data to the acceptance job (a separate, self-hosted runner). Always
+      # upload, even on test failure, so the combined report can still be produced.
+      - name: Upload unit coverage data
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: covdata-unit
+          path: covdata/unit
+          retention-days: 1
+          if-no-files-found: warn
+
+      # Post (or refresh) the single coverage comment with the unit figure and a placeholder for the
+      # combined number. The acceptance job rewrites this same comment (matched by the HTML marker)
+      # once it has merged in the live-backend coverage.
+      - name: Post coverage to PR (unit; acceptance pending)
+        if: ${{ always() && github.event_name == 'pull_request' }}
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          TOTAL=$(tail -1 coverage-summary.txt | awk '{print $3}')
-          
-          # Create comment body
-          COMMENT="## 📊 Test Coverage: $TOTAL
-          
-          <details><summary>Top uncovered files</summary>
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+        shell: bash
+        run: .github/scripts/coverage-comment.sh unit
 
-          \`\`\`
-          $(grep '0.0%' coverage-summary.txt | head -10 || echo 'All files have some coverage!')
-          \`\`\`
-          </details>
-          
-          *Coverage measured across all packages with \`-coverpkg=./...\`*"
-          
-          # Post or update comment
-          gh pr comment ${{ github.event.pull_request.number }} --body "$COMMENT" --edit-last || \
-          gh pr comment ${{ github.event.pull_request.number }} --body "$COMMENT"
+  # Acceptance tests against a real, fully dockerized meshStack backend brought up from pre-built
+  # images as service containers. Runs on the org's self-hosted mesh-runners (which can pull the
+  # private GAR images); forks are skipped (no runners / secrets / MESHFED_REGISTRY variable).
+  # The internal registry path comes from the MESHFED_REGISTRY repo/org configuration variable so
+  # it is not hardcoded here. Canonical local equivalent: meshfed-release/docker-compose.acc.yml.
+  acceptance:
+    name: Go Acceptance Test
+    needs: [ build, test ]
+    # Run after the unit job (so its coverage artifact exists to merge) even when that job's tests
+    # failed, but only on a green build and on a non-fork PR or a manual dispatch (forks lack the
+    # self-hosted runners, the secrets and the MESHFED_REGISTRY variable).
+    if: >-
+      always() && needs.build.result == 'success' &&
+      (github.event_name == 'workflow_dispatch' ||
+       github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: mesh-runners
+    permissions:
+      contents: read
+      pull-requests: write  # for the coverage comment
+
+    # ARC runs these self-hosted runners in kubernetes container mode, where a job using service
+    # containers MUST declare a job container — so nix-ci stays as the (GAR-available, proven) base.
+    # The Go toolchain + module/build cache come from actions/setup-go below, aligned with the other
+    # jobs in this workflow; tofu is provided by the nix-ci image.
+    container:
+      image: ${{ vars.MESHFED_REGISTRY }}/meshstack-container/nix-ci:latest
+
+    # Full backend as service containers. On mesh-runners all services + the job container share one
+    # network, so the images' baked localhost config resolves between them. Ports are de-conflicted
+    # (meshfed-api on 8089 so the tf-runner's fixed :8080 health server does not collide). JVM
+    # services use `--restart on-failure` to absorb the mariadb startup race; the readiness step is
+    # the real gate.
+    services:
+      mariadb:
+        image: ${{ vars.MESHFED_REGISTRY }}/meshstack-container/mariadb-ci
+
+      ravendb:
+        image: ${{ vars.MESHFED_REGISTRY }}/meshstack-container/ravendb-ci
+
+      rabbitmq:
+        image: ${{ vars.MESHFED_REGISTRY }}/dockerhub/rabbitmq:3.11.18-alpine
+        env:
+          RABBITMQ_DEFAULT_USER: guest
+          RABBITMQ_DEFAULT_PASS: guest
+
+      keycloak:
+        image: ${{ vars.MESHFED_REGISTRY }}/meshstack-container/keycloak-ci:26
+
+      meshfed-api:
+        image: ${{ vars.MESHFED_REGISTRY }}/meshstack-container/meshfed:latest
+        env:
+          SERVER_PORT: "8089"   # off 8080 so the tf-runner health server can have it; mgmt 8180
+        options: --restart on-failure
+
+      replicator:
+        image: ${{ vars.MESHFED_REGISTRY }}/meshstack-container/replicator:latest
+        env:
+          SERVER_PORT: "7080"   # move embedded server off 8080; mgmt 7180
+        options: --restart on-failure
+
+      block-coordinator-api:
+        image: ${{ vars.MESHFED_REGISTRY }}/meshstack-container/block-coordinator-api:latest
+        options: --restart on-failure
+
+      # Single poller of the magic runner UUID; fans work out by type. 127.0.0.1 forces IPv4 (the Go
+      # mux would otherwise resolve localhost to [::1], which Tomcat does not listen on). The mux
+      # holds no credentials: it forwards each runner's own Authorization on the claim, overriding
+      # only forRunnerUuid with the magic UUID.
+      multiplexing-block-runner:
+        image: ${{ vars.MESHFED_REGISTRY }}/meshstack-container/multiplexing-block-runner-ci:latest
+        env:
+          BB_RUNNER_MUX_UPSTREAM_URL: http://127.0.0.1:8089
+        options: --restart on-failure
+
+      # Standalone runners poll their mux port; own UUID is irrelevant (mux claims as the magic UUID),
+      # so it is an arbitrary placeholder. They authenticate with the seeded managed-runners API key
+      # (RUNNER_API_CLIENT_ID/SECRET → Bearer via POST /api/login, proxied through the mux) — the
+      # runner-scoped key, NOT the broad provider admin key (MESHSTACK_API_KEY) which only the
+      # provider client uses below. No basic auth. tf-block-runner bakes the matching dev private key
+      # (secret decryption works out of the box) and installs OpenTofu at runtime via Nix.
+      #
+      # Pinned to :main (not :latest): the building-block-runner repo only refreshes :latest on a
+      # tagged release, while :main is rebuilt on every merge to main. Tracking :main keeps the auth
+      # fixes (API-key-over-basic-auth precedence) that let the tf runner work in this acc stack.
+      tf-block-runner:
+        image: ghcr.io/meshcloud/tf-block-runner:main
+        env:
+          RUNNER_API_URL: http://127.0.0.1:8300
+          RUNNER_UUID: 11111111-1111-1111-1111-111111111111
+          RUNNER_API_CLIENT_ID: ${{ secrets.RUNNER_API_CLIENT_ID }}
+          RUNNER_API_CLIENT_SECRET: ${{ secrets.RUNNER_API_CLIENT_SECRET }}
+        options: --restart on-failure
+
+      manual-block-runner:
+        image: ghcr.io/meshcloud/manual-block-runner:main   # track merged main, see tf-block-runner
+        env:
+          RUNNER_API_URL: http://127.0.0.1:8301
+          RUNNER_UUID: 22222222-2222-2222-2222-222222222222
+          RUNNER_API_CLIENT_ID: ${{ secrets.RUNNER_API_CLIENT_ID }}
+          RUNNER_API_CLIENT_SECRET: ${{ secrets.RUNNER_API_CLIENT_SECRET }}
+          SERVER_PORT: "8104"   # move its embedded web server off 8080
+        options: --restart on-failure
+
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+
+      # Unit coverage data from the `test` job (a different runner). `continue-on-error` so a missing
+      # artifact (e.g. the unit job produced none) does not fail acceptance — the report step then
+      # falls back to acceptance-only coverage.
+      - name: Download unit coverage data
+        if: always()
+        continue-on-error: true
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: covdata-unit
+          path: covdata/unit
+
+      - name: Wait for backend to be ready
+        timeout-minutes: 8
+        shell: bash
+        run: |
+          wait_http() {
+            local url="$1" name="$2" deadline=$(( SECONDS + ${3:-360} ))
+            echo "waiting for $name ($url)..."
+            until curl -sf "$url" -o /dev/null; do
+              [ "$SECONDS" -gt "$deadline" ] && { echo "::error::timeout waiting for $name ($url)"; return 1; }
+              sleep 3
+            done
+            echo "$name healthy"
+          }
+          # meshfed-api is the gate: it bootstraps API keys into Keycloak, so tests run before it is
+          # healthy fail with auth errors.
+          wait_http http://localhost:8180/actuator/health meshfed-api 420
+          wait_http http://localhost:7180/actuator/health replicator 240
+          wait_http http://localhost:8083/actuator/health block-coordinator-api 240
+          wait_http http://localhost:8309/healthz mux 120
+          echo "mux routing:"; curl -s http://localhost:8309/status || true
+
+      - name: Run acceptance tests with coverage
+        id: acc
+        # Advisory: a failed acceptance run must never block the PR. The job runs against the last
+        # *merged* meshfed-release backend images, so a change needing a companion backend PR cannot
+        # go green here until that backend merges — gating on it would deadlock cross-repo changes.
+        # meshfed-release's source-built `terraform-provider-acceptance` job is the real gate; here we
+        # only surface failures via an advisory comment (see the last step).
+        continue-on-error: true
+        env:
+          # The acceptance API key/secret (seeded by the mariadb-ci dev dump) come from repo secrets.
+          MESHSTACK_ENDPOINT: http://localhost:8089
+          MESHSTACK_API_KEY: ${{ secrets.MESHSTACK_API_KEY }}
+          MESHSTACK_API_SECRET: ${{ secrets.MESHSTACK_API_SECRET }}
+          MESHSTACK_SKIP_VERSION_CHECK: "true"
+          TF_ACC: "1"
+          TF_ACC_PROVIDER_HOST: registry.opentofu.org
+        shell: bash
+        run: |
+          mkdir -p covdata/acc
+          export TF_ACC_TERRAFORM_PATH="$(command -v tofu)"
+          # The acceptance suite lives in ./internal/provider, but coverage is attributed across all
+          # packages via -coverpkg=./... so the merged report reflects the real end-to-end exercise of
+          # the client and helper packages too. Coverage is emitted as a binary coverage-data dir for
+          # merging with the unit job's data.
+          #
+          # Tee the output to a file so the next step can verify the run actually finished: a
+          # self-hosted-runner truncation can cut the test process short while this step still exits
+          # 0, which would otherwise pass as a green run. The default shell is `bash -eo pipefail`,
+          # so a genuine test failure still propagates through the pipe and fails this step.
+          go tool gotestsum --junitfile junit-acc.xml --format testdox -- \
+            -coverpkg=./... -count=1 -timeout 10m ./internal/provider/... \
+            -args -test.gocoverdir="$PWD/covdata/acc" 2>&1 | tee acc-output.log
+
+      # Guard against the self-hosted runner truncating/killing the test process while the step above
+      # still reports success (seen here, and in meshfed-release's e2e job). gotestsum prints a final
+      # "DONE N tests ... in Xs" summary only when the run completes, so its absence means the run was
+      # cut short and the result is UNKNOWN — fail hard so it can never be mistaken for green. This is
+      # distinct from an advisory test failure: a completed run (DONE present) keeps `continue-on-error`
+      # semantics below; only an incomplete run reds the job and demands a re-run. Exposes `complete`
+      # for the coverage/advisory steps. Sets the output before exiting so they can still read it.
+      - name: Verify acceptance run completed
+        id: acccheck
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          if [ -s acc-output.log ] && grep -qE '^DONE [0-9]+ tests' acc-output.log; then
+            echo "complete=true" >> "$GITHUB_OUTPUT"
+            echo "Acceptance run reached the gotestsum summary — the result is trustworthy."
+          else
+            echo "complete=false" >> "$GITHUB_OUTPUT"
+            echo "::error::Acceptance run did not complete: no gotestsum 'DONE' summary in acc-output.log. The self-hosted runner truncated or killed the run, so the result is UNKNOWN (not a pass). Re-run the job."
+            exit 1
+          fi
+
+      # Merge the unit coverage (downloaded from the test job) with this job's acceptance coverage and
+      # rewrite the single coverage comment with the combined figure. Always runs — even when the
+      # acceptance tests fail the instrumented binaries still flush their coverage on exit — and
+      # annotates the combined row with the acceptance outcome / incompleteness.
+      - name: Report combined coverage on PR
+        if: ${{ always() && github.event_name == 'pull_request' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          ACC_OUTCOME: ${{ steps.acc.outcome }}
+          ACC_COMPLETE: ${{ steps.acccheck.outputs.complete }}
+        shell: bash
+        run: .github/scripts/coverage-comment.sh combined
+
+      # Advisory PR comment: the acceptance result never blocks (continue-on-error above). Post a
+      # comment when the latest run failed so the regression stays visible, and delete it once a later
+      # run goes green. Idempotent via the HTML marker; only on PRs (needs a PR number).
+      - name: Manage acceptance advisory comment
+        if: ${{ always() && github.event_name == 'pull_request' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          OUTCOME: ${{ steps.acc.outcome }}
+          COMPLETE: ${{ steps.acccheck.outputs.complete }}
+          SERVER_URL: ${{ github.server_url }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          MARKER='<!-- acceptance-advisory -->'
+
+          # Link straight to THIS acceptance job, not the run: the run page shows green on purpose
+          # (the acc step is continue-on-error), so the failing/truncated step is only visible inside
+          # the job. Resolve the job's html_url by matching the ephemeral runner that ran it; fall back
+          # to the run URL if the lookup fails.
+          RUN_URL="$SERVER_URL/$REPO/actions/runs/$RUN_ID"
+          JOB_URL=$(gh api "repos/$REPO/actions/runs/$RUN_ID/attempts/$RUN_ATTEMPT/jobs" \
+            --jq ".jobs[] | select(.runner_name == \"${RUNNER_NAME:-}\") | .html_url" 2>/dev/null | head -n1 || true)
+          [ -n "$JOB_URL" ] || JOB_URL="$RUN_URL"
+
+          existing=$(gh api "repos/$REPO/issues/$PR/comments" --paginate \
+            --jq ".[] | select(.body | startswith(\"$MARKER\")) | .id" | head -n1 || true)
+
+          upsert() { # $1 = body
+            if [ -n "$existing" ]; then
+              gh api -X PATCH "repos/$REPO/issues/comments/$existing" -f body="$1" >/dev/null
+              echo "updated advisory comment $existing"
+            else
+              gh api -X POST "repos/$REPO/issues/$PR/comments" -f body="$1" >/dev/null
+              echo "posted advisory comment"
+            fi
+          }
+
+          # Incomplete run (truncated/killed by the runner): the result is unknown, so surface it
+          # loudly and never delete an existing warning by mistaking it for a pass.
+          if [ "$COMPLETE" != "true" ]; then
+            upsert "$(printf '%s\n%s\n\n%s' "$MARKER" \
+              "🛑 **The acceptance run did not complete.** The self-hosted runner truncated or killed the test process before gotestsum reported a summary, so the result is **unknown — not a pass**. Re-run the job; if it recurs it is a runner-infra issue." \
+              "🔗 [View the acceptance job]($JOB_URL)")"
+            exit 0
+          fi
+
+          # Completed run — act only on a definitive pass/fail; ignore cancelled/skipped.
+          case "$OUTCOME" in
+            success)
+              if [ -n "$existing" ]; then
+                gh api -X DELETE "repos/$REPO/issues/comments/$existing"
+                echo "acceptance green — deleted advisory comment $existing"
+              else
+                echo "acceptance green — no advisory comment to delete"
+              fi
+              ;;
+            failure)
+              upsert "$(printf '%s\n%s\n\n%s' "$MARKER" \
+                "⚠️ **Acceptance tests failed on the latest run.** This is advisory and does **not** block merge — the job runs against the last merged meshfed-release backend images. If this change needs a companion backend change, validate the pair via meshfed-release's \`terraform-provider-acceptance\` job; otherwise this is a regression to fix." \
+                "🔗 [View the failing acceptance job]($JOB_URL)")"
+              ;;
+            *)
+              echo "acceptance outcome '$OUTCOME' — leaving any existing comment untouched"
+              ;;
+          esac
