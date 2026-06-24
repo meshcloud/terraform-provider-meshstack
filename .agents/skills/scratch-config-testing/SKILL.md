@@ -96,13 +96,18 @@ the **`tf-block-runner`** — a Go app in the `building-block-runner` repo (may 
 pkill -9 -f "BlockRunnerApplicationKt"          # stop the manual runner (same UUID would race)
 cd ../building-block-runner/tf-block-runner
 RUNNER_UUID=98520496-627d-43e6-82da-ce499179ff3f \
+  RUNNER_API_CLIENT_ID=<local managed-runners client id> \
+  RUNNER_API_CLIENT_SECRET=<local managed-runners secret> \
   nohup go run . > /tmp/tf-runner.log 2>&1 &     # restart the manual runner afterwards for acc tests
 ```
 
 `RUNNER_UUID` (env) overrides `runner-config.yml` and **must** equal the
 `SharedBuildingBlockRunnerUuid` (`internal/provider/building_block_runner.go`,
-`98520496-…`) that BBD examples default to, or runs sit unclaimed. The runner polls
-`localhost:8080` (bb-api/guest), downloads OpenTofu via tofudl, clones the BBD's
+`98520496-…`) that BBD examples default to, or runs sit unclaimed. It authenticates with the local
+managed-runners API key (`RUNNER_API_CLIENT_ID`/`RUNNER_API_CLIENT_SECRET` above — seeded dev values
+are in the meshfed-release `local-dev-stack` skill, kept out of this public repo; the tf-block-runner
+no longer ships a basic-auth default). The runner polls `localhost:8080`, downloads OpenTofu via
+tofudl, clones the BBD's
 `repository_url`, and for a module that declares no backend injects the mesh http backend
 (`use_mesh_http_backend_fallback = true`). Watch `/tmp/tf-runner.log`; the building block
 reaches `SUCCEEDED` with real tofu outputs in TF state. A minimal BBD `implementation`:
