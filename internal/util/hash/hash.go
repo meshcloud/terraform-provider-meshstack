@@ -35,7 +35,7 @@ func (h Hasher) hash(root reflectwalk.WalkPath, v reflect.Value) (Sum, bool, err
 	visitor := func(path reflectwalk.WalkPath, v reflect.Value) error {
 		kind := v.Kind()
 
-		if kind == reflect.Ptr || kind == reflect.Interface {
+		if kind == reflect.Pointer || kind == reflect.Interface {
 			if v.IsNil() {
 				return path.Stop()
 			} else {

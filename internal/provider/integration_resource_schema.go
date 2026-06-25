@@ -104,7 +104,7 @@ func (r *integrationResource) Schema(_ context.Context, _ resource.SchemaRequest
 						Required:            true,
 					},
 					"config": schema.SingleNestedAttribute{
-						MarkdownDescription: "Configuration for the integration. Must specify exactly one of `github`, `gitlab`, `azuredevops`, or `entraid`.",
+						MarkdownDescription: "Configuration for the integration. Must specify exactly one of `github`, `gitlab`, `azuredevops`, or `entraid`. Note that your meshStack does not support Entra ID integrations by default and needs to be configured explicitly to do so.",
 						Required:            true,
 						Attributes: map[string]schema.Attribute{
 							"github": schema.SingleNestedAttribute{

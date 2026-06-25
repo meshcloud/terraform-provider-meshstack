@@ -390,7 +390,7 @@ func structFieldByIndex(fallbackToZero bool, v reflect.Value, index []int) refle
 	}
 	for i, x := range index {
 		if i > 0 {
-			if v.Kind() == reflect.Ptr {
+			if v.Kind() == reflect.Pointer {
 				if v.IsNil() {
 					if fallbackToZero {
 						// This is the fallback: get zero value of pointed-to-type instead of throwing error/panic.

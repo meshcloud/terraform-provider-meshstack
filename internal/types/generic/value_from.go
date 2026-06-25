@@ -98,7 +98,7 @@ func (conv converter) valueFrom(in reflect.Value, path reflectwalk.WalkPath, hav
 dereference:
 	for {
 		switch kind := in.Kind(); kind {
-		case reflect.Ptr:
+		case reflect.Pointer:
 			if in.IsNil() {
 				haveNil = in.IsNil()
 				in = reflect.Zero(in.Type().Elem())
