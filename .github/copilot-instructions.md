@@ -8,5 +8,4 @@ Deeper, on-demand procedures live as skills under `.agents/skills/` (`.claude/sk
 - **`github-ci`** — GitHub Actions workflow conventions and action SHA-pinning.
 - **`modern-go`** — Go 1.26 `new(expression)` and the codebase's generics.
 - **`changelog-management`** — pick the next version and maintain `CHANGELOG.md`.
-- **`meshstack-services`** — bring up a clean local meshStack backend (the legacy `meshfed-release` repo).
-- **`acceptance-testing`** — run and debug the acceptance test suite.
+- **`acceptance-testing`** — bring up a clean local meshStack backend (via the `meshfed-release` sibling repo's `local-dev-stack` skill) and run/debug the acceptance test suite.
