@@ -34,6 +34,16 @@ func IsMockClientTest() bool {
 	return os.Getenv("TF_ACC") == ""
 }
 
+// AdminWorkspaceIdentifier is the admin (partner) workspace seeded by the dev dump that the
+// acceptance tests run against — both locally and in CI (where the dev-dump-seeded meshStack is
+// brought up as an ephemeral service). The dev dump sets meshfed's
+// web.register.default-partner-identifier to "demo-partner", which is the partner/admin workspace.
+// Some resources (e.g. Entra ID integrations) can only be owned by the admin workspace — meshfed
+// rejects any other owner — so tests for them hardcode this identifier. It is specific to the dev
+// dump and does not exist on other meshStack instances, which is fine: the acceptance suite only
+// ever runs against the dev dump.
+const AdminWorkspaceIdentifier = "demo-partner"
+
 // envKeyScratchDump, when non-empty, makes ApplyAndTest dump each step's HCL config to disk
 // (as a standalone, re-runnable config) instead of running the test. Set it to "1"/"true" to
 // dump into the repo-root scratch/ dir, or to a directory path to dump there. See the

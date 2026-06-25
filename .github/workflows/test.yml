@@ -137,11 +137,14 @@ jobs:
     name: Go Acceptance Test
     needs: [ build, test ]
     # Run after the unit job (so its coverage artifact exists to merge) even when that job's tests
-    # failed, but only on a green build and on a non-fork PR or a manual dispatch (forks lack the
-    # self-hosted runners, the secrets and the MESHFED_REGISTRY variable).
+    # failed, but only on a green build and on a non-fork PR, a push to main, or a manual dispatch
+    # (forks lack the self-hosted runners, the secrets and the MESHFED_REGISTRY variable). Running
+    # on the main push (not just PRs) is what surfaces a provider/backend regression before a
+    # release tag — the same failure that meshfed-release's source-built acceptance job would hit.
     if: >-
       always() && needs.build.result == 'success' &&
       (github.event_name == 'workflow_dispatch' ||
+       github.event_name == 'push' ||
        github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: mesh-runners
     permissions:
@@ -273,12 +276,16 @@ jobs:
 
       - name: Run acceptance tests with coverage
         id: acc
-        # Advisory: a failed acceptance run must never block the PR. The job runs against the last
-        # *merged* meshfed-release backend images, so a change needing a companion backend PR cannot
-        # go green here until that backend merges — gating on it would deadlock cross-repo changes.
-        # meshfed-release's source-built `terraform-provider-acceptance` job is the real gate; here we
-        # only surface failures via an advisory comment (see the last step).
-        continue-on-error: true
+        # Advisory ON PRs ONLY: a failed acceptance run must never block a PR, because the job runs
+        # against the last *merged* meshfed-release backend images, so a change needing a companion
+        # backend PR cannot go green here until that backend merges — gating on it would deadlock
+        # cross-repo changes. On PRs, meshfed-release's source-built `terraform-provider-acceptance`
+        # job is the real gate and failures here only surface via an advisory comment (see the last
+        # step). On a push to main (and manual dispatch) there is no PR to comment on and the backend
+        # images are already merged, so the run is NOT advisory: a failure reds the job, surfacing a
+        # provider/backend regression here before a release tag — which is what this CI run would
+        # otherwise only catch in meshfed-release.
+        continue-on-error: ${{ github.event_name == 'pull_request' }}
         env:
           # The acceptance API key/secret (seeded by the mariadb-ci dev dump) come from repo secrets.
           MESHSTACK_ENDPOINT: http://localhost:8089
@@ -291,17 +298,19 @@ jobs:
         run: |
           mkdir -p covdata/acc
           export TF_ACC_TERRAFORM_PATH="$(command -v tofu)"
-          # The acceptance suite lives in ./internal/provider, but coverage is attributed across all
-          # packages via -coverpkg=./... so the merged report reflects the real end-to-end exercise of
-          # the client and helper packages too. Coverage is emitted as a binary coverage-data dir for
-          # merging with the unit job's data.
+          # Select acceptance tests by the `TestAcc` naming convention across ALL packages (./...)
+          # rather than restricting to ./internal/provider, so acceptance tests added in any package
+          # are picked up automatically. Coverage is attributed across all packages via
+          # -coverpkg=./... so the merged report reflects the real end-to-end exercise of the client
+          # and helper packages too; it is emitted as a binary coverage-data dir for merging with the
+          # unit job's data.
           #
           # Tee the output to a file so the next step can verify the run actually finished: a
           # self-hosted-runner truncation can cut the test process short while this step still exits
           # 0, which would otherwise pass as a green run. The default shell is `bash -eo pipefail`,
           # so a genuine test failure still propagates through the pipe and fails this step.
           go tool gotestsum --junitfile junit-acc.xml --format testdox -- \
-            -coverpkg=./... -count=1 -timeout 10m ./internal/provider/... \
+            -coverpkg=./... -count=1 -timeout 10m -run 'TestAcc' ./... \
             -args -test.gocoverdir="$PWD/covdata/acc" 2>&1 | tee acc-output.log
 
       # Guard against the self-hosted runner truncating/killing the test process while the step above
