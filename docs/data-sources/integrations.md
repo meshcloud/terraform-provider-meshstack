@@ -98,7 +98,7 @@ Read-Only:
 
 Read-Only:
 
-- `config` (Attributes) Configuration for the integration. Specifies one of github, gitlab, azuredevops, or entraid integration types. (see [below for nested schema](#nestedatt--integrations--spec--config))
+- `config` (Attributes) Configuration for the integration. Specifies one of `github`, `gitlab`, `azuredevops`, or `entraid` integration types. Note that your meshStack does not support Entra ID integrations by default and needs to be configured explicitly to do so. (see [below for nested schema](#nestedatt--integrations--spec--config))
 - `display_name` (String) Display name of the integration.
 
 <a id="nestedatt--integrations--spec--config"></a>

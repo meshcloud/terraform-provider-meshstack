@@ -105,7 +105,7 @@ func (conv converter) valueTo(in tftypes.Value, out reflect.Value, path reflectw
 	}
 
 	switch kind := out.Kind(); kind {
-	case reflect.Ptr:
+	case reflect.Pointer:
 		if out.IsNil() {
 			out.Set(reflect.New(out.Type().Elem()))
 		}

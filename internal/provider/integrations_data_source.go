@@ -117,7 +117,7 @@ func (d *integrationsDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 									Computed:            true,
 								},
 								"config": schema.SingleNestedAttribute{
-									MarkdownDescription: "Configuration for the integration. Specifies one of github, gitlab, azuredevops, or entraid integration types.",
+									MarkdownDescription: "Configuration for the integration. Specifies one of `github`, `gitlab`, `azuredevops`, or `entraid` integration types. Note that your meshStack does not support Entra ID integrations by default and needs to be configured explicitly to do so.",
 									Computed:            true,
 									Attributes: map[string]schema.Attribute{
 										"github": schema.SingleNestedAttribute{

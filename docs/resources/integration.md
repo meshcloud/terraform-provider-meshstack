@@ -121,7 +121,7 @@ Read-Only:
 
 Required:
 
-- `config` (Attributes) Configuration for the integration. Must specify exactly one of `github`, `gitlab`, `azuredevops`, or `entraid`. (see [below for nested schema](#nestedatt--spec--config))
+- `config` (Attributes) Configuration for the integration. Must specify exactly one of `github`, `gitlab`, `azuredevops`, or `entraid`. Note that your meshStack does not support Entra ID integrations by default and needs to be configured explicitly to do so. (see [below for nested schema](#nestedatt--spec--config))
 - `display_name` (String) Display name of the integration.
 
 <a id="nestedatt--spec--config"></a>
