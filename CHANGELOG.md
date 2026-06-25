@@ -1,5 +1,8 @@
 # v0.22.1
 
+FEATURES:
+- `meshstack_integrations`: Added support for Entra ID SSO integrations via a new `spec.config.entraid` block (`tenant_id`, `client_id`, `client_secret`, and a computed `redirect_url`). Entra ID integrations can only be owned by the admin workspace, and can only be managed if your meshStack is configured to support Entra ID SSO integrations.
+
 FIXES:
 - `meshstack_building_block_definition`: The "version_spec cannot be updated in non-draft state" error now includes actionable next steps: set `draft = true` and apply to create a draft, then set `draft = false` and apply again to release.
 
