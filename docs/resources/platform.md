@@ -2106,8 +2106,8 @@ Required:
 
 Read-Only:
 
-- `kind` (String) The kind of the object. Always `meshPlatform`.
-- `uuid` (String) UUID of the platform.
+- `kind` (String) meshObject type, always `meshPlatform`.
+- `uuid` (String) UUID of the meshPlatform.
 
 ## Import
 

@@ -88,18 +88,7 @@ func (r *tenantV4Resource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				MarkdownDescription: "Reference to this tenant, can be used as `target_ref` in building block resources.",
 				Computed:            true,
 				PlanModifiers:       []planmodifier.Object{objectplanmodifier.UseStateForUnknown()},
-				Attributes: map[string]schema.Attribute{
-					"kind": schema.StringAttribute{
-						MarkdownDescription: "The kind of the object. Always `meshTenant`.",
-						Computed:            true,
-						PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-					},
-					"uuid": schema.StringAttribute{
-						MarkdownDescription: "UUID of the tenant.",
-						Computed:            true,
-						PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-					},
-				},
+				Attributes:          meshUuidRefOutputAttribute(client.MeshObjectKind.Tenant),
 			},
 
 			"metadata": schema.SingleNestedAttribute{

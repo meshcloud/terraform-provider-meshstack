@@ -69,6 +69,7 @@ func (r *landingZoneResource) Schema(_ context.Context, _ resource.SchemaRequest
 
 	buildingBlockRefs := schema.NestedAttributeObject{
 		Attributes: meshUuidRefAttribute(client.MeshObjectKind.BuildingBlockDefinition),
+		Validators: meshUuidRefValidators(),
 	}
 
 	resp.Schema = schema.Schema{
