@@ -1,8 +1,10 @@
 package provider
 
 import (
+	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/defaults"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -53,7 +55,15 @@ func meshProjectRoleAttribute(computed bool) schema.SingleNestedAttribute {
 	}
 }
 
-// TODO reuse this at all other places where UUID refs.
+// meshUuidRefAttribute builds the attributes for a user-supplied reference composed of a fixed
+// `kind` discriminator plus a `uuid`. `kind` is optional and defaults to (and is validated against)
+// the single fixed kind; `uuid` is left Optional+Computed so a whole computed `.ref` object — whose
+// uuid is unknown until apply — can be assigned and so the backend can default an omitted ref. Pair
+// it with meshUuidRefValidators so an explicitly-provided ref still has to carry its uuid.
+//
+// It intentionally does not fit refs with bespoke schemas: a discriminated uuid-or-name target_ref,
+// a RequiresReplace platform_ref, or a uuid-only version_ref. Computed-only output refs (a resource's
+// own `.ref`) use meshUuidRefOutputAttribute instead.
 func meshUuidRefAttribute(kind string) map[string]schema.Attribute {
 	return map[string]schema.Attribute{
 		"kind": schema.StringAttribute{
@@ -72,6 +82,16 @@ func meshUuidRefAttribute(kind string) map[string]schema.Attribute {
 			Computed:            true,
 			PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 		},
+	}
+}
+
+// meshUuidRefValidators guards a meshUuidRefAttribute reference: a ref object that is provided must
+// carry its uuid. Assigning a whole computed `.ref` (whose uuid is unknown until apply) still
+// passes — AlsoRequires treats an unknown value as configured — so only an explicitly omitted uuid
+// is rejected, at plan time, instead of only failing later against the backend.
+func meshUuidRefValidators() []validator.Object {
+	return []validator.Object{
+		objectvalidator.AlsoRequires(path.MatchRelative().AtName("uuid")),
 	}
 }
 

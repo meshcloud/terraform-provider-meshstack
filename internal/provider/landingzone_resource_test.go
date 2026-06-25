@@ -2,6 +2,7 @@ package provider
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -14,6 +15,27 @@ import (
 	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/xknownvalue"
 )
+
+// TestAccLandingZoneBuildingBlockRefRequiresUuid asserts the plan-time validator rejects a
+// building block ref object that is provided without a uuid (an assigned computed `.ref`, whose
+// uuid is unknown at plan time, stays allowed — see TestAccBuildingBlock/04_tenant_moved_from_v1).
+func TestAccLandingZoneBuildingBlockRefRequiresUuid(t *testing.T) {
+	config, _ := testconfig.LandingZoneAndWorkspace(t)
+
+	badConfig := config.WithFirstBlock(
+		testconfig.Descend("spec", "mandatory_building_block_refs")(
+			testconfig.SetRawExpr(`[{ kind = "meshBuildingBlockDefinition" }]`)))
+
+	ApplyAndTest(t, resource.TestCase{
+		Steps: []resource.TestStep{
+			{
+				Config:      badConfig.String(),
+				PlanOnly:    true,
+				ExpectError: regexp.MustCompile(`(?s)uuid.*must be specified when`),
+			},
+		},
+	})
+}
 
 func TestAccLandingZone(t *testing.T) {
 	config, landingZoneAddr := testconfig.LandingZoneAndWorkspace(t)

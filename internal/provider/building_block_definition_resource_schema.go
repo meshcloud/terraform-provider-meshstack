@@ -188,7 +188,10 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 	},
 	}
 
-	dependencyRefs := schema.NestedAttributeObject{Attributes: meshUuidRefAttribute(client.MeshObjectKind.BuildingBlockDefinition)}
+	dependencyRefs := schema.NestedAttributeObject{
+		Attributes: meshUuidRefAttribute(client.MeshObjectKind.BuildingBlockDefinition),
+		Validators: meshUuidRefValidators(),
+	}
 
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Manages a meshBuildingBlockDefinition in meshStack. " +
@@ -526,6 +529,7 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 										MarkdownDescription: "Reference to the integration to use.",
 										Required:            true,
 										Attributes:          meshUuidRefAttribute(client.MeshObjectKind.Integration),
+										Validators:          meshUuidRefValidators(),
 									},
 								},
 							},
@@ -548,6 +552,7 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 										MarkdownDescription: "Reference to the integration to use.",
 										Required:            true,
 										Attributes:          meshUuidRefAttribute(client.MeshObjectKind.Integration),
+										Validators:          meshUuidRefValidators(),
 									},
 								},
 							},
@@ -577,6 +582,7 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 										MarkdownDescription: "Reference to the integration to use",
 										Required:            true,
 										Attributes:          meshUuidRefAttribute(client.MeshObjectKind.Integration),
+										Validators:          meshUuidRefValidators(),
 									},
 								},
 							},
