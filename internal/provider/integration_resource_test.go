@@ -203,12 +203,18 @@ func TestAccIntegrationResource(t *testing.T) {
 						xknownvalue.Ref(resourceAddress, "meshIntegration", &resourceUuid),
 					},
 				},
-				// NOTE: no display_name update step here (unlike the other integration types).
-				// meshfed's EntraIdIntegrationHandler.update ignores model.name — it updates only
-				// tenant_id/client_id/client_secret and reuses the stale name — so renaming an Entra
-				// ID integration is silently dropped by the backend, which surfaces as a Terraform
-				// "inconsistent result after apply". Re-add an update step once the backend persists
-				// the name. Tracked by the meshfed-release fix PR.
+				{
+					Config: updateIntegrationDisplayName(t, config, "Entra ID Integration"),
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PreApply: []plancheck.PlanCheck{
+							plancheck.ExpectResourceAction(resourceAddress.String(), plancheck.ResourceActionUpdate),
+						},
+					},
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("spec"), checkIntegrationSpec("04_entra_id", "Entra ID Updated Integration")),
+						xknownvalue.Ref(resourceAddress, "meshIntegration", &resourceUuid),
+					},
+				},
 				{
 					ImportState:     true,
 					ImportStateKind: resource.ImportBlockWithID,
