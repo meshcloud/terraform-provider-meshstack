@@ -368,6 +368,31 @@ type buildingBlockAllInput struct {
 	AssignmentType enum.Entry[client.MeshBuildingBlockInputAssignmentType] `tfsdk:"assignment_type"`
 }
 
+// buildAllInput converts a single backend building block input into its read-only all_inputs
+// representation: a sensitive input surfaces only its hash (never plaintext), a non-sensitive
+// input its jsonencode'd value. Shared by the building_block resource and the
+// building_blocks data source so both present an identical all_inputs shape.
+func buildAllInput(in *client.MeshBuildingBlockInput, diags *diag.Diagnostics) (out buildingBlockAllInput) {
+	if in.IsSensitive {
+		// Guard against nil hash (backend returns null for unset sensitive inputs).
+		if in.Value.X.Hash != nil {
+			out.Sensitive = &secret.HashOnly{Hash: *in.Value.X.Hash}
+		}
+	} else {
+		var err error
+		out.Value, err = marshalAnyIfPresent(in.Value)
+		if err != nil {
+			// non-fatal here: record the diag and keep going.
+			diags.AddError("Marshalling input value failed", err.Error())
+		}
+	}
+	if in.ValueType != nil {
+		out.ValueType = *in.ValueType
+	}
+	out.AssignmentType = in.AssignmentType
+	return
+}
+
 func (m *buildingBlockModel) SetFromClientDto(dto *client.MeshBuildingBlockV2, isImport bool, diags *diag.Diagnostics) {
 	// snapshot the configured inputs before the DTO overwrite, to decide which to keep in spec.inputs
 	// versus surface only in all_inputs
@@ -380,26 +405,8 @@ func (m *buildingBlockModel) SetFromClientDto(dto *client.MeshBuildingBlockV2, i
 
 	m.AllInputs = make(map[string]buildingBlockAllInput)
 
-	mapToAllInput := func(in *client.MeshBuildingBlockInput) (out buildingBlockAllInput) {
-		if in.IsSensitive {
-			// Guard against nil hash (backend returns null for unset sensitive inputs).
-			if in.Value.X.Hash != nil {
-				out.Sensitive = &secret.HashOnly{Hash: *in.Value.X.Hash}
-			}
-			// if Hash is nil, leave out.Sensitive nil (no value yet)
-		} else {
-			var err error
-			out.Value, err = marshalAnyIfPresent(in.Value)
-			if err != nil {
-				// this will rarely happen, so continue and eventually the diag will stop further processing
-				diags.AddError("Marshalling input value failed", err.Error())
-			}
-		}
-		if in.ValueType != nil {
-			out.ValueType = *in.ValueType
-		}
-		out.AssignmentType = in.AssignmentType
-		return
+	mapToAllInput := func(in *client.MeshBuildingBlockInput) buildingBlockAllInput {
+		return buildAllInput(in, diags)
 	}
 
 	for key, input := range m.Spec.Inputs {
@@ -449,7 +456,7 @@ func (m *buildingBlockModel) SetFromClientDto(dto *client.MeshBuildingBlockV2, i
 }
 
 func marshalAnyIfPresent(in clientTypes.SecretOrAny) (*string, error) {
-	// Marshal any value to JSON to eventually match jsontypes.Normalized (if value is present)
+	// JSON-encode so the value matches the jsontypes.Normalized attribute.
 	if in.HasY() {
 		marshalled, err := json.Marshal(in.Y)
 		if err != nil {
@@ -488,15 +495,13 @@ func buildingBlockConverterOptions(ctx context.Context, config, plan, state gene
 	}
 
 	return generic.ConverterOptions{
-		// Support clientTypes.Any as output value (both directions: Set writes
-		// outputs to state, Get reads them back when refreshing/updating/deleting)
+		// clientTypes.Any output value — needed both directions (Set to state, Get back on refresh).
 		withValueFromConverterForClientTypeAny(),
 		withValueToConverterForClientTypeAny(),
 
-		// Support sets marked with clientTypes.Set
 		generic.WithSliceTypeAsSet(clientTypes.IsSet),
 
-		// Handle inputs: From Client DTO to model
+		// inputs: from Client DTO to model
 		generic.WithValueFromConverterFor[client.MeshBuildingBlockInput](
 			func() (tftypes.Value, error) {
 				return generic.ValueFrom[*buildingBlockInputWithSensitive](nil, secretOrAnyValueFromConverter)
@@ -515,12 +520,12 @@ func buildingBlockConverterOptions(ctx context.Context, config, plan, state gene
 					}
 				}
 				return generic.ValueFrom(out,
-					generic.WithAttributePath(attributePath), // pass down attribute path into walk
+					generic.WithAttributePath(attributePath),
 					secretOrAnyValueFromConverter,
 				)
 			}),
 
-		// Handle inputs: From model to Client DTO
+		// inputs: from model to Client DTO
 		generic.WithValueToConverterFor[client.MeshBuildingBlockInput](func(attributePath path.Path, in tftypes.Value) (client.MeshBuildingBlockInput, error) {
 			model, err := generic.ValueTo[buildingBlockInputWithSensitive](in, secretOrAnyValueToConverter, generic.WithSetUnknownValueToZero())
 			if err != nil {
@@ -824,8 +829,7 @@ func rerunNeeded(plan, state client.MeshBuildingBlockV2Spec) bool {
 
 func (r *buildingBlockResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
 	if req.Plan.Raw.IsNull() {
-		// do nothing in case of Delete
-		return
+		return // destroy — nothing to modify
 	}
 
 	secret.WalkSecretPathsIn(req.Plan.Raw, &resp.Diagnostics, func(attributePath path.Path, diags *diag.Diagnostics) {
@@ -833,11 +837,10 @@ func (r *buildingBlockResource) ModifyPlan(ctx context.Context, req resource.Mod
 	})
 
 	if req.State.Raw.IsNull() {
-		// do not continue in case of Create
-		return
+		return // create — no prior state to diff against
 	}
 
-	// This must happen _only_ for Update: Determines if run is retriggered (manual or due to upgrade) and makes read-only attributes unknown accordingly
+	// Past the guards above only Update reaches here.
 	converterOptions := buildingBlockConverterOptions(ctx, req.Config, req.Plan, req.State)
 
 	// Mark the run-derived read-only attributes (status, outputs, all_inputs) unknown so the apply can

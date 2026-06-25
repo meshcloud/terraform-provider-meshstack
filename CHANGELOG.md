@@ -1,21 +1,16 @@
 # v0.23.0
 
 FEATURES:
-- New `meshstack_building_block` resource with in-place input updates (no force-replace), rerun triggered by `content_hash` changes in `building_block_definition_version_ref`, `moved` block migration support from `meshstack_buildingblock`/`meshstack_building_block_v2`, optional `purge_on_delete`, and computed `all_inputs` and `status`.
-- `meshstack_building_block`: `spec.display_name` is now updated in place. Renaming the building block no longer forces a destroy-and-recreate and does not trigger a building block run.
-- `meshstack_building_block`: Rotating a sensitive input's secret (changing its `secret_version`) now triggers a building block rerun so the new value is applied, instead of being silently ignored.
-- `meshstack_building_block`: Added a `timeouts` block to configure how long the provider waits for a building block run to complete on create, update, and delete (defaults to 30m).
-- `meshstack_building_block`: Added a computed `status.latest_dry_run_uuid` exposing the latest dry (DETECT) run when it is the most recent run. Note: `status.latest_run_uuid` now tracks only modifying (apply/destroy) runs and excludes dry runs.
-- `meshstack_building_block`: A configuration now manages only the inputs it declares in `spec.inputs`. An input set by another party but omitted from your configuration is preserved (the backend patches only the inputs the request carries) and surfaced read-only in `all_inputs` instead of showing as drift — symmetric for user and platform-operator inputs. This enables shared ownership of a single building block: the consumer manages user inputs while a platform operator (with `MANAGED_BUILDINGBLOCK_SAVE`) manages operator inputs, each declaring only its own. On import, set input values are still populated into `spec.inputs`.
+- New `meshstack_building_block` resource, the recommended way to manage building blocks.<br>
+  Updates inputs, `spec.display_name` and the definition version in place instead of forcing a destroy and recreate ([#141](https://github.com/meshcloud/terraform-provider-meshstack/issues/141)).<br>
+  Reruns the building block when a draft version's `content_hash` or a sensitive input's `secret_version` changes.<br>
+  Manages only the inputs declared in `spec.inputs`. Inputs set by someone else stay untouched and show up read only in the computed `all_inputs`.<br>
+  Each input takes one `jsonencode(...)` `value` (or a `sensitive` block) instead of the per-type `value_string`, `value_int` and similar attributes.<br>
+  Optional `timeouts` (create, update, delete; default 30m) and `purge_on_delete`. Computed `status.latest_run_uuid` and `status.latest_dry_run_uuid`.<br>
+  Migrate from the deprecated `meshstack_buildingblock` and `meshstack_building_block_v2` resources with a `moved` block. Sensitive inputs survive a `meshstack_building_block_v2` migration: re-declare the input with any placeholder `secret_value` to keep the current secret, and bump `secret_version` with a real value to rotate it.
+- New `meshstack_building_blocks` data source to list building blocks, read only and aligned to the `meshstack_building_block` resource, with optional filters. Only active building blocks are returned.
 
 FIXES:
-- `meshstack_building_block`: An update that supplies a previously-missing input (e.g. a platform operator providing an operator input that unblocks a block parked in `WAITING_FOR_OPERATOR_INPUT`) now waits for the resulting run to complete instead of returning early on the parked state. meshStack moves the block to `PENDING` as soon as the supplied inputs make it runnable, so the provider awaits the run by its status; if the block stays parked waiting for an input this configuration does not supply, it finishes with the waiting-for-input warning. This removes the need for a second apply to observe the completed run and its outputs.
-- `meshstack_building_block`: Changing `spec.parent_building_blocks` on its own (without a definition version change) now forces a replacement instead of attempting an in-place update that the backend rejects. When the definition version also changes, the parent change is carried by the in-place upgrade and no replacement occurs.
-- `meshstack_building_block`: A definition version change while the building block is not in a completed state (`SUCCEEDED`/`FAILED`/`ABORTED`) now fails with a clear, actionable error instead of an opaque backend conflict (409). Resolve any pending input or run first, then retry the upgrade.
-- `meshstack_building_block`: After a rerun-triggering update, the provider now waits for the newly triggered run to complete instead of returning early on the previous run's stale `SUCCEEDED` status, so `status` and `outputs` reflect the new run.
-- `meshstack_building_block`: When a create or update short-circuits because the run is parked waiting for operator input, the provider now emits the "waiting for input" warning instead of reporting a clean apply on a stuck block.
-- `meshstack_building_block`: A failed run now includes the failing run step's log message in the apply error (when run transparency or your permissions allow reading the run logs), instead of a separate warning.
-- `meshstack_building_block`: Migrating from `meshstack_building_block_v2` via a `moved` block now warns to re-supply sensitive inputs (whose write-only values cannot be carried through state) instead of silently dropping them.
 - `meshstack_landingzone`: `spec.platform_ref` and `spec.mandatory_building_block_refs`/`spec.recommended_building_block_refs` now accept a referenced resource's computed `ref` directly (e.g. `platform_ref = meshstack_platform.example.ref`). The `kind` field is now optional (defaulting to its single valid value) instead of read-only, so assigning a full ref object no longer fails with "Cannot set value for this attribute as the provider has marked it as read-only".
 
 # v0.22.1

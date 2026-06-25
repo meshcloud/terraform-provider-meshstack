@@ -197,6 +197,7 @@ func (p *MeshStackProvider) DataSources(_ context.Context) []func() datasource.D
 	return []func() datasource.DataSource{
 		NewBuildingBlockDataSource,
 		NewBuildingBlockV2DataSource,
+		NewBuildingBlocksDataSource,
 		NewBuildingBlockDefinitionsDataSource,
 		NewProjectDataSource,
 		NewProjectsDataSource,

@@ -36,7 +36,7 @@ func TestHttpClient(t *testing.T) {
 
 	t.Run("DoRequest object call with empty 2xx body errors", func(t *testing.T) {
 		client := newTestClientWithServer(t, func(resp http.ResponseWriter, req *http.Request) {
-			resp.WriteHeader(http.StatusOK) // 200 with no body
+			resp.WriteHeader(http.StatusOK)
 		})
 		_, err := DoRequest[*string](t.Context(), client, http.MethodGet, client.RootUrl.JoinPath("get"))
 		require.Error(t, err)
@@ -45,7 +45,7 @@ func TestHttpClient(t *testing.T) {
 
 	t.Run("DoRequest no-content call (any) tolerates an empty 2xx body", func(t *testing.T) {
 		client := newTestClientWithServer(t, func(resp http.ResponseWriter, req *http.Request) {
-			resp.WriteHeader(http.StatusAccepted) // e.g. trigger-run / delete: empty body by design
+			resp.WriteHeader(http.StatusAccepted) // empty body by design (trigger-run/delete)
 		})
 		_, err := DoRequest[any](t.Context(), client, http.MethodPost, client.RootUrl.JoinPath("trigger-run"))
 		require.NoError(t, err)
@@ -256,6 +256,24 @@ func TestHttpClient(t *testing.T) {
 			assert.Equal(t, 2, retryTestBackoff.Called)
 		})
 
+	})
+}
+
+func TestUrlQueryOptions(t *testing.T) {
+	t.Run("WithUrlQuery sets query parameters", func(t *testing.T) {
+		var gotQuery url.Values
+		client := newTestClientWithServer(t, func(resp http.ResponseWriter, req *http.Request) {
+			gotQuery = req.URL.Query()
+			resp.WriteHeader(http.StatusOK)
+			_, _ = resp.Write([]byte(`"ok"`))
+		})
+		_, err := DoRequest[string](t.Context(), client, http.MethodGet, client.RootUrl.JoinPath("list"),
+			WithUrlQuery("definitionUuid", "abc"),
+			WithUrlQuery("status", "SUCCEEDED"),
+		)
+		require.NoError(t, err)
+		assert.Equal(t, "abc", gotQuery.Get("definitionUuid"))
+		assert.Equal(t, "SUCCEEDED", gotQuery.Get("status"))
 	})
 }
 
