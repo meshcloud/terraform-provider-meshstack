@@ -259,6 +259,24 @@ func TestHttpClient(t *testing.T) {
 	})
 }
 
+func TestUrlQueryOptions(t *testing.T) {
+	t.Run("WithUrlQuery sets query parameters", func(t *testing.T) {
+		var gotQuery url.Values
+		client := newTestClientWithServer(t, func(resp http.ResponseWriter, req *http.Request) {
+			gotQuery = req.URL.Query()
+			resp.WriteHeader(http.StatusOK)
+			_, _ = resp.Write([]byte(`"ok"`))
+		})
+		_, err := DoRequest[string](t.Context(), client, http.MethodGet, client.RootUrl.JoinPath("list"),
+			WithUrlQuery("definitionUuid", "abc"),
+			WithUrlQuery("status", "SUCCEEDED"),
+		)
+		require.NoError(t, err)
+		assert.Equal(t, "abc", gotQuery.Get("definitionUuid"))
+		assert.Equal(t, "SUCCEEDED", gotQuery.Get("status"))
+	})
+}
+
 func mockTimeNowAsUTC(t *testing.T) time.Time {
 	t.Helper()
 	now := time.Now().UTC().Truncate(time.Second)

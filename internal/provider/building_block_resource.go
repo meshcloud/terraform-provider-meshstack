@@ -368,6 +368,31 @@ type buildingBlockAllInput struct {
 	AssignmentType enum.Entry[client.MeshBuildingBlockInputAssignmentType] `tfsdk:"assignment_type"`
 }
 
+// buildAllInput converts a single backend building block input into its read-only all_inputs
+// representation: a sensitive input surfaces only its hash (never plaintext), a non-sensitive
+// input its jsonencode'd value. Shared by the building_block resource and the
+// building_blocks data source so both present an identical all_inputs shape.
+func buildAllInput(in *client.MeshBuildingBlockInput, diags *diag.Diagnostics) (out buildingBlockAllInput) {
+	if in.IsSensitive {
+		// Guard against nil hash (backend returns null for unset sensitive inputs).
+		if in.Value.X.Hash != nil {
+			out.Sensitive = &secret.HashOnly{Hash: *in.Value.X.Hash}
+		}
+	} else {
+		var err error
+		out.Value, err = marshalAnyIfPresent(in.Value)
+		if err != nil {
+			// this will rarely happen, so continue and eventually the diag will stop further processing
+			diags.AddError("Marshalling input value failed", err.Error())
+		}
+	}
+	if in.ValueType != nil {
+		out.ValueType = *in.ValueType
+	}
+	out.AssignmentType = in.AssignmentType
+	return
+}
+
 func (m *buildingBlockModel) SetFromClientDto(dto *client.MeshBuildingBlockV2, isImport bool, diags *diag.Diagnostics) {
 	// snapshot the configured inputs before the DTO overwrite, to decide which to keep in spec.inputs
 	// versus surface only in all_inputs
@@ -380,26 +405,8 @@ func (m *buildingBlockModel) SetFromClientDto(dto *client.MeshBuildingBlockV2, i
 
 	m.AllInputs = make(map[string]buildingBlockAllInput)
 
-	mapToAllInput := func(in *client.MeshBuildingBlockInput) (out buildingBlockAllInput) {
-		if in.IsSensitive {
-			// Guard against nil hash (backend returns null for unset sensitive inputs).
-			if in.Value.X.Hash != nil {
-				out.Sensitive = &secret.HashOnly{Hash: *in.Value.X.Hash}
-			}
-			// if Hash is nil, leave out.Sensitive nil (no value yet)
-		} else {
-			var err error
-			out.Value, err = marshalAnyIfPresent(in.Value)
-			if err != nil {
-				// this will rarely happen, so continue and eventually the diag will stop further processing
-				diags.AddError("Marshalling input value failed", err.Error())
-			}
-		}
-		if in.ValueType != nil {
-			out.ValueType = *in.ValueType
-		}
-		out.AssignmentType = in.AssignmentType
-		return
+	mapToAllInput := func(in *client.MeshBuildingBlockInput) buildingBlockAllInput {
+		return buildAllInput(in, diags)
 	}
 
 	for key, input := range m.Spec.Inputs {

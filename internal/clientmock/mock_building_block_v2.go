@@ -76,6 +76,49 @@ func (m MeshBuildingBlockV2Client) ReadFunc(bbUuid string) func(ctx context.Cont
 	}
 }
 
+func (m MeshBuildingBlockV2Client) List(_ context.Context, filter *client.MeshBuildingBlockV2ListFilter) ([]client.MeshBuildingBlockV2, error) {
+	result := make([]client.MeshBuildingBlockV2, 0)
+	// Iterate in sorted-uuid order for deterministic test output.
+	for _, key := range m.Store.SortedKeys() {
+		bb, ok := m.Store.Get(key)
+		if !ok {
+			continue
+		}
+		if filter != nil && !mockBuildingBlockMatchesFilter(bb, filter) {
+			continue
+		}
+		result = append(result, *deepCopyBB(bb))
+	}
+	return result, nil
+}
+
+// mockBuildingBlockMatchesFilter applies the subset of MeshBuildingBlockV2ListFilter fields that
+// are derivable from a stored building block. Fields the mock store doesn't carry — DefinitionUuid
+// and VersionNumber (the store only holds the definition *version* uuid, not the definition uuid or
+// the version number) — are accepted but not applied, so tests should assert only on the supported
+// filters. The real backend applies all of them.
+func mockBuildingBlockMatchesFilter(bb *client.MeshBuildingBlockV2, filter *client.MeshBuildingBlockV2ListFilter) bool {
+	if filter.WorkspaceIdentifier != nil && bb.Metadata.OwnedByWorkspace != *filter.WorkspaceIdentifier {
+		return false
+	}
+	if filter.Name != nil && bb.Spec.DisplayName != *filter.Name {
+		return false
+	}
+	if filter.VersionUuid != nil && bb.Spec.BuildingBlockDefinitionVersionRef.Uuid != *filter.VersionUuid {
+		return false
+	}
+	if filter.TargetKind != nil && bb.Spec.TargetRef.Kind != *filter.TargetKind {
+		return false
+	}
+	if filter.TenantUuid != nil && (bb.Spec.TargetRef.Uuid == nil || *bb.Spec.TargetRef.Uuid != *filter.TenantUuid) {
+		return false
+	}
+	if filter.Status != nil && (bb.Status == nil || string(bb.Status.Status) != *filter.Status) {
+		return false
+	}
+	return true
+}
+
 func (m MeshBuildingBlockV2Client) Create(_ context.Context, bb *client.MeshBuildingBlockV2) (*client.MeshBuildingBlockV2, error) {
 	id := uuid.NewString()
 	runUuid := uuid.NewString()
