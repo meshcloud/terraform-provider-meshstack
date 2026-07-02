@@ -289,16 +289,19 @@ func (r *buildingBlockV2Resource) Create(ctx context.Context, req resource.Creat
 	for key, values := range userInputs {
 		var inputValue clientTypes.SecretOrAny
 		var valueType string
+		var isSensitive bool
 
 		// Sensitive inputs must be sent as SecretEmbedded {"plaintext": "..."} per the v2-preview API.
 		if !values.ValueStringSensitive.IsNull() && !values.ValueStringSensitive.IsUnknown() {
 			plaintext := values.ValueStringSensitive.ValueString()
 			inputValue = clientTypes.SecretOrAny{X: clientTypes.Secret{Plaintext: &plaintext}}
 			valueType = client.MESH_BUILDING_BLOCK_IO_TYPE_STRING
+			isSensitive = true
 		} else if !values.ValueCodeSensitive.IsNull() && !values.ValueCodeSensitive.IsUnknown() {
 			plaintext := values.ValueCodeSensitive.ValueString()
 			inputValue = clientTypes.SecretOrAny{X: clientTypes.Secret{Plaintext: &plaintext}}
 			valueType = client.MESH_BUILDING_BLOCK_IO_TYPE_CODE
+			isSensitive = true
 		} else {
 			value, vt := values.extractIoValue()
 			if value == nil {
@@ -311,9 +314,14 @@ func (r *buildingBlockV2Resource) Create(ctx context.Context, req resource.Creat
 			inputValue = clientTypes.SecretOrAny{Y: value}
 			valueType = vt
 		}
+		// IsSensitive must be set so the secret stays in the SecretOrAny.X variant across a JSON
+		// round-trip (MeshBuildingBlockInput.UnmarshalJSON demotes X→Y when it is false). The v3
+		// resource sets it symmetrically (buildingBlockConverterOptions); without it the mock's
+		// deep-copy strips the Secret and the plaintext leaks into value_string as a raw map.
 		bb.Spec.Inputs[key] = &client.MeshBuildingBlockInput{
-			Value:     inputValue,
-			ValueType: new(enum.Entry[client.MeshBuildingBlockIOType](valueType)),
+			Value:       inputValue,
+			ValueType:   new(enum.Entry[client.MeshBuildingBlockIOType](valueType)),
+			IsSensitive: isSensitive,
 		}
 	}
 
