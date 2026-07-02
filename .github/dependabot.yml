@@ -6,8 +6,23 @@ updates:
     directory: "/"
     schedule:
       interval: "daily"
+    # Combine Go module updates into a single PR instead of one PR per module.
+    groups:
+      go-modules:
+        patterns:
+          - "*"
 
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+    # Combine all GitHub Actions bumps into a single PR (including major versions),
+    # so they can be reviewed and merged together rather than one PR per action.
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+          - "major"

@@ -32,6 +32,11 @@ gh api repos/actions/checkout/git/refs/tags/v6.0.2 --jq '.object.sha'        # r
 
 Then update both the SHA and the `# vX.Y.Z` comment. Use latest stable versions; check periodically.
 
+**Adding a *new* action** (a step not yet in the workflows): resolve the **latest** release with the
+two commands above and pin to that SHA. Do **not** copy a SHA/version out of a scaffolding template,
+another repo, or an old example — that is how an action lands already several majors behind on the
+day it is introduced.
+
 ## Jobs in `test.yml`
 
 All gated on `build` succeeding first.
