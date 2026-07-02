@@ -1,3 +1,8 @@
+# v0.23.1
+
+DEPRECATIONS:
+- `meshstack_tenant`: deprecated in favor of `meshstack_tenant_v4`. Only `meshstack_tenant_v4` exposes the tenant `uuid` (and a `ref`) required to target tenants from the `meshstack_building_block` resource. Using `meshstack_tenant` now emits a deprecation warning. There is no automatic state migration between the two resource types; move existing tenants over by importing them into `meshstack_tenant_v4`.
+
 # v0.23.0
 
 FEATURES:

@@ -43,6 +43,7 @@ func (r *tenantResource) Configure(_ context.Context, req resource.ConfigureRequ
 func (r *tenantResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Single tenant by workspace, project, and platform.",
+		DeprecationMessage:  "Use `meshstack_tenant_v4` instead, which exposes the tenant `uuid` (and a `ref`) required to target tenants from `meshstack_building_block`. There is no automatic state migration between the two resource types; move existing tenants over by importing them into `meshstack_tenant_v4`.",
 
 		Attributes: map[string]schema.Attribute{
 			"metadata": schema.SingleNestedAttribute{
