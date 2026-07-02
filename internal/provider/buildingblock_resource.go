@@ -23,31 +23,36 @@ import (
 )
 
 var (
-	_ resource.Resource              = &buildingBlockResource{}
-	_ resource.ResourceWithConfigure = &buildingBlockResource{}
+	_ resource.Resource              = &buildingblockResource{}
+	_ resource.ResourceWithConfigure = &buildingblockResource{}
 )
 
-func NewBuildingBlockResource() resource.Resource {
-	return &buildingBlockResource{}
+// NewBuildingblockResource is the legacy meshstack_buildingblock (v1) resource. The unexported
+// `buildingblock` spelling (single capital B) is deliberate: it mirrors the Terraform type name
+// `meshstack_buildingblock` (one word, no separator), keeping it distinct from the newer
+// meshstack_building_block (v3) resource whose Go symbols use the `buildingBlock` spelling.
+func NewBuildingblockResource() resource.Resource {
+	return &buildingblockResource{}
 }
 
-type buildingBlockResource struct {
+type buildingblockResource struct {
 	meshBuildingBlockClient client.MeshBuildingBlockClient
 }
 
-func (r *buildingBlockResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+func (r *buildingblockResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_buildingblock"
 }
 
-func (r *buildingBlockResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+func (r *buildingblockResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	resp.Diagnostics.Append(configureProviderClient(req.ProviderData, func(client client.Client) {
 		r.meshBuildingBlockClient = client.BuildingBlock
 	})...)
 }
 
-func (r *buildingBlockResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *buildingblockResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Manage Building Block assignment.",
+		DeprecationMessage:  "Use `meshstack_building_block` (with `_`) instead. You can migrate state with a `moved` block from `meshstack_buildingblock` to `meshstack_building_block`.",
 
 		Attributes: map[string]schema.Attribute{
 			"metadata": schema.SingleNestedAttribute{
@@ -157,7 +162,7 @@ func (r *buildingBlockResource) Schema(ctx context.Context, req resource.SchemaR
 	}
 }
 
-type buildingBlockResourceModel struct {
+type buildingblockResourceModel struct {
 	Metadata struct {
 		Uuid                types.String `tfsdk:"uuid"`
 		DefinitionUuid      types.String `tfsdk:"definition_uuid"`
@@ -179,8 +184,8 @@ type buildingBlockResourceModel struct {
 	Status types.Object `tfsdk:"status"`
 }
 
-func (r *buildingBlockResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var plan buildingBlockResourceModel
+func (r *buildingblockResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var plan buildingblockResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 
 	bb := client.MeshBuildingBlockCreate{
@@ -233,7 +238,7 @@ func (r *buildingBlockResource) Create(ctx context.Context, req resource.CreateR
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("spec").AtName("inputs"), plan.Spec.Inputs)...)
 }
 
-func (r *buildingBlockResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+func (r *buildingblockResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var uuid string
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("metadata").AtName("uuid"), &uuid)...)
 	if resp.Diagnostics.HasError() {
@@ -253,11 +258,11 @@ func (r *buildingBlockResource) Read(ctx context.Context, req resource.ReadReque
 	resp.Diagnostics.Append(r.setStateFromResponse(&ctx, &resp.State, bb)...)
 }
 
-func (r *buildingBlockResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+func (r *buildingblockResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	resp.Diagnostics.AddError("Building blocks can't be updated", "Unsupported operation: building blocks can't be updated.")
 }
 
-func (r *buildingBlockResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+func (r *buildingblockResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var uuid string
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("metadata").AtName("uuid"), &uuid)...)
 	if resp.Diagnostics.HasError() {
@@ -366,7 +371,7 @@ func toResourceModel(io client.MeshBuildingBlockIO, diags *diag.Diagnostics) (re
 	return
 }
 
-func (r *buildingBlockResource) setStateFromResponse(ctx *context.Context, state *tfsdk.State, bb *client.MeshBuildingBlock) (diags diag.Diagnostics) {
+func (r *buildingblockResource) setStateFromResponse(ctx *context.Context, state *tfsdk.State, bb *client.MeshBuildingBlock) (diags diag.Diagnostics) {
 	diags.Append(state.SetAttribute(*ctx, path.Root("metadata"), bb.Metadata)...)
 
 	diags.Append(state.SetAttribute(*ctx, path.Root("spec").AtName("display_name"), bb.Spec.DisplayName)...)

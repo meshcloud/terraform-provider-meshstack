@@ -1,3 +1,18 @@
+# v0.23.0
+
+FEATURES:
+- New `meshstack_building_block` resource, the recommended way to manage building blocks.<br>
+  Updates inputs, `spec.display_name` and the definition version in place instead of forcing a destroy and recreate ([#141](https://github.com/meshcloud/terraform-provider-meshstack/issues/141)).<br>
+  Reruns the building block when a draft version's `content_hash` or a sensitive input's `secret_version` changes.<br>
+  Manages only the inputs declared in `spec.inputs`. Inputs set by someone else stay untouched and show up read only in the computed `all_inputs`.<br>
+  Each input takes one `jsonencode(...)` `value` (or a `sensitive` block) instead of the per-type `value_string`, `value_int` and similar attributes.<br>
+  Optional `timeouts` (create, update, delete; default 30m) and `purge_on_delete`. Computed `status.latest_run_uuid` and `status.latest_dry_run_uuid`.<br>
+  Migrate from the deprecated `meshstack_buildingblock` and `meshstack_building_block_v2` resources with a `moved` block. Sensitive inputs survive a `meshstack_building_block_v2` migration: re-declare the input with any placeholder `secret_value` to keep the current secret, and bump `secret_version` with a real value to rotate it.
+- New `meshstack_building_blocks` data source to list building blocks, read only and aligned to the `meshstack_building_block` resource, with optional filters. Only active building blocks are returned.
+
+FIXES:
+- `meshstack_landingzone`: `spec.platform_ref` and `spec.mandatory_building_block_refs`/`spec.recommended_building_block_refs` now accept a referenced resource's computed `ref` directly (e.g. `platform_ref = meshstack_platform.example.ref`). The `kind` field is now optional (defaulting to its single valid value) instead of read-only, so assigning a full ref object no longer fails with "Cannot set value for this attribute as the provider has marked it as read-only".
+
 # v0.22.1
 
 FEATURES:

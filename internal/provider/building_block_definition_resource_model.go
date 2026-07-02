@@ -108,20 +108,6 @@ func buildingBlockDefinitionVersionConverterOptions(ctx context.Context, config,
 		Sensitive *buildingBlockDefinitionVersionInputSensitive `tfsdk:"sensitive"`
 	}
 
-	secretOrAnyValueFromConverter := generic.WithValueFromConverterFor[clientTypes.SecretOrAny](generic.ValueFromConverterForTypedNilHandler[string](),
-		func(attributePath path.Path, in clientTypes.SecretOrAny) (tftypes.Value, error) {
-			// Marshal any value to JSON to eventually match jsontypes.Normalized (if value is present)
-			// Note that the case HasX is explicitly handled below!
-			if in.HasY() {
-				marshalled, err := json.Marshal(in.Y)
-				if err != nil {
-					return tftypes.Value{}, err
-				}
-				return generic.ValueFrom(string(marshalled))
-			}
-			return generic.ValueFrom[*string](nil)
-		})
-
 	return append(
 		// Support converting secrets in implementation config
 		secret.WithConverterSupport(ctx, config, plan, state),
@@ -165,12 +151,6 @@ func buildingBlockDefinitionVersionConverterOptions(ctx context.Context, config,
 			func(attributePath path.Path, in client.MeshBuildingBlockDefinitionInput) (tftypes.Value, error) {
 				// Note that client.MeshBuildingBlockDefinitionInput.UnmarshalJSON ensures that the IsSensitive flag is consistent with the clientTypes.SecretOrAny aka Variant[X, Y] state
 				out := buildingBlockDefinitionInputWithSensitive{MeshBuildingBlockDefinitionInput: in}
-				converterOptions := generic.ConverterOptions{
-					generic.WithAttributePath(attributePath), // pass down attribute path into walk
-					secretOrAnyValueFromConverter,
-					// for selectable values (which are sets)
-					generic.WithSliceTypeAsSet(clientTypes.IsSet),
-				}
 				if in.IsSensitive {
 					var errs []error
 					convertSecret := func(in clientTypes.Secret, attributeName string) (out secret.Secret) {
@@ -197,25 +177,17 @@ func buildingBlockDefinitionVersionConverterOptions(ctx context.Context, config,
 					}
 					out.Sensitive = &sensitive
 				}
-				return generic.ValueFrom(out, converterOptions...)
+				return generic.ValueFrom(out,
+					generic.WithAttributePath(attributePath), // pass down attribute path into walk
+					secretOrAnyValueFromConverter,
+					// for selectable values (which are sets)
+					generic.WithSliceTypeAsSet(clientTypes.IsSet),
+				)
 			}),
 
 		// Handle version spec inputs: From model to Client DTO
 		generic.WithValueToConverterFor[client.MeshBuildingBlockDefinitionInput](func(attributePath path.Path, in tftypes.Value) (client.MeshBuildingBlockDefinitionInput, error) {
-			model, err := generic.ValueTo[buildingBlockDefinitionInputWithSensitive](in,
-				generic.WithValueToConverterFor[clientTypes.SecretOrAny](func(attributePath path.Path, in tftypes.Value) (out clientTypes.SecretOrAny, err error) {
-					if in.IsKnown() && !in.IsNull() {
-						var jsonValue string
-						err = in.As(&jsonValue)
-						if err != nil {
-							return
-						}
-						err = json.Unmarshal([]byte(jsonValue), &out.Y)
-					}
-					return
-				}),
-				generic.WithSetUnknownValueToZero(),
-			)
+			model, err := generic.ValueTo[buildingBlockDefinitionInputWithSensitive](in, secretOrAnyValueToConverter, generic.WithSetUnknownValueToZero())
 			if err != nil {
 				return client.MeshBuildingBlockDefinitionInput{}, err
 			}

@@ -5,6 +5,4 @@ resource "meshstack_building_block_v2" "sensitive" {
     target_ref                            = { kind = "meshWorkspace", name = "placeholder" }
     inputs                                = {}
   }
-  wait_for_completion = false
-  purge_on_delete     = true
 }

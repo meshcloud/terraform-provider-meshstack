@@ -79,6 +79,7 @@ linters:
             - github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry
             - github.com/hashicorp/terraform-plugin-framework-jsontypes/jsontypes # for 'any' value support
             - github.com/hashicorp/terraform-plugin-framework-validators
+            - github.com/hashicorp/terraform-plugin-framework-timeouts # for resource timeouts block
             - github.com/hashicorp/terraform-plugin-go
             - github.com/hashicorp/terraform-plugin-log
             - github.com/gabriel-vasile/mimetype

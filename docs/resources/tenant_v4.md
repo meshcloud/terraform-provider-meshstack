@@ -92,8 +92,8 @@ Required:
 
 Read-Only:
 
-- `kind` (String) The kind of the object. Always `meshTenant`.
-- `uuid` (String) UUID of the tenant.
+- `kind` (String) meshObject type, always `meshTenant`.
+- `uuid` (String) UUID of the meshTenant.
 
 
 <a id="nestedatt--status"></a>

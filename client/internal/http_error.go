@@ -25,3 +25,8 @@ func (e HttpError) IsForbidden() bool {
 func (e HttpError) IsNotFound() bool {
 	return e.StatusCode == http.StatusNotFound
 }
+
+// IsConflict returns true if the error is a 409 Conflict response.
+func (e HttpError) IsConflict() bool {
+	return e.StatusCode == http.StatusConflict
+}

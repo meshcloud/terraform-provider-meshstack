@@ -25,8 +25,10 @@ func LandingZone(t *testing.T, workspaceAddr, platformAddr, platformTypeAddr Tra
 		OwnedByWorkspace(workspaceAddr),
 		Descend("metadata", "name")(SetString(fmt.Sprintf("test-lz-%s", landingZoneSuffix))),
 		Descend("spec")(
-			Descend("platform_ref")(SetRawExpr("{uuid = %s}", platformAddr.Join("metadata", "uuid"))),
-			Descend("mandatory_building_block_refs")(SetRawExpr("[{uuid = %s}]", buildingBlockDefinitionAddr.Join("metadata", "uuid"))),
+			// Assign the platform's computed `ref` inline (kind + uuid) — the consuming
+			// platform_ref accepts the full ref object, no explicit uuid mapping needed.
+			Descend("platform_ref")(SetRawExpr("%s", platformAddr.Join("ref"))),
+			Descend("mandatory_building_block_refs")(SetRawExpr("[%s]", buildingBlockDefinitionAddr.Join("ref"))),
 		),
 	).Join(buildingBlockDefinitionConfig), landingZoneAddr
 }

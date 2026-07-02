@@ -69,13 +69,13 @@ func pluralizeKind(kind string) string {
 	return kind + "s"
 }
 
-func (c MeshObjectClient[M]) meshObjectMimeType() string {
+func (c MeshObjectClient[M]) MeshObjectMimeType() string {
 	return fmt.Sprintf("application/vnd.meshcloud.api.%s.%s.hal+json", c.Kind, c.ApiVersion)
 }
 
 // Get retrieves a meshObject by ID. Returns nil if not found.
 func (c MeshObjectClient[M]) Get(ctx context.Context, id string) (resp *M, err error) {
-	resp, err = unmarshalBody[M](c.doAuthorizedRequest(ctx, http.MethodGet, c.ApiUrl.JoinPath(id), withAccept(c.meshObjectMimeType())))
+	resp, err = DoAuthorizedRequest[*M](ctx, c.HttpClient, http.MethodGet, c.ApiUrl.JoinPath(id), WithAccept(c.MeshObjectMimeType()))
 	if httpErr, ok := errors.AsType[HttpError](err); ok && httpErr.IsNotFound() {
 		return nil, nil
 	}
@@ -84,14 +84,20 @@ func (c MeshObjectClient[M]) Get(ctx context.Context, id string) (resp *M, err e
 
 // Post creates a new meshObject with the given payload.
 // Automatically injects apiVersion and kind into the JSON payload.
-func (c MeshObjectClient[M]) Post(ctx context.Context, payload any) (*M, error) {
-	return unmarshalBody[M](c.doAuthorizedRequest(ctx, http.MethodPost, c.ApiUrl, c.withMeshObjectPayload(payload)))
+func (c MeshObjectClient[M]) Post(ctx context.Context, payload any, options ...RequestOption) (*M, error) {
+	return DoAuthorizedRequest[*M](
+		ctx,
+		c.HttpClient,
+		http.MethodPost,
+		c.ApiUrl,
+		append(options, c.withMeshObjectPayload(payload))...,
+	)
 }
 
 // Put updates an existing meshObject by ID with the given payload.
 // Automatically injects apiVersion and kind into the JSON payload.
 func (c MeshObjectClient[M]) Put(ctx context.Context, id string, payload any) (*M, error) {
-	return unmarshalBody[M](c.doAuthorizedRequest(ctx, http.MethodPut, c.ApiUrl.JoinPath(id), c.withMeshObjectPayload(payload)))
+	return DoAuthorizedRequest[*M](ctx, c.HttpClient, http.MethodPut, c.ApiUrl.JoinPath(id), c.withMeshObjectPayload(payload))
 }
 
 // withMeshObjectPayload returns a RequestOption that sets the payload with apiVersion and kind injected,
@@ -114,18 +120,12 @@ func (c MeshObjectClient[M]) withMeshObjectPayload(payload any) RequestOption {
 	m["apiVersion"] = c.ApiVersion
 	m["kind"] = c.Kind
 
-	return withPayload(m, c.meshObjectMimeType())
+	return withPayload(m, c.MeshObjectMimeType())
 }
 
 // Delete removes a meshObject by ID.
-func (c MeshObjectClient[M]) Delete(ctx context.Context, id string) (err error) {
-	_, err = c.doAuthorizedRequest(ctx, http.MethodDelete, c.ApiUrl.JoinPath(id), withAccept(c.meshObjectMimeType()))
-	return
-}
-
-// Purge removes a meshObject by ID without running any cloud-side cleanup, by calling DELETE /{id}/purge.
-func (c MeshObjectClient[M]) Purge(ctx context.Context, id string) (err error) {
-	_, err = c.doAuthorizedRequest(ctx, http.MethodDelete, c.ApiUrl.JoinPath(id, "purge"), withAccept(c.meshObjectMimeType()))
+func (c MeshObjectClient[M]) Delete(ctx context.Context, id string, options ...RequestOption) (err error) {
+	_, err = DoAuthorizedRequest[any](ctx, c.HttpClient, http.MethodDelete, c.ApiUrl.JoinPath(id), append(options, WithAccept(c.MeshObjectMimeType()))...)
 	return
 }
 
@@ -144,10 +144,10 @@ func (c MeshObjectClient[M]) List(ctx context.Context, options ...RequestOption)
 				Number     int `json:"number"`
 			} `json:"page"`
 		}
-		response, err := unmarshalBody[paginatedResponse](c.doAuthorizedRequest(ctx, http.MethodGet, c.ApiUrl, append(options,
-			withAccept(c.meshObjectMimeType()),
+		response, err := DoAuthorizedRequest[paginatedResponse](ctx, c.HttpClient, http.MethodGet, c.ApiUrl, append(options,
+			WithAccept(c.MeshObjectMimeType()),
 			WithUrlQuery("page", pageNumber),
-		)...))
+		)...)
 		if err != nil {
 			return result, fmt.Errorf("error getting page %d: %w", pageNumber, err)
 		} else if items, ok := response.Embedded[embeddedKey]; !ok {

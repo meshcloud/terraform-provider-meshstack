@@ -118,18 +118,7 @@ func (r *platformResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			"ref": schema.SingleNestedAttribute{
 				MarkdownDescription: "Reference to this platform, can be used as `platform_ref` in landing zone resources.",
 				Computed:            true,
-				Attributes: map[string]schema.Attribute{
-					"kind": schema.StringAttribute{
-						MarkdownDescription: "The kind of the object. Always `meshPlatform`.",
-						Computed:            true,
-						PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-					},
-					"uuid": schema.StringAttribute{
-						MarkdownDescription: "UUID of the platform.",
-						Computed:            true,
-						PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-					},
-				},
+				Attributes:          meshUuidRefOutputAttribute(client.MeshObjectKind.Platform),
 			},
 
 			"spec": schema.SingleNestedAttribute{

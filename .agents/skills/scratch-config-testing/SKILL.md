@@ -79,38 +79,20 @@ terraform destroy      # clean up the meshObjects when done
 Provider-side logs: `TF_LOG_PROVIDER=debug terraform apply`. To step through with a debugger,
 build with `go build -gcflags="all=-N -l"` and attach delve to the running provider process.
 
-## Optional: terraform-implementation BBDs (real `tf-block-runner`)
+## terraform-implementation BBDs (real `tf-block-runner`)
 
-> **Not needed for acceptance testing.** The acceptance suite (and the default local backend
-> from the **meshstack-services** skill) registers the **manual** block runner — a no-op that
-> echoes inputs as outputs and never executes terraform. Leave that as-is for `task testacc`.
-> This section is only for *playing in `scratch/` with a `meshstack_building_block_definition`
-> whose `implementation.terraform` actually clones a repo and runs OpenTofu*, plus its
-> consuming `meshstack_building_block`.
+The standard local fan-out from the **`local-dev-stack`** / **meshstack-services** skills already runs
+the **`tf-block-runner`** behind the multiplexer (mux `:8300`), so a `meshstack_building_block_definition`
+whose `implementation.terraform` clones a repo and runs OpenTofu — plus its consuming
+`meshstack_building_block` — works in `scratch/` with **no runner swap**. (This is the same fan-out the
+acceptance suite uses; nothing special is needed for `scratch/` play.)
 
-The manual runner can't run terraform. To exercise a terraform-impl BBD end-to-end, swap it for
-the **`tf-block-runner`** — a Go app in the `building-block-runner` repo (may sit at
-`../building-block-runner/tf-block-runner`; it is *not* a gradle module, so `go run .`):
-
-```bash
-pkill -9 -f "BlockRunnerApplicationKt"          # stop the manual runner (same UUID would race)
-cd ../building-block-runner/tf-block-runner
-RUNNER_UUID=98520496-627d-43e6-82da-ce499179ff3f \
-  RUNNER_API_CLIENT_ID=<local managed-runners client id> \
-  RUNNER_API_CLIENT_SECRET=<local managed-runners secret> \
-  nohup go run . > /tmp/tf-runner.log 2>&1 &     # restart the manual runner afterwards for acc tests
-```
-
-`RUNNER_UUID` (env) overrides `runner-config.yml` and **must** equal the
-`SharedBuildingBlockRunnerUuid` (`internal/provider/building_block_runner.go`,
-`98520496-…`) that BBD examples default to, or runs sit unclaimed. It authenticates with the local
-managed-runners API key (`RUNNER_API_CLIENT_ID`/`RUNNER_API_CLIENT_SECRET` above — seeded dev values
-are in the meshfed-release `local-dev-stack` skill, kept out of this public repo; the tf-block-runner
-no longer ships a basic-auth default). The runner polls `localhost:8080`, downloads OpenTofu via
-tofudl, clones the BBD's
-`repository_url`, and for a module that declares no backend injects the mesh http backend
-(`use_mesh_http_backend_fallback = true`). Watch `/tmp/tf-runner.log`; the building block
-reaches `SUCCEEDED` with real tofu outputs in TF state. A minimal BBD `implementation`:
+The tf-block-runner downloads OpenTofu via tofudl, clones the BBD's `repository_url`, and for a module
+that declares no backend injects the mesh http backend (`use_mesh_http_backend_fallback = true`). Watch
+`/tmp/tf-runner.log`; the building block reaches `SUCCEEDED` with real tofu outputs in TF state.
+Sensitive inputs (`sensitive = { argument = { secret_value = ... } }`) decrypt end to end out of the
+box — the dev seed registers `building-blocks.pem` on the magic runner UUID and the tf-block-runner
+ships the matching private key. A minimal BBD `implementation`:
 
 ```hcl
 implementation = {
@@ -124,11 +106,7 @@ implementation = {
 }
 ```
 
-Two gotchas when hand-writing such a config:
-- **Sensitive STATIC inputs fail to decrypt** (`file input decryption failed`): the local shared
-  runner's registered public key doesn't match the `tf-block-runner`'s `runner-config.yml` key.
-  For play, declare the input as plain STATIC (`argument = jsonencode(...)`) instead of
-  `sensitive = { argument = { secret_value = ... } }`.
+One gotcha when hand-writing such a config:
 - **`draft = false` versions are immutable** (`Updating a version_spec in non-draft state is not
   allowed`). Use `draft = true` to iterate — each apply updates the version in place and reruns
   the block; flip to `false` only to "release". A released version can't return to draft (destroy

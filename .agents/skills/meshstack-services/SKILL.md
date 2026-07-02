@@ -1,48 +1,39 @@
 ---
 name: meshstack-services
-description: Bring up a clean local meshStack backend for acceptance testing. The backend (docker compose infra + the three meshfed-release Gradle services) is brought up via the meshfed-release `local-dev-stack` skill; this skill adds only the acceptance-test-specific part — run a single manual block runner so terraform-implementation BBDs are no-op'd. Use before running acceptance tests, or when the backend is down / returning stale-data 409s.
+description: Bring up a clean local meshStack backend for acceptance testing. The backend (docker compose infra + the three meshfed-release Gradle services + the building-block runner fan-out) is brought up via the meshfed-release `local-dev-stack` skill; the acceptance suite uses that exact mux + tf + manual topology — there is no separate acceptance topology. Use before running acceptance tests, or when the backend is down / returning stale-data 409s.
 ---
 
 # meshStack backend (meshfed-release) for acceptance testing
 
 The backend lives in the **`meshfed-release`** repo (may sit at `../meshfed-release`). Hard-restarting
-the docker compose infrastructure and starting the three meshfed services (meshfed-api,
-block-coordinator, replicator) — with readiness markers and startup pitfalls — is the
-**`local-dev-stack`** skill in that repo. Follow its infra + services steps, then return here for the
-acceptance-test runner.
+the docker compose infrastructure, starting the three meshfed services (meshfed-api,
+block-coordinator, replicator), and starting the building-block runner fan-out — all with readiness
+markers and startup pitfalls — is the **`local-dev-stack`** skill in that repo. Follow it in full;
+this skill only records what is acceptance-specific.
 
 > If services are already running on another worktree's code, do **not** restart them.
 
-## Runner: a single manual block runner (acceptance topology)
+## Runner topology: the full mux + tf + manual fan-out
 
-The acceptance suite needs the **manual** runner to claim **all** runs and no-op them — it echoes
-inputs as outputs for *both* manual and terraform-implementation BBDs, so the suite never executes
-real OpenTofu. Run **only** the manual runner, polling meshfed directly as the shared runner UUID —
-**not** the multiplexer fan-out from `local-dev-stack`, which routes terraform-implementation BBDs to
-the real `tf-block-runner` (that would actually run tofu).
+The acceptance suite needs the **same** multiplexer fan-out that `local-dev-stack` brings up and that
+CI runs (`.github/workflows/test.yml`) — there is no separate, lighter "acceptance topology". Bring up
+the standard mux + manual + tf runners per `local-dev-stack`; **both** real runners are required:
 
-```bash
-cd ../building-block-runner    # the runner was extracted out of meshfed-release
-: > /tmp/manual-runner.log
-RUNNER_UUID=98520496-627d-43e6-82da-ce499179ff3f \
-  RUNNER_API_CLIENT_ID=<local managed-runners client id> \
-  RUNNER_API_CLIENT_SECRET=<local managed-runners secret> \
-  nohup ./gradlew :manual-block-runner:bootRun --console=plain > /tmp/manual-runner.log 2>&1 &
-```
+- the **`tf-block-runner`** (mux `:8300`) actually runs OpenTofu for terraform-implementation BBDs.
+  The suite serves the committed bare fixture `internal/provider/testdata/tf-building-block` over git
+  smart-HTTP (`git_http_server_test.go`) for the runner to clone, and asserts an end-to-end
+  **sensitive-input decryption proof** (`status.outputs.api_key_echo` equals the supplied plaintext,
+  in `building_block_resource_test.go`). A no-op runner cannot decrypt, so it would fail these
+  subtests — do **not** try to substitute a single manual no-op runner.
+- the **`manual-block-runner`** (mux `:8301`) no-ops the manual-implementation migration fixtures
+  (move-from-v1 / move-from-v2), which carry no sensitive inputs.
 
-- **`RUNNER_UUID` is critical** — it must equal the provider's `SharedBuildingBlockRunnerUuid`
-  (`98520496-627d-43e6-82da-ce499179ff3f`, see `internal/provider/building_block_runner.go`), which
-  all BBD examples/tests default to. The runner's built-in default (`46b7c17a-…`) does **not** match
-  and leaves building blocks stuck at `PENDING`.
-- **Auth: prefer the API key.** Authenticate with the local managed-runners API key via
-  `RUNNER_API_CLIENT_ID` / `RUNNER_API_CLIENT_SECRET`. The seeded local dev values are in the
-  meshfed-release `local-dev-stack` skill (kept out of this public repo). The legacy basic auth
-  `RUNNER_API_USERNAME` / `RUNNER_API_PASSWORD` still works as a deprecated fallback, but the API key
-  takes precedence when both are set.
-
-Ready marker: `Started BlockRunnerApplication` in `/tmp/manual-runner.log` (no HTTP port; polls ~10s).
+Sensitive inputs decrypt out of the box: the dev seed registers `building-blocks.pem` (public) on the
+magic runner UUID and `tf-block-runner` ships the matching private key, so meshfed's encrypt and the
+runner's decrypt pair up. Readiness markers, ports, and the managed-runners API key are all in the
+`local-dev-stack` skill.
 
 ## Next
 
-Backend (per `local-dev-stack`) + this manual runner ready → run the suite (see the
+Backend + the mux/manual/tf fan-out (per `local-dev-stack`) ready → run the suite (see the
 **`acceptance-testing`** skill).

@@ -68,7 +68,8 @@ func (r *landingZoneResource) Schema(_ context.Context, _ resource.SchemaRequest
 	}
 
 	buildingBlockRefs := schema.NestedAttributeObject{
-		Attributes: meshBuildingBlockDefinitionRefAttribute(false),
+		Attributes: meshUuidRefAttribute(client.MeshObjectKind.BuildingBlockDefinition),
+		Validators: meshUuidRefValidators(),
 	}
 
 	resp.Schema = schema.Schema{
@@ -140,10 +141,12 @@ func (r *landingZoneResource) Schema(_ context.Context, _ resource.SchemaRequest
 								Required:            true,
 							},
 							"kind": schema.StringAttribute{
-								MarkdownDescription: "Must always be set to meshPlatform",
+								MarkdownDescription: "meshObject type, always `meshPlatform`.",
+								Optional:            true,
 								Computed:            true,
 								PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 								Default:             stringdefault.StaticString(client.MeshObjectKind.Platform),
+								Validators:          []validator.String{stringvalidator.OneOf(client.MeshObjectKind.Platform)},
 							},
 						},
 					},

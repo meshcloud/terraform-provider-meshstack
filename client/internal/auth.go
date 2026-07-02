@@ -64,8 +64,8 @@ func (auth *clientSecretAuthorization) ensureValidToken(ctx context.Context, cli
 		ExpireSec int    `json:"expires_in"`
 	}
 
-	loginResult, err := unmarshalBody[loginResponse](client.doRequest(ctx, http.MethodPost, loginApiUrl,
-		withPayload(loginRequest{ClientId: auth.ClientId, ClientSecret: auth.ClientSecret}, "application/json")),
+	loginResult, err := DoRequest[loginResponse](ctx, client, http.MethodPost, loginApiUrl,
+		withPayload(loginRequest{ClientId: auth.ClientId, ClientSecret: auth.ClientSecret}, "application/json"),
 	)
 	if err != nil {
 		return fmt.Errorf("login at %s with client id '%s' failed: %w", loginApiUrl, auth.ClientId, err)

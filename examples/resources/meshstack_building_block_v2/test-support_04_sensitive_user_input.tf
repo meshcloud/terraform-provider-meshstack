@@ -8,6 +8,4 @@ resource "meshstack_building_block_v2" "sensitive_user_input" {
       secret_code = { value_code_sensitive = "super-secret-code-value" }
     }
   }
-  wait_for_completion = false
-  purge_on_delete     = true
 }

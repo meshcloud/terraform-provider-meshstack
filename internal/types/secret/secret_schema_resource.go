@@ -48,3 +48,20 @@ func ResourceSchema(opts ResourceSchemaOptions) (result schema.SingleNestedAttri
 		},
 	}
 }
+
+// ReadOnlyResourceSchema defines the read-only Secret representation (hash only, see HashOnly) for a
+// computed resource attribute or data source, where the secret is surfaced for drift detection but is
+// not managed through this attribute. Use ResourceSchema instead for a managed, write-only secret.
+func ReadOnlyResourceSchema(opts ResourceSchemaOptions) (result schema.SingleNestedAttribute) {
+	return schema.SingleNestedAttribute{
+		MarkdownDescription: opts.MarkdownDescription,
+		Computed:            true,
+		Attributes: map[string]schema.Attribute{
+			hashAttributeKey: schema.StringAttribute{
+				MarkdownDescription: "Hash value of the secret stored in the backend. " +
+					"If this hash has changed, the secret was changed externally.",
+				Computed: true,
+			},
+		},
+	}
+}

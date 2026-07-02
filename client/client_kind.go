@@ -4,6 +4,7 @@ package client
 type meshObjectKind struct {
 	ApiKey                         string
 	BuildingBlock                  string
+	BuildingBlockRun               string
 	BuildingBlockDefinition        string
 	BuildingBlockDefinitionVersion string
 	BuildingBlockRunner            string
@@ -28,6 +29,7 @@ type meshObjectKind struct {
 var MeshObjectKind = meshObjectKind{
 	ApiKey:                         "meshApiKey",
 	BuildingBlock:                  "meshBuildingBlock",
+	BuildingBlockRun:               "meshBuildingBlockRun",
 	BuildingBlockDefinition:        "meshBuildingBlockDefinition",
 	BuildingBlockDefinitionVersion: "meshBuildingBlockDefinitionVersion",
 	BuildingBlockRunner:            "meshBuildingBlockRunner",
