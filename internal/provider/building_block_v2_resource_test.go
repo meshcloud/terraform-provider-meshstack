@@ -1,6 +1,8 @@
 package provider
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -12,6 +14,25 @@ import (
 	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/xknownvalue"
 )
+
+// assertIsHashNotPlaintext validates that a surfaced sensitive-input value is the backend's secret
+// hash and not the leaked plaintext. It guards against the toResourceModel fallback that stuffs a
+// non-string value's raw Go representation (e.g. "map[plaintext:...]") into value_string when the
+// secret was demoted from SecretOrAny.X to Y (IsSensitive not set on the outbound DTO).
+func assertIsHashNotPlaintext(plaintext string) func(string) error {
+	return func(v string) error {
+		// The mock's simulated hash is "sha256:<plaintext>", so a substring match on the plaintext
+		// would false-positive there; the meaningful guards are that the value is not the raw
+		// plaintext and not the toResourceModel map-fallback representation.
+		if v == plaintext {
+			return fmt.Errorf("expected a secret hash but got the raw plaintext %q — the secret was not hashed", v)
+		}
+		if strings.Contains(v, "map[") {
+			return fmt.Errorf("expected a secret hash but got %q — the plaintext leaked (secret demoted to a plain value)", v)
+		}
+		return nil
+	}
+}
 
 func TestAccBuildingBlockV2(t *testing.T) {
 	t.Parallel()
@@ -65,6 +86,12 @@ func TestAccBuildingBlockV2(t *testing.T) {
 		buildingBlockDefinitionConfig := exampleResource.TestSupportConfig(t, "_bbd").WithFirstBlock(
 			testconfig.ExtractAddress(&buildingBlockDefinitionAddr),
 			testconfig.OwnedByWorkspace(workspaceAddr),
+			// Point at the committed bare repo served over loopback so the run actually completes and the
+			// block reaches a final state, letting the default wait_for_completion/purge_on_delete exercise
+			// the full lifecycle instead of leaving a stuck run behind.
+			testconfig.Descend("version_spec", "implementation", "terraform", "repository_url")(
+				testconfig.SetRawExpr("%q", terraformTestdataRepoURL(t)),
+			),
 		)
 
 		var buildingBlockAddr testconfig.Traversal
@@ -96,12 +123,14 @@ func TestAccBuildingBlockV2(t *testing.T) {
 	})
 
 	t.Run("04_sensitive_user_input", func(t *testing.T) {
-		if IsMockClientTest() {
-			// The in-memory mock does not process SecretEmbedded plaintext, so the hash
-			// never appears in combined_inputs in mock mode.
-			t.Skip("requires real meshStack to process sensitive user inputs")
-		}
-
+		// Runs in both modes. Sensitive USER_INPUTs (STRING and CODE) are sent as SecretEmbedded
+		// {"plaintext": "..."} with IsSensitive=true, which keeps them in the SecretOrAny.X variant
+		// across a JSON round-trip; the backend (and the mock's backendSecretBehavior) return only the
+		// sha256 hash, which surfaces in combined_inputs (STRING hash in value_string, CODE hash in
+		// value_code). STRING and CODE take the identical code path — the only difference is which
+		// value_* field the hash lands in. The assertions verify the surfaced value is a real hash, not
+		// the leaked plaintext (a prior bug demoted the secret to a plain value and stuffed its raw map
+		// representation into value_string via the toResourceModel fallback).
 		workspaceConfig, workspaceAddr := testconfig.Workspace(t)
 		exampleResource := testconfig.Resource{Name: "building_block_v2", Suffix: "_04_sensitive_user_input"}
 
@@ -109,6 +138,12 @@ func TestAccBuildingBlockV2(t *testing.T) {
 		buildingBlockDefinitionConfig := exampleResource.TestSupportConfig(t, "_bbd").WithFirstBlock(
 			testconfig.ExtractAddress(&buildingBlockDefinitionAddr),
 			testconfig.OwnedByWorkspace(workspaceAddr),
+			// Point at the committed bare repo served over loopback so the run actually completes and the
+			// block reaches a final state, letting the default wait_for_completion/purge_on_delete exercise
+			// the full lifecycle instead of leaving a stuck run behind.
+			testconfig.Descend("version_spec", "implementation", "terraform", "repository_url")(
+				testconfig.SetRawExpr("%q", terraformTestdataRepoURL(t)),
+			),
 		)
 
 		var buildingBlockAddr testconfig.Traversal
@@ -133,10 +168,10 @@ func TestAccBuildingBlockV2(t *testing.T) {
 						// The hash surfaces in combined_inputs (the STRING hash in value_string, the CODE hash in value_code).
 						statecheck.ExpectKnownValue(buildingBlockAddr.String(),
 							tfjsonpath.New("spec").AtMapKey("combined_inputs").AtMapKey("secret_str").AtMapKey("value_string"),
-							xknownvalue.NotEmptyString()),
+							xknownvalue.NotEmptyString(assertIsHashNotPlaintext("super-secret-string-value"))),
 						statecheck.ExpectKnownValue(buildingBlockAddr.String(),
 							tfjsonpath.New("spec").AtMapKey("combined_inputs").AtMapKey("secret_code").AtMapKey("value_code"),
-							xknownvalue.NotEmptyString()),
+							xknownvalue.NotEmptyString(assertIsHashNotPlaintext("super-secret-code-value"))),
 					},
 				},
 			},
