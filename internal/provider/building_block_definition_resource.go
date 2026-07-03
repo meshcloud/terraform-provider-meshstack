@@ -218,6 +218,27 @@ func outputAssignmentTypes(outputs types.Map) map[string]string {
 	return result
 }
 
+func displayOrdersDiffer(a, b client.MeshBuildingBlockDefinitionVersionSpec) bool {
+	inputOrders := func(m map[string]*client.MeshBuildingBlockDefinitionInput) map[string]int64 {
+		orders := make(map[string]int64, len(m))
+		for key, input := range m {
+			if input != nil {
+				orders[key] = input.DisplayOrder
+			}
+		}
+		return orders
+	}
+	outputOrders := func(m map[string]client.MeshBuildingBlockDefinitionOutput) map[string]int64 {
+		orders := make(map[string]int64, len(m))
+		for key, output := range m {
+			orders[key] = output.DisplayOrder
+		}
+		return orders
+	}
+	return !maps.Equal(inputOrders(a.Inputs), inputOrders(b.Inputs)) ||
+		!maps.Equal(outputOrders(a.Outputs), outputOrders(b.Outputs))
+}
+
 // platformTenantIdOutputKeysEqual reports whether the set of output keys assigned PLATFORM_TENANT_ID is
 // the same in both maps. Used to detect whether a manual building block's configured tenant-id output
 // changed, which (besides an inputs change) is the only way its reconciled outputs can change.
@@ -495,6 +516,15 @@ func (r *buildingBlockDefinitionResource) Update(ctx context.Context, req resour
 			return
 		}
 		if versionSpecDtoContentHash == state.VersionLatest.ContentHash.Get() {
+			// display_order is excluded from the content hash, so an equal hash could still mean changed display_order.
+			// Released versions are immutable, so reject a display_order-only change explicitly
+			if displayOrdersDiffer(plan.VersionSpec.MeshBuildingBlockDefinitionVersionSpec, state.VersionSpec.MeshBuildingBlockDefinitionVersionSpec) {
+				resp.Diagnostics.AddError("Error updating version_spec", fmt.Sprintf(
+					"Changing display_order on a released version %d is not allowed — released versions are immutable.",
+					state.VersionLatest.Number.Get(),
+				))
+				return
+			}
 			// state is in draft=false (aka released), and there's no change in version_spec,
 			// so all is good, and we don't need to do anything with the backend
 			return

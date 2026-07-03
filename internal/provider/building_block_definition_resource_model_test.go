@@ -114,3 +114,25 @@ func Test_versionContentHash_ignoresPerVersionFields(t *testing.T) {
 	require.Empty(t, diags)
 	assert.Equal(t, baseHash, mutatedHash, "buildingBlockDefinitionRef/versionNumber/state must not affect the content hash")
 }
+
+func Test_versionContentHash_ignoresDisplayOrder(t *testing.T) {
+	var base, mutated client.MeshBuildingBlockDefinitionVersionSpec
+	require.NoError(t, json.Unmarshal(versionSpecJson, &base))
+	require.NoError(t, json.Unmarshal(versionSpecJson, &mutated))
+
+	require.NotEmpty(t, mutated.Inputs, "test fixture must contain at least one input")
+	for _, input := range mutated.Inputs {
+		input.DisplayOrder = 7
+	}
+	require.NotEmpty(t, mutated.Outputs, "test fixture must contain at least one output")
+	for key, output := range mutated.Outputs {
+		output.DisplayOrder = 11
+		mutated.Outputs[key] = output
+	}
+
+	var diags diag.Diagnostics
+	baseHash := versionContentHash(base, &diags)
+	mutatedHash := versionContentHash(mutated, &diags)
+	require.Empty(t, diags)
+	assert.Equal(t, baseHash, mutatedHash, "display_order must not affect the content hash")
+}

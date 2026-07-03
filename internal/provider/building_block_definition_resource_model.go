@@ -324,6 +324,22 @@ func versionContentHash(versionSpecDto client.MeshBuildingBlockDefinitionVersion
 		versionSpecDto.State = nil
 		versionSpecDto.BuildingBlockDefinitionRef = nil
 
+		// display_order is presentation-only so create a copy without it
+		strippedInputs := make(map[string]*client.MeshBuildingBlockDefinitionInput, len(versionSpecDto.Inputs))
+		for key, input := range versionSpecDto.Inputs {
+			clone := *input
+			clone.DisplayOrder = 0
+			strippedInputs[key] = &clone
+		}
+		versionSpecDto.Inputs = strippedInputs
+
+		strippedOutputs := make(map[string]client.MeshBuildingBlockDefinitionOutput, len(versionSpecDto.Outputs))
+		for key, output := range versionSpecDto.Outputs {
+			output.DisplayOrder = 0
+			strippedOutputs[key] = output
+		}
+		versionSpecDto.Outputs = strippedOutputs
+
 		// Converting it first from/to JSON makes hashing more stable, as fields with 'omitempty' are ignored.
 		// Additionally, all numbers are converted to float64, even integers (which also allows changing DTO model types later on).
 		// Also, the current Hasher implementation does not support structs for now, but map[string]any works!

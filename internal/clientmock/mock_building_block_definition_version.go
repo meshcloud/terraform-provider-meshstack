@@ -87,6 +87,7 @@ func applyManualOutputBehavior(versionSpec *client.MeshBuildingBlockDefinitionVe
 			DisplayName:    input.DisplayName,
 			Type:           translateManualInputTypeToOutput(input.Type),
 			AssignmentType: assignmentType,
+			DisplayOrder:   input.DisplayOrder,
 		}
 	}
 	versionSpec.Outputs = outputs
