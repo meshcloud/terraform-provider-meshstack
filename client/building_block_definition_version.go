@@ -112,6 +112,7 @@ type MeshBuildingBlockDefinitionInput struct {
 	Description                 *string           `json:"description,omitempty" tfsdk:"description"`
 	ValueValidationRegex        *string           `json:"valueValidationRegex,omitempty" tfsdk:"value_validation_regex"`
 	ValidationRegexErrorMessage *string           `json:"validationRegexErrorMessage,omitempty" tfsdk:"validation_regex_error_message"`
+	DisplayOrder                int64             `json:"displayOrder,omitempty" tfsdk:"display_order"`
 }
 
 func (m *MeshBuildingBlockDefinitionInput) UnmarshalJSON(bytes []byte) error {
@@ -148,6 +149,7 @@ type MeshBuildingBlockDefinitionOutput struct {
 	DisplayName    string                                          `json:"displayName" tfsdk:"display_name"`
 	Type           MeshBuildingBlockIOType                         `json:"type" tfsdk:"type"`
 	AssignmentType MeshBuildingBlockDefinitionOutputAssignmentType `json:"assignmentType" tfsdk:"assignment_type"`
+	DisplayOrder   int64                                           `json:"displayOrder,omitempty" tfsdk:"display_order"`
 }
 
 // Main version types

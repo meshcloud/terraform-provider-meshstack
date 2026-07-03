@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
@@ -157,6 +158,13 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 					MarkdownDescription: "Error message to display when regex validation fails.",
 					Optional:            true,
 				},
+				"display_order": schema.Int64Attribute{
+					MarkdownDescription: "Numeric value controlling the display ordering of this input in meshPanel. " +
+						"Used only for arranging inputs; it does not affect the version's content hash. Defaults to `0` when omitted.",
+					Optional: true,
+					Computed: true,
+					Default:  int64default.StaticInt64(0),
+				},
 			},
 		},
 	}
@@ -184,6 +192,13 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 			Validators: []validator.String{
 				stringvalidator.OneOf(client.MeshBuildingBlockOutputIOTypes.Strings()...),
 			},
+		},
+		"display_order": schema.Int64Attribute{
+			MarkdownDescription: "Numeric value controlling the display ordering of this output in meshPanel. " +
+				"Used only for arranging outputs; it does not affect the version's content hash. Defaults to `0` when omitted.",
+			Optional: true,
+			Computed: true,
+			Default:  int64default.StaticInt64(0),
 		},
 	},
 	}

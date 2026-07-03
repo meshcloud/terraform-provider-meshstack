@@ -430,6 +430,7 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 				"display_name":    knownvalue.StringExact(displayName),
 				"type":            knownvalue.StringExact(ioType),
 				"assignment_type": knownvalue.StringExact("NONE"),
+				"display_order":   knownvalue.Int64Exact(0),
 			})
 		}
 		baseOutputs := knownvalue.MapExact(map[string]knownvalue.Check{
@@ -820,6 +821,7 @@ func checksForImplementation(exampleSuffix string) (checkInputs, checkImplementa
 					"argument":                       knownvalue.Null(),
 					"default_value":                  knownvalue.Null(),
 					"sensitive":                      knownvalue.Null(),
+					"display_order":                  knownvalue.Int64Exact(1),
 				}),
 				"resource_name": xknownvalue.MapExact(map[string]knownvalue.Check{
 					"display_name":                   knownvalue.StringExact("Resource Name"),
@@ -834,6 +836,7 @@ func checksForImplementation(exampleSuffix string) (checkInputs, checkImplementa
 					"validation_regex_error_message": knownvalue.StringExact("Resource name must contain only lowercase letters, numbers, and hyphens"),
 					"selectable_values":              knownvalue.Null(),
 					"sensitive":                      knownvalue.Null(),
+					"display_order":                  knownvalue.Int64Exact(2),
 				}),
 				"SOMETHING_VERY_SECRET": xknownvalue.MapExact(map[string]knownvalue.Check{
 					"display_name":           knownvalue.StringExact("Top Secret"),
@@ -855,6 +858,7 @@ func checksForImplementation(exampleSuffix string) (checkInputs, checkImplementa
 					"selectable_values":              knownvalue.Null(),
 					"argument":                       knownvalue.Null(),
 					"default_value":                  knownvalue.Null(),
+					"display_order":                  knownvalue.Int64Exact(0),
 				}),
 				"some-file.yaml": xknownvalue.MapExact(map[string]knownvalue.Check{
 					"display_name":                   knownvalue.StringExact("Some input file"),
@@ -869,6 +873,7 @@ func checksForImplementation(exampleSuffix string) (checkInputs, checkImplementa
 					"validation_regex_error_message": knownvalue.Null(),
 					"selectable_values":              knownvalue.Null(),
 					"sensitive":                      knownvalue.Null(),
+					"display_order":                  knownvalue.Int64Exact(0),
 				}),
 			}),
 			xknownvalue.MapExact(map[string]knownvalue.Check{
@@ -882,11 +887,13 @@ func checksForImplementation(exampleSuffix string) (checkInputs, checkImplementa
 					"display_name":    knownvalue.StringExact("If true, it really worked"),
 					"type":            knownvalue.StringExact("BOOLEAN"),
 					"assignment_type": knownvalue.StringExact("NONE"),
+					"display_order":   knownvalue.Int64Exact(1),
 				}),
 				"summary": xknownvalue.MapExact(map[string]knownvalue.Check{
 					"display_name":    knownvalue.StringExact("Summary of work"),
 					"type":            knownvalue.StringExact("STRING"),
 					"assignment_type": knownvalue.StringExact("SUMMARY"),
+					"display_order":   knownvalue.Int64Exact(2),
 				}),
 			})
 	case "02_github_workflows":
@@ -904,6 +911,7 @@ func checksForImplementation(exampleSuffix string) (checkInputs, checkImplementa
 					"argument":                       knownvalue.Null(),
 					"default_value":                  knownvalue.Null(),
 					"sensitive":                      knownvalue.Null(),
+					"display_order":                  knownvalue.Int64Exact(0),
 				}),
 			}),
 			xknownvalue.MapExact(map[string]knownvalue.Check{
@@ -918,6 +926,7 @@ func checksForImplementation(exampleSuffix string) (checkInputs, checkImplementa
 					"display_name":    knownvalue.StringExact("Workflow Run URL"),
 					"type":            knownvalue.StringExact("STRING"),
 					"assignment_type": knownvalue.StringExact("RESOURCE_URL"),
+					"display_order":   knownvalue.Int64Exact(0),
 				}),
 			})
 	case "03_manual":
@@ -935,6 +944,7 @@ func checksForImplementation(exampleSuffix string) (checkInputs, checkImplementa
 					"argument":                       knownvalue.Null(),
 					"default_value":                  knownvalue.Null(),
 					"sensitive":                      knownvalue.Null(),
+					"display_order":                  knownvalue.Int64Exact(0),
 				}),
 			}),
 			xknownvalue.MapExact(map[string]knownvalue.Check{
@@ -949,6 +959,7 @@ func checksForImplementation(exampleSuffix string) (checkInputs, checkImplementa
 					"display_name":    knownvalue.StringExact("Approval Required"),
 					"type":            knownvalue.StringExact("BOOLEAN"),
 					"assignment_type": knownvalue.StringExact("NONE"),
+					"display_order":   knownvalue.Int64Exact(0),
 				}),
 			})
 	case "04_azure_devops_pipeline":
@@ -966,6 +977,7 @@ func checksForImplementation(exampleSuffix string) (checkInputs, checkImplementa
 					"argument":                       knownvalue.Null(),
 					"default_value":                  knownvalue.Null(),
 					"sensitive":                      knownvalue.Null(),
+					"display_order":                  knownvalue.Int64Exact(0),
 				}),
 			}),
 			xknownvalue.MapExact(map[string]knownvalue.Check{
@@ -980,6 +992,7 @@ func checksForImplementation(exampleSuffix string) (checkInputs, checkImplementa
 					"display_name":    knownvalue.StringExact("Pipeline Run ID"),
 					"type":            knownvalue.StringExact("STRING"),
 					"assignment_type": knownvalue.StringExact("NONE"),
+					"display_order":   knownvalue.Int64Exact(0),
 				}),
 			})
 	case "05_gitlab_pipeline":
@@ -997,6 +1010,7 @@ func checksForImplementation(exampleSuffix string) (checkInputs, checkImplementa
 					"argument":                       knownvalue.Null(),
 					"default_value":                  knownvalue.Null(),
 					"sensitive":                      knownvalue.Null(),
+					"display_order":                  knownvalue.Int64Exact(0),
 				}),
 			}),
 			xknownvalue.MapExact(map[string]knownvalue.Check{
@@ -1011,6 +1025,7 @@ func checksForImplementation(exampleSuffix string) (checkInputs, checkImplementa
 					"display_name":    knownvalue.StringExact("Pipeline URL"),
 					"type":            knownvalue.StringExact("STRING"),
 					"assignment_type": knownvalue.StringExact("RESOURCE_URL"),
+					"display_order":   knownvalue.Int64Exact(0),
 				}),
 			})
 	default:
