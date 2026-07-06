@@ -129,6 +129,13 @@ func (r *buildingBlockDefinitionResource) Read(ctx context.Context, req resource
 		Metadata: definitionDto.Metadata,
 		Spec:     definitionDto.Spec,
 	}
+	// Seed the prior inputs shape (null vs empty {}) so SetFromVersionClientDtos preserves it across a
+	// refresh — the backend collapses the two, so without this an empty-map state would flip to null.
+	var priorInputs types.Map
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("version_spec").AtName("inputs"), &priorInputs)...)
+	if !priorInputs.IsNull() && len(priorInputs.Elements()) == 0 {
+		state.VersionSpec.Inputs = map[string]*client.MeshBuildingBlockDefinitionInput{}
+	}
 
 	versionDtos, err := r.buildingBlockDefinitionVersionClient.List(ctx, bbdUuid)
 	if err != nil {

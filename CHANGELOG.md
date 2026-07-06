@@ -3,6 +3,9 @@
 FEATURES:
 - `meshstack_building_block`: A composition now captures a failed child building block's full run log, using the run-scoped `MESHSTACK_RUN_TOKEN` when meshStack injects it, even if the child has run transparency disabled.
 
+FIXES:
+- `meshstack_building_block_definition`: A definition with an empty `version_spec.inputs = {}` no longer fails with "Provider produced inconsistent result after apply" (null vs empty map). The applied and refreshed values now preserve the configured shape.
+
 # v0.23.0
 
 FEATURES:

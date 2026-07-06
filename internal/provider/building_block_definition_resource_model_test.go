@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
+	"github.com/meshcloud/terraform-provider-meshstack/internal/types/generic"
 )
 
 var (
@@ -113,4 +114,48 @@ func Test_versionContentHash_ignoresPerVersionFields(t *testing.T) {
 	mutatedHash := versionContentHash(mutated, &diags)
 	require.Empty(t, diags)
 	assert.Equal(t, baseHash, mutatedHash, "buildingBlockDefinitionRef/versionNumber/state must not affect the content hash")
+}
+
+// The backend collapses a null inputs map and an empty one, so SetFromVersionClientDtos must preserve the
+// caller's exact shape when the version carries no inputs — otherwise Terraform reports a null-vs-empty
+// "Provider produced inconsistent result after apply".
+func Test_SetFromVersionClientDtos_preservesInputsShape(t *testing.T) {
+	draftState := client.MeshBuildingBlockDefinitionVersionStateDraft.Unwrap()
+	versionWithNoInputs := client.MeshBuildingBlockDefinitionVersion{
+		Metadata: client.MeshBuildingBlockDefinitionVersionMetadata{Uuid: "v1"},
+		Spec: client.MeshBuildingBlockDefinitionVersionSpec{
+			VersionNumber: new(int64(1)),
+			State:         &draftState,
+			Implementation: client.MeshBuildingBlockDefinitionImplementation{
+				Terraform: &client.MeshBuildingBlockDefinitionTerraformImplementation{},
+			},
+			// Inputs left nil, mimicking a backend response that omits an empty inputs map.
+		},
+	}
+
+	tests := []struct {
+		name    string
+		prior   map[string]*client.MeshBuildingBlockDefinitionInput
+		wantNil bool
+	}{
+		{"nil inputs stay nil", nil, true},
+		{"empty inputs stay empty (not null)", map[string]*client.MeshBuildingBlockDefinitionInput{}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			model := &buildingBlockDefinition{}
+			model.VersionSpec.Inputs = tt.prior
+
+			var diags diag.Diagnostics
+			model.SetFromVersionClientDtos(&diags, generic.KnownValue(true), "bbd", versionWithNoInputs)
+			require.False(t, diags.HasError(), "unexpected diags: %v", diags.Errors())
+
+			if tt.wantNil {
+				require.Nil(t, model.VersionSpec.Inputs)
+			} else {
+				require.NotNil(t, model.VersionSpec.Inputs)
+				require.Empty(t, model.VersionSpec.Inputs)
+			}
+		})
+	}
 }

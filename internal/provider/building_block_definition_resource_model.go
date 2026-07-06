@@ -266,12 +266,15 @@ func (model *buildingBlockDefinition) SetFromVersionClientDtos(diags *diag.Diagn
 		return
 	}
 	latestIndex := len(versionDtos) - 1
-	inputsNil := model.VersionSpec.Inputs == nil
+	// The backend can't distinguish a null inputs map from an empty one (ToClientDto sends {} for both) and
+	// may return either. Preserve the caller's exact shape (nil vs {}) when the round-trip carries no inputs,
+	// otherwise Terraform reports a null-vs-empty "inconsistent result after apply".
+	priorInputs := model.VersionSpec.Inputs
 	model.VersionSpec = buildingBlockDefinitionVersionSpec{
 		MeshBuildingBlockDefinitionVersionSpec: versionDtos[latestIndex].Spec,
 	}
-	if inputsNil && len(model.VersionSpec.Inputs) == 0 {
-		model.VersionSpec.Inputs = nil
+	if len(priorInputs) == 0 && len(model.VersionSpec.Inputs) == 0 {
+		model.VersionSpec.Inputs = priorInputs
 	}
 
 	if !isDraft.IsUnknown() && !isDraft.Get() {
