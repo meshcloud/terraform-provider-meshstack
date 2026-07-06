@@ -129,6 +129,21 @@ func TestHttpClient(t *testing.T) {
 		assert.Equal(t, 1, attempts, "PATCH must not be retried")
 	})
 
+	t.Run("DoRequest with DELETE (retried, idempotent)", func(t *testing.T) {
+		attempts := 0
+		client := WithRetry(newTestClientWithServer(t, func(resp http.ResponseWriter, req *http.Request) {
+			attempts++
+			if attempts == 1 {
+				resp.WriteHeader(503)
+				return
+			}
+			resp.WriteHeader(http.StatusNoContent)
+		}), RetryOptions{MaxRetries: 3, Backoff: &retryTestBackoff{}})
+		_, err := DoRequest[any](t.Context(), client, http.MethodDelete, client.RootUrl.JoinPath("delete"))
+		require.NoError(t, err)
+		assert.Equal(t, 2, attempts, "DELETE must be retried after a 503")
+	})
+
 	t.Run("DoRequest with PUT replays body on retry", func(t *testing.T) {
 		attempt := 0
 		client := WithRetry(newTestClientWithServer(t, func(resp http.ResponseWriter, req *http.Request) {

@@ -59,8 +59,12 @@ func New(ctx context.Context, rootUrl *url.URL, userAgent string, auth Authoriza
 	httpClient := internal.WithRetry(
 		internal.NewHttpClient(rootUrl, userAgent, auth),
 		internal.RetryOptions{
-			MaxRetries:       10,
-			Backoff:          internal.ExponentialBackoff{MinWait: 1 * time.Second, MaxWait: 10 * time.Second},
+			// Sized to ride out a full meshStack backend restart (e.g. an OOMKill followed by a
+			// Spring Boot cold start), which can leave the gateway returning 503 for ~2-3 minutes —
+			// well beyond the previous ~75s budget. This backoff sequence sums to ~4 minutes:
+			// 1+2+4+8+16+30*7 seconds.
+			MaxRetries:       12,
+			Backoff:          internal.ExponentialBackoff{MinWait: 1 * time.Second, MaxWait: 30 * time.Second},
 			WhitelistedPaths: map[string][]string{"POST": {apiLoginPath}},
 		},
 	)

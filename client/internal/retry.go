@@ -14,8 +14,8 @@ import (
 )
 
 // WithRetry sets up the given client to retry certain requests.
-// GET and PUT are retried by default, POST only if the path is explicitly whitelisted.
-// See RetryOptions.
+// The idempotent methods GET, PUT and DELETE are retried by default, POST only if the path is
+// explicitly whitelisted. See RetryOptions.
 func WithRetry(c HttpClient, options RetryOptions) HttpClient {
 	next := http.DefaultTransport
 	if c.Transport != nil {
@@ -40,7 +40,10 @@ func WithRetry(c HttpClient, options RetryOptions) HttpClient {
 				return false
 			}
 			switch req.Method {
-			case http.MethodGet, http.MethodPut:
+			case http.MethodGet, http.MethodPut, http.MethodDelete:
+				// Idempotent methods are safe to retry: replaying them cannot create duplicate
+				// side effects. A DELETE that actually succeeded server-side before a proxy 503
+				// simply yields a 404 on replay, which delete handlers already treat as done.
 				return true
 			}
 			if whitelisted, found := whitelistedByMethodAndUrl[req.Method]; found {
