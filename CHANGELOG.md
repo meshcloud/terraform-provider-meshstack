@@ -1,7 +1,7 @@
 # v0.23.1
 
 FEATURES:
-- `meshstack_building_block_definition`: `version_spec.inputs` and `version_spec.outputs` now support an optional `display_order` (number) attribute that controls how inputs/outputs are arranged in meshPanel. It defaults to `0` when omitted and is intentionally excluded from a version's `content_hash`, so reordering does not create a version change.
+- `meshstack_building_block_definition`: `version_spec.inputs` and `version_spec.outputs` now support an optional `display_order` (number) attribute that controls how inputs/outputs are arranged in meshPanel. It defaults to `0` when omitted.
 
 FIXES:
 - `meshstack_building_block`: Prepare for the upcoming `WAITING_FOR_APPROVAL` run status (an approval gate coming soon to meshStack — not available yet). Once meshStack starts returning it, an awaited create/update where the run parks for approval will complete with a "waiting for input" warning instead of failing with "unknown building block status; provider may be out of date".

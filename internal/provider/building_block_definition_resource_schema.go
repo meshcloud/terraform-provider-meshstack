@@ -159,8 +159,8 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 					Optional:            true,
 				},
 				"display_order": schema.Int64Attribute{
-					MarkdownDescription: "Numeric value controlling the display ordering of this input in meshPanel. " +
-						"Used only for arranging inputs; it does not affect the version's content hash. Defaults to `0` when omitted.",
+					MarkdownDescription: "Numeric value controlling in which order the inputs are displayed in the UI. " +
+						"Cannot be changed on a released version. When omitted, uses existing value, if any. Otherwise defaults to `0`.",
 					Optional: true,
 					Computed: true,
 					Default:  int64default.StaticInt64(0),
@@ -194,8 +194,8 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 			},
 		},
 		"display_order": schema.Int64Attribute{
-			MarkdownDescription: "Numeric value controlling the display ordering of this output in meshPanel. " +
-				"Used only for arranging outputs; it does not affect the version's content hash. Defaults to `0` when omitted.",
+			MarkdownDescription: "Numeric value controlling in which order the outputs are displayed in the UI. " +
+				"Cannot be changed on a released version. When omitted, uses existing value, if any. Otherwise defaults to `0`.",
 			Optional: true,
 			Computed: true,
 			Default:  int64default.StaticInt64(0),
