@@ -41,6 +41,10 @@ type Client struct {
 	Workspace                      MeshWorkspaceClient
 	WorkspaceGroupBinding          MeshWorkspaceGroupBindingClient
 	WorkspaceUserBinding           MeshWorkspaceUserBindingClient
+
+	// BuildingBlockRunWithRunToken reads run logs authenticated with the privileged run token, letting a
+	// composition capture a failed child run's system message. Nil unless MESHSTACK_RUN_TOKEN is set.
+	BuildingBlockRunWithRunToken MeshBuildingBlockRunClient
 }
 
 type Authorization = internal.Authorization
@@ -98,6 +102,20 @@ func New(ctx context.Context, rootUrl *url.URL, userAgent string, auth Authoriza
 		WorkspaceGroupBinding:          newWorkspaceGroupBindingClient(ctx, httpClient),
 		WorkspaceUserBinding:           newWorkspaceUserBindingClient(ctx, httpClient),
 	}, nil
+}
+
+// NewBuildingBlockRunClientWithAuth builds a standalone run client with its own authorization, so the
+// provider can read run logs with the run token while the main client keeps the workspace credentials.
+// It skips the version check the main client already performed.
+func NewBuildingBlockRunClientWithAuth(ctx context.Context, rootUrl *url.URL, userAgent string, auth Authorization) MeshBuildingBlockRunClient {
+	httpClient := internal.WithRetry(
+		internal.NewHttpClient(rootUrl, userAgent, auth),
+		internal.RetryOptions{
+			MaxRetries: 10,
+			Backoff:    internal.ExponentialBackoff{MinWait: 1 * time.Second, MaxWait: 10 * time.Second},
+		},
+	)
+	return newBuildingBlockRunClient(ctx, httpClient)
 }
 
 func checkMeshVersion(ctx context.Context, httpClient internal.HttpClient) error {

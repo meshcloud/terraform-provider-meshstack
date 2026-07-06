@@ -73,6 +73,9 @@ const (
 	envKeyMeshstackApiKey    = "MESHSTACK_API_KEY"
 	envKeyMeshstackApiSecret = "MESHSTACK_API_SECRET"
 	envKeyMeshstackApiToken  = "MESHSTACK_API_TOKEN"
+	// envKeyMeshstackRunToken carries the privileged, run-scoped token meshStack injects into a building
+	// block run. Env-only: it is set per run by the platform, never configured in HCL.
+	envKeyMeshstackRunToken = "MESHSTACK_RUN_TOKEN"
 )
 
 func (p *MeshStackProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
@@ -163,6 +166,14 @@ func newProviderClient(ctx context.Context, data MeshStackProviderModel, provide
 	if err != nil {
 		diags.AddError("Failed to create meshStack client.", err.Error())
 		return
+	}
+
+	// The run token lets a composition read its children's run logs even when the child has run
+	// transparency disabled. It authorizes only the run-log client; all other calls use the workspace auth.
+	if runToken := os.Getenv(envKeyMeshstackRunToken); runToken != "" {
+		providerClient.BuildingBlockRunWithRunToken = client.NewBuildingBlockRunClientWithAuth(
+			ctx, parsedEndpoint, userAgent, client.NewApiTokenAuthorization(runToken),
+		)
 	}
 	return
 }

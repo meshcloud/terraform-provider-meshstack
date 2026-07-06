@@ -175,6 +175,72 @@ func TestAwaitRunWarnsWhenFailedRunLogsUnreadable(t *testing.T) {
 	require.Equal(t, client.BuildingBlockStatusFailed, final.Status.Status)
 }
 
+// recordingRunLogsClient records whether GetLogs was called and returns a single failed step whose system
+// message identifies which client answered, so a test can assert which client was used to fetch logs.
+type recordingRunLogsClient struct {
+	client.MeshBuildingBlockRunClient
+	systemMessage string
+	called        bool
+}
+
+func (c *recordingRunLogsClient) GetLogs(_ context.Context, _ string) (client.MeshBuildingBlockRunLogs, error) {
+	c.called = true
+	return client.MeshBuildingBlockRunLogs{Steps: []client.MeshBuildingBlockRunStepLog{
+		{DisplayName: "apply", Status: string(client.BuildingBlockStatusFailed), SystemMessage: new(c.systemMessage)},
+	}}, nil
+}
+
+func failedRunStates(runUuid string) []*client.MeshBuildingBlockV2 {
+	return []*client.MeshBuildingBlockV2{
+		bbWithRun(client.BuildingBlockStatusInProgress, runUuid),
+		bbWithRun(client.BuildingBlockStatusFailed, runUuid),
+	}
+}
+
+// TestAwaitRunFetchesFailureLogsWithRunTokenClient: when a run-token client is configured, awaitRun reads
+// the failed run's logs with it (not the workspace client) so a composition can surface a child's system
+// message even with the child's run transparency disabled.
+func TestAwaitRunFetchesFailureLogsWithRunTokenClient(t *testing.T) {
+	t.Parallel()
+
+	stub := &sequencedBBClient{states: failedRunStates("run-broken")}
+	workspace := &recordingRunLogsClient{systemMessage: "workspace-client logs"}
+	runToken := &recordingRunLogsClient{systemMessage: "run-token-client logs"}
+	r := &buildingBlockResource{BuildingBlockClient: stub, BuildingBlockRunClient: workspace, RunTokenRunClient: runToken}
+
+	var diags diag.Diagnostics
+	r.awaitRun(context.Background(), &diags, "bb-uuid", true, 30*time.Second)
+
+	require.True(t, runToken.called, "the run-token client must fetch failure logs when configured")
+	require.False(t, workspace.called, "the workspace client must not be used when the run-token client is configured")
+	require.Contains(t, allErrorDetails(diags), "run-token-client logs")
+}
+
+// TestAwaitRunFetchesFailureLogsWithWorkspaceClientWithoutRunToken: without a run-token client (no
+// MESHSTACK_RUN_TOKEN), awaitRun falls back to the workspace client for the failure logs.
+func TestAwaitRunFetchesFailureLogsWithWorkspaceClientWithoutRunToken(t *testing.T) {
+	t.Parallel()
+
+	stub := &sequencedBBClient{states: failedRunStates("run-broken")}
+	workspace := &recordingRunLogsClient{systemMessage: "workspace-client logs"}
+	r := &buildingBlockResource{BuildingBlockClient: stub, BuildingBlockRunClient: workspace}
+
+	var diags diag.Diagnostics
+	r.awaitRun(context.Background(), &diags, "bb-uuid", true, 30*time.Second)
+
+	require.True(t, workspace.called, "the workspace client must fetch failure logs when no run-token client is set")
+	require.Contains(t, allErrorDetails(diags), "workspace-client logs")
+}
+
+func allErrorDetails(diags diag.Diagnostics) string {
+	var b strings.Builder
+	for _, e := range diags.Errors() {
+		b.WriteString(e.Detail())
+		b.WriteByte('\n')
+	}
+	return b.String()
+}
+
 // TestAwaitRunWarnsOnParkedWaiting: a block parked in WAITING_FOR_*_INPUT cannot proceed from this apply
 // (a runnable block would already be PENDING). awaitRun returns it as terminal-but-non-fatal with a
 // waiting-for-input warning, rather than polling to the timeout.

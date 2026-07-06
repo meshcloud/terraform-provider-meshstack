@@ -55,6 +55,10 @@ func NewBuildingBlockResource() resource.Resource {
 type buildingBlockResource struct {
 	BuildingBlockClient    client.MeshBuildingBlockV2Client
 	BuildingBlockRunClient client.MeshBuildingBlockRunClient
+	// RunTokenRunClient reads run logs with the run token, used for failure diagnostics so a composition
+	// captures a failed child run's system message regardless of the child's run transparency. Nil unless
+	// MESHSTACK_RUN_TOKEN is set.
+	RunTokenRunClient client.MeshBuildingBlockRunClient
 }
 
 func (r *buildingBlockResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -65,6 +69,7 @@ func (r *buildingBlockResource) Configure(_ context.Context, req resource.Config
 	resp.Diagnostics.Append(configureProviderClient(req.ProviderData, func(client client.Client) {
 		r.BuildingBlockClient = client.BuildingBlockV2
 		r.BuildingBlockRunClient = client.BuildingBlockRun
+		r.RunTokenRunClient = client.BuildingBlockRunWithRunToken
 	})...)
 }
 
@@ -579,7 +584,13 @@ func (r *buildingBlockResource) addRunFailureDiagnostics(
 	if bb == nil || bb.Status == nil || bb.Status.LatestRunUuid == nil {
 		return
 	}
-	logs, err := r.BuildingBlockRunClient.GetLogs(ctx, *bb.Status.LatestRunUuid)
+	// Prefer the run-token client: its privileged scope makes the run's system message readable even when
+	// the (child) building block has run transparency disabled. Falls back to the workspace client.
+	runClient := r.BuildingBlockRunClient
+	if r.RunTokenRunClient != nil {
+		runClient = r.RunTokenRunClient
+	}
+	logs, err := runClient.GetLogs(ctx, *bb.Status.LatestRunUuid)
 	if err != nil {
 		// Fetching run logs can legitimately fail: the building block definition may have run
 		// transparency disabled, or the caller's permissions may not allow reading them. Surface it

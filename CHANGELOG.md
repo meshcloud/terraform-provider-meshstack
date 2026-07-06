@@ -1,3 +1,8 @@
+# v0.23.1
+
+FEATURES:
+- `meshstack_building_block`: A composition now captures a failed child building block's full run log, using the run-scoped `MESHSTACK_RUN_TOKEN` when meshStack injects it, even if the child has run transparency disabled.
+
 # v0.23.0
 
 FEATURES:
