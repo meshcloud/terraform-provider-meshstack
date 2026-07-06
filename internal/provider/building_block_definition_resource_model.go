@@ -1,10 +1,8 @@
 package provider
 
 import (
-	"bytes"
 	"cmp"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
@@ -18,7 +16,6 @@ import (
 	clientTypes "github.com/meshcloud/terraform-provider-meshstack/client/types"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/types/generic"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/types/secret"
-	"github.com/meshcloud/terraform-provider-meshstack/internal/util/hash"
 	reflectwalk "github.com/meshcloud/terraform-provider-meshstack/internal/util/reflect"
 )
 
@@ -259,7 +256,7 @@ func (model *buildingBlockDefinition) SetFromVersionClientDtos(diags *diag.Diagn
 			Uuid:        generic.KnownValue(versionDto.Metadata.Uuid),
 			Number:      generic.KnownValue(*versionDto.Spec.VersionNumber),
 			State:       generic.KnownValue(*versionDto.Spec.State),
-			ContentHash: generic.KnownValue(versionContentHash(versionDto.Spec, diags)),
+			ContentHash: generic.KnownValue(calculateBuildingBlockDefinitionVersionContentHash(versionDto.Spec, diags).toBase64()),
 		}
 	}
 	if diags.HasError() {
@@ -307,66 +304,6 @@ func (model *buildingBlockDefinition) SetFromVersionClientDtos(diags *diag.Diagn
 	}
 
 	model.Ref = newBuildingBlockDefinitionRef(bbdUuid)
-}
-
-func versionContentHash(versionSpecDto client.MeshBuildingBlockDefinitionVersionSpec, diags *diag.Diagnostics) string {
-	if result, err := func() (string, error) {
-		// Safeguard against accidentally hashing plaintext secret values (the backend only ever returns
-		// hashes, so plaintext would make the hash unstable). Detection is on the typed DTO so user data -
-		// e.g. an input named "plaintext" or a STATIC argument whose JSON carries a "plaintext" key - is
-		// never mistaken for a secret. Callers leave the hash unknown when a secret rotates (issue #196).
-		if versionSpecContainsPlaintextSecret(versionSpecDto) {
-			return "", errors.New("version_spec carries a plaintext secret value, which must not be hashed")
-		}
-
-		// Ignore version, state, and buildingBlockDefinitionRef fields by setting them to constant values, always!
-		versionSpecDto.VersionNumber = nil
-		versionSpecDto.State = nil
-		versionSpecDto.BuildingBlockDefinitionRef = nil
-
-		// display_order is presentation-only so create a copy without it
-		strippedInputs := make(map[string]*client.MeshBuildingBlockDefinitionInput, len(versionSpecDto.Inputs))
-		for key, input := range versionSpecDto.Inputs {
-			clone := *input
-			clone.DisplayOrder = 0
-			strippedInputs[key] = &clone
-		}
-		versionSpecDto.Inputs = strippedInputs
-
-		strippedOutputs := make(map[string]client.MeshBuildingBlockDefinitionOutput, len(versionSpecDto.Outputs))
-		for key, output := range versionSpecDto.Outputs {
-			output.DisplayOrder = 0
-			strippedOutputs[key] = output
-		}
-		versionSpecDto.Outputs = strippedOutputs
-
-		// Converting it first from/to JSON makes hashing more stable, as fields with 'omitempty' are ignored.
-		// Additionally, all numbers are converted to float64, even integers (which also allows changing DTO model types later on).
-		// Also, the current Hasher implementation does not support structs for now, but map[string]any works!
-		var buffer bytes.Buffer
-		if err := json.NewEncoder(&buffer).Encode(versionSpecDto); err != nil {
-			return "", err
-		}
-		var converted any
-		if err := json.NewDecoder(&buffer).Decode(&converted); err != nil {
-			return "", err
-		}
-
-		versionSpecHash, err := hash.Hasher{}.Hash(converted)
-		if err != nil {
-			return "", err
-		}
-		// add some versioning prefix to migrate possible changes in the hashes later on,
-		// but let's hope migrating/fixing the hashes is never required
-		return "v1:" + versionSpecHash.Hex(), nil
-	}(); err != nil {
-		diags.AddError("Failed to determine content hash", fmt.Sprintf(
-			"Content hashing of version_spec as client DTO failed: %s", err.Error(),
-		))
-		return ""
-	} else {
-		return result
-	}
 }
 
 // versionSpecContainsPlaintextSecret reports whether the typed version_spec DTO carries a secret whose

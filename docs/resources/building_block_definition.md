@@ -74,7 +74,7 @@ resource "meshstack_building_block_definition" "example_01_terraform" {
         updateable_by_consumer         = true                                                                      # Optional: defaults to false
         value_validation_regex         = "^[a-z0-9-]+$"                                                            # Optional
         validation_regex_error_message = "Resource name must contain only lowercase letters, numbers, and hyphens" # Optional
-        display_order                  = 2                                                                         # Optional: only arranges inputs in meshPanel, ignored by the content hash
+        display_order                  = 2                                                                         # Optional: arranges inputs in meshPanel; part of the content hash, so it cannot change on a released version
       }
       SOMETHING_VERY_SECRET = {
         display_name    = "Top Secret"
@@ -572,7 +572,7 @@ Optional:
 - `argument` (String) Argument value for the input, depending on the assignment type. **Required** if `assignment_type` is `STATIC`, `BUILDING_BLOCK_OUTPUT`. **Must not be provided** for other assignment types.<br>For assignment type `BUILDING_BLOCK_OUTPUT`, the value must have the format `jsonencode("<BuildingBlockDefinitionUuid>.<outputName>")`.<br>The value must be passed through `jsonencode()` to support dynamic typing as defined by the `type` attribute.<br>For type `CODE`, the value must be an `jsonencode`'d string, e.g. `jsonencode("some code")` and the interpretation of the `"some code"` string is implementation-specific.<br>For the `terraform` implementation, the `CODE` input value should be `jsonencode`'d again, as any JSON is a valid HCL expression, which is properly passed to a variable input by the TF runner.<br>For example, if the variable input specifies `type = map(string)`, then a type-matching value input is `jsonencode(jsonencode({some-key: "some-value"}))`.
 - `default_value` (String) Default value for the input. **Can only be provided** if `assignment_type` is `USER_INPUT`, `PLATFORM_OPERATOR_MANUAL_INPUT`. Must be passed through `jsonencode()` to match the `type` attribute.
 - `description` (String) Description explaining the purpose and usage of the input.
-- `display_order` (Number) Numeric value controlling the display ordering of this input in meshPanel. Used only for arranging inputs; it does not affect the version's content hash. Defaults to `0` when omitted.
+- `display_order` (Number) Numeric value controlling the display ordering of this input in meshPanel. It is part of the version's content hash, so it cannot be changed on a released version. Defaults to `0` when omitted.
 - `is_environment` (Boolean) Whether this input is exposed as an environment variable (when `true`) or as a regular variable (when `false`).
 - `selectable_values` (Set of String) Set of allowed values for the input. **Required** to be non-empty when `type` is `SINGLE_SELECT` or `MULTI_SELECT`.
 - `sensitive` (Attributes) Configuration for sensitive input values. **Mutually exclusive** with the non-sensitive `argument` and `default_value` attributes. When an input is marked as sensitive, use the nested `sensitive.argument` or `sensitive.default_value` instead of the top-level attributes. You can provide an empty attribute `sensitive = {}` to mark this input as sensitive without providing values. Sensitive inputs are **only supported** for `assignment_type` of `USER_INPUT`, `PLATFORM_OPERATOR_MANUAL_INPUT`, `STATIC`. (see [below for nested schema](#nestedatt--version_spec--inputs--sensitive))
@@ -633,7 +633,7 @@ Required:
 Optional:
 
 - `assignment_type` (String) How the output is used. One of `NONE`, `PLATFORM_TENANT_ID`, `SIGN_IN_URL`, `RESOURCE_URL`, `SUMMARY`. Defaults to `NONE`.
-- `display_order` (Number) Numeric value controlling the display ordering of this output in meshPanel. Used only for arranging outputs; it does not affect the version's content hash. Defaults to `0` when omitted.
+- `display_order` (Number) Numeric value controlling the display ordering of this output in meshPanel. It is part of the version's content hash, so it cannot be changed on a released version. Defaults to `0` when omitted.
 
 
 <a id="nestedatt--version_spec--runner_ref"></a>

@@ -56,7 +56,7 @@ resource "meshstack_building_block_definition" "example_01_terraform" {
         updateable_by_consumer         = true                                                                      # Optional: defaults to false
         value_validation_regex         = "^[a-z0-9-]+$"                                                            # Optional
         validation_regex_error_message = "Resource name must contain only lowercase letters, numbers, and hyphens" # Optional
-        display_order                  = 2                                                                         # Optional: only arranges inputs in meshPanel, ignored by the content hash
+        display_order                  = 2                                                                         # Optional: arranges inputs in meshPanel; part of the content hash, so it cannot change on a released version
       }
       SOMETHING_VERY_SECRET = {
         display_name    = "Top Secret"

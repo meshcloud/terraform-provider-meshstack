@@ -30,9 +30,9 @@ var (
 func Test_versionContentHash(t *testing.T) {
 	// If constant values below are required to change, you need a good reason and consider backwards compatibility!
 	const (
-		hashWhichShouldNeverChange1 = "v1:674c77c28e4eb4cec99b9f1e73ad11b520a367da416ff3fa90d5e5426e09befc"
-		hashWhichShouldNeverChange2 = "v1:020cd7c032ff6ce05a02873fd319e7b7206896fa415904791836c933f0a239ee"
-		hashWhichShouldNeverChange3 = "v1:2b992e234316baa08d1f4d017f57379ddfb45f39f3ae7b148079322938dfd8e0"
+		hashWhichShouldNeverChange1 = "djI6Njc0Yzc3YzI4ZTRlYjRjZWM5OWI5ZjFlNzNhZDExYjUyMGEzNjdkYTQxNmZmM2ZhOTBkNWU1NDI2ZTA5YmVmYw=="
+		hashWhichShouldNeverChange2 = "djI6MDIwY2Q3YzAzMmZmNmNlMDVhMDI4NzNmZDMxOWU3YjcyMDY4OTZmYTQxNTkwNDc5MTgzNmM5MzNmMGEyMzllZQ=="
+		hashWhichShouldNeverChange3 = "djI6MmI5OTJlMjM0MzE2YmFhMDhkMWY0ZDAxN2Y1NzM3OWRkZmI0NWYzOWYzYWU3YjE0ODA3OTMyMjkzOGRmZDhlMA=="
 	)
 	require.NotEqual(t, hashWhichShouldNeverChange1, hashWhichShouldNeverChange2)
 	tests := []struct {
@@ -51,9 +51,9 @@ func Test_versionContentHash(t *testing.T) {
 			var versionSpec client.MeshBuildingBlockDefinitionVersionSpec
 			require.NoError(t, json.Unmarshal(tt.json, &versionSpec))
 			var diags diag.Diagnostics
-			actualHash := versionContentHash(versionSpec, &diags)
+			actualHashStr := calculateBuildingBlockDefinitionVersionContentHash(versionSpec, &diags).toBase64()
 			require.Empty(t, diags)
-			require.Equal(t, tt.want, actualHash)
+			require.Equal(t, tt.want, actualHashStr)
 		})
 	}
 }
@@ -62,7 +62,7 @@ func Test_versionContentHash_plaintextSecret(t *testing.T) {
 	var versionSpec client.MeshBuildingBlockDefinitionVersionSpec
 	require.NoError(t, json.Unmarshal(versionSpecPlaintextSecretJson, &versionSpec))
 	var diags diag.Diagnostics
-	versionContentHash(versionSpec, &diags)
+	calculateBuildingBlockDefinitionVersionContentHash(versionSpec, &diags)
 	require.Len(t, diags, 1)
 	assert.Contains(t, diags[0].Detail(), "version_spec carries a plaintext secret value, which must not be hashed")
 }
@@ -85,9 +85,9 @@ func Test_versionContentHash_userDataNamedPlaintext(t *testing.T) {
 	var versionSpec client.MeshBuildingBlockDefinitionVersionSpec
 	require.NoError(t, json.Unmarshal([]byte(userDataJson), &versionSpec))
 	var diags diag.Diagnostics
-	actualHash := versionContentHash(versionSpec, &diags)
+	actualHashStr := calculateBuildingBlockDefinitionVersionContentHash(versionSpec, &diags).toBase64()
 	require.Empty(t, diags)
-	assert.NotEmpty(t, actualHash)
+	assert.NotEmpty(t, actualHashStr)
 }
 
 // Test_versionContentHash_ignoresPerVersionFields pins the invariant that the content hash is independent
@@ -109,30 +109,8 @@ func Test_versionContentHash_ignoresPerVersionFields(t *testing.T) {
 	mutated.State = client.MeshBuildingBlockDefinitionVersionStateReleased.Ptr()
 
 	var diags diag.Diagnostics
-	baseHash := versionContentHash(base, &diags)
-	mutatedHash := versionContentHash(mutated, &diags)
+	baseHash := calculateBuildingBlockDefinitionVersionContentHash(base, &diags).toBase64()
+	mutatedHash := calculateBuildingBlockDefinitionVersionContentHash(mutated, &diags).toBase64()
 	require.Empty(t, diags)
 	assert.Equal(t, baseHash, mutatedHash, "buildingBlockDefinitionRef/versionNumber/state must not affect the content hash")
-}
-
-func Test_versionContentHash_ignoresDisplayOrder(t *testing.T) {
-	var base, mutated client.MeshBuildingBlockDefinitionVersionSpec
-	require.NoError(t, json.Unmarshal(versionSpecJson, &base))
-	require.NoError(t, json.Unmarshal(versionSpecJson, &mutated))
-
-	require.NotEmpty(t, mutated.Inputs, "test fixture must contain at least one input")
-	for _, input := range mutated.Inputs {
-		input.DisplayOrder = 7
-	}
-	require.NotEmpty(t, mutated.Outputs, "test fixture must contain at least one output")
-	for key, output := range mutated.Outputs {
-		output.DisplayOrder = 11
-		mutated.Outputs[key] = output
-	}
-
-	var diags diag.Diagnostics
-	baseHash := versionContentHash(base, &diags)
-	mutatedHash := versionContentHash(mutated, &diags)
-	require.Empty(t, diags)
-	assert.Equal(t, baseHash, mutatedHash, "display_order must not affect the content hash")
 }

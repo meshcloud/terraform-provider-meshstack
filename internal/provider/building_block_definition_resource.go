@@ -218,27 +218,6 @@ func outputAssignmentTypes(outputs types.Map) map[string]string {
 	return result
 }
 
-func displayOrdersDiffer(a, b client.MeshBuildingBlockDefinitionVersionSpec) bool {
-	inputOrders := func(m map[string]*client.MeshBuildingBlockDefinitionInput) map[string]int64 {
-		orders := make(map[string]int64, len(m))
-		for key, input := range m {
-			if input != nil {
-				orders[key] = input.DisplayOrder
-			}
-		}
-		return orders
-	}
-	outputOrders := func(m map[string]client.MeshBuildingBlockDefinitionOutput) map[string]int64 {
-		orders := make(map[string]int64, len(m))
-		for key, output := range m {
-			orders[key] = output.DisplayOrder
-		}
-		return orders
-	}
-	return !maps.Equal(inputOrders(a.Inputs), inputOrders(b.Inputs)) ||
-		!maps.Equal(outputOrders(a.Outputs), outputOrders(b.Outputs))
-}
-
 // platformTenantIdOutputKeysEqual reports whether the set of output keys assigned PLATFORM_TENANT_ID is
 // the same in both maps. Used to detect whether a manual building block's configured tenant-id output
 // changed, which (besides an inputs change) is the only way its reconciled outputs can change.
@@ -394,12 +373,12 @@ func (r *buildingBlockDefinitionResource) ModifyPlan(ctx context.Context, req re
 			return
 		}
 		if tfValue.IsFullyKnown() {
-			result.Value = new(versionContentHash(
+			result.Value = new(calculateBuildingBlockDefinitionVersionContentHash(
 				generic.GetAttribute[client.MeshBuildingBlockDefinitionVersionSpec](
 					ctx, req.Plan, versionSpecPath, &resp.Diagnostics,
 					buildingBlockDefinitionVersionConverterOptions(ctx, req.Config, req.Plan, req.State)...),
 				&resp.Diagnostics,
-			))
+			).toBase64())
 		}
 		return
 	}()
@@ -511,21 +490,12 @@ func (r *buildingBlockDefinitionResource) Update(ctx context.Context, req resour
 		// this makes released or in-review versions immutable. A secret rotation on a released version is
 		// already rejected at plan time in ModifyPlan with a clear message (issue #196), so it never reaches
 		// here; any remaining version_spec change is caught by the content-hash comparison below.
-		versionSpecDtoContentHash := versionContentHash(versionSpecDto, &resp.Diagnostics)
+		versionSpecDtoContentHash := calculateBuildingBlockDefinitionVersionContentHash(versionSpecDto, &resp.Diagnostics)
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		if versionSpecDtoContentHash == state.VersionLatest.ContentHash.Get() {
-			// display_order is excluded from the content hash, so an equal hash could still mean changed display_order.
-			// Released versions are immutable, so reject a display_order-only change explicitly
-			if displayOrdersDiffer(plan.VersionSpec.MeshBuildingBlockDefinitionVersionSpec, state.VersionSpec.MeshBuildingBlockDefinitionVersionSpec) {
-				resp.Diagnostics.AddError("Error updating version_spec", fmt.Sprintf(
-					"Changing display_order on a released version %d is not allowed — released versions are immutable.",
-					state.VersionLatest.Number.Get(),
-				))
-				return
-			}
-			// state is in draft=false (aka released), and there's no change in version_spec,
+		if !versionSpecDtoContentHash.indicatesChangesTowardsHash(state.VersionLatest.ContentHash.Get()) {
+			// state is in draft=false (aka released), and there's no indication of change in version_specs,
 			// so all is good, and we don't need to do anything with the backend
 			return
 		} else {
@@ -534,7 +504,7 @@ func (r *buildingBlockDefinitionResource) Update(ctx context.Context, req resour
 					"To publish your changes as a new version, first set draft = true and apply to create a draft. "+
 					"Once you are happy with the draft, set draft = false and apply again to release it.\n\n"+
 					"(The content hash would change from %s to %s.)",
-				state.VersionLatest.ContentHash.Get(), versionSpecDtoContentHash,
+				state.VersionLatest.ContentHash.Get(), versionSpecDtoContentHash.toBase64(),
 			))
 			return
 		}
@@ -563,15 +533,15 @@ func (r *buildingBlockDefinitionResource) Update(ctx context.Context, req resour
 		return
 	}
 	if updatedVersionDto != nil {
-		updatedVersionSpecContentHash := versionContentHash(updatedVersionDto.Spec, &resp.Diagnostics)
+		updatedVersionSpecContentHash := calculateBuildingBlockDefinitionVersionContentHash(updatedVersionDto.Spec, &resp.Diagnostics)
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		if plan.VersionLatest.ContentHash.Get() != updatedVersionSpecContentHash {
+		if updatedVersionSpecContentHash.indicatesChangesTowardsHash(plan.VersionLatest.ContentHash.Get()) {
 			resp.Diagnostics.AddError("Inconsistent content hash of version_spec after update", fmt.Sprintf(
 				"The content hash of the latest version after listing does not match the content hash of the updated/created response: %s != %s. "+
 					"This is most likely a bug in the backend.",
-				plan.VersionLatest.ContentHash.Get(), updatedVersionSpecContentHash,
+				plan.VersionLatest.ContentHash.Get(), updatedVersionSpecContentHash.toBase64(),
 			))
 			return
 		}
