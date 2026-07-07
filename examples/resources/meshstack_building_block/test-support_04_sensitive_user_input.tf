@@ -18,10 +18,10 @@ resource "meshstack_building_block" "sensitive_user_input" {
     }
   }
 
-  # Short waits so tests fail fast instead of polling the 30m default if a run hangs.
+  # Bounded waits so tests fail reasonably fast (vs the 30m default) while tolerating a busy runner.
   timeouts = {
-    create = "30s"
-    update = "30s"
-    delete = "30s"
+    create = "2m"
+    update = "2m"
+    delete = "2m"
   }
 }

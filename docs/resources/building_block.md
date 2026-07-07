@@ -46,9 +46,9 @@ resource "meshstack_building_block" "example_workspace" {
   # create/update wait for the building block run to reach a terminal state; delete waits for
   # deprovisioning. Tune to your runner's typical run duration (defaults to 30m if unset).
   timeouts = {
-    create = "30s"
-    update = "30s"
-    delete = "30s"
+    create = "2m"
+    update = "2m"
+    delete = "2m"
   }
 }
 ```
@@ -85,9 +85,9 @@ resource "meshstack_building_block" "example_tenant" {
   # create/update wait for the building block run to reach a terminal state; delete waits for
   # deprovisioning. Tune to your runner's typical run duration (defaults to 30m if unset).
   timeouts = {
-    create = "30s"
-    update = "30s"
-    delete = "30s"
+    create = "2m"
+    update = "2m"
+    delete = "2m"
   }
 }
 ```
