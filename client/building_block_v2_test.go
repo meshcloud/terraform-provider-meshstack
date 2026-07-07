@@ -136,6 +136,15 @@ func TestMeshBuildingBlockV2_CreateSuccessful(t *testing.T) {
 			wantErr:  false,
 		},
 		{
+			name: "WAITING_FOR_APPROVAL — terminal but non-fatal",
+			bb: &MeshBuildingBlockV2{
+				Metadata: MeshBuildingBlockV2Metadata{Uuid: new("test-uuid")},
+				Status:   &MeshBuildingBlockV2Status{Status: BuildingBlockStatusWaitingForApproval},
+			},
+			wantDone: true,
+			wantErr:  false,
+		},
+		{
 			name: "FAILED with nil Uuid does not panic",
 			bb: &MeshBuildingBlockV2{
 				Metadata: MeshBuildingBlockV2Metadata{Uuid: nil},

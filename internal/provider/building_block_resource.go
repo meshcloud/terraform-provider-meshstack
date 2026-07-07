@@ -638,7 +638,7 @@ func addWaitingForInputWarning(diags *diag.Diagnostics, bb *client.MeshBuildingB
 	}
 	diags.AddWarning(
 		"Building block run is waiting for input",
-		fmt.Sprintf("Building block %s is in status %s. Provide the required inputs in meshPanel to complete the run; outputs are not yet available.", uuid, bb.Status.Status),
+		fmt.Sprintf("Building block %s is in status %s. Resolve the pending input or approval in meshPanel to complete the run; outputs are not yet available.", uuid, bb.Status.Status),
 	)
 }
 

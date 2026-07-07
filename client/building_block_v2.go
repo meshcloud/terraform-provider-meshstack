@@ -28,6 +28,7 @@ var (
 	BuildingBlockStatusWaitingForDependentInput = BuildingBlockStatuses.Entry("WAITING_FOR_DEPENDENT_INPUT")
 	BuildingBlockStatusWaitingForOperatorInput  = BuildingBlockStatuses.Entry("WAITING_FOR_OPERATOR_INPUT")
 	BuildingBlockStatusWaitingForUserInput      = BuildingBlockStatuses.Entry("WAITING_FOR_USER_INPUT")
+	BuildingBlockStatusWaitingForApproval       = BuildingBlockStatuses.Entry("WAITING_FOR_APPROVAL")
 	BuildingBlockStatusPending                  = BuildingBlockStatuses.Entry("PENDING")
 	BuildingBlockStatusInProgress               = BuildingBlockStatuses.Entry("IN_PROGRESS")
 	BuildingBlockStatusSucceeded                = BuildingBlockStatuses.Entry("SUCCEEDED")
@@ -239,12 +240,14 @@ func (c meshBuildingBlockV2Client) Delete(ctx context.Context, uuid string, purg
 }
 
 // IsWaitingForInput reports whether the building block run is paused awaiting
-// human or dependency input. Such a run will not progress on its own, so polling
-// callers treat it as a terminal (but non-fatal) state and surface a warning.
+// human input, a dependency, or an approval. Such a run will not progress on its
+// own, so polling callers treat it as a terminal (but non-fatal) state and surface
+// a warning.
 func (bb *MeshBuildingBlockV2) IsWaitingForInput() bool {
 	return bb.Status.Status == BuildingBlockStatusWaitingForOperatorInput ||
 		bb.Status.Status == BuildingBlockStatusWaitingForUserInput ||
-		bb.Status.Status == BuildingBlockStatusWaitingForDependentInput
+		bb.Status.Status == BuildingBlockStatusWaitingForDependentInput ||
+		bb.Status.Status == BuildingBlockStatusWaitingForApproval
 }
 
 // bbUuidOrUnknown returns the building block UUID for diagnostic messages, or "<unknown>" if nil.

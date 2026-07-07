@@ -54,7 +54,7 @@ data "meshstack_building_blocks" "all" {
 - `name` (String) Only return building blocks with this exact name.
 - `platform_identifier` (String) Only return building blocks on this platform (`<platformInstance>.<location>`).
 - `project_identifier` (String) Only return building blocks in this project.
-- `status` (String) Only return building blocks in this execution status. One of `WAITING_FOR_DEPENDENT_INPUT`, `WAITING_FOR_OPERATOR_INPUT`, `WAITING_FOR_USER_INPUT`, `PENDING`, `IN_PROGRESS`, `SUCCEEDED`, `FAILED`, `ABORTED`.
+- `status` (String) Only return building blocks in this execution status. One of `WAITING_FOR_DEPENDENT_INPUT`, `WAITING_FOR_OPERATOR_INPUT`, `WAITING_FOR_USER_INPUT`, `WAITING_FOR_APPROVAL`, `PENDING`, `IN_PROGRESS`, `SUCCEEDED`, `FAILED`, `ABORTED`.
 - `target_kind` (String) Only return building blocks with this target kind. One of `meshTenant`, `meshWorkspace`.
 - `tenant_uuid` (String) Only return building blocks targeting the tenant with this UUID.
 - `version_number` (String) Only return building blocks created from this building block definition version number. Accepts a plain number (`1`) or a `v`-prefixed string (`v1`); the `v` is stripped server-side.
@@ -150,7 +150,7 @@ Read-Only:
 - `latest_dry_run_uuid` (String) UUID of the latest dry (DETECT) run, but only when it is the newest run; null otherwise.
 - `latest_run_uuid` (String) UUID of the latest modifying (apply/destroy) run. Null when none exists or when permissions are insufficient to read runs.
 - `outputs` (Attributes Map) Outputs of the building block, available after a successful run. (see [below for nested schema](#nestedatt--building_blocks--status--outputs))
-- `status` (String) Execution status. One of `WAITING_FOR_DEPENDENT_INPUT`, `WAITING_FOR_OPERATOR_INPUT`, `WAITING_FOR_USER_INPUT`, `PENDING`, `IN_PROGRESS`, `SUCCEEDED`, `FAILED`, `ABORTED`.
+- `status` (String) Execution status. One of `WAITING_FOR_DEPENDENT_INPUT`, `WAITING_FOR_OPERATOR_INPUT`, `WAITING_FOR_USER_INPUT`, `WAITING_FOR_APPROVAL`, `PENDING`, `IN_PROGRESS`, `SUCCEEDED`, `FAILED`, `ABORTED`.
 
 <a id="nestedatt--building_blocks--status--outputs"></a>
 ### Nested Schema for `building_blocks.status.outputs`

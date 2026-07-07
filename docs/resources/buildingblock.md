@@ -121,7 +121,7 @@ Read-Only:
 Read-Only:
 
 - `outputs` (Attributes Map) Building block outputs. Each output has exactly one value attribute set. (see [below for nested schema](#nestedatt--status--outputs))
-- `status` (String) Execution status. One of `WAITING_FOR_DEPENDENT_INPUT`, `WAITING_FOR_OPERATOR_INPUT`, `PENDING`, `IN_PROGRESS`, `SUCCEEDED`, `FAILED`.
+- `status` (String) Execution status. One of `WAITING_FOR_DEPENDENT_INPUT`, `WAITING_FOR_OPERATOR_INPUT`, `WAITING_FOR_USER_INPUT`, `WAITING_FOR_APPROVAL`, `PENDING`, `IN_PROGRESS`, `SUCCEEDED`, `FAILED`, `ABORTED`.
 
 <a id="nestedatt--status--outputs"></a>
 ### Nested Schema for `status.outputs`

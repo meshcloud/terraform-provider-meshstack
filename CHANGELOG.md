@@ -1,3 +1,8 @@
+# v0.23.1
+
+FIXES:
+- `meshstack_building_block`: Prepare for the upcoming `WAITING_FOR_APPROVAL` run status (an approval gate coming soon to meshStack — not available yet). Once meshStack starts returning it, an awaited create/update where the run parks for approval will complete with a "waiting for input" warning instead of failing with "unknown building block status; provider may be out of date".
+
 # v0.23.0
 
 FEATURES:
