@@ -494,11 +494,30 @@ func (r *buildingBlockDefinitionResource) Update(ctx context.Context, req resour
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		if !versionSpecDtoContentHash.indicatesChangesTowardsHash(state.VersionLatest.ContentHash.Get()) {
+
+		cmp := versionSpecDtoContentHash.compareToStored(state.VersionLatest.ContentHash.Get())
+		if cmp == hashIncomparable {
+			// The stored hash was produced by a different/legacy algorithm version (state written by an
+			// older provider and never refreshed, imported, or planned with -refresh=false), so its value
+			// cannot be compared against the current-version hash. Recompute the released version's hash
+			// from the authoritative spec in state AT THE CURRENT version so we compare like-for-like
+			// instead of guessing "no change". We build the DTO straight from state.VersionSpec (not via
+			// versionSpecDtoFromPlan, which would pull a manual BBD's outputs from the new config and
+			// thus mask a real change) — mirroring how the stored hash was originally derived from state.
+			stateSpecDto := state.VersionSpec.ToClientDto(bbdUuid)
+			authoritative := calculateBuildingBlockDefinitionVersionContentHash(stateSpecDto, &resp.Diagnostics)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+			cmp = versionSpecDtoContentHash.compareToStored(authoritative.toBase64())
+		}
+
+		switch cmp {
+		case hashSame:
 			// state is in draft=false (aka released), and there's no indication of change in version_specs,
 			// so all is good, and we don't need to do anything with the backend
 			return
-		} else {
+		default: // hashDifferent, or still-incomparable -> fail safe by rejecting a change to an immutable version
 			resp.Diagnostics.AddError("Error updating version_spec", fmt.Sprintf(
 				"Updating a version_spec in non-draft (released) state is not allowed — released versions are immutable.\n\n"+
 					"To publish your changes as a new version, first set draft = true and apply to create a draft. "+
@@ -537,7 +556,7 @@ func (r *buildingBlockDefinitionResource) Update(ctx context.Context, req resour
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		if updatedVersionSpecContentHash.indicatesChangesTowardsHash(plan.VersionLatest.ContentHash.Get()) {
+		if updatedVersionSpecContentHash.compareToStored(plan.VersionLatest.ContentHash.Get()) == hashDifferent {
 			resp.Diagnostics.AddError("Inconsistent content hash of version_spec after update", fmt.Sprintf(
 				"The content hash of the latest version after listing does not match the content hash of the updated/created response: %s != %s. "+
 					"This is most likely a bug in the backend.",

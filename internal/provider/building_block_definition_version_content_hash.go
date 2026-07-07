@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -15,19 +16,27 @@ import (
 )
 
 const (
-	errorHashVersion   = "err"
-	currentHashVersion = "v2"
+	currentHashVersion = 2
 )
 
 // represents a content hash of a building block definition version, which is used to detect changes in the version_spec.
-// because the version_spec is subject to change w.r.t. new fields etc., the hash is versioned
-// this means we can only meaningfully compare hashes of the same version
-// use func indicatesChangesTowardsHash(hashStr string) to detect whether an instance of BuildingBlockDefinitionVersionContentHash
-// differs from a previously calculated hash string representation.
+// because the version_spec is subject to change w.r.t. new fields etc., the hash is versioned.
 type BuildingBlockDefinitionVersionContentHash struct {
-	hashVersion string
+	hashVersion int
 	hashValue   string
 }
+
+// hashComparison is the three-way result of comparing a freshly computed content hash against a
+// previously stored one. Two hash *values* are only meaningful to compare when they were produced
+// by the same hash version (algorithm); across versions the values are unrelated, so the outcome is
+// hashIncomparable.
+type hashComparison int
+
+const (
+	hashIncomparable hashComparison = iota
+	hashSame
+	hashDifferent
+)
 
 func calculateBuildingBlockDefinitionVersionContentHash(versionSpecDto client.MeshBuildingBlockDefinitionVersionSpec, diags *diag.Diagnostics) BuildingBlockDefinitionVersionContentHash {
 	if result, err := func() (string, error) {
@@ -70,7 +79,7 @@ func calculateBuildingBlockDefinitionVersionContentHash(versionSpecDto client.Me
 			"Content hashing of version_spec as client DTO failed: %s", err.Error(),
 		))
 
-		return errorHash()
+		return BuildingBlockDefinitionVersionContentHash{}
 	} else {
 
 		return BuildingBlockDefinitionVersionContentHash{
@@ -80,57 +89,63 @@ func calculateBuildingBlockDefinitionVersionContentHash(versionSpecDto client.Me
 	}
 }
 
-// we can only safely know that two definition versions differ in case they have both the same hash version
-// and different hash values. If the hash versions differ, we cannot know whether the content has changed or not.
-func (h BuildingBlockDefinitionVersionContentHash) indicatesChangesTowardsHash(hashStr string) bool {
+func getVersionedHashFromString(encoded string) (BuildingBlockDefinitionVersionContentHash, error) {
+	// v1 hashes were just simple strings in the format of "v1:<hash>"
+	// later version representations are all base64 encoded strings
+	if strings.HasPrefix(encoded, "v1:") { // safe check, as base64 cannot contain ":"
+		return BuildingBlockDefinitionVersionContentHash{
+			hashVersion: 1,
+			hashValue:   encoded,
+		}, nil
+	} else {
+		h := BuildingBlockDefinitionVersionContentHash{}
+		err := h.loadFromBase64(encoded)
+		return h, err
+	}
+}
 
-	getVersionedHashFromString := func(encoded string) BuildingBlockDefinitionVersionContentHash {
-		// v1 hashes were just simple strings in the format of "v1:<hash>"
-		// later version representations are all base64 encoded strings
-		if strings.HasPrefix(encoded, "v1:") { // safe check, as base64 cannot contain ":"
-			return BuildingBlockDefinitionVersionContentHash{
-				hashVersion: "v1",
-				hashValue:   encoded,
-			}
-		} else {
-			h := BuildingBlockDefinitionVersionContentHash{}
-			h.loadFromBase64(encoded)
-			return h
-		}
+// compareToStored compares the receiver (always freshly computed at currentHashVersion) against a
+// previously stored hash string. It returns hashIncomparable when the hash versions differ or either
+// side is an error/unparsable hash — callers MUST treat that as "unknown", never as "no change".
+func (h BuildingBlockDefinitionVersionContentHash) compareToStored(storedStr string) hashComparison {
+	other, err := getVersionedHashFromString(storedStr)
+
+	if err != nil || h.hashVersion != other.hashVersion {
+		return hashIncomparable
 	}
 
-	other := getVersionedHashFromString(hashStr)
+	if h.hashValue == other.hashValue {
+		return hashSame
+	}
 
-	return (h.hashVersion == other.hashVersion) && (h.hashValue != other.hashValue)
+	return hashDifferent
 }
 
 func (h BuildingBlockDefinitionVersionContentHash) toBase64() string {
-	text := h.hashVersion + ":" + h.hashValue
+	text := fmt.Sprintf("v%d:%s", h.hashVersion, h.hashValue)
 	encoded := base64.StdEncoding.EncodeToString([]byte(text))
 
 	return encoded
 }
 
-func (h *BuildingBlockDefinitionVersionContentHash) loadFromBase64(encoded string) {
+func (h *BuildingBlockDefinitionVersionContentHash) loadFromBase64(encoded string) error {
 	decoded, err := base64.StdEncoding.DecodeString(encoded)
 	if err != nil {
-		h.hashVersion = errorHashVersion
-		return
+		return err
 	}
 
 	parts := strings.Split(string(decoded), ":")
 	if len(parts) != 2 {
-		h.hashVersion = errorHashVersion
-		return
+		return errors.New("invalid hash format: expected 'version:value'")
 	}
 
-	h.hashVersion = parts[0]
+	hashVersion, err := strconv.Atoi(parts[0][1:]) // skip leading "v"
+	if err != nil {
+		return errors.New("invalid hash version: expected integer")
+	}
+
+	h.hashVersion = hashVersion
 	h.hashValue = parts[1]
-}
 
-func errorHash() BuildingBlockDefinitionVersionContentHash {
-	return BuildingBlockDefinitionVersionContentHash{
-		hashVersion: errorHashVersion,
-		hashValue:   "",
-	}
+	return nil
 }
