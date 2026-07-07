@@ -152,7 +152,7 @@ func (r *buildingblockResource) Schema(ctx context.Context, req resource.SchemaR
 				PlanModifiers:       []planmodifier.Object{objectplanmodifier.UseStateForUnknown()},
 				Attributes: map[string]schema.Attribute{
 					"status": schema.StringAttribute{
-						MarkdownDescription: "Execution status. One of `WAITING_FOR_DEPENDENT_INPUT`, `WAITING_FOR_OPERATOR_INPUT`, `WAITING_FOR_USER_INPUT`, `WAITING_FOR_APPROVAL`, `PENDING`, `IN_PROGRESS`, `SUCCEEDED`, `FAILED`, `ABORTED`.",
+						MarkdownDescription: "Execution status. One of " + client.BuildingBlockStatuses.Markdown() + ".",
 						Computed:            true,
 					},
 					"outputs": buildingBlockOutputs(),
