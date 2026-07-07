@@ -111,7 +111,6 @@ func (r *buildingBlockDefinitionResource) Create(ctx context.Context, req resour
 
 func (r *buildingBlockDefinitionResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	stateMetadata := generic.GetAttribute[client.MeshBuildingBlockDefinitionMetadata](ctx, req.State, path.Root("metadata"), &resp.Diagnostics, generic.WithSetUnknownValueToZero())
-	isDraft := generic.GetAttribute[generic.NullIsUnknown[bool]](ctx, req.State, path.Root("version_spec").AtName("draft"), &resp.Diagnostics, generic.WithSetUnknownValueToZero())
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -141,7 +140,9 @@ func (r *buildingBlockDefinitionResource) Read(ctx context.Context, req resource
 			definitionDto.Spec.DisplayName, bbdUuid,
 		))
 	}
-	state.SetFromVersionClientDtos(&resp.Diagnostics, isDraft, bbdUuid, versionDtos...)
+	// Refresh reflects the actual latest-version state: derive draft from it (as the definitions data
+	// source does) so an external switch to DRAFT is noticed instead of a stale draft=false persisting.
+	state.SetFromVersionClientDtos(&resp.Diagnostics, deriveDraftFromLatestVersion(versionDtos), bbdUuid, versionDtos...)
 	if resp.Diagnostics.HasError() {
 		return
 	}

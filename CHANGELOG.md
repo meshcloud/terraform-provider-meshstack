@@ -2,6 +2,7 @@
 
 FIXES:
 - `meshstack_building_block`: Prepare for the upcoming `WAITING_FOR_APPROVAL` run status (an approval gate coming soon to meshStack — not available yet). Once meshStack starts returning it, an awaited create/update where the run parks for approval will complete with a "waiting for input" warning instead of failing with "unknown building block status; provider may be out of date".
+- `meshstack_building_block_definition`: `Read` now derives `version_spec.draft` from the definition's actual latest version instead of retaining the prior state value. Previously, when the latest version was switched to a draft outside Terraform, refresh kept `draft = false`, so a `draft = false -> true` change created a redundant new version instead of reconciling the existing draft in place.
 
 # v0.23.0
 
