@@ -3,6 +3,9 @@
 FEATURES:
 - `meshstack_building_block_definition`: `version_spec.inputs` and `version_spec.outputs` now support an optional `display_order` (number) attribute that controls how inputs/outputs are arranged in meshPanel. It defaults to the already set value when omitted, or `0` if there is none.
 
+FIXES:
+- `meshstack_building_block`: A `content_hash` wired from a definition's computed `content_hash` no longer triggers a re-run when the value changed only because the hash-algorithm version changed (e.g. after upgrading the provider). Such version-only differences are now recognized and ignored, while genuine content changes still re-run. Setting an arbitrary (non-versioned) `content_hash` to force a manual re-run continues to work.
+
 # v0.23.1
 
 FIXES:

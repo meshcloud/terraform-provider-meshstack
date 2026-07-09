@@ -1380,3 +1380,78 @@ func bbv3SizeEnvInputChecks(buildingBlockAddr testconfig.Traversal) []statecheck
 		statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("spec").AtMapKey("inputs").AtMapKey("environment").AtMapKey("value"), knownvalue.StringExact(`"dev"`)),
 	}
 }
+
+// Test_compareContentHashes tests the content hash comparison logic for the building block rerun decision.
+func Test_compareContentHashes(t *testing.T) {
+	v2a := BuildingBlockDefinitionVersionContentHash{hashVersion: 2, hashValue: "aaa"}.toBase64()
+	v2b := BuildingBlockDefinitionVersionContentHash{hashVersion: 2, hashValue: "bbb"}.toBase64()
+	v1 := "v1:someLegacyHashValue"
+
+	tests := []struct {
+		name      string
+		planHash  string
+		stateHash string
+		want      hashComparison
+	}{
+		{"versioned, same version, same value", v2a, v2a, hashSame},
+		{"versioned, same version, different value", v2a, v2b, hashDifferent},
+		{"versioned, different algorithm version", v2a, v1, hashIncomparable},
+		{"different algorithm version, other direction", v1, v2a, hashIncomparable},
+		{"free-form, changed", "2", "1", hashDifferent},
+		{"free-form, unchanged", "x", "x", hashSame},
+		{"free-form plan vs versioned state", "manual", v2a, hashDifferent},
+		{"versioned plan vs free-form state", v2a, "manual", hashDifferent},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.want, compareContentHashes(tt.planHash, tt.stateHash))
+		})
+	}
+}
+
+func Test_rerunNeeded(t *testing.T) {
+	v2a := BuildingBlockDefinitionVersionContentHash{hashVersion: 2, hashValue: "aaa"}.toBase64()
+	v2b := BuildingBlockDefinitionVersionContentHash{hashVersion: 2, hashValue: "bbb"}.toBase64()
+	v1 := "v1:someLegacyHashValue"
+
+	spec := func(uuid string, contentHash *string, inputs map[string]*client.MeshBuildingBlockInput, parents ...client.MeshBuildingBlockParent) client.MeshBuildingBlockV2Spec {
+		return client.MeshBuildingBlockV2Spec{
+			BuildingBlockDefinitionVersionRef: client.MeshBuildingBlockV2DefinitionVersionRef{
+				Uuid:        uuid,
+				ContentHash: contentHash,
+			},
+			Inputs:               inputs,
+			ParentBuildingBlocks: parents,
+		}
+	}
+	input := func(sensitive bool) *client.MeshBuildingBlockInput {
+		return &client.MeshBuildingBlockInput{IsSensitive: sensitive}
+	}
+	parent := client.MeshBuildingBlockParent{BuildingBlockUuid: "parent-1", DefinitionUuid: "def-1"}
+
+	tests := []struct {
+		name  string
+		plan  client.MeshBuildingBlockV2Spec
+		state client.MeshBuildingBlockV2Spec
+		want  bool
+	}{
+		{"uuid differs", spec("uuid-2", nil, nil), spec("uuid-1", nil, nil), true},
+		{"content_hash newly set", spec("uuid", &v2a, nil), spec("uuid", nil, nil), true},
+		{"content_hash removed", spec("uuid", nil, nil), spec("uuid", &v2a, nil), false},
+		{"content_hash version mismatch", spec("uuid", &v2a, nil), spec("uuid", &v1, nil), false},
+		{"content_hash changed", spec("uuid", &v2a, nil), spec("uuid", &v2b, nil), true},
+		{"content_hash arbitrary value changed", spec("uuid", new("force-rerun"), nil), spec("uuid", new("previous-value"), nil), true},
+		{"content_hash unchanged", spec("uuid", &v2a, nil), spec("uuid", &v2a, nil), false},
+		{"inputs added", spec("uuid", nil, map[string]*client.MeshBuildingBlockInput{"a": input(false)}), spec("uuid", nil, nil), true},
+		{"inputs changed", spec("uuid", nil, map[string]*client.MeshBuildingBlockInput{"a": input(true)}), spec("uuid", nil, map[string]*client.MeshBuildingBlockInput{"a": input(false)}), true},
+		{"inputs unchanged", spec("uuid", nil, map[string]*client.MeshBuildingBlockInput{"a": input(false)}), spec("uuid", nil, map[string]*client.MeshBuildingBlockInput{"a": input(false)}), false},
+		{"parents differ", spec("uuid", nil, nil, parent), spec("uuid", nil, nil), true},
+		{"parents unchanged", spec("uuid", nil, nil, parent), spec("uuid", nil, nil, parent), false},
+		{"all equal", spec("uuid", &v2a, map[string]*client.MeshBuildingBlockInput{"a": input(false)}, parent), spec("uuid", &v2a, map[string]*client.MeshBuildingBlockInput{"a": input(false)}, parent), false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.want, rerunNeeded(tt.plan, tt.state))
+		})
+	}
+}
