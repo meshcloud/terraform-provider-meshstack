@@ -3,6 +3,7 @@ package clientmock
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	"github.com/google/uuid"
 
@@ -77,8 +78,23 @@ func applyManualOutputBehavior(versionSpec *client.MeshBuildingBlockDefinitionVe
 			platformTenantIdKeys[key] = true
 		}
 	}
+	// Mirror the backend (ManualDefinitionVersionService.mapInputsToOutputUpdateModels): derived outputs
+	// take their display_order from the input's position in (display_order, key)-sorted order, NOT the
+	// input's own display_order. So two inputs both at display_order 0 yield outputs 0 and 1.
+	keys := make([]string, 0, len(versionSpec.Inputs))
+	for key := range versionSpec.Inputs {
+		keys = append(keys, key)
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		if di, dj := versionSpec.Inputs[keys[i]].DisplayOrder, versionSpec.Inputs[keys[j]].DisplayOrder; di != dj {
+			return di < dj
+		}
+		return keys[i] < keys[j]
+	})
+
 	outputs := make(map[string]client.MeshBuildingBlockDefinitionOutput, len(versionSpec.Inputs))
-	for key, input := range versionSpec.Inputs {
+	for index, key := range keys {
+		input := versionSpec.Inputs[key]
 		assignmentType := client.MeshBuildingBlockDefinitionOutputAssignmentTypeNone.Unwrap()
 		if platformTenantIdKeys[key] {
 			assignmentType = client.MeshBuildingBlockDefinitionOutputAssignmentTypePlatformTenantID.Unwrap()
@@ -87,7 +103,7 @@ func applyManualOutputBehavior(versionSpec *client.MeshBuildingBlockDefinitionVe
 			DisplayName:    input.DisplayName,
 			Type:           translateManualInputTypeToOutput(input.Type),
 			AssignmentType: assignmentType,
-			DisplayOrder:   input.DisplayOrder,
+			DisplayOrder:   int64(index),
 		}
 	}
 	versionSpec.Outputs = outputs

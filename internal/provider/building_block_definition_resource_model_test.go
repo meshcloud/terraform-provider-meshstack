@@ -29,9 +29,9 @@ var (
 func Test_versionContentHash(t *testing.T) {
 	// If constant values below are required to change, you need a good reason and consider backwards compatibility!
 	const (
-		hashWhichShouldNeverChange1 = "djI6Njc0Yzc3YzI4ZTRlYjRjZWM5OWI5ZjFlNzNhZDExYjUyMGEzNjdkYTQxNmZmM2ZhOTBkNWU1NDI2ZTA5YmVmYw=="
-		hashWhichShouldNeverChange2 = "djI6MDIwY2Q3YzAzMmZmNmNlMDVhMDI4NzNmZDMxOWU3YjcyMDY4OTZmYTQxNTkwNDc5MTgzNmM5MzNmMGEyMzllZQ=="
-		hashWhichShouldNeverChange3 = "djI6MmI5OTJlMjM0MzE2YmFhMDhkMWY0ZDAxN2Y1NzM3OWRkZmI0NWYzOWYzYWU3YjE0ODA3OTMyMjkzOGRmZDhlMA=="
+		hashWhichShouldNeverChange1 = "djI6N2Y4NDNjY2I0YTUzYjY3OWUyNDVhYzkyODFiM2UyZTk1N2JlNjc0YWNjMGY0OGVmMWM3YjhjMmJhNTJmMzlhOA=="
+		hashWhichShouldNeverChange2 = "djI6ODFlNGU0MzZmMmUzNzMwZDBhNWUwZjJlYzY4NTcwZWM4OGNiN2Y4MmI5MzM1MGQ0ZTRkOTVkZTEyMDhkYTU3YQ=="
+		hashWhichShouldNeverChange3 = "djI6MWEyNGY3MGRlNjE3ZTY0ZmMyNThjZWNhNGE0YjcxNTllY2ViZDlhOTVhY2Q0ZWE0MDg1MWU0NDNjMDgwMDM4ZQ=="
 	)
 	require.NotEqual(t, hashWhichShouldNeverChange1, hashWhichShouldNeverChange2)
 	tests := []struct {

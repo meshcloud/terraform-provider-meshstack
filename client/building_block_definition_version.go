@@ -112,7 +112,10 @@ type MeshBuildingBlockDefinitionInput struct {
 	Description                 *string           `json:"description,omitempty" tfsdk:"description"`
 	ValueValidationRegex        *string           `json:"valueValidationRegex,omitempty" tfsdk:"value_validation_regex"`
 	ValidationRegexErrorMessage *string           `json:"validationRegexErrorMessage,omitempty" tfsdk:"validation_regex_error_message"`
-	DisplayOrder                int64             `json:"displayOrder,omitempty" tfsdk:"display_order"`
+	// No omitempty: a 0 (the schema default, and what an unknown plan value collapses to) must be sent so
+	// the backend stores it verbatim. With omitempty the 0 would be dropped and the backend would assign
+	// a position itself, making the applied value differ from the plan.
+	DisplayOrder int64 `json:"displayOrder" tfsdk:"display_order"`
 }
 
 func (m *MeshBuildingBlockDefinitionInput) UnmarshalJSON(bytes []byte) error {
@@ -149,7 +152,8 @@ type MeshBuildingBlockDefinitionOutput struct {
 	DisplayName    string                                          `json:"displayName" tfsdk:"display_name"`
 	Type           MeshBuildingBlockIOType                         `json:"type" tfsdk:"type"`
 	AssignmentType MeshBuildingBlockDefinitionOutputAssignmentType `json:"assignmentType" tfsdk:"assignment_type"`
-	DisplayOrder   int64                                           `json:"displayOrder,omitempty" tfsdk:"display_order"`
+	// No omitempty so a 0 is sent, not dropped (see MeshBuildingBlockDefinitionInput.DisplayOrder).
+	DisplayOrder int64 `json:"displayOrder" tfsdk:"display_order"`
 }
 
 // Main version types

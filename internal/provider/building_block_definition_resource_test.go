@@ -425,22 +425,24 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
       ticket   = { display_name = "Ticket", type = "STRING", assignment_type = "STATIC", argument = jsonencode("T-1") }
     }`)
 
-		outputCheck := func(displayName, ioType string) knownvalue.Check {
+		// Derived outputs inherit the backend's positional display_order (input order, 0-based): the manual
+		// output derivation assigns position = input index, see meshfed ManualDefinitionVersionService.
+		outputCheck := func(displayName, ioType string, displayOrder int64) knownvalue.Check {
 			return xknownvalue.MapExact(map[string]knownvalue.Check{
 				"display_name":    knownvalue.StringExact(displayName),
 				"type":            knownvalue.StringExact(ioType),
 				"assignment_type": knownvalue.StringExact("NONE"),
-				"display_order":   knownvalue.Int64Exact(0),
+				"display_order":   knownvalue.Int64Exact(displayOrder),
 			})
 		}
 		baseOutputs := knownvalue.MapExact(map[string]knownvalue.Check{
-			"approval": outputCheck("Approval", "BOOLEAN"),
-			"region":   outputCheck("Region", "STRING"),
+			"approval": outputCheck("Approval", "BOOLEAN", 0),
+			"region":   outputCheck("Region", "STRING", 1),
 		})
 		redraftOutputs := knownvalue.MapExact(map[string]knownvalue.Check{
-			"approval": outputCheck("Approval", "BOOLEAN"),
-			"region":   outputCheck("Region", "STRING"),
-			"ticket":   outputCheck("Ticket", "STRING"),
+			"approval": outputCheck("Approval", "BOOLEAN", 0),
+			"region":   outputCheck("Region", "STRING", 1),
+			"ticket":   outputCheck("Ticket", "STRING", 2),
 		})
 
 		releasedHashStable := statecheck.CompareValue(compare.ValuesSame())
