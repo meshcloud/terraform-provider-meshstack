@@ -500,10 +500,8 @@ func (r *buildingBlockDefinitionResource) Update(ctx context.Context, req resour
 			// The stored hash was produced by a different/legacy algorithm version (state written by an
 			// older provider and never refreshed, imported, or planned with -refresh=false), so its value
 			// cannot be compared against the current-version hash. Recompute the released version's hash
-			// from the authoritative spec in state AT THE CURRENT version so we compare like-for-like
-			// instead of guessing "no change". We build the DTO straight from state.VersionSpec (not via
-			// versionSpecDtoFromPlan, which would pull a manual BBD's outputs from the new config and
-			// thus mask a real change) — mirroring how the stored hash was originally derived from state.
+			// from the authoritative spec in state AT THE CURRENT version so we compare.
+			// We build the DTO straight from state.VersionSpec.
 			stateSpecDto := state.VersionSpec.ToClientDto(bbdUuid)
 			authoritative := calculateBuildingBlockDefinitionVersionContentHash(stateSpecDto, &resp.Diagnostics)
 			if resp.Diagnostics.HasError() {

@@ -130,6 +130,8 @@ func (r *buildingBlockResource) Schema(ctx context.Context, req resource.SchemaR
 								MarkdownDescription: "Content hash of the building block definition version. " +
 									"Its purpose is to detect content changes of a **draft** BBD (whose version `uuid` stays the same) " +
 									"and conveniently re-run the building block when it changes.<br>" +
+									"When wired from a definition's computed `content_hash`, a change caused *only* by a hash-algorithm " +
+									"version upgrade (e.g. after upgrading the provider) does **not** trigger a re-run.<br>" +
 									"It is provider-only and never sent to the backend, so changing it can also be used to force a " +
 									"manual re-run — use with care; with a plain workspace key (`BUILDINGBLOCK_SAVE`) this requires the " +
 									"definition to have run transparency enabled (admins and the definition's platform operator are exempt).<br>" +
@@ -798,33 +800,64 @@ func requiresReplaceParentsWhenVersionUnchanged(ctx context.Context, req planmod
 // rerunNeeded is the single shared predicate determining whether an Update should trigger a run.
 // Used by both ModifyPlan and Update.
 // Semantics:
-//   - version-ref uuid differs → rerun
-//   - content_hash: rerun only when BOTH non-nil and different, or plan non-nil and state nil (newly set);
-//     plan nil + state non-nil (user removed content_hash) → NOT a rerun
-//   - inputs differ → rerun
-//   - parent set differs → rerun (parents change re-resolves BUILDING_BLOCK_OUTPUT inputs)
+//  1. version-ref uuid differs → rerun
+//  2. content_hash:
+//     - rerun when plan non-nil and state nil (newly set) → rerun.
+//     - both non-nil and hashes are different → rerun.
+//     - plan nil + state non-nil (user removed content_hash) → NOT a rerun.
+//     - an arbitrary (non-versioned) content_hash value the user sets to force a manual rerun → rerun.
+//  3. inputs differ → rerun.
+//  4. parent set differs → rerun.
 func rerunNeeded(plan, state client.MeshBuildingBlockV2Spec) bool {
+	// uuid change detection
 	if plan.BuildingBlockDefinitionVersionRef.Uuid != state.BuildingBlockDefinitionVersionRef.Uuid {
 		return true
 	}
+
+	// content_hash change detection
 	planHash := plan.BuildingBlockDefinitionVersionRef.ContentHash
 	stateHash := state.BuildingBlockDefinitionVersionRef.ContentHash
 	if planHash != nil {
-		// plan non-nil + state nil → newly set → rerun
-		// plan non-nil + state non-nil + different → changed → rerun
-		if stateHash == nil || *planHash != *stateHash {
+		if stateHash == nil || compareContentHashes(*planHash, *stateHash) == hashDifferent {
 			return true
 		}
 	}
-	// plan nil + state non-nil → user removed content_hash → NOT a rerun
+
+	// inputs change detection
 	if planInputsChanged(plan.Inputs, state.Inputs) {
 		return true
 	}
-	// parent set differs → rerun (parents change re-resolves BUILDING_BLOCK_OUTPUT inputs)
+
+	// parent building blocks change detection
 	if !reflect.DeepEqual(plan.ParentBuildingBlocks, state.ParentBuildingBlocks) {
 		return true
 	}
+
 	return false
+}
+
+func compareContentHashes(planHash, stateHash string) hashComparison {
+	planParsed, err := getVersionedHashFromString(planHash)
+	if err != nil {
+		return stringBasedHashComparison(planHash, stateHash)
+	}
+
+	cmp := planParsed.compareToStored(stateHash)
+	// hashIncomparable means either a different algorithm version, or the state string is free-form.
+	// Only the latter should fall back to a plain comparison; a genuine version mismatch stays incomparable.
+	if cmp == hashIncomparable {
+		if _, err := getVersionedHashFromString(stateHash); err != nil {
+			return stringBasedHashComparison(planHash, stateHash) // state side free-form → plain comparison
+		}
+	}
+	return cmp
+}
+
+func stringBasedHashComparison(planHash, stateHash string) hashComparison {
+	if planHash != stateHash {
+		return hashDifferent
+	}
+	return hashSame
 }
 
 func (r *buildingBlockResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
@@ -898,6 +931,25 @@ func (r *buildingBlockResource) ModifyPlan(ctx context.Context, req resource.Mod
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	// When plan and state content_hash differ only by their hash-algorithm version (see
+	// classifyContentHash), the building block is deliberately NOT re-run. Warn so the user knows a
+	// genuine content change - if any - was not picked up, and how to force a re-run.
+	if planHash := planSpec.BuildingBlockDefinitionVersionRef.ContentHash; planHash != nil {
+		if stateHash := stateSpec.BuildingBlockDefinitionVersionRef.ContentHash; stateHash != nil {
+			if compareContentHashes(*planHash, *stateHash) == hashIncomparable {
+				resp.Diagnostics.AddAttributeWarning(
+					path.Root("spec").AtName("building_block_definition_version_ref").AtName("content_hash"),
+					"Building block definition version content hash version changed; not re-running",
+					"The referenced version's content_hash changed only because it was produced by a different "+
+						"hash-algorithm version (for example after upgrading the provider), so the building block was "+
+						"not re-run. If the version's content actually changed and you want to force a re-run, set "+
+						"spec.building_block_definition_version_ref.content_hash to an arbitrary new value.",
+				)
+			}
+		}
+	}
+
 	if rerunNeeded(planSpec, stateSpec) || secretRotated {
 		triggerRun()
 	}

@@ -83,11 +83,10 @@ func Test_contentHash_changeDetectionEndToEnd(t *testing.T) {
 	assert.Equal(t, hashDifferent, relevant.compareToStored(stored))
 }
 
-// Mirrors the released-version immutability guard's fail-safe: when the stored hash is from a legacy /
-// unknown algorithm version (e.g. written by an older provider and never refreshed), it is incomparable
-// to the current-version hash. The guard then recomputes the released spec from state AT THE CURRENT
-// version so the comparison becomes meaningful again — a genuine change is detected (would reject) and
-// an unchanged spec is recognized (no-op), instead of the old silent "no change" guess.
+// Mirrors the released-version immutability guard's fail-safe: when the stored hash is from an older provider,
+// it is incomparable to the current-version hash.
+// The guard then recomputes the released spec from state AT THE CURRENT version so the comparison becomes
+// meaningful again — a genuine change is detected (would reject) and an unchanged spec is recognized (no-op).
 func Test_contentHash_incomparableStoredHash_resolvedByRecomputeAtCurrentVersion(t *testing.T) {
 	changedPlanHash := forTestCalculateContentHash(t, versionSpecRelevantChangeJson)
 	unchangedPlanHash := forTestCalculateContentHash(t, versionSpecJson)

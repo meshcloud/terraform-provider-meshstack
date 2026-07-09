@@ -104,9 +104,6 @@ func getVersionedHashFromString(encoded string) (BuildingBlockDefinitionVersionC
 	}
 }
 
-// compareToStored compares the receiver (always freshly computed at currentHashVersion) against a
-// previously stored hash string. It returns hashIncomparable when the hash versions differ or either
-// side is an error/unparsable hash — callers MUST treat that as "unknown", never as "no change".
 func (h BuildingBlockDefinitionVersionContentHash) compareToStored(storedStr string) hashComparison {
 	other, err := getVersionedHashFromString(storedStr)
 
