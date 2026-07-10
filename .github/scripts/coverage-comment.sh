@@ -94,7 +94,7 @@ if [ "$MODE" = combined ]; then
         success) ACC_TAG=" — ✅ acceptance passed" ;;
         failure)
           ACC_TAG=" — ❌ acceptance failed"
-          ACC_NOTE="❌ **Acceptance tests failed** (advisory — the job runs against the last *merged* meshfed-release backend, so a change needing a companion backend PR fails here until that backend merges; the real gate is meshfed-release's \`terraform-provider-acceptance\` job)."
+          ACC_NOTE="❌ **Acceptance tests failed** — this blocks merge. If the change needs a companion backend change, merge its meshfed-release PR first (rebuilds \`:latest\`), then re-run; otherwise it is a regression to fix. See the acceptance comment for details."
           ;;
       esac
       ;;
