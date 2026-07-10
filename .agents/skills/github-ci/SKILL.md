@@ -46,10 +46,27 @@ All gated on `build` succeeding first.
 | `build` | `go mod tidy` then `go build`; fails if `go mod tidy` produces a diff (commit the tidy). |
 | `golangci` | `golangci-lint-action` with `only-new-issues: true` (annotates only changed code on PRs). On failure it prints the `golangci-lint run --fix` hint. |
 | `generate` | `go generate` then fails on any diff — regenerate docs (`task generate`) and commit. |
-| `test` | Runs tests via gotestsum and posts coverage. |
+| `test` | Unit/mock tests via gotestsum; posts coverage. Pins `TF_ACC_TERRAFORM_PATH` to a pre-installed tofu (`setup-opentofu`) — the mock tests still drive a real CLI, and auto-install races parallel exec against the download ("text file busy"). |
+| `acceptance` | `TestAcc` suite on self-hosted `mesh-runners` against the full backend (meshfed `:latest` service containers). **Gates merge** (PRs and push to main). tofu comes from the nix-ci image; a truncation guard reds an incomplete run as UNKNOWN (re-run). |
 
-`permissions` are minimal per job (`contents: read`; `test` adds `pull-requests: write` for the
-coverage comment, `golangci` adds `pull-requests: read` for `only-new-issues`).
+`permissions` are minimal per job (`contents: read`; `test`/`acceptance` add `pull-requests: write`
+for the coverage/PR comment, `golangci` adds `pull-requests: read` for `only-new-issues`).
+
+## Companion meshfed-release changes
+
+The `acceptance` job runs against the **last merged** meshfed-release backend — the `:latest`
+service-container images, which rebuild from develop on merge. So a provider change that needs a
+backend change fails acc here until the backend lands. That is the correct merge order, not a
+workaround:
+
+1. Open the companion PR in `meshfed-release` (same branch name). Its `terraform-provider-acceptance`
+   job builds the backend from source, pairs this provider branch, and validates the pair.
+2. Merge that PR → `:latest` rebuilds.
+3. Re-run this provider PR's acceptance job → it now runs against the rebuilt backend → green → merge.
+
+Never bypass a red acceptance check to merge provider-first: that ships a provider broken against the
+released backend. On failure the PR comment links a branch-filtered meshfed-release PR search (it
+404s for anyone without access to that private repo).
 
 ## Standard actions
 
