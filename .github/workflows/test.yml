@@ -286,16 +286,11 @@ jobs:
 
       - name: Run acceptance tests with coverage
         id: acc
-        # Advisory ON PRs ONLY: a failed acceptance run must never block a PR, because the job runs
-        # against the last *merged* meshfed-release backend images, so a change needing a companion
-        # backend PR cannot go green here until that backend merges — gating on it would deadlock
-        # cross-repo changes. On PRs, meshfed-release's source-built `terraform-provider-acceptance`
-        # job is the real gate and failures here only surface via an advisory comment (see the last
-        # step). On a push to main (and manual dispatch) there is no PR to comment on and the backend
-        # images are already merged, so the run is NOT advisory: a failure reds the job, surfacing a
-        # provider/backend regression here before a release tag — which is what this CI run would
-        # otherwise only catch in meshfed-release.
-        continue-on-error: ${{ github.event_name == 'pull_request' }}
+        # Gates merge (PRs and push to main). The job runs against the last *merged* meshfed-release
+        # backend (`:latest` service containers), so a change needing a companion backend PR fails here
+        # until that PR merges and `:latest` rebuilds — the correct order, not a deadlock: merge the
+        # backend PR first (its terraform-provider-acceptance job pairs this branch), then re-run this
+        # job. See the github-ci skill "Companion meshfed-release changes"; the failure comment links it.
         env:
           # The acceptance API key/secret (seeded by the mariadb-ci dev dump) come from repo secrets.
           MESHSTACK_ENDPOINT: http://localhost:8089
@@ -323,13 +318,11 @@ jobs:
             -coverpkg=./... -count=1 -timeout 10m -run 'TestAcc' ./... \
             -args -test.gocoverdir="$PWD/covdata/acc" 2>&1 | tee acc-output.log
 
-      # Guard against the self-hosted runner truncating/killing the test process while the step above
-      # still reports success (seen here, and in meshfed-release's e2e job). gotestsum prints a final
-      # "DONE N tests ... in Xs" summary only when the run completes, so its absence means the run was
-      # cut short and the result is UNKNOWN — fail hard so it can never be mistaken for green. This is
-      # distinct from an advisory test failure: a completed run (DONE present) keeps `continue-on-error`
-      # semantics below; only an incomplete run reds the job and demands a re-run. Exposes `complete`
-      # for the coverage/advisory steps. Sets the output before exiting so they can still read it.
+      # Distinguish a truncated run from a real failure. gotestsum prints a final "DONE N tests ..."
+      # summary only when the run completes; its absence means the self-hosted runner cut the process
+      # short, so the result is UNKNOWN (re-run — likely runner-infra) rather than a genuine failure.
+      # Both red the job (the acc step already gates), but the advisory comment words itself per
+      # `complete`. Exposes `complete` for the coverage/advisory steps; sets it before exiting.
       - name: Verify acceptance run completed
         id: acccheck
         if: ${{ always() }}
@@ -359,10 +352,10 @@ jobs:
         shell: bash
         run: .github/scripts/coverage-comment.sh combined
 
-      # Advisory PR comment: the acceptance result never blocks (continue-on-error above). Post a
-      # comment when the latest run failed so the regression stays visible, and delete it once a later
-      # run goes green. Idempotent via the HTML marker; only on PRs (needs a PR number).
-      - name: Manage acceptance advisory comment
+      # PR comment: the acceptance result blocks merge, so this comment explains *why* it failed and how
+      # to unblock (see the failure branch), and deletes itself once a later run goes green. Idempotent
+      # via the HTML marker; only on PRs (needs a PR number).
+      - name: Manage acceptance PR comment
         if: ${{ always() && github.event_name == 'pull_request' }}
         env:
           GH_TOKEN: ${{ github.token }}
@@ -373,6 +366,7 @@ jobs:
           SERVER_URL: ${{ github.server_url }}
           RUN_ID: ${{ github.run_id }}
           RUN_ATTEMPT: ${{ github.run_attempt }}
+          HEAD_REF: ${{ github.head_ref }}
         shell: bash
         run: |
           set -euo pipefail
@@ -386,6 +380,12 @@ jobs:
           JOB_URL=$(gh api "repos/$REPO/actions/runs/$RUN_ID/attempts/$RUN_ATTEMPT/jobs" \
             --jq ".jobs[] | select(.runner_name == \"${RUNNER_NAME:-}\") | .html_url" 2>/dev/null | head -n1 || true)
           [ -n "$JOB_URL" ] || JOB_URL="$RUN_URL"
+
+          # Best-effort link to a same-branch companion PR in the (private) meshfed-release repo. This
+          # public repo's token cannot query that repo, so we build a branch-filtered PR search URL by
+          # convention rather than confirming one exists — it resolves for authorized users and 404s
+          # for everyone else.
+          MESHFED_PR_SEARCH="$SERVER_URL/meshcloud/meshfed-release/pulls?q=is%3Apr+head%3A${HEAD_REF}"
 
           existing=$(gh api "repos/$REPO/issues/$PR/comments" --paginate \
             --jq ".[] | select(.body | startswith(\"$MARKER\")) | .id" | head -n1 || true)
@@ -421,8 +421,8 @@ jobs:
               ;;
             failure)
               upsert "$(printf '%s\n%s\n\n%s' "$MARKER" \
-                "⚠️ **Acceptance tests failed on the latest run.** This is advisory and does **not** block merge — the job runs against the last merged meshfed-release backend images. If this change needs a companion backend change, validate the pair via meshfed-release's \`terraform-provider-acceptance\` job; otherwise this is a regression to fix." \
-                "🔗 [View the failing acceptance job]($JOB_URL)")"
+                "❌ **Acceptance tests failed — this blocks merge.** The job runs against the last *merged* meshfed-release backend (\`:latest\`). If this change needs a companion backend change, get its meshfed-release PR green and **merged first** (that rebuilds \`:latest\`), then **re-run this job**; otherwise it is a regression to fix. Measured coverage for this run is in the coverage comment above." \
+                "🔗 [Failing acceptance job]($JOB_URL) · [companion meshfed-release PR — same branch]($MESHFED_PR_SEARCH) (private; 404 without access)")"
               ;;
             *)
               echo "acceptance outcome '$OUTCOME' — leaving any existing comment untouched"

@@ -132,7 +132,9 @@ versioning policy and format.
 
 GitHub Actions workflows pin every action to a full 40-char SHA with a `# vX.Y.Z` comment —
 never mutable tags. Full conventions (jobs, update procedure, action table, gotestsum coverage)
-are in the **`github-ci`** skill.
+are in the **`github-ci`** skill. The acceptance job **gates** merge and runs against the
+last-merged meshfed-release backend, so a change needing a companion backend PR must merge that PR
+first, then re-run — see that skill's "Companion meshfed-release changes".
 
 ## Adding a new resource
 
