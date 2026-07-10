@@ -28,6 +28,14 @@ of duplicating (and drifting from) it:
 For any cross-cutting concern with no TF-repo skill, read the matching meshfed-release skill and
 apply its language-agnostic guidance to Go, ignoring Kotlin/JVM/Gradle specifics.
 
+## Code comments
+
+Applies to code, tests, and CI/workflow YAML alike. Keep comments lean: a comment earns its place
+only by saying what the code cannot — the *why*, a trade-off, a non-obvious constraint, or a
+surprise. Do not restate what a name, signature, or type already conveys. Prefer one sharp line
+over a paragraph. Full guidance lives in meshfed-release's `PRINCIPLES.md` + `AGENTS.md`
+"Code Comments".
+
 ## Key directories
 
 - **`internal/provider/`** — provider implementation (`provider.go`, `*_resource.go`, `*_data_source.go`).
