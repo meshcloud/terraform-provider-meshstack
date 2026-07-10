@@ -95,12 +95,22 @@ jobs:
         with:
           go-version-file: 'go.mod'
           cache: true
+      # The mock tests (TF_ACC unset -> IsUnitTest) still drive a real CLI. Left to auto-install one,
+      # the framework races parallel exec against its own download ("text file busy"/ETXTBSY, plus
+      # occasional 502s); pin a pre-installed tofu instead. Mirrors the acceptance job's pinning below.
+      - uses: opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4 # v2.0.2
+        with:
+          tofu_wrapper: false
       # Emit coverage as a binary coverage-data directory (GOCOVERDIR format) rather than a text
       # profile, so the acceptance job on a different runner can merge it with its own live-backend
       # coverage via `go tool covdata merge`. `-coverpkg=./...` attributes coverage across all
       # packages; the test binaries flush coverage on exit even when a test fails.
       - name: Run unit tests with gotestsum
+        env:
+          # OpenTofu resolves the test provider's legacy "-" namespace only against this host.
+          TF_ACC_PROVIDER_HOST: registry.opentofu.org
         run: |
+          export TF_ACC_TERRAFORM_PATH="$(command -v tofu)"
           mkdir -p covdata/unit
           go tool gotestsum --junitfile junit.xml --format testdox -- \
             -coverpkg=./... ./... -args -test.gocoverdir="$PWD/covdata/unit"
