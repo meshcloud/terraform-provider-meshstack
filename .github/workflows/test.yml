@@ -186,23 +186,33 @@ jobs:
           RABBITMQ_DEFAULT_USER: guest
           RABBITMQ_DEFAULT_PASS: guest
 
+      # Cap each JVM service container's heap. The ARC $job-pod hook injects a JAVA_TOOL_OPTIONS -Xmx
+      # only into the job container, not service containers, so an uncapped JVM here sizes its heap to
+      # ~25% of node memory; several at once overcommit the spot node and OOM-kill it — surfacing as a
+      # truncated ("did not complete") acc run. Mirrors meshfed-release's service-container caps.
       keycloak:
         image: ${{ vars.MESHFED_REGISTRY }}/meshstack-container/keycloak-ci:26
+        env:
+          JAVA_TOOL_OPTIONS: -Xmx1g
 
       meshfed-api:
         image: ${{ vars.MESHFED_REGISTRY }}/meshstack-container/meshfed:latest
         env:
           SERVER_PORT: "8089"   # off 8080 so the tf-runner health server can have it; mgmt 8180
+          JAVA_TOOL_OPTIONS: -Xmx2g   # heap cap (working set ~1.4Gi), see keycloak
         options: --restart on-failure
 
       replicator:
         image: ${{ vars.MESHFED_REGISTRY }}/meshstack-container/replicator:latest
         env:
           SERVER_PORT: "7080"   # move embedded server off 8080; mgmt 7180
+          JAVA_TOOL_OPTIONS: -Xmx2g   # heap cap, see keycloak
         options: --restart on-failure
 
       block-coordinator-api:
         image: ${{ vars.MESHFED_REGISTRY }}/meshstack-container/block-coordinator-api:latest
+        env:
+          JAVA_TOOL_OPTIONS: -Xmx2g   # heap cap, see keycloak
         options: --restart on-failure
 
       # Single poller of the magic runner UUID; fans work out by type. 127.0.0.1 forces IPv4 (the Go
@@ -232,6 +242,7 @@ jobs:
           RUNNER_UUID: 11111111-1111-1111-1111-111111111111
           RUNNER_API_CLIENT_ID: ${{ secrets.RUNNER_API_CLIENT_ID }}
           RUNNER_API_CLIENT_SECRET: ${{ secrets.RUNNER_API_CLIENT_SECRET }}
+          JAVA_TOOL_OPTIONS: -Xmx1g   # heap cap, see keycloak
         options: --restart on-failure
 
       manual-block-runner:
@@ -242,6 +253,7 @@ jobs:
           RUNNER_API_CLIENT_ID: ${{ secrets.RUNNER_API_CLIENT_ID }}
           RUNNER_API_CLIENT_SECRET: ${{ secrets.RUNNER_API_CLIENT_SECRET }}
           SERVER_PORT: "8104"   # move its embedded web server off 8080
+          JAVA_TOOL_OPTIONS: -Xmx1g   # heap cap, see keycloak
         options: --restart on-failure
 
     steps:
