@@ -1,14 +1,15 @@
 ---
 name: github-ci
-description: Conventions for this repo's GitHub Actions workflows — pinning actions to full SHAs, updating action versions, the build/lint/generate/test jobs, and gotestsum coverage reporting. Use when editing .github/workflows/*.yml, bumping an action version, or debugging a CI job.
+description: Conventions for this repo's GitHub Actions workflows — pinning actions to full SHAs, updating action versions, the build/lint/generate/test/acceptance jobs, the companion meshfed-release merge order, and gotestsum coverage reporting. Use when editing .github/workflows/*.yml, bumping an action version, or debugging a CI job.
 ---
 
 # GitHub Actions CI conventions
 
 Workflows live in `.github/workflows/` (`test.yml`, `release.yml`). They follow the HashiCorp
 [terraform-provider-scaffolding-framework](https://github.com/hashicorp/terraform-provider-scaffolding-framework)
-template with two adjustments: **no Terraform version matrix** (single version from
-`hashicorp/setup-terraform`) and a **separate `golangci` lint job** (not folded into build).
+template with adjustments: **no Terraform version matrix**, a **separate `golangci` lint job** (not
+folded into build), and **OpenTofu** as the test/acceptance CLI (Terraform is used only for doc
+generation).
 
 ## Action pinning (the main rule)
 
@@ -75,7 +76,8 @@ released backend. On failure the PR comment links a branch-filtered meshfed-rele
 | `actions/checkout` | Clone repo (the `test` job uses `fetch-depth: 0` for base-branch coverage comparison) |
 | `actions/setup-go` | Install Go (`go-version-file: go.mod`, or `stable` for the lint job) |
 | `golangci/golangci-lint-action` | Lint + format check with inline annotations |
-| `hashicorp/setup-terraform` | Install Terraform CLI for doc generation (`terraform_wrapper: false`) |
+| `hashicorp/setup-terraform` | Install Terraform CLI for the `generate` job only (`terraform_wrapper: false`) |
+| `opentofu/setup-opentofu` | Install OpenTofu for the `test` job; `TF_ACC_TERRAFORM_PATH` pins it (`tofu_wrapper: false`) |
 | `goreleaser/goreleaser-action` | Build + release binaries (release.yml) |
 | `crazy-max/ghaction-import-gpg` | Import GPG key for release signing (release.yml) |
 
@@ -84,7 +86,11 @@ released backend. On failure the PR comment links a branch-filtered meshfed-rele
 - Tests run through [gotestsum](https://github.com/gotestyourself/gotestsum), installed as a Go
   tool dependency in `go.mod` (`tool gotest.tools/gotestsum`); invoked as `go tool gotestsum`
   (version managed by Dependabot, gomod ecosystem).
-- Command: `go tool gotestsum --junitfile junit.xml --format testdox -- -coverprofile=coverage.out -coverpkg=./... ./...`
-  — `-coverpkg=./...` gives accurate cross-package coverage.
-- Coverage total + by-file detail go to `GITHUB_STEP_SUMMARY`; on PRs the summary is posted/updated
-  as a comment via `gh pr comment … --edit-last` (official GitHub CLI, no third-party action).
+- Both test jobs emit **binary coverage data** (GOCOVERDIR), not a text profile — via
+  `-args -test.gocoverdir=…` with `-coverpkg=./...` for cross-package attribution: the `test` job
+  writes `covdata/unit`, the `acceptance` job writes `covdata/acc`.
+- `covdata/unit` is uploaded as an artifact so the `acceptance` job (a different, self-hosted runner)
+  downloads it and merges both with `go tool covdata` into one figure.
+- A single PR comment (matched by an HTML marker) is written by `.github/scripts/coverage-comment.sh`
+  in two stages: `unit` (Go Test job — unit figure, combined pending) then `combined` (acceptance job
+  — rewrites it with the merged figure). Safe when a job produced no data (reports `n/a`).
