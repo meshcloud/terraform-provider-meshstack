@@ -16,6 +16,10 @@ var (
 	versionSpecJson []byte
 	//go:embed testdata/bbd/version-spec-irrelevant-change.json
 	versionSpecIrrelevantChangeJson []byte
+	//go:embed testdata/bbd/version-spec-with-reordered-inputs.json
+	versionSpecReorderedInputsJson []byte
+	//go:embed testdata/bbd/version-spec-with-displayOrder.json
+	versionSpecWithDisplayOrderJson []byte
 	//go:embed testdata/bbd/version-spec-relevant-change.json
 	versionSpecRelevantChangeJson []byte
 	//go:embed testdata/bbd/version-spec-with-plaintext-secret.json
@@ -32,6 +36,7 @@ func Test_versionContentHash(t *testing.T) {
 		hashWhichShouldNeverChange1 = "djI6N2Y4NDNjY2I0YTUzYjY3OWUyNDVhYzkyODFiM2UyZTk1N2JlNjc0YWNjMGY0OGVmMWM3YjhjMmJhNTJmMzlhOA=="
 		hashWhichShouldNeverChange2 = "djI6ODFlNGU0MzZmMmUzNzMwZDBhNWUwZjJlYzY4NTcwZWM4OGNiN2Y4MmI5MzM1MGQ0ZTRkOTVkZTEyMDhkYTU3YQ=="
 		hashWhichShouldNeverChange3 = "djI6MWEyNGY3MGRlNjE3ZTY0ZmMyNThjZWNhNGE0YjcxNTllY2ViZDlhOTVhY2Q0ZWE0MDg1MWU0NDNjMDgwMDM4ZQ=="
+		hashWhichShouldNeverChange4 = "djI6M2E5ZmUwMTBiZmVmM2RmYmM1MzE3NDJhYjEzMGJjMmM1NTliODZkOWJhNTk1ZDk1MWRjNWYyZmI3YmY2NjI0Yw=="
 	)
 	require.NotEqual(t, hashWhichShouldNeverChange1, hashWhichShouldNeverChange2)
 	tests := []struct {
@@ -40,10 +45,12 @@ func Test_versionContentHash(t *testing.T) {
 		want string
 	}{
 		{"example", versionSpecJson, hashWhichShouldNeverChange1},
+		{"example with reordered inputs", versionSpecReorderedInputsJson, hashWhichShouldNeverChange1},
 		{"example with irrelevant changes", versionSpecIrrelevantChangeJson, hashWhichShouldNeverChange1},
 		{"example with relevant changes", versionSpecRelevantChangeJson, hashWhichShouldNeverChange2},
 		{"example with null outputs", versionSpecNullOutputsChangeJson, hashWhichShouldNeverChange3},
 		{"example with empty outputs (same hash)", versionSpecEmptyOutputsJson, hashWhichShouldNeverChange3},
+		{"example with display order set (different hash)", versionSpecWithDisplayOrderJson, hashWhichShouldNeverChange4},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
