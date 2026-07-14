@@ -79,7 +79,15 @@ func startGitHTTPServer() (string, error) {
 	if !ok {
 		return "", fmt.Errorf("unexpected listener address type %T", ln.Addr())
 	}
-	return fmt.Sprintf("http://127.0.0.1:%d", addr.Port), nil
+	// The listener is on 0.0.0.0, so the advertised host only decides who can reach it. Default to
+	// 127.0.0.1 (shared loopback for the CI pod and for a host `go run` runner). When the runner is
+	// NOT on the host's loopback -- e.g. a run-controller-dispatched Job in a minikube cluster --
+	// set MESHSTACK_TF_FIXTURE_HOST=host.minikube.internal so the pod can reach the fixture.
+	advertiseHost := "127.0.0.1"
+	if h := os.Getenv("MESHSTACK_TF_FIXTURE_HOST"); h != "" {
+		advertiseHost = h
+	}
+	return fmt.Sprintf("http://%s:%d", advertiseHost, addr.Port), nil
 }
 
 // gitHTTPRepoBaseURL lazily starts the smart-HTTP server (once per test process) and returns its
