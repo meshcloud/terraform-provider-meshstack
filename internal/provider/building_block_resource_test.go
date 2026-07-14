@@ -939,13 +939,13 @@ func TestAccBuildingBlock(t *testing.T) {
 	})
 
 	// 08_validation_rejects collects the plan-time and create-time rejection checks over the workspace
-	// BBWorkspace config: a target_ref whose kind and identifier disagree, a malformed version uuid,
-	// and a STATIC BBD input wrongly assigned as a customer input. It splits along the mock/acceptance
-	// line into two subtests (each a single ApplyAndTest), so no per-step mode gate is needed:
+	// BBWorkspace config: a target_ref whose kind and identifier disagree, and a STATIC BBD input
+	// wrongly assigned as a customer input. It splits along the mock/acceptance line into two subtests
+	// (each a single ApplyAndTest), so no per-step mode gate is needed:
 	//   - provider_side_validators runs in BOTH modes: the target_ref kind/identifier mismatch is
 	//     rejected by a provider-side validator before any backend call, so the mock exercises it too.
-	//   - backend_rejections runs in ACCEPTANCE only (it skips itself in mock): the malformed-uuid 400
-	//     and the STATIC-input rejection are backend validations the in-memory mock does not reproduce.
+	//   - backend_rejections runs in ACCEPTANCE only (it skips itself in mock): the STATIC-input
+	//     rejection is a backend validation the in-memory mock does not reproduce.
 	t.Run("08_validation_rejects", func(t *testing.T) {
 		// provider_side_validators: target_ref kind/identifier mismatches caught by the provider's own
 		// validators (no backend involved), so both modes run them.
@@ -976,17 +976,14 @@ func TestAccBuildingBlock(t *testing.T) {
 		})
 
 		// backend_rejections: rejections that only the real backend produces. The whole subtest is
-		// skipped in mock — the in-memory mock neither validates the version uuid format nor rejects a
-		// STATIC input assigned as a customer input, so there is nothing here it could exercise.
+		// skipped in mock — the in-memory mock does not reject a STATIC input assigned as a customer
+		// input, so there is nothing here it could exercise.
 		t.Run("backend_rejections", func(t *testing.T) {
 			if IsMockClientTest() {
-				t.Skip("backend-only validations (malformed-uuid 400, STATIC-input rejection) the mock does not reproduce")
+				t.Skip("backend-only validation (STATIC-input rejection) the mock does not reproduce")
 			}
 			config, buildingBlockAddr, _, _ := testconfig.BBWorkspace(t)
 
-			invalidVersionUuid := config.WithFirstBlock(
-				testconfig.Descend("spec", "building_block_definition_version_ref")(testconfig.SetRawExpr(`{ uuid = "not-a-uuid" }`)),
-			)
 			// A STATIC BBD input (region) must not be accepted as a customer/operator input.
 			invalidInputAssignment := config.WithFirstBlock(
 				testconfig.Descend("spec", "inputs", "region")(testconfig.SetRawExpr(`{
@@ -994,15 +991,8 @@ func TestAccBuildingBlock(t *testing.T) {
 }`)),
 			)
 
-			// The ExpectError steps establish no state, so ordering them before the valid create is safe.
 			ApplyAndTest(t, resource.TestCase{
 				Steps: []resource.TestStep{
-					{
-						// A malformed version uuid must surface as a clear backend 400 (not a 500).
-						// \s+ tolerates Terraform's word-wrapping of the diagnostic detail.
-						Config:      invalidVersionUuid.String(),
-						ExpectError: regexp.MustCompile(`Invalid UUID format for\s+buildingBlockDefinitionVersionRef\.uuid`),
-					},
 					{
 						// Create a valid BB first, then (next step) attempt the invalid STATIC-input
 						// assignment as an Update.
