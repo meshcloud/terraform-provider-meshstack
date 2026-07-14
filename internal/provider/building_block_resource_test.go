@@ -1160,6 +1160,12 @@ func TestAccBuildingBlock(t *testing.T) {
 				testconfig.Descend("version_spec", "implementation", "terraform", "repository_url")(testconfig.SetRawExpr("%q", terraformTestdataRepoURL(t))),
 				testconfig.Descend("version_spec", "implementation", "terraform", "ref_name")(testconfig.SetRawExpr("%q", "broken")),
 				testconfig.Descend("spec", "run_transparency")(testconfig.SetRawExpr("%t", runTransparency)),
+				// PURGE deletion: a normal DELETE by the consumer's workspace key soft-deletes the block
+				// internally without a runner destroy run. The default DELETE mode would run the `broken`
+				// module again at teardown, which re-fails the precondition and leaves the block stuck in
+				// FAILED — a nondeterministic post-test-destroy failure under the parallel suite. This test
+				// only asserts on the failed CREATE run's transparency, so the teardown mode is immaterial.
+				testconfig.Descend("version_spec", "deletion_mode")(testconfig.SetRawExpr("%q", "PURGE")),
 			)
 
 			var otherWorkspaceAddr testconfig.Traversal
