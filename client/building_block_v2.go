@@ -291,7 +291,13 @@ func (bb *MeshBuildingBlockV2) DeletionSuccessful() (done bool, err error) {
 		// block is returned with MARKED_FOR_DELETION, which falls through as not-yet-done so we keep polling.
 		done = true
 	case bb.Status != nil && bb.Status.Status == BuildingBlockStatusFailed:
-		err = fmt.Errorf("building block %s reached FAILED state during deletion. For more details, check the building block run logs in meshStack", bbUuidOrUnknown(bb))
+		// A force-purge (definition deletion_mode = PURGE, or an admin purge) deletes the block
+		// regardless of its delete run's outcome, so a FAILED status here is transient — the
+		// lifecycle still proceeds to DELETED. Keep polling instead of erroring on that transient
+		// FAILED. Only a FAILED delete that is NOT being force-purged is a genuine stuck deletion.
+		if !bb.Status.ForcePurge {
+			err = fmt.Errorf("building block %s reached FAILED state during deletion. For more details, check the building block run logs in meshStack", bbUuidOrUnknown(bb))
+		}
 	}
 	return
 }

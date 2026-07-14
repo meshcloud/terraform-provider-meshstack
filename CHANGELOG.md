@@ -5,6 +5,7 @@ FEATURES:
 
 FIXES:
 - `meshstack_building_block`: A `content_hash` wired from a definition's computed `content_hash` no longer triggers a re-run when the value changed only because the hash-algorithm version changed (e.g. after upgrading the provider). Such version-only differences are now recognized and ignored, while genuine content changes still re-run. Setting an arbitrary (non-versioned) `content_hash` to force a manual re-run continues to work.
+- `meshstack_building_block` / `meshstack_building_block_v2`: Deleting a building block whose definition uses `deletion_mode = PURGE` no longer intermittently fails with "reached FAILED state during deletion" when the block's delete run itself fails. A purge removes the block regardless of that run's outcome, so a transient `FAILED` status is now tolerated and the provider waits for the lifecycle to reach `DELETED`. A failed deletion that is *not* being purged still surfaces as an error.
 
 # v0.23.1
 

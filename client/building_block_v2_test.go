@@ -44,6 +44,18 @@ func TestMeshBuildingBlockV2_DeletionSuccessful(t *testing.T) {
 			wantErr:  true,
 		},
 		{
+			name: "status FAILED but force-purged keeps polling (transient, will reach DELETED)",
+			bb: &MeshBuildingBlockV2{
+				Metadata: MeshBuildingBlockV2Metadata{Uuid: new("test-uuid")},
+				Status: &MeshBuildingBlockV2Status{
+					Status:     BuildingBlockStatusFailed,
+					ForcePurge: true,
+				},
+			},
+			wantDone: false,
+			wantErr:  false,
+		},
+		{
 			name: "status FAILED with nil Uuid does not panic",
 			bb: &MeshBuildingBlockV2{
 				Metadata: MeshBuildingBlockV2Metadata{Uuid: nil},
