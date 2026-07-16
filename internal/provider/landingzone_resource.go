@@ -67,9 +67,10 @@ func (r *landingZoneResource) Schema(_ context.Context, _ resource.SchemaRequest
 		},
 	}
 
+	buildingBlockRef := meshRefByUuid(meshRefOptions{Kind: client.MeshObjectKind.BuildingBlockDefinition, InSet: true})
 	buildingBlockRefs := schema.NestedAttributeObject{
-		Attributes: meshUuidRefAttribute(client.MeshObjectKind.BuildingBlockDefinition),
-		Validators: meshUuidRefValidators(),
+		Attributes: buildingBlockRef.Attributes,
+		Validators: buildingBlockRef.Validators,
 	}
 
 	resp.Schema = schema.Schema{
@@ -245,7 +246,7 @@ func awsPlatformConfigSchema() schema.Attribute {
 				Required:            true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"project_role_ref": meshProjectRoleAttribute(false),
+						"project_role_ref": meshRefByName(meshRefOptions{Kind: client.MeshObjectKind.ProjectRole, Description: "Reference to the meshProjectRole.", InSet: true}),
 						"platform_role": schema.StringAttribute{
 							MarkdownDescription: "The AWS platform role",
 							Required:            true,
@@ -274,7 +275,7 @@ func aksPlatformConfigSchema() schema.Attribute {
 				Required: true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"project_role_ref": meshProjectRoleAttribute(false),
+						"project_role_ref": meshRefByName(meshRefOptions{Kind: client.MeshObjectKind.ProjectRole, Description: "Reference to the meshProjectRole.", InSet: true}),
 						"platform_roles": schema.SetAttribute{
 							MarkdownDescription: "List of AKS platform roles to assign to the meshProject role.",
 							ElementType:         types.StringType,
@@ -290,7 +291,7 @@ func aksPlatformConfigSchema() schema.Attribute {
 func azurePlatformConfigSchema() schema.Attribute {
 	azureRoleMappings := schema.NestedAttributeObject{
 		Attributes: map[string]schema.Attribute{
-			"project_role_ref": meshProjectRoleAttribute(false),
+			"project_role_ref": meshRefByName(meshRefOptions{Kind: client.MeshObjectKind.ProjectRole, Description: "Reference to the meshProjectRole.", InSet: true}),
 			"azure_group_suffix": schema.StringAttribute{
 				MarkdownDescription: "The given role name will be injected into the" +
 					" group name via the group naming pattern configured on the" +
@@ -360,7 +361,7 @@ func gcpPlatformConfigSchema() schema.Attribute {
 				Required: true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"project_role_ref": meshProjectRoleAttribute(false),
+						"project_role_ref": meshRefByName(meshRefOptions{Kind: client.MeshObjectKind.ProjectRole, Description: "Reference to the meshProjectRole.", InSet: true}),
 						"platform_roles": schema.SetAttribute{
 							MarkdownDescription: "Can be empty. List of GCP IAM roles to assign to the meshProject role.",
 							ElementType:         types.StringType,
@@ -391,7 +392,7 @@ func azureRgPlatformConfigSchema() schema.Attribute {
 				Required: true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"project_role_ref": meshProjectRoleAttribute(false),
+						"project_role_ref": meshRefByName(meshRefOptions{Kind: client.MeshObjectKind.ProjectRole, Description: "Reference to the meshProjectRole.", InSet: true}),
 						"azure_group_suffix": schema.StringAttribute{
 							MarkdownDescription: "The given role name will be injected into the" +
 								" group name via the group naming pattern configured on the" +
@@ -434,7 +435,7 @@ func kubernetesPlatformConfigSchema() schema.Attribute {
 				Required:            true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"project_role_ref": meshProjectRoleAttribute(false),
+						"project_role_ref": meshRefByName(meshRefOptions{Kind: client.MeshObjectKind.ProjectRole, Description: "Reference to the meshProjectRole.", InSet: true}),
 						"platform_roles": schema.SetAttribute{
 							MarkdownDescription: "Roles need to be mapped from the meshRole to" +
 								" the Cluster Role. You can use both built in roles like 'editor' or custom roles that you setup in the Kubernetes Cluster" +

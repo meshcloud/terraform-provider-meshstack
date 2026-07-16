@@ -169,7 +169,7 @@ Read-Only:
 Optional:
 
 - `kind` (String) meshObject type, always `meshBuildingBlockRunner`.
-- `uuid` (String) UUID of the meshBuildingBlockRunner.
+- `uuid` (String) UUID (`metadata.uuid`) of `meshBuildingBlockRunner`.
 
 
 
@@ -239,7 +239,7 @@ Read-Only:
 Optional:
 
 - `kind` (String) meshObject type, always `meshBuildingBlockRunner`.
-- `uuid` (String) UUID of the meshBuildingBlockRunner.
+- `uuid` (String) UUID (`metadata.uuid`) of `meshBuildingBlockRunner`.
 
 
 
@@ -260,7 +260,7 @@ Optional:
 Optional:
 
 - `kind` (String) meshObject type, always `meshBuildingBlockRunner`.
-- `uuid` (String) UUID of the meshBuildingBlockRunner.
+- `uuid` (String) UUID (`metadata.uuid`) of `meshBuildingBlockRunner`.
 
 
 
@@ -272,7 +272,7 @@ Optional:
 Read-Only:
 
 - `kind` (String) meshObject type, always `meshIntegration`.
-- `uuid` (String) UUID of the meshIntegration.
+- `uuid` (String) UUID (`metadata.uuid`) of `meshIntegration`.
 
 
 <a id="nestedatt--status"></a>

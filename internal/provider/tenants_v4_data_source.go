@@ -69,18 +69,7 @@ func (d *tenantsV4DataSource) Schema(_ context.Context, _ datasource.SchemaReque
 				Computed:            true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"ref": schema.SingleNestedAttribute{
-							MarkdownDescription: "Reference to this tenant, can be used as `target_ref` in building block resources.",
-							Computed:            true,
-							Attributes: map[string]schema.Attribute{
-								"kind": schema.StringAttribute{
-									Computed: true,
-								},
-								"uuid": schema.StringAttribute{
-									Computed: true,
-								},
-							},
-						},
+						"ref": meshRefByUuid(meshRefOptions{Kind: client.MeshObjectKind.Tenant, Description: "Reference to this tenant, can be used as `target_ref` in building block resources.", Output: true}),
 						"metadata": schema.SingleNestedAttribute{
 							Computed: true,
 							Attributes: map[string]schema.Attribute{

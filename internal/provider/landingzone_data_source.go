@@ -78,20 +78,7 @@ func (d *landingZoneDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 						MarkdownDescription: "Link to additional information about the landing zone.",
 						Computed:            true,
 					},
-					"platform_ref": schema.SingleNestedAttribute{
-						MarkdownDescription: "Reference to the platform this landing zone belongs to.",
-						Computed:            true,
-						Attributes: map[string]schema.Attribute{
-							"uuid": schema.StringAttribute{
-								MarkdownDescription: "UUID of the platform.",
-								Computed:            true,
-							},
-							"kind": schema.StringAttribute{
-								MarkdownDescription: "Must always be set to meshPlatform",
-								Computed:            true,
-							},
-						},
-					},
+					"platform_ref": meshRefByUuid(meshRefOptions{Kind: client.MeshObjectKind.Platform, Description: "Reference to the platform this landing zone belongs to.", Output: true}),
 					"platform_properties": schema.SingleNestedAttribute{
 						MarkdownDescription: "Platform-specific configuration options.",
 						Computed:            true,

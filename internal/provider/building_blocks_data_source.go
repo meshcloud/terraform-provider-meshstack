@@ -67,6 +67,7 @@ type buildingBlockListItemSpec struct {
 
 type buildingBlockListItemVersionRef struct {
 	Uuid string `tfsdk:"uuid"`
+	Kind string `tfsdk:"kind"`
 }
 
 func (d *buildingBlocksDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -145,6 +146,7 @@ func (d *buildingBlocksDataSource) Schema(_ context.Context, _ datasource.Schema
 									Computed:            true,
 									Attributes: map[string]schema.Attribute{
 										"uuid": computedString("UUID of the building block definition version."),
+										"kind": computedString("meshObject type, always `" + client.MeshObjectKind.BuildingBlockDefinitionVersion + "`."),
 									},
 								},
 								"target_ref": schema.SingleNestedAttribute{
@@ -252,10 +254,13 @@ func (d *buildingBlocksDataSource) Read(ctx context.Context, req datasource.Read
 		item := buildingBlockListItem{
 			Metadata: bb.Metadata,
 			Spec: buildingBlockListItemSpec{
-				DisplayName:                       bb.Spec.DisplayName,
-				BuildingBlockDefinitionVersionRef: buildingBlockListItemVersionRef{Uuid: bb.Spec.BuildingBlockDefinitionVersionRef.Uuid},
-				TargetRef:                         bb.Spec.TargetRef,
-				ParentBuildingBlocks:              bb.Spec.ParentBuildingBlocks,
+				DisplayName: bb.Spec.DisplayName,
+				BuildingBlockDefinitionVersionRef: buildingBlockListItemVersionRef{
+					Uuid: bb.Spec.BuildingBlockDefinitionVersionRef.Uuid,
+					Kind: client.MeshObjectKind.BuildingBlockDefinitionVersion,
+				},
+				TargetRef:            bb.Spec.TargetRef,
+				ParentBuildingBlocks: bb.Spec.ParentBuildingBlocks,
 			},
 			Status:    bb.Status,
 			AllInputs: make(map[string]buildingBlockAllInput, len(bb.Spec.Inputs)),

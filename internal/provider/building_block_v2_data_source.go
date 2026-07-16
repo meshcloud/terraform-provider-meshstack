@@ -61,11 +61,15 @@ func (d *buildingBlockV2DataSource) Schema(ctx context.Context, req datasource.S
 					},
 
 					"building_block_definition_version_ref": schema.SingleNestedAttribute{
-						MarkdownDescription: "References the building block definition this building block is based on.",
+						MarkdownDescription: "References the building block definition version this building block is based on.",
 						Computed:            true,
 						Attributes: map[string]schema.Attribute{
 							"uuid": schema.StringAttribute{
-								MarkdownDescription: "UUID of the building block definition.",
+								MarkdownDescription: "UUID of the building block definition version.",
+								Computed:            true,
+							},
+							"kind": schema.StringAttribute{
+								MarkdownDescription: "meshObject type, always `" + client.MeshObjectKind.BuildingBlockDefinitionVersion + "`.",
 								Computed:            true,
 							},
 						},
@@ -175,6 +179,7 @@ func (d *buildingBlockV2DataSource) Read(ctx context.Context, req datasource.Rea
 	// Set all spec values except for inputs
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("spec").AtName("display_name"), bb.Spec.DisplayName)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("spec").AtName("building_block_definition_version_ref").AtName("uuid"), bb.Spec.BuildingBlockDefinitionVersionRef.Uuid)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("spec").AtName("building_block_definition_version_ref").AtName("kind"), client.MeshObjectKind.BuildingBlockDefinitionVersion)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("spec").AtName("target_ref"), bb.Spec.TargetRef)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("spec").AtName("parent_building_blocks"), bb.Spec.ParentBuildingBlocks)...)
 

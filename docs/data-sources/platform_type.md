@@ -52,8 +52,8 @@ Read-Only:
 
 Read-Only:
 
-- `kind` (String) The kind of the object. Always `meshPlatformType`.
-- `name` (String) Identifier of the platform type.
+- `kind` (String) meshObject type, always `meshPlatformType`.
+- `name` (String) Named identifier (`metadata.name`) of `meshPlatformType`.
 
 
 <a id="nestedatt--spec"></a>

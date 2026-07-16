@@ -138,20 +138,7 @@ func (d *integrationsDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 													Computed:            true,
 												},
 												"app_private_key": secret.DatasourceSchema(secret.DatasourceSchemaOptions{}),
-												"runner_ref": schema.SingleNestedAttribute{
-													MarkdownDescription: "Reference to the building block runner that executes GitHub workflows.",
-													Computed:            true,
-													Attributes: map[string]schema.Attribute{
-														"uuid": schema.StringAttribute{
-															MarkdownDescription: "UUID of the meshBuildingBlockRunner.",
-															Computed:            true,
-														},
-														"kind": schema.StringAttribute{
-															MarkdownDescription: "meshObject type, always meshBuildingBlockRunner.",
-															Computed:            true,
-														},
-													},
-												},
+												"runner_ref":      meshRefByUuid(meshRefOptions{Kind: client.MeshObjectKind.BuildingBlockRunner, Description: "Reference to the building block runner that executes GitHub workflows.", Output: true}),
 											},
 										},
 										"gitlab": schema.SingleNestedAttribute{
@@ -163,20 +150,7 @@ func (d *integrationsDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 													MarkdownDescription: "Base URL of the GitLab instance (e.g., https://gitlab.com or your self-hosted GitLab URL).",
 													Computed:            true,
 												},
-												"runner_ref": schema.SingleNestedAttribute{
-													MarkdownDescription: "Reference to the building block runner that executes GitLab pipelines.",
-													Computed:            true,
-													Attributes: map[string]schema.Attribute{
-														"uuid": schema.StringAttribute{
-															MarkdownDescription: "UUID of the meshBuildingBlockRunner.",
-															Computed:            true,
-														},
-														"kind": schema.StringAttribute{
-															MarkdownDescription: "meshObject type, always meshBuildingBlockRunner.",
-															Computed:            true,
-														},
-													},
-												},
+												"runner_ref": meshRefByUuid(meshRefOptions{Kind: client.MeshObjectKind.BuildingBlockRunner, Description: "Reference to the building block runner that executes GitLab pipelines.", Output: true}),
 											},
 										},
 										"azuredevops": schema.SingleNestedAttribute{
@@ -193,20 +167,7 @@ func (d *integrationsDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 													Computed:            true,
 												},
 												"personal_access_token": secret.DatasourceSchema(secret.DatasourceSchemaOptions{}),
-												"runner_ref": schema.SingleNestedAttribute{
-													MarkdownDescription: "Reference to the building block runner that executes Azure DevOps pipelines.",
-													Computed:            true,
-													Attributes: map[string]schema.Attribute{
-														"uuid": schema.StringAttribute{
-															MarkdownDescription: "UUID of the meshBuildingBlockRunner.",
-															Computed:            true,
-														},
-														"kind": schema.StringAttribute{
-															MarkdownDescription: "meshObject type, always meshBuildingBlockRunner.",
-															Computed:            true,
-														},
-													},
-												},
+												"runner_ref":            meshRefByUuid(meshRefOptions{Kind: client.MeshObjectKind.BuildingBlockRunner, Description: "Reference to the building block runner that executes Azure DevOps pipelines.", Output: true}),
 											},
 										},
 										"entraid": schema.SingleNestedAttribute{

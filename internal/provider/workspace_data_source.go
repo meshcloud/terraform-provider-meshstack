@@ -36,20 +36,7 @@ func (d *workspaceDataSource) Schema(_ context.Context, _ datasource.SchemaReque
 		MarkdownDescription: "Read a single workspace by identifier.",
 
 		Attributes: map[string]schema.Attribute{
-			"ref": schema.SingleNestedAttribute{
-				MarkdownDescription: "Reference to this workspace, can be used as `target_ref` in building block resources.",
-				Computed:            true,
-				Attributes: map[string]schema.Attribute{
-					"kind": schema.StringAttribute{
-						MarkdownDescription: "The kind of the object. Always `meshWorkspace`.",
-						Computed:            true,
-					},
-					"name": schema.StringAttribute{
-						MarkdownDescription: "Identifier of the workspace.",
-						Computed:            true,
-					},
-				},
-			},
+			"ref": meshRefByName(meshRefOptions{Kind: client.MeshObjectKind.Workspace, Description: "Reference to this workspace, can be used as `target_ref` in building block resources.", Output: true}),
 
 			"metadata": schema.SingleNestedAttribute{
 				Required: true,

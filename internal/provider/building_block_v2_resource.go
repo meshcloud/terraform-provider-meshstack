@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
@@ -159,6 +160,14 @@ func (r *buildingBlockV2Resource) Schema(ctx context.Context, req resource.Schem
 								MarkdownDescription: "UUID of the building block definition version.",
 								Required:            true,
 							},
+							"kind": schema.StringAttribute{
+								MarkdownDescription: "meshObject type, always `" + client.MeshObjectKind.BuildingBlockDefinitionVersion + "`.",
+								Optional:            true,
+								Computed:            true,
+								Default:             stringdefault.StaticString(client.MeshObjectKind.BuildingBlockDefinitionVersion),
+								PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+								Validators:          []validator.String{stringvalidator.OneOf(client.MeshObjectKind.BuildingBlockDefinitionVersion)},
+							},
 						},
 					},
 
@@ -279,6 +288,7 @@ func (r *buildingBlockV2Resource) Create(ctx context.Context, req resource.Creat
 	// Retrieve values from plan
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec").AtName("display_name"), &bb.Spec.DisplayName)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec").AtName("building_block_definition_version_ref").AtName("uuid"), &bb.Spec.BuildingBlockDefinitionVersionRef.Uuid)...)
+	bb.Spec.BuildingBlockDefinitionVersionRef.Kind = client.MeshObjectKind.BuildingBlockDefinitionVersion
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec").AtName("parent_building_blocks"), &bb.Spec.ParentBuildingBlocks)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec").AtName("target_ref"), &bb.Spec.TargetRef)...)
 
@@ -456,6 +466,7 @@ func setStateFromResponseV2(ctx context.Context, state *tfsdk.State, bb *client.
 
 	diags.Append(state.SetAttribute(ctx, path.Root("spec").AtName("display_name"), bb.Spec.DisplayName)...)
 	diags.Append(state.SetAttribute(ctx, path.Root("spec").AtName("building_block_definition_version_ref").AtName("uuid"), bb.Spec.BuildingBlockDefinitionVersionRef.Uuid)...)
+	diags.Append(state.SetAttribute(ctx, path.Root("spec").AtName("building_block_definition_version_ref").AtName("kind"), client.MeshObjectKind.BuildingBlockDefinitionVersion)...)
 	diags.Append(state.SetAttribute(ctx, path.Root("spec").AtName("target_ref"), bb.Spec.TargetRef)...)
 	diags.Append(state.SetAttribute(ctx, path.Root("spec").AtName("parent_building_blocks"), bb.Spec.ParentBuildingBlocks)...)
 

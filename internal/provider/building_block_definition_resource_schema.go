@@ -16,7 +16,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
@@ -47,6 +46,13 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 		"content_hash": schema.StringAttribute{
 			MarkdownDescription: "Content hash of the version. Will only change for draft versions when edited, otherwise constant.",
 			Computed:            true,
+		},
+		"kind": schema.StringAttribute{
+			MarkdownDescription: "meshObject type, always `" + client.MeshObjectKind.BuildingBlockDefinitionVersion + "`.",
+			Computed:            true,
+			Default:             stringdefault.StaticString(client.MeshObjectKind.BuildingBlockDefinitionVersion),
+			PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+			Validators:          []validator.String{stringvalidator.OneOf(client.MeshObjectKind.BuildingBlockDefinitionVersion)},
 		},
 	}
 
@@ -203,9 +209,10 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 	},
 	}
 
+	dependencyRef := meshRefByUuid(meshRefOptions{Kind: client.MeshObjectKind.BuildingBlockDefinition, InSet: true})
 	dependencyRefs := schema.NestedAttributeObject{
-		Attributes: meshUuidRefAttribute(client.MeshObjectKind.BuildingBlockDefinition),
-		Validators: meshUuidRefValidators(),
+		Attributes: dependencyRef.Attributes,
+		Validators: dependencyRef.Validators,
 	}
 
 	resp.Schema = schema.Schema{
@@ -369,16 +376,8 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 							int64planmodifier.UseStateForUnknown(),
 						},
 					},
-					"runner_ref": schema.SingleNestedAttribute{
-						MarkdownDescription: "Reference to the runner to run the implementation. " +
-							"If omitted, the pre-defined shared runner is used suitable for the given `implementation` choice",
-						Optional:   true,
-						Computed:   true,
-						Attributes: meshUuidRefAttribute(client.MeshObjectKind.BuildingBlockRunner),
-						PlanModifiers: []planmodifier.Object{
-							objectplanmodifier.UseStateForUnknown(),
-						},
-					},
+					"runner_ref": meshRefByUuid(meshRefOptions{Kind: client.MeshObjectKind.BuildingBlockRunner, Description: "Reference to the runner to run the implementation. " +
+						"If omitted, the pre-defined shared runner is used suitable for the given `implementation` choice", OptionalComputed: true}),
 					"only_apply_once_per_tenant": schema.BoolAttribute{
 						MarkdownDescription: "Whether this building block can only be applied once per tenant.",
 						Optional:            true,
@@ -541,12 +540,7 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 										Computed:            true,
 										Default:             booldefault.StaticBool(false),
 									},
-									"integration_ref": schema.SingleNestedAttribute{
-										MarkdownDescription: "Reference to the integration to use.",
-										Required:            true,
-										Attributes:          meshUuidRefAttribute(client.MeshObjectKind.Integration),
-										Validators:          meshUuidRefValidators(),
-									},
+									"integration_ref": meshRefByUuid(meshRefOptions{Kind: client.MeshObjectKind.Integration, Description: "Reference to the integration to use."}),
 								},
 							},
 							"gitlab_pipeline": schema.SingleNestedAttribute{
@@ -564,12 +558,7 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 									"pipeline_trigger_token": secret.ResourceSchema(secret.ResourceSchemaOptions{
 										MarkdownDescription: "GitLab pipeline trigger token.",
 									}),
-									"integration_ref": schema.SingleNestedAttribute{
-										MarkdownDescription: "Reference to the integration to use.",
-										Required:            true,
-										Attributes:          meshUuidRefAttribute(client.MeshObjectKind.Integration),
-										Validators:          meshUuidRefValidators(),
-									},
+									"integration_ref": meshRefByUuid(meshRefOptions{Kind: client.MeshObjectKind.Integration, Description: "Reference to the integration to use."}),
 								},
 							},
 							"azure_devops_pipeline": schema.SingleNestedAttribute{
@@ -594,12 +583,7 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 										Computed:            true,
 										Default:             booldefault.StaticBool(false),
 									},
-									"integration_ref": schema.SingleNestedAttribute{
-										MarkdownDescription: "Reference to the integration to use",
-										Required:            true,
-										Attributes:          meshUuidRefAttribute(client.MeshObjectKind.Integration),
-										Validators:          meshUuidRefValidators(),
-									},
+									"integration_ref": meshRefByUuid(meshRefOptions{Kind: client.MeshObjectKind.Integration, Description: "Reference to the integration to use"}),
 								},
 							},
 						},
@@ -626,14 +610,7 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 				},
 			},
 
-			"ref": schema.SingleNestedAttribute{
-				MarkdownDescription: "Reference to this building block definition. Reuse in `version_spec.dependency_refs` of other building block definitions.",
-				Computed:            true,
-				Attributes:          meshUuidRefOutputAttribute(client.MeshObjectKind.BuildingBlockDefinition),
-				PlanModifiers: []planmodifier.Object{
-					objectplanmodifier.UseStateForUnknown(),
-				},
-			},
+			"ref": meshRefByUuid(meshRefOptions{Kind: client.MeshObjectKind.BuildingBlockDefinition, Description: "Reference to this building block definition. Reuse in `version_spec.dependency_refs` of other building block definitions.", Output: true}),
 		},
 	}
 }

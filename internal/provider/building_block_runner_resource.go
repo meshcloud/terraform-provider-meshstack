@@ -9,7 +9,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -194,14 +193,7 @@ func (r *buildingBlockRunnerResource) Schema(_ context.Context, _ resource.Schem
 					},
 				},
 			},
-			"ref": schema.SingleNestedAttribute{
-				MarkdownDescription: "Reference to this runner, can be used in building block definitions.",
-				Computed:            true,
-				Attributes:          meshUuidRefOutputAttribute(client.MeshObjectKind.BuildingBlockRunner),
-				PlanModifiers: []planmodifier.Object{
-					objectplanmodifier.UseStateForUnknown(),
-				},
-			},
+			"ref": meshRefByUuid(meshRefOptions{Kind: client.MeshObjectKind.BuildingBlockRunner, Description: "Reference to this runner, can be used in building block definitions.", Output: true}),
 		},
 	}
 }

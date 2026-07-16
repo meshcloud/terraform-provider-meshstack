@@ -42,6 +42,28 @@ Mid-complexity, clean, and complete — prefer these over the large `building_bl
 6. **`internal/provider/<name>_resource_test.go`** — a `TestAcc<Name>` test (see below).
 7. `task generate` (docs) and update `CHANGELOG.md`.
 
+## meshObject reference attributes ({kind, uuid|name})
+
+Build any reference to another meshObject with **`meshRefByUuid` / `meshRefByName`**
+(`schema_utils.go`) — never hand-roll the `{kind, uuid|name}` block. Always pass
+`meshRefOptions{Kind, Description}` (both are needed — `Kind` sets the discriminator + OneOf
+validation, `Description` the block docs); then set at most one behaviour flag:
+
+- no flag → **required input** (the common case for a resource's own spec refs): block and
+  identifier both Required;
+- `Output: true` → **computed output** (a resource's own `.ref` or any data-source ref; `kind`
+  stays known at plan);
+- `OptionalComputed: true` → an **input meshStack may default** (e.g. `runner_ref`): block and
+  identifier Optional+Computed;
+- `InSet: true` → a ref **hashed as an opaque set element** (nested in a `SetNestedAttribute`
+  object like `project_role_ref`, or the set's own element type like `mandatory_building_block_refs`
+  / `dependency_refs`): block stays Required but the identifier is Optional+Computed with an
+  `AlsoRequires` guard, because a set element whose identifier is unknown at plan can't be hashed
+  and a plain Required identifier would fail. See the `meshRefOptions` godoc for the full rationale.
+
+Only refs that carry extra fields (`target_ref`, `building_block_definition_version_ref`) stay
+bespoke.
+
 ## The builder
 
 A public function in `testconfig`, named without `Build`/`Config`, `t` first, named returns

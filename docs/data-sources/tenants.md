@@ -69,8 +69,8 @@ Read-Only:
 
 Read-Only:
 
-- `kind` (String)
-- `uuid` (String)
+- `kind` (String) meshObject type, always `meshTenant`.
+- `uuid` (String) UUID (`metadata.uuid`) of `meshTenant`.
 
 
 <a id="nestedatt--tenants--spec"></a>

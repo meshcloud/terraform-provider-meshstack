@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 
+	"github.com/meshcloud/terraform-provider-meshstack/client"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/types/secret"
 )
 
@@ -64,7 +65,7 @@ func gcpReplicationConfigSchema() schema.Attribute {
 				Required:            true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"project_role_ref": meshProjectRoleAttribute(false),
+						"project_role_ref": meshRefByName(meshRefOptions{Kind: client.MeshObjectKind.ProjectRole, Description: "Reference to the meshProjectRole."}),
 						"gcp_role": schema.StringAttribute{
 							MarkdownDescription: "The GCP IAM role",
 							Required:            true,

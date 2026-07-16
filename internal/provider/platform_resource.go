@@ -115,11 +115,7 @@ func (r *platformResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 
-			"ref": schema.SingleNestedAttribute{
-				MarkdownDescription: "Reference to this platform, can be used as `platform_ref` in landing zone resources.",
-				Computed:            true,
-				Attributes:          meshUuidRefOutputAttribute(client.MeshObjectKind.Platform),
-			},
+			"ref": meshRefByUuid(meshRefOptions{Kind: client.MeshObjectKind.Platform, Description: "Reference to this platform, can be used as `platform_ref` in landing zone resources.", Output: true}),
 
 			"spec": schema.SingleNestedAttribute{
 				Required: true,

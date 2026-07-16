@@ -158,20 +158,7 @@ func (d *buildingBlockDefinitionsDataSource) Schema(_ context.Context, _ datasou
 							Optional:            true,
 							Attributes:          versionRefAttributes,
 						},
-						"ref": schema.SingleNestedAttribute{
-							MarkdownDescription: "Reference to this building block definition (for dependency refs).",
-							Computed:            true,
-							Attributes: map[string]schema.Attribute{
-								"kind": schema.StringAttribute{
-									MarkdownDescription: "The kind of the object. Always `meshBuildingBlockDefinition`.",
-									Computed:            true,
-								},
-								"uuid": schema.StringAttribute{
-									MarkdownDescription: "UUID of the building block definition.",
-									Computed:            true,
-								},
-							},
-						},
+						"ref": meshRefByUuid(meshRefOptions{Kind: client.MeshObjectKind.BuildingBlockDefinition, Description: "Reference to this building block definition (for dependency refs).", Output: true}),
 					},
 				},
 			},

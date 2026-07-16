@@ -151,18 +151,15 @@ Required:
 Required:
 
 - `platform_roles` (Set of String) List of AKS platform roles to assign to the meshProject role.
-- `project_role_ref` (Attributes) the meshProject role (see [below for nested schema](#nestedatt--spec--platform_properties--aks--kubernetes_role_mappings--project_role_ref))
+- `project_role_ref` (Attributes) Reference to the meshProjectRole. (see [below for nested schema](#nestedatt--spec--platform_properties--aks--kubernetes_role_mappings--project_role_ref))
 
 <a id="nestedatt--spec--platform_properties--aks--kubernetes_role_mappings--project_role_ref"></a>
 ### Nested Schema for `spec.platform_properties.aks.kubernetes_role_mappings.project_role_ref`
 
-Required:
-
-- `name` (String) The identifier of the meshProjectRole
-
-Read-Only:
+Optional:
 
 - `kind` (String) meshObject type, always `meshProjectRole`.
+- `name` (String) Named identifier (`metadata.name`) of `meshProjectRole`. Required; optional here only so a computed reference can be used inside a set, and enforced at plan time.
 
 
 
@@ -187,18 +184,15 @@ Required:
 
 - `platform_role` (String) The AWS platform role
 - `policies` (Set of String) List of policies associated with this role mapping
-- `project_role_ref` (Attributes) the meshProject role (see [below for nested schema](#nestedatt--spec--platform_properties--aws--aws_role_mappings--project_role_ref))
+- `project_role_ref` (Attributes) Reference to the meshProjectRole. (see [below for nested schema](#nestedatt--spec--platform_properties--aws--aws_role_mappings--project_role_ref))
 
 <a id="nestedatt--spec--platform_properties--aws--aws_role_mappings--project_role_ref"></a>
 ### Nested Schema for `spec.platform_properties.aws.aws_role_mappings.project_role_ref`
 
-Required:
-
-- `name` (String) The identifier of the meshProjectRole
-
-Read-Only:
+Optional:
 
 - `kind` (String) meshObject type, always `meshProjectRole`.
+- `name` (String) Named identifier (`metadata.name`) of `meshProjectRole`. Required; optional here only so a computed reference can be used inside a set, and enforced at plan time.
 
 
 
@@ -221,7 +215,7 @@ Required:
 
 - `azure_group_suffix` (String) The given role name will be injected into the group name via the group naming pattern configured on the platform instance.
 - `azure_role_definitions` (Attributes Set) List of Azure role definitions (see [below for nested schema](#nestedatt--spec--platform_properties--azure--azure_role_mappings--azure_role_definitions))
-- `project_role_ref` (Attributes) the meshProject role (see [below for nested schema](#nestedatt--spec--platform_properties--azure--azure_role_mappings--project_role_ref))
+- `project_role_ref` (Attributes) Reference to the meshProjectRole. (see [below for nested schema](#nestedatt--spec--platform_properties--azure--azure_role_mappings--project_role_ref))
 
 <a id="nestedatt--spec--platform_properties--azure--azure_role_mappings--azure_role_definitions"></a>
 ### Nested Schema for `spec.platform_properties.azure.azure_role_mappings.azure_role_definitions`
@@ -238,13 +232,10 @@ Optional:
 <a id="nestedatt--spec--platform_properties--azure--azure_role_mappings--project_role_ref"></a>
 ### Nested Schema for `spec.platform_properties.azure.azure_role_mappings.project_role_ref`
 
-Required:
-
-- `name` (String) The identifier of the meshProjectRole
-
-Read-Only:
+Optional:
 
 - `kind` (String) meshObject type, always `meshProjectRole`.
+- `name` (String) Named identifier (`metadata.name`) of `meshProjectRole`. Required; optional here only so a computed reference can be used inside a set, and enforced at plan time.
 
 
 
@@ -268,18 +259,15 @@ Required:
 
 - `azure_group_suffix` (String) The given role name will be injected into the group name via the group naming pattern configured on the platform instance.
 - `azure_role_definition_ids` (Set of String) Role Definitions with the given IDs will be attached to this Azure Role.
-- `project_role_ref` (Attributes) the meshProject role (see [below for nested schema](#nestedatt--spec--platform_properties--azurerg--azure_rg_role_mappings--project_role_ref))
+- `project_role_ref` (Attributes) Reference to the meshProjectRole. (see [below for nested schema](#nestedatt--spec--platform_properties--azurerg--azure_rg_role_mappings--project_role_ref))
 
 <a id="nestedatt--spec--platform_properties--azurerg--azure_rg_role_mappings--project_role_ref"></a>
 ### Nested Schema for `spec.platform_properties.azurerg.azure_rg_role_mappings.project_role_ref`
 
-Required:
-
-- `name` (String) The identifier of the meshProjectRole
-
-Read-Only:
+Optional:
 
 - `kind` (String) meshObject type, always `meshProjectRole`.
+- `name` (String) Named identifier (`metadata.name`) of `meshProjectRole`. Required; optional here only so a computed reference can be used inside a set, and enforced at plan time.
 
 
 
@@ -315,18 +303,15 @@ Optional:
 Required:
 
 - `platform_roles` (Set of String) Can be empty. List of GCP IAM roles to assign to the meshProject role.
-- `project_role_ref` (Attributes) the meshProject role (see [below for nested schema](#nestedatt--spec--platform_properties--gcp--gcp_role_mappings--project_role_ref))
+- `project_role_ref` (Attributes) Reference to the meshProjectRole. (see [below for nested schema](#nestedatt--spec--platform_properties--gcp--gcp_role_mappings--project_role_ref))
 
 <a id="nestedatt--spec--platform_properties--gcp--gcp_role_mappings--project_role_ref"></a>
 ### Nested Schema for `spec.platform_properties.gcp.gcp_role_mappings.project_role_ref`
 
-Required:
-
-- `name` (String) The identifier of the meshProjectRole
-
-Read-Only:
+Optional:
 
 - `kind` (String) meshObject type, always `meshProjectRole`.
+- `name` (String) Named identifier (`metadata.name`) of `meshProjectRole`. Required; optional here only so a computed reference can be used inside a set, and enforced at plan time.
 
 
 
@@ -344,18 +329,15 @@ Required:
 Required:
 
 - `platform_roles` (Set of String) Roles need to be mapped from the meshRole to the Cluster Role. You can use both built in roles like 'editor' or custom roles that you setup in the Kubernetes Cluster before. For more information see [the Landing Zone documentation](https://docs.meshcloud.io/meshstack.kubernetes.landing-zones/).
-- `project_role_ref` (Attributes) the meshProject role (see [below for nested schema](#nestedatt--spec--platform_properties--kubernetes--kubernetes_role_mappings--project_role_ref))
+- `project_role_ref` (Attributes) Reference to the meshProjectRole. (see [below for nested schema](#nestedatt--spec--platform_properties--kubernetes--kubernetes_role_mappings--project_role_ref))
 
 <a id="nestedatt--spec--platform_properties--kubernetes--kubernetes_role_mappings--project_role_ref"></a>
 ### Nested Schema for `spec.platform_properties.kubernetes.kubernetes_role_mappings.project_role_ref`
 
-Required:
-
-- `name` (String) The identifier of the meshProjectRole
-
-Read-Only:
+Optional:
 
 - `kind` (String) meshObject type, always `meshProjectRole`.
+- `name` (String) Named identifier (`metadata.name`) of `meshProjectRole`. Required; optional here only so a computed reference can be used inside a set, and enforced at plan time.
 
 
 
@@ -383,7 +365,7 @@ Optional:
 Optional:
 
 - `kind` (String) meshObject type, always `meshBuildingBlockDefinition`.
-- `uuid` (String) UUID of the meshBuildingBlockDefinition.
+- `uuid` (String) UUID (`metadata.uuid`) of `meshBuildingBlockDefinition`. Required; optional here only so a computed reference can be used inside a set, and enforced at plan time.
 
 
 <a id="nestedatt--spec--quotas"></a>
@@ -401,7 +383,7 @@ Required:
 Optional:
 
 - `kind` (String) meshObject type, always `meshBuildingBlockDefinition`.
-- `uuid` (String) UUID of the meshBuildingBlockDefinition.
+- `uuid` (String) UUID (`metadata.uuid`) of `meshBuildingBlockDefinition`. Required; optional here only so a computed reference can be used inside a set, and enforced at plan time.
 
 
 

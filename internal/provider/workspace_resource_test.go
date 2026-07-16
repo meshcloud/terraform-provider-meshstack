@@ -28,6 +28,10 @@ func TestAccWorkspace(t *testing.T) {
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectResourceAction(resourceAddress.String(), plancheck.ResourceActionCreate),
+						// `kind` is the single constant value, so it is known already at plan time;
+						// only the identifier is computed on create.
+						plancheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("ref").AtMapKey("kind"), knownvalue.StringExact("meshWorkspace")),
+						plancheck.ExpectUnknownValue(resourceAddress.String(), tfjsonpath.New("ref").AtMapKey("name")),
 					},
 				},
 				ConfigStateChecks: []statecheck.StateCheck{

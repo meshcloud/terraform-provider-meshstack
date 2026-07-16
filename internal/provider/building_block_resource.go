@@ -22,6 +22,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -125,6 +126,14 @@ func (r *buildingBlockResource) Schema(ctx context.Context, req resource.SchemaR
 							"uuid": schema.StringAttribute{
 								MarkdownDescription: "UUID of the building block definition version. Must reference the latest released version of the definition when upgrading.",
 								Required:            true,
+							},
+							"kind": schema.StringAttribute{
+								MarkdownDescription: "meshObject type, always `" + client.MeshObjectKind.BuildingBlockDefinitionVersion + "`.",
+								Optional:            true,
+								Computed:            true,
+								Default:             stringdefault.StaticString(client.MeshObjectKind.BuildingBlockDefinitionVersion),
+								PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+								Validators:          []validator.String{stringvalidator.OneOf(client.MeshObjectKind.BuildingBlockDefinitionVersion)},
 							},
 							"content_hash": schema.StringAttribute{
 								MarkdownDescription: "Content hash of the building block definition version. " +
@@ -404,6 +413,8 @@ func (m *buildingBlockModel) SetFromClientDto(dto *client.MeshBuildingBlockV2, i
 	contentHash := m.Spec.BuildingBlockDefinitionVersionRef.ContentHash
 	m.MeshBuildingBlockV2 = *dto
 	m.Spec.BuildingBlockDefinitionVersionRef.ContentHash = contentHash
+	// kind is a fixed discriminator; force it so it round-trips even if the backend omits it.
+	m.Spec.BuildingBlockDefinitionVersionRef.Kind = client.MeshObjectKind.BuildingBlockDefinitionVersion
 
 	m.AllInputs = make(map[string]buildingBlockAllInput)
 

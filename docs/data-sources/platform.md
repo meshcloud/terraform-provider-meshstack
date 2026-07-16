@@ -51,8 +51,8 @@ Read-Only:
 
 Read-Only:
 
-- `kind` (String) The kind of the object. Always `meshPlatform`.
-- `uuid` (String) UUID of the platform.
+- `kind` (String) meshObject type, always `meshPlatform`.
+- `uuid` (String) UUID (`metadata.uuid`) of `meshPlatform`.
 
 
 <a id="nestedatt--spec"></a>
@@ -351,14 +351,11 @@ Read-Only:
 <a id="nestedatt--spec--config--aws--replication--aws_identity_store--aws_role_mappings"></a>
 ### Nested Schema for `spec.config.aws.replication.aws_identity_store.aws_role_mappings`
 
-Required:
-
-- `project_role_ref` (Attributes) the meshProject role (see [below for nested schema](#nestedatt--spec--config--aws--replication--aws_identity_store--aws_role_mappings--project_role_ref))
-
 Read-Only:
 
 - `aws_role` (String) AWS role alias used as suffix in the group name pattern.
 - `permission_set_arns` (List of String) ARNs of IAM Identity Center permission sets to assign to the group. At least one is required.
+- `project_role_ref` (Attributes) Reference to the meshProjectRole. (see [below for nested schema](#nestedatt--spec--config--aws--replication--aws_identity_store--aws_role_mappings--project_role_ref))
 
 <a id="nestedatt--spec--config--aws--replication--aws_identity_store--aws_role_mappings--project_role_ref"></a>
 ### Nested Schema for `spec.config.aws.replication.aws_identity_store.aws_role_mappings.project_role_ref`
@@ -366,7 +363,7 @@ Read-Only:
 Read-Only:
 
 - `kind` (String) meshObject type, always `meshProjectRole`.
-- `name` (String) The identifier of the meshProjectRole
+- `name` (String) Named identifier (`metadata.name`) of `meshProjectRole`.
 
 
 
@@ -386,14 +383,11 @@ Read-Only:
 <a id="nestedatt--spec--config--aws--replication--aws_sso--aws_role_mappings"></a>
 ### Nested Schema for `spec.config.aws.replication.aws_sso.aws_role_mappings`
 
-Required:
-
-- `project_role_ref` (Attributes) the meshProject role (see [below for nested schema](#nestedatt--spec--config--aws--replication--aws_sso--aws_role_mappings--project_role_ref))
-
 Read-Only:
 
 - `aws_role` (String) The AWS role name
 - `permission_set_arns` (List of String) List of permission set ARNs associated with this role mapping
+- `project_role_ref` (Attributes) Reference to the meshProjectRole. (see [below for nested schema](#nestedatt--spec--config--aws--replication--aws_sso--aws_role_mappings--project_role_ref))
 
 <a id="nestedatt--spec--config--aws--replication--aws_sso--aws_role_mappings--project_role_ref"></a>
 ### Nested Schema for `spec.config.aws.replication.aws_sso.aws_role_mappings.project_role_ref`
@@ -401,7 +395,7 @@ Read-Only:
 Read-Only:
 
 - `kind` (String) meshObject type, always `meshProjectRole`.
-- `name` (String) The identifier of the meshProjectRole
+- `name` (String) Named identifier (`metadata.name`) of `meshProjectRole`.
 
 
 
@@ -518,22 +512,10 @@ Read-Only:
 <a id="nestedatt--spec--config--azure--replication--azure_role_mappings"></a>
 ### Nested Schema for `spec.config.azure.replication.azure_role_mappings`
 
-Required:
-
-- `project_role_ref` (Attributes) the meshProject role (see [below for nested schema](#nestedatt--spec--config--azure--replication--azure_role_mappings--project_role_ref))
-
 Read-Only:
 
 - `azure_role` (Attributes) The Azure role definition. (see [below for nested schema](#nestedatt--spec--config--azure--replication--azure_role_mappings--azure_role))
-
-<a id="nestedatt--spec--config--azure--replication--azure_role_mappings--project_role_ref"></a>
-### Nested Schema for `spec.config.azure.replication.azure_role_mappings.project_role_ref`
-
-Read-Only:
-
-- `kind` (String) meshObject type, always `meshProjectRole`.
-- `name` (String) The identifier of the meshProjectRole
-
+- `project_role_ref` (Attributes) Reference to the meshProjectRole. (see [below for nested schema](#nestedatt--spec--config--azure--replication--azure_role_mappings--project_role_ref))
 
 <a id="nestedatt--spec--config--azure--replication--azure_role_mappings--azure_role"></a>
 ### Nested Schema for `spec.config.azure.replication.azure_role_mappings.azure_role`
@@ -542,6 +524,15 @@ Read-Only:
 
 - `alias` (String) The alias/name of the Azure role.
 - `id` (String) The Azure role definition ID.
+
+
+<a id="nestedatt--spec--config--azure--replication--azure_role_mappings--project_role_ref"></a>
+### Nested Schema for `spec.config.azure.replication.azure_role_mappings.project_role_ref`
+
+Read-Only:
+
+- `kind` (String) meshObject type, always `meshProjectRole`.
+- `name` (String) Named identifier (`metadata.name`) of `meshProjectRole`.
 
 
 
@@ -778,8 +769,8 @@ Read-Only:
 
 Read-Only:
 
-- `kind` (String) Kind of the platform type. Always `meshPlatformType`.
-- `name` (String) Name of the platform type.
+- `kind` (String) meshObject type, always `meshPlatformType`.
+- `name` (String) Named identifier (`metadata.name`) of `meshPlatformType`.
 
 
 
@@ -863,13 +854,10 @@ Read-Only:
 <a id="nestedatt--spec--config--gcp--replication--gcp_role_mappings"></a>
 ### Nested Schema for `spec.config.gcp.replication.gcp_role_mappings`
 
-Required:
-
-- `project_role_ref` (Attributes) the meshProject role (see [below for nested schema](#nestedatt--spec--config--gcp--replication--gcp_role_mappings--project_role_ref))
-
 Read-Only:
 
 - `gcp_role` (String) The GCP IAM role
+- `project_role_ref` (Attributes) Reference to the meshProjectRole. (see [below for nested schema](#nestedatt--spec--config--gcp--replication--gcp_role_mappings--project_role_ref))
 
 <a id="nestedatt--spec--config--gcp--replication--gcp_role_mappings--project_role_ref"></a>
 ### Nested Schema for `spec.config.gcp.replication.gcp_role_mappings.project_role_ref`
@@ -877,7 +865,7 @@ Read-Only:
 Read-Only:
 
 - `kind` (String) meshObject type, always `meshProjectRole`.
-- `name` (String) The identifier of the meshProjectRole
+- `name` (String) Named identifier (`metadata.name`) of `meshProjectRole`.
 
 
 
@@ -1073,13 +1061,10 @@ Read-Only:
 <a id="nestedatt--spec--config--openshift--replication--openshift_role_mappings"></a>
 ### Nested Schema for `spec.config.openshift.replication.openshift_role_mappings`
 
-Required:
-
-- `project_role_ref` (Attributes) the meshProject role (see [below for nested schema](#nestedatt--spec--config--openshift--replication--openshift_role_mappings--project_role_ref))
-
 Read-Only:
 
 - `openshift_role` (String) The OpenShift role name
+- `project_role_ref` (Attributes) Reference to the meshProjectRole. (see [below for nested schema](#nestedatt--spec--config--openshift--replication--openshift_role_mappings--project_role_ref))
 
 <a id="nestedatt--spec--config--openshift--replication--openshift_role_mappings--project_role_ref"></a>
 ### Nested Schema for `spec.config.openshift.replication.openshift_role_mappings.project_role_ref`
@@ -1087,7 +1072,7 @@ Read-Only:
 Read-Only:
 
 - `kind` (String) meshObject type, always `meshProjectRole`.
-- `name` (String) The identifier of the meshProjectRole
+- `name` (String) Named identifier (`metadata.name`) of `meshProjectRole`.
 
 
 
@@ -1117,8 +1102,8 @@ Read-Only:
 
 Read-Only:
 
-- `kind` (String) Must always be set to meshLocation
-- `name` (String) Identifier of the Location.
+- `kind` (String) meshObject type, always `meshLocation`.
+- `name` (String) Named identifier (`metadata.name`) of `meshLocation`.
 
 
 <a id="nestedatt--spec--quota_definitions"></a>

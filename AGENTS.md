@@ -55,9 +55,19 @@ If a variable name contains an acronym of 2+ letters, only the first letter is u
 All resources follow: `api_version`, `kind` (e.g. `meshProject`), `metadata` (name, uuid,
 timestamps), `spec` (user config), `status` (system-managed).
 
-**meshEntity references** (e.g. `project_role_ref`): user provides `name` (required); system
-sets `kind` (computed, `stringdefault.StaticString("meshProjectRole")`); validate kind with
-`stringvalidator.OneOf()`; use `stringplanmodifier.UseStateForUnknown()` for kind.
+**meshObject references** (e.g. `project_role_ref`, `platform_ref`): build with `meshRefByUuid` /
+`meshRefByName` (`schema_utils.go`), never a hand-rolled `{kind, uuid|name}` block. Pass
+`meshRefOptions{Kind, Description}`; the zero value is a required input — block and identifier both
+Required. Set `Output: true` for a computed output (a resource's own `.ref` or a data-source
+attribute — `kind` is kept known at plan), `OptionalComputed: true` for an input meshStack defaults
+(block and identifier Optional+Computed), or `InSet: true` when the ref is hashed as an opaque set
+element (nested in a `SetNestedAttribute` object, or the set's element type itself, like
+`mandatory_building_block_refs`). Only `InSet` refs keep the identifier Optional+Computed with an
+`AlsoRequires` guard **instead of** Required — a set element whose identifier is still unknown at
+plan hashes as wholly-unknown, so a plain Required identifier fails with "Missing Configuration for
+Required Attribute". In every input variant `kind` is optional, defaulted, and OneOf-validated. Refs
+carrying extra fields (`target_ref`, `building_block_definition_version_ref`) stay bespoke. See the
+helper doc comments for the full rationale.
 
 ## Testing
 

@@ -135,6 +135,7 @@ Required:
 Optional:
 
 - `content_hash` (String) Content hash of the building block definition version. Its purpose is to detect content changes of a **draft** BBD (whose version `uuid` stays the same) and conveniently re-run the building block when it changes.<br>When wired from a definition's computed `content_hash`, a change caused *only* by a hash-algorithm version upgrade (e.g. after upgrading the provider) does **not** trigger a re-run.<br>It is provider-only and never sent to the backend, so changing it can also be used to force a manual re-run — use with care; with a plain workspace key (`BUILDINGBLOCK_SAVE`) this requires the definition to have run transparency enabled (admins and the definition's platform operator are exempt).<br>After import it is left null in state, so the first apply triggers a run if `content_hash` is set in config. To avoid that, omit `content_hash` until after the first post-import apply, or set it only then.
+- `kind` (String) meshObject type, always `meshBuildingBlockDefinitionVersion`.
 
 
 <a id="nestedatt--spec--inputs"></a>

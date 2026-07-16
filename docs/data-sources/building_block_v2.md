@@ -52,7 +52,7 @@ Read-Only:
 
 Read-Only:
 
-- `building_block_definition_version_ref` (Attributes) References the building block definition this building block is based on. (see [below for nested schema](#nestedatt--spec--building_block_definition_version_ref))
+- `building_block_definition_version_ref` (Attributes) References the building block definition version this building block is based on. (see [below for nested schema](#nestedatt--spec--building_block_definition_version_ref))
 - `display_name` (String) Display name for the building block as shown in meshPanel.
 - `inputs` (Attributes Map) Contains all building block inputs. Each input has exactly one value attribute set according to its' type. (see [below for nested schema](#nestedatt--spec--inputs))
 - `parent_building_blocks` (Attributes Set) Set of parent building blocks. (see [below for nested schema](#nestedatt--spec--parent_building_blocks))
@@ -63,7 +63,8 @@ Read-Only:
 
 Read-Only:
 
-- `uuid` (String) UUID of the building block definition.
+- `kind` (String) meshObject type, always `meshBuildingBlockDefinitionVersion`.
+- `uuid` (String) UUID of the building block definition version.
 
 
 <a id="nestedatt--spec--inputs"></a>

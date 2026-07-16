@@ -36,6 +36,7 @@ type buildingBlockDefinitionVersionRef struct {
 	Number      generic.NullIsUnknown[int64]                                          `tfsdk:"number"`
 	State       generic.NullIsUnknown[client.MeshBuildingBlockDefinitionVersionState] `tfsdk:"state"`
 	ContentHash generic.NullIsUnknown[string]                                         `tfsdk:"content_hash"`
+	Kind        generic.NullIsUnknown[string]                                         `tfsdk:"kind"`
 }
 
 type buildingBlockDefinitionRef struct {
@@ -257,6 +258,7 @@ func (model *buildingBlockDefinition) SetFromVersionClientDtos(diags *diag.Diagn
 			Number:      generic.KnownValue(*versionDto.Spec.VersionNumber),
 			State:       generic.KnownValue(*versionDto.Spec.State),
 			ContentHash: generic.KnownValue(calculateBuildingBlockDefinitionVersionContentHash(versionDto.Spec, diags).toBase64()),
+			Kind:        generic.KnownValue(client.MeshObjectKind.BuildingBlockDefinitionVersion),
 		}
 	}
 	if diags.HasError() {

@@ -51,6 +51,7 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 			"number":       knownvalue.Int64Exact(number),
 			"state":        knownvalue.StringExact(state.String()),
 			"content_hash": xknownvalue.NotEmptyString(),
+			"kind":         knownvalue.StringExact(client.MeshObjectKind.BuildingBlockDefinitionVersion),
 		})
 	}
 

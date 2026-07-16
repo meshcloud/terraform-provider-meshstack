@@ -148,4 +148,4 @@ Required:
 Read-Only:
 
 - `kind` (String) meshObject type, always `meshBuildingBlockRunner`.
-- `uuid` (String) UUID of the meshBuildingBlockRunner.
+- `uuid` (String) UUID (`metadata.uuid`) of `meshBuildingBlockRunner`.

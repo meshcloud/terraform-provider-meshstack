@@ -134,8 +134,8 @@ Read-Only:
 
 Read-Only:
 
-- `kind` (String) meshObject type, always meshBuildingBlockRunner.
-- `uuid` (String) UUID of the meshBuildingBlockRunner.
+- `kind` (String) meshObject type, always `meshBuildingBlockRunner`.
+- `uuid` (String) UUID (`metadata.uuid`) of `meshBuildingBlockRunner`.
 
 
 
@@ -185,8 +185,8 @@ Read-Only:
 
 Read-Only:
 
-- `kind` (String) meshObject type, always meshBuildingBlockRunner.
-- `uuid` (String) UUID of the meshBuildingBlockRunner.
+- `kind` (String) meshObject type, always `meshBuildingBlockRunner`.
+- `uuid` (String) UUID (`metadata.uuid`) of `meshBuildingBlockRunner`.
 
 
 
@@ -203,8 +203,8 @@ Read-Only:
 
 Read-Only:
 
-- `kind` (String) meshObject type, always meshBuildingBlockRunner.
-- `uuid` (String) UUID of the meshBuildingBlockRunner.
+- `kind` (String) meshObject type, always `meshBuildingBlockRunner`.
+- `uuid` (String) UUID (`metadata.uuid`) of `meshBuildingBlockRunner`.
 
 
 

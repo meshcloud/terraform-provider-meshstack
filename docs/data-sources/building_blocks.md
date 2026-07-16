@@ -118,6 +118,7 @@ Read-Only:
 
 Read-Only:
 
+- `kind` (String) meshObject type, always `meshBuildingBlockDefinitionVersion`.
 - `uuid` (String) UUID of the building block definition version.
 
 

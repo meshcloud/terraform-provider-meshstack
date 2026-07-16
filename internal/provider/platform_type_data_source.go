@@ -36,20 +36,7 @@ func (d *platformTypeDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 			"metadata": platformTypeMetadataSchema(false),
 			"spec":     platformTypeSpecSchema(),
 			"status":   platformTypeStatusSchema(),
-			"ref": schema.SingleNestedAttribute{
-				MarkdownDescription: "Reference to this platform type, can be used as input for `platform_type_ref` in platform resources.",
-				Computed:            true,
-				Attributes: map[string]schema.Attribute{
-					"kind": schema.StringAttribute{
-						MarkdownDescription: "The kind of the object. Always `meshPlatformType`.",
-						Computed:            true,
-					},
-					"name": schema.StringAttribute{
-						MarkdownDescription: "Identifier of the platform type.",
-						Computed:            true,
-					},
-				},
-			},
+			"ref":      meshRefByName(meshRefOptions{Kind: client.MeshObjectKind.PlatformType, Description: "Reference to this platform type, can be used as input for `platform_type_ref` in platform resources.", Output: true}),
 		},
 	}
 }

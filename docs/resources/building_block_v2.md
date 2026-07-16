@@ -93,6 +93,10 @@ Required:
 
 - `uuid` (String) UUID of the building block definition version.
 
+Optional:
+
+- `kind` (String) meshObject type, always `meshBuildingBlockDefinitionVersion`.
+
 
 <a id="nestedatt--spec--target_ref"></a>
 ### Nested Schema for `spec.target_ref`

@@ -1,20 +1,21 @@
 package provider
 
 import (
+	"context"
+
 	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/defaults"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-
-	"github.com/meshcloud/terraform-provider-meshstack/client"
 )
 
 // nestedObjectToObjectType converts a schema.NestedAttributeObject into a types.ObjectType
@@ -33,82 +34,157 @@ func emptySetDefault(nested schema.NestedAttributeObject) defaults.Set {
 	return setdefault.StaticValue(types.SetValueMust(nestedObjectToObjectType(nested), nil))
 }
 
-// meshProjectRoleAttribute returns a schema attribute for meshProject role references.
-// This is used across multiple resources (landingzone, platform) to maintain consistency.
-func meshProjectRoleAttribute(computed bool) schema.SingleNestedAttribute {
-	return schema.SingleNestedAttribute{
-		MarkdownDescription: "the meshProject role",
-		Required:            true,
-		Attributes: map[string]schema.Attribute{
-			"name": schema.StringAttribute{
-				Computed:            computed,
-				Required:            !computed,
-				MarkdownDescription: "The identifier of the meshProjectRole",
-			},
-			"kind": schema.StringAttribute{
-				MarkdownDescription: "meshObject type, always `meshProjectRole`.",
-				Computed:            true,
-				Default:             stringdefault.StaticString(client.MeshObjectKind.ProjectRole),
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-			},
-		},
-	}
+// meshRefOptions configures a meshObject reference attribute. The zero value yields a required input
+// reference: block and identifier are both Required, and `kind` is lenient — optional, defaulted to
+// the single valid value, and OneOf-validated. The three opt-in variants (output, omittable-computed,
+// in-set) each cost one field.
+type meshRefOptions struct {
+	Kind        string
+	Description string
+
+	// Output makes the reference a computed-only output — a resource's own `.ref` or a data-source
+	// attribute. Block, kind and identifier are all Computed, and kind carries no OneOf validator.
+	Output bool
+
+	// OptionalComputed marks an input the user may omit because meshStack defaults it: the block and
+	// its identifier become Optional+Computed. Ignored when Output is set.
+	OptionalComputed bool
+
+	// InSet marks a reference hashed as an opaque set element — nested inside a SetNestedAttribute
+	// object (e.g. project_role_ref in a role-mapping set) or used as a set's element type itself
+	// (e.g. mandatory_building_block_refs). Terraform hashes set elements by whole value, so an
+	// element whose identifier is still unknown at plan can't be hashed and a plain Required
+	// identifier fails with "Missing Configuration for Required Attribute". For such refs the block
+	// stays Required but the identifier is Optional+Computed with an AlsoRequires guard that enforces
+	// presence while tolerating the unknown. Ignored when Output or OptionalComputed is set.
+	InSet bool
 }
 
-// meshUuidRefAttribute builds the attributes for a user-supplied reference composed of a fixed
-// `kind` discriminator plus a `uuid`. `kind` is optional and defaults to (and is validated against)
-// the single fixed kind; `uuid` is left Optional+Computed so a whole computed `.ref` object — whose
-// uuid is unknown until apply — can be assigned and so the backend can default an omitted ref. Pair
-// it with meshUuidRefValidators so an explicitly-provided ref still has to carry its uuid.
+// meshRefByUuid builds a {kind, uuid} reference for the given meshObject kind.
+func meshRefByUuid(opts meshRefOptions) schema.SingleNestedAttribute {
+	return meshRef("uuid", "UUID (`metadata.uuid`) of `"+opts.Kind+"`.", opts)
+}
+
+// meshRefByName builds a {kind, name} reference for the given meshObject kind.
+func meshRefByName(opts meshRefOptions) schema.SingleNestedAttribute {
+	return meshRef("name", "Named identifier (`metadata.name`) of `"+opts.Kind+"`.", opts)
+}
+
+// meshRef builds the whole {kind, <uuid|name>} reference attribute — block scaffolding, identifier
+// and kind discriminator — for a meshObject reference. Callers pick the identifier flavour via
+// meshRefByUuid / meshRefByName rather than calling this directly.
 //
-// It intentionally does not fit refs with bespoke schemas: a discriminated uuid-or-name target_ref,
-// a RequiresReplace platform_ref, or a uuid-only version_ref. Computed-only output refs (a resource's
-// own `.ref`) use meshUuidRefOutputAttribute instead.
-func meshUuidRefAttribute(kind string) map[string]schema.Attribute {
-	return map[string]schema.Attribute{
-		"kind": schema.StringAttribute{
-			MarkdownDescription: "meshObject type, always `" + kind + "`.",
-			Optional:            true,
-			Computed:            true,
-			Default:             stringdefault.StaticString(kind),
-			PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-			Validators: []validator.String{
-				stringvalidator.OneOf(kind),
-			},
-		},
-		"uuid": schema.StringAttribute{
-			MarkdownDescription: "UUID of the " + kind + ".",
-			Optional:            true,
-			Computed:            true,
-			PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-		},
+// It intentionally does not fit refs with bespoke schemas: the discriminated uuid-or-name target_ref
+// and the building_block_definition_version_ref (which carries an extra content_hash on the v3 path).
+func meshRef(idName, idDesc string, opts meshRefOptions) schema.SingleNestedAttribute {
+	kindAttr := schema.StringAttribute{
+		MarkdownDescription: "meshObject type, always `" + opts.Kind + "`.",
+		Default:             stringdefault.StaticString(opts.Kind),
+		PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 	}
+	idAttr := schema.StringAttribute{MarkdownDescription: idDesc}
+	block := schema.SingleNestedAttribute{MarkdownDescription: opts.Description}
+
+	// `kind` is always lenient for inputs: optional, defaulted to the single valid value, and
+	// OneOf-validated, so the user never has to spell it out. (Output overrides this below.)
+	lenientKind := func() {
+		kindAttr.Optional = true
+		kindAttr.Computed = true
+		kindAttr.Validators = []validator.String{stringvalidator.OneOf(opts.Kind)}
+	}
+	// A computed identifier keeps its last-known value while the plan can't resolve it yet.
+	computedId := func() {
+		idAttr.Optional = true
+		idAttr.Computed = true
+		idAttr.PlanModifiers = []planmodifier.String{stringplanmodifier.UseStateForUnknown()}
+	}
+
+	switch {
+	case opts.Output:
+		block.Computed = true
+		kindAttr.Computed = true
+		idAttr.Computed = true
+		idAttr.PlanModifiers = []planmodifier.String{stringplanmodifier.UseStateForUnknown()}
+		// Keep `kind` known at plan time; only the identifier is genuinely computed.
+		block.PlanModifiers = []planmodifier.Object{refOutputKind{kind: opts.Kind, idName: idName}}
+
+	case opts.OptionalComputed:
+		// meshStack defaults this input, so the user may omit it: block and identifier are Optional+Computed.
+		lenientKind()
+		computedId()
+		block.Optional = true
+		block.Computed = true
+
+	case opts.InSet:
+		// The ref is hashed as an opaque set element, so its identifier can't be plain Required —
+		// a set element whose identifier is still unknown at plan collapses to a wholly-unknown
+		// element (sets hash by whole value), and a Required identifier then fails with "Missing
+		// Configuration for Required Attribute". Keep the identifier Optional+Computed with an
+		// AlsoRequires guard that enforces presence while tolerating the unknown.
+		lenientKind()
+		computedId()
+		block.Required = true
+		block.Validators = []validator.Object{
+			objectvalidator.AlsoRequires(path.MatchRelative().AtName(idName)),
+		}
+		// Note goes on the identifier, not the block: set-element-typed refs
+		// (dependency_refs, mandatory_building_block_refs) are spread into a NestedAttributeObject
+		// that keeps only .Attributes, dropping the block description — but the identifier renders
+		// under "Optional:" in every case, which is exactly the line that needs the caveat.
+		idAttr.MarkdownDescription += " Required; optional here only so a computed reference can be used inside a set, and enforced at plan time."
+
+	default:
+		// Plain required input: both block and identifier are Required.
+		lenientKind()
+		block.Required = true
+		idAttr.Required = true
+	}
+
+	// An omittable-computed input keeps its last-known value while the plan can't resolve it yet.
+	if block.Computed && !opts.Output {
+		block.PlanModifiers = append(block.PlanModifiers, objectplanmodifier.UseStateForUnknown())
+	}
+
+	block.Attributes = map[string]schema.Attribute{"kind": kindAttr, idName: idAttr}
+	return block
 }
 
-// meshUuidRefValidators guards a meshUuidRefAttribute reference: a ref object that is provided must
-// carry its uuid. Assigning a whole computed `.ref` (whose uuid is unknown until apply) still
-// passes — AlsoRequires treats an unknown value as configured — so only an explicitly omitted uuid
-// is rejected, at plan time, instead of only failing later against the backend.
-func meshUuidRefValidators() []validator.Object {
-	return []validator.Object{
-		objectvalidator.AlsoRequires(path.MatchRelative().AtName("uuid")),
-	}
+// refOutputKind keeps an output reference's `kind` known at plan time. An output block is Computed,
+// so on create the framework plans the whole object as unknown ("known after apply") — including
+// `kind`, which is always the single constant value. This modifier fills a still-unknown block with
+// its known kind and an unknown identifier; when prior state exists it carries that state instead
+// (as UseStateForUnknown would), so updates keep showing the already-resolved identifier.
+//
+// The resulting partial object does not survive set membership: Terraform hashes set elements by
+// whole value, so a ref feeding a set is unknown there regardless — which is why set-nested input
+// identifiers still can't be plain Required (see meshRef). Plan modifiers run for resources only, so
+// this is inert for data-source refs, which instead resolve `kind` at their plan-time read.
+type refOutputKind struct {
+	kind   string
+	idName string
 }
 
-func meshUuidRefOutputAttribute(kind string) map[string]schema.Attribute {
-	return map[string]schema.Attribute{
-		"kind": schema.StringAttribute{
-			MarkdownDescription: "meshObject type, always `" + kind + "`.",
-			Computed:            true,
-			Default:             stringdefault.StaticString(kind),
-			PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-		},
-		"uuid": schema.StringAttribute{
-			MarkdownDescription: "UUID of the " + kind + ".",
-			Computed:            true,
-			PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-		},
+func (m refOutputKind) Description(context.Context) string {
+	return "Keeps the reference `kind` known at plan time; the identifier stays computed."
+}
+
+func (m refOutputKind) MarkdownDescription(ctx context.Context) string { return m.Description(ctx) }
+
+func (m refOutputKind) PlanModifyObject(ctx context.Context, req planmodifier.ObjectRequest, resp *planmodifier.ObjectResponse) {
+	if !req.PlanValue.IsUnknown() {
+		return
 	}
+	if !req.StateValue.IsNull() {
+		resp.PlanValue = req.StateValue
+		return
+	}
+
+	obj, diags := types.ObjectValue(req.PlanValue.AttributeTypes(ctx), map[string]attr.Value{
+		"kind":   types.StringValue(m.kind),
+		m.idName: types.StringUnknown(),
+	})
+	resp.Diagnostics.Append(diags...)
+	resp.PlanValue = obj
 }
 
 func tenantTagsAttribute() schema.SingleNestedAttribute {

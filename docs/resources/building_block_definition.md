@@ -430,10 +430,13 @@ Optional:
 <a id="nestedatt--version_spec--implementation--azure_devops_pipeline--integration_ref"></a>
 ### Nested Schema for `version_spec.implementation.azure_devops_pipeline.integration_ref`
 
+Required:
+
+- `uuid` (String) UUID (`metadata.uuid`) of `meshIntegration`.
+
 Optional:
 
 - `kind` (String) meshObject type, always `meshIntegration`.
-- `uuid` (String) UUID of the meshIntegration.
 
 
 
@@ -456,10 +459,13 @@ Optional:
 <a id="nestedatt--version_spec--implementation--github_workflows--integration_ref"></a>
 ### Nested Schema for `version_spec.implementation.github_workflows.integration_ref`
 
+Required:
+
+- `uuid` (String) UUID (`metadata.uuid`) of `meshIntegration`.
+
 Optional:
 
 - `kind` (String) meshObject type, always `meshIntegration`.
-- `uuid` (String) UUID of the meshIntegration.
 
 
 
@@ -476,10 +482,13 @@ Required:
 <a id="nestedatt--version_spec--implementation--gitlab_pipeline--integration_ref"></a>
 ### Nested Schema for `version_spec.implementation.gitlab_pipeline.integration_ref`
 
+Required:
+
+- `uuid` (String) UUID (`metadata.uuid`) of `meshIntegration`.
+
 Optional:
 
 - `kind` (String) meshObject type, always `meshIntegration`.
-- `uuid` (String) UUID of the meshIntegration.
 
 
 <a id="nestedatt--version_spec--implementation--gitlab_pipeline--pipeline_trigger_token"></a>
@@ -555,7 +564,7 @@ Read-Only:
 Optional:
 
 - `kind` (String) meshObject type, always `meshBuildingBlockDefinition`.
-- `uuid` (String) UUID of the meshBuildingBlockDefinition.
+- `uuid` (String) UUID (`metadata.uuid`) of `meshBuildingBlockDefinition`. Required; optional here only so a computed reference can be used inside a set, and enforced at plan time.
 
 
 <a id="nestedatt--version_spec--inputs"></a>
@@ -642,7 +651,7 @@ Optional:
 Optional:
 
 - `kind` (String) meshObject type, always `meshBuildingBlockRunner`.
-- `uuid` (String) UUID of the meshBuildingBlockRunner.
+- `uuid` (String) UUID (`metadata.uuid`) of `meshBuildingBlockRunner`.
 
 
 
@@ -652,6 +661,7 @@ Optional:
 Read-Only:
 
 - `content_hash` (String) Content hash of the version. Will only change for draft versions when edited, otherwise constant.
+- `kind` (String) meshObject type, always `meshBuildingBlockDefinitionVersion`.
 - `number` (Number) Version number.
 - `state` (String) State of the version. One of `DRAFT`, `RELEASED`.
 - `uuid` (String) UUID of the version.
@@ -663,7 +673,7 @@ Read-Only:
 Read-Only:
 
 - `kind` (String) meshObject type, always `meshBuildingBlockDefinition`.
-- `uuid` (String) UUID of the meshBuildingBlockDefinition.
+- `uuid` (String) UUID (`metadata.uuid`) of `meshBuildingBlockDefinition`.
 
 
 <a id="nestedatt--version_latest"></a>
@@ -672,6 +682,7 @@ Read-Only:
 Read-Only:
 
 - `content_hash` (String) Content hash of the version. Will only change for draft versions when edited, otherwise constant.
+- `kind` (String) meshObject type, always `meshBuildingBlockDefinitionVersion`.
 - `number` (Number) Version number.
 - `state` (String) State of the version. One of `DRAFT`, `RELEASED`.
 - `uuid` (String) UUID of the version.
@@ -683,6 +694,7 @@ Read-Only:
 Read-Only:
 
 - `content_hash` (String) Content hash of the version. Will only change for draft versions when edited, otherwise constant.
+- `kind` (String) meshObject type, always `meshBuildingBlockDefinitionVersion`.
 - `number` (Number) Version number.
 - `state` (String) State of the version. One of `DRAFT`, `RELEASED`.
 - `uuid` (String) UUID of the version.

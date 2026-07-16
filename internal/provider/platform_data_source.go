@@ -71,20 +71,7 @@ func (d *platformDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 				Computed:            true,
 			},
 
-			"ref": schema.SingleNestedAttribute{
-				MarkdownDescription: "Reference to this platform, can be used as `platform_ref` in landing zone resources.",
-				Computed:            true,
-				Attributes: map[string]schema.Attribute{
-					"kind": schema.StringAttribute{
-						MarkdownDescription: "The kind of the object. Always `meshPlatform`.",
-						Computed:            true,
-					},
-					"uuid": schema.StringAttribute{
-						MarkdownDescription: "UUID of the platform.",
-						Computed:            true,
-					},
-				},
-			},
+			"ref": meshRefByUuid(meshRefOptions{Kind: client.MeshObjectKind.Platform, Description: "Reference to this platform, can be used as `platform_ref` in landing zone resources.", Output: true}),
 
 			"spec": schema.SingleNestedAttribute{
 				Computed: true,
@@ -113,20 +100,7 @@ func (d *platformDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 						MarkdownDescription: "Free-text access information shown to users when accessing tenants on this platform. Supports markdown formatting.",
 						Computed:            true,
 					},
-					"location_ref": schema.SingleNestedAttribute{
-						MarkdownDescription: "Reference to the location where this platform is situated.",
-						Computed:            true,
-						Attributes: map[string]schema.Attribute{
-							"kind": schema.StringAttribute{
-								MarkdownDescription: "Must always be set to meshLocation",
-								Computed:            true,
-							},
-							"name": schema.StringAttribute{
-								MarkdownDescription: "Identifier of the Location.",
-								Computed:            true,
-							},
-						},
-					},
+					"location_ref": meshRefByName(meshRefOptions{Kind: client.MeshObjectKind.Location, Description: "Reference to the location where this platform is situated.", Output: true}),
 					"contributing_workspaces": schema.SetAttribute{
 						MarkdownDescription: "A list of workspace identifiers that contribute to this meshPlatform.",
 						ElementType:         types.StringType,
@@ -196,20 +170,7 @@ func customPlatformDataSourceSchema() schema.Attribute {
 		MarkdownDescription: "Custom platform configuration.",
 		Computed:            true,
 		Attributes: map[string]schema.Attribute{
-			"platform_type_ref": schema.SingleNestedAttribute{
-				MarkdownDescription: "Reference to the platform type.",
-				Computed:            true,
-				Attributes: map[string]schema.Attribute{
-					"name": schema.StringAttribute{
-						MarkdownDescription: "Name of the platform type.",
-						Computed:            true,
-					},
-					"kind": schema.StringAttribute{
-						MarkdownDescription: "Kind of the platform type. Always `meshPlatformType`.",
-						Computed:            true,
-					},
-				},
-			},
+			"platform_type_ref": meshRefByName(meshRefOptions{Kind: client.MeshObjectKind.PlatformType, Description: "Reference to the platform type.", Output: true}),
 			"metering": schema.SingleNestedAttribute{
 				MarkdownDescription: "Metering configuration.",
 				Computed:            true,
@@ -681,7 +642,7 @@ func awsReplicationConfigDataSourceSchema() schema.Attribute {
 						Computed:            true,
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
-								"project_role_ref": meshProjectRoleAttribute(true),
+								"project_role_ref": meshRefByName(meshRefOptions{Kind: client.MeshObjectKind.ProjectRole, Description: "Reference to the meshProjectRole.", Output: true}),
 								"aws_role": schema.StringAttribute{
 									MarkdownDescription: "The AWS role name",
 									Computed:            true,
@@ -721,7 +682,7 @@ func awsReplicationConfigDataSourceSchema() schema.Attribute {
 						Computed:            true,
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
-								"project_role_ref": meshProjectRoleAttribute(true),
+								"project_role_ref": meshRefByName(meshRefOptions{Kind: client.MeshObjectKind.ProjectRole, Description: "Reference to the meshProjectRole.", Output: true}),
 								"aws_role": schema.StringAttribute{
 									MarkdownDescription: "AWS role alias used as suffix in the group name pattern.",
 									Computed:            true,
@@ -896,7 +857,7 @@ func azureReplicationConfigDataSourceSchema() schema.Attribute {
 				Computed:            true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"project_role_ref": meshProjectRoleAttribute(true),
+						"project_role_ref": meshRefByName(meshRefOptions{Kind: client.MeshObjectKind.ProjectRole, Description: "Reference to the meshProjectRole.", Output: true}),
 						"azure_role": schema.SingleNestedAttribute{
 							MarkdownDescription: "The Azure role definition.",
 							Computed:            true,
@@ -1129,7 +1090,7 @@ func gcpReplicationConfigDataSourceSchema() schema.Attribute {
 				Computed:            true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"project_role_ref": meshProjectRoleAttribute(true),
+						"project_role_ref": meshRefByName(meshRefOptions{Kind: client.MeshObjectKind.ProjectRole, Description: "Reference to the meshProjectRole.", Output: true}),
 						"gcp_role": schema.StringAttribute{
 							MarkdownDescription: "The GCP IAM role",
 							Computed:            true,
@@ -1246,7 +1207,7 @@ func openShiftReplicationConfigDataSourceSchema() schema.Attribute {
 				Computed:            true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"project_role_ref": meshProjectRoleAttribute(true),
+						"project_role_ref": meshRefByName(meshRefOptions{Kind: client.MeshObjectKind.ProjectRole, Description: "Reference to the meshProjectRole.", Output: true}),
 						"openshift_role": schema.StringAttribute{
 							MarkdownDescription: "The OpenShift role name",
 							Computed:            true,

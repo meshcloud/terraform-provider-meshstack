@@ -91,8 +91,8 @@ Read-Only:
 
 Read-Only:
 
-- `kind` (String) The kind of the object. Always `meshBuildingBlockDefinition`.
-- `uuid` (String) UUID of the building block definition.
+- `kind` (String) meshObject type, always `meshBuildingBlockDefinition`.
+- `uuid` (String) UUID (`metadata.uuid`) of `meshBuildingBlockDefinition`.
 
 
 <a id="nestedatt--building_block_definitions--spec"></a>

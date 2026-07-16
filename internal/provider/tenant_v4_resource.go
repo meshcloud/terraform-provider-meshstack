@@ -84,12 +84,7 @@ func (r *tenantV4Resource) Schema(_ context.Context, _ resource.SchemaRequest, r
 		MarkdownDescription: "Manages a `meshTenant` with API version 4." + previewDisclaimer(),
 
 		Attributes: map[string]schema.Attribute{
-			"ref": schema.SingleNestedAttribute{
-				MarkdownDescription: "Reference to this tenant, can be used as `target_ref` in building block resources.",
-				Computed:            true,
-				PlanModifiers:       []planmodifier.Object{objectplanmodifier.UseStateForUnknown()},
-				Attributes:          meshUuidRefOutputAttribute(client.MeshObjectKind.Tenant),
-			},
+			"ref": meshRefByUuid(meshRefOptions{Kind: client.MeshObjectKind.Tenant, Description: "Reference to this tenant, can be used as `target_ref` in building block resources.", Output: true}),
 
 			"metadata": schema.SingleNestedAttribute{
 				MarkdownDescription: "Metadata of the tenant. The `owned_by_workspace` and `owned_by_project` attributes must be set here.",

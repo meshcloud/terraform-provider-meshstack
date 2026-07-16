@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
+	"github.com/meshcloud/terraform-provider-meshstack/client"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/types/secret"
 )
 
@@ -30,7 +31,7 @@ func azurePlatformSchema() schema.Attribute {
 func azureReplicationConfigSchema() schema.Attribute {
 	azureRoleMappings := schema.NestedAttributeObject{
 		Attributes: map[string]schema.Attribute{
-			"project_role_ref": meshProjectRoleAttribute(false),
+			"project_role_ref": meshRefByName(meshRefOptions{Kind: client.MeshObjectKind.ProjectRole, Description: "Reference to the meshProjectRole.", InSet: true}),
 			"azure_role": schema.SingleNestedAttribute{
 				MarkdownDescription: "The Azure role definition.",
 				Required:            true,

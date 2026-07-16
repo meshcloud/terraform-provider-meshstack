@@ -7,7 +7,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -128,13 +127,8 @@ func (r *integrationResource) Schema(_ context.Context, _ resource.SchemaRequest
 										MarkdownDescription: "Private key for the GitHub App.",
 										Optional:            false,
 									}),
-									"runner_ref": schema.SingleNestedAttribute{
-										MarkdownDescription: "Reference to the building block runner that executes GitHub workflows." +
-											"If omitted, the pre-defined shared runner is used.",
-										Optional:   true,
-										Computed:   true,
-										Attributes: meshUuidRefAttribute(client.MeshObjectKind.BuildingBlockRunner),
-									},
+									"runner_ref": meshRefByUuid(meshRefOptions{Kind: client.MeshObjectKind.BuildingBlockRunner, Description: "Reference to the building block runner that executes GitHub workflows." +
+										"If omitted, the pre-defined shared runner is used.", OptionalComputed: true}),
 								},
 							},
 							"gitlab": schema.SingleNestedAttribute{
@@ -146,13 +140,8 @@ func (r *integrationResource) Schema(_ context.Context, _ resource.SchemaRequest
 										MarkdownDescription: "Base URL of the GitLab instance (e.g., `https://gitlab.com` or your self-hosted GitLab URL).",
 										Required:            true,
 									},
-									"runner_ref": schema.SingleNestedAttribute{
-										MarkdownDescription: "Reference to the building block runner that executes GitLab pipelines." +
-											"If omitted, the pre-defined shared runner is used.",
-										Optional:   true,
-										Computed:   true,
-										Attributes: meshUuidRefAttribute(client.MeshObjectKind.BuildingBlockRunner),
-									},
+									"runner_ref": meshRefByUuid(meshRefOptions{Kind: client.MeshObjectKind.BuildingBlockRunner, Description: "Reference to the building block runner that executes GitLab pipelines." +
+										"If omitted, the pre-defined shared runner is used.", OptionalComputed: true}),
 								},
 							},
 							"azuredevops": schema.SingleNestedAttribute{
@@ -172,13 +161,8 @@ func (r *integrationResource) Schema(_ context.Context, _ resource.SchemaRequest
 										MarkdownDescription: "Personal Access Token (PAT) for authentication.",
 										Optional:            true,
 									}),
-									"runner_ref": schema.SingleNestedAttribute{
-										MarkdownDescription: "Reference to the building block runner that executes Azure DevOps pipelines. " +
-											"If omitted, the pre-defined shared runner is used.",
-										Optional:   true,
-										Computed:   true,
-										Attributes: meshUuidRefAttribute(client.MeshObjectKind.BuildingBlockRunner),
-									},
+									"runner_ref": meshRefByUuid(meshRefOptions{Kind: client.MeshObjectKind.BuildingBlockRunner, Description: "Reference to the building block runner that executes Azure DevOps pipelines. " +
+										"If omitted, the pre-defined shared runner is used.", OptionalComputed: true}),
 								},
 							},
 							"entraid": schema.SingleNestedAttribute{
@@ -225,14 +209,7 @@ func (r *integrationResource) Schema(_ context.Context, _ resource.SchemaRequest
 				},
 			},
 
-			"ref": schema.SingleNestedAttribute{
-				MarkdownDescription: "Reference to integration, can be used in building block definitions.",
-				Computed:            true,
-				Attributes:          meshUuidRefOutputAttribute(client.MeshObjectKind.Integration),
-				PlanModifiers: []planmodifier.Object{
-					objectplanmodifier.UseStateForUnknown(),
-				},
-			},
+			"ref": meshRefByUuid(meshRefOptions{Kind: client.MeshObjectKind.Integration, Description: "Reference to integration, can be used in building block definitions.", Output: true}),
 		},
 	}
 }
