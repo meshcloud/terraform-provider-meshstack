@@ -1,7 +1,7 @@
 # v0.23.3
 
 FEATURES:
-- `meshstack_building_block_definition`: `version_spec.inputs` now support the `MESH_TENANT_UUID` assignment type, which assigns the meshTenant's UUID as a string. Like `PLATFORM_TENANT_ID`, it takes no `argument`, `default_value`, or `sensitive` value.
+- `meshstack_building_block_definition`: `version_spec.inputs` now support the `MESHSTACK_TENANT_ID` assignment type, which assigns the meshTenant's UUID as a string. Like `PLATFORM_TENANT_ID`, it takes no `argument`, `default_value`, or `sensitive` value.
 
 # v0.23.2
 
