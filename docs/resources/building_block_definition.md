@@ -563,7 +563,7 @@ Optional:
 
 Required:
 
-- `assignment_type` (String) How the input value is assigned. One of `AUTHOR`, `USER_INPUT`, `PLATFORM_OPERATOR_MANUAL_INPUT`, `BUILDING_BLOCK_OUTPUT`, `PLATFORM_TENANT_ID`, `WORKSPACE_IDENTIFIER`, `PROJECT_IDENTIFIER`, `FULL_PLATFORM_IDENTIFIER`, `TENANT_BUILDING_BLOCK_UUID`, `STATIC`, `USER_PERMISSIONS`. Determines which additional attributes are required or allowed.
+- `assignment_type` (String) How the input value is assigned. One of `AUTHOR`, `USER_INPUT`, `PLATFORM_OPERATOR_MANUAL_INPUT`, `BUILDING_BLOCK_OUTPUT`, `PLATFORM_TENANT_ID`, `MESH_TENANT_UUID`, `WORKSPACE_IDENTIFIER`, `PROJECT_IDENTIFIER`, `FULL_PLATFORM_IDENTIFIER`, `TENANT_BUILDING_BLOCK_UUID`, `STATIC`, `USER_PERMISSIONS`. Determines which additional attributes are required or allowed.
 - `display_name` (String) Human-readable display name for the input.
 - `type` (String) Data type of the input. One of `STRING`, `CODE`, `INTEGER`, `BOOLEAN`, `FILE`, `LIST`, `SINGLE_SELECT`, `MULTI_SELECT`. `LIST` is deprecated, use `CODE` instead. For type `FILE`, the value must be a MIME-typed base64 data blob. Use `provider::meshstack::load_file` or `provider::meshstack::encode_file` to produce such a data blob. When providing this value via `argument` or `default_value`, wrap the blob in `jsonencode(...)`, for example `argument = jsonencode(provider::meshstack::load_file(...))`.
 
