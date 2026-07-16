@@ -59,6 +59,7 @@ var (
 	MeshBuildingBlockInputAssignmentTypePlatformOperatorManualInput = MeshBuildingBlockInputAssignmentTypes.Entry("PLATFORM_OPERATOR_MANUAL_INPUT")
 	MeshBuildingBlockInputAssignmentTypeBuildingBlockOutput         = MeshBuildingBlockInputAssignmentTypes.Entry("BUILDING_BLOCK_OUTPUT")
 	MeshBuildingBlockInputAssignmentTypePlatformTenantID            = MeshBuildingBlockInputAssignmentTypes.Entry("PLATFORM_TENANT_ID")
+	MeshBuildingBlockInputAssignmentTypeMeshTenantUuid              = MeshBuildingBlockInputAssignmentTypes.Entry("MESH_TENANT_UUID")
 	MeshBuildingBlockInputAssignmentTypeWorkspaceIdentifier         = MeshBuildingBlockInputAssignmentTypes.Entry("WORKSPACE_IDENTIFIER")
 	MeshBuildingBlockInputAssignmentTypeProjectIdentifier           = MeshBuildingBlockInputAssignmentTypes.Entry("PROJECT_IDENTIFIER")
 	MeshBuildingBlockInputAssignmentTypeFullPlatformIdentifier      = MeshBuildingBlockInputAssignmentTypes.Entry("FULL_PLATFORM_IDENTIFIER")
