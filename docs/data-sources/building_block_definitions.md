@@ -5,7 +5,6 @@ subcategory: ""
 description: |-
   List building block definitions with optional workspace filter. Prefer this plural data source with one(...) for reusable wiring in examples. For each returned definition, this data source performs an additional API call to load all versions; use workspace_identifier to narrow scope where possible.
   Cross-Workspace Access: When accessing building block definitions from workspaces other than your own using a workspace-scoped API key, the content_hash attribute will be null as it requires detailed version information that is not accessible without workspace permissions. The versions, version_latest, and version_latest_release attributes will still be populated with uuid, number, and state.
-  ~> Preview: This resource is in preview. Breaking changes are possible without prior notice due to changes in the underlying meshStack preview API https://docs.meshcloud.io/api/technical-specifications#preview-endpoints or due to changes in this provider. Please ensure you are running the latest version of the provider and report any bugs via GitHub issues https://github.com/meshcloud/terraform-provider-meshstack/issues or via support@meshcloud.io.
 ---
 
 # meshstack_building_block_definitions (Data Source)
@@ -13,10 +12,6 @@ description: |-
 List building block definitions with optional workspace filter. Prefer this plural data source with `one(...)` for reusable wiring in examples. For each returned definition, this data source performs an additional API call to load all versions; use `workspace_identifier` to narrow scope where possible. 
 
 **Cross-Workspace Access**: When accessing building block definitions from workspaces other than your own using a workspace-scoped API key, the `content_hash` attribute will be null as it requires detailed version information that is not accessible without workspace permissions. The `versions`, `version_latest`, and `version_latest_release` attributes will still be populated with uuid, number, and state.
-
-
-
-~> **Preview:** This resource is in preview. Breaking changes are possible without prior notice due to changes in the underlying [meshStack preview API](https://docs.meshcloud.io/api/technical-specifications#preview-endpoints) or due to changes in this provider. Please ensure you are running the latest version of the provider and report any bugs via [GitHub issues](https://github.com/meshcloud/terraform-provider-meshstack/issues) or via support@meshcloud.io.
 
 ## Example Usage
 

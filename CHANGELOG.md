@@ -1,3 +1,12 @@
+# v0.25.0
+
+Requires meshStack 2026.31.0 or later (previously 2026.30.0).
+
+BREAKING CHANGES:
+- `meshstack_tenant` and `meshstack_tenants` now use the meshTenant v4 GA media type instead of the v4 preview media type. They require a meshStack backend that has promoted meshTenant v4 to GA; older backends that only serve the `-preview` media type return HTTP 415 (Unsupported Media Type).
+- The deprecated `meshstack_tenant_v4` resource and data source have been removed. Migrate to `meshstack_tenant` / `meshstack_tenants`. Because v0.25.0 no longer knows the `meshstack_tenant_v4` type, add a `moved` block on v0.24.x (which still ships both the `moved` support and the deprecated type) and apply it before upgrading to v0.25.0.
+- The `meshstack_building_block_definition` resource and data sources now use the GA `application/vnd.meshcloud.api.meshbuildingblockdefinition.v1.hal+json` media type (and the version sibling) instead of v1-preview, and the preview disclaimers were removed. This requires a meshStack release where the meshBuildingBlockDefinition v1 API is GA. (Behaviourally identical to v0.23.2, which used the preview media type of the same shape.)
+
 # v0.24.2
 
 Requires meshStack 2026.30.0 or later (previously 2026.29.0).
@@ -12,9 +21,7 @@ Requires meshStack 2026.29.0 or later (previously 2026.24.0).
 
 BREAKING CHANGES:
 - Release binaries are now published only for `linux` and `darwin` on `amd64` and `arm64`. Builds for `windows`, `freebsd`, `386` and 32-bit `arm` are no longer produced.
-- `meshstack_tenant` and `meshstack_tenants` now use the meshTenant v4 GA media type instead of the v4 preview media type. They require a meshStack backend that has promoted meshTenant v4 to GA; older backends that only serve the `-preview` media type return HTTP 415 (Unsupported Media Type).
 - `meshstack_tenant` and `meshstack_tenants`: the tenant `status.tenant_identifier` output was renamed to `status.tenant_name`. The value is unchanged (still the fully-qualified `<workspace>.<project>.<platform>.<location>`); update any references from `status.tenant_identifier` to `status.tenant_name`.
-- The deprecated `meshstack_tenant_v4` resource and data source have been removed. Migrate to `meshstack_tenant` / `meshstack_tenants`. Because v0.24.1 no longer knows the `meshstack_tenant_v4` type, add a `moved` block on v0.24.0 (which still ships both the `moved` support and the deprecated type) and apply it before upgrading to v0.24.1.
 
 FEATURES:
 - New provider function `provider::meshstack::non_ephemeral_secret(secret_value)` builds the `sensitive` secret block (used by `meshstack_platform`, `meshstack_integration`, `meshstack_building_block` and others) from a value kept in Terraform config or state rather than supplied via an `ephemeral` resource. It sets `secret_value` to the value and `secret_version` to `sha256(secret_value)`, so a changed value sends the write only `secret_value` to the backend again while an unchanged value produces no diff. Wrap a sensitive argument in `nonsensitive(...)` to keep the version hash visible: `access_token = provider::meshstack::non_ephemeral_secret(nonsensitive(var.access_token))`.
