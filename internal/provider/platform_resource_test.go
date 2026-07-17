@@ -261,13 +261,65 @@ func checkPlatformConfigState(resourceAddress, exampleSuffix string) []statechec
 		configCheck = knownvalue.NotNull()
 	}
 
-	return []statecheck.StateCheck{
+	checks := []statecheck.StateCheck{
 		statecheck.ExpectKnownValue(
 			resourceAddress,
 			tfjsonpath.New("spec").AtMapKey("config").AtMapKey(platformType),
 			configCheck,
 		),
 		checkPlatformQuotas(resourceAddress, exampleSuffix),
+	}
+	return append(checks, checkPlatformRoleMappings(resourceAddress, exampleSuffix)...)
+}
+
+// checkPlatformRoleMappings asserts that aws/gcp role mappings resolve their `project_role_ref`
+// as an unordered set (openshift/azure role mappings are already asserted in their config check).
+// It guards against the regression where these were modeled as ordered lists and against a
+// `project_role_ref` whose identifier/kind failed to resolve.
+func checkPlatformRoleMappings(resourceAddress, exampleSuffix string) []statecheck.StateCheck {
+	projectRoleRef := func(name string) knownvalue.Check {
+		return xknownvalue.MapExact(map[string]knownvalue.Check{
+			"name": knownvalue.StringExact(name),
+			"kind": knownvalue.StringExact("meshProjectRole"),
+		})
+	}
+
+	switch exampleSuffix {
+	case "02_aws":
+		return []statecheck.StateCheck{
+			statecheck.ExpectKnownValue(
+				resourceAddress,
+				tfjsonpath.New("spec").AtMapKey("config").AtMapKey("aws").
+					AtMapKey("replication").AtMapKey("aws_identity_store").AtMapKey("aws_role_mappings"),
+				knownvalue.SetExact([]knownvalue.Check{
+					xknownvalue.MapExact(map[string]knownvalue.Check{
+						"project_role_ref":    projectRoleRef("admin"),
+						"aws_role":            knownvalue.StringExact("admin"),
+						"permission_set_arns": knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("arn:aws:sso:::permissionSet/ssoins-1234567890abcdef/ps-1234567890abcdef")}),
+					}),
+				}),
+			),
+		}
+	case "03_gcp":
+		return []statecheck.StateCheck{
+			statecheck.ExpectKnownValue(
+				resourceAddress,
+				tfjsonpath.New("spec").AtMapKey("config").AtMapKey("gcp").
+					AtMapKey("replication").AtMapKey("gcp_role_mappings"),
+				knownvalue.SetExact([]knownvalue.Check{
+					xknownvalue.MapExact(map[string]knownvalue.Check{
+						"project_role_ref": projectRoleRef("admin"),
+						"gcp_role":         knownvalue.StringExact("roles/editor"),
+					}),
+					xknownvalue.MapExact(map[string]knownvalue.Check{
+						"project_role_ref": projectRoleRef("reader"),
+						"gcp_role":         knownvalue.StringExact("roles/viewer"),
+					}),
+				}),
+			),
+		}
+	default:
+		return nil
 	}
 }
 
