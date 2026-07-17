@@ -60,12 +60,12 @@ func gcpReplicationConfigSchema() schema.Attribute {
 				MarkdownDescription: "Used external ID type for user lookup",
 				Optional:            true,
 			},
-			"gcp_role_mappings": schema.ListNestedAttribute{
+			"gcp_role_mappings": schema.SetNestedAttribute{
 				MarkdownDescription: "Mapping of platform roles to GCP IAM roles.",
 				Required:            true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"project_role_ref": meshRefByName(meshRefOptions{Kind: client.MeshObjectKind.ProjectRole, Description: "Reference to the meshProjectRole."}),
+						"project_role_ref": meshRefByName(meshRefOptions{Kind: client.MeshObjectKind.ProjectRole, Description: "Reference to the meshProjectRole.", InSet: true}),
 						"gcp_role": schema.StringAttribute{
 							MarkdownDescription: "The GCP IAM role",
 							Required:            true,

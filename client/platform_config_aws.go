@@ -48,12 +48,12 @@ type AwsWorkloadIdentityCredential struct {
 }
 
 type AwsSsoConfig struct {
-	ScimEndpoint     string              `json:"scimEndpoint" tfsdk:"scim_endpoint"`
-	Arn              string              `json:"arn" tfsdk:"arn"`
-	GroupNamePattern string              `json:"groupNamePattern" tfsdk:"group_name_pattern"`
-	SsoAccessToken   types.Secret        `json:"ssoAccessToken" tfsdk:"sso_access_token"`
-	AwsRoleMappings  []AwsSsoRoleMapping `json:"awsRoleMappings" tfsdk:"aws_role_mappings"`
-	SignInUrl        string              `json:"signInUrl" tfsdk:"sign_in_url"`
+	ScimEndpoint     string                       `json:"scimEndpoint" tfsdk:"scim_endpoint"`
+	Arn              string                       `json:"arn" tfsdk:"arn"`
+	GroupNamePattern string                       `json:"groupNamePattern" tfsdk:"group_name_pattern"`
+	SsoAccessToken   types.Secret                 `json:"ssoAccessToken" tfsdk:"sso_access_token"`
+	AwsRoleMappings  types.Set[AwsSsoRoleMapping] `json:"awsRoleMappings" tfsdk:"aws_role_mappings"`
+	SignInUrl        string                       `json:"signInUrl" tfsdk:"sign_in_url"`
 }
 
 type AwsSsoRoleMapping struct {
@@ -68,11 +68,11 @@ type AwsEnrollmentConfiguration struct {
 }
 
 type AwsIdentityStoreConfig struct {
-	IdentityStoreId  string                        `json:"identityStoreId" tfsdk:"identity_store_id"`
-	Arn              string                        `json:"arn" tfsdk:"arn"`
-	GroupNamePattern string                        `json:"groupNamePattern" tfsdk:"group_name_pattern"`
-	AwsRoleMappings  []AwsIdentityStoreRoleMapping `json:"awsRoleMappings" tfsdk:"aws_role_mappings"`
-	SignInUrl        string                        `json:"signInUrl" tfsdk:"sign_in_url"`
+	IdentityStoreId  string                                 `json:"identityStoreId" tfsdk:"identity_store_id"`
+	Arn              string                                 `json:"arn" tfsdk:"arn"`
+	GroupNamePattern string                                 `json:"groupNamePattern" tfsdk:"group_name_pattern"`
+	AwsRoleMappings  types.Set[AwsIdentityStoreRoleMapping] `json:"awsRoleMappings" tfsdk:"aws_role_mappings"`
+	SignInUrl        string                                 `json:"signInUrl" tfsdk:"sign_in_url"`
 }
 
 type AwsIdentityStoreRoleMapping struct {

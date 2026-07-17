@@ -1115,7 +1115,7 @@ Required:
 Required:
 
 - `arn` (String) The ARN of the AWS IAM Identity Center Instance, e.g. `arn:aws:sso:::instance/ssoins-123456789abc`.
-- `aws_role_mappings` (Attributes List) AWS role mappings for AWS IAM Identity Store (see [below for nested schema](#nestedatt--spec--config--aws--replication--aws_identity_store--aws_role_mappings))
+- `aws_role_mappings` (Attributes Set) AWS role mappings for AWS IAM Identity Store (see [below for nested schema](#nestedatt--spec--config--aws--replication--aws_identity_store--aws_role_mappings))
 - `group_name_pattern` (String) Configures the pattern that defines the desired name of AWS IAM Identity Center groups managed by meshStack. It supports the `platformGroupAlias` replacement. meshStack will additionally prefix the group name with `mst-` to identify groups it manages.
 - `identity_store_id` (String) The ID of the AWS IAM Identity Center Identity Store, e.g. `d-1234567890`.
 - `sign_in_url` (String) The AWS IAM Identity Center sign-in URL for end-users.
@@ -1132,13 +1132,10 @@ Required:
 <a id="nestedatt--spec--config--aws--replication--aws_identity_store--aws_role_mappings--project_role_ref"></a>
 ### Nested Schema for `spec.config.aws.replication.aws_identity_store.aws_role_mappings.project_role_ref`
 
-Required:
-
-- `name` (String) Named identifier (`metadata.name`) of `meshProjectRole`.
-
 Optional:
 
 - `kind` (String) meshObject type, always `meshProjectRole`.
+- `name` (String) Named identifier (`metadata.name`) of `meshProjectRole`. Required; optional here only so a computed reference can be used inside a set, and enforced at plan time.
 
 
 
@@ -1156,7 +1153,7 @@ Required:
 
 Optional:
 
-- `aws_role_mappings` (Attributes List) AWS role mappings for AWS SSO (see [below for nested schema](#nestedatt--spec--config--aws--replication--aws_sso--aws_role_mappings))
+- `aws_role_mappings` (Attributes Set) AWS role mappings for AWS SSO (see [below for nested schema](#nestedatt--spec--config--aws--replication--aws_sso--aws_role_mappings))
 
 <a id="nestedatt--spec--config--aws--replication--aws_sso--sso_access_token"></a>
 ### Nested Schema for `spec.config.aws.replication.aws_sso.sso_access_token`
@@ -1189,13 +1186,10 @@ Optional:
 <a id="nestedatt--spec--config--aws--replication--aws_sso--aws_role_mappings--project_role_ref"></a>
 ### Nested Schema for `spec.config.aws.replication.aws_sso.aws_role_mappings.project_role_ref`
 
-Required:
-
-- `name` (String) Named identifier (`metadata.name`) of `meshProjectRole`.
-
 Optional:
 
 - `kind` (String) meshObject type, always `meshProjectRole`.
+- `name` (String) Named identifier (`metadata.name`) of `meshProjectRole`. Required; optional here only so a computed reference can be used inside a set, and enforced at plan time.
 
 
 
@@ -1748,7 +1742,7 @@ Required:
 - `billing_account_id` (String) The ID of the billing account to associate with all GCP projects managed by meshStack
 - `customer_id` (String) A Google Customer ID. It typically starts with a 'C'.
 - `domain` (String) The domain used for cloud identity directory-groups created and managed by meshStack. meshStack maintains separate groups for each meshProject role on each managed GCP project.
-- `gcp_role_mappings` (Attributes List) Mapping of platform roles to GCP IAM roles. (see [below for nested schema](#nestedatt--spec--config--gcp--replication--gcp_role_mappings))
+- `gcp_role_mappings` (Attributes Set) Mapping of platform roles to GCP IAM roles. (see [below for nested schema](#nestedatt--spec--config--gcp--replication--gcp_role_mappings))
 - `group_name_pattern` (String) All the commonly available replicator string template properties are available. Additionally you can also use 'platformGroupAlias' as a placeholder to access the specific project role from the role mappings done in this platform configuration or in the meshLandingZone configuration.
 - `project_id_pattern` (String) All the commonly available replicator string template properties are available. The resulting string must not exceed a total length of 30 characters. Only alphanumeric + hyphen are allowed. We recommend that configuration include at least 3 characters of the random parameter to reduce the chance of naming collisions as the project Ids must be globally unique within GCP.
 - `project_name_pattern` (String) All the commonly available replicator string template properties are available. The result must be 4 to 30 characters. Allowed characters are: lowercase and uppercase letters, numbers, hyphen, single-quote, double-quote, space, and exclamation point. When length restrictions are applied, the abbreviation will be in the middle and marked by a single-quote.
@@ -1772,13 +1766,10 @@ Required:
 <a id="nestedatt--spec--config--gcp--replication--gcp_role_mappings--project_role_ref"></a>
 ### Nested Schema for `spec.config.gcp.replication.gcp_role_mappings.project_role_ref`
 
-Required:
-
-- `name` (String) Named identifier (`metadata.name`) of `meshProjectRole`.
-
 Optional:
 
 - `kind` (String) meshObject type, always `meshProjectRole`.
+- `name` (String) Named identifier (`metadata.name`) of `meshProjectRole`. Required; optional here only so a computed reference can be used inside a set, and enforced at plan time.
 
 
 

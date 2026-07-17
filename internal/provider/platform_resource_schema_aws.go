@@ -171,12 +171,12 @@ func awsReplicationConfigSchema() schema.Attribute {
 					"sso_access_token": secret.ResourceSchema(secret.ResourceSchemaOptions{
 						MarkdownDescription: "The AWS IAM Identity Center SCIM Access Token that was generated via the Automatic provisioning config in AWS IAM Identity Center.",
 					}),
-					"aws_role_mappings": schema.ListNestedAttribute{
+					"aws_role_mappings": schema.SetNestedAttribute{
 						MarkdownDescription: "AWS role mappings for AWS SSO",
 						Optional:            true,
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
-								"project_role_ref": meshRefByName(meshRefOptions{Kind: client.MeshObjectKind.ProjectRole, Description: "Reference to the meshProjectRole."}),
+								"project_role_ref": meshRefByName(meshRefOptions{Kind: client.MeshObjectKind.ProjectRole, Description: "Reference to the meshProjectRole.", InSet: true}),
 								"aws_role": schema.StringAttribute{
 									MarkdownDescription: "The AWS role name",
 									Required:            true,
@@ -214,12 +214,12 @@ func awsReplicationConfigSchema() schema.Attribute {
 						MarkdownDescription: "Configures the pattern that defines the desired name of AWS IAM Identity Center groups managed by meshStack. It supports the `platformGroupAlias` replacement. meshStack will additionally prefix the group name with `mst-` to identify groups it manages.",
 						Required:            true,
 					},
-					"aws_role_mappings": schema.ListNestedAttribute{
+					"aws_role_mappings": schema.SetNestedAttribute{
 						MarkdownDescription: "AWS role mappings for AWS IAM Identity Store",
 						Required:            true,
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
-								"project_role_ref": meshRefByName(meshRefOptions{Kind: client.MeshObjectKind.ProjectRole, Description: "Reference to the meshProjectRole."}),
+								"project_role_ref": meshRefByName(meshRefOptions{Kind: client.MeshObjectKind.ProjectRole, Description: "Reference to the meshProjectRole.", InSet: true}),
 								"aws_role": schema.StringAttribute{
 									MarkdownDescription: "AWS role alias used as suffix in the group name pattern.",
 									Required:            true,

@@ -637,7 +637,7 @@ func awsReplicationConfigDataSourceSchema() schema.Attribute {
 						Computed:            true,
 					},
 					"sso_access_token": secret.DatasourceSchema(secret.DatasourceSchemaOptions{MarkdownDescription: "The AWS IAM Identity Center SCIM Access Token that was generated via the Automatic provisioning config in AWS IAM Identity Center."}),
-					"aws_role_mappings": schema.ListNestedAttribute{
+					"aws_role_mappings": schema.SetNestedAttribute{
 						MarkdownDescription: "AWS role mappings for AWS SSO",
 						Computed:            true,
 						NestedObject: schema.NestedAttributeObject{
@@ -677,7 +677,7 @@ func awsReplicationConfigDataSourceSchema() schema.Attribute {
 						MarkdownDescription: "Configures the pattern that defines the desired name of AWS IAM Identity Center groups managed by meshStack. It supports the `platformGroupAlias` replacement. meshStack will additionally prefix the group name with `mst-` to identify groups it manages.",
 						Computed:            true,
 					},
-					"aws_role_mappings": schema.ListNestedAttribute{
+					"aws_role_mappings": schema.SetNestedAttribute{
 						MarkdownDescription: "AWS role mappings for AWS IAM Identity Store",
 						Computed:            true,
 						NestedObject: schema.NestedAttributeObject{
@@ -1085,7 +1085,7 @@ func gcpReplicationConfigDataSourceSchema() schema.Attribute {
 				MarkdownDescription: "The type of external ID used for user lookup.",
 				Computed:            true,
 			},
-			"gcp_role_mappings": schema.ListNestedAttribute{
+			"gcp_role_mappings": schema.SetNestedAttribute{
 				MarkdownDescription: "Mapping of platform roles to GCP IAM roles.",
 				Computed:            true,
 				NestedObject: schema.NestedAttributeObject{
