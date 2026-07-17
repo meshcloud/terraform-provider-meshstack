@@ -226,7 +226,7 @@ resource "meshstack_building_block_definition" "example_03_manual" {
 ```
 
 ```terraform
-# An example for manual implementation with required attributes only
+# An example for azure_devops_pipeline implementation with required attributes only
 resource "meshstack_building_block_definition" "example_04_azure_devops_pipeline" {
   metadata = {
     owned_by_workspace = data.meshstack_workspace.example.metadata.name
