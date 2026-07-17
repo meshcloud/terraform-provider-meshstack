@@ -1,7 +1,7 @@
 # v0.23.3
 
 FEATURES:
-- `meshstack_building_block_definition`: `version_spec.inputs` now support the `MESHSTACK_TENANT_ID` assignment type, which assigns the meshTenant's UUID as a string. Like `PLATFORM_TENANT_ID`, it takes no `argument`, `default_value`, or `sensitive` value.
+- `meshstack_building_block_definition`: `version_spec.inputs` now support the `MESHSTACK_TENANT_UUID` assignment type, which assigns the meshTenant's UUID as a string. Like `PLATFORM_TENANT_ID`, it takes no `argument`, `default_value`, or `sensitive` value.
 
 FIXES:
 - `meshstack_building_block_definition`: `display_order` on `version_spec.inputs` and `version_spec.outputs` again counts towards a version's computed `content_hash`. Changing only `display_order` on a draft does not really need to rerun the building block, but hashing it keeps the backend simpler and the provider follows the same rule. The `content_hash` version was raised from 2 to 3 to go with this change. A `content_hash` written by an older provider is now recomputed at the current version instead of being treated as changed, so upgrading no longer shows false plan diffs or reruns building blocks whose definition is already released.
