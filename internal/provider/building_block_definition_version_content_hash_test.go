@@ -1,8 +1,11 @@
 package provider
 
 import (
+	_ "embed"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -11,6 +14,82 @@ import (
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
 )
+
+var (
+	//go:embed testdata/bbd/version-spec.json
+	versionSpecJson []byte
+	//go:embed testdata/bbd/version-spec-irrelevant-change.json
+	versionSpecIrrelevantChangeJson []byte
+	//go:embed testdata/bbd/version-spec-with-reordered-inputs.json
+	versionSpecReorderedInputsJson []byte
+	//go:embed testdata/bbd/version-spec-with-displayOrder.json
+	versionSpecWithDisplayOrderJson []byte
+	//go:embed testdata/bbd/version-spec-relevant-change.json
+	versionSpecRelevantChangeJson []byte
+	//go:embed testdata/bbd/version-spec-with-plaintext-secret.json
+	versionSpecPlaintextSecretJson []byte
+	//go:embed testdata/bbd/version-spec-null-outputs.json
+	versionSpecNullOutputsChangeJson []byte
+	//go:embed testdata/bbd/version-spec-empty-outputs.json
+	versionSpecEmptyOutputsJson []byte
+)
+
+// Test_versionContentHash pins the raw digest (hashValue) each fixture produces under the *current* hashing
+// algorithm. It asserts the digest alone, not the versioned toBase64 encoding, so the two independent concerns
+// stay separate:
+//   - The digest is a property of the algorithm. It is allowed to change when the algorithm changes (e.g.
+//     folding display_order back into the hash). But any such change is a breaking change to already-stored
+//     hashes, so it MUST be paired with a currentHashVersion bump — otherwise a hash stored by an older
+//     provider compares same-version against the new digest and is reported as spuriously "changed", rerunning
+//     every already-released building block. A bump instead makes the old hash incomparable, so it is
+//     recomputed at the new version (Test_contentHash_compareToStored_acrossVersions).
+//   - The version prefix is pinned separately in Test_contentHash_currentVersion.
+//
+// So: change a digest below only alongside a deliberate hash-version bump, never on its own.
+func Test_versionContentHash(t *testing.T) {
+	const (
+		digestExample      = "7f843ccb4a53b679e245ac9281b3e2e957be674acc0f48ef1c7b8c2ba52f39a8"
+		digestRelevant     = "81e4e436f2e3730d0a5e0f2ec68570ec88cb7f82b93350d4e4d95de1208da57a"
+		digestNullOutputs  = "1a24f70de617e64fc258ceca4a4b7159ecebd9a95acd4ea40851e443c080038e"
+		digestDisplayOrder = "3a9fe010bfef3dfbc531742ab130bc2c559b86d9ba595d951dc5f2fb7bf6624c"
+	)
+	require.NotEqual(t, digestExample, digestRelevant)
+
+	tests := []struct {
+		name string
+		json []byte
+		want string
+	}{
+		{"example", versionSpecJson, digestExample},
+		{"reordered inputs hash the same as example", versionSpecReorderedInputsJson, digestExample},
+		{"irrelevant change hashes the same as example", versionSpecIrrelevantChangeJson, digestExample},
+		{"relevant change hashes differently", versionSpecRelevantChangeJson, digestRelevant},
+		{"null outputs", versionSpecNullOutputsChangeJson, digestNullOutputs},
+		{"empty outputs hash the same as null outputs", versionSpecEmptyOutputsJson, digestNullOutputs},
+		{"display_order affects the hash", versionSpecWithDisplayOrderJson, digestDisplayOrder},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, forTestCalculateContentHash(t, tt.json).hashValue)
+		})
+	}
+}
+
+// Test_contentHash_currentVersion is the single guard for the hash-version prefix. Bumping currentHashVersion
+// is a deliberate act (it makes every previously stored hash incomparable, forcing a recompute at the new
+// version instead of a spurious "changed" — see Test_contentHash_compareToStored_acrossVersions), so it must
+// be paired with an intentional edit here.
+func Test_contentHash_currentVersion(t *testing.T) {
+	require.Equal(t, 3, currentHashVersion)
+
+	h := forTestCalculateContentHash(t, versionSpecJson)
+	require.Equal(t, currentHashVersion, h.hashVersion)
+
+	decoded, err := base64.StdEncoding.DecodeString(h.toBase64())
+	require.NoError(t, err)
+	assert.True(t, strings.HasPrefix(string(decoded), fmt.Sprintf("v%d:", currentHashVersion)),
+		"toBase64 must carry the current version prefix, got %q", string(decoded))
+}
 
 func Test_contentHash_base64Roundtrip(t *testing.T) {
 	original := BuildingBlockDefinitionVersionContentHash{hashVersion: currentHashVersion, hashValue: "foobar"}
@@ -40,35 +119,55 @@ func Test_contentHash_loadFromBase64_malformed(t *testing.T) {
 	}
 }
 
-func Test_contentHash_compareToStored(t *testing.T) {
-	hash1 := BuildingBlockDefinitionVersionContentHash{hashVersion: 2, hashValue: "aaa"}
-	hash2 := BuildingBlockDefinitionVersionContentHash{hashVersion: 2, hashValue: "bbb"}
+// storedHash renders a (version, hashValue) into the string compareToStored later reads back. The only
+// difference between versions is whether the string is base64-encoded: v1 predates base64 and is persisted
+// raw, every later version goes through toBase64. Callers must understand the raw v1 form is exactly its
+// hashValue, which itself carries the "v1:" prefix — so pass the full "v1:..." string as value for v1
+// (a bare digest for later versions).
+func storedHash(version int, value string) string {
+	h := BuildingBlockDefinitionVersionContentHash{hashVersion: version, hashValue: value}
+	if version == 1 {
+		return h.hashValue
+	}
+	return h.toBase64()
+}
 
+// Test_contentHash_compareToStored_acrossVersions is the heart of the version-bump contract: two hashes are
+// only comparable when their versions match. A stored hash from an older provider (v1 or v2) is therefore
+// incomparable to a current v3 hash — the case that must NOT be reported as "changed", because that would
+// rerun every already-released building block after a provider upgrade (issue behind the v2->v3 bump).
+func Test_contentHash_compareToStored_acrossVersions(t *testing.T) {
 	tests := []struct {
-		name    string
-		current BuildingBlockDefinitionVersionContentHash
-		stored  string
-		want    hashComparison
+		name         string
+		currentVer   int
+		currentValue string
+		storedVer    int
+		storedValue  string
+		want         hashComparison
 	}{
-		{"same version, same value -> same", hash1, hash1.toBase64(), hashSame},
-		{"same version, different value -> different", hash1, hash2.toBase64(), hashDifferent},
-		{"stored v1 raw, current v2 -> incomparable", hash1, "v1:someOldHash", hashIncomparable},
-		{"stored unparsable -> incomparable", hash1, "not base64 !!!", hashIncomparable},
-		{"stored empty -> incomparable", hash1, "", hashIncomparable},
-		{"unparsable receiver -> incomparable", BuildingBlockDefinitionVersionContentHash{}, hash1.toBase64(), hashIncomparable},
+		{"same version, same value -> same", 3, "aaa", 3, "aaa", hashSame},
+		{"same version, different value -> different", 3, "aaa", 3, "bbb", hashDifferent},
+		{"legacy v1 self-consistent -> same", 1, "v1:h", 1, "v1:h", hashSame},
+		{"legacy v1 different value -> different", 1, "v1:h", 1, "v1:other", hashDifferent},
+		{"stored v1, current v2 -> incomparable", 2, "aaa", 1, "v1:h", hashIncomparable},
+		{"stored v1, current v3 -> incomparable", 3, "aaa", 1, "v1:h", hashIncomparable},
+		{"stored v2, current v3 -> incomparable", 3, "aaa", 2, "aaa", hashIncomparable},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.want, tt.current.compareToStored(tt.stored))
+			current := BuildingBlockDefinitionVersionContentHash{hashVersion: tt.currentVer, hashValue: tt.currentValue}
+			assert.Equal(t, tt.want, current.compareToStored(storedHash(tt.storedVer, tt.storedValue)))
 		})
 	}
 }
 
-func Test_contentHash_compareToStored_v1(t *testing.T) {
-	currentV1 := BuildingBlockDefinitionVersionContentHash{hashVersion: 1, hashValue: "v1:sameHash"}
+func Test_contentHash_compareToStored_unparsable(t *testing.T) {
+	current := BuildingBlockDefinitionVersionContentHash{hashVersion: currentHashVersion, hashValue: "aaa"}
 
-	assert.Equal(t, hashSame, currentV1.compareToStored("v1:sameHash"))
-	assert.Equal(t, hashDifferent, currentV1.compareToStored("v1:otherHash"))
+	assert.Equal(t, hashIncomparable, current.compareToStored("not base64 !!!"))
+	assert.Equal(t, hashIncomparable, current.compareToStored(""))
+	// A receiver that never loaded (zero version) cannot be compared to anything.
+	assert.Equal(t, hashIncomparable, BuildingBlockDefinitionVersionContentHash{}.compareToStored(current.toBase64()))
 }
 
 func Test_contentHash_changeDetectionEndToEnd(t *testing.T) {
