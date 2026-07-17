@@ -15,8 +15,14 @@ import (
 	"github.com/meshcloud/terraform-provider-meshstack/internal/util/hash"
 )
 
+// currentHashVersion tags every hash this provider computes. Bump it whenever the hashing algorithm changes
+// (any change that makes a given version_spec produce a different digest, e.g. folding display_order back in).
+// The bump is what keeps such a change safe: a hash stored by an older provider then compares as a *different
+// version* and is treated as incomparable — the caller recomputes the stored spec at the current version
+// instead of reporting a spurious "changed", which would rerun every already-released building block. Changing
+// the algorithm without bumping this is a silent breaking change.
 const (
-	currentHashVersion = 2
+	currentHashVersion = 3
 )
 
 // represents a content hash of a building block definition version, which is used to detect changes in the version_spec.
@@ -70,8 +76,6 @@ func calculateBuildingBlockDefinitionVersionContentHash(versionSpecDto client.Me
 			return "", err
 		}
 
-		// add some versioning prefix to migrate possible changes in the hashes later on,
-		// but let's hope migrating/fixing the hashes is never required
 		return versionSpecHash.Hex(), nil
 
 	}(); err != nil {
