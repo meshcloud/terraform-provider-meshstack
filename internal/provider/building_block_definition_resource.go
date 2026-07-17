@@ -163,14 +163,16 @@ func (r *buildingBlockDefinitionResource) ValidateConfig(ctx context.Context, re
 	}
 
 	// Manual building blocks derive their outputs from the inputs on the backend (one output per input,
-	// assignment type NONE). The backend only honors outputs the user marks with assignment type
-	// PLATFORM_TENANT_ID; everything else it regenerates. So configuring any non-PLATFORM_TENANT_ID output
-	// for a manual building block is rejected here - omit it and let it be computed (see issues #131, #176).
+	// assignment type NONE). The backend regenerates every derived output as NONE except those the user
+	// marks with a non-NONE assignment_type (PLATFORM_TENANT_ID, SIGN_IN_URL, RESOURCE_URL, SUMMARY), which
+	// it preserves on the matching output. So a manual output with assignment_type NONE (explicit or
+	// omitted) does nothing and is rejected here; any non-NONE assignment_type is accepted (see issues #131,
+	// #176).
 	if manual.IsNull() || manual.IsUnknown() || outputs.IsNull() || outputs.IsUnknown() {
 		return
 	}
 	for key, assignmentType := range outputAssignmentTypes(outputs) {
-		if assignmentType == client.MeshBuildingBlockDefinitionOutputAssignmentTypePlatformTenantID.String() {
+		if assignmentType != "" && assignmentType != client.MeshBuildingBlockDefinitionOutputAssignmentTypeNone.String() {
 			continue
 		}
 		// An omitted assignment_type defaults to NONE, which the backend ignores just like an explicit
@@ -181,11 +183,11 @@ func (r *buildingBlockDefinitionResource) ValidateConfig(ctx context.Context, re
 		}
 		resp.Diagnostics.AddAttributeError(
 			outputsPath.AtMapKey(key),
-			"manual building block outputs may only assign PLATFORM_TENANT_ID",
+			"manual building block outputs must have a special assignment_type (other than NONE)",
 			fmt.Sprintf("Manual building block definitions derive their outputs from the inputs automatically. "+
-				"Output %q has %s; remove it so it can be computed from the API response. "+
-				"Only outputs with assignment_type %s may be configured (to mark which output carries the tenant id).",
-				key, configured, client.MeshBuildingBlockDefinitionOutputAssignmentTypePlatformTenantID),
+				"Output %q has %s, which does nothing; either remove it so it is computed from the API response, "+
+				"or give it a dedicated assignment_type to mark how the matching output is used.",
+				key, configured),
 		)
 	}
 }
@@ -218,20 +220,17 @@ func outputAssignmentTypes(outputs types.Map) map[string]string {
 	return result
 }
 
-// platformTenantIdOutputKeysEqual reports whether the set of output keys assigned PLATFORM_TENANT_ID is
-// the same in both maps. Used to detect whether a manual building block's configured tenant-id output
-// changed, which (besides an inputs change) is the only way its reconciled outputs can change.
-func platformTenantIdOutputKeysEqual(a, b types.Map) bool {
-	tenantIdKeys := func(m types.Map) map[string]struct{} {
-		keys := map[string]struct{}{}
+func manualAllowedOutputAssignmentsEqual(a, b types.Map) bool {
+	allowed := func(m types.Map) map[string]string {
+		result := map[string]string{}
 		for key, assignmentType := range outputAssignmentTypes(m) {
-			if assignmentType == client.MeshBuildingBlockDefinitionOutputAssignmentTypePlatformTenantID.String() {
-				keys[key] = struct{}{}
+			if assignmentType != "" && assignmentType != client.MeshBuildingBlockDefinitionOutputAssignmentTypeNone.String() {
+				result[key] = assignmentType
 			}
 		}
-		return keys
+		return result
 	}
-	return maps.Equal(tenantIdKeys(a), tenantIdKeys(b))
+	return maps.Equal(allowed(a), allowed(b))
 }
 
 // versionSpecDtoFromPlan builds the version_spec client DTO from the plan, applying the manual-output
@@ -321,9 +320,9 @@ func (r *buildingBlockDefinitionResource) ModifyPlan(ctx context.Context, req re
 	}
 
 	// Manual building blocks have backend-derived outputs: the backend mirrors every input into an output
-	// (assignment type NONE), preserving only outputs the user marked PLATFORM_TENANT_ID (see issues #131
-	// and #176, and ValidateConfig). We cannot fully predict the reconciled outputs at plan time, so
-	// whenever the inputs or the configured PLATFORM_TENANT_ID outputs change we leave outputs - and the
+	// (assignment type NONE), preserving only outputs the user marked with a non-NONE assignment_type (see
+	// issues #131 and #176, and ValidateConfig). We cannot fully predict the reconciled outputs at plan
+	// time, so whenever the inputs or the configured non-NONE outputs change we leave outputs - and the
 	// content hash that includes them - unknown and let the apply reconcile them from the API response.
 	// Otherwise we reuse the reconciled value from state, which also avoids a perpetual diff between the
 	// (partial) configured outputs and the (full) stored outputs. Non-manual implementations configure
@@ -344,7 +343,7 @@ func (r *buildingBlockDefinitionResource) ModifyPlan(ctx context.Context, req re
 			return
 		}
 		versionSpecOutputsUncertain = !planInputs.Equal(stateInputs) ||
-			!platformTenantIdOutputKeysEqual(configOutputs, stateOutputs)
+			!manualAllowedOutputAssignmentsEqual(configOutputs, stateOutputs)
 		if versionSpecOutputsUncertain {
 			resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, outputsPath, types.MapUnknown(stateOutputs.ElementType(ctx)))...)
 		} else {

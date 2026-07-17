@@ -1224,18 +1224,30 @@ resource "meshstack_building_block_definition" "test" {
 		{
 			name:        "NONE output rejected for manual",
 			outputs:     `outputs = { tenant = { display_name = "Tenant", type = "STRING", assignment_type = "NONE" } }`,
-			expectError: regexp.MustCompile(`may only assign PLATFORM_TENANT_ID`),
+			expectError: regexp.MustCompile(`must have a special assignment_type`),
 		},
 		{
 			// Omitting assignment_type defaults it to NONE, which the backend ignores; it must be
 			// rejected the same as an explicit NONE rather than silently accepted.
 			name:        "omitted assignment_type rejected for manual",
 			outputs:     `outputs = { tenant = { display_name = "Tenant", type = "STRING" } }`,
-			expectError: regexp.MustCompile(`may only assign PLATFORM_TENANT_ID`),
+			expectError: regexp.MustCompile(`must have a special assignment_type`),
 		},
 		{
 			name:    "PLATFORM_TENANT_ID output allowed for manual",
 			outputs: `outputs = { tenant = { display_name = "Tenant", type = "STRING", assignment_type = "PLATFORM_TENANT_ID" } }`,
+		},
+		{
+			name:    "SIGN_IN_URL output allowed for manual",
+			outputs: `outputs = { tenant = { display_name = "Tenant", type = "STRING", assignment_type = "SIGN_IN_URL" } }`,
+		},
+		{
+			name:    "RESOURCE_URL output allowed for manual",
+			outputs: `outputs = { tenant = { display_name = "Tenant", type = "STRING", assignment_type = "RESOURCE_URL" } }`,
+		},
+		{
+			name:    "SUMMARY output allowed for manual",
+			outputs: `outputs = { tenant = { display_name = "Tenant", type = "STRING", assignment_type = "SUMMARY" } }`,
 		},
 	}
 

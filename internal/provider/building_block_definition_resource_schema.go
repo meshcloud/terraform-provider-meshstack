@@ -426,7 +426,11 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 						MarkdownDescription: "Map of output definitions for the building block. Keys are output names, values are output configuration objects. " +
 							"Outputs define values that building blocks produce and can be consumed by other building blocks. " +
 							"If implementation type is " + client.MeshBuildingBlockImplementationTypeManual.Markdown() +
-							", outputs are computed from the API response, so omit this attribute entirely unless you want to specify a static `assignment_type = \"PLATFORM_TENANT_ID\"` as part of a landing zone.",
+							", outputs are computed from the API response, so omit this attribute entirely unless you want to mark how a derived output is used by giving it a dedicated `assignment_type` (one of " +
+							client.MeshBuildingBlockDefinitionOutputAssignmentTypePlatformTenantID.Markdown() + ", " +
+							client.MeshBuildingBlockDefinitionOutputAssignmentTypeSignInURL.Markdown() + ", " +
+							client.MeshBuildingBlockDefinitionOutputAssignmentTypeResourceURL.Markdown() + ", " +
+							client.MeshBuildingBlockDefinitionOutputAssignmentTypeSummary.Markdown() + "); the output key must match an input key.",
 						Optional:     true,
 						Computed:     true,
 						NestedObject: outputs,
