@@ -8,7 +8,7 @@ type AwsPlatformProperties struct {
 }
 
 type AwsRoleMapping struct {
-	MeshProjectRoleRef MeshProjectRoleRefV2 `json:"projectRoleRef" tfsdk:"project_role_ref"`
-	PlatformRole       string               `json:"platformRole" tfsdk:"platform_role"`
-	Policies           []string             `json:"policies" tfsdk:"policies"`
+	MeshProjectRoleRef NamedRef `json:"projectRoleRef" tfsdk:"project_role_ref"`
+	PlatformRole       string   `json:"platformRole" tfsdk:"platform_role"`
+	Policies           []string `json:"policies" tfsdk:"policies"`
 }

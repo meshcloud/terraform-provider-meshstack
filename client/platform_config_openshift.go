@@ -24,6 +24,6 @@ type OpenShiftMeteringConfig struct {
 }
 
 type OpenShiftPlatformRoleMapping struct {
-	MeshProjectRoleRef MeshProjectRoleRefV2 `json:"projectRoleRef" tfsdk:"project_role_ref"`
-	OpenshiftRole      string               `json:"openshiftRole" tfsdk:"openshift_role"`
+	MeshProjectRoleRef NamedRef `json:"projectRoleRef" tfsdk:"project_role_ref"`
+	OpenshiftRole      string   `json:"openshiftRole" tfsdk:"openshift_role"`
 }

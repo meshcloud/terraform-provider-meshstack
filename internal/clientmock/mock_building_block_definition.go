@@ -47,7 +47,7 @@ func (m meshBuildingBlockDefinitionClient) Create(_ context.Context, definition 
 			OwnedByWorkspace: definition.Metadata.OwnedByWorkspace,
 		},
 		Spec: client.MeshBuildingBlockDefinitionVersionSpec{
-			BuildingBlockDefinitionRef: &client.BuildingBlockDefinitionRef{
+			BuildingBlockDefinitionRef: &client.UuidRef{
 				Uuid: definitionUuid,
 				Kind: "meshBuildingBlockDefinition",
 			},

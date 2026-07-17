@@ -100,8 +100,7 @@ func (m *MeshBuildingBlockInput) UnmarshalJSON(bytes []byte) error {
 }
 
 type MeshBuildingBlockV2DefinitionVersionRef struct {
-	Uuid string `json:"uuid" tfsdk:"uuid"`
-	Kind string `json:"kind" tfsdk:"kind"`
+	UuidRef
 	// ContentHash is a Terraform-only field (json:"-", never sent to or returned by the backend).
 	// It lets a config signal that the referenced version's content changed so a rerun is triggered
 	// even though the version uuid is unchanged. The building_block (v3) resource honors it via the

@@ -7,9 +7,9 @@ type AzureRgPlatformProperties struct {
 }
 
 type AzureRgRoleMapping struct {
-	MeshProjectRoleRef     MeshProjectRoleRefV2 `json:"projectRoleRef" tfsdk:"project_role_ref"`
-	AzureGroupSuffix       string               `json:"azureGroupSuffix" tfsdk:"azure_group_suffix"`
-	AzureRoleDefinitionIds []string             `json:"azureRoleDefinitionIds" tfsdk:"azure_role_definition_ids"`
+	MeshProjectRoleRef     NamedRef `json:"projectRoleRef" tfsdk:"project_role_ref"`
+	AzureGroupSuffix       string   `json:"azureGroupSuffix" tfsdk:"azure_group_suffix"`
+	AzureRoleDefinitionIds []string `json:"azureRoleDefinitionIds" tfsdk:"azure_role_definition_ids"`
 }
 
 type AzureFunction struct {

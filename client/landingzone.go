@@ -24,21 +24,16 @@ type MeshLandingZoneSpec struct {
 	AutomateDeletionApproval     bool                               `json:"automateDeletionApproval" tfsdk:"automate_deletion_approval"`
 	AutomateDeletionReplication  bool                               `json:"automateDeletionReplication" tfsdk:"automate_deletion_replication"`
 	InfoLink                     *string                            `json:"infoLink,omitempty" tfsdk:"info_link"`
-	PlatformRef                  MeshLandingZonePlatformRef         `json:"platformRef" tfsdk:"platform_ref"`
+	PlatformRef                  UuidRef                            `json:"platformRef" tfsdk:"platform_ref"`
 	PlatformProperties           *MeshLandingZonePlatformProperties `json:"platformProperties,omitempty" tfsdk:"platform_properties"`
 	Quotas                       []MeshLandingZoneQuota             `json:"quotas" tfsdk:"quotas"`
-	MandatoryBuildingBlockRefs   []MeshBuildingBlockDefinitionRef   `json:"mandatoryBuildingBlockRefs" tfsdk:"mandatory_building_block_refs"`
-	RecommendedBuildingBlockRefs []MeshBuildingBlockDefinitionRef   `json:"recommendedBuildingBlockRefs" tfsdk:"recommended_building_block_refs"`
+	MandatoryBuildingBlockRefs   []UuidRef                          `json:"mandatoryBuildingBlockRefs" tfsdk:"mandatory_building_block_refs"`
+	RecommendedBuildingBlockRefs []UuidRef                          `json:"recommendedBuildingBlockRefs" tfsdk:"recommended_building_block_refs"`
 }
 
 type MeshLandingZoneStatus struct {
 	Disabled   bool `json:"disabled" tfsdk:"disabled"`
 	Restricted bool `json:"restricted" tfsdk:"restricted"`
-}
-
-type MeshLandingZonePlatformRef struct {
-	Uuid string `json:"uuid" tfsdk:"uuid"`
-	Kind string `json:"kind" tfsdk:"kind"`
 }
 
 type MeshLandingZonePlatformProperties struct {

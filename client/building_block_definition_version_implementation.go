@@ -39,31 +39,31 @@ type MeshBuildingBlockDefinitionTerraformImplementation struct {
 }
 
 type MeshBuildingBlockDefinitionGitHubWorkflowsImplementation struct {
-	Repository         string             `json:"repository" tfsdk:"repository"`
-	Branch             string             `json:"branch" tfsdk:"branch"`
-	ApplyWorkflow      string             `json:"applyWorkflow" tfsdk:"apply_workflow"`
-	DestroyWorkflow    *string            `json:"destroyWorkflow" tfsdk:"destroy_workflow"`
-	Async              bool               `json:"async" tfsdk:"async"`
-	OmitRunObjectInput bool               `json:"omitRunObjectInput" tfsdk:"omit_run_object_input"`
-	IntegrationRef     MeshIntegrationRef `json:"integrationRef" tfsdk:"integration_ref"`
+	Repository         string  `json:"repository" tfsdk:"repository"`
+	Branch             string  `json:"branch" tfsdk:"branch"`
+	ApplyWorkflow      string  `json:"applyWorkflow" tfsdk:"apply_workflow"`
+	DestroyWorkflow    *string `json:"destroyWorkflow" tfsdk:"destroy_workflow"`
+	Async              bool    `json:"async" tfsdk:"async"`
+	OmitRunObjectInput bool    `json:"omitRunObjectInput" tfsdk:"omit_run_object_input"`
+	IntegrationRef     UuidRef `json:"integrationRef" tfsdk:"integration_ref"`
 }
 
 type MeshBuildingBlockDefinitionManualImplementation struct {
 }
 
 type MeshBuildingBlockDefinitionGitLabPipelineImplementation struct {
-	ProjectID            string             `json:"projectId" tfsdk:"project_id"`
-	RefName              string             `json:"refName" tfsdk:"ref_name"`
-	IntegrationRef       MeshIntegrationRef `json:"integrationRef" tfsdk:"integration_ref"`
-	PipelineTriggerToken types.Secret       `json:"pipelineTriggerToken" tfsdk:"pipeline_trigger_token"`
+	ProjectID            string       `json:"projectId" tfsdk:"project_id"`
+	RefName              string       `json:"refName" tfsdk:"ref_name"`
+	IntegrationRef       UuidRef      `json:"integrationRef" tfsdk:"integration_ref"`
+	PipelineTriggerToken types.Secret `json:"pipelineTriggerToken" tfsdk:"pipeline_trigger_token"`
 }
 
 type MeshBuildingBlockDefinitionAzureDevOpsPipelineImplementation struct {
-	Project        string             `json:"project" tfsdk:"project"`
-	PipelineID     string             `json:"pipelineId" tfsdk:"pipeline_id"`
-	RefName        *string            `json:"refName,omitempty" tfsdk:"ref_name"`
-	Async          bool               `json:"async" tfsdk:"async"`
-	IntegrationRef MeshIntegrationRef `json:"integrationRef" tfsdk:"integration_ref"`
+	Project        string  `json:"project" tfsdk:"project"`
+	PipelineID     string  `json:"pipelineId" tfsdk:"pipeline_id"`
+	RefName        *string `json:"refName,omitempty" tfsdk:"ref_name"`
+	Async          bool    `json:"async" tfsdk:"async"`
+	IntegrationRef UuidRef `json:"integrationRef" tfsdk:"integration_ref"`
 }
 
 type MeshBuildingBlockDefinitionImplementation struct {

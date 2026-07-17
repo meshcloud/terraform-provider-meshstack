@@ -27,11 +27,6 @@ var MeshBuildingBlockRunnerImplementationTypes = []string{
 	string(MeshBuildingBlockRunnerImplementationTypeAll),
 }
 
-type BuildingBlockRunnerRef struct {
-	Uuid string `json:"uuid" tfsdk:"uuid"`
-	Kind string `json:"kind" tfsdk:"kind"`
-}
-
 type MeshBuildingBlockRunner struct {
 	Metadata MeshBuildingBlockRunnerMetadata `json:"metadata" tfsdk:"metadata"`
 	Spec     MeshBuildingBlockRunnerSpec     `json:"spec" tfsdk:"spec"`

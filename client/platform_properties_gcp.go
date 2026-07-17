@@ -7,6 +7,6 @@ type GcpPlatformProperties struct {
 }
 
 type GcpRoleMapping struct {
-	MeshProjectRoleRef MeshProjectRoleRefV2 `json:"projectRoleRef" tfsdk:"project_role_ref"`
-	PlatformRoles      []string             `json:"platformRoles" tfsdk:"platform_roles"`
+	MeshProjectRoleRef NamedRef `json:"projectRoleRef" tfsdk:"project_role_ref"`
+	PlatformRoles      []string `json:"platformRoles" tfsdk:"platform_roles"`
 }

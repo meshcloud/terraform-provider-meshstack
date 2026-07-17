@@ -47,9 +47,9 @@ type integrationModel struct {
 }
 
 func (model integrationModel) ToClientDto() client.MeshIntegration {
-	setRunnerRefIfNil := func(runnerRef **client.BuildingBlockRunnerRef) {
+	setRunnerRefIfNil := func(runnerRef **client.UuidRef) {
 		if *runnerRef == nil {
-			*runnerRef = &client.BuildingBlockRunnerRef{
+			*runnerRef = &client.UuidRef{
 				Kind: client.MeshObjectKind.BuildingBlockRunner,
 				Uuid: SharedBuildingBlockRunnerUuid,
 			}

@@ -67,11 +67,6 @@ type MeshBuildingBlockCreateMetadata struct {
 	TenantIdentifier  string `json:"tenantIdentifier" tfsdk:"tenant_identifier"`
 }
 
-type MeshBuildingBlockDefinitionRef struct {
-	Kind string `json:"kind" tfsdk:"kind"`
-	Uuid string `json:"uuid" tfsdk:"uuid"`
-}
-
 type MeshBuildingBlockClient interface {
 	Read(ctx context.Context, uuid string) (*MeshBuildingBlock, error)
 	Create(ctx context.Context, bb *MeshBuildingBlockCreate) (*MeshBuildingBlock, error)

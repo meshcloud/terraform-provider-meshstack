@@ -65,12 +65,12 @@ type buildingBlockDefinitionVersionSpec struct {
 
 func (model buildingBlockDefinitionVersionSpec) ToClientDto(buildingBlockDefinitionUuid string) (dto client.MeshBuildingBlockDefinitionVersionSpec) {
 	dto = model.MeshBuildingBlockDefinitionVersionSpec
-	dto.BuildingBlockDefinitionRef = &client.BuildingBlockDefinitionRef{
+	dto.BuildingBlockDefinitionRef = &client.UuidRef{
 		Kind: client.MeshObjectKind.BuildingBlockDefinition,
 		Uuid: buildingBlockDefinitionUuid,
 	}
 	if dto.RunnerRef == nil {
-		dto.RunnerRef = &client.BuildingBlockRunnerRef{
+		dto.RunnerRef = &client.UuidRef{
 			Kind: client.MeshObjectKind.BuildingBlockRunner,
 			Uuid: SharedBuildingBlockRunnerUuid,
 		}

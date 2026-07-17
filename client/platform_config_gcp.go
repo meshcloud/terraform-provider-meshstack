@@ -35,8 +35,8 @@ type GcpServiceAccountWorkloadIdentityConfig struct {
 }
 
 type GcpPlatformRoleMapping struct {
-	MeshProjectRoleRef MeshProjectRoleRefV2 `json:"projectRoleRef" tfsdk:"project_role_ref"`
-	GcpRole            string               `json:"gcpRole" tfsdk:"gcp_role"`
+	MeshProjectRoleRef NamedRef `json:"projectRoleRef" tfsdk:"project_role_ref"`
+	GcpRole            string   `json:"gcpRole" tfsdk:"gcp_role"`
 }
 
 type GcpMeteringConfig struct {

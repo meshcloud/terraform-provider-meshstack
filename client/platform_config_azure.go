@@ -71,8 +71,8 @@ type AzureInviteB2BUserConfig struct {
 }
 
 type AzureRoleMapping struct {
-	MeshProjectRoleRef MeshProjectRoleRefV2 `json:"projectRoleRef" tfsdk:"project_role_ref"`
-	AzureRole          AzureRole            `json:"azureRole" tfsdk:"azure_role"`
+	MeshProjectRoleRef NamedRef  `json:"projectRoleRef" tfsdk:"project_role_ref"`
+	AzureRole          AzureRole `json:"azureRole" tfsdk:"azure_role"`
 }
 
 type AzureRole struct {

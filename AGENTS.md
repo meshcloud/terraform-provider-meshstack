@@ -69,6 +69,13 @@ Required Attribute". In every input variant `kind` is optional, defaulted, and O
 carrying extra fields (`target_ref`, `building_block_definition_version_ref`) stay bespoke. See the
 helper doc comments for the full rationale.
 
+On the client side these references deserialize into the two shared DTO structs in
+`client/refs.go` — `NamedRef` (`{name, kind}`) and `UuidRef` (`{uuid, kind}`), the counterparts of
+`meshRefByName` / `meshRefByUuid`. Use one of them for any `{name|uuid, kind}` field rather than
+declaring a new named type; a ref that adds fields (e.g. `MeshBuildingBlockV2DefinitionVersionRef`'s
+`content_hash`) **embeds** the matching struct by value — both `json` and `tfsdk` reflection promote
+the embedded fields. Only refs mixing name *and* uuid (`MeshBuildingBlockV2TargetRef`) stay bespoke.
+
 ## Testing
 
 ### Test modes — `ApplyAndTest`

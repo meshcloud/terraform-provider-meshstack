@@ -1413,7 +1413,7 @@ func Test_rerunNeeded(t *testing.T) {
 	spec := func(uuid string, contentHash *string, inputs map[string]*client.MeshBuildingBlockInput, parents ...client.MeshBuildingBlockParent) client.MeshBuildingBlockV2Spec {
 		return client.MeshBuildingBlockV2Spec{
 			BuildingBlockDefinitionVersionRef: client.MeshBuildingBlockV2DefinitionVersionRef{
-				Uuid:        uuid,
+				UuidRef:     client.UuidRef{Uuid: uuid},
 				ContentHash: contentHash,
 			},
 			Inputs:               inputs,

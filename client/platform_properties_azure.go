@@ -6,7 +6,7 @@ type AzurePlatformProperties struct {
 }
 
 type AzureRoleMappingProperty struct {
-	MeshProjectRoleRef   MeshProjectRoleRefV2  `json:"projectRoleRef" tfsdk:"project_role_ref"`
+	MeshProjectRoleRef   NamedRef              `json:"projectRoleRef" tfsdk:"project_role_ref"`
 	AzureGroupSuffix     string                `json:"azureGroupSuffix" tfsdk:"azure_group_suffix"`
 	AzureRoleDefinitions []AzureRoleDefinition `json:"azureRoleDefinitions" tfsdk:"azure_role_definitions"`
 }

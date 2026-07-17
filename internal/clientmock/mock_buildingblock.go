@@ -81,7 +81,7 @@ func (m meshBuildingBlockClient) Create(_ context.Context, bb *client.MeshBuildi
 			OwnedByWorkspace: ownedByWorkspace,
 		},
 		Spec: client.MeshBuildingBlockV2Spec{
-			BuildingBlockDefinitionVersionRef: client.MeshBuildingBlockV2DefinitionVersionRef{Uuid: versionUuid},
+			BuildingBlockDefinitionVersionRef: client.MeshBuildingBlockV2DefinitionVersionRef{UuidRef: client.UuidRef{Uuid: versionUuid}},
 			TargetRef: client.MeshBuildingBlockV2TargetRef{
 				Kind: client.MeshObjectKind.Tenant,
 				Uuid: &tenantUuid,

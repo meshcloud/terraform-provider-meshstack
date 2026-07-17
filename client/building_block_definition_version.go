@@ -79,18 +79,6 @@ var (
 	MeshBuildingBlockDefinitionOutputAssignmentTypeSummary          = MeshBuildingBlockDefinitionOutputAssignmentTypes.Entry("SUMMARY")
 )
 
-// Ref types
-
-type BuildingBlockDefinitionRef struct {
-	Uuid string `json:"uuid"`
-	Kind string `json:"kind"`
-}
-
-type MeshIntegrationRef struct {
-	Uuid string `json:"uuid" tfsdk:"uuid"`
-	Kind string `json:"kind" tfsdk:"kind"`
-}
-
 // Input and Output types
 
 type MeshBuildingBlockDefinitionInput struct {
@@ -167,14 +155,14 @@ type MeshBuildingBlockDefinitionVersionMetadata struct {
 
 type BuildingBlockDependencyRef string
 type MeshBuildingBlockDefinitionVersionSpec struct {
-	BuildingBlockDefinitionRef *BuildingBlockDefinitionRef                  `json:"buildingBlockDefinitionRef" tfsdk:"-"`
+	BuildingBlockDefinitionRef *UuidRef                                     `json:"buildingBlockDefinitionRef" tfsdk:"-"`
 	OnlyApplyOncePerTenant     bool                                         `json:"onlyApplyOncePerTenant" tfsdk:"only_apply_once_per_tenant"`
 	DeletionMode               BuildingBlockDeletionMode                    `json:"deletionMode" tfsdk:"deletion_mode"`
 	Permissions                types.Set[ApiPermission]                     `json:"permissions,omitempty" tfsdk:"permissions"`
 	Outputs                    map[string]MeshBuildingBlockDefinitionOutput `json:"outputs" tfsdk:"outputs"`
 	VersionNumber              *int64                                       `json:"versionNumber,omitempty" tfsdk:"version_number"`
 	State                      *MeshBuildingBlockDefinitionVersionState     `json:"state,omitempty" tfsdk:"state"`
-	RunnerRef                  *BuildingBlockRunnerRef                      `json:"runnerRef" tfsdk:"runner_ref"`
+	RunnerRef                  *UuidRef                                     `json:"runnerRef" tfsdk:"runner_ref"`
 	DependencyDefinitionUUIDs  types.Set[BuildingBlockDependencyRef]        `json:"dependencyDefinitionUuids,omitempty" tfsdk:"dependency_refs"`
 	Implementation             MeshBuildingBlockDefinitionImplementation    `json:"implementation" tfsdk:"implementation"`
 	Inputs                     map[string]*MeshBuildingBlockDefinitionInput `json:"inputs" tfsdk:"inputs"`

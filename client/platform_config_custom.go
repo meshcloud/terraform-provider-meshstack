@@ -1,13 +1,8 @@
 package client
 
 type CustomPlatformConfig struct {
-	PlatformTypeRef PlatformTypeRef       `json:"platformTypeRef" tfsdk:"platform_type_ref"`
+	PlatformTypeRef NamedRef              `json:"platformTypeRef" tfsdk:"platform_type_ref"`
 	Metering        *CustomMeteringConfig `json:"metering,omitempty" tfsdk:"metering"`
-}
-
-type PlatformTypeRef struct {
-	Name string `json:"name" tfsdk:"name"`
-	Kind string `json:"kind" tfsdk:"kind"`
 }
 
 type CustomMeteringConfig struct {

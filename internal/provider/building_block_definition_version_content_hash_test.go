@@ -248,7 +248,7 @@ func Test_versionContentHash_ignoresPerVersionFields(t *testing.T) {
 	require.NoError(t, json.Unmarshal(versionSpecJson, &base))
 	require.NoError(t, json.Unmarshal(versionSpecJson, &mutated))
 
-	mutated.BuildingBlockDefinitionRef = &client.BuildingBlockDefinitionRef{
+	mutated.BuildingBlockDefinitionRef = &client.UuidRef{
 		Kind: client.MeshObjectKind.BuildingBlockDefinition,
 		Uuid: "a-different-bbd-uuid",
 	}
