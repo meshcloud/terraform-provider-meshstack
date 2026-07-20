@@ -1,3 +1,8 @@
+# v0.24.1
+
+BREAKING CHANGES:
+- Release binaries are now published only for `linux` and `darwin` on `amd64` and `arm64`. Builds for `windows`, `freebsd`, `386` and 32-bit `arm` are no longer produced.
+
 # v0.24.0
 
 BREAKING CHANGES:

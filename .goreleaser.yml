@@ -16,19 +16,16 @@ builds:
     - -trimpath
   ldflags:
     - '-s -w -X main.version={{.Version}} -X main.commit={{.Commit}}'
+  # Build only the platforms our users actually run on. The registry publishes whatever
+  # archives a release contains (min one), so dropping the other targets just skips low-usage
+  # platforms and speeds up releases; amd64 + arm64 on linux/darwin covers every real consumer
+  # (Apple Silicon, Intel Macs, and amd64/arm64 CI runners).
   goos:
-    - freebsd
-    - windows
     - linux
     - darwin
   goarch:
     - amd64
-    - '386'
-    - arm
     - arm64
-  ignore:
-    - goos: darwin
-      goarch: '386'
   binary: '{{ .ProjectName }}_v{{ .Version }}'
 archives:
 - formats:
