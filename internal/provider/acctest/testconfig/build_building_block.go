@@ -41,7 +41,7 @@ func BBTenant(t *testing.T, terraformRepoUrl string) (config Config, buildingBlo
 	landingZoneConfig, landingZoneAddr := LandingZone(t, workspaceAddr, platformAddr, platformTypeAddr)
 
 	var tenantAddr Traversal
-	tenantConfig := Resource{Name: "tenant"}.Config(t).WithFirstBlock(
+	tenantConfig := Resource{Name: "tenant"}.Config(t).FirstBlockOnly().WithFirstBlock(
 		ExtractAddress(&tenantAddr),
 		Descend("metadata")(
 			Descend("owned_by_workspace")(SetAddr(projectAddr, "metadata", "owned_by_workspace")),

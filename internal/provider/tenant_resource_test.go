@@ -3,6 +3,7 @@ package provider
 import (
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-testing/compare"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
@@ -53,6 +54,88 @@ func TestAccTenant(t *testing.T) {
 						// Status
 						statecheck.ExpectKnownValue(tenantAddr.String(), tfjsonpath.New("status").AtMapKey("tenant_name"), xknownvalue.NotEmptyString()),
 						statecheck.ExpectKnownValue(tenantAddr.String(), tfjsonpath.New("status").AtMapKey("platform_type_identifier"), xknownvalue.NotEmptyString()),
+					},
+				},
+			},
+		})
+	})
+
+	// create_via_data_sources creates a tenant whose platform_ref and landing_zone_ref are resolved
+	// from data sources rather than the resources directly, exercising the singular
+	// (meshstack_platform / meshstack_landingzone) and plural (meshstack_platforms /
+	// meshstack_landingzones) data sources equally — all four are still fully supported. The tenant is
+	// fed from the plural platforms list (a one(...) select) and the singular landing zone; the
+	// CompareValuePairs checks then assert the other-cardinality data source resolves to the same
+	// object, so the plural element `ref` and the singular data-source `ref` are proven interchangeable
+	// ({kind, uuid} for the platform, {kind, name} for the landing zone). The fresh workspace holds
+	// exactly one platform and one landing zone, so the plural lists have a single element at index 0.
+	t.Run("create_via_data_sources", func(t *testing.T) {
+		workspaceConfig, workspaceAddr := testconfig.Workspace(t)
+		projectConfig, projectAddr := testconfig.Project(t, workspaceAddr)
+		platformConfig, platformAddr, platformTypeAddr := testconfig.CustomPlatform(t, workspaceAddr)
+		landingZoneConfig, landingZoneAddr := testconfig.LandingZone(t, workspaceAddr, platformAddr, platformTypeAddr)
+
+		var singularPlatformAddr, pluralPlatformsAddr, singularLandingZoneAddr, pluralLandingZonesAddr testconfig.Traversal
+
+		// Singular data sources read by uuid / name — the resource references make them depend on the
+		// platform / landing zone implicitly, so no explicit depends_on is needed.
+		singularPlatform := testconfig.DataSource{Name: "platform"}.Config(t).WithFirstBlock(
+			testconfig.ExtractAddress(&singularPlatformAddr),
+			testconfig.Descend("metadata", "uuid")(testconfig.SetAddr(platformAddr, "metadata", "uuid")),
+		)
+		singularLandingZone := testconfig.DataSource{Name: "landingzone"}.Config(t).WithFirstBlock(
+			testconfig.ExtractAddress(&singularLandingZoneAddr),
+			testconfig.Descend("metadata", "name")(testconfig.SetAddr(landingZoneAddr, "metadata", "name")),
+		)
+
+		// Plural data sources filter by workspace / platform, which does not depend on the object rows
+		// themselves, so they need an explicit depends_on to list after those rows exist.
+		pluralPlatforms := testconfig.DataSource{Name: "platforms"}.Config(t).WithFirstBlock(
+			testconfig.ExtractAddress(&pluralPlatformsAddr),
+			testconfig.Descend("owned_by_workspace")(testconfig.SetAddr(workspaceAddr, "metadata", "name")),
+			testconfig.Descend("depends_on")(testconfig.SetRawExpr("[%s]", platformAddr)),
+		)
+		pluralLandingZones := testconfig.DataSource{Name: "landingzones"}.Config(t).WithFirstBlock(
+			testconfig.ExtractAddress(&pluralLandingZonesAddr),
+			testconfig.Descend("platform_uuid")(testconfig.SetAddr(platformAddr, "metadata", "uuid")),
+			testconfig.Descend("depends_on")(testconfig.SetRawExpr("[%s]", landingZoneAddr)),
+		)
+
+		tenantConfig, tenantAddr := testconfig.Tenant(t, projectAddr, platformAddr, landingZoneAddr)
+		tenantConfig = tenantConfig.WithFirstBlock(
+			testconfig.Descend("spec", "platform_ref")(testconfig.SetRawExpr(
+				"one([for p in %s.platforms : p if p.metadata.uuid == %s]).ref",
+				pluralPlatformsAddr, platformAddr.Join("metadata", "uuid"))),
+			testconfig.Descend("spec", "landing_zone_ref")(testconfig.SetRawExpr(
+				"%s.ref", singularLandingZoneAddr)),
+		)
+
+		config := tenantConfig.Join(
+			singularPlatform, pluralPlatforms, singularLandingZone, pluralLandingZones,
+			workspaceConfig, projectConfig, platformConfig, landingZoneConfig,
+		)
+
+		ApplyAndTest(t, resource.TestCase{
+			Steps: []resource.TestStep{
+				{
+					Config: config.String(),
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(tenantAddr.String(), tfjsonpath.New("spec").AtMapKey("platform_ref").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
+						statecheck.ExpectKnownValue(tenantAddr.String(), tfjsonpath.New("spec").AtMapKey("platform_ref").AtMapKey("kind"), knownvalue.StringExact("meshPlatform")),
+						statecheck.ExpectKnownValue(tenantAddr.String(), tfjsonpath.New("spec").AtMapKey("landing_zone_ref").AtMapKey("name"), xknownvalue.NotEmptyString()),
+						statecheck.ExpectKnownValue(tenantAddr.String(), tfjsonpath.New("ref").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
+
+						// singular and plural data sources resolve to the same platform / landing zone.
+						statecheck.CompareValuePairs(
+							singularPlatformAddr.String(), tfjsonpath.New("ref").AtMapKey("uuid"),
+							pluralPlatformsAddr.String(), tfjsonpath.New("platforms").AtSliceIndex(0).AtMapKey("ref").AtMapKey("uuid"),
+							compare.ValuesSame(),
+						),
+						statecheck.CompareValuePairs(
+							singularLandingZoneAddr.String(), tfjsonpath.New("ref").AtMapKey("name"),
+							pluralLandingZonesAddr.String(), tfjsonpath.New("landing_zones").AtSliceIndex(0).AtMapKey("ref").AtMapKey("name"),
+							compare.ValuesSame(),
+						),
 					},
 				},
 			},

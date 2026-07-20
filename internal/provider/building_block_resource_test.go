@@ -351,7 +351,7 @@ func TestAccBuildingBlock(t *testing.T) {
 		landingZoneConfig, landingZoneAddr := testconfig.LandingZone(t, workspaceAddr, platformAddr, platformTypeAddr)
 
 		var tenantAddr testconfig.Traversal
-		tenantConfig := testconfig.Resource{Name: "tenant"}.Config(t).WithFirstBlock(
+		tenantConfig := testconfig.Resource{Name: "tenant"}.Config(t).FirstBlockOnly().WithFirstBlock(
 			testconfig.ExtractAddress(&tenantAddr),
 			testconfig.Descend("metadata")(
 				testconfig.Descend("owned_by_workspace")(testconfig.SetAddr(projectAddr, "metadata", "owned_by_workspace")),

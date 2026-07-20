@@ -19,17 +19,18 @@ type MeshPlatformMetadata struct {
 }
 
 type MeshPlatformSpec struct {
-	DisplayName            string                     `json:"displayName" tfsdk:"display_name"`
-	Description            string                     `json:"description" tfsdk:"description"`
-	Endpoint               string                     `json:"endpoint" tfsdk:"endpoint"`
-	SupportUrl             *string                    `json:"supportUrl,omitempty" tfsdk:"support_url"`
-	DocumentationUrl       *string                    `json:"documentationUrl,omitempty" tfsdk:"documentation_url"`
-	AccessInformation      *string                    `json:"accessInformation,omitempty" tfsdk:"access_information"`
-	LocationRef            NamedRef                   `json:"locationRef" tfsdk:"location_ref"`
-	ContributingWorkspaces types.Set[string]          `json:"contributingWorkspaces" tfsdk:"contributing_workspaces"`
-	Availability           PlatformAvailability       `json:"availability" tfsdk:"availability"`
-	Config                 PlatformConfig             `json:"config" tfsdk:"config"`
-	QuotaDefinitions       types.Set[QuotaDefinition] `json:"quotaDefinitions" tfsdk:"quota_definitions"`
+	DisplayName            string               `json:"displayName" tfsdk:"display_name"`
+	Description            string               `json:"description" tfsdk:"description"`
+	Endpoint               string               `json:"endpoint" tfsdk:"endpoint"`
+	SupportUrl             *string              `json:"supportUrl,omitempty" tfsdk:"support_url"`
+	DocumentationUrl       *string              `json:"documentationUrl,omitempty" tfsdk:"documentation_url"`
+	AccessInformation      *string              `json:"accessInformation,omitempty" tfsdk:"access_information"`
+	LocationRef            NamedRef             `json:"locationRef" tfsdk:"location_ref"`
+	ContributingWorkspaces types.Set[string]    `json:"contributingWorkspaces" tfsdk:"contributing_workspaces"`
+	Availability           PlatformAvailability `json:"availability" tfsdk:"availability"`
+	// Config is nullable in responses: redacted (omitted) for marketplace-consumer callers. Required on write.
+	Config           *PlatformConfig            `json:"config,omitempty" tfsdk:"config"`
+	QuotaDefinitions types.Set[QuotaDefinition] `json:"quotaDefinitions" tfsdk:"quota_definitions"`
 }
 
 type QuotaDefinition struct {
