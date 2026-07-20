@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -18,7 +17,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
-	clientTypes "github.com/meshcloud/terraform-provider-meshstack/client/types"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/types/generic"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/util/poll"
 )
@@ -27,7 +25,6 @@ var (
 	_ resource.Resource                 = &tenantResource{}
 	_ resource.ResourceWithConfigure    = &tenantResource{}
 	_ resource.ResourceWithImportState  = &tenantResource{}
-	_ resource.ResourceWithMoveState    = &tenantResource{}
 	_ resource.ResourceWithUpgradeState = &tenantResource{}
 )
 
@@ -36,8 +33,7 @@ func NewTenantResource() resource.Resource {
 }
 
 // tenantResource is the unsuffixed, stable meshTenant resource. It runs on the ref-based meshTenant
-// (v4) body, migrating existing v3 state via an UpgradeState and accepting a `moved` block from the
-// deprecated meshstack_tenant_v4.
+// (v4) body, migrating existing v3 state via an UpgradeState.
 type tenantResource struct {
 	meshTenantClient client.MeshTenantClient
 }
@@ -55,7 +51,7 @@ func (r *tenantResource) Configure(_ context.Context, req resource.ConfigureRequ
 func (r *tenantResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Version:             1,
-		MarkdownDescription: "Manages a `meshTenant`." + previewDisclaimer(),
+		MarkdownDescription: "Manages a `meshTenant`.",
 		Attributes:          tenantBodyAttributes(),
 	}
 }
@@ -202,72 +198,6 @@ func (r *tenantResource) ImportState(ctx context.Context, req resource.ImportSta
 	}
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("wait_for_completion"), types.BoolValue(true))...)
-}
-
-// tenantMoveStateSchemaOnce lazily builds the source (meshstack_tenant_v4) schema for MoveState.
-var tenantMoveStateSchemaOnce = sync.OnceValue(func() schema.Schema {
-	v4, ok := NewTenantV4Resource().(*tenantV4Resource)
-	if !ok {
-		panic("unexpected type for TenantV4Resource")
-	}
-	var schemaResp resource.SchemaResponse
-	v4.Schema(context.Background(), resource.SchemaRequest{}, &schemaResp)
-	return schemaResp.Schema
-})
-
-func (r *tenantResource) MoveState(_ context.Context) []resource.StateMover {
-	v4Schema := tenantMoveStateSchemaOnce()
-	return []resource.StateMover{
-		{
-			SourceSchema: &v4Schema,
-			StateMover:   r.moveFromV4,
-		},
-	}
-}
-
-// moveFromV4 accepts a `moved` block from the deprecated meshstack_tenant_v4. That resource is
-// identifier-based (spec.platform_identifier) while meshstack_tenant is ref-based (spec.platform_ref
-// by uuid), so the source state cannot be copied across verbatim. MoveResourceState does not run
-// Configure, so the mover has no API client to translate the identifier into a ref. We therefore
-// carry over only what the two schemas share unambiguously — the tenant uuid and its owning
-// workspace/project — plus the client-side wait_for_completion toggle, and leave the ref/status/spec
-// outputs null. The refresh Read that follows the move re-reads the tenant by uuid and fills those in.
-// Both resources address the same meshTenant object, so no tenant is recreated.
-func (r *tenantResource) moveFromV4(ctx context.Context, req resource.MoveStateRequest, resp *resource.MoveStateResponse) {
-	if req.SourceTypeName != "meshstack_tenant_v4" {
-		return
-	}
-
-	var src tenantV4ResourceModel
-	resp.Diagnostics.Append(req.SourceState.Get(ctx, &src)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	// spec.quotas is optional (not computed); carry the source's value so a configured value survives
-	// the move without churn.
-	var quotas clientTypes.Set[client.MeshTenantQuota]
-	if !src.Spec.Quotas.IsNull() && !src.Spec.Quotas.IsUnknown() {
-		resp.Diagnostics.Append(src.Spec.Quotas.ElementsAs(ctx, &quotas, false)...)
-	}
-
-	// Carry only the tenant uuid, its owning workspace/project, the configured spec.quotas and the
-	// client-side wait_for_completion toggle; the ref/platform_ref/landing_zone_ref/status outputs are
-	// left at their zero value and get overwritten by the refresh Read that follows the move (it
-	// re-reads the tenant by uuid).
-	target := tenantResourceModelFromDto(
-		&client.MeshTenant{
-			Metadata: client.MeshTenantMetadata{
-				Uuid:             src.Metadata.Uuid.ValueString(),
-				OwnedByWorkspace: src.Metadata.OwnedByWorkspace.ValueString(),
-				OwnedByProject:   src.Metadata.OwnedByProject.ValueString(),
-			},
-			Spec: client.MeshTenantSpec{PlatformTenantId: src.Spec.PlatformTenantId.ValueStringPointer()},
-		},
-		quotas,
-		true,
-	)
-	resp.Diagnostics.Append(generic.Set(ctx, &resp.TargetState, target, tenantConverterOptions()...)...)
 }
 
 func (r *tenantResource) UpgradeState(_ context.Context) map[int64]resource.StateUpgrader {
