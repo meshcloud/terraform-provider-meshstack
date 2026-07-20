@@ -1236,9 +1236,6 @@ resource "meshstack_building_block_definition" "test" {
 			expectError: regexp.MustCompile(`must have a special assignment_type`),
 		},
 		{
-			// Regression test for issue #240: an explicit empty map is not the same as omitting outputs.
-			// The backend derives one output per input, so `outputs = {}` fails at apply with "provider
-			// produced inconsistent result after apply". Reject it at validate time and tell users to omit it.
 			name:        "empty outputs map rejected for manual",
 			outputs:     `outputs = {}`,
 			expectError: regexp.MustCompile(`must be omitted, not an empty map`),
