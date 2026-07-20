@@ -4,14 +4,11 @@ page_title: "meshstack_tenants Data Source - terraform-provider-meshstack"
 subcategory: ""
 description: |-
   Query tenants in a workspace with optional filters.
-  ~> Preview: This resource is in preview. Breaking changes are possible without prior notice due to changes in the underlying meshStack preview API https://docs.meshcloud.io/api/technical-specifications#preview-endpoints or due to changes in this provider. Please ensure you are running the latest version of the provider and report any bugs via GitHub issues https://github.com/meshcloud/terraform-provider-meshstack/issues or via support@meshcloud.io.
 ---
 
 # meshstack_tenants (Data Source)
 
 Query tenants in a workspace with optional filters.
-
-~> **Preview:** This resource is in preview. Breaking changes are possible without prior notice due to changes in the underlying [meshStack preview API](https://docs.meshcloud.io/api/technical-specifications#preview-endpoints) or due to changes in this provider. Please ensure you are running the latest version of the provider and report any bugs via [GitHub issues](https://github.com/meshcloud/terraform-provider-meshstack/issues) or via support@meshcloud.io.
 
 ## Example Usage
 

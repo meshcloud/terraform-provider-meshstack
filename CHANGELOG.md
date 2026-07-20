@@ -2,6 +2,7 @@
 
 BREAKING CHANGES:
 - Release binaries are now published only for `linux` and `darwin` on `amd64` and `arm64`. Builds for `windows`, `freebsd`, `386` and 32-bit `arm` are no longer produced.
+- `meshstack_tenant` and `meshstack_tenants` now use the meshTenant v4 GA media type instead of the v4 preview media type. They require a meshStack backend that has promoted meshTenant v4 to GA; older backends that only serve the `-preview` media type return HTTP 415 (Unsupported Media Type).
 
 # v0.24.0
 
