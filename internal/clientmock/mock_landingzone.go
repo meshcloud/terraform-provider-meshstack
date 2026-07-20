@@ -16,6 +16,32 @@ func (m MeshLandingZoneClient) Read(_ context.Context, name string) (*client.Mes
 	return v, nil
 }
 
+// List applies only the plain attribute filters from the query; it does not simulate marketplace
+// visibility or permissions. The mock stores the landing zone's platform as a uuid ref, so
+// platform_uuid filters against that ref uuid.
+func (m MeshLandingZoneClient) List(_ context.Context, query client.MeshLandingZoneListQuery) ([]client.MeshLandingZone, error) {
+	var result []client.MeshLandingZone
+	for _, landingZone := range m.Store.Values() {
+		if query.PlatformUuid != nil && landingZone.Spec.PlatformRef.Uuid != *query.PlatformUuid {
+			continue
+		}
+		if query.Identifier != nil && landingZone.Metadata.Name != *query.Identifier {
+			continue
+		}
+		if query.DisplayName != nil && landingZone.Spec.DisplayName != *query.DisplayName {
+			continue
+		}
+		if query.Restricted != nil && landingZone.Status.Restricted != *query.Restricted {
+			continue
+		}
+		if query.OwnedByWorkspace != nil && landingZone.Metadata.OwnedByWorkspace != *query.OwnedByWorkspace {
+			continue
+		}
+		result = append(result, *landingZone)
+	}
+	return result, nil
+}
+
 func (m MeshLandingZoneClient) Create(_ context.Context, landingZone *client.MeshLandingZoneCreate) (*client.MeshLandingZone, error) {
 	created := &client.MeshLandingZone{
 		Metadata: landingZone.Metadata,
