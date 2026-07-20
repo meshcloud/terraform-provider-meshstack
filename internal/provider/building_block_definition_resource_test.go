@@ -1216,27 +1216,36 @@ resource "meshstack_building_block_definition" "test" {
 }`, outputs)
 	}
 
-	tests := []struct {
+	type testCase struct {
 		name        string
 		outputs     string
 		expectError *regexp.Regexp
-	}{
+	}
+	tests := []testCase{
 		{
 			name:        "NONE output rejected for manual",
 			outputs:     `outputs = { tenant = { display_name = "Tenant", type = "STRING", assignment_type = "NONE" } }`,
-			expectError: regexp.MustCompile(`may only assign PLATFORM_TENANT_ID`),
+			expectError: regexp.MustCompile(`must have a special assignment_type`),
 		},
 		{
 			// Omitting assignment_type defaults it to NONE, which the backend ignores; it must be
 			// rejected the same as an explicit NONE rather than silently accepted.
 			name:        "omitted assignment_type rejected for manual",
 			outputs:     `outputs = { tenant = { display_name = "Tenant", type = "STRING" } }`,
-			expectError: regexp.MustCompile(`may only assign PLATFORM_TENANT_ID`),
+			expectError: regexp.MustCompile(`must have a special assignment_type`),
 		},
-		{
-			name:    "PLATFORM_TENANT_ID output allowed for manual",
-			outputs: `outputs = { tenant = { display_name = "Tenant", type = "STRING", assignment_type = "PLATFORM_TENANT_ID" } }`,
-		},
+	}
+
+	// Every non-NONE assignment type is accepted on a manual output; loop the enum so a new entry is
+	// covered without editing this test.
+	for _, assignmentType := range nonNoneOutputAssignmentTypes {
+		tests = append(tests, testCase{
+			name: fmt.Sprintf("%s output allowed for manual", assignmentType),
+			outputs: fmt.Sprintf(
+				`outputs = { tenant = { display_name = "Tenant", type = "STRING", assignment_type = %q } }`,
+				assignmentType,
+			),
+		})
 	}
 
 	for _, tt := range tests {

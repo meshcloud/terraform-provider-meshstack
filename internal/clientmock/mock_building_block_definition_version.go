@@ -66,16 +66,17 @@ func (m meshBuildingBlockDefinitionVersionClient) Update(_ context.Context, uuid
 // applyManualOutputBehavior mirrors the real backend's ManualBuildingBlockCreationModule: for manual
 // building blocks the outputs are derived from the inputs (one output per input, assignment type NONE,
 // with SINGLE_SELECT/MULTI_SELECT/LIST input types translated to output-compatible types). Any output the
-// caller marked PLATFORM_TENANT_ID keeps that assignment for the matching input; all other supplied
-// outputs are ignored, matching the backend.
+// caller marked with a non-NONE assignment_type (PLATFORM_TENANT_ID, SIGN_IN_URL, RESOURCE_URL, SUMMARY)
+// keeps that assignment on the matching input's derived output; all other supplied outputs are ignored,
+// matching the backend.
 func applyManualOutputBehavior(versionSpec *client.MeshBuildingBlockDefinitionVersionSpec) {
 	if versionSpec.Implementation.Manual == nil {
 		return
 	}
-	platformTenantIdKeys := map[string]bool{}
+	specialOutputAssignmentTypes := map[string]client.MeshBuildingBlockDefinitionOutputAssignmentType{}
 	for key, output := range versionSpec.Outputs {
-		if output.AssignmentType == client.MeshBuildingBlockDefinitionOutputAssignmentTypePlatformTenantID.Unwrap() {
-			platformTenantIdKeys[key] = true
+		if output.AssignmentType != client.MeshBuildingBlockDefinitionOutputAssignmentTypeNone.Unwrap() {
+			specialOutputAssignmentTypes[key] = output.AssignmentType
 		}
 	}
 	// Mirror the backend (ManualDefinitionVersionService.mapInputsToOutputUpdateModels): derived outputs
@@ -96,8 +97,8 @@ func applyManualOutputBehavior(versionSpec *client.MeshBuildingBlockDefinitionVe
 	for index, key := range keys {
 		input := versionSpec.Inputs[key]
 		assignmentType := client.MeshBuildingBlockDefinitionOutputAssignmentTypeNone.Unwrap()
-		if platformTenantIdKeys[key] {
-			assignmentType = client.MeshBuildingBlockDefinitionOutputAssignmentTypePlatformTenantID.Unwrap()
+		if definedSpecialType, ok := specialOutputAssignmentTypes[key]; ok {
+			assignmentType = definedSpecialType
 		}
 		outputs[key] = client.MeshBuildingBlockDefinitionOutput{
 			DisplayName:    input.DisplayName,
