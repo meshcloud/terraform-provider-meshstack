@@ -24,6 +24,13 @@ var (
 	_ resource.ResourceWithValidateConfig = &buildingBlockDefinitionResource{}
 )
 
+// nonNoneOutputAssignmentTypes is every output assignment type except NONE — the "special" types that mark
+// how a manual building block's derived output is used. Derived from the full enum so a new entry flows in
+// automatically; the schema description, ValidateConfig, and the tests all read this single source.
+var nonNoneOutputAssignmentTypes = client.MeshBuildingBlockDefinitionOutputAssignmentTypes.Except(
+	client.MeshBuildingBlockDefinitionOutputAssignmentTypeNone,
+)
+
 func NewBuildingBlockDefinitionResource() resource.Resource {
 	return &buildingBlockDefinitionResource{}
 }
@@ -164,10 +171,9 @@ func (r *buildingBlockDefinitionResource) ValidateConfig(ctx context.Context, re
 
 	// Manual building blocks derive their outputs from the inputs on the backend (one output per input,
 	// assignment type NONE). The backend regenerates every derived output as NONE except those the user
-	// marks with a non-NONE assignment_type (PLATFORM_TENANT_ID, SIGN_IN_URL, RESOURCE_URL, SUMMARY), which
-	// it preserves on the matching output. So a manual output with assignment_type NONE (explicit or
-	// omitted) does nothing and is rejected here; any non-NONE assignment_type is accepted (see issues #131,
-	// #176).
+	// marks with a non-NONE assignment_type (see nonNoneOutputAssignmentTypes), which it preserves on the
+	// matching output. So a manual output with assignment_type NONE (explicit or omitted) does nothing and
+	// is rejected here; any non-NONE assignment_type is accepted (see issues #131, #176).
 	if manual.IsNull() || manual.IsUnknown() || outputs.IsNull() || outputs.IsUnknown() {
 		return
 	}

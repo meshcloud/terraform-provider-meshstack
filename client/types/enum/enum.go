@@ -2,6 +2,7 @@ package enum
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -26,6 +27,14 @@ func (e Enum[T]) to(mapper func(entry Entry[T]) string) (result []string) {
 
 func (e Enum[T]) Strings() []string {
 	return e.to(Entry[T].String)
+}
+
+// Except returns the enum minus the given entries, preserving order. Deriving a subset this way keeps a
+// single source of truth: adding an entry to the base enum flows into the subset automatically.
+func (e Enum[T]) Except(excluded ...Entry[T]) Enum[T] {
+	return slices.DeleteFunc(slices.Clone(e), func(ee Entry[T]) bool {
+		return slices.Contains(excluded, ee)
+	})
 }
 
 func (e Enum[T]) Markdown() string {

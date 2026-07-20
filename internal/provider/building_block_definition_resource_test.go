@@ -1216,11 +1216,12 @@ resource "meshstack_building_block_definition" "test" {
 }`, outputs)
 	}
 
-	tests := []struct {
+	type testCase struct {
 		name        string
 		outputs     string
 		expectError *regexp.Regexp
-	}{
+	}
+	tests := []testCase{
 		{
 			name:        "NONE output rejected for manual",
 			outputs:     `outputs = { tenant = { display_name = "Tenant", type = "STRING", assignment_type = "NONE" } }`,
@@ -1233,22 +1234,18 @@ resource "meshstack_building_block_definition" "test" {
 			outputs:     `outputs = { tenant = { display_name = "Tenant", type = "STRING" } }`,
 			expectError: regexp.MustCompile(`must have a special assignment_type`),
 		},
-		{
-			name:    "PLATFORM_TENANT_ID output allowed for manual",
-			outputs: `outputs = { tenant = { display_name = "Tenant", type = "STRING", assignment_type = "PLATFORM_TENANT_ID" } }`,
-		},
-		{
-			name:    "SIGN_IN_URL output allowed for manual",
-			outputs: `outputs = { tenant = { display_name = "Tenant", type = "STRING", assignment_type = "SIGN_IN_URL" } }`,
-		},
-		{
-			name:    "RESOURCE_URL output allowed for manual",
-			outputs: `outputs = { tenant = { display_name = "Tenant", type = "STRING", assignment_type = "RESOURCE_URL" } }`,
-		},
-		{
-			name:    "SUMMARY output allowed for manual",
-			outputs: `outputs = { tenant = { display_name = "Tenant", type = "STRING", assignment_type = "SUMMARY" } }`,
-		},
+	}
+
+	// Every non-NONE assignment type is accepted on a manual output; loop the enum so a new entry is
+	// covered without editing this test.
+	for _, assignmentType := range nonNoneOutputAssignmentTypes {
+		tests = append(tests, testCase{
+			name: fmt.Sprintf("%s output allowed for manual", assignmentType),
+			outputs: fmt.Sprintf(
+				`outputs = { tenant = { display_name = "Tenant", type = "STRING", assignment_type = %q } }`,
+				assignmentType,
+			),
+		})
 	}
 
 	for _, tt := range tests {
