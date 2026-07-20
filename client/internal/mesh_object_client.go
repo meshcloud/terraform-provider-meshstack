@@ -45,7 +45,7 @@ func NewMeshObjectClient[M any](ctx context.Context, httpClient HttpClient, apiV
 var versionSuffixRe = regexp.MustCompile(`V\d+$`)
 
 // InferKind infers the meshObject kind from a struct type name using the same convention
-// as the meshObject API: MeshWorkspace → "meshWorkspace", MeshTenantV4 → "meshTenant".
+// as the meshObject API: MeshWorkspace → "meshWorkspace", MeshBuildingBlockV2 → "meshBuildingBlock".
 // Version suffixes (V\d+) are stripped.
 // Tested when client.Kind is statically initialized.
 func InferKind[M any]() string {

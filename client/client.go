@@ -37,7 +37,6 @@ type Client struct {
 	ServiceInstance                MeshServiceInstanceClient
 	TagDefinition                  MeshTagDefinitionClient
 	Tenant                         MeshTenantClient
-	TenantV4                       MeshTenantV4Client
 	Workspace                      MeshWorkspaceClient
 	WorkspaceGroupBinding          MeshWorkspaceGroupBindingClient
 	WorkspaceUserBinding           MeshWorkspaceUserBindingClient
@@ -93,7 +92,6 @@ func New(ctx context.Context, rootUrl *url.URL, userAgent string, auth Authoriza
 		ServiceInstance:                newServiceInstanceClient(ctx, httpClient),
 		TagDefinition:                  newTagDefinitionClient(ctx, httpClient),
 		Tenant:                         newTenantClient(ctx, httpClient),
-		TenantV4:                       newTenantV4Client(ctx, httpClient),
 		Workspace:                      newWorkspaceClient(ctx, httpClient),
 		WorkspaceGroupBinding:          newWorkspaceGroupBindingClient(ctx, httpClient),
 		WorkspaceUserBinding:           newWorkspaceUserBindingClient(ctx, httpClient),

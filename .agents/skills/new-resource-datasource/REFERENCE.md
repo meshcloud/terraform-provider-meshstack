@@ -23,7 +23,7 @@ Builder rules:
 - Declare all `Traversal` vars upfront with `var` before `WithFirstBlock` calls that populate them.
 - Return inline (`return expr.Join(...), addr`); consolidate all modifiers into a single `WithFirstBlock`.
 - Use explicit version suffixes in file names when multiple versions exist
-  (`build_building_block_v1.go`, `build_tenant_v4.go`); omit when only one version exists.
+  (`build_building_block_v1.go`, `build_building_block_v2.go`); omit when only one version exists.
 
 Modifier preference order: `SetString`/`SetValue` (literals) → `SetAddr(addr, "metadata", "name")`
 (resource references) → `SetRawExpr(format, args...)` (complex HCL, last resort). For
@@ -127,9 +127,8 @@ testconfig.SimpleLandingZone(t, workspaceAddr, platformAddr)               → (
 testconfig.PaymentMethod(t, workspaceAddr)                                 → (config, paymentMethodAddr)
 testconfig.PaymentMethodAndWorkspace(t)                                    → (config, paymentMethodAddr, workspaceAddr)
 testconfig.Integration(t, suffix)                                          → (config, integrationAddr)
-testconfig.TenantV4(t, projectAddr, platformAddr, landingZoneAddr)         → (config, tenantAddr)
-testconfig.TenantV4AndWorkspace(t)                                         → (config, tenantAddr)
-testconfig.TenantV3(t, projectAddr, platformAddr, landingZoneAddr)         → (config, tenantAddr)
+testconfig.Tenant(t, projectAddr, platformAddr, landingZoneAddr)           → (config, tenantAddr)
+testconfig.TenantAndWorkspace(t)                                           → (config, tenantAddr)
 testconfig.TagDefinition(t, targetKind)                                    → (config, tagDefinitionAddr, tagKey)
 testconfig.Location(t, workspaceAddr)                                      → (config, locationAddr, locationName)
 testconfig.BBDTerraform(t)                                                 → (config, buildingBlockDefinitionAddr)

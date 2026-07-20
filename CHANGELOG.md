@@ -3,6 +3,7 @@
 BREAKING CHANGES:
 - Release binaries are now published only for `linux` and `darwin` on `amd64` and `arm64`. Builds for `windows`, `freebsd`, `386` and 32-bit `arm` are no longer produced.
 - `meshstack_tenant` and `meshstack_tenants` now use the meshTenant v4 GA media type instead of the v4 preview media type. They require a meshStack backend that has promoted meshTenant v4 to GA; older backends that only serve the `-preview` media type return HTTP 415 (Unsupported Media Type).
+- The deprecated `meshstack_tenant_v4` resource and data source have been removed. Migrate to `meshstack_tenant` / `meshstack_tenants`. Because v0.24.1 no longer knows the `meshstack_tenant_v4` type, add a `moved` block on v0.24.0 (which still ships both the `moved` support and the deprecated type) and apply it before upgrading to v0.24.1.
 
 # v0.24.0
 

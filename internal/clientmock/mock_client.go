@@ -33,7 +33,6 @@ type Client struct {
 	ServiceInstance                MeshServiceInstanceClient
 	TagDefinition                  MeshTagDefinitionClient
 	Tenant                         MeshTenantClient
-	TenantV4                       MeshTenantV4Client
 	Workspace                      MeshWorkspaceClient
 	WorkspaceGroupBinding          MeshWorkspaceGroupBindingClient
 	WorkspaceUserBinding           MeshWorkspaceUserBindingClient
@@ -60,7 +59,6 @@ func (c *Client) AsClient() client.Client {
 		ServiceInstance:                c.ServiceInstance,
 		TagDefinition:                  c.TagDefinition,
 		Tenant:                         c.Tenant,
-		TenantV4:                       c.TenantV4,
 		Workspace:                      c.Workspace,
 		WorkspaceGroupBinding:          c.WorkspaceGroupBinding,
 		WorkspaceUserBinding:           c.WorkspaceUserBinding,
@@ -98,7 +96,6 @@ func NewMock() Client {
 		ServiceInstance:                MeshServiceInstanceClient{Store: NewStore[client.MeshServiceInstance]()},
 		TagDefinition:                  MeshTagDefinitionClient{Store: NewStore[client.MeshTagDefinition]()},
 		Tenant:                         MeshTenantClient{Store: tenantStore},
-		TenantV4:                       MeshTenantV4Client{Store: NewStore[client.MeshTenantV4]()},
 		Workspace:                      MeshWorkspaceClient{Store: NewStore[client.MeshWorkspace]()},
 		WorkspaceGroupBinding:          MeshWorkspaceGroupBindingClient{Store: NewStore[client.MeshWorkspaceGroupBinding]()},
 		WorkspaceUserBinding:           MeshWorkspaceUserBindingClient{Store: NewStore[client.MeshWorkspaceUserBinding]()},

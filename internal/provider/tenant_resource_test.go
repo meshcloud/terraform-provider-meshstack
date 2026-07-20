@@ -99,48 +99,4 @@ func TestAccTenant(t *testing.T) {
 			},
 		})
 	})
-
-	// moved_from_v4 asserts a `moved` block migrates the deprecated (identifier-based)
-	// meshstack_tenant_v4 to the ref-based meshstack_tenant without recreating the tenant. The state
-	// mover carries over the tenant uuid; the post-move refresh Read re-reads the tenant by uuid and
-	// fills in the ref-based platform_ref/landing_zone_ref/status (the framework gives the mover no API
-	// client). On the real backend both resources address the same meshTenant object, so the migrated
-	// state matches the target config and the move plans as a no-op. This cross-resource re-read cannot
-	// run in mock mode: the v4 (identifier) and unsuffixed (ref) mock clients back separate stores, so
-	// the tenant created via meshstack_tenant_v4 is not visible to the meshstack_tenant client.
-	t.Run("moved_from_v4", func(t *testing.T) {
-		if IsMockClientTest() {
-			t.Skip("state-mover re-reads the tenant across the two (separate-store) mock clients; requires a real meshStack")
-		}
-		workspaceConfig, workspaceAddr := testconfig.Workspace(t)
-		projectConfig, projectAddr := testconfig.Project(t, workspaceAddr)
-		platformConfig, platformAddr, platformTypeAddr := testconfig.CustomPlatform(t, workspaceAddr)
-		landingZoneConfig, landingZoneAddr := testconfig.LandingZone(t, workspaceAddr, platformAddr, platformTypeAddr)
-		deps := workspaceConfig.Join(projectConfig, platformConfig, landingZoneConfig)
-
-		v4Config, v4Addr := testconfig.TenantV4(t, projectAddr, platformAddr, landingZoneAddr)
-
-		movedConfig, tenantAddr := testconfig.Tenant(t, projectAddr, platformAddr, landingZoneAddr)
-		movedConfig = movedConfig.WithRawBlock("moved {\n  from = " + v4Addr.String() + "\n  to = " + tenantAddr.String() + "\n}")
-
-		ApplyAndTest(t, resource.TestCase{
-			Steps: []resource.TestStep{
-				{
-					Config: v4Config.Join(deps).String(),
-				},
-				{
-					Config: movedConfig.Join(deps).String(),
-					ConfigPlanChecks: resource.ConfigPlanChecks{
-						PreApply: []plancheck.PlanCheck{
-							plancheck.ExpectResourceAction(tenantAddr.String(), plancheck.ResourceActionNoop),
-						},
-					},
-					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(tenantAddr.String(), tfjsonpath.New("ref").AtMapKey("kind"), knownvalue.StringExact("meshTenant")),
-						statecheck.ExpectKnownValue(tenantAddr.String(), tfjsonpath.New("spec").AtMapKey("platform_ref").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
-					},
-				},
-			},
-		})
-	})
 }

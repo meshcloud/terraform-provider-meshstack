@@ -32,7 +32,7 @@ meshstack_workspace
   └─ meshstack_location
      └─ meshstack_platform (identifier)
         └─ meshstack_landingzone
-           └─ meshstack_tenant_v4
+           └─ meshstack_tenant
               └─ meshstack_building_block_v2 (target_ref)
 ```
 
