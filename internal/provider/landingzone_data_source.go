@@ -36,6 +36,11 @@ func (d *landingZoneDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 		MarkdownDescription: "Read a single landing zone by identifier.",
 
 		Attributes: map[string]schema.Attribute{
+			"ref": meshRefByName(meshRefOptions{
+				Kind:        client.MeshObjectKind.LandingZone,
+				Description: "Reference to this landing zone, can be used as `landing_zone_ref` in tenant resources. The landing zone name is only unique together with its platform, so a `meshstack_tenant` references both `platform_ref` and `landing_zone_ref`.",
+				Output:      true,
+			}),
 			"metadata": schema.SingleNestedAttribute{
 				Required: true,
 				Attributes: map[string]schema.Attribute{
@@ -202,6 +207,5 @@ func (d *landingZoneDataSource) Read(ctx context.Context, req datasource.ReadReq
 		return
 	}
 
-	// client data maps directly to the schema so we just need to set the state
-	resp.Diagnostics.Append(resp.State.Set(ctx, landingZone)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, landingZoneModelFrom(landingZone))...)
 }

@@ -58,6 +58,10 @@ type meshRefOptions struct {
 	// stays Required but the identifier is Optional+Computed with an AlsoRequires guard that enforces
 	// presence while tolerating the unknown. Ignored when Output or OptionalComputed is set.
 	InSet bool
+
+	// RequiresReplace forces replacement of the resource when the reference block changes — for an
+	// input ref that cannot be changed in place (e.g. a tenant's platform_ref / landing_zone_ref).
+	RequiresReplace bool
 }
 
 // meshRefByUuid builds a {kind, uuid} reference for the given meshObject kind.
@@ -143,6 +147,9 @@ func meshRef(idName, idDesc string, opts meshRefOptions) schema.SingleNestedAttr
 	// An omittable-computed input keeps its last-known value while the plan can't resolve it yet.
 	if block.Computed && !opts.Output {
 		block.PlanModifiers = append(block.PlanModifiers, objectplanmodifier.UseStateForUnknown())
+	}
+	if opts.RequiresReplace {
+		block.PlanModifiers = append(block.PlanModifiers, objectplanmodifier.RequiresReplace())
 	}
 
 	block.Attributes = map[string]schema.Attribute{"kind": kindAttr, idName: idAttr}

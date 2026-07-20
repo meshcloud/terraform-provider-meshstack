@@ -1,3 +1,8 @@
+# v0.24.0
+
+FEATURES:
+- `meshstack_landingzone` resource and data source now expose a computed `ref` output (`{name, kind}`) suitable for use as `landing_zone_ref` in tenant resources, matching the existing `ref` outputs on other resources.
+
 # v0.23.3
 
 FEATURES:

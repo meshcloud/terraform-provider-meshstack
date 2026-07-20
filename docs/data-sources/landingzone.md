@@ -29,6 +29,7 @@ data "meshstack_landingzone" "example" {
 
 ### Read-Only
 
+- `ref` (Attributes) Reference to this landing zone, can be used as `landing_zone_ref` in tenant resources. The landing zone name is only unique together with its platform, so a `meshstack_tenant` references both `platform_ref` and `landing_zone_ref`. (see [below for nested schema](#nestedatt--ref))
 - `spec` (Attributes) (see [below for nested schema](#nestedatt--spec))
 - `status` (Attributes) Current Landing Zone status. (see [below for nested schema](#nestedatt--status))
 
@@ -43,6 +44,15 @@ Read-Only:
 
 - `owned_by_workspace` (String) Identifier of the workspace that owns this landing zone.
 - `tags` (Map of List of String) Tags of the landing zone.
+
+
+<a id="nestedatt--ref"></a>
+### Nested Schema for `ref`
+
+Read-Only:
+
+- `kind` (String) meshObject type, always `meshLandingZone`.
+- `name` (String) Named identifier (`metadata.name`) of `meshLandingZone`.
 
 
 <a id="nestedatt--spec"></a>

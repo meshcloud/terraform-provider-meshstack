@@ -14,7 +14,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -39,6 +38,30 @@ func NewLandingZoneResource() resource.Resource {
 // landingZoneResource is the resource implementation.
 type landingZoneResource struct {
 	meshLandingZoneClient client.MeshLandingZoneClient
+}
+
+// landingZoneRefOutput is the computed self-`ref` of a landing zone (name-based).
+type landingZoneRefOutput struct {
+	Name string `tfsdk:"name"`
+	Kind string `tfsdk:"kind"`
+}
+
+// landingZoneModel is the state model: the API's landing zone fields plus the computed self-`ref`.
+// The client struct has no `ref` field, so we wrap it here rather than mutating client types.
+type landingZoneModel struct {
+	Ref      landingZoneRefOutput           `tfsdk:"ref"`
+	Metadata client.MeshLandingZoneMetadata `tfsdk:"metadata"`
+	Spec     client.MeshLandingZoneSpec     `tfsdk:"spec"`
+	Status   client.MeshLandingZoneStatus   `tfsdk:"status"`
+}
+
+func landingZoneModelFrom(lz *client.MeshLandingZone) landingZoneModel {
+	return landingZoneModel{
+		Ref:      landingZoneRefOutput{Name: lz.Metadata.Name, Kind: client.MeshObjectKind.LandingZone},
+		Metadata: lz.Metadata,
+		Spec:     lz.Spec,
+		Status:   lz.Status,
+	}
 }
 
 // Metadata returns the resource type name.
@@ -76,6 +99,12 @@ func (r *landingZoneResource) Schema(_ context.Context, _ resource.SchemaRequest
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Represents a meshStack landing zone.",
 		Attributes: map[string]schema.Attribute{
+			"ref": meshRefByName(meshRefOptions{
+				Kind:        client.MeshObjectKind.LandingZone,
+				Description: "Reference to this landing zone, can be used as `landing_zone_ref` in tenant resources. The landing zone name is only unique together with its platform, so a `meshstack_tenant` references both `platform_ref` and `landing_zone_ref`.",
+				Output:      true,
+			}),
+
 			"metadata": schema.SingleNestedAttribute{
 				Required: true,
 				Attributes: map[string]schema.Attribute{
@@ -132,25 +161,7 @@ func (r *landingZoneResource) Schema(_ context.Context, _ resource.SchemaRequest
 						MarkdownDescription: "Link to additional information about the landing zone.",
 						Optional:            true,
 					},
-					"platform_ref": schema.SingleNestedAttribute{
-						MarkdownDescription: "Reference to the platform this landing zone belongs to.",
-						Required:            true,
-						Attributes: map[string]schema.Attribute{
-							"uuid": schema.StringAttribute{
-								PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
-								MarkdownDescription: "UUID of the platform.",
-								Required:            true,
-							},
-							"kind": schema.StringAttribute{
-								MarkdownDescription: "meshObject type, always `meshPlatform`.",
-								Optional:            true,
-								Computed:            true,
-								PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-								Default:             stringdefault.StaticString(client.MeshObjectKind.Platform),
-								Validators:          []validator.String{stringvalidator.OneOf(client.MeshObjectKind.Platform)},
-							},
-						},
-					},
+					"platform_ref": meshRefByUuid(meshRefOptions{Kind: client.MeshObjectKind.Platform, Description: "Reference to the platform this landing zone belongs to.", RequiresReplace: true}),
 					"platform_properties": schema.SingleNestedAttribute{
 						MarkdownDescription: "Platform-specific configuration options.",
 						Required:            true,
@@ -488,7 +499,7 @@ func (r *landingZoneResource) Create(ctx context.Context, req resource.CreateReq
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, createdLandingZone)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, landingZoneModelFrom(createdLandingZone))...)
 }
 
 func (r *landingZoneResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -516,8 +527,7 @@ func (r *landingZoneResource) Read(ctx context.Context, req resource.ReadRequest
 		return
 	}
 
-	// client data maps directly to the schema so we just need to set the state
-	resp.Diagnostics.Append(resp.State.Set(ctx, landingZone)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, landingZoneModelFrom(landingZone))...)
 }
 
 func (r *landingZoneResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -542,7 +552,7 @@ func (r *landingZoneResource) Update(ctx context.Context, req resource.UpdateReq
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, updatedLandingZone)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, landingZoneModelFrom(updatedLandingZone))...)
 }
 
 func (r *landingZoneResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {

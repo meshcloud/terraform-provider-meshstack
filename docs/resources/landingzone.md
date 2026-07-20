@@ -86,6 +86,7 @@ resource "meshstack_landingzone" "example" {
 
 ### Read-Only
 
+- `ref` (Attributes) Reference to this landing zone, can be used as `landing_zone_ref` in tenant resources. The landing zone name is only unique together with its platform, so a `meshstack_tenant` references both `platform_ref` and `landing_zone_ref`. (see [below for nested schema](#nestedatt--ref))
 - `status` (Attributes) Current Landing Zone status. (see [below for nested schema](#nestedatt--status))
 
 <a id="nestedatt--metadata"></a>
@@ -352,7 +353,7 @@ Optional:
 
 Required:
 
-- `uuid` (String) UUID of the platform.
+- `uuid` (String) UUID (`metadata.uuid`) of `meshPlatform`.
 
 Optional:
 
@@ -385,6 +386,15 @@ Optional:
 - `kind` (String) meshObject type, always `meshBuildingBlockDefinition`.
 - `uuid` (String) UUID (`metadata.uuid`) of `meshBuildingBlockDefinition`. Required; optional here only so a computed reference can be used inside a set, and enforced at plan time.
 
+
+
+<a id="nestedatt--ref"></a>
+### Nested Schema for `ref`
+
+Read-Only:
+
+- `kind` (String) meshObject type, always `meshLandingZone`.
+- `name` (String) Named identifier (`metadata.name`) of `meshLandingZone`.
 
 
 <a id="nestedatt--status"></a>
