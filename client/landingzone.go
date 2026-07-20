@@ -58,8 +58,19 @@ type MeshLandingZoneCreate struct {
 	Spec     MeshLandingZoneSpec     `json:"spec" tfsdk:"spec"`
 }
 
+// MeshLandingZoneListQuery holds the optional filters for the V1 landing zone list endpoint. The
+// json tags name the query params; unset (nil/zero) fields are dropped by WithUrlQuery.
+type MeshLandingZoneListQuery struct {
+	PlatformUuid     *string `json:"platformUuid"`
+	Identifier       *string `json:"identifier"`
+	DisplayName      *string `json:"displayName"`
+	Restricted       *bool   `json:"restricted"`
+	OwnedByWorkspace *string `json:"ownedByWorkspace"`
+}
+
 type MeshLandingZoneClient interface {
 	Read(ctx context.Context, name string) (*MeshLandingZone, error)
+	List(ctx context.Context, query MeshLandingZoneListQuery) ([]MeshLandingZone, error)
 	Create(ctx context.Context, landingZone *MeshLandingZoneCreate) (*MeshLandingZone, error)
 	Update(ctx context.Context, name string, landingZone *MeshLandingZoneCreate) (*MeshLandingZone, error)
 	Delete(ctx context.Context, name string) error
@@ -75,6 +86,10 @@ func newLandingZoneClient(ctx context.Context, httpClient internal.HttpClient) M
 
 func (c meshLandingZoneClient) Read(ctx context.Context, name string) (*MeshLandingZone, error) {
 	return c.meshObject.Get(ctx, name)
+}
+
+func (c meshLandingZoneClient) List(ctx context.Context, query MeshLandingZoneListQuery) ([]MeshLandingZone, error) {
+	return c.meshObject.List(ctx, internal.WithUrlQuery(query))
 }
 
 func (c meshLandingZoneClient) Create(ctx context.Context, landingZone *MeshLandingZoneCreate) (*MeshLandingZone, error) {

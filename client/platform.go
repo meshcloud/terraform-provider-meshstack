@@ -75,8 +75,24 @@ type TagMapper struct {
 	ValuePattern string `json:"valuePattern" tfsdk:"value_pattern"`
 }
 
+// MeshPlatformListQuery holds the optional filters for the V2 platform list endpoint. The json tags
+// name the query params; unset (nil/zero) fields are dropped by WithUrlQuery.
+type MeshPlatformListQuery struct {
+	OwnedByWorkspace      *string `json:"ownedByWorkspace"`
+	Identifier            *string `json:"identifier"`
+	LocationIdentifier    *string `json:"locationIdentifier"`
+	DisplayName           *string `json:"displayName"`
+	Restriction           *string `json:"restriction"`
+	PublicationState      *string `json:"publicationState"`
+	ContributingWorkspace *string `json:"contributingWorkspace"`
+	// PlatformTypeIdentifier filters by the platform type's identifier (matched backend-side); the type
+	// is not carried in the response, and spec.config is redacted for marketplace consumers anyway.
+	PlatformTypeIdentifier *string `json:"platformTypeIdentifier"`
+}
+
 type MeshPlatformClient interface {
 	Read(ctx context.Context, uuid string) (*MeshPlatform, error)
+	List(ctx context.Context, query MeshPlatformListQuery) ([]MeshPlatform, error)
 	Create(ctx context.Context, platform MeshPlatform) (*MeshPlatform, error)
 	Update(ctx context.Context, uuid string, platform MeshPlatform) (*MeshPlatform, error)
 	Delete(ctx context.Context, uuid string) error
@@ -92,6 +108,10 @@ func newPlatformClient(ctx context.Context, httpClient internal.HttpClient) Mesh
 
 func (c meshPlatformClient) Read(ctx context.Context, uuid string) (*MeshPlatform, error) {
 	return c.meshObject.Get(ctx, uuid)
+}
+
+func (c meshPlatformClient) List(ctx context.Context, query MeshPlatformListQuery) ([]MeshPlatform, error) {
+	return c.meshObject.List(ctx, internal.WithUrlQuery(query))
 }
 
 func (c meshPlatformClient) Create(ctx context.Context, platform MeshPlatform) (*MeshPlatform, error) {
