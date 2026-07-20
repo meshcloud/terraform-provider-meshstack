@@ -1,3 +1,11 @@
+# v0.24.2
+
+Requires meshStack 2026.30.0 or later (previously 2026.29.0).
+
+FEATURES:
+- New `meshstack_platforms` and `meshstack_landingzones` (plural) data sources list and filter platforms / landing zones, so a platform or landing zone can be resolved by name, identifier, type or publication state in HCL instead of hardcoding a UUID. Each element has the same shape as the singular `meshstack_platform` / `meshstack_landingzone` data source, including the computed `ref` that drops straight into `meshstack_tenant`'s `platform_ref` / `landing_zone_ref`. `meshstack_platforms` supports the marketplace/discovery filters (`publication_state`, `restriction`, `platform_type_identifier`, `owned_by_workspace`, …) and, on a backend that supports it, also returns platforms **published** to the caller's workspace; `meshstack_landingzones` supports `platform_uuid` to list a chosen platform's landing zones.
+- `meshstack_platform` (singular) and the new `meshstack_platforms` document their cross-workspace visibility: for a platform the caller only consumes, `spec.config` is omitted (owner/contributor/admin still receive it, with secrets always hashed).
+
 # v0.24.1
 
 Requires meshStack 2026.29.0 or later (previously 2026.24.0).

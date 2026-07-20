@@ -111,6 +111,21 @@ func (c Config) WithRawBlock(raw string) Config {
 	return result
 }
 
+// FirstBlockOnly returns a Config containing only the first block, dropping any others. Use it when
+// an example .tf illustrates the primary block alongside supporting data/locals blocks (for the
+// registry docs) but a builder only wants that primary block — the test supplies its own
+// prerequisites via [Config.Join].
+func (c Config) FirstBlockOnly() Config {
+	c.t.Helper()
+	result := clone(c)
+	blocks := result.internal.Body().Blocks()
+	require.NotEmpty(c.t, blocks, "FirstBlockOnly: config has no blocks — did you load the right .tf file?")
+	for _, block := range blocks[1:] {
+		result.internal.Body().RemoveBlock(block)
+	}
+	return result
+}
+
 // WithFirstBlock applies consumers to the first block of a cloned Config and returns the new Config.
 func (c Config) WithFirstBlock(consumers ...ExpressionConsumer) Config {
 	c.t.Helper()

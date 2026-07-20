@@ -4,11 +4,17 @@ page_title: "meshstack_platform Data Source - terraform-provider-meshstack"
 subcategory: ""
 description: |-
   Represents a meshStack platform.
+  Requires the PLATFORMINSTANCE_LIST (workspace-scoped) or ADM_PLATFORMINSTANCE_LIST API-key right. The workspace-scoped right also surfaces platforms published to the caller's workspace.
+  Cross-Workspace Access: for a platform the caller only consumes (i.e. it is published to the caller's workspace but not owned/contributed by it), spec.config is omitted; owner, contributor and admin callers still receive it (secrets are always returned hashed).
 ---
 
 # meshstack_platform (Data Source)
 
 Represents a meshStack platform.
+
+Requires the `PLATFORMINSTANCE_LIST` (workspace-scoped) or `ADM_PLATFORMINSTANCE_LIST` API-key right. The workspace-scoped right also surfaces platforms **published** to the caller's workspace. 
+
+**Cross-Workspace Access**: for a platform the caller only consumes (i.e. it is published to the caller's workspace but not owned/contributed by it), `spec.config` is omitted; owner, contributor and admin callers still receive it (secrets are always returned hashed).
 
 ## Example Usage
 
@@ -62,7 +68,7 @@ Read-Only:
 
 - `access_information` (String) Free-text access information shown to users when accessing tenants on this platform. Supports markdown formatting.
 - `availability` (Attributes) Availability configuration for the meshPlatform. (see [below for nested schema](#nestedatt--spec--availability))
-- `config` (Attributes) Platform-specific configuration options. (see [below for nested schema](#nestedatt--spec--config))
+- `config` (Attributes) Platform-specific configuration options. Omitted (null) for a platform the caller only consumes cross-workspace; see the data source description. (see [below for nested schema](#nestedatt--spec--config))
 - `contributing_workspaces` (Set of String) A list of workspace identifiers that contribute to this meshPlatform.
 - `description` (String) Description of the meshPlatform.
 - `display_name` (String) The human-readable display name of the meshPlatform.

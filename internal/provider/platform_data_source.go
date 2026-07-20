@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -46,121 +45,12 @@ func (d *platformDataSource) Configure(_ context.Context, req datasource.Configu
 
 func (d *platformDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Represents a meshStack platform.",
+		MarkdownDescription: "Represents a meshStack platform." + platformConfigVisibilityNote,
 		Attributes: map[string]schema.Attribute{
-			"metadata": schema.SingleNestedAttribute{
-				Required: true,
-				Attributes: map[string]schema.Attribute{
-					"uuid": schema.StringAttribute{
-						MarkdownDescription: "Platform UUID identifier.",
-						Required:            true,
-					},
-					"name": schema.StringAttribute{
-						MarkdownDescription: "Platform identifier.",
-						Computed:            true,
-					},
-					"owned_by_workspace": schema.StringAttribute{
-						MarkdownDescription: "The identifier of the workspace that owns this meshPlatform.",
-						Computed:            true,
-					},
-				},
-			},
-
-			"identifier": schema.StringAttribute{
-				MarkdownDescription: "Full platform identifier (`<platform-name>.<location-name>`), suitable for use as `platform_identifier` in tenant resources.",
-				Computed:            true,
-			},
-
-			"ref": meshRefByUuid(meshRefOptions{Kind: client.MeshObjectKind.Platform, Description: "Reference to this platform, can be used as `platform_ref` in landing zone and tenant resources.", Output: true}),
-
-			"spec": schema.SingleNestedAttribute{
-				Computed: true,
-				Attributes: map[string]schema.Attribute{
-					"display_name": schema.StringAttribute{
-						MarkdownDescription: "The human-readable display name of the meshPlatform.",
-						Computed:            true,
-					},
-					"description": schema.StringAttribute{
-						MarkdownDescription: "Description of the meshPlatform.",
-						Computed:            true,
-					},
-					"endpoint": schema.StringAttribute{
-						MarkdownDescription: "The web console URL endpoint of the platform.",
-						Computed:            true,
-					},
-					"support_url": schema.StringAttribute{
-						MarkdownDescription: "URL for platform support documentation.",
-						Computed:            true,
-					},
-					"documentation_url": schema.StringAttribute{
-						MarkdownDescription: "URL for platform documentation.",
-						Computed:            true,
-					},
-					"access_information": schema.StringAttribute{
-						MarkdownDescription: "Free-text access information shown to users when accessing tenants on this platform. Supports markdown formatting.",
-						Computed:            true,
-					},
-					"location_ref": meshRefByName(meshRefOptions{Kind: client.MeshObjectKind.Location, Description: "Reference to the location where this platform is situated.", Output: true}),
-					"contributing_workspaces": schema.SetAttribute{
-						MarkdownDescription: "A list of workspace identifiers that contribute to this meshPlatform.",
-						ElementType:         types.StringType,
-						Computed:            true,
-					},
-					"availability": schema.SingleNestedAttribute{
-						MarkdownDescription: "Availability configuration for the meshPlatform.",
-						Computed:            true,
-						Attributes: map[string]schema.Attribute{
-							"restriction": schema.StringAttribute{
-								MarkdownDescription: "Access restriction for the platform. Must be one of: PUBLIC, PRIVATE, RESTRICTED.",
-								Computed:            true,
-							},
-							"publication_state": schema.StringAttribute{
-								MarkdownDescription: "Publication state of the platform. Must be one of: PUBLISHED, UNPUBLISHED.",
-								Computed:            true,
-							},
-							"restricted_to_workspaces": schema.SetAttribute{
-								MarkdownDescription: "If the restriction is set to `RESTRICTED`, you can specify the workspace identifiers this meshPlatform is restricted to.",
-								ElementType:         types.StringType,
-								Computed:            true,
-							},
-						},
-					},
-					"quota_definitions": schema.SetAttribute{
-						MarkdownDescription: "List of quota definitions for the platform.",
-						Computed:            true,
-						Sensitive:           false,
-						ElementType: types.ObjectType{
-							AttrTypes: map[string]attr.Type{
-								"quota_key":               types.StringType,
-								"label":                   types.StringType,
-								"description":             types.StringType,
-								"unit":                    types.StringType,
-								"min_value":               types.Int64Type,
-								"max_value":               types.Int64Type,
-								"auto_approval_threshold": types.Int64Type,
-							},
-						},
-					},
-					"config": schema.SingleNestedAttribute{
-						MarkdownDescription: "Platform-specific configuration options.",
-						Computed:            true,
-						Attributes: map[string]schema.Attribute{
-							"custom":     customPlatformDataSourceSchema(),
-							"aws":        awsPlatformDataSourceSchema(),
-							"aks":        aksPlatformDataSourceSchema(),
-							"azure":      azurePlatformDataSourceSchema(),
-							"azurerg":    azureRgPlatformDataSourceSchema(),
-							"gcp":        gcpPlatformDataSourceSchema(),
-							"kubernetes": kubernetesPlatformDataSourceSchema(),
-							"openshift":  openShiftPlatformDataSourceSchema(),
-							"type": schema.StringAttribute{
-								MarkdownDescription: "Type of the platform.",
-								Computed:            true,
-							},
-						},
-					},
-				},
-			},
+			"metadata":   platformMetadataDataSourceSchema(false),
+			"identifier": platformIdentifierDataSourceSchema(),
+			"ref":        meshRefByUuid(meshRefOptions{Kind: client.MeshObjectKind.Platform, Description: "Reference to this platform, can be used as `platform_ref` in landing zone and tenant resources.", Output: true}),
+			"spec":       platformSpecDataSourceSchema(),
 		},
 	}
 }
