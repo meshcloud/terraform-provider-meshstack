@@ -177,6 +177,22 @@ func (r *buildingBlockDefinitionResource) ValidateConfig(ctx context.Context, re
 	if manual.IsNull() || manual.IsUnknown() || outputs.IsNull() || outputs.IsUnknown() {
 		return
 	}
+	// An explicit empty map (`outputs = {}`) is not the same as omitting outputs: the backend still derives
+	// one output per input, so the applied result carries those keys while the plan keeps the configured
+	// empty map. Terraform forbids a provider from planning a computed value that diverges from a known
+	// configured value, so this surfaces at apply as "provider produced inconsistent result after apply:
+	// new element ... has appeared" (issue #240). Reject it here and tell the user to omit the attribute.
+	if len(outputs.Elements()) == 0 {
+		resp.Diagnostics.AddAttributeError(
+			outputsPath,
+			"manual building block outputs must be omitted, not an empty map",
+			"Manual building block definitions derive their outputs from the inputs automatically (one output "+
+				"per input). An explicit empty `outputs = {}` conflicts with those derived outputs and fails at "+
+				"apply with \"provider produced inconsistent result after apply\". Remove the version_spec.outputs "+
+				"attribute entirely so it can be computed from the API response.",
+		)
+		return
+	}
 	for key, assignmentType := range outputAssignmentTypes(outputs) {
 		if assignmentType != "" && assignmentType != client.MeshBuildingBlockDefinitionOutputAssignmentTypeNone.String() {
 			continue
