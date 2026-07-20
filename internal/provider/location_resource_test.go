@@ -82,6 +82,7 @@ func checkLocationStatus() knownvalue.Check {
 
 func checkLocationRef(name string) knownvalue.Check {
 	return xknownvalue.MapExact(map[string]knownvalue.Check{
+		"kind": knownvalue.StringExact("meshLocation"),
 		"name": knownvalue.StringExact(name),
 	})
 }

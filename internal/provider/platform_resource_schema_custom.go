@@ -2,9 +2,6 @@ package provider
 
 import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
 )
@@ -14,23 +11,7 @@ func customPlatformSchema() schema.Attribute {
 		MarkdownDescription: "Custom platform configuration.",
 		Optional:            true,
 		Attributes: map[string]schema.Attribute{
-			"platform_type_ref": schema.SingleNestedAttribute{
-				MarkdownDescription: "Reference to the platform type.",
-				Required:            true,
-				Attributes: map[string]schema.Attribute{
-					"name": schema.StringAttribute{
-						MarkdownDescription: "Name of the platform type.",
-						Required:            true,
-					},
-					"kind": schema.StringAttribute{
-						MarkdownDescription: "Kind of the platform type. Always `meshPlatformType`.",
-						Computed:            true,
-						Optional:            true,
-						Default:             stringdefault.StaticString(client.MeshObjectKind.PlatformType),
-						PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-					},
-				},
-			},
+			"platform_type_ref": meshRefByName(meshRefOptions{Kind: client.MeshObjectKind.PlatformType, Description: "Reference to the platform type."}),
 			"metering": schema.SingleNestedAttribute{
 				MarkdownDescription: "Metering configuration.",
 				Optional:            true,

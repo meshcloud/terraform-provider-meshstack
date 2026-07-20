@@ -14,7 +14,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -115,7 +114,7 @@ func (r *platformResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 
-			"ref": meshRefByUuid(meshRefOptions{Kind: client.MeshObjectKind.Platform, Description: "Reference to this platform, can be used as `platform_ref` in landing zone resources.", Output: true}),
+			"ref": meshRefByUuid(meshRefOptions{Kind: client.MeshObjectKind.Platform, Description: "Reference to this platform, can be used as `platform_ref` in landing zone and tenant resources.", Output: true}),
 
 			"spec": schema.SingleNestedAttribute{
 				Required: true,
@@ -144,23 +143,7 @@ func (r *platformResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						MarkdownDescription: "Free-text access information shown to users when accessing tenants on this platform. Supports markdown formatting.",
 						Optional:            true,
 					},
-					"location_ref": schema.SingleNestedAttribute{
-						MarkdownDescription: "Reference to the location where this platform is situated.",
-						Required:            true,
-						Attributes: map[string]schema.Attribute{
-							"kind": schema.StringAttribute{
-								MarkdownDescription: "meshObject type, always `meshLocation`.",
-								Computed:            true,
-								Optional:            true,
-								Default:             stringdefault.StaticString(client.MeshObjectKind.Location),
-								PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-							},
-							"name": schema.StringAttribute{
-								MarkdownDescription: "Identifier of the Location.",
-								Required:            true,
-							},
-						},
-					},
+					"location_ref": meshRefByName(meshRefOptions{Kind: client.MeshObjectKind.Location, Description: "Reference to the location where this platform is situated."}),
 					"contributing_workspaces": schema.SetAttribute{
 						MarkdownDescription: "A list of workspace identifiers that may contribute to this meshPlatform.",
 						ElementType:         types.StringType,

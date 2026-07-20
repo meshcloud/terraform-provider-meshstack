@@ -125,23 +125,7 @@ func (r *platformTypeResource) Schema(_ context.Context, _ resource.SchemaReques
 				},
 			},
 
-			"ref": schema.SingleNestedAttribute{
-				MarkdownDescription: "Reference to this platform type, can be used as input for `platform_type_ref` in platform resources.",
-				Computed:            true,
-				Attributes: map[string]schema.Attribute{
-					"kind": schema.StringAttribute{
-						MarkdownDescription: "The kind of the object. Always `meshPlatformType`.",
-						Computed:            true,
-						Default:             stringdefault.StaticString(client.MeshObjectKind.PlatformType),
-						PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-					},
-					"name": schema.StringAttribute{
-						MarkdownDescription: "Identifier of the platform type.",
-						Computed:            true,
-						PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-					},
-				},
-			},
+			"ref": meshRefByName(meshRefOptions{Kind: client.MeshObjectKind.PlatformType, Description: "Reference to this platform type, can be used as input for `platform_type_ref` in platform resources.", Output: true}),
 		},
 	}
 }

@@ -8,6 +8,7 @@ BREAKING CHANGES:
 FEATURES:
 - `meshstack_landingzone` resource and data source now expose a computed `ref` output (`{name, kind}`) suitable for use as `landing_zone_ref` in tenant resources, matching the existing `ref` outputs on other resources.
 - `meshstack_tenant` supports migrating from the deprecated `meshstack_tenant_v4` with a `moved` block. The move carries over the tenant uuid; the post-move refresh re-reads the tenant from the API to translate the v4 `spec.platform_identifier` into the ref-based `spec.platform_ref`, so the move does not recreate the tenant.
+- `meshstack_location` and `meshstack_platform_type` `ref` outputs now include a computed `kind`, consistent with every other meshObject reference. The remaining hand-rolled `ref` / `*_ref` schemas (`meshstack_platform` `location_ref`, custom-platform `platform_type_ref`) are now defined through the shared meshRef helper.
 
 FIXES:
 - `meshstack_tenant`: changing only `wait_for_completion` (a client-side toggle with no API call) is now applied in place instead of failing with "Tenants can't be updated". Any other change to an existing tenant remains unsupported.

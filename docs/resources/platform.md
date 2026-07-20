@@ -733,7 +733,7 @@ resource "meshstack_platform" "example_custom" {
 ### Read-Only
 
 - `identifier` (String) Full platform identifier (`<platform-name>.<location-name>`), suitable for use as `platform_identifier` in tenant resources.
-- `ref` (Attributes) Reference to this platform, can be used as `platform_ref` in landing zone resources. (see [below for nested schema](#nestedatt--ref))
+- `ref` (Attributes) Reference to this platform, can be used as `platform_ref` in landing zone and tenant resources. (see [below for nested schema](#nestedatt--ref))
 
 <a id="nestedatt--metadata"></a>
 ### Nested Schema for `metadata`
@@ -1636,11 +1636,11 @@ Optional:
 
 Required:
 
-- `name` (String) Name of the platform type.
+- `name` (String) Named identifier (`metadata.name`) of `meshPlatformType`.
 
 Optional:
 
-- `kind` (String) Kind of the platform type. Always `meshPlatformType`.
+- `kind` (String) meshObject type, always `meshPlatformType`.
 
 
 <a id="nestedatt--spec--config--custom--metering"></a>
@@ -2064,7 +2064,7 @@ Required:
 
 Required:
 
-- `name` (String) Identifier of the Location.
+- `name` (String) Named identifier (`metadata.name`) of `meshLocation`.
 
 Optional:
 

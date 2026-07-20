@@ -31,6 +31,7 @@ type locationResource struct {
 }
 
 type locationRef struct {
+	Kind string `tfsdk:"kind"`
 	Name string `tfsdk:"name"`
 }
 
@@ -109,17 +110,7 @@ func (r *locationResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				},
 			},
 
-			"ref": schema.SingleNestedAttribute{
-				MarkdownDescription: "Reference to this location, can be used as input for `location_ref` in platform resources.",
-				Computed:            true,
-				Attributes: map[string]schema.Attribute{
-					"name": schema.StringAttribute{
-						MarkdownDescription: "Identifier of the Location.",
-						Computed:            true,
-						PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-					},
-				},
-			},
+			"ref": meshRefByName(meshRefOptions{Kind: client.MeshObjectKind.Location, Description: "Reference to this location, can be used as input for `location_ref` in platform resources.", Output: true}),
 		},
 	}
 }
@@ -162,6 +153,7 @@ func (r *locationResource) Create(ctx context.Context, req resource.CreateReques
 	state := locationResourceModel{
 		MeshLocation: *createdLocation,
 		Ref: locationRef{
+			Kind: client.MeshObjectKind.Location,
 			Name: createdLocation.Metadata.Name,
 		},
 	}
@@ -194,6 +186,7 @@ func (r *locationResource) Read(ctx context.Context, req resource.ReadRequest, r
 	state := locationResourceModel{
 		MeshLocation: *location,
 		Ref: locationRef{
+			Kind: client.MeshObjectKind.Location,
 			Name: location.Metadata.Name,
 		},
 	}
@@ -241,6 +234,7 @@ func (r *locationResource) Update(ctx context.Context, req resource.UpdateReques
 	state := locationResourceModel{
 		MeshLocation: *updatedLocation,
 		Ref: locationRef{
+			Kind: client.MeshObjectKind.Location,
 			Name: updatedLocation.Metadata.Name,
 		},
 	}

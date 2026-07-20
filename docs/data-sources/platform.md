@@ -30,7 +30,7 @@ data "meshstack_platform" "example" {
 ### Read-Only
 
 - `identifier` (String) Full platform identifier (`<platform-name>.<location-name>`), suitable for use as `platform_identifier` in tenant resources.
-- `ref` (Attributes) Reference to this platform, can be used as `platform_ref` in landing zone resources. (see [below for nested schema](#nestedatt--ref))
+- `ref` (Attributes) Reference to this platform, can be used as `platform_ref` in landing zone and tenant resources. (see [below for nested schema](#nestedatt--ref))
 - `spec` (Attributes) (see [below for nested schema](#nestedatt--spec))
 
 <a id="nestedatt--metadata"></a>

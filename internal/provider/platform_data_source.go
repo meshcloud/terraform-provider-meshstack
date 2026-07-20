@@ -71,7 +71,7 @@ func (d *platformDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 				Computed:            true,
 			},
 
-			"ref": meshRefByUuid(meshRefOptions{Kind: client.MeshObjectKind.Platform, Description: "Reference to this platform, can be used as `platform_ref` in landing zone resources.", Output: true}),
+			"ref": meshRefByUuid(meshRefOptions{Kind: client.MeshObjectKind.Platform, Description: "Reference to this platform, can be used as `platform_ref` in landing zone and tenant resources.", Output: true}),
 
 			"spec": schema.SingleNestedAttribute{
 				Computed: true,

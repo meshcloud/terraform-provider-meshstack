@@ -66,7 +66,8 @@ Required:
 
 Read-Only:
 
-- `name` (String) Identifier of the Location.
+- `kind` (String) meshObject type, always `meshLocation`.
+- `name` (String) Named identifier (`metadata.name`) of `meshLocation`.
 
 
 <a id="nestedatt--status"></a>
