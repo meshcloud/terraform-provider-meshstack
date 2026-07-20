@@ -12,6 +12,7 @@ Requires meshStack 2026.29.0 or later (previously 2026.24.0).
 
 BREAKING CHANGES:
 - Release binaries are now published only for `linux` and `darwin` on `amd64` and `arm64`. Builds for `windows`, `freebsd`, `386` and 32-bit `arm` are no longer produced.
+- `meshstack_tenant` and `meshstack_tenants` now use the meshTenant v4 GA media type instead of the v4 preview media type. They require a meshStack backend that has promoted meshTenant v4 to GA; older backends that only serve the `-preview` media type return HTTP 415 (Unsupported Media Type).
 - `meshstack_tenant` and `meshstack_tenants`: the tenant `status.tenant_identifier` output was renamed to `status.tenant_name`. The value is unchanged (still the fully-qualified `<workspace>.<project>.<platform>.<location>`); update any references from `status.tenant_identifier` to `status.tenant_name`.
 
 FEATURES:

@@ -187,7 +187,7 @@ type meshTenantClient struct {
 }
 
 func newTenantClient(ctx context.Context, httpClient internal.HttpClient) MeshTenantClient {
-	return meshTenantClient{internal.NewMeshObjectClient[MeshTenant](ctx, httpClient, "v4-preview")}
+	return meshTenantClient{internal.NewMeshObjectClient[MeshTenant](ctx, httpClient, "v4")}
 }
 
 func (c meshTenantClient) Read(ctx context.Context, uuid string) (*MeshTenant, error) {
