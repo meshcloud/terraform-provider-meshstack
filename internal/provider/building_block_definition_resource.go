@@ -181,7 +181,7 @@ func (r *buildingBlockDefinitionResource) ValidateConfig(ctx context.Context, re
 	// one output per input, so the applied result carries those keys while the plan keeps the configured
 	// empty map. Terraform forbids a provider from planning a computed value that diverges from a known
 	// configured value, so this surfaces at apply as "provider produced inconsistent result after apply:
-	// new element ... has appeared" (issue #240). Reject it here and tell the user to omit the attribute.
+	// new element ... has appeared". Reject it here and tell the user to omit the attribute.
 	if len(outputs.Elements()) == 0 {
 		resp.Diagnostics.AddAttributeError(
 			outputsPath,
