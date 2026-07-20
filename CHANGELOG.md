@@ -12,6 +12,9 @@ FEATURES:
 FIXES:
 - `meshstack_tenant`: changing only `wait_for_completion` (a client-side toggle with no API call) is now applied in place instead of failing with "Tenants can't be updated". Any other change to an existing tenant remains unsupported.
 
+DEPRECATIONS:
+- `meshstack_tenant_v4` (resource and data source) is deprecated in favor of `meshstack_tenant` / `meshstack_tenants`; migrate the resource with a `moved` block. It stays registered for now and is removed in a later release.
+
 # v0.23.3
 
 FEATURES:
