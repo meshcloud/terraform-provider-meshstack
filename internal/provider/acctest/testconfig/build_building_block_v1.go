@@ -10,7 +10,7 @@ func BBv1Tenant(t *testing.T) (config Config, buildingBlockAddr Traversal) {
 	projectConfig, projectAddr := Project(t, workspaceAddr)
 	platformConfig, platformAddr, platformTypeAddr := CustomPlatform(t, workspaceAddr)
 	landingZoneConfig, landingZoneAddr := LandingZone(t, workspaceAddr, platformAddr, platformTypeAddr)
-	tenantConfig, tenantAddr := TenantV4(t, projectAddr, platformAddr, landingZoneAddr)
+	tenantConfig, tenantAddr := Tenant(t, projectAddr, platformAddr, landingZoneAddr)
 
 	var buildingBlockDefinitionAddr Traversal
 	buildingBlockDefinitionConfig := Resource{Name: "building_block_v2", Suffix: "_02_tenant"}.TestSupportConfig(t, "").WithFirstBlock(
@@ -25,8 +25,8 @@ func BBv1Tenant(t *testing.T) (config Config, buildingBlockAddr Traversal) {
 			Descend("definition_uuid")(SetAddr(buildingBlockDefinitionAddr, "ref", "uuid")),
 			Descend("definition_version")(SetAddr(buildingBlockDefinitionAddr, "version_latest", "number")),
 			Descend("tenant_identifier")(SetRawExpr(
-				`"${%s.metadata.owned_by_workspace}.${%s.metadata.owned_by_project}.${%s.spec.platform_identifier}"`,
-				tenantAddr, tenantAddr, tenantAddr)),
+				`"${%s.metadata.owned_by_workspace}.${%s.metadata.owned_by_project}.${%s.identifier}"`,
+				tenantAddr, tenantAddr, platformAddr)),
 		),
 		Descend("spec", "inputs", "environment")(SetRawExpr(`{ value_single_select = "dev" }`)),
 	).Join(workspaceConfig, projectConfig, platformConfig, landingZoneConfig, tenantConfig, buildingBlockDefinitionConfig), buildingBlockAddr

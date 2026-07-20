@@ -12,8 +12,8 @@ import (
 	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/xknownvalue"
 )
 
-func TestAccTenantsV4DataSource(t *testing.T) {
-	tenantConfig, tenantAddr := testconfig.TenantV4AndWorkspace(t)
+func TestAccTenantsDataSource(t *testing.T) {
+	tenantConfig, tenantAddr := testconfig.TenantAndWorkspace(t)
 
 	config := testconfig.DataSource{Name: "tenants"}.Config(t).WithFirstBlock(
 		testconfig.Descend("workspace")(testconfig.SetAddr(tenantAddr, "metadata", "owned_by_workspace")),

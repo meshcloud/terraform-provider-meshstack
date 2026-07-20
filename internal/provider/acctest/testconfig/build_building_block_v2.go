@@ -29,7 +29,7 @@ func BBv2Tenant(t *testing.T) (config Config, buildingBlockAddr Traversal) {
 	platformConfig, platformAddr, platformTypeAddr := CustomPlatform(t, workspaceAddr)
 	landingZoneConfig, landingZoneAddr := LandingZone(t, workspaceAddr, platformAddr, platformTypeAddr)
 
-	tenantConfig, tenantAddr := TenantV4(t, projectAddr, platformAddr, landingZoneAddr)
+	tenantConfig, tenantAddr := Tenant(t, projectAddr, platformAddr, landingZoneAddr)
 
 	var buildingBlockDefinitionAddr Traversal
 	buildingBlockDefinitionConfig := Resource{Name: "building_block_v2", Suffix: "_02_tenant"}.TestSupportConfig(t, "").WithFirstBlock(

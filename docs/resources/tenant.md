@@ -3,26 +3,32 @@
 page_title: "meshstack_tenant Resource - terraform-provider-meshstack"
 subcategory: ""
 description: |-
-  Single tenant by workspace, project, and platform.
+  Manages a meshTenant.
+  ~> Preview: This resource is in preview. Breaking changes are possible without prior notice due to changes in the underlying meshStack preview API https://docs.meshcloud.io/api/technical-specifications#preview-endpoints or due to changes in this provider. Please ensure you are running the latest version of the provider and report any bugs via GitHub issues https://github.com/meshcloud/terraform-provider-meshstack/issues or via support@meshcloud.io.
 ---
 
 # meshstack_tenant (Resource)
 
-Single tenant by workspace, project, and platform.
+Manages a `meshTenant`.
+
+~> **Preview:** This resource is in preview. Breaking changes are possible without prior notice due to changes in the underlying [meshStack preview API](https://docs.meshcloud.io/api/technical-specifications#preview-endpoints) or due to changes in this provider. Please ensure you are running the latest version of the provider and report any bugs via [GitHub issues](https://github.com/meshcloud/terraform-provider-meshstack/issues) or via support@meshcloud.io.
 
 ## Example Usage
 
 ```terraform
 resource "meshstack_tenant" "example" {
   metadata = {
-    owned_by_workspace  = data.meshstack_workspace.example.metadata.name
-    owned_by_project    = data.meshstack_project.example.metadata.name
-    platform_identifier = data.meshstack_platform.example.identifier
+    owned_by_workspace = data.meshstack_workspace.example.metadata.name
+    owned_by_project   = data.meshstack_project.example.metadata.name
   }
 
   spec = {
-    landing_zone_identifier = data.meshstack_landingzone.example.metadata.name
+    platform_ref     = data.meshstack_platform.example.ref
+    landing_zone_ref = data.meshstack_landingzone.example.ref
   }
+
+  # wait until the tenant's platform_tenant_id is set (not necessarily full replication); defaults to true
+  wait_for_completion = true
 }
 ```
 
@@ -31,40 +37,93 @@ resource "meshstack_tenant" "example" {
 
 ### Required
 
-- `metadata` (Attributes) Tenant metadata. Workspace, project and platform of the target tenant must be set here. (see [below for nested schema](#nestedatt--metadata))
+- `metadata` (Attributes) Metadata of the tenant. The `owned_by_workspace` and `owned_by_project` attributes must be set here. (see [below for nested schema](#nestedatt--metadata))
 - `spec` (Attributes) Tenant specification. (see [below for nested schema](#nestedatt--spec))
+
+### Optional
+
+- `wait_for_completion` (Boolean) Wait for tenant creation/deletion to complete. Note that tenant creation is considered complete when `spec.platformTenantId` is set and not necessarily when replication is finished. Defaults to `true`.
+
+### Read-Only
+
+- `ref` (Attributes) Reference to this tenant, can be used as `target_ref` in building block resources. (see [below for nested schema](#nestedatt--ref))
+- `status` (Attributes) Tenant status. (see [below for nested schema](#nestedatt--status))
 
 <a id="nestedatt--metadata"></a>
 ### Nested Schema for `metadata`
 
 Required:
 
-- `owned_by_project` (String) Identifier of the project the tenant belongs to.
-- `owned_by_workspace` (String) Identifier of the workspace the tenant belongs to.
-- `platform_identifier` (String) Identifier of the target platform.
+- `owned_by_project` (String) The identifier of the project that the tenant belongs to.
+- `owned_by_workspace` (String) The identifier of the workspace that the tenant belongs to.
 
 Read-Only:
 
-- `assigned_tags` (Map of List of String) Tags assigned to this tenant originating from workspace, payment method and project.
-- `deleted_on` (String) If the tenant has been submitted for deletion by a workspace manager, the date is shown here (e.g. 2020-12-22T09:37:43Z).
+- `uuid` (String) The unique identifier (UUID) of the tenant.
 
 
 <a id="nestedatt--spec"></a>
 ### Nested Schema for `spec`
 
+Required:
+
+- `platform_ref` (Attributes) Reference to the platform this tenant belongs to, identified by its uuid. (see [below for nested schema](#nestedatt--spec--platform_ref))
+
 Optional:
 
-- `landing_zone_identifier` (String) Identifier of landing zone to assign to this tenant. **Note:** This field is only optional for platform type SERVICEREGISTRY, otherwise it is required.
-- `local_id` (String) Tenant ID local to the platform (e.g. GCP project ID, Azure subscription ID). Setting the local ID means that a tenant with this ID should be imported into meshStack. Not setting a local ID means that a new tenant should be created. Field will be empty until a successful replication has run. **Note:** Importing is a high-privileged operation and setting this field is possible only when using API Keys with admin permissions for saving tenants.
-- `quotas` (Attributes List) Set of applied tenant quotas. By default the landing zone quotas are applied to new tenants. (see [below for nested schema](#nestedatt--spec--quotas))
+- `landing_zone_ref` (Attributes) Reference to the landing zone to assign to this tenant, identified by its name (the landing zone identifier). (see [below for nested schema](#nestedatt--spec--landing_zone_ref))
+- `platform_tenant_id` (String) The identifier of the tenant on the platform (e.g. GCP project ID or Azure subscription ID). If this is not set, a new tenant will be created. If this is set, an existing tenant will be imported. Otherwise, this field will be empty until a successful replication has run.
+- `quotas` (Attributes Set) Quotas to apply to the tenant at creation. If omitted, the landing zone's default quotas apply. Set only at creation: the meshTenant API cannot update a tenant, so changing this on an existing tenant is rejected. To change a live tenant's quotas, file a quota request in the meshStack panel (Tenant > Settings > Quotas), which is subject to platform-operator approval. (see [below for nested schema](#nestedatt--spec--quotas))
+
+<a id="nestedatt--spec--platform_ref"></a>
+### Nested Schema for `spec.platform_ref`
+
+Required:
+
+- `uuid` (String) UUID (`metadata.uuid`) of `meshPlatform`.
+
+Optional:
+
+- `kind` (String) meshObject type, always `meshPlatform`.
+
+
+<a id="nestedatt--spec--landing_zone_ref"></a>
+### Nested Schema for `spec.landing_zone_ref`
+
+Optional:
+
+- `kind` (String) meshObject type, always `meshLandingZone`.
+- `name` (String) Named identifier (`metadata.name`) of `meshLandingZone`.
+
 
 <a id="nestedatt--spec--quotas"></a>
 ### Nested Schema for `spec.quotas`
 
-Read-Only:
+Required:
 
 - `key` (String)
 - `value` (Number)
+
+
+
+<a id="nestedatt--ref"></a>
+### Nested Schema for `ref`
+
+Read-Only:
+
+- `kind` (String) meshObject type, always `meshTenant`.
+- `uuid` (String) UUID (`metadata.uuid`) of `meshTenant`.
+
+
+<a id="nestedatt--status"></a>
+### Nested Schema for `status`
+
+Read-Only:
+
+- `platform_type_identifier` (String) Identifier of the tenant's platform type — the kind of platform (e.g. `aws`, `azure`), not the specific platform instance the tenant lives on.
+- `platform_workspace_id` (String) For platforms that represent a workspace as a platform-side container (e.g. a Cloud Foundry Organization or an OpenStack Domain), the platform's own id of that container (an id assigned by the external platform, not a meshWorkspace identifier). Null for platforms with no such concept or until the tenant has been replicated.
+- `tags` (Map of List of String) Tags assigned to this tenant.
+- `tenant_identifier` (String) Fully-qualified identifier of the tenant: the owning workspace, project and platform (instance) identifiers joined by dots (`<workspace>.<project>.<platform>.<location>`).
 
 ## Import
 
@@ -72,8 +131,9 @@ Use the [`import` block](https://developer.hashicorp.com/terraform/language/impo
 
 ```terraform
 import {
-  # full tenant identifier <workspace-identifier>.<project-identifier>.<platform-identifier>
-  id = "my-workspace.my-project.my-location.my-platform"
+  # full tenant identifier <workspace-identifier>.<project-identifier>.<platform-identifier>, where the
+  # platform identifier is itself <platform-name>.<location-name>
+  id = "my-workspace.my-project.my-platform.my-location"
   to = meshstack_tenant.example
 }
 ```

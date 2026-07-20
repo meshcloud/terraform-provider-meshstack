@@ -2,7 +2,9 @@ package clientmock
 
 import (
 	"context"
-	"fmt"
+
+	"github.com/google/uuid"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
 )
@@ -11,32 +13,42 @@ type MeshTenantClient struct {
 	Store *Store[client.MeshTenant]
 }
 
-func (m MeshTenantClient) tenantId(workspace, project, platform string) string {
-	return workspace + "." + project + "." + platform
+func (m MeshTenantClient) Read(_ context.Context, uuid string) (*client.MeshTenant, error) {
+	if t, ok := m.Store.Get(uuid); ok {
+		return t, nil
+	}
+	return nil, nil
 }
 
-func (m MeshTenantClient) Read(_ context.Context, workspace string, project string, platform string) (*client.MeshTenant, error) {
-	v, _ := m.Store.Get(m.tenantId(workspace, project, platform))
-	return v, nil
+func (m MeshTenantClient) ReadFunc(uuid string) func(ctx context.Context) (*client.MeshTenant, error) {
+	return func(ctx context.Context) (*client.MeshTenant, error) {
+		return m.Read(ctx, uuid)
+	}
 }
 
 func (m MeshTenantClient) Create(_ context.Context, tenant *client.MeshTenantCreate) (*client.MeshTenant, error) {
-	id := m.tenantId(tenant.Metadata.OwnedByWorkspace, tenant.Metadata.OwnedByProject, tenant.Metadata.PlatformIdentifier)
+	id := uuid.NewString()
 
-	if existing, ok := m.Store.Get(id); ok && existing != nil {
-		return nil, fmt.Errorf("tenant already exists: %s", id)
-	}
+	// Simulate a successful tenant creation with platformTenantId set
+	tenantIdentifier := tenant.Metadata.OwnedByWorkspace + "." + tenant.Metadata.OwnedByProject + "." + tenant.Spec.PlatformRef.Uuid
 
 	created := &client.MeshTenant{
 		Metadata: client.MeshTenantMetadata{
-			OwnedByProject:     tenant.Metadata.OwnedByProject,
-			OwnedByWorkspace:   tenant.Metadata.OwnedByWorkspace,
-			PlatformIdentifier: tenant.Metadata.PlatformIdentifier,
-			AssignedTags:       map[string][]string{},
+			Uuid:             id,
+			OwnedByProject:   tenant.Metadata.OwnedByProject,
+			OwnedByWorkspace: tenant.Metadata.OwnedByWorkspace,
 		},
 		Spec: client.MeshTenantSpec{
-			LocalId:               tenant.Spec.LocalId,
-			LandingZoneIdentifier: *tenant.Spec.LandingZoneIdentifier,
+			PlatformRef:      tenant.Spec.PlatformRef,
+			PlatformTenantId: new(acctest.RandString(16)),
+			LandingZoneRef:   tenant.Spec.LandingZoneRef,
+			Quotas:           tenant.Spec.Quotas,
+		},
+		Status: client.MeshTenantStatus{
+			TenantIdentifier:       tenantIdentifier,
+			PlatformTypeIdentifier: "mock-platform-type",
+			PlatformWorkspaceId:    new("mock-platform-workspace-id"),
+			Tags:                   map[string][]string{},
 		},
 	}
 
@@ -44,7 +56,35 @@ func (m MeshTenantClient) Create(_ context.Context, tenant *client.MeshTenantCre
 	return created, nil
 }
 
-func (m MeshTenantClient) Delete(_ context.Context, workspace string, project string, platform string) error {
-	m.Store.Delete(m.tenantId(workspace, project, platform))
+func (m MeshTenantClient) Delete(_ context.Context, uuid string) error {
+	m.Store.Delete(uuid)
 	return nil
+}
+
+func (m MeshTenantClient) List(_ context.Context, query *client.MeshTenantQuery) ([]client.MeshTenant, error) {
+	var result []client.MeshTenant
+	for _, t := range m.Store.Values() {
+		if t.Metadata.OwnedByWorkspace != query.Workspace {
+			continue
+		}
+		if query.Project != nil && t.Metadata.OwnedByProject != *query.Project {
+			continue
+		}
+		// The mock stores platform by ref (uuid); the backend resolves the platformIdentifier query
+		// param to that uuid, so mock-mode callers filter by uuid here.
+		if query.Platform != nil && t.Spec.PlatformRef.Uuid != *query.Platform {
+			continue
+		}
+		if query.PlatformType != nil && t.Status.PlatformTypeIdentifier != *query.PlatformType {
+			continue
+		}
+		if query.LandingZone != nil && (t.Spec.LandingZoneRef == nil || t.Spec.LandingZoneRef.Name != *query.LandingZone) {
+			continue
+		}
+		if query.PlatformTenant != nil && (t.Spec.PlatformTenantId == nil || *t.Spec.PlatformTenantId != *query.PlatformTenant) {
+			continue
+		}
+		result = append(result, *t)
+	}
+	return result, nil
 }

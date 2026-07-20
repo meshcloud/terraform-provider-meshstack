@@ -351,15 +351,15 @@ func TestAccBuildingBlock(t *testing.T) {
 		landingZoneConfig, landingZoneAddr := testconfig.LandingZone(t, workspaceAddr, platformAddr, platformTypeAddr)
 
 		var tenantAddr testconfig.Traversal
-		tenantConfig := testconfig.Resource{Name: "tenant_v4"}.Config(t).WithFirstBlock(
+		tenantConfig := testconfig.Resource{Name: "tenant"}.Config(t).WithFirstBlock(
 			testconfig.ExtractAddress(&tenantAddr),
 			testconfig.Descend("metadata")(
 				testconfig.Descend("owned_by_workspace")(testconfig.SetAddr(projectAddr, "metadata", "owned_by_workspace")),
 				testconfig.Descend("owned_by_project")(testconfig.SetAddr(projectAddr, "metadata", "name")),
 			),
 			testconfig.Descend("spec")(
-				testconfig.Descend("platform_identifier")(testconfig.SetAddr(platformAddr, "identifier")),
-				testconfig.Descend("landing_zone_identifier")(testconfig.SetAddr(landingZoneAddr, "metadata", "name")),
+				testconfig.Descend("platform_ref")(testconfig.SetRawExpr("%s", platformAddr.Join("ref"))),
+				testconfig.Descend("landing_zone_ref")(testconfig.SetRawExpr("{name = %s}", landingZoneAddr.Join("metadata", "name"))),
 			),
 		)
 
@@ -380,8 +380,8 @@ func TestAccBuildingBlock(t *testing.T) {
 				testconfig.Descend("definition_uuid")(testconfig.SetAddr(buildingBlockDefinitionAddr, "ref", "uuid")),
 				testconfig.Descend("definition_version")(testconfig.SetAddr(buildingBlockDefinitionAddr, "version_latest", "number")),
 				testconfig.Descend("tenant_identifier")(testconfig.SetRawExpr(
-					`"${%s.metadata.owned_by_workspace}.${%s.metadata.owned_by_project}.${%s.spec.platform_identifier}"`,
-					tenantAddr, tenantAddr, tenantAddr,
+					`"${%s.metadata.owned_by_workspace}.${%s.metadata.owned_by_project}.${%s.identifier}"`,
+					tenantAddr, tenantAddr, platformAddr,
 				)),
 			),
 			testconfig.Descend("spec", "inputs", "environment")(testconfig.SetRawExpr(`{ value_single_select = "dev" }`)),

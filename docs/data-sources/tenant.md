@@ -4,11 +4,14 @@ page_title: "meshstack_tenant Data Source - terraform-provider-meshstack"
 subcategory: ""
 description: |-
   Single tenant by workspace, project, and platform.
+  ~> Preview: This resource is in preview. Breaking changes are possible without prior notice due to changes in the underlying meshStack preview API https://docs.meshcloud.io/api/technical-specifications#preview-endpoints or due to changes in this provider. Please ensure you are running the latest version of the provider and report any bugs via GitHub issues https://github.com/meshcloud/terraform-provider-meshstack/issues or via support@meshcloud.io.
 ---
 
 # meshstack_tenant (Data Source)
 
 Single tenant by workspace, project, and platform.
+
+~> **Preview:** This resource is in preview. Breaking changes are possible without prior notice due to changes in the underlying [meshStack preview API](https://docs.meshcloud.io/api/technical-specifications#preview-endpoints) or due to changes in this provider. Please ensure you are running the latest version of the provider and report any bugs via [GitHub issues](https://github.com/meshcloud/terraform-provider-meshstack/issues) or via support@meshcloud.io.
 
 ## Example Usage
 
@@ -32,20 +35,20 @@ data "meshstack_tenant" "name" {
 ### Read-Only
 
 - `spec` (Attributes) Tenant specification. (see [below for nested schema](#nestedatt--spec))
+- `status` (Attributes) Tenant status. (see [below for nested schema](#nestedatt--status))
 
 <a id="nestedatt--metadata"></a>
 ### Nested Schema for `metadata`
 
 Required:
 
-- `owned_by_project` (String)
-- `owned_by_workspace` (String)
-- `platform_identifier` (String)
+- `owned_by_project` (String) Identifier of the project the tenant belongs to.
+- `owned_by_workspace` (String) Identifier of the workspace the tenant belongs to.
+- `platform_identifier` (String) Identifier of the target platform (`<platform>.<location>`).
 
 Read-Only:
 
-- `assigned_tags` (Map of List of String)
-- `deleted_on` (String)
+- `uuid` (String) The unique identifier (UUID) of the tenant.
 
 
 <a id="nestedatt--spec"></a>
@@ -53,9 +56,28 @@ Read-Only:
 
 Read-Only:
 
-- `landing_zone_identifier` (String)
-- `local_id` (String)
-- `quotas` (Attributes List) (see [below for nested schema](#nestedatt--spec--quotas))
+- `landing_zone_ref` (Attributes) Reference to the landing zone assigned to this tenant, identified by its name (the landing zone identifier). (see [below for nested schema](#nestedatt--spec--landing_zone_ref))
+- `platform_ref` (Attributes) Reference to the platform this tenant belongs to, identified by its uuid. (see [below for nested schema](#nestedatt--spec--platform_ref))
+- `platform_tenant_id` (String)
+- `quotas` (Attributes Set) (see [below for nested schema](#nestedatt--spec--quotas))
+
+<a id="nestedatt--spec--landing_zone_ref"></a>
+### Nested Schema for `spec.landing_zone_ref`
+
+Read-Only:
+
+- `kind` (String) meshObject type, always `meshLandingZone`.
+- `name` (String) Named identifier (`metadata.name`) of `meshLandingZone`.
+
+
+<a id="nestedatt--spec--platform_ref"></a>
+### Nested Schema for `spec.platform_ref`
+
+Read-Only:
+
+- `kind` (String) meshObject type, always `meshPlatform`.
+- `uuid` (String) UUID (`metadata.uuid`) of `meshPlatform`.
+
 
 <a id="nestedatt--spec--quotas"></a>
 ### Nested Schema for `spec.quotas`
@@ -64,3 +86,15 @@ Read-Only:
 
 - `key` (String)
 - `value` (Number)
+
+
+
+<a id="nestedatt--status"></a>
+### Nested Schema for `status`
+
+Read-Only:
+
+- `platform_type_identifier` (String) Identifier of the tenant's platform type — the kind of platform (e.g. `aws`, `azure`), not the specific platform instance the tenant lives on.
+- `platform_workspace_id` (String) For platforms that represent a workspace as a platform-side container (e.g. a Cloud Foundry Organization or an OpenStack Domain), the platform's own id of that container (an id assigned by the external platform, not a meshWorkspace identifier). Null for platforms with no such concept or until the tenant has been replicated.
+- `tags` (Map of List of String) Tags assigned to this tenant.
+- `tenant_identifier` (String) Fully-qualified identifier of the tenant: the owning workspace, project and platform (instance) identifiers joined by dots (`<workspace>.<project>.<platform>.<location>`).

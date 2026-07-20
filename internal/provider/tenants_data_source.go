@@ -12,29 +12,29 @@ import (
 )
 
 var (
-	_ datasource.DataSource              = &tenantsV4DataSource{}
-	_ datasource.DataSourceWithConfigure = &tenantsV4DataSource{}
+	_ datasource.DataSource              = &tenantsDataSource{}
+	_ datasource.DataSourceWithConfigure = &tenantsDataSource{}
 )
 
-func NewTenantsV4DataSource() datasource.DataSource {
-	return &tenantsV4DataSource{}
+func NewTenantsDataSource() datasource.DataSource {
+	return &tenantsDataSource{}
 }
 
-type tenantsV4DataSource struct {
-	meshTenantV4Client client.MeshTenantV4Client
+type tenantsDataSource struct {
+	meshTenantClient client.MeshTenantClient
 }
 
-func (d *tenantsV4DataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+func (d *tenantsDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_tenants"
 }
 
-func (d *tenantsV4DataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+func (d *tenantsDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	resp.Diagnostics.Append(configureProviderClient(req.ProviderData, func(client client.Client) {
-		d.meshTenantV4Client = client.TenantV4
+		d.meshTenantClient = client.Tenant
 	})...)
 }
 
-func (d *tenantsV4DataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (d *tenantsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Query tenants in a workspace with optional filters." + previewDisclaimer(),
 
@@ -82,29 +82,24 @@ func (d *tenantsV4DataSource) Schema(_ context.Context, _ datasource.SchemaReque
 								"owned_by_project": schema.StringAttribute{
 									Computed: true,
 								},
-								"created_on": schema.StringAttribute{
-									Computed: true,
-								},
-								"marked_for_deletion_on": schema.StringAttribute{
-									Computed: true,
-								},
-								"deleted_on": schema.StringAttribute{
-									Computed: true,
-								},
 							},
 						},
 						"spec": schema.SingleNestedAttribute{
 							Computed: true,
 							Attributes: map[string]schema.Attribute{
-								"platform_identifier": schema.StringAttribute{
-									Computed: true,
-								},
+								"platform_ref": meshRefByUuid(meshRefOptions{
+									Kind:        client.MeshObjectKind.Platform,
+									Description: "Reference to the platform this tenant belongs to, identified by its uuid.",
+									Output:      true,
+								}),
 								"platform_tenant_id": schema.StringAttribute{
 									Computed: true,
 								},
-								"landing_zone_identifier": schema.StringAttribute{
-									Computed: true,
-								},
+								"landing_zone_ref": meshRefByName(meshRefOptions{
+									Kind:        client.MeshObjectKind.LandingZone,
+									Description: "Reference to the landing zone assigned to this tenant, identified by its name (the landing zone identifier).",
+									Output:      true,
+								}),
 								"quotas": schema.ListNestedAttribute{
 									Computed: true,
 									NestedObject: schema.NestedAttributeObject{
@@ -119,18 +114,22 @@ func (d *tenantsV4DataSource) Schema(_ context.Context, _ datasource.SchemaReque
 						"status": schema.SingleNestedAttribute{
 							Computed: true,
 							Attributes: map[string]schema.Attribute{
-								"tenant_name": schema.StringAttribute{
-									Computed: true,
+								"tenant_identifier": schema.StringAttribute{
+									MarkdownDescription: "Fully-qualified identifier of the tenant: the owning workspace, project and platform (instance) identifiers joined by dots (`<workspace>.<project>.<platform>.<location>`).",
+									Computed:            true,
 								},
 								"platform_type_identifier": schema.StringAttribute{
-									Computed: true,
+									MarkdownDescription: "Identifier of the tenant's platform type — the kind of platform (e.g. `aws`, `azure`), not the specific platform instance the tenant lives on.",
+									Computed:            true,
 								},
-								"platform_workspace_identifier": schema.StringAttribute{
-									Computed: true,
+								"platform_workspace_id": schema.StringAttribute{
+									MarkdownDescription: "For platforms that represent a workspace as a platform-side container (e.g. a Cloud Foundry Organization or an OpenStack Domain), the platform's own id of that container (an id assigned by the external platform, not a meshWorkspace identifier). Null for platforms with no such concept or until the tenant has been replicated.",
+									Computed:            true,
 								},
 								"tags": schema.MapAttribute{
-									ElementType: types.ListType{ElemType: types.StringType},
-									Computed:    true,
+									MarkdownDescription: "Tags assigned to this tenant.",
+									ElementType:         types.ListType{ElemType: types.StringType},
+									Computed:            true,
 								},
 							},
 						},
@@ -141,7 +140,7 @@ func (d *tenantsV4DataSource) Schema(_ context.Context, _ datasource.SchemaReque
 	}
 }
 
-func (d *tenantsV4DataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+func (d *tenantsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var workspace string
 	var project, platform, platformType, landingZone, platformTenantId *string
 
@@ -156,7 +155,7 @@ func (d *tenantsV4DataSource) Read(ctx context.Context, req datasource.ReadReque
 		return
 	}
 
-	tenants, err := d.meshTenantV4Client.List(ctx, &client.MeshTenantV4Query{
+	tenants, err := d.meshTenantClient.List(ctx, &client.MeshTenantQuery{
 		Workspace:      workspace,
 		Project:        project,
 		Platform:       platform,
@@ -169,10 +168,13 @@ func (d *tenantsV4DataSource) Read(ctx context.Context, req datasource.ReadReque
 		return
 	}
 
-	models := make([]tenantV4Model, len(tenants))
+	models := make([]tenantModel, len(tenants))
 	for i := range tenants {
-		models[i] = newTenantV4Model(&tenants[i])
+		models[i] = tenantModelFromDto(&tenants[i])
 	}
 
+	// The `tenants` set and the nested `spec.quotas` list render differently (set vs list); the standard
+	// framework honors each per the schema, whereas the generic converter's set detection is global. The
+	// mapping here is already model-based (tenantModel), so no hand-rolled attribute plumbing remains.
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("tenants"), &models)...)
 }

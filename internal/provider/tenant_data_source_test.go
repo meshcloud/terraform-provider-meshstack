@@ -12,30 +12,36 @@ import (
 )
 
 func TestAccTenantDataSource(t *testing.T) {
-	// The v3 tenant DS reads from a different mock store than the v4 tenant resource writes to,
-	// so this test only works against a real meshStack (acceptance mode).
+	// The singular meshstack_tenant data source resolves the tenant via the list endpoint by the real
+	// platform identifier, which the mock (storing platform by ref uuid) cannot reproduce.
 	if IsMockClientTest() {
-		t.Skip("v3 tenant DS mock incompatible with v4 tenant resource mock")
+		t.Skip("meshstack_tenant data source composite lookup requires a real meshStack")
 	}
 
-	tenantConfig, tenantAddr := testconfig.TenantV4AndWorkspace(t)
+	workspaceConfig, workspaceAddr := testconfig.Workspace(t)
+	projectConfig, projectAddr := testconfig.Project(t, workspaceAddr)
+	platformConfig, platformAddr, platformTypeAddr := testconfig.CustomPlatform(t, workspaceAddr)
+	landingZoneConfig, landingZoneAddr := testconfig.LandingZone(t, workspaceAddr, platformAddr, platformTypeAddr)
+	tenantConfig, tenantAddr := testconfig.Tenant(t, projectAddr, platformAddr, landingZoneAddr)
 
 	dsAddress := testconfig.Traversal{"data.meshstack_tenant", "name"}
 	config := testconfig.DataSource{Name: "tenant"}.Config(t).WithFirstBlock(
 		testconfig.Descend("metadata")(
 			testconfig.Descend("owned_by_workspace")(testconfig.SetAddr(tenantAddr, "metadata", "owned_by_workspace")),
 			testconfig.Descend("owned_by_project")(testconfig.SetAddr(tenantAddr, "metadata", "owned_by_project")),
-			testconfig.Descend("platform_identifier")(testconfig.SetAddr(tenantAddr, "spec", "platform_identifier")),
+			testconfig.Descend("platform_identifier")(testconfig.SetAddr(platformAddr, "identifier")),
 		),
-	).Join(tenantConfig)
+	).Join(workspaceConfig, projectConfig, platformConfig, landingZoneConfig, tenantConfig)
 
 	ApplyAndTest(t, resource.TestCase{
 		Steps: []resource.TestStep{
 			{
 				Config: config.String(),
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(dsAddress.String(), tfjsonpath.New("metadata").AtMapKey("owned_by_workspace"), xknownvalue.NotEmptyString()),
-					statecheck.ExpectKnownValue(dsAddress.String(), tfjsonpath.New("metadata").AtMapKey("owned_by_project"), xknownvalue.NotEmptyString()),
+					statecheck.ExpectKnownValue(dsAddress.String(), tfjsonpath.New("metadata").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
+					statecheck.ExpectKnownValue(dsAddress.String(), tfjsonpath.New("spec").AtMapKey("platform_ref").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
+					statecheck.ExpectKnownValue(dsAddress.String(), tfjsonpath.New("status").AtMapKey("tenant_identifier"), xknownvalue.NotEmptyString()),
+					statecheck.ExpectKnownValue(dsAddress.String(), tfjsonpath.New("status").AtMapKey("platform_type_identifier"), xknownvalue.NotEmptyString()),
 				},
 			},
 		},

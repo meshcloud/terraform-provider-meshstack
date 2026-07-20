@@ -77,10 +77,10 @@ func NewMock() Client {
 	// what lets the v1->v3 `moved` migration refresh-Read find the block. The tenant store is shared
 	// so the v1 client can resolve tenant_identifier <-> tenant target_ref uuid.
 	buildingBlockStore := NewStore[client.MeshBuildingBlockV2]()
-	tenantV4Store := NewStore[client.MeshTenantV4]()
+	tenantStore := NewStore[client.MeshTenant]()
 	return Client{
 		ApiKey:                         MeshApiKeyClient{Store: NewStore[client.MeshApiKey]()},
-		BuildingBlock:                  meshBuildingBlockClient{Store: buildingBlockStore, BbdVersionStore: bbdVersionStore, TenantStore: tenantV4Store},
+		BuildingBlock:                  meshBuildingBlockClient{Store: buildingBlockStore, BbdVersionStore: bbdVersionStore, TenantStore: tenantStore},
 		BuildingBlockRun:               MeshBuildingBlockRunClient{Store: buildingBlockRunStore, LogStore: buildingBlockRunLogStore},
 		BuildingBlockDefinition:        meshBuildingBlockDefinitionClient{Store: NewStore[client.MeshBuildingBlockDefinition](), StoreVersion: bbdVersionStore},
 		BuildingBlockDefinitionVersion: meshBuildingBlockDefinitionVersionClient{Store: bbdVersionStore},
@@ -97,8 +97,8 @@ func NewMock() Client {
 		ProjectUserBinding:             MeshProjectUserBindingClient{Store: NewStore[client.MeshProjectUserBinding]()},
 		ServiceInstance:                MeshServiceInstanceClient{Store: NewStore[client.MeshServiceInstance]()},
 		TagDefinition:                  MeshTagDefinitionClient{Store: NewStore[client.MeshTagDefinition]()},
-		Tenant:                         MeshTenantClient{Store: NewStore[client.MeshTenant]()},
-		TenantV4:                       MeshTenantV4Client{Store: tenantV4Store},
+		Tenant:                         MeshTenantClient{Store: tenantStore},
+		TenantV4:                       MeshTenantV4Client{Store: NewStore[client.MeshTenantV4]()},
 		Workspace:                      MeshWorkspaceClient{Store: NewStore[client.MeshWorkspace]()},
 		WorkspaceGroupBinding:          MeshWorkspaceGroupBindingClient{Store: NewStore[client.MeshWorkspaceGroupBinding]()},
 		WorkspaceUserBinding:           MeshWorkspaceUserBindingClient{Store: NewStore[client.MeshWorkspaceUserBinding]()},

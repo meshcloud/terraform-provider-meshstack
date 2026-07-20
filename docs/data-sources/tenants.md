@@ -56,9 +56,6 @@ Read-Only:
 
 Read-Only:
 
-- `created_on` (String)
-- `deleted_on` (String)
-- `marked_for_deletion_on` (String)
 - `owned_by_project` (String)
 - `owned_by_workspace` (String)
 - `uuid` (String)
@@ -78,10 +75,28 @@ Read-Only:
 
 Read-Only:
 
-- `landing_zone_identifier` (String)
-- `platform_identifier` (String)
+- `landing_zone_ref` (Attributes) Reference to the landing zone assigned to this tenant, identified by its name (the landing zone identifier). (see [below for nested schema](#nestedatt--tenants--spec--landing_zone_ref))
+- `platform_ref` (Attributes) Reference to the platform this tenant belongs to, identified by its uuid. (see [below for nested schema](#nestedatt--tenants--spec--platform_ref))
 - `platform_tenant_id` (String)
 - `quotas` (Attributes List) (see [below for nested schema](#nestedatt--tenants--spec--quotas))
+
+<a id="nestedatt--tenants--spec--landing_zone_ref"></a>
+### Nested Schema for `tenants.spec.landing_zone_ref`
+
+Read-Only:
+
+- `kind` (String) meshObject type, always `meshLandingZone`.
+- `name` (String) Named identifier (`metadata.name`) of `meshLandingZone`.
+
+
+<a id="nestedatt--tenants--spec--platform_ref"></a>
+### Nested Schema for `tenants.spec.platform_ref`
+
+Read-Only:
+
+- `kind` (String) meshObject type, always `meshPlatform`.
+- `uuid` (String) UUID (`metadata.uuid`) of `meshPlatform`.
+
 
 <a id="nestedatt--tenants--spec--quotas"></a>
 ### Nested Schema for `tenants.spec.quotas`
@@ -98,7 +113,7 @@ Read-Only:
 
 Read-Only:
 
-- `platform_type_identifier` (String)
-- `platform_workspace_identifier` (String)
-- `tags` (Map of List of String)
-- `tenant_name` (String)
+- `platform_type_identifier` (String) Identifier of the tenant's platform type — the kind of platform (e.g. `aws`, `azure`), not the specific platform instance the tenant lives on.
+- `platform_workspace_id` (String) For platforms that represent a workspace as a platform-side container (e.g. a Cloud Foundry Organization or an OpenStack Domain), the platform's own id of that container (an id assigned by the external platform, not a meshWorkspace identifier). Null for platforms with no such concept or until the tenant has been replicated.
+- `tags` (Map of List of String) Tags assigned to this tenant.
+- `tenant_identifier` (String) Fully-qualified identifier of the tenant: the owning workspace, project and platform (instance) identifiers joined by dots (`<workspace>.<project>.<platform>.<location>`).

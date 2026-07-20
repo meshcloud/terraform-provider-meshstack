@@ -98,6 +98,19 @@ func (c Config) Join(others ...Config) Config {
 	return result
 }
 
+// WithRawBlock parses raw HCL (e.g. a `moved {}` block) and appends its blocks to a cloned Config.
+func (c Config) WithRawBlock(raw string) Config {
+	c.t.Helper()
+	result := clone(c)
+	parsed, diags := hclwrite.ParseConfig([]byte(raw), "", hcl.Pos{Line: 1, Column: 1})
+	require.False(c.t, diags.HasErrors(), "WithRawBlock: failed to parse raw HCL: %s", diags.Error())
+	for _, block := range parsed.Body().Blocks() {
+		result.internal.Body().AppendNewline()
+		result.internal.Body().AppendBlock(block)
+	}
+	return result
+}
+
 // WithFirstBlock applies consumers to the first block of a cloned Config and returns the new Config.
 func (c Config) WithFirstBlock(consumers ...ExpressionConsumer) Config {
 	c.t.Helper()

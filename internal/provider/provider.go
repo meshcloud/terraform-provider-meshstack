@@ -208,7 +208,7 @@ func (p *MeshStackProvider) DataSources(_ context.Context) []func() datasource.D
 		NewTagDefinitionDataSource,
 		NewTagDefinitionsDataSource,
 		NewTenantV4DataSource,
-		NewTenantsV4DataSource,
+		NewTenantsDataSource,
 		NewLandingZoneDataSource,
 		NewPlatformDataSource,
 		NewPaymentMethodDataSource,

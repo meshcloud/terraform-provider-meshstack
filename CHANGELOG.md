@@ -1,7 +1,16 @@
 # v0.24.0
 
+BREAKING CHANGES:
+- `meshstack_tenant` now runs on the meshTenant v4 API and the resource body changed accordingly (existing state is upgraded in place, without recreating the tenant): `metadata.platform_identifier` → `spec.platform_ref` (`{uuid, kind}`), `spec.local_id` → `spec.platform_tenant_id`, `spec.landing_zone_identifier` → `spec.landing_zone_ref` (`{name, kind}`), `metadata.assigned_tags` → `status.tags`, and `spec.quotas` is now a set. New computed `ref`, richer `status`, and a `wait_for_completion` toggle. Import accepts either the tenant UUID or the legacy `workspace.project.platform.location` composite. Requires meshStack with the meshTenant v4 API carrying `platformRef`/`landingZoneRef`. Upgrade caveats: the automatic state upgrade queries the backend and expects exactly one active tenant for the composite (it errors otherwise); and if you previously omitted the landing zone, set `landing_zone_ref` after upgrading, because it is `RequiresReplace` — leaving it unset forces a tenant recreate.
+- `meshstack_tenants` (data source) now runs on the ref-based meshTenant v4 body: each returned tenant exposes `spec.platform_ref` (`{uuid, kind}`) and `spec.landing_zone_ref` (`{name, kind}`) instead of `spec.platform_identifier` / `spec.landing_zone_identifier`, plus a computed `ref` and a richer `status`. Update any consumers that read the old identifier fields.
+- `meshstack_tenant` and `meshstack_tenants` no longer expose the lifecycle status outputs `metadata.created_on`, `metadata.marked_for_deletion_on` and `metadata.deleted_on`. These were read-only passthrough attributes with no functional use; lifecycle status is intentionally hidden inside the resource/data source (aligned with modern resources like `meshstack_building_block_definition`). Remove any references to these attributes.
+
 FEATURES:
 - `meshstack_landingzone` resource and data source now expose a computed `ref` output (`{name, kind}`) suitable for use as `landing_zone_ref` in tenant resources, matching the existing `ref` outputs on other resources.
+- `meshstack_tenant` supports migrating from the deprecated `meshstack_tenant_v4` with a `moved` block. The move carries over the tenant uuid; the post-move refresh re-reads the tenant from the API to translate the v4 `spec.platform_identifier` into the ref-based `spec.platform_ref`, so the move does not recreate the tenant.
+
+FIXES:
+- `meshstack_tenant`: changing only `wait_for_completion` (a client-side toggle with no API call) is now applied in place instead of failing with "Tenants can't be updated". Any other change to an existing tenant remains unsupported.
 
 # v0.23.3
 
