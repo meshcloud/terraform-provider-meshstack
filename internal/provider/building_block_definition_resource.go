@@ -1,11 +1,12 @@
 package provider
 
 import (
+	"cmp"
 	"context"
 	"fmt"
-	"maps"
 	"slices"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -22,13 +23,6 @@ var (
 	_ resource.ResourceWithImportState    = &buildingBlockDefinitionResource{}
 	_ resource.ResourceWithModifyPlan     = &buildingBlockDefinitionResource{}
 	_ resource.ResourceWithValidateConfig = &buildingBlockDefinitionResource{}
-)
-
-// nonNoneOutputAssignmentTypes is every output assignment type except NONE — the "special" types that mark
-// how a manual building block's derived output is used. Derived from the full enum so a new entry flows in
-// automatically; the schema description, ValidateConfig, and the tests all read this single source.
-var nonNoneOutputAssignmentTypes = client.MeshBuildingBlockDefinitionOutputAssignmentTypes.Except(
-	client.MeshBuildingBlockDefinitionOutputAssignmentTypeNone,
 )
 
 func NewBuildingBlockDefinitionResource() resource.Resource {
@@ -171,102 +165,116 @@ func (r *buildingBlockDefinitionResource) Read(ctx context.Context, req resource
 		buildingBlockDefinitionConverterOptions().Append(buildingBlockDefinitionVersionConverterOptions(ctx, nil, nil, req.State)...)...)...)
 }
 
+// outputStringAttr safely extracts a string attribute from a nested output object's attribute map,
+// returning a null string when the key is absent or not a string (never panics on unexpected shapes).
+func outputStringAttr(attrs map[string]attr.Value, name string) types.String {
+	if s, ok := attrs[name].(types.String); ok {
+		return s
+	}
+	return types.StringNull()
+}
+
 func (r *buildingBlockDefinitionResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
 	manualPath := path.Root("version_spec").AtName("implementation").AtName("manual")
+	inputsPath := path.Root("version_spec").AtName("inputs")
 	outputsPath := path.Root("version_spec").AtName("outputs")
 
 	var manual types.Object
 	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, manualPath, &manual)...)
-	var outputs types.Map
+	var inputs, outputs types.Map
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, inputsPath, &inputs)...)
 	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, outputsPath, &outputs)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// Manual building blocks derive their outputs from the inputs on the backend (one output per input,
-	// assignment type NONE). The backend regenerates every derived output as NONE except those the user
-	// marks with a non-NONE assignment_type (see nonNoneOutputAssignmentTypes), which it preserves on the
-	// matching output. So a manual output with assignment_type NONE (explicit or omitted) does nothing and
-	// is rejected here; any non-NONE assignment_type is accepted (see issues #131, #176).
-	if manual.IsNull() || manual.IsUnknown() || outputs.IsNull() || outputs.IsUnknown() {
-		return
-	}
-	// An explicit empty map (`outputs = {}`) is not the same as omitting outputs: the backend still derives
-	// one output per input, so the applied result carries those keys while the plan keeps the configured
-	// empty map. Terraform forbids a provider from planning a computed value that diverges from a known
-	// configured value, so this surfaces at apply as "provider produced inconsistent result after apply:
-	// new element ... has appeared". Reject it here and tell the user to omit the attribute.
-	if len(outputs.Elements()) == 0 {
-		resp.Diagnostics.AddAttributeError(
-			outputsPath,
-			"manual building block outputs must be omitted, not an empty map",
-			"Manual building block definitions derive their outputs from the inputs automatically (one output "+
-				"per input). An explicit empty `outputs = {}` conflicts with those derived outputs and fails at "+
-				"apply with \"provider produced inconsistent result after apply\". Remove the version_spec.outputs "+
-				"attribute entirely so it can be computed from the API response.",
-		)
-		return
-	}
-	for key, assignmentType := range outputAssignmentTypes(outputs) {
-		if assignmentType != "" && assignmentType != client.MeshBuildingBlockDefinitionOutputAssignmentTypeNone.String() {
-			continue
-		}
-		// An omitted assignment_type defaults to NONE, which the backend ignores just like an explicit
-		// NONE, so reject it too instead of silently accepting config that does nothing.
-		configured := fmt.Sprintf("assignment_type %q", assignmentType)
-		if assignmentType == "" {
-			configured = fmt.Sprintf("no assignment_type (defaults to %s)", client.MeshBuildingBlockDefinitionOutputAssignmentTypeNone)
-		}
-		resp.Diagnostics.AddAttributeError(
-			outputsPath.AtMapKey(key),
-			"manual building block outputs must have a special assignment_type (other than NONE)",
-			fmt.Sprintf("Manual building block definitions derive their outputs from the inputs automatically. "+
-				"Output %q has %s, which does nothing; either remove it so it is computed from the API response, "+
-				"or give it a dedicated assignment_type to mark how the matching output is used.",
-				key, configured),
-		)
-	}
-}
-
-// outputAssignmentTypes returns the assignment_type of each output in the given map (keyed by output name),
-// skipping null/unknown maps and elements. An omitted or null assignment_type yields an empty string (it
-// defaults to NONE, so it must be surfaced rather than dropped); an unknown assignment_type is skipped
-// because it cannot be validated yet.
-func outputAssignmentTypes(outputs types.Map) map[string]string {
-	result := map[string]string{}
+	// Nothing declared -> nothing to validate (the outputs schema is optional+computed).
 	if outputs.IsNull() || outputs.IsUnknown() {
-		return result
+		return
 	}
-	for key, elem := range outputs.Elements() {
+	outputElems := outputs.Elements()
+
+	// The outputs object is shared by manual and non-manual definitions; the schema had to loosen
+	// display_name/type to optional+computed to accommodate manual's sparse-override model, so the
+	// per-implementation contract is re-imposed here (the framework cannot flip Required per implementation).
+	if manual.IsNull() || manual.IsUnknown() {
+		// Non-manual: outputs are configured explicitly, so type and display_name remain mandatory.
+		for key, elem := range outputElems {
+			obj, ok := elem.(types.Object)
+			if !ok || obj.IsNull() || obj.IsUnknown() {
+				continue
+			}
+			attrs := obj.Attributes()
+			if outputStringAttr(attrs, "type").IsNull() {
+				resp.Diagnostics.AddAttributeError(outputsPath.AtMapKey(key),
+					"output type is required",
+					"For non-manual building block definitions, every declared output must set 'type'.")
+			}
+			if outputStringAttr(attrs, "display_name").IsNull() {
+				resp.Diagnostics.AddAttributeError(outputsPath.AtMapKey(key),
+					"output display_name is required",
+					"For non-manual building block definitions, every declared output must set 'display_name'.")
+			}
+		}
+		return
+	}
+
+	// Manual: outputs are a sparse override. The backend derives type and positional display_order and merges
+	// the sent subset; the provider prunes the response back to the tracked subset with a diff rule
+	// (assignment_type != NONE OR display_name != the input's). For that rule to be lossless - a hard
+	// requirement for stable per-version content hashes - every accepted override must be reconstructable.
+	// So: type is always derived (reject it); a no-op override (nothing but display_order, or a display_name
+	// equal to the input's, with NONE assignment) cannot be reconstructed (reject it). Checks that need a value
+	// which is unknown at plan are skipped (best-effort); the invariant is guaranteed for fully-known config.
+	none := client.MeshBuildingBlockDefinitionOutputAssignmentTypeNone.String()
+	inputsKnown := !inputs.IsNull() && !inputs.IsUnknown()
+	var inputElems map[string]attr.Value
+	if inputsKnown {
+		inputElems = inputs.Elements()
+	}
+	for key, elem := range outputElems {
 		obj, ok := elem.(types.Object)
 		if !ok || obj.IsNull() || obj.IsUnknown() {
 			continue
 		}
-		assignmentType, ok := obj.Attributes()["assignment_type"].(types.String)
-		if ok && assignmentType.IsUnknown() {
-			continue
-		}
-		// A missing or null assignment_type defaults to NONE; represent it as "" so callers can reject it.
-		if !ok || assignmentType.IsNull() {
-			result[key] = ""
-			continue
-		}
-		result[key] = assignmentType.ValueString()
-	}
-	return result
-}
+		attrs := obj.Attributes()
 
-func manualAllowedOutputAssignmentsEqual(a, b types.Map) bool {
-	allowed := func(m types.Map) map[string]string {
-		result := map[string]string{}
-		for key, assignmentType := range outputAssignmentTypes(m) {
-			if assignmentType != "" && assignmentType != client.MeshBuildingBlockDefinitionOutputAssignmentTypeNone.String() {
-				result[key] = assignmentType
+		if t := attrs["type"]; t != nil && !t.IsNull() {
+			resp.Diagnostics.AddAttributeError(outputsPath.AtMapKey(key).AtName("type"),
+				"output type must not be set on manual building blocks",
+				"For manual building block definitions the output type is always derived from the matching input. Remove 'type' from this output.")
+		}
+
+		if inputsKnown {
+			if _, ok := inputElems[key]; !ok {
+				resp.Diagnostics.AddAttributeError(outputsPath.AtMapKey(key),
+					"declared output has no matching input",
+					fmt.Sprintf("Manual building block outputs are keyed by their matching input; output %q has no matching input. "+
+						"Remove it, or add an input with the same key.", key))
+				continue
 			}
 		}
-		return result
+
+		assignment := outputStringAttr(attrs, "assignment_type")
+		displayName := outputStringAttr(attrs, "display_name")
+
+		assignmentProvablyNone := assignment.IsNull() || (!assignment.IsUnknown() && assignment.ValueString() == none)
+		displayNameProvablyNotOverride := displayName.IsNull()
+		if !displayName.IsNull() && !displayName.IsUnknown() && inputsKnown {
+			if inputObj, ok := inputElems[key].(types.Object); ok {
+				inputDisplayName := outputStringAttr(inputObj.Attributes(), "display_name")
+				if !inputDisplayName.IsNull() && !inputDisplayName.IsUnknown() && displayName.ValueString() == inputDisplayName.ValueString() {
+					displayNameProvablyNotOverride = true
+				}
+			}
+		}
+		if assignmentProvablyNone && displayNameProvablyNotOverride {
+			resp.Diagnostics.AddAttributeError(outputsPath.AtMapKey(key),
+				"manual building block output override has no effect",
+				fmt.Sprintf("Output %q does not override anything: set assignment_type to a value other than %s, or a display_name "+
+					"that differs from the matching input's. Overriding display_order alone is not supported.", key, none))
+		}
 	}
-	return maps.Equal(allowed(a), allowed(b))
 }
 
 // versionSpecDtoFromPlan builds the version_spec client DTO from the plan, applying the manual-output
@@ -277,20 +285,69 @@ func manualAllowedOutputAssignmentsEqual(a, b types.Map) bool {
 func versionSpecDtoFromPlan(ctx context.Context, plan buildingBlockDefinition, bbdUuid string, config generic.AttributeGetter, diags *diag.Diagnostics) client.MeshBuildingBlockDefinitionVersionSpec {
 	dto := plan.VersionSpec.ToClientDto(bbdUuid)
 	if dto.Implementation.Manual != nil {
-		dto.Outputs = manualConfiguredOutputs(ctx, config, diags)
+		dto.Outputs = manualConfiguredOutputs(ctx, config, dto.Inputs, diags)
 	}
 	return dto
 }
 
-// manualConfiguredOutputs reads the user-configured version_spec.outputs (the PLATFORM_TENANT_ID hints)
-// from config so they can be sent to the backend even though the planned outputs value is left unknown
-// for manual building blocks. Returns an empty map when outputs are omitted.
-func manualConfiguredOutputs(ctx context.Context, config generic.AttributeGetter, diags *diag.Diagnostics) map[string]client.MeshBuildingBlockDefinitionOutput {
-	outputs := generic.GetAttribute[map[string]client.MeshBuildingBlockDefinitionOutput](
-		ctx, config, path.Root("version_spec").AtName("outputs"), diags, generic.WithSetUnknownValueToZero())
-	if outputs == nil {
-		// The backend rejects a null outputs property, so send an empty map when none are configured.
-		outputs = map[string]client.MeshBuildingBlockDefinitionOutput{}
+// manualOutputOverride reads a configured manual output with nullable fields, so an omitted attribute (nil)
+// is distinguishable from an explicit value - notably display_order, where an omitted value must fall back to
+// the derived positional order rather than pinning position 0.
+type manualOutputOverride struct {
+	DisplayName    *string                                                 `tfsdk:"display_name"`
+	AssignmentType *client.MeshBuildingBlockDefinitionOutputAssignmentType `tfsdk:"assignment_type"`
+	Type           *client.MeshBuildingBlockIOType                         `tfsdk:"type"`
+	DisplayOrder   *int64                                                  `tfsdk:"display_order"`
+}
+
+// manualConfiguredOutputs synthesizes the FULL one-per-input output set to send to the backend, applying the
+// user's sparse overrides on top of the backend-derived defaults (type translated from the input, display_name
+// from the input, assignment_type NONE, positional display_order). Sending the full set is required because the
+// backend is stateful: on update it preserves any previously stored override for an output key absent from the
+// request, so a dropped override would otherwise linger. By sending every key explicitly - untracked ones reset
+// to their derived values - the provider fully controls the result and removing an override by dropping it from
+// config works. The output type is always derived because the backend rejects an empty or mismatching type.
+func manualConfiguredOutputs(ctx context.Context, config generic.AttributeGetter, inputs map[string]*client.MeshBuildingBlockDefinitionInput, diags *diag.Diagnostics) map[string]client.MeshBuildingBlockDefinitionOutput {
+	overrides := generic.GetAttribute[map[string]manualOutputOverride](
+		ctx, config, path.Root("version_spec").AtName("outputs"), diags)
+	if diags.HasError() {
+		return nil
+	}
+
+	// Derived display_order mirrors the backend: the input's position in (display_order, key)-sorted order.
+	keys := make([]string, 0, len(inputs))
+	for key := range inputs {
+		keys = append(keys, key)
+	}
+	slices.SortFunc(keys, func(a, b string) int {
+		if c := cmp.Compare(inputs[a].DisplayOrder, inputs[b].DisplayOrder); c != 0 {
+			return c
+		}
+		return cmp.Compare(a, b)
+	})
+
+	none := client.MeshBuildingBlockDefinitionOutputAssignmentTypeNone.Unwrap()
+	outputs := make(map[string]client.MeshBuildingBlockDefinitionOutput, len(inputs))
+	for index, key := range keys {
+		input := inputs[key]
+		output := client.MeshBuildingBlockDefinitionOutput{
+			DisplayName:    input.DisplayName,
+			Type:           translateManualInputTypeToOutput(input.Type),
+			AssignmentType: none,
+			DisplayOrder:   int64(index),
+		}
+		if override, ok := overrides[key]; ok {
+			if override.DisplayName != nil && *override.DisplayName != "" {
+				output.DisplayName = *override.DisplayName
+			}
+			if override.AssignmentType != nil && *override.AssignmentType != "" {
+				output.AssignmentType = *override.AssignmentType
+			}
+			if override.DisplayOrder != nil {
+				output.DisplayOrder = *override.DisplayOrder
+			}
+		}
+		outputs[key] = output
 	}
 	return outputs
 }
@@ -317,7 +374,9 @@ func (r *buildingBlockDefinitionResource) ModifyPlan(ctx context.Context, req re
 	}
 
 	if !req.State.Raw.IsKnown() || req.State.Raw.IsNull() {
-		// do nothing more in case of create
+		// Create needs no output handling. Manual outputs are Computed and derived by the backend at apply;
+		// the create plan leaves them known-after-apply and the read-back prunes to the tracked overrides, so
+		// the create plan is consistent with the apply result.
 		return
 	}
 
@@ -355,14 +414,13 @@ func (r *buildingBlockDefinitionResource) ModifyPlan(ctx context.Context, req re
 		return
 	}
 
-	// Manual building blocks have backend-derived outputs: the backend mirrors every input into an output
-	// (assignment type NONE), preserving only outputs the user marked with a non-NONE assignment_type (see
-	// issues #131 and #176, and ValidateConfig). We cannot fully predict the reconciled outputs at plan
-	// time, so whenever the inputs or the configured non-NONE outputs change we leave outputs - and the
-	// content hash that includes them - unknown and let the apply reconcile them from the API response.
-	// Otherwise we reuse the reconciled value from state, which also avoids a perpetual diff between the
-	// (partial) configured outputs and the (full) stored outputs. Non-manual implementations configure
-	// outputs explicitly and the backend does not derive them, so they are left untouched here.
+	// Manual building blocks track only the user's output overrides (a sparse subset); the backend derives
+	// the rest. A declared override's display_name/type/display_order are Computed and held from state by
+	// UseStateForUnknown, so a no-op plan stays fully known and the content hash is stable. But the backend
+	// re-derives type and positional display_order whenever the inputs change OR the tracked-override key set
+	// changes (including dropping all overrides), so in those cases leave the whole outputs map - and the
+	// content hash that includes it - unknown, and let apply reconcile.
+	// Non-manual implementations configure outputs explicitly and the backend does not derive them.
 	outputsPath := path.Root("version_spec").AtName("outputs")
 	inputsPath := path.Root("version_spec").AtName("inputs")
 	manualPath := path.Root("version_spec").AtName("implementation").AtName("manual")
@@ -370,34 +428,65 @@ func (r *buildingBlockDefinitionResource) ModifyPlan(ctx context.Context, req re
 	var manual types.Object
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, manualPath, &manual)...)
 	if !manual.IsNull() && !manual.IsUnknown() {
-		var planInputs, stateInputs, configOutputs, stateOutputs types.Map
-		resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, inputsPath, &planInputs)...)
-		resp.Diagnostics.Append(req.State.GetAttribute(ctx, inputsPath, &stateInputs)...)
+		var configOutputs, stateOutputs, planInputs, stateInputs types.Map
 		resp.Diagnostics.Append(req.Config.GetAttribute(ctx, outputsPath, &configOutputs)...)
 		resp.Diagnostics.Append(req.State.GetAttribute(ctx, outputsPath, &stateOutputs)...)
+		resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, inputsPath, &planInputs)...)
+		resp.Diagnostics.Append(req.State.GetAttribute(ctx, inputsPath, &stateInputs)...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		versionSpecOutputsUncertain = !planInputs.Equal(stateInputs) ||
-			!manualAllowedOutputAssignmentsEqual(configOutputs, stateOutputs)
-		if versionSpecOutputsUncertain {
-			resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, outputsPath, types.MapUnknown(stateOutputs.ElementType(ctx)))...)
-		} else {
-			resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, outputsPath, stateOutputs)...)
+		inputsChanged := !planInputs.Equal(stateInputs)
+		switch {
+		case configOutputs.IsNull():
+			// Outputs omitted: the whole set is derived. Leave it unknown when the derived result cannot be
+			// predicted - the inputs changed, or overrides are being dropped (state still holds some) - so apply
+			// reconciles. When nothing changed, leaving the state value avoids a perpetual "known after apply".
+			stateEmpty := stateOutputs.IsNull() || len(stateOutputs.Elements()) == 0
+			if inputsChanged || !stateEmpty {
+				versionSpecOutputsUncertain = true
+				resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, outputsPath, types.MapUnknown(stateOutputs.ElementType(ctx)))...)
+			}
+		case inputsChanged:
+			// Overrides are declared and the inputs changed, so the backend re-derives each output's type and
+			// positional display_order. The whole configured map cannot be planned unknown, so null only the
+			// Computed fields held from state that a re-derivation can shift - type (never configured for
+			// manual), and display_name/display_order where the user did not set them - and defer the hash.
+			versionSpecOutputsUncertain = true
+			for key, elem := range configOutputs.Elements() {
+				obj, ok := elem.(types.Object)
+				if !ok {
+					continue
+				}
+				attrs := obj.Attributes()
+				base := outputsPath.AtMapKey(key)
+				resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, base.AtName("type"), types.StringUnknown())...)
+				if dn := attrs["display_name"]; dn == nil || dn.IsNull() {
+					resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, base.AtName("display_name"), types.StringUnknown())...)
+				}
+				if do := attrs["display_order"]; do == nil || do.IsNull() {
+					resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, base.AtName("display_order"), types.Int64Unknown())...)
+				}
+			}
 		}
 		if resp.Diagnostics.HasError() {
 			return
 		}
 	}
 
-	// Determine this very carefully and leave it unknown if the underlying version_spec has unknown values somewhere deep down
+	// Determine this very carefully and leave it unknown if the underlying version_spec has unknown values
+	// somewhere deep down. Read from resp.Plan, not req.Plan: for a manual building block the outputs were
+	// just reconciled into resp.Plan above (reused from state, or left unknown), whereas req.Plan still holds
+	// the raw configured outputs - a subset with the schema-default display_order 0. Hashing req.Plan would
+	// predict a content_hash that disagrees with the one the backend-derived outputs produce at apply,
+	// surfacing as "inconsistent result after apply" on the content_hash of a released or re-drafted version.
 	versionSpecContentHash := func() (result generic.NullIsUnknown[string]) {
 		if versionSpecSecretsChanged || versionSpecOutputsUncertain {
 			return
 		}
 		versionSpecPath := path.Root("version_spec")
 		var versionSpec types.Object
-		req.Plan.GetAttribute(ctx, versionSpecPath, &versionSpec)
+		resp.Plan.GetAttribute(ctx, versionSpecPath, &versionSpec)
 		attributes := versionSpec.Attributes()
 		attributeTypes := versionSpec.AttributeTypes(ctx)
 		delete(attributes, "draft")
@@ -410,7 +499,7 @@ func (r *buildingBlockDefinitionResource) ModifyPlan(ctx context.Context, req re
 		if tfValue.IsFullyKnown() {
 			result.Value = new(calculateBuildingBlockDefinitionVersionContentHash(
 				generic.GetAttribute[client.MeshBuildingBlockDefinitionVersionSpec](
-					ctx, req.Plan, versionSpecPath, &resp.Diagnostics,
+					ctx, resp.Plan, versionSpecPath, &resp.Diagnostics,
 					buildingBlockDefinitionVersionConverterOptions(ctx, req.Config, req.Plan, req.State)...),
 				&resp.Diagnostics,
 			).toBase64())

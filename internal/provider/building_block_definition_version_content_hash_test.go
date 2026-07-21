@@ -80,7 +80,7 @@ func Test_versionContentHash(t *testing.T) {
 // version instead of a spurious "changed" — see Test_contentHash_compareToStored_acrossVersions), so it must
 // be paired with an intentional edit here.
 func Test_contentHash_currentVersion(t *testing.T) {
-	require.Equal(t, 4, currentHashVersion)
+	require.Equal(t, 5, currentHashVersion)
 
 	h := forTestCalculateContentHash(t, versionSpecJson)
 	require.Equal(t, currentHashVersion, h.hashVersion)
@@ -153,6 +153,7 @@ func Test_contentHash_compareToStored_acrossVersions(t *testing.T) {
 		{"stored v1, current v4 -> incomparable", 4, "aaa", 1, "v1:h", hashIncomparable},
 		{"stored v2, current v4 -> incomparable", 4, "aaa", 2, "aaa", hashIncomparable},
 		{"stored v3, current v4 -> incomparable", 4, "aaa", 3, "aaa", hashIncomparable},
+		{"stored v4, current v5 -> incomparable", 5, "aaa", 4, "aaa", hashIncomparable},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

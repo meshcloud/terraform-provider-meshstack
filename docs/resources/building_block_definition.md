@@ -193,7 +193,7 @@ resource "meshstack_building_block_definition" "example_02_github_workflows" {
 ```
 
 ```terraform
-# An example for manual implementation with required attributes only
+# An example for a manual implementation, showing a sparse output override.
 resource "meshstack_building_block_definition" "example_03_manual" {
   metadata = {
     owned_by_workspace = data.meshstack_workspace.example.metadata.name
@@ -213,14 +213,31 @@ resource "meshstack_building_block_definition" "example_03_manual" {
         type            = "BOOLEAN"
         assignment_type = "PLATFORM_OPERATOR_MANUAL_INPUT"
       }
+      resource_url = {
+        display_name    = "Resource URL"
+        type            = "STRING"
+        assignment_type = "USER_INPUT"
+      }
     }
 
     implementation = {
       manual = {}
     }
 
-    # Outputs are omitted for manual building blocks: the backend derives them from the inputs
-    # (one output per input), so version_spec.outputs is computed and must not be set here.
+    # Manual building blocks are special: the backend derives one output per input, and each output's
+    # `type` is always taken from its input (it must NOT be set here). `version_spec.outputs` is therefore
+    # a SPARSE OVERRIDE — declare only the outputs you want to customize and leave the rest to be derived.
+    # For a declared output you may set `assignment_type` (to mark how the value is used) and, optionally,
+    # `display_name` and `display_order`. Omit the attribute entirely (or set `{}`) to customize nothing.
+    outputs = {
+      # Mark the operator-provided URL as a resource link and give it a friendlier label and position.
+      resource_url = {
+        assignment_type = "RESOURCE_URL"
+        display_name    = "Provisioned Resource"
+        display_order   = 1
+      }
+      # approval_required is not listed here, so its output is derived as-is.
+    }
   }
 }
 ```
@@ -393,7 +410,7 @@ Optional:
 - `dependency_refs` (Attributes Set) Set of refs to building block definitions this definition depends on. Prefer reusable refs from `meshstack_building_block_definition.<name>.ref` or `one(data.meshstack_building_block_definitions.<name>.building_block_definitions).ref`. (see [below for nested schema](#nestedatt--version_spec--dependency_refs))
 - `inputs` (Attributes Map) Map of input definitions for the building block. Keys are input names, values are input configuration objects. Inputs define parameters that building blocks can receive. (see [below for nested schema](#nestedatt--version_spec--inputs))
 - `only_apply_once_per_tenant` (Boolean) Whether this building block can only be applied once per tenant.
-- `outputs` (Attributes Map) Map of output definitions for the building block. Keys are output names, values are output configuration objects. Outputs define values that building blocks produce and can be consumed by other building blocks. If implementation type is `manual`, outputs are computed from the API response, so omit this attribute entirely unless you want to mark how a derived output is used by giving it a dedicated `assignment_type` (one of `PLATFORM_TENANT_ID`, `SIGN_IN_URL`, `RESOURCE_URL`, `SUMMARY`); the output key must match an input key. (see [below for nested schema](#nestedatt--version_spec--outputs))
+- `outputs` (Attributes Map) Map of output definitions for the building block. Keys are output names, values are output configuration objects. Outputs define values that building blocks produce and can be consumed by other building blocks. If implementation type is `manual`, outputs are derived from the inputs by the backend (one output per input) and this attribute is a **sparse override**: declare only the outputs you want to customize (keyed by the matching input); the rest are derived. An empty map or omitting it entirely means "no overrides". A declared output's `display_name`, `display_order`, and `assignment_type` (any of `NONE`, `PLATFORM_TENANT_ID`, `SIGN_IN_URL`, `RESOURCE_URL`, `SUMMARY`) are honored; its `type` is always derived from the input's translated output type (`SINGLE_SELECT` becomes `STRING`, `MULTI_SELECT`/`LIST` become `CODE`) and must not be set. (see [below for nested schema](#nestedatt--version_spec--outputs))
 - `permissions` (Set of String) Set of API permissions required by this building block. Will provide building block runs with an ephemeral API token with the specified workspace permissions. See [Workspace Permissions](https://docs.meshcloud.io/api/authentication/api-permissions/) for available values and [documentation on ephemeral API keys](https://docs.dev.meshcloud.io/concepts/building-block/#ephemeral-api-keys).
 - `runner_ref` (Attributes) Reference to the runner to run the implementation. If omitted, the pre-defined shared runner is used suitable for the given `implementation` choice (see [below for nested schema](#nestedatt--version_spec--runner_ref))
 
@@ -634,15 +651,12 @@ Read-Only:
 <a id="nestedatt--version_spec--outputs"></a>
 ### Nested Schema for `version_spec.outputs`
 
-Required:
-
-- `display_name` (String) Human-readable display name for the output.
-- `type` (String) Data type of the output. One of `STRING`, `CODE`, `INTEGER`, `BOOLEAN`.
-
 Optional:
 
 - `assignment_type` (String) How the output is used. One of `NONE`, `PLATFORM_TENANT_ID`, `SIGN_IN_URL`, `RESOURCE_URL`, `SUMMARY`. Defaults to `NONE`.
-- `display_order` (Number) Numeric value controlling in which order the outputs are displayed in the UI. Cannot be changed on a released version. When omitted, uses existing value, if any. Otherwise defaults to `0`.
+- `display_name` (String) Human-readable display name for the output. For manual building blocks this is optional; when omitted it is derived from the matching input's display name.
+- `display_order` (Number) Numeric value controlling in which order the outputs are displayed in the UI. Cannot be changed on a released version. When omitted, the value is derived from the backend (for manual building blocks: the input's position) and then held stable from state.
+- `type` (String) Data type of the output. One of `STRING`, `CODE`, `INTEGER`, `BOOLEAN`. For manual building blocks the type is always derived from the matching input and must not be set.
 
 
 <a id="nestedatt--version_spec--runner_ref"></a>

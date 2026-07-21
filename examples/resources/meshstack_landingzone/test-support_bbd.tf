@@ -30,9 +30,10 @@ resource "meshstack_building_block_definition" "mandatory_bbd" {
     }
 
     outputs = {
+      # Manual building block output: the type is always derived from the matching input and must not be set.
+      # assignment_type PLATFORM_TENANT_ID makes this a tracked override.
       tenant_id = {
         display_name    = "Tenant ID"
-        type            = "STRING"
         assignment_type = "PLATFORM_TENANT_ID"
       }
     }

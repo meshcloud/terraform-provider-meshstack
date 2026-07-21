@@ -29,7 +29,9 @@ func (m meshBuildingBlockDefinitionVersionClient) Create(_ context.Context, owne
 	versionUuid := uuid.NewString()
 	// Compute hashes for all secrets in the spec
 	backendSecretBehavior(true, &versionSpec, nil)
-	applyManualOutputBehavior(&versionSpec)
+	if err := applyManualOutputBehavior(&versionSpec); err != nil {
+		return nil, err
+	}
 
 	// Set version number if not already set
 	if versionSpec.VersionNumber == nil {
@@ -53,7 +55,9 @@ func (m meshBuildingBlockDefinitionVersionClient) Update(_ context.Context, uuid
 	if existing, ok := m.Store.Get(uuid); ok {
 		// Compute hashes for all secrets in the spec
 		backendSecretBehavior(false, &versionSpec, &existing.Spec)
-		applyManualOutputBehavior(&versionSpec)
+		if err := applyManualOutputBehavior(&versionSpec); err != nil {
+			return nil, err
+		}
 		if existing.Metadata.OwnedByWorkspace != ownedByWorkspace {
 			return nil, fmt.Errorf("mismatching workspace ownership: %s (existing) != %s (expected)", existing.Metadata.OwnedByWorkspace, ownedByWorkspace)
 		}
@@ -63,21 +67,22 @@ func (m meshBuildingBlockDefinitionVersionClient) Update(_ context.Context, uuid
 	return nil, fmt.Errorf("building block definition version not found: %s", uuid)
 }
 
-// applyManualOutputBehavior mirrors the real backend's ManualBuildingBlockCreationModule: for manual
-// building blocks the outputs are derived from the inputs (one output per input, assignment type NONE,
-// with SINGLE_SELECT/MULTI_SELECT/LIST input types translated to output-compatible types). Any output the
-// caller marked with a non-NONE assignment_type (PLATFORM_TENANT_ID, SIGN_IN_URL, RESOURCE_URL, SUMMARY)
-// keeps that assignment on the matching input's derived output; all other supplied outputs are ignored,
-// matching the backend.
-func applyManualOutputBehavior(versionSpec *client.MeshBuildingBlockDefinitionVersionSpec) {
+// applyManualOutputBehavior mirrors the real backend's ManualBuildingBlockCreationModule /
+// ManualDefinitionVersionService: for manual building blocks the outputs are derived from the inputs (one
+// output per input, with SINGLE_SELECT/MULTI_SELECT/LIST input types translated to output-compatible types).
+// output_key and type are locked to the input; the caller's putOutputs may override display_name and
+// assignment_type on the matching input's derived output. A supplied output whose key does not match an
+// input is rejected with an error, matching the backend's 400.
+func applyManualOutputBehavior(versionSpec *client.MeshBuildingBlockDefinitionVersionSpec) error {
 	if versionSpec.Implementation.Manual == nil {
-		return
+		return nil
 	}
-	specialOutputAssignmentTypes := map[string]client.MeshBuildingBlockDefinitionOutputAssignmentType{}
+	suppliedOutputs := map[string]client.MeshBuildingBlockDefinitionOutput{}
 	for key, output := range versionSpec.Outputs {
-		if output.AssignmentType != client.MeshBuildingBlockDefinitionOutputAssignmentTypeNone.Unwrap() {
-			specialOutputAssignmentTypes[key] = output.AssignmentType
+		if _, ok := versionSpec.Inputs[key]; !ok {
+			return fmt.Errorf("manual building block output %q has no matching input", key)
 		}
+		suppliedOutputs[key] = output
 	}
 	// Mirror the backend (ManualDefinitionVersionService.mapInputsToOutputUpdateModels): derived outputs
 	// take their display_order from the input's position in (display_order, key)-sorted order, NOT the
@@ -96,18 +101,30 @@ func applyManualOutputBehavior(versionSpec *client.MeshBuildingBlockDefinitionVe
 	outputs := make(map[string]client.MeshBuildingBlockDefinitionOutput, len(versionSpec.Inputs))
 	for index, key := range keys {
 		input := versionSpec.Inputs[key]
+		displayName := input.DisplayName
 		assignmentType := client.MeshBuildingBlockDefinitionOutputAssignmentTypeNone.Unwrap()
-		if definedSpecialType, ok := specialOutputAssignmentTypes[key]; ok {
-			assignmentType = definedSpecialType
+		// A derived output with no caller-supplied override takes the input's position (index) as its
+		// display_order; a supplied output's display_name, assignment_type, and display_order are honored
+		// (putOutputs), while output_key and type stay locked to the input.
+		displayOrder := int64(index)
+		if supplied, ok := suppliedOutputs[key]; ok {
+			if supplied.DisplayName != "" {
+				displayName = supplied.DisplayName
+			}
+			if supplied.AssignmentType != "" {
+				assignmentType = supplied.AssignmentType
+			}
+			displayOrder = supplied.DisplayOrder
 		}
 		outputs[key] = client.MeshBuildingBlockDefinitionOutput{
-			DisplayName:    input.DisplayName,
+			DisplayName:    displayName,
 			Type:           translateManualInputTypeToOutput(input.Type),
 			AssignmentType: assignmentType,
-			DisplayOrder:   int64(index),
+			DisplayOrder:   displayOrder,
 		}
 	}
 	versionSpec.Outputs = outputs
+	return nil
 }
 
 // translateManualInputTypeToOutput mirrors backend ManualIOTypeTranslation: SINGLE_SELECT, MULTI_SELECT

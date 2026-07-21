@@ -176,8 +176,13 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 
 	outputs := schema.NestedAttributeObject{Attributes: map[string]schema.Attribute{
 		"display_name": schema.StringAttribute{
-			MarkdownDescription: "Human-readable display name for the output.",
-			Required:            true,
+			MarkdownDescription: "Human-readable display name for the output. " +
+				"For manual building blocks this is optional; when omitted it is derived from the matching input's display name.",
+			Optional: true,
+			Computed: true,
+			PlanModifiers: []planmodifier.String{
+				stringplanmodifier.UseStateForUnknown(),
+			},
 		},
 		"assignment_type": schema.StringAttribute{
 			MarkdownDescription: fmt.Sprintf("How the output is used. One of %s. Defaults to %s.",
@@ -192,18 +197,26 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 			},
 		},
 		"type": schema.StringAttribute{
-			MarkdownDescription: "Data type of the output. One of " + client.MeshBuildingBlockOutputIOTypes.Markdown() + ".",
-			Required:            true,
+			MarkdownDescription: "Data type of the output. One of " + client.MeshBuildingBlockOutputIOTypes.Markdown() + ". " +
+				"For manual building blocks the type is always derived from the matching input and must not be set.",
+			Optional: true,
+			Computed: true,
 			Validators: []validator.String{
 				stringvalidator.OneOf(client.MeshBuildingBlockOutputIOTypes.Strings()...),
+			},
+			PlanModifiers: []planmodifier.String{
+				stringplanmodifier.UseStateForUnknown(),
 			},
 		},
 		"display_order": schema.Int64Attribute{
 			MarkdownDescription: "Numeric value controlling in which order the outputs are displayed in the UI. " +
-				"Cannot be changed on a released version. When omitted, uses existing value, if any. Otherwise defaults to `0`.",
+				"Cannot be changed on a released version. When omitted, the value is derived from the backend (for manual " +
+				"building blocks: the input's position) and then held stable from state.",
 			Optional: true,
 			Computed: true,
-			Default:  int64default.StaticInt64(0),
+			PlanModifiers: []planmodifier.Int64{
+				int64planmodifier.UseStateForUnknown(),
+			},
 		},
 	},
 	}
@@ -418,8 +431,11 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 						MarkdownDescription: "Map of output definitions for the building block. Keys are output names, values are output configuration objects. " +
 							"Outputs define values that building blocks produce and can be consumed by other building blocks. " +
 							"If implementation type is " + client.MeshBuildingBlockImplementationTypeManual.Markdown() +
-							", outputs are computed from the API response, so omit this attribute entirely unless you want to mark how a derived output is used by giving it a dedicated `assignment_type` (one of " +
-							nonNoneOutputAssignmentTypes.Markdown() + "); the output key must match an input key.",
+							", outputs are derived from the inputs by the backend (one output per input) and this attribute is a " +
+							"**sparse override**: declare only the outputs you want to customize (keyed by the matching input); the rest are derived. " +
+							"An empty map or omitting it entirely means \"no overrides\". A declared output's `display_name`, `display_order`, and " +
+							"`assignment_type` (any of " + client.MeshBuildingBlockDefinitionOutputAssignmentTypes.Markdown() + ") are honored; " +
+							"its `type` is always derived from the input's translated output type (`SINGLE_SELECT` becomes `STRING`, `MULTI_SELECT`/`LIST` become `CODE`) and must not be set.",
 						Optional:     true,
 						Computed:     true,
 						NestedObject: outputs,

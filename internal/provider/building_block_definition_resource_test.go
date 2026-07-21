@@ -405,14 +405,19 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 	})
 
 	// Regression test for issues #131 and #176: manual building blocks derive their outputs from inputs
-	// on the backend (SINGLE_SELECT/STATIC inputs auto-generate outputs). The config omits version_spec.outputs
-	// entirely (it is computed). Releasing and then re-drafting together with an input change must reconcile
-	// the derived outputs without "Provider produced inconsistent result after apply", and must not change
-	// the already-released version.
+	// on the backend (SINGLE_SELECT/STATIC inputs auto-generate outputs). This test declares no output
+	// overrides (version_spec.outputs = {}), so all outputs are derived and pruned. Releasing and then
+	// re-drafting together with an input change must reconcile the derived outputs without "Provider produced
+	// inconsistent result after apply", and must not change the already-released version.
 	t.Run("07_manual_computed_outputs", func(t *testing.T) {
 		config, addr := testconfig.BBDManual(t)
 		withInputs := func(inputs string) testconfig.Config {
-			return config.WithFirstBlock(testconfig.Descend("version_spec", "inputs")(testconfig.SetRawExpr("%s", inputs)))
+			return config.WithFirstBlock(
+				testconfig.Descend("version_spec", "inputs")(testconfig.SetRawExpr("%s", inputs)),
+				// The shared manual example (BBDManual) declares an output override; clear it so this test
+				// exercises the "no overrides, everything derived" case regardless of the example's content.
+				testconfig.Descend("version_spec", "outputs")(testconfig.SetRawExpr("{}")),
+			)
 		}
 
 		// approval (BOOLEAN) mirrors to a BOOLEAN output; region (SINGLE_SELECT) mirrors to a STRING output.
@@ -426,25 +431,10 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
       ticket   = { display_name = "Ticket", type = "STRING", assignment_type = "STATIC", argument = jsonencode("T-1") }
     }`)
 
-		// Derived outputs inherit the backend's positional display_order (input order, 0-based): the manual
-		// output derivation assigns position = input index, see meshfed ManualDefinitionVersionService.
-		outputCheck := func(displayName, ioType string, displayOrder int64) knownvalue.Check {
-			return xknownvalue.MapExact(map[string]knownvalue.Check{
-				"display_name":    knownvalue.StringExact(displayName),
-				"type":            knownvalue.StringExact(ioType),
-				"assignment_type": knownvalue.StringExact("NONE"),
-				"display_order":   knownvalue.Int64Exact(displayOrder),
-			})
-		}
-		baseOutputs := knownvalue.MapExact(map[string]knownvalue.Check{
-			"approval": outputCheck("Approval", "BOOLEAN", 0),
-			"region":   outputCheck("Region", "STRING", 1),
-		})
-		redraftOutputs := knownvalue.MapExact(map[string]knownvalue.Check{
-			"approval": outputCheck("Approval", "BOOLEAN", 0),
-			"region":   outputCheck("Region", "STRING", 1),
-			"ticket":   outputCheck("Ticket", "STRING", 2),
-		})
+		// Outputs are omitted, so every derived output is a non-override (assignment NONE, display_name = the
+		// input's) and prunes away: the tracked subset is the empty map, across the input change too.
+		baseOutputs := knownvalue.MapSizeExact(0)
+		redraftOutputs := knownvalue.MapSizeExact(0)
 
 		releasedHashStable := statecheck.CompareValue(compare.ValuesSame())
 		releasedHashPath := tfjsonpath.New("version_latest_release").AtMapKey("content_hash")
@@ -482,6 +472,206 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_spec").AtMapKey("outputs"), redraftOutputs),
 						releasedHashStable.AddStateValue(addr.String(), releasedHashPath),
 					},
+				},
+			},
+		})
+	})
+
+	// Regression test for declaring outputs on a manual building block as a SPARSE OVERRIDE (issues #131,
+	// #176, #240). The backend derives one output per input and returns the full set; the provider tracks only
+	// the user's overrides (assignment_type != NONE, or a display_name different from the input's) and prunes
+	// the rest. Declaring a subset must create, release and re-draft without "inconsistent result after apply"
+	// or a content_hash flip, and state must hold only the tracked keys. A declared output must not set type
+	// (always derived) - covered by the validation subtest.
+	t.Run("12_manual_declared_outputs", func(t *testing.T) {
+		config, addr := testconfig.BBDManual(t)
+		// Three inputs, two overrides: rename approval (display_name differs from the input's) and mark region
+		// SUMMARY. ticket is not overridden, so its derived output (NONE, display_name = "Ticket") is pruned,
+		// proving the subset semantics. No output sets type (always derived) or display_order (the derived
+		// positional order flows: inputs sorted by (display_order, key) -> approval=0, region=1, ticket=2).
+		withDeclaredOutputs := func(c testconfig.Config) testconfig.Config {
+			return c.WithFirstBlock(
+				testconfig.Descend("version_spec", "inputs")(testconfig.SetRawExpr("%s", `{
+      approval = { display_name = "Approval", type = "BOOLEAN", assignment_type = "PLATFORM_OPERATOR_MANUAL_INPUT" }
+      region   = { display_name = "Region", type = "SINGLE_SELECT", assignment_type = "USER_INPUT", selectable_values = ["eu", "us"] }
+      ticket   = { display_name = "Ticket", type = "STRING", assignment_type = "USER_INPUT" }
+    }`)),
+				testconfig.Descend("version_spec", "outputs")(testconfig.SetRawExpr("%s", `{
+      approval = { display_name = "Approval Output" }
+      region   = { assignment_type = "SUMMARY" }
+    }`)),
+			)
+		}
+		base := withDeclaredOutputs(config)
+
+		expectedOutputs := knownvalue.MapExact(map[string]knownvalue.Check{
+			"approval": xknownvalue.MapExact(map[string]knownvalue.Check{
+				"display_name":    knownvalue.StringExact("Approval Output"),
+				"type":            knownvalue.StringExact("BOOLEAN"),
+				"assignment_type": knownvalue.StringExact("NONE"),
+				"display_order":   knownvalue.Int64Exact(0),
+			}),
+			"region": xknownvalue.MapExact(map[string]knownvalue.Check{
+				"display_name":    knownvalue.StringExact("Region"),
+				"type":            knownvalue.StringExact("STRING"),
+				"assignment_type": knownvalue.StringExact("SUMMARY"),
+				"display_order":   knownvalue.Int64Exact(1),
+			}),
+		})
+		releasedHashStable := statecheck.CompareValue(compare.ValuesSame())
+		releasedHashPath := tfjsonpath.New("version_latest_release").AtMapKey("content_hash")
+
+		ApplyAndTest(t, resource.TestCase{
+			Steps: []resource.TestStep{
+				// Step 1: Create draft v1 with a full declared output set (bug 1: create reconciliation).
+				{
+					Config: base.String(),
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_spec").AtMapKey("outputs"), expectedOutputs),
+						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest"), expectedVersion(1, versionStateDraft)),
+					},
+				},
+				// Step 2: Release v1 (bug 2: content_hash must not flip during apply).
+				{
+					Config: releaseBBDVersion(t, base).String(),
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest_release"), expectedVersion(1, versionStateReleased)),
+						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_spec").AtMapKey("outputs"), expectedOutputs),
+						releasedHashStable.AddStateValue(addr.String(), releasedHashPath),
+					},
+				},
+				// Step 3: Re-draft (draft false->true) with no change -> new draft v2 (bug 2: create new
+				// version content_hash must not flip); released v1 stays immutable.
+				{
+					Config: base.String(),
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PreApply: []plancheck.PlanCheck{
+							plancheck.ExpectResourceAction(addr.String(), plancheck.ResourceActionUpdate),
+						},
+					},
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest_release"), expectedVersion(1, versionStateReleased)),
+						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest"), expectedVersion(2, versionStateDraft)),
+						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_spec").AtMapKey("outputs"), expectedOutputs),
+						releasedHashStable.AddStateValue(addr.String(), releasedHashPath),
+					},
+				},
+			},
+		})
+	})
+
+	// Sparse override lifecycle on a draft: flipping and removing overrides updates in place and re-prunes.
+	// Dropping the approval override - which the stateful backend would otherwise preserve - exercises the
+	// full-set send that resets it, and region is renamed. State must end up holding only region.
+	t.Run("13_manual_output_override_update", func(t *testing.T) {
+		config, addr := testconfig.BBDManual(t)
+		withOutputs := func(outputs string) testconfig.Config {
+			return config.WithFirstBlock(
+				testconfig.Descend("version_spec", "inputs")(testconfig.SetRawExpr("%s", `{
+      approval = { display_name = "Approval", type = "BOOLEAN", assignment_type = "PLATFORM_OPERATOR_MANUAL_INPUT" }
+      region   = { display_name = "Region", type = "SINGLE_SELECT", assignment_type = "USER_INPUT", selectable_values = ["eu", "us"] }
+    }`)),
+				testconfig.Descend("version_spec", "outputs")(testconfig.SetRawExpr("%s", outputs)),
+			)
+		}
+		initial := withOutputs(`{
+      approval = { assignment_type = "SUMMARY" }
+      region   = { display_name = "Region Output" }
+    }`)
+		updated := withOutputs(`{
+      region = { display_name = "Region Renamed" }
+    }`)
+
+		initialOutputs := knownvalue.MapExact(map[string]knownvalue.Check{
+			"approval": xknownvalue.MapExact(map[string]knownvalue.Check{
+				"display_name":    knownvalue.StringExact("Approval"),
+				"type":            knownvalue.StringExact("BOOLEAN"),
+				"assignment_type": knownvalue.StringExact("SUMMARY"),
+				"display_order":   knownvalue.Int64Exact(0),
+			}),
+			"region": xknownvalue.MapExact(map[string]knownvalue.Check{
+				"display_name":    knownvalue.StringExact("Region Output"),
+				"type":            knownvalue.StringExact("STRING"),
+				"assignment_type": knownvalue.StringExact("NONE"),
+				"display_order":   knownvalue.Int64Exact(1),
+			}),
+		})
+		updatedOutputs := knownvalue.MapExact(map[string]knownvalue.Check{
+			"region": xknownvalue.MapExact(map[string]knownvalue.Check{
+				"display_name":    knownvalue.StringExact("Region Renamed"),
+				"type":            knownvalue.StringExact("STRING"),
+				"assignment_type": knownvalue.StringExact("NONE"),
+				"display_order":   knownvalue.Int64Exact(1),
+			}),
+		})
+
+		ApplyAndTest(t, resource.TestCase{
+			Steps: []resource.TestStep{
+				{
+					Config: initial.String(),
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_spec").AtMapKey("outputs"), initialOutputs),
+						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest"), expectedVersion(1, versionStateDraft)),
+					},
+				},
+				{
+					Config: updated.String(),
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PreApply: []plancheck.PlanCheck{
+							plancheck.ExpectResourceAction(addr.String(), plancheck.ResourceActionUpdate),
+						},
+					},
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_spec").AtMapKey("outputs"), updatedOutputs),
+						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest"), expectedVersion(1, versionStateDraft)),
+					},
+				},
+			},
+		})
+	})
+
+	// Import must materialize exactly the diff-rule subset: with no prior state, the read-back prunes the
+	// backend's full one-per-input set to the tracked overrides, so the imported state equals the applied one.
+	t.Run("14_manual_output_import", func(t *testing.T) {
+		config, addr := testconfig.BBDManual(t)
+		var resourceUuid string
+		base := config.WithFirstBlock(
+			testconfig.Descend("version_spec", "inputs")(testconfig.SetRawExpr("%s", `{
+      approval = { display_name = "Approval", type = "BOOLEAN", assignment_type = "PLATFORM_OPERATOR_MANUAL_INPUT" }
+      region   = { display_name = "Region", type = "SINGLE_SELECT", assignment_type = "USER_INPUT", selectable_values = ["eu", "us"] }
+    }`)),
+			testconfig.Descend("version_spec", "outputs")(testconfig.SetRawExpr("%s", `{
+      region = { assignment_type = "SUMMARY" }
+    }`)),
+		)
+
+		// Only region is a tracked override (assignment != NONE); approval is derived (NONE, display_name equal
+		// to the input's) and pruned. The imported state must reproduce exactly this subset.
+		expectedOutputs := knownvalue.MapExact(map[string]knownvalue.Check{
+			"region": xknownvalue.MapExact(map[string]knownvalue.Check{
+				"display_name":    knownvalue.StringExact("Region"),
+				"type":            knownvalue.StringExact("STRING"),
+				"assignment_type": knownvalue.StringExact("SUMMARY"),
+				"display_order":   knownvalue.Int64Exact(1),
+			}),
+		})
+
+		ApplyAndTest(t, resource.TestCase{
+			Steps: []resource.TestStep{
+				{
+					Config: base.String(),
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_spec").AtMapKey("outputs"), expectedOutputs),
+						xknownvalue.Ref(addr, "meshBuildingBlockDefinition", &resourceUuid),
+					},
+				},
+				{
+					// Command-style import (not a plannable import block, which does not support ImportStateVerify).
+					ImportState:                          true,
+					ImportStateIdFunc:                    func(_ *terraform.State) (string, error) { return resourceUuid, nil },
+					ResourceName:                         addr.String(),
+					ImportStateVerify:                    true,
+					ImportStateVerifyIdentifierAttribute: "metadata.uuid",
 				},
 			},
 		})
@@ -990,6 +1180,21 @@ func checksForImplementation(exampleSuffix string) (checkInputs, checkImplementa
 					"sensitive":                      knownvalue.Null(),
 					"display_order":                  knownvalue.Int64Exact(0),
 				}),
+				"resource_url": xknownvalue.MapExact(map[string]knownvalue.Check{
+					"display_name":                   knownvalue.StringExact("Resource URL"),
+					"type":                           knownvalue.StringExact("STRING"),
+					"assignment_type":                knownvalue.StringExact("USER_INPUT"),
+					"is_environment":                 knownvalue.Bool(false),
+					"updateable_by_consumer":         knownvalue.Bool(false),
+					"description":                    knownvalue.Null(),
+					"selectable_values":              knownvalue.Null(),
+					"value_validation_regex":         knownvalue.Null(),
+					"validation_regex_error_message": knownvalue.Null(),
+					"argument":                       knownvalue.Null(),
+					"default_value":                  knownvalue.Null(),
+					"sensitive":                      knownvalue.Null(),
+					"display_order":                  knownvalue.Int64Exact(0),
+				}),
 			}),
 			xknownvalue.MapExact(map[string]knownvalue.Check{
 				"manual":                checkManualImplementation(),
@@ -998,12 +1203,15 @@ func checksForImplementation(exampleSuffix string) (checkInputs, checkImplementa
 				"azure_devops_pipeline": knownvalue.Null(),
 				"terraform":             knownvalue.Null(),
 			}),
+			// Manual outputs are a sparse override. The example overrides only resource_url (marked
+			// RESOURCE_URL, renamed, positioned), which is tracked; approval_required is derived (assignment
+			// NONE, display_name = the input's) and pruned. type is always the input's derived output type.
 			xknownvalue.MapExact(map[string]knownvalue.Check{
-				"approval_required": xknownvalue.MapExact(map[string]knownvalue.Check{
-					"display_name":    knownvalue.StringExact("Approval Required"),
-					"type":            knownvalue.StringExact("BOOLEAN"),
-					"assignment_type": knownvalue.StringExact("NONE"),
-					"display_order":   knownvalue.Int64Exact(0),
+				"resource_url": xknownvalue.MapExact(map[string]knownvalue.Check{
+					"display_name":    knownvalue.StringExact("Provisioned Resource"),
+					"type":            knownvalue.StringExact("STRING"),
+					"assignment_type": knownvalue.StringExact("RESOURCE_URL"),
+					"display_order":   knownvalue.Int64Exact(1),
 				}),
 			})
 	case "04_azure_devops_pipeline":
@@ -1242,6 +1450,8 @@ func TestAccBuildingBlockDefinitionManualOutputsValidation(t *testing.T) {
 
 	t.Parallel()
 
+	// Two inputs so a partial declaration can be exercised. STRING/STATIC inputs derive STRING outputs
+	// (STRING passes through the manual IO type translation unchanged).
 	manualConfig := func(outputs string) string {
 		return fmt.Sprintf(`
 resource "meshstack_building_block_definition" "test" {
@@ -1251,6 +1461,7 @@ resource "meshstack_building_block_definition" "test" {
     draft = true
     inputs = {
       tenant = { display_name = "Tenant", type = "STRING", assignment_type = "STATIC", argument = jsonencode("t") }
+      region = { display_name = "Region", type = "STRING", assignment_type = "STATIC", argument = jsonencode("r") }
     }
     implementation = { manual = {} }
     %s
@@ -1265,33 +1476,61 @@ resource "meshstack_building_block_definition" "test" {
 	}
 	tests := []testCase{
 		{
-			name:        "NONE output rejected for manual",
-			outputs:     `outputs = { tenant = { display_name = "Tenant", type = "STRING", assignment_type = "NONE" } }`,
-			expectError: regexp.MustCompile(`must have a special assignment_type`),
+			// Outputs are keyed by input; a key with no matching input is rejected (mirrors the backend 400).
+			name:        "output without a matching input rejected",
+			outputs:     `outputs = { tenant = { assignment_type = "SUMMARY" }, surplus = { assignment_type = "SUMMARY" } }`,
+			expectError: regexp.MustCompile(`no matching input`),
 		},
 		{
-			// Omitting assignment_type defaults it to NONE, which the backend ignores; it must be
-			// rejected the same as an explicit NONE rather than silently accepted.
-			name:        "omitted assignment_type rejected for manual",
-			outputs:     `outputs = { tenant = { display_name = "Tenant", type = "STRING" } }`,
-			expectError: regexp.MustCompile(`must have a special assignment_type`),
+			// type is always derived for manual outputs, so declaring it is rejected.
+			name:        "declared type rejected on manual output",
+			outputs:     `outputs = { tenant = { type = "STRING", assignment_type = "SUMMARY" } }`,
+			expectError: regexp.MustCompile(`type must not be set`),
 		},
 		{
-			name:        "empty outputs map rejected for manual",
-			outputs:     `outputs = {}`,
-			expectError: regexp.MustCompile(`must be omitted, not an empty map`),
+			// A no-op override (NONE assignment and no display_name) cannot be reconstructed by the diff rule.
+			name:        "no-op override rejected (NONE assignment, no display_name)",
+			outputs:     `outputs = { tenant = { assignment_type = "NONE" } }`,
+			expectError: regexp.MustCompile(`no effect`),
+		},
+		{
+			name:        "no-op override rejected (empty object)",
+			outputs:     `outputs = { tenant = {} }`,
+			expectError: regexp.MustCompile(`no effect`),
+		},
+		{
+			// display_order alone is not a supported override (deliberately not a membership signal).
+			name:        "display_order-only override rejected",
+			outputs:     `outputs = { tenant = { display_order = 5 } }`,
+			expectError: regexp.MustCompile(`no effect`),
+		},
+		{
+			// A display_name equal to the input's is not a real override.
+			name:        "display_name equal to input rejected as no-op",
+			outputs:     `outputs = { tenant = { display_name = "Tenant" } }`,
+			expectError: regexp.MustCompile(`no effect`),
+		},
+		// Accepted: a sparse subset, an empty map (no overrides), and a display_name override.
+		{
+			name:    "empty outputs map accepted (no overrides)",
+			outputs: `outputs = {}`,
+		},
+		{
+			name:    "subset override via display_name accepted",
+			outputs: `outputs = { tenant = { display_name = "Custom Tenant" } }`,
 		},
 	}
 
-	// Every non-NONE assignment type is accepted on a manual output; loop the enum so a new entry is
-	// covered without editing this test.
-	for _, assignmentType := range nonNoneOutputAssignmentTypes {
+	// Any non-NONE assignment_type is a meaningful subset override and is accepted; loop the whole enum so a
+	// new entry is covered without editing this test.
+	none := client.MeshBuildingBlockDefinitionOutputAssignmentTypeNone.String()
+	for _, assignmentType := range client.MeshBuildingBlockDefinitionOutputAssignmentTypes {
+		if assignmentType.String() == none {
+			continue
+		}
 		tests = append(tests, testCase{
-			name: fmt.Sprintf("%s output allowed for manual", assignmentType),
-			outputs: fmt.Sprintf(
-				`outputs = { tenant = { display_name = "Tenant", type = "STRING", assignment_type = %q } }`,
-				assignmentType,
-			),
+			name:    fmt.Sprintf("subset override with %s accepted", assignmentType),
+			outputs: fmt.Sprintf(`outputs = { tenant = { assignment_type = %q } }`, assignmentType),
 		})
 	}
 

@@ -95,6 +95,49 @@ func (model buildingBlockDefinitionVersionSpec) ToClientDto(buildingBlockDefinit
 	return
 }
 
+// translateManualInputTypeToOutput mirrors the backend's ManualIOTypeTranslation: SINGLE_SELECT,
+// MULTI_SELECT and LIST cannot be output types and are translated; every other type is kept as-is. The
+// provider derives and sends the output type itself because the backend rejects an empty or mismatching
+// output type with a 400 (it never derives one for a caller-supplied output).
+func translateManualInputTypeToOutput(inputType client.MeshBuildingBlockIOType) client.MeshBuildingBlockIOType {
+	switch inputType {
+	case client.MeshBuildingBlockIOTypeSingleSelect.Unwrap():
+		return client.MeshBuildingBlockIOTypeString.Unwrap()
+	case client.MeshBuildingBlockIOTypeMultiSelect.Unwrap(), client.MeshBuildingBlockIOTypeList.Unwrap():
+		return client.MeshBuildingBlockIOTypeCode.Unwrap()
+	default:
+		return inputType
+	}
+}
+
+// manualTrackedOutputs returns the subset of a version spec's outputs that represent user overrides on a
+// manual building block, per the diff rule: keep output k iff assignmentType(k) != NONE OR displayName(k)
+// differs from the matching input's displayName. The backend returns one output per input, so re-deriving
+// the tracked keys from any response is exact - ValidateConfig rejects any override this rule could not
+// reconstruct, which is what keeps per-version content hashes stable. Non-manual specs are returned
+// unchanged (their outputs are configured explicitly, not derived).
+func manualTrackedOutputs(spec client.MeshBuildingBlockDefinitionVersionSpec) map[string]client.MeshBuildingBlockDefinitionOutput {
+	if spec.Implementation.Manual == nil {
+		return spec.Outputs
+	}
+	none := client.MeshBuildingBlockDefinitionOutputAssignmentTypeNone.Unwrap()
+	tracked := make(map[string]client.MeshBuildingBlockDefinitionOutput)
+	for key, output := range spec.Outputs {
+		keep := output.AssignmentType != none
+		if input, ok := spec.Inputs[key]; ok {
+			keep = keep || output.DisplayName != input.DisplayName
+		} else {
+			// One output per input is guaranteed by the backend; an output without a matching input is
+			// unexpected, so keep it rather than silently dropping it.
+			keep = true
+		}
+		if keep {
+			tracked[key] = output
+		}
+	}
+	return tracked
+}
+
 func buildingBlockDefinitionVersionConverterOptions(ctx context.Context, config, plan, state generic.AttributeGetter) generic.ConverterOptions {
 	type buildingBlockDefinitionVersionInputSensitive struct {
 		Argument     *secret.Secret `tfsdk:"argument"`
@@ -259,6 +302,16 @@ func (model *buildingBlockDefinition) SetFromVersionClientDtos(diags *diag.Diagn
 	}
 	if inputsNil && len(model.VersionSpec.Inputs) == 0 {
 		model.VersionSpec.Inputs = nil
+	}
+
+	// A manual building block's backend response carries the full one-per-input output set, but config/state
+	// track only the user's overrides. Prune to the tracked subset so state matches config (the core fix for
+	// "inconsistent result after apply"). "No overrides" is represented as an empty map, not null: an explicit
+	// `outputs = {}` config plans as a known empty map, and an omitted config plans as unknown which can become
+	// the empty map - both land on {} consistently, whereas normalizing to null would diverge from an explicit
+	// `{}`. Non-manual outputs are left as configured.
+	if model.VersionSpec.Implementation.Manual != nil {
+		model.VersionSpec.Outputs = manualTrackedOutputs(model.VersionSpec.MeshBuildingBlockDefinitionVersionSpec)
 	}
 
 	if !isDraft.IsUnknown() && !isDraft.Get() {

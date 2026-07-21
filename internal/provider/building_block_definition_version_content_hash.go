@@ -23,7 +23,9 @@ import (
 // the algorithm without bumping this is a silent breaking change.
 const (
 	// v3: display_order folded into the hash. v4: dependencies hashed as dependencyDefinitionRefs.
-	currentHashVersion = 4
+	// v5: manual building block outputs are hashed as the tracked-override subset (sparse), not the full
+	// backend-derived one-per-input set, matching the sparse config/state model.
+	currentHashVersion = 5
 )
 
 // represents a content hash of a building block definition version, which is used to detect changes in the version_spec.
@@ -54,6 +56,11 @@ func calculateBuildingBlockDefinitionVersionContentHash(versionSpecDto client.Me
 		if versionSpecContainsPlaintextSecret(versionSpecDto) {
 			return "", errors.New("version_spec carries a plaintext secret value, which must not be hashed")
 		}
+
+		// Hash the config-shaped outputs. For manual building blocks only the tracked overrides are part of
+		// config/state (the rest are backend-derived), so prune to that subset. This is idempotent on an
+		// already-sparse spec, so the plan-side hash (sparse) and the read-back hash (full response) agree.
+		versionSpecDto.Outputs = manualTrackedOutputs(versionSpecDto)
 
 		// Ignore version, state, and buildingBlockDefinitionRef fields by setting them to constant values, always!
 		versionSpecDto.VersionNumber = nil
