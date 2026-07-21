@@ -1,7 +1,12 @@
 # v0.24.1
 
+Requires meshStack 2026.29.0 or later (previously 2026.24.0).
+
 BREAKING CHANGES:
 - Release binaries are now published only for `linux` and `darwin` on `amd64` and `arm64`. Builds for `windows`, `freebsd`, `386` and 32-bit `arm` are no longer produced.
+
+FEATURES:
+- `meshstack_building_block_definition`: `version_spec.dependency_refs` now use the `dependencyDefinitionRefs` field (`{uuid, kind}`) instead of the deprecated `dependencyDefinitionUuids` (bare UUID array), so a dependency's `kind` round-trips. The resource schema is unchanged (no config or state migration). Upgrade **before** the backend removes `dependencyDefinitionUuids`, otherwise dependencies silently stop round-tripping. Content-hash bumped to v4 (v3 taken by the `display_order` change below); an older `content_hash` is recomputed rather than flagged changed, as in the v0.23.2 fix.
 
 FIXES:
 - `meshstack_building_block_definition`: a manual building block with an explicit empty `version_spec.outputs = {}` is now rejected at plan time with a clear message telling you to omit the attribute, instead of failing at apply with "provider produced inconsistent result after apply: new element ... has appeared". Manual building blocks derive one output per input on the backend, so an explicit empty map can never match the applied result; omitting `version_spec.outputs` lets it be computed ([#240](https://github.com/meshcloud/terraform-provider-meshstack/issues/240)).

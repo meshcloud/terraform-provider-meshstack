@@ -22,7 +22,8 @@ import (
 // instead of reporting a spurious "changed", which would rerun every already-released building block. Changing
 // the algorithm without bumping this is a silent breaking change.
 const (
-	currentHashVersion = 3
+	// v3: display_order folded into the hash. v4: dependencies hashed as dependencyDefinitionRefs.
+	currentHashVersion = 4
 )
 
 // represents a content hash of a building block definition version, which is used to detect changes in the version_spec.
