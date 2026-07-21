@@ -153,7 +153,6 @@ type MeshBuildingBlockDefinitionVersionMetadata struct {
 	CreatedOn        string `json:"createdOn"`
 }
 
-type BuildingBlockDependencyRef string
 type MeshBuildingBlockDefinitionVersionSpec struct {
 	BuildingBlockDefinitionRef *UuidRef                                     `json:"buildingBlockDefinitionRef" tfsdk:"-"`
 	OnlyApplyOncePerTenant     bool                                         `json:"onlyApplyOncePerTenant" tfsdk:"only_apply_once_per_tenant"`
@@ -163,9 +162,10 @@ type MeshBuildingBlockDefinitionVersionSpec struct {
 	VersionNumber              *int64                                       `json:"versionNumber,omitempty" tfsdk:"version_number"`
 	State                      *MeshBuildingBlockDefinitionVersionState     `json:"state,omitempty" tfsdk:"state"`
 	RunnerRef                  *UuidRef                                     `json:"runnerRef" tfsdk:"runner_ref"`
-	DependencyDefinitionUUIDs  types.Set[BuildingBlockDependencyRef]        `json:"dependencyDefinitionUuids,omitempty" tfsdk:"dependency_refs"`
-	Implementation             MeshBuildingBlockDefinitionImplementation    `json:"implementation" tfsdk:"implementation"`
-	Inputs                     map[string]*MeshBuildingBlockDefinitionInput `json:"inputs" tfsdk:"inputs"`
+	// Replaces the deprecated bare-UUID dependencyDefinitionUuids; requires a backend serving it.
+	DependencyDefinitionRefs types.Set[UuidRef]                           `json:"dependencyDefinitionRefs,omitempty" tfsdk:"dependency_refs"`
+	Implementation           MeshBuildingBlockDefinitionImplementation    `json:"implementation" tfsdk:"implementation"`
+	Inputs                   map[string]*MeshBuildingBlockDefinitionInput `json:"inputs" tfsdk:"inputs"`
 }
 
 type MeshBuildingBlockDefinitionVersionStatus struct {

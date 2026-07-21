@@ -122,19 +122,7 @@ func buildingBlockDefinitionVersionConverterOptions(ctx context.Context, config,
 			return generic.ValueFrom(in, secret.WithConverterSupport(ctx, config, plan, state).Append(generic.WithAttributePath(attributePath))...)
 		}),
 
-		// Handle DependencyDefinitionUUIDs
-		generic.WithValueToConverterFor[client.BuildingBlockDependencyRef](func(attributePath path.Path, in tftypes.Value) (client.BuildingBlockDependencyRef, error) {
-			ref, err := generic.ValueTo[buildingBlockDefinitionRef](in)
-			if err != nil {
-				return "", err
-			}
-			return client.BuildingBlockDependencyRef(ref.Uuid), nil
-		}),
-
-		generic.WithValueFromConverterFor[client.BuildingBlockDependencyRef](generic.ValueFromConverterForTypedNilHandler[buildingBlockDefinitionRef](),
-			func(attributePath path.Path, in client.BuildingBlockDependencyRef) (tftypes.Value, error) {
-				return generic.ValueFrom(newBuildingBlockDefinitionRef(string(in)))
-			}),
+		// dependency_refs (types.Set[client.UuidRef]) needs no custom converter — mapped generically like runner_ref.
 
 		// Handle version spec inputs: From Client DTO to model
 		generic.WithValueFromConverterFor[client.MeshBuildingBlockDefinitionInput](

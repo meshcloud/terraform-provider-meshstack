@@ -48,10 +48,10 @@ var (
 // So: change a digest below only alongside a deliberate hash-version bump, never on its own.
 func Test_versionContentHash(t *testing.T) {
 	const (
-		digestExample      = "7f843ccb4a53b679e245ac9281b3e2e957be674acc0f48ef1c7b8c2ba52f39a8"
-		digestRelevant     = "81e4e436f2e3730d0a5e0f2ec68570ec88cb7f82b93350d4e4d95de1208da57a"
+		digestExample      = "814c7b4eb579d555f4f1589bd34c4f913d250fe1d5fda7b2fdffe05e75fcd910"
+		digestRelevant     = "6ddbadbe5eb3baa76e7a2488f22ce62bd0e94eb380cbfbd55724231f704264dc"
 		digestNullOutputs  = "1a24f70de617e64fc258ceca4a4b7159ecebd9a95acd4ea40851e443c080038e"
-		digestDisplayOrder = "3a9fe010bfef3dfbc531742ab130bc2c559b86d9ba595d951dc5f2fb7bf6624c"
+		digestDisplayOrder = "a7cba4239e3d448387d188d1457bd3e00aa66694244dd6e26e8d7a055c9c4075"
 	)
 	require.NotEqual(t, digestExample, digestRelevant)
 
@@ -80,7 +80,7 @@ func Test_versionContentHash(t *testing.T) {
 // version instead of a spurious "changed" — see Test_contentHash_compareToStored_acrossVersions), so it must
 // be paired with an intentional edit here.
 func Test_contentHash_currentVersion(t *testing.T) {
-	require.Equal(t, 3, currentHashVersion)
+	require.Equal(t, 4, currentHashVersion)
 
 	h := forTestCalculateContentHash(t, versionSpecJson)
 	require.Equal(t, currentHashVersion, h.hashVersion)
@@ -133,9 +133,9 @@ func storedHash(version int, value string) string {
 }
 
 // Test_contentHash_compareToStored_acrossVersions is the heart of the version-bump contract: two hashes are
-// only comparable when their versions match. A stored hash from an older provider (v1 or v2) is therefore
-// incomparable to a current v3 hash — the case that must NOT be reported as "changed", because that would
-// rerun every already-released building block after a provider upgrade (issue behind the v2->v3 bump).
+// only comparable when their versions match. A stored hash from an older provider (v1, v2 or v3) is therefore
+// incomparable to a current v4 hash — the case that must NOT be reported as "changed", because that would
+// rerun every already-released building block after a provider upgrade (issue behind the v3->v4 bump).
 func Test_contentHash_compareToStored_acrossVersions(t *testing.T) {
 	tests := []struct {
 		name         string
@@ -145,13 +145,14 @@ func Test_contentHash_compareToStored_acrossVersions(t *testing.T) {
 		storedValue  string
 		want         hashComparison
 	}{
-		{"same version, same value -> same", 3, "aaa", 3, "aaa", hashSame},
-		{"same version, different value -> different", 3, "aaa", 3, "bbb", hashDifferent},
+		{"same version, same value -> same", 4, "aaa", 4, "aaa", hashSame},
+		{"same version, different value -> different", 4, "aaa", 4, "bbb", hashDifferent},
 		{"legacy v1 self-consistent -> same", 1, "v1:h", 1, "v1:h", hashSame},
 		{"legacy v1 different value -> different", 1, "v1:h", 1, "v1:other", hashDifferent},
 		{"stored v1, current v2 -> incomparable", 2, "aaa", 1, "v1:h", hashIncomparable},
-		{"stored v1, current v3 -> incomparable", 3, "aaa", 1, "v1:h", hashIncomparable},
-		{"stored v2, current v3 -> incomparable", 3, "aaa", 2, "aaa", hashIncomparable},
+		{"stored v1, current v4 -> incomparable", 4, "aaa", 1, "v1:h", hashIncomparable},
+		{"stored v2, current v4 -> incomparable", 4, "aaa", 2, "aaa", hashIncomparable},
+		{"stored v3, current v4 -> incomparable", 4, "aaa", 3, "aaa", hashIncomparable},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

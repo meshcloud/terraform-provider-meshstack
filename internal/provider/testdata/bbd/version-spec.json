@@ -9,7 +9,13 @@
     "uuid" : "",
     "kind" : "meshBuildingBlockRunner"
   },
-  "dependencyDefinitionUuids" : [ "dep-1", "dep-2" ],
+  "dependencyDefinitionRefs" : [ {
+    "uuid" : "dep-1",
+    "kind" : "meshBuildingBlockDefinition"
+  }, {
+    "uuid" : "dep-2",
+    "kind" : "meshBuildingBlockDefinition"
+  } ],
   "outputs" : {
     "sign_in_url" : {
       "displayName" : "Sign-in URL",
