@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 
 	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
-	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/xknownvalue"
 )
 
 func TestAccTagDefinitionResource(t *testing.T) {
@@ -22,7 +21,7 @@ func TestAccTagDefinitionResource(t *testing.T) {
 			{
 				Config: config.String(),
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(tagDefinitionAddr.String(), tfjsonpath.New("spec").AtMapKey("display_name"), xknownvalue.KnownStringWithPrefix("Example")),
+					statecheck.ExpectKnownValue(tagDefinitionAddr.String(), tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("Test Tag")),
 				},
 			},
 		},

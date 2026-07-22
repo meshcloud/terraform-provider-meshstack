@@ -241,11 +241,13 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 						},
 					},
 					"tags": schema.MapAttribute{
-						MarkdownDescription: "Key/value pairs of tags set on the building block definition. Values are arrays of strings.",
-						ElementType:         types.ListType{ElemType: types.StringType},
-						Optional:            true,
-						Computed:            true,
-						Default:             mapdefault.StaticValue(types.MapValueMust(types.ListType{ElemType: types.StringType}, nil)),
+						MarkdownDescription: "Key/value pairs of tags set on the building block definition. Values are arrays of strings. " +
+							"Only the tags you declare here are managed by Terraform; restricted-tag defaults that meshStack fills in " +
+							"automatically are not tracked and will not appear as drift.",
+						ElementType: types.ListType{ElemType: types.StringType},
+						Optional:    true,
+						Computed:    true,
+						Default:     mapdefault.StaticValue(types.MapValueMust(types.ListType{ElemType: types.StringType}, nil)),
 					},
 				},
 			},

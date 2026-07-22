@@ -66,7 +66,7 @@ Optional:
 
 - `amount` (Number) Amount associated with the payment method.
 - `expiration_date` (String) Expiration date of the payment method (ISO 8601 format).
-- `tags` (Map of List of String) Tags of the payment method.
+- `tags` (Map of List of String) Tags of the payment method. Only the tags you declare here are managed by Terraform; tag properties meshStack fills in automatically are not tracked and will not appear as drift.
 
 ## Import
 

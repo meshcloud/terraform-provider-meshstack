@@ -67,8 +67,13 @@ func (r *buildingBlockDefinitionResource) Create(ctx context.Context, req resour
 		return
 	}
 
-	// Set spec/metadata of BBD immediately after successful creation
+	// Set spec/metadata of BBD immediately after successful creation. Keep the tags the user declared
+	// rather than the superset the API returns (an entry for every defined tag property plus injected
+	// restricted-tag defaults), which would break plan/apply consistency. SetFromClientDto overwrites
+	// Metadata wholesale, so capture the planned tags first and restore them afterwards.
+	plannedTags := plan.Metadata.Tags
 	plan.SetFromClientDto(createdDto, &resp.Diagnostics)
+	plan.Metadata.Tags = plannedTags
 	resp.Diagnostics.Append(generic.SetAttributeTo(ctx, &resp.State, path.Root("metadata"), plan.Metadata, buildingBlockDefinitionConverterOptions()...)...)
 	resp.Diagnostics.Append(generic.SetAttributeTo(ctx, &resp.State, path.Root("spec"), plan.Spec, buildingBlockDefinitionConverterOptions()...)...)
 	if resp.Diagnostics.HasError() {
@@ -134,6 +139,15 @@ func (r *buildingBlockDefinitionResource) Read(ctx context.Context, req resource
 	state := buildingBlockDefinition{
 		Metadata: definitionDto.Metadata,
 		Spec:     definitionDto.Spec,
+	}
+
+	// Keep only the tags we already track. The API returns a superset (every schema property plus
+	// injected restricted-tag defaults) that the caller may be unable to manage, so mirroring it
+	// verbatim would surface as drift. On import there is no prior state (tags is null); we keep the
+	// full set so a normal import round-trips.
+	state.Metadata.Tags = reconcileTrackedTags(ctx, req.State, path.Root("metadata").AtName("tags"), state.Metadata.Tags, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
 	versionDtos, err := r.buildingBlockDefinitionVersionClient.List(ctx, bbdUuid)
@@ -479,7 +493,10 @@ func (r *buildingBlockDefinitionResource) Update(ctx context.Context, req resour
 		return
 	}
 
+	// Keep the tags the user declared rather than the superset the API returns, mirroring Create.
+	plannedTags := plan.Metadata.Tags
 	plan.SetFromClientDto(updatedDto, &resp.Diagnostics)
+	plan.Metadata.Tags = plannedTags
 	resp.Diagnostics.Append(generic.SetAttributeTo(ctx, &resp.State, path.Root("metadata"), plan.Metadata, buildingBlockDefinitionConverterOptions()...)...)
 	resp.Diagnostics.Append(generic.SetAttributeTo(ctx, &resp.State, path.Root("spec"), plan.Spec, buildingBlockDefinitionConverterOptions()...)...)
 	if resp.Diagnostics.HasError() {

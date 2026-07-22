@@ -342,7 +342,7 @@ Required:
 
 Optional:
 
-- `tags` (Map of List of String) Key/value pairs of tags set on the building block definition. Values are arrays of strings.
+- `tags` (Map of List of String) Key/value pairs of tags set on the building block definition. Values are arrays of strings. Only the tags you declare here are managed by Terraform; restricted-tag defaults that meshStack fills in automatically are not tracked and will not appear as drift.
 
 Read-Only:
 

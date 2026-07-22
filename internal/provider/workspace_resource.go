@@ -83,11 +83,12 @@ func (r *workspaceResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 						PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 					},
 					"tags": schema.MapAttribute{
-						MarkdownDescription: "Tags of the workspace.",
-						ElementType:         types.ListType{ElemType: types.StringType},
-						Optional:            true,
-						Computed:            true,
-						Default:             mapdefault.StaticValue(types.MapValueMust(types.ListType{ElemType: types.StringType}, map[string]attr.Value{})),
+						MarkdownDescription: "Tags of the workspace. Only the tags you declare here are managed by Terraform; " +
+							"tag properties meshStack fills in automatically are not tracked and will not appear as drift.",
+						ElementType: types.ListType{ElemType: types.StringType},
+						Optional:    true,
+						Computed:    true,
+						Default:     mapdefault.StaticValue(types.MapValueMust(types.ListType{ElemType: types.StringType}, map[string]attr.Value{})),
 					},
 				},
 			},
@@ -134,6 +135,11 @@ func (r *workspaceResource) Create(ctx context.Context, req resource.CreateReque
 		return
 	}
 
+	// Keep the tags the user declared rather than the superset the API returns (an entry for every
+	// defined tag property plus injected restricted-tag defaults), which would break plan/apply
+	// consistency. Mirrors the project / landing zone resources.
+	createdWorkspace.Metadata.Tags = workspace.Metadata.Tags
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, newWorkspaceModel(createdWorkspace))...)
 }
 
@@ -159,6 +165,15 @@ func (r *workspaceResource) Read(ctx context.Context, req resource.ReadRequest, 
 	if workspace == nil {
 		// The workspace was deleted outside of Terraform, so we remove it from the state
 		resp.State.RemoveResource(ctx)
+		return
+	}
+
+	// Keep only the tags we already track. The API returns a superset (every schema property plus
+	// injected restricted-tag defaults) that the caller may be unable to manage, so mirroring it
+	// verbatim would surface as drift. On import there is no prior state (tags is null); we keep the
+	// full set so a normal import round-trips.
+	workspace.Metadata.Tags = reconcileTrackedTags(ctx, req.State, path.Root("metadata").AtName("tags"), workspace.Metadata.Tags, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
 		return
 	}
 
@@ -188,6 +203,9 @@ func (r *workspaceResource) Update(ctx context.Context, req resource.UpdateReque
 		)
 		return
 	}
+
+	// Keep the tags the user declared rather than the superset the API returns, mirroring Create.
+	updatedWorkspace.Metadata.Tags = workspace.Metadata.Tags
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, newWorkspaceModel(updatedWorkspace))...)
 }

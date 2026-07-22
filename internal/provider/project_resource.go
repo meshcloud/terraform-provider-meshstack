@@ -79,6 +79,8 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 					"display_name": schema.StringAttribute{Required: true},
 					// TODO: Blocks would be more terraform-y.
 					"tags": schema.MapAttribute{
+						MarkdownDescription: "Tags of the project. Only the tags you declare here are managed by Terraform; " +
+							"restricted-tag defaults that meshStack fills in automatically are not tracked and will not appear as drift.",
 						ElementType: types.ListType{ElemType: types.StringType},
 						Optional:    true,
 						Computed:    true,
@@ -195,6 +197,15 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 
 	if project == nil {
 		resp.State.RemoveResource(ctx)
+		return
+	}
+
+	// Keep only the tags we already track. The API returns a superset (every schema property plus
+	// injected restricted-tag defaults) that the caller may be unable to manage, so mirroring it
+	// verbatim would surface as drift. On import there is no prior state (tags is null); we keep the
+	// full set so a normal import round-trips, accepting that a restricted default would then show up.
+	project.Spec.Tags = reconcileTrackedTags(ctx, req.State, path.Root("spec").AtName("tags"), project.Spec.Tags, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
 		return
 	}
 

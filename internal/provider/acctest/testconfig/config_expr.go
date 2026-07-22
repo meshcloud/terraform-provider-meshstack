@@ -34,6 +34,12 @@ func SetString(s string) ExpressionConsumer {
 	return SetValue(cty.StringVal(s))
 }
 
+// SetBool returns an ExpressionConsumer that sets the expression to a boolean value. Prefer it over
+// SetRawExpr("true") / SetRawExpr("false") for boolean attributes.
+func SetBool(b bool) ExpressionConsumer {
+	return SetValue(cty.BoolVal(b))
+}
+
 // SetAddr sets a traversal identifier (typically a resource address) with additional segments appended.
 // See OwnedByWorkspace for a very common example usage.
 func SetAddr(addr Traversal, moreSegments ...string) ExpressionConsumer {
@@ -48,6 +54,10 @@ func SetRawExpr(format string, args ...any) ExpressionConsumer {
 }
 
 // RenameKey returns an ExpressionConsumer that renames the traversed attribute or block label.
+// Use it rarely: it is meant for the few cases where a single example/test-support file has to be
+// reused under different keys or block labels within one config (e.g. two integrations from the same
+// support file). Prefer a purpose-built test-support file over renaming keys of an example that does
+// not otherwise fit.
 func RenameKey(newName string) ExpressionConsumer {
 	return func(t *testing.T, e Expression) {
 		t.Helper()

@@ -685,6 +685,47 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 			},
 		})
 	})
+
+	t.Run("12_restricted_default_tag", func(t *testing.T) {
+		// Backend-materialized default: the mock has no tag-restriction logic, so it can't reproduce
+		// BuildingBlockDefinitionTagService injecting a restricted tag's default on create. See the
+		// lock-step policy in the acceptance-testing skill.
+		if IsMockClientTest() {
+			t.Skip("relies on the backend injecting a restricted tag's default value on create")
+		}
+
+		config, addr := testconfig.BBDManual(t)
+		// One tag the BBD declares (needs a real definition or the backend rejects it) ...
+		declaredTag, declaredTagAddr, declaredKey := testconfig.TagDefinition(t, client.MeshObjectKind.BuildingBlockDefinition)
+		// ... and a restricted tag with a default the BBD does not declare: the backend injects it on
+		// create, so the fix must keep it out of the managed tags instead of crashing / drifting.
+		restrictedTag, restrictedTagAddr, _ := testconfig.RestrictedTagDefinitionWithDefault(t, client.MeshObjectKind.BuildingBlockDefinition, "injected-default")
+		config = config.Join(declaredTag, restrictedTag).WithFirstBlock(
+			testconfig.Descend("metadata", "tags")(testconfig.SetRawExpr(`{ (%s) = ["blue"] }`, declaredTagAddr.Join("spec", "key"))),
+			// depends_on forces the tag definitions to be created before the BBD (so the restricted
+			// default is actually injected) and destroyed after it. The latter avoids a backend bug:
+			// deleting a restricted BBD tag definition while any BBD still exists hits a
+			// BuildingBlockDefinitionTag foreign-key violation (500) during the server-side tag recompute.
+			testconfig.Descend("depends_on")(testconfig.SetRawExpr(`[%s, %s]`, declaredTagAddr, restrictedTagAddr)),
+		)
+
+		ApplyAndTest(t, resource.TestCase{
+			Steps: []resource.TestStep{
+				{
+					Config: config.String(),
+					ConfigStateChecks: []statecheck.StateCheck{
+						// Only the declared tag remains; the injected restricted default is not tracked.
+						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("metadata").AtMapKey("tags"), knownvalue.MapExact(map[string]knownvalue.Check{
+							declaredKey: knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("blue")}),
+						})),
+					},
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+					},
+				},
+			},
+		})
+	})
 }
 
 // checkBBDMetadataFull checks metadata for the 01_terraform example (tags with 2 entries).

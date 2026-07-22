@@ -65,7 +65,7 @@ Optional:
 
 - `payment_method_identifier` (String)
 - `substitute_payment_method_identifier` (String)
-- `tags` (Map of List of String)
+- `tags` (Map of List of String) Tags of the project. Only the tags you declare here are managed by Terraform; restricted-tag defaults that meshStack fills in automatically are not tracked and will not appear as drift.
 
 ## Import
 

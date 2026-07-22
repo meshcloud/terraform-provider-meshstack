@@ -101,11 +101,12 @@ func (r *paymentMethodResource) Schema(_ context.Context, _ resource.SchemaReque
 						Optional:            true,
 					},
 					"tags": schema.MapAttribute{
-						MarkdownDescription: "Tags of the payment method.",
-						ElementType:         types.ListType{ElemType: types.StringType},
-						Optional:            true,
-						Computed:            true,
-						Default:             mapdefault.StaticValue(types.MapValueMust(types.ListType{ElemType: types.StringType}, map[string]attr.Value{})),
+						MarkdownDescription: "Tags of the payment method. Only the tags you declare here are managed by Terraform; " +
+							"tag properties meshStack fills in automatically are not tracked and will not appear as drift.",
+						ElementType: types.ListType{ElemType: types.StringType},
+						Optional:    true,
+						Computed:    true,
+						Default:     mapdefault.StaticValue(types.MapValueMust(types.ListType{ElemType: types.StringType}, map[string]attr.Value{})),
 					},
 				},
 			},
@@ -135,6 +136,9 @@ func (r *paymentMethodResource) Create(ctx context.Context, req resource.CreateR
 		return
 	}
 
+	// Keep the tags the user declared rather than the superset the API returns (an entry for every
+	// defined tag property), which would break plan/apply consistency. Mirrors the project resource.
+	createdPaymentMethod.Spec.Tags = paymentMethod.Spec.Tags
 	if createdPaymentMethod.Spec.Tags == nil {
 		createdPaymentMethod.Spec.Tags = make(map[string][]string)
 	}
@@ -166,6 +170,13 @@ func (r *paymentMethodResource) Read(ctx context.Context, req resource.ReadReque
 		return
 	}
 
+	// Keep only the tags we already track; the API returns a superset (an entry for every defined tag
+	// property) that would otherwise surface as drift. On import there is no prior state (tags is
+	// null); we keep the full set so a normal import round-trips.
+	paymentMethod.Spec.Tags = reconcileTrackedTags(ctx, req.State, path.Root("spec").AtName("tags"), paymentMethod.Spec.Tags, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	if paymentMethod.Spec.Tags == nil {
 		paymentMethod.Spec.Tags = make(map[string][]string)
 	}
@@ -196,6 +207,8 @@ func (r *paymentMethodResource) Update(ctx context.Context, req resource.UpdateR
 		return
 	}
 
+	// Keep the tags the user declared rather than the superset the API returns, mirroring Create.
+	updatedPaymentMethod.Spec.Tags = paymentMethod.Spec.Tags
 	if updatedPaymentMethod.Spec.Tags == nil {
 		updatedPaymentMethod.Spec.Tags = make(map[string][]string)
 	}

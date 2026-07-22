@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 
+	"github.com/meshcloud/terraform-provider-meshstack/client"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/xknownvalue"
 )
@@ -38,6 +39,111 @@ func TestAccLandingZoneBuildingBlockRefRequiresUuid(t *testing.T) {
 }
 
 func TestAccLandingZone(t *testing.T) {
+	t.Run("restricted_default_tag", func(t *testing.T) {
+		// Backend-materialized default: the mock has no tag-restriction business logic, so it can't
+		// reproduce TagService.applyLandingZoneTagsOnCreation injecting a restricted tag's default on
+		// create. See the lock-step policy in the acceptance-testing skill.
+		if IsMockClientTest() {
+			t.Skip("relies on the backend injecting a restricted tag's default value on create")
+		}
+
+		tagConfig, tagAddr, tagKey := testconfig.TagDefinition(t, client.MeshObjectKind.LandingZone)
+		restrictedTagConfig, _, _ := testconfig.RestrictedTagDefinitionWithDefault(t, client.MeshObjectKind.LandingZone, "injected-default")
+		config, landingZoneAddr := testconfig.LandingZoneAndWorkspace(t)
+		config = config.Join(tagConfig, restrictedTagConfig).WithFirstBlock(
+			testconfig.Descend("metadata", "tags")(testconfig.SetRawExpr(`{ (%s) = ["blue"] }`, tagAddr.Join("spec", "key"))),
+		)
+
+		ApplyAndTest(t, resource.TestCase{
+			Steps: []resource.TestStep{
+				{
+					Config: config.String(),
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(landingZoneAddr.String(), tfjsonpath.New("metadata").AtMapKey("tags"), knownvalue.MapExact(map[string]knownvalue.Check{
+							tagKey: knownvalue.SetExact([]knownvalue.Check{knownvalue.StringExact("blue")}),
+						})),
+					},
+					// Refresh reads back the injected superset; reconcileTrackedTags must reconcile it
+					// away so no drift remains.
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+					},
+				},
+			},
+		})
+	})
+
+	t.Run("only_restricted_injected_no_declared_tags", func(t *testing.T) {
+		// The original crash repro: the caller declares no tags at all (base config has tags = {}),
+		// yet the backend injects a restricted tag's default on create. That injected default must be
+		// reconciled away, leaving an empty tag map with no drift — not an inconsistent-result crash.
+		if IsMockClientTest() {
+			t.Skip("relies on the backend injecting a restricted tag's default value on create")
+		}
+
+		restrictedTag, restrictedAddr, _ := testconfig.RestrictedTagDefinitionWithDefault(t, client.MeshObjectKind.LandingZone, "injected-default")
+		config, landingZoneAddr := testconfig.LandingZoneAndWorkspace(t)
+		// depends_on forces the tag definition to exist before the landing zone (so the restricted
+		// default is actually injected on create) and to be torn down after it.
+		config = config.Join(restrictedTag).WithFirstBlock(
+			testconfig.Descend("depends_on")(testconfig.SetRawExpr("[%s]", restrictedAddr)),
+		)
+
+		ApplyAndTest(t, resource.TestCase{
+			Steps: []resource.TestStep{
+				{
+					Config: config.String(),
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(landingZoneAddr.String(), tfjsonpath.New("metadata").AtMapKey("tags"), knownvalue.MapSizeExact(0)),
+					},
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+					},
+				},
+			},
+		})
+	})
+
+	t.Run("declared_restricted_tag_kept", func(t *testing.T) {
+		// A restricted tag the caller declares with a value is a tracked key, so it must round-trip;
+		// a different restricted tag the backend injects (undeclared) must still be reconciled away.
+		// Requires the acceptance identity to be permitted to set the declared restricted tag's value.
+		if IsMockClientTest() {
+			t.Skip("relies on the backend injecting a restricted tag's default value on create")
+		}
+
+		nonRestrictedTag, nonRestrictedAddr, nonRestrictedKey := testconfig.TagDefinition(t, client.MeshObjectKind.LandingZone)
+		declaredRestrictedTag, declaredRestrictedAddr, declaredRestrictedKey := testconfig.RestrictedTagDefinitionWithDefault(t, client.MeshObjectKind.LandingZone, "default-value")
+		injectedRestrictedTag, injectedRestrictedAddr, _ := testconfig.RestrictedTagDefinitionWithDefault(t, client.MeshObjectKind.LandingZone, "injected-default")
+		config, landingZoneAddr := testconfig.LandingZoneAndWorkspace(t)
+		config = config.Join(nonRestrictedTag, declaredRestrictedTag, injectedRestrictedTag).WithFirstBlock(
+			testconfig.Descend("metadata", "tags")(testconfig.SetRawExpr(
+				`{ (%s) = ["blue"], (%s) = ["set-by-caller"] }`,
+				nonRestrictedAddr.Join("spec", "key"),
+				declaredRestrictedAddr.Join("spec", "key"),
+			)),
+			testconfig.Descend("depends_on")(testconfig.SetRawExpr("[%s, %s, %s]", nonRestrictedAddr, declaredRestrictedAddr, injectedRestrictedAddr)),
+		)
+
+		ApplyAndTest(t, resource.TestCase{
+			Steps: []resource.TestStep{
+				{
+					Config: config.String(),
+					ConfigStateChecks: []statecheck.StateCheck{
+						// Both declared tags survive; only the undeclared injected restricted default is dropped.
+						statecheck.ExpectKnownValue(landingZoneAddr.String(), tfjsonpath.New("metadata").AtMapKey("tags"), knownvalue.MapExact(map[string]knownvalue.Check{
+							nonRestrictedKey:      knownvalue.SetExact([]knownvalue.Check{knownvalue.StringExact("blue")}),
+							declaredRestrictedKey: knownvalue.SetExact([]knownvalue.Check{knownvalue.StringExact("set-by-caller")}),
+						})),
+					},
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+					},
+				},
+			},
+		})
+	})
+
 	config, landingZoneAddr := testconfig.LandingZoneAndWorkspace(t)
 	resourceAddress := landingZoneAddr.String()
 

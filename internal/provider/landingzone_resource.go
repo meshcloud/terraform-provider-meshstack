@@ -129,11 +129,12 @@ func (r *landingZoneResource) Schema(_ context.Context, _ resource.SchemaRequest
 						},
 					},
 					"tags": schema.MapAttribute{
-						MarkdownDescription: "Tags of the landing zone.",
-						ElementType:         types.SetType{ElemType: types.StringType},
-						Optional:            true,
-						Computed:            true,
-						Default:             mapdefault.StaticValue(types.MapValueMust(types.SetType{ElemType: types.StringType}, map[string]attr.Value{})),
+						MarkdownDescription: "Tags of the landing zone. Only the tags you declare here are managed by Terraform; " +
+							"restricted-tag defaults that meshStack fills in automatically are not tracked and will not appear as drift.",
+						ElementType: types.SetType{ElemType: types.StringType},
+						Optional:    true,
+						Computed:    true,
+						Default:     mapdefault.StaticValue(types.MapValueMust(types.SetType{ElemType: types.StringType}, map[string]attr.Value{})),
 					},
 				},
 			},
@@ -499,6 +500,10 @@ func (r *landingZoneResource) Create(ctx context.Context, req resource.CreateReq
 		return
 	}
 
+	// Keep the tags the user declared rather than the superset the API returns (every schema property
+	// plus injected restricted-tag defaults), which would break plan/apply consistency.
+	createdLandingZone.Metadata.Tags = landingZone.Metadata.Tags
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, landingZoneModelFrom(createdLandingZone))...)
 }
 
@@ -527,6 +532,15 @@ func (r *landingZoneResource) Read(ctx context.Context, req resource.ReadRequest
 		return
 	}
 
+	// Keep only the tags we already track. The API returns a superset (every schema property plus
+	// injected restricted-tag defaults) that the caller may be unable to manage, so mirroring it
+	// verbatim would surface as drift. On import there is no prior state (tags is null); we keep the
+	// full set so a normal import round-trips, accepting that a restricted default would then show up.
+	landingZone.Metadata.Tags = reconcileTrackedTags(ctx, req.State, path.Root("metadata").AtName("tags"), landingZone.Metadata.Tags, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, landingZoneModelFrom(landingZone))...)
 }
 
@@ -551,6 +565,9 @@ func (r *landingZoneResource) Update(ctx context.Context, req resource.UpdateReq
 		)
 		return
 	}
+
+	// Keep the tags the user declared rather than the superset the API returns, mirroring Create.
+	updatedLandingZone.Metadata.Tags = landingZone.Metadata.Tags
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, landingZoneModelFrom(updatedLandingZone))...)
 }
