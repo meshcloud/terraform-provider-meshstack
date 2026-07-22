@@ -478,6 +478,18 @@ func tenantBodyAttributes() map[string]schema.Attribute {
 					ElementType:         types.ListType{ElemType: types.StringType},
 					Computed:            true,
 				},
+				"quotas": schema.SetNestedAttribute{
+					MarkdownDescription: "The effective quotas meshStack applied to this tenant. These can differ from the " +
+						"requested `spec.quotas` once the landing zone's default quotas are merged in or a platform operator " +
+						"adjusts them.",
+					Computed: true,
+					NestedObject: schema.NestedAttributeObject{
+						Attributes: map[string]schema.Attribute{
+							"key":   schema.StringAttribute{Computed: true},
+							"value": schema.Int64Attribute{Computed: true},
+						},
+					},
+				},
 			},
 		},
 

@@ -115,5 +115,14 @@ Read-Only:
 
 - `platform_type_identifier` (String) Identifier of the tenant's platform type — the kind of platform (e.g. `aws`, `azure`), not the specific platform instance the tenant lives on.
 - `platform_workspace_id` (String) For platforms that represent a workspace as a platform-side container (e.g. a Cloud Foundry Organization or an OpenStack Domain), the platform's own id of that container (an id assigned by the external platform, not a meshWorkspace identifier). Null for platforms with no such concept or until the tenant has been replicated.
+- `quotas` (Attributes List) The effective quotas meshStack applied to this tenant. (see [below for nested schema](#nestedatt--tenants--status--quotas))
 - `tags` (Map of List of String) Tags assigned to this tenant.
-- `tenant_name` (String) Name of the tenant, currently the owning workspace, project and platform (instance) identifiers joined by dots (`<workspace>.<project>.<platform>.<location>`). Treat this as an opaque string and do not parse it: the format is not guaranteed and may change unexpectedly, for example when the location segment becomes optional or when a tenant is moved across projects.
+- `tenant_identifier` (String) Fully-qualified identifier of the tenant: the owning workspace, project and platform (instance) identifiers joined by dots (`<workspace>.<project>.<platform>.<location>`).
+
+<a id="nestedatt--tenants--status--quotas"></a>
+### Nested Schema for `tenants.status.quotas`
+
+Read-Only:
+
+- `key` (String)
+- `value` (Number)
