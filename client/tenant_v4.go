@@ -35,6 +35,9 @@ type MeshTenantV4Status struct {
 	PlatformTypeIdentifier      string              `json:"platformTypeIdentifier" tfsdk:"platform_type_identifier"`
 	PlatformWorkspaceIdentifier *string             `json:"platformWorkspaceIdentifier" tfsdk:"platform_workspace_identifier"`
 	Tags                        map[string][]string `json:"tags" tfsdk:"tags"`
+	// Quotas are the effective quotas meshStack applied to the tenant, distinct from the create-only
+	// spec.quotas which carries only the requested values.
+	Quotas []MeshTenantQuota `json:"quotas" tfsdk:"quotas"`
 }
 
 type MeshTenantV4Create struct {
@@ -135,12 +138,15 @@ type MeshTenantSpec struct {
 	Quotas           types.Set[MeshTenantQuota] `json:"quotas" tfsdk:"quotas"`
 }
 
-// MeshTenantStatus has no quotas field; quotas are part of the tenant spec, not its status.
 type MeshTenantStatus struct {
 	TenantName             string              `json:"tenantName" tfsdk:"tenant_name"`
 	PlatformTypeIdentifier string              `json:"platformTypeIdentifier" tfsdk:"platform_type_identifier"`
 	PlatformWorkspaceId    *string             `json:"platformWorkspaceId" tfsdk:"platform_workspace_id"`
 	Tags                   map[string][]string `json:"tags" tfsdk:"tags"`
+	// Quotas are the effective quotas meshStack applied to the tenant. spec.quotas carries only the
+	// values requested at create (create-only); the effective quotas here can differ once landing-zone
+	// defaults are merged in or an operator adjusts them, so drift is tracked against these.
+	Quotas types.Set[MeshTenantQuota] `json:"quotas" tfsdk:"quotas"`
 }
 
 type MeshTenantQuota struct {

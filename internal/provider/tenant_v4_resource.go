@@ -220,7 +220,9 @@ func (r *tenantV4Resource) setStateFromResponse(ctx context.Context, tenant *cli
 		"key":   types.StringType,
 		"value": types.Int64Type,
 	}
-	quotasStatus, d := types.SetValueFrom(ctx, types.ObjectType{AttrTypes: quotaAttributeTypes}, tenant.Spec.Quotas)
+	// Effective quotas come from status.quotas, populated by the backend. spec.quotas is create-only and
+	// carries only the requested values, so it is not a reliable source for the applied quotas.
+	quotasStatus, d := types.SetValueFrom(ctx, types.ObjectType{AttrTypes: quotaAttributeTypes}, tenant.Status.Quotas)
 	diags.Append(d...)
 
 	tagsValue, d := types.MapValueFrom(ctx, types.ListType{ElemType: types.StringType}, tenant.Status.Tags)

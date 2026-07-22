@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/compare"
@@ -142,6 +143,79 @@ func TestAccTenant(t *testing.T) {
 		})
 	})
 
+	// quotas covers the create-only quota flow: a tenant requesting an in-bounds quota applies it, and
+	// the effective quotas are read back from status.quotas (distinct from the requested spec.quotas).
+	// Runs in both modes — the mock echoes the requested quota into status, the real backend validates
+	// it against the platform quota definition and applies it.
+	t.Run("quotas", func(t *testing.T) {
+		config, tenantAddr := tenantQuotaConfig(t, 4000, 4000, 2000)
+
+		quotaSet := knownvalue.SetExact([]knownvalue.Check{
+			knownvalue.ObjectExact(map[string]knownvalue.Check{
+				"key":   knownvalue.StringExact("limits.cpu"),
+				"value": knownvalue.Int64Exact(2000),
+			}),
+		})
+
+		ApplyAndTest(t, resource.TestCase{
+			Steps: []resource.TestStep{
+				{
+					Config: config.String(),
+					ConfigStateChecks: []statecheck.StateCheck{
+						// Requested quotas echo the config verbatim (spec.quotas is create-only, Optional).
+						statecheck.ExpectKnownValue(tenantAddr.String(), tfjsonpath.New("spec").AtMapKey("quotas"), quotaSet),
+						// Effective quotas come from status.quotas, populated by the backend.
+						statecheck.ExpectKnownValue(tenantAddr.String(), tfjsonpath.New("status").AtMapKey("quotas"), quotaSet),
+					},
+				},
+			},
+		})
+	})
+
+	// quotas_change_rejected asserts that changing spec.quotas on an existing tenant is rejected: the
+	// meshTenant API is create/delete only, with no quota update endpoint, so the provider must surface a
+	// clear plan-time error rather than silently no-op. This is a provider-side decision, so it runs in
+	// both modes.
+	t.Run("quotas_change_rejected", func(t *testing.T) {
+		// Reuse the same base config (same prerequisite resources) and change only the tenant's requested
+		// quota value, so step 2 is an in-place update of the existing tenant rather than a full replace.
+		config, _ := tenantQuotaConfig(t, 4000, 4000, 2000)
+		changedConfig := config.WithFirstBlock(
+			testconfig.Descend("spec", "quotas")(testconfig.SetRawExpr(`[{ key = "limits.cpu", value = %d }]`, 3000)),
+		)
+
+		ApplyAndTest(t, resource.TestCase{
+			Steps: []resource.TestStep{
+				{
+					Config: config.String(),
+				},
+				{
+					Config:      changedConfig.String(),
+					ExpectError: regexp.MustCompile("Tenants can't be updated"),
+				},
+			},
+		})
+	})
+
+	// quotas_out_of_range asserts the backend's create-time guardrail surfaces as a clear error: a
+	// requested quota above the platform's max is rejected with HTTP 400, and the provider bubbles up the
+	// descriptive API message. The mock does not enforce bounds, so this is acceptance-only.
+	t.Run("quotas_out_of_range", func(t *testing.T) {
+		if IsMockClientTest() {
+			t.Skip("quota bounds are enforced by the backend; requires a real meshStack")
+		}
+		config, _ := tenantQuotaConfig(t, 100, 100, 101)
+
+		ApplyAndTest(t, resource.TestCase{
+			Steps: []resource.TestStep{
+				{
+					Config:      config.String(),
+					ExpectError: regexp.MustCompile(`is out of range`),
+				},
+			},
+		})
+	})
+
 	// requires_replace asserts that changing platform_ref forces a replacement rather than an
 	// in-place update. platform_ref (and landing_zone_ref) carry the RequiresReplace plan modifier
 	// applied centrally by the meshRef helper (schema_utils.go) — a tenant cannot move platforms in
@@ -226,4 +300,29 @@ func TestAccTenant(t *testing.T) {
 			},
 		})
 	})
+}
+
+// tenantQuotaConfig builds a full tenant config whose platform defines a `limits.cpu` quota with the
+// given max/threshold (min is fixed at 1) and whose tenant requests requestedCpu for that quota. The
+// bespoke quota_definitions and spec.quotas are layered onto the standard builders via SetRawExpr.
+func tenantQuotaConfig(t *testing.T, maxCpu, threshold, requestedCpu int64) (testconfig.Config, testconfig.Traversal) {
+	t.Helper()
+	workspaceConfig, workspaceAddr := testconfig.Workspace(t)
+	projectConfig, projectAddr := testconfig.Project(t, workspaceAddr)
+	platformConfig, platformAddr, platformTypeAddr := testconfig.CustomPlatform(t, workspaceAddr)
+	platformConfig = platformConfig.WithFirstBlock(
+		testconfig.Descend("spec", "quota_definitions")(testconfig.SetRawExpr(
+			`[{ quota_key = "limits.cpu", min_value = 1, max_value = %d, unit = "cores", auto_approval_threshold = %d, description = "vCPU limit", label = "CPU" }]`,
+			maxCpu, threshold,
+		)),
+	)
+	landingZoneConfig, landingZoneAddr := testconfig.LandingZone(t, workspaceAddr, platformAddr, platformTypeAddr)
+	tenantConfig, tenantAddr := testconfig.Tenant(t, projectAddr, platformAddr, landingZoneAddr)
+	tenantConfig = tenantConfig.WithFirstBlock(
+		testconfig.Descend("spec", "quotas")(testconfig.SetRawExpr(
+			`[{ key = "limits.cpu", value = %d }]`, requestedCpu,
+		)),
+	)
+	config := tenantConfig.Join(workspaceConfig, projectConfig, platformConfig, landingZoneConfig)
+	return config, tenantAddr
 }

@@ -49,6 +49,9 @@ func (m MeshTenantClient) Create(_ context.Context, tenant *client.MeshTenantCre
 			PlatformTypeIdentifier: "mock-platform-type",
 			PlatformWorkspaceId:    new("mock-platform-workspace-id"),
 			Tags:                   map[string][]string{},
+			// The mock applies the requested quotas verbatim (no bounds/landing-zone-default resolution),
+			// so effective status.quotas mirrors the requested spec.quotas.
+			Quotas: tenant.Spec.Quotas,
 		},
 	}
 
