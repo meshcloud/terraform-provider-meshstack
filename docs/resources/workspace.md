@@ -50,7 +50,7 @@ Required:
 
 Optional:
 
-- `tags` (Map of List of String) Tags of the workspace. Only the tags you declare here are managed by Terraform; tag properties meshStack fills in automatically are not tracked and will not appear as drift.
+- `tags` (Map of List of String) Tags of `meshWorkspace`. Only the tags you declare here are managed by Terraform.
 
 Read-Only:
 

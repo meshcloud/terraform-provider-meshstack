@@ -99,7 +99,7 @@ Required:
 
 Optional:
 
-- `tags` (Map of Set of String) Tags of the landing zone. Only the tags you declare here are managed by Terraform; restricted-tag defaults that meshStack fills in automatically are not tracked and will not appear as drift.
+- `tags` (Map of List of String) Tags of `meshLandingZone`. Only the tags you declare here are managed by Terraform; restricted-tag defaults meshStack injects are not tracked and never show as drift.
 
 
 <a id="nestedatt--spec"></a>

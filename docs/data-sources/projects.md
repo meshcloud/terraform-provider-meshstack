@@ -69,4 +69,4 @@ Read-Only:
 - `display_name` (String) Display name of the project
 - `payment_method_identifier` (String) Payment method identifier
 - `substitute_payment_method_identifier` (String) Substitute payment method identifier
-- `tags` (Map of List of String) Tags associated with the project
+- `tags` (Map of List of String) Tags of `meshProject`.

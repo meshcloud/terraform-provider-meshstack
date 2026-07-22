@@ -7,7 +7,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
-	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
 )
@@ -53,11 +52,7 @@ func (d *workspaceDataSource) Schema(_ context.Context, _ datasource.SchemaReque
 						MarkdownDescription: "Deletion date of the workspace.",
 						Computed:            true,
 					},
-					"tags": schema.MapAttribute{
-						MarkdownDescription: "Tags of the workspace.",
-						ElementType:         types.ListType{ElemType: types.StringType},
-						Computed:            true,
-					},
+					"tags": tagsAttribute(tagsOptions{Kind: client.MeshObjectKind.Workspace, Output: true}),
 				},
 			},
 

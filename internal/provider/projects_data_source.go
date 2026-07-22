@@ -6,7 +6,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
-	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
 )
@@ -77,11 +76,7 @@ func (d *projectsDataSource) Schema(ctx context.Context, req datasource.SchemaRe
 									MarkdownDescription: "Display name of the project",
 									Computed:            true,
 								},
-								"tags": schema.MapAttribute{
-									MarkdownDescription: "Tags associated with the project",
-									Computed:            true,
-									ElementType:         types.ListType{ElemType: types.StringType},
-								},
+								"tags": tagsAttribute(tagsOptions{Kind: client.MeshObjectKind.Project, Output: true}),
 								"payment_method_identifier": schema.StringAttribute{
 									MarkdownDescription: "Payment method identifier",
 									Computed:            true,

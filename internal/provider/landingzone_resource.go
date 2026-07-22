@@ -3,7 +3,9 @@ package provider
 import (
 	"context"
 	"fmt"
+	"maps"
 	"regexp"
+	"sync"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -25,9 +27,10 @@ import (
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_ resource.Resource                = &landingZoneResource{}
-	_ resource.ResourceWithConfigure   = &landingZoneResource{}
-	_ resource.ResourceWithImportState = &landingZoneResource{}
+	_ resource.Resource                 = &landingZoneResource{}
+	_ resource.ResourceWithConfigure    = &landingZoneResource{}
+	_ resource.ResourceWithImportState  = &landingZoneResource{}
+	_ resource.ResourceWithUpgradeState = &landingZoneResource{}
 )
 
 // NewLandingZoneResource is a helper function to simplify the provider implementation.
@@ -97,6 +100,8 @@ func (r *landingZoneResource) Schema(_ context.Context, _ resource.SchemaRequest
 	}
 
 	resp.Schema = schema.Schema{
+		// v1 corrected metadata.tags from set(string) to list(string) — see UpgradeState.
+		Version:             1,
 		MarkdownDescription: "Represents a meshStack landing zone.",
 		Attributes: map[string]schema.Attribute{
 			"ref": meshRefByName(meshRefOptions{
@@ -128,14 +133,7 @@ func (r *landingZoneResource) Schema(_ context.Context, _ resource.SchemaRequest
 							stringplanmodifier.RequiresReplace(),
 						},
 					},
-					"tags": schema.MapAttribute{
-						MarkdownDescription: "Tags of the landing zone. Only the tags you declare here are managed by Terraform; " +
-							"restricted-tag defaults that meshStack fills in automatically are not tracked and will not appear as drift.",
-						ElementType: types.SetType{ElemType: types.StringType},
-						Optional:    true,
-						Computed:    true,
-						Default:     mapdefault.StaticValue(types.MapValueMust(types.SetType{ElemType: types.StringType}, map[string]attr.Value{})),
-					},
+					"tags": tagsAttribute(tagsOptions{Kind: client.MeshObjectKind.LandingZone, Restricted: true}),
 				},
 			},
 
@@ -593,4 +591,47 @@ func (r *landingZoneResource) Delete(ctx context.Context, req resource.DeleteReq
 
 func (r *landingZoneResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughID(ctx, path.Root("metadata").AtName("name"), req, resp)
+}
+
+// landingZoneSchemaV0Once builds the v0 schema for the state upgrader: the current schema with
+// metadata.tags as its old set(string) type. v1 corrected tags to list(string) (tag values are
+// lists, not sets), so this exists only to read v0 state.
+var landingZoneSchemaV0Once = sync.OnceValue(func() schema.Schema {
+	var schemaResp resource.SchemaResponse
+	(&landingZoneResource{}).Schema(context.Background(), resource.SchemaRequest{}, &schemaResp)
+	s := schemaResp.Schema
+	s.Version = 0
+
+	metadata, ok := s.Attributes["metadata"].(schema.SingleNestedAttribute)
+	if !ok {
+		panic("landing zone metadata attribute is not a SingleNestedAttribute")
+	}
+	metadata.Attributes = maps.Clone(metadata.Attributes)
+	metadata.Attributes["tags"] = schema.MapAttribute{
+		ElementType: types.SetType{ElemType: types.StringType},
+		Optional:    true,
+		Computed:    true,
+		Default:     mapdefault.StaticValue(types.MapValueMust(types.SetType{ElemType: types.StringType}, map[string]attr.Value{})),
+	}
+	s.Attributes = maps.Clone(s.Attributes)
+	s.Attributes["metadata"] = metadata
+	return s
+})
+
+func (r *landingZoneResource) UpgradeState(_ context.Context) map[int64]resource.StateUpgrader {
+	prior := landingZoneSchemaV0Once()
+	return map[int64]resource.StateUpgrader{
+		0: {PriorSchema: &prior, StateUpgrader: r.upgradeTagsSetToListV0},
+	}
+}
+
+// upgradeTagsSetToListV0 migrates v0 (tags as set) state to v1 (list). The Go model holds tags as
+// map[string][]string, so a read-then-write under the current schema does the conversion losslessly.
+func (r *landingZoneResource) upgradeTagsSetToListV0(ctx context.Context, req resource.UpgradeStateRequest, resp *resource.UpgradeStateResponse) {
+	var model landingZoneModel
+	resp.Diagnostics.Append(req.State.Get(ctx, &model)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	resp.Diagnostics.Append(resp.State.Set(ctx, model)...)
 }

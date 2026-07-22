@@ -54,4 +54,4 @@ Read-Only:
 - `amount` (Number) Amount associated with the payment method.
 - `display_name` (String) Display name of the payment method.
 - `expiration_date` (String) Expiration date of the payment method (ISO 8601 format).
-- `tags` (Map of List of String) Tags of the payment method.
+- `tags` (Map of List of String) Tags of `meshPaymentMethod`.

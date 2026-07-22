@@ -43,7 +43,7 @@ Read-Only:
 
 - `created_on` (String) Creation date of the workspace.
 - `deleted_on` (String) Deletion date of the workspace.
-- `tags` (Map of List of String) Tags of the workspace.
+- `tags` (Map of List of String) Tags of `meshWorkspace`.
 
 
 <a id="nestedatt--ref"></a>

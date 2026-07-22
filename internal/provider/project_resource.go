@@ -5,11 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -78,14 +76,7 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Attributes: map[string]schema.Attribute{
 					"display_name": schema.StringAttribute{Required: true},
 					// TODO: Blocks would be more terraform-y.
-					"tags": schema.MapAttribute{
-						MarkdownDescription: "Tags of the project. Only the tags you declare here are managed by Terraform; " +
-							"restricted-tag defaults that meshStack fills in automatically are not tracked and will not appear as drift.",
-						ElementType: types.ListType{ElemType: types.StringType},
-						Optional:    true,
-						Computed:    true,
-						Default:     mapdefault.StaticValue(types.MapValueMust(types.ListType{ElemType: types.StringType}, map[string]attr.Value{})),
-					},
+					"tags": tagsAttribute(tagsOptions{Kind: client.MeshObjectKind.Project, Restricted: true}),
 					// These can have defaults set upon creation
 					"payment_method_identifier": schema.StringAttribute{
 						Optional: true,

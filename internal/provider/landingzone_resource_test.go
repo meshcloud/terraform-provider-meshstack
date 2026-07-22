@@ -60,7 +60,7 @@ func TestAccLandingZone(t *testing.T) {
 					Config: config.String(),
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(landingZoneAddr.String(), tfjsonpath.New("metadata").AtMapKey("tags"), knownvalue.MapExact(map[string]knownvalue.Check{
-							tagKey: knownvalue.SetExact([]knownvalue.Check{knownvalue.StringExact("blue")}),
+							tagKey: knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("blue")}),
 						})),
 					},
 					// Refresh reads back the injected superset; reconcileTrackedTags must reconcile it
@@ -74,9 +74,8 @@ func TestAccLandingZone(t *testing.T) {
 	})
 
 	t.Run("only_restricted_injected_no_declared_tags", func(t *testing.T) {
-		// The original crash repro: the caller declares no tags at all (base config has tags = {}),
-		// yet the backend injects a restricted tag's default on create. That injected default must be
-		// reconciled away, leaving an empty tag map with no drift — not an inconsistent-result crash.
+		// Original crash repro: no tags declared, backend injects a restricted default on create; it
+		// must reconcile away to an empty map with no drift, rather than crash on inconsistent result.
 		if IsMockClientTest() {
 			t.Skip("relies on the backend injecting a restricted tag's default value on create")
 		}
@@ -105,9 +104,9 @@ func TestAccLandingZone(t *testing.T) {
 	})
 
 	t.Run("declared_restricted_tag_kept", func(t *testing.T) {
-		// A restricted tag the caller declares with a value is a tracked key, so it must round-trip;
-		// a different restricted tag the backend injects (undeclared) must still be reconciled away.
-		// Requires the acceptance identity to be permitted to set the declared restricted tag's value.
+		// A declared restricted tag is tracked and must round-trip; an undeclared injected restricted
+		// default must still be reconciled away. Requires the acc identity to be allowed to set the
+		// declared restricted tag's value.
 		if IsMockClientTest() {
 			t.Skip("relies on the backend injecting a restricted tag's default value on create")
 		}
@@ -132,8 +131,8 @@ func TestAccLandingZone(t *testing.T) {
 					ConfigStateChecks: []statecheck.StateCheck{
 						// Both declared tags survive; only the undeclared injected restricted default is dropped.
 						statecheck.ExpectKnownValue(landingZoneAddr.String(), tfjsonpath.New("metadata").AtMapKey("tags"), knownvalue.MapExact(map[string]knownvalue.Check{
-							nonRestrictedKey:      knownvalue.SetExact([]knownvalue.Check{knownvalue.StringExact("blue")}),
-							declaredRestrictedKey: knownvalue.SetExact([]knownvalue.Check{knownvalue.StringExact("set-by-caller")}),
+							nonRestrictedKey:      knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("blue")}),
+							declaredRestrictedKey: knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("set-by-caller")}),
 						})),
 					},
 					ConfigPlanChecks: resource.ConfigPlanChecks{

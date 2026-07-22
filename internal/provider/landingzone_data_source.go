@@ -7,7 +7,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
-	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
 )
@@ -52,11 +51,7 @@ func (d *landingZoneDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 						MarkdownDescription: "Identifier of the workspace that owns this landing zone.",
 						Computed:            true,
 					},
-					"tags": schema.MapAttribute{
-						MarkdownDescription: "Tags of the landing zone.",
-						ElementType:         types.ListType{ElemType: types.StringType},
-						Computed:            true,
-					},
+					"tags": tagsAttribute(tagsOptions{Kind: client.MeshObjectKind.LandingZone, Output: true}),
 				},
 			},
 

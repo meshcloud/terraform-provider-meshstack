@@ -6,16 +6,13 @@ import (
 	"regexp"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
-	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
 )
@@ -82,14 +79,7 @@ func (r *workspaceResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 						Computed:            true,
 						PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 					},
-					"tags": schema.MapAttribute{
-						MarkdownDescription: "Tags of the workspace. Only the tags you declare here are managed by Terraform; " +
-							"tag properties meshStack fills in automatically are not tracked and will not appear as drift.",
-						ElementType: types.ListType{ElemType: types.StringType},
-						Optional:    true,
-						Computed:    true,
-						Default:     mapdefault.StaticValue(types.MapValueMust(types.ListType{ElemType: types.StringType}, map[string]attr.Value{})),
-					},
+					"tags": tagsAttribute(tagsOptions{Kind: client.MeshObjectKind.Workspace}),
 				},
 			},
 

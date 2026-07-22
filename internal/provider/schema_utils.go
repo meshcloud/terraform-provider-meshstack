@@ -6,17 +6,16 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/defaults"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
-	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -34,6 +33,47 @@ func nestedObjectToObjectType(nested schema.NestedAttributeObject) types.ObjectT
 // schema.NestedAttributeObject as a default value.
 func emptySetDefault(nested schema.NestedAttributeObject) defaults.Set {
 	return setdefault.StaticValue(types.SetValueMust(nestedObjectToObjectType(nested), nil))
+}
+
+// tagsOptions configures the shared meshObject `tags` attribute. Kind is required (it names the
+// object in the description); the zero value is not meaningful on its own.
+type tagsOptions struct {
+	// Kind is the meshObject kind whose tags these are, e.g. client.MeshObjectKind.LandingZone.
+	Kind string
+
+	// Output builds the read-only data-source form: Computed, no default, no managed-tags note.
+	Output bool
+
+	// Restricted flags a kind whose meshObject API create path injects restricted-tag defaults the
+	// caller may not be permitted to manage — only meshProject, meshLandingZone and
+	// meshBuildingBlockDefinition do. Adjusts the managed-tags note; ignored when Output is set.
+	Restricted bool
+}
+
+// tagsAttribute builds the shared `tags` attribute — a map of tag key to an ordered list of strings
+// (tag values are lists, never sets; see tags_reconcile.go) — for a taggable meshObject.
+func tagsAttribute(opts tagsOptions) schema.MapAttribute {
+	elemType := types.ListType{ElemType: types.StringType}
+	a := schema.MapAttribute{
+		MarkdownDescription: "Tags of `" + opts.Kind + "`.",
+		ElementType:         elemType,
+		Computed:            true,
+	}
+	if opts.Output {
+		return a
+	}
+
+	a.MarkdownDescription += " Only the tags you declare here are managed by Terraform"
+	if opts.Restricted {
+		// These kinds also get restricted-tag defaults injected by the backend that the caller may not
+		// manage; call that out so their appearing untracked isn't surprising.
+		a.MarkdownDescription += "; restricted-tag defaults meshStack injects are not tracked and never show as drift."
+	} else {
+		a.MarkdownDescription += "."
+	}
+	a.Optional = true
+	a.Default = mapdefault.StaticValue(types.MapValueMust(elemType, map[string]attr.Value{}))
+	return a
 }
 
 // meshRefOptions configures a meshObject reference attribute. The zero value yields a required input
@@ -64,44 +104,6 @@ type meshRefOptions struct {
 	// RequiresReplace forces replacement of the resource when the reference block changes — for an
 	// input ref that cannot be changed in place (e.g. a tenant's platform_ref / landing_zone_ref).
 	RequiresReplace bool
-}
-
-// reconcileTrackedTags restricts apiTags to the tag keys already tracked in state at tagsPath. The
-// meshObject API returns a superset of the tags a caller sent — an entry for every schema property
-// (empty list for unset ones) plus injected restricted-tag defaults — which the caller may be unable
-// to manage. Keeping only the previously tracked keys prevents those server-side additions from
-// entering the user-managed `tags` attribute and producing spurious drift on the next plan.
-//
-// On import there is no prior state (tags is null), so apiTags is returned unchanged and the full set
-// round-trips. Reading state can fail, so diagnostics are appended to diags; check diags.HasError()
-// at the call site as usual.
-func reconcileTrackedTags(ctx context.Context, state tfsdk.State, tagsPath path.Path, apiTags map[string][]string, diags *diag.Diagnostics) map[string][]string {
-	var priorTags types.Map
-	diags.Append(state.GetAttribute(ctx, tagsPath, &priorTags)...)
-	if diags.HasError() || priorTags.IsNull() {
-		return apiTags
-	}
-
-	var tracked map[string][]string
-	diags.Append(priorTags.ElementsAs(ctx, &tracked, false)...)
-	if diags.HasError() {
-		return apiTags
-	}
-
-	return reconcileTags(tracked, apiTags)
-}
-
-// reconcileTags is the pure core of reconcileTrackedTags: it restricts apiTags to the keys present in
-// tracked, dropping the server-injected superset entries (empty lists for undeclared properties and
-// restricted-tag defaults) that are not tracked in state.
-func reconcileTags(tracked, apiTags map[string][]string) map[string][]string {
-	reconciled := make(map[string][]string, len(tracked))
-	for key := range tracked {
-		if value, ok := apiTags[key]; ok {
-			reconciled[key] = value
-		}
-	}
-	return reconciled
 }
 
 // meshRefByUuid builds a {kind, uuid} reference for the given meshObject kind.

@@ -14,7 +14,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
@@ -240,15 +239,7 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 							stringplanmodifier.RequiresReplace(),
 						},
 					},
-					"tags": schema.MapAttribute{
-						MarkdownDescription: "Key/value pairs of tags set on the building block definition. Values are arrays of strings. " +
-							"Only the tags you declare here are managed by Terraform; restricted-tag defaults that meshStack fills in " +
-							"automatically are not tracked and will not appear as drift.",
-						ElementType: types.ListType{ElemType: types.StringType},
-						Optional:    true,
-						Computed:    true,
-						Default:     mapdefault.StaticValue(types.MapValueMust(types.ListType{ElemType: types.StringType}, nil)),
-					},
+					"tags": tagsAttribute(tagsOptions{Kind: client.MeshObjectKind.BuildingBlockDefinition, Restricted: true}),
 				},
 			},
 
