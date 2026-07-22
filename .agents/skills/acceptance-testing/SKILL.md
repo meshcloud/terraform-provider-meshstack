@@ -27,6 +27,13 @@ Both real runners are required:
 Sensitive inputs decrypt out of the box: the dev seed pairs `building-blocks.pem` (public, on the
 magic runner UUID) with the private key shipped in `tf-block-runner`.
 
+## The `.env` (no need to hunt for it)
+
+`.env` is reconstructible from the dev seed — don't go searching other worktrees for a copy. Set
+`TF_ACC=1` and `MESHSTACK_ENDPOINT=http://localhost:8080`; `MESHSTACK_API_KEY` (the key uuid) and
+`MESHSTACK_API_SECRET` (its `Secret.Raw`) are the `mkGlobalApiKey "terraform-provider-acceptance" …`
+entry under `auth.openid.apiKeys` in `../meshfed-release/meshfed/api/src/main/resources/application-default.dhall`.
+
 ## 1. Run the acceptance tests
 
 ```bash
