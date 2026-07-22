@@ -199,6 +199,13 @@ calling the API. Full pattern and example in the **`new-resource-datasource`** s
   **not** return pointers from `new*Client` functions (interface is satisfied by value).
 - **Pointers + `omitempty`** only for fields actually nullable in the backend API; non-nullable
   fields use value types without `omitempty`.
+- **List query parameters go through a struct, not an ad-hoc map.** A client `List` method (and its
+  interface signature) takes/builds a single json-tagged query struct and hands it **by value** to
+  `internal.WithUrlQuery`, which names each query param from the `json` tag and drops zero-value
+  fields (an implicit `omitempty` — no pointer or `,omitempty` needed; use a pointer only to send an
+  explicit zero). Reach for a `map[string]string` / `map[string]any` **only** in the rare verbatim
+  case where a zero value must still be transmitted (e.g. `page=0` in the paginator), which a struct
+  would omit.
 
 ## Modern Go (Go 1.26 + generics)
 
