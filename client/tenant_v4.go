@@ -155,7 +155,11 @@ type MeshTenantSpec struct {
 
 // MeshTenantStatus has no quotas field; quotas are part of the tenant spec, not its status.
 type MeshTenantStatus struct {
-	TenantIdentifier       string              `json:"tenantIdentifier" tfsdk:"tenant_identifier"`
+	// Sourced from the backend's status.tenantName (the qualified tenant identifier). The v4 GA
+	// API renamed tenantIdentifier -> tenantName and drops the deprecated tenantIdentifier; the
+	// public tenant_identifier attribute keeps its name since the value (qualifiedTenantIdentifier)
+	// is unchanged.
+	TenantIdentifier       string              `json:"tenantName" tfsdk:"tenant_identifier"`
 	PlatformTypeIdentifier string              `json:"platformTypeIdentifier" tfsdk:"platform_type_identifier"`
 	PlatformWorkspaceId    *string             `json:"platformWorkspaceId" tfsdk:"platform_workspace_id"`
 	Tags                   map[string][]string `json:"tags" tfsdk:"tags"`
