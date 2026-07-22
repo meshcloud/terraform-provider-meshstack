@@ -75,13 +75,14 @@ func (c meshPlatformTypeClient) Delete(ctx context.Context, name string) error {
 	return c.meshObject.Delete(ctx, name)
 }
 
+type meshPlatformTypeListQuery struct {
+	Category        *string `json:"category"`
+	LifecycleStatus *string `json:"lifecycleStatus"`
+}
+
 func (c meshPlatformTypeClient) List(ctx context.Context, category *string, lifecycleStatus *string) ([]MeshPlatformType, error) {
-	var options []internal.RequestOption
-	if category != nil {
-		options = append(options, internal.WithUrlQuery("category", *category))
-	}
-	if lifecycleStatus != nil {
-		options = append(options, internal.WithUrlQuery("lifecycleStatus", *lifecycleStatus))
-	}
-	return c.meshObject.List(ctx, options...)
+	return c.meshObject.List(ctx, internal.WithUrlQuery(meshPlatformTypeListQuery{
+		Category:        category,
+		LifecycleStatus: lifecycleStatus,
+	}))
 }

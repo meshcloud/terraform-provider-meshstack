@@ -74,7 +74,7 @@ func (m MeshBuildingBlockV2Client) ReadFunc(bbUuid string) func(ctx context.Cont
 	}
 }
 
-func (m MeshBuildingBlockV2Client) List(_ context.Context, filter *client.MeshBuildingBlockV2ListFilter) ([]client.MeshBuildingBlockV2, error) {
+func (m MeshBuildingBlockV2Client) List(_ context.Context, filter client.MeshBuildingBlockV2ListFilter) ([]client.MeshBuildingBlockV2, error) {
 	result := make([]client.MeshBuildingBlockV2, 0)
 	// Iterate in sorted-uuid order for deterministic test output.
 	for _, key := range m.Store.SortedKeys() {
@@ -82,7 +82,7 @@ func (m MeshBuildingBlockV2Client) List(_ context.Context, filter *client.MeshBu
 		if !ok {
 			continue
 		}
-		if filter != nil && !mockBuildingBlockMatchesFilter(bb, filter) {
+		if !mockBuildingBlockMatchesFilter(bb, filter) {
 			continue
 		}
 		result = append(result, *deepCopyBB(bb))
@@ -95,7 +95,7 @@ func (m MeshBuildingBlockV2Client) List(_ context.Context, filter *client.MeshBu
 // and VersionNumber (the store only holds the definition *version* uuid, not the definition uuid or
 // the version number) — are accepted but not applied, so tests should assert only on the supported
 // filters. The real backend applies all of them.
-func mockBuildingBlockMatchesFilter(bb *client.MeshBuildingBlockV2, filter *client.MeshBuildingBlockV2ListFilter) bool {
+func mockBuildingBlockMatchesFilter(bb *client.MeshBuildingBlockV2, filter client.MeshBuildingBlockV2ListFilter) bool {
 	if filter.WorkspaceIdentifier != nil && bb.Metadata.OwnedByWorkspace != *filter.WorkspaceIdentifier {
 		return false
 	}

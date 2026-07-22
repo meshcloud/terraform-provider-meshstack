@@ -55,18 +55,18 @@ type MeshTenantV4CreateSpec struct {
 }
 
 type MeshTenantV4Query struct {
-	Workspace      string
-	Project        *string
-	Platform       *string
-	PlatformType   *string
-	LandingZone    *string
-	PlatformTenant *string
+	Workspace      string  `json:"workspaceIdentifier"`
+	Project        *string `json:"projectIdentifier"`
+	Platform       *string `json:"platformIdentifier"`
+	PlatformType   *string `json:"platformTypeIdentifier"`
+	LandingZone    *string `json:"landingZoneIdentifier"`
+	PlatformTenant *string `json:"platformTenantId"`
 }
 
 type MeshTenantV4Client interface {
 	Read(ctx context.Context, uuid string) (*MeshTenantV4, error)
 	ReadFunc(uuid string) func(ctx context.Context) (*MeshTenantV4, error)
-	List(ctx context.Context, query *MeshTenantV4Query) ([]MeshTenantV4, error)
+	List(ctx context.Context, query MeshTenantV4Query) ([]MeshTenantV4, error)
 	Create(ctx context.Context, tenant *MeshTenantV4Create) (*MeshTenantV4, error)
 	Delete(ctx context.Context, uuid string) error
 }
@@ -93,26 +93,8 @@ func (c meshTenantV4Client) Create(ctx context.Context, tenant *MeshTenantV4Crea
 	return c.meshObject.Post(ctx, tenant)
 }
 
-func (c meshTenantV4Client) List(ctx context.Context, query *MeshTenantV4Query) ([]MeshTenantV4, error) {
-	options := []internal.RequestOption{
-		internal.WithUrlQuery("workspaceIdentifier", query.Workspace),
-	}
-	if query.Project != nil {
-		options = append(options, internal.WithUrlQuery("projectIdentifier", *query.Project))
-	}
-	if query.Platform != nil {
-		options = append(options, internal.WithUrlQuery("platformIdentifier", *query.Platform))
-	}
-	if query.PlatformType != nil {
-		options = append(options, internal.WithUrlQuery("platformTypeIdentifier", *query.PlatformType))
-	}
-	if query.LandingZone != nil {
-		options = append(options, internal.WithUrlQuery("landingZoneIdentifier", *query.LandingZone))
-	}
-	if query.PlatformTenant != nil {
-		options = append(options, internal.WithUrlQuery("platformTenantId", *query.PlatformTenant))
-	}
-	return c.meshObject.List(ctx, options...)
+func (c meshTenantV4Client) List(ctx context.Context, query MeshTenantV4Query) ([]MeshTenantV4, error) {
+	return c.meshObject.List(ctx, internal.WithUrlQuery(query))
 }
 
 func (c meshTenantV4Client) Delete(ctx context.Context, uuid string) error {
@@ -184,18 +166,18 @@ type MeshTenantCreateSpec struct {
 }
 
 type MeshTenantQuery struct {
-	Workspace      string
-	Project        *string
-	Platform       *string
-	PlatformType   *string
-	LandingZone    *string
-	PlatformTenant *string
+	Workspace      string  `json:"workspaceIdentifier"`
+	Project        *string `json:"projectIdentifier"`
+	Platform       *string `json:"platformIdentifier"`
+	PlatformType   *string `json:"platformTypeIdentifier"`
+	LandingZone    *string `json:"landingZoneIdentifier"`
+	PlatformTenant *string `json:"platformTenantId"`
 }
 
 type MeshTenantClient interface {
 	Read(ctx context.Context, uuid string) (*MeshTenant, error)
 	ReadFunc(uuid string) func(ctx context.Context) (*MeshTenant, error)
-	List(ctx context.Context, query *MeshTenantQuery) ([]MeshTenant, error)
+	List(ctx context.Context, query MeshTenantQuery) ([]MeshTenant, error)
 	Create(ctx context.Context, tenant *MeshTenantCreate) (*MeshTenant, error)
 	Delete(ctx context.Context, uuid string) error
 }
@@ -222,26 +204,8 @@ func (c meshTenantClient) Create(ctx context.Context, tenant *MeshTenantCreate) 
 	return c.meshObject.Post(ctx, tenant)
 }
 
-func (c meshTenantClient) List(ctx context.Context, query *MeshTenantQuery) ([]MeshTenant, error) {
-	options := []internal.RequestOption{
-		internal.WithUrlQuery("workspaceIdentifier", query.Workspace),
-	}
-	if query.Project != nil {
-		options = append(options, internal.WithUrlQuery("projectIdentifier", *query.Project))
-	}
-	if query.Platform != nil {
-		options = append(options, internal.WithUrlQuery("platformIdentifier", *query.Platform))
-	}
-	if query.PlatformType != nil {
-		options = append(options, internal.WithUrlQuery("platformTypeIdentifier", *query.PlatformType))
-	}
-	if query.LandingZone != nil {
-		options = append(options, internal.WithUrlQuery("landingZoneIdentifier", *query.LandingZone))
-	}
-	if query.PlatformTenant != nil {
-		options = append(options, internal.WithUrlQuery("platformTenantId", *query.PlatformTenant))
-	}
-	return c.meshObject.List(ctx, options...)
+func (c meshTenantClient) List(ctx context.Context, query MeshTenantQuery) ([]MeshTenant, error) {
+	return c.meshObject.List(ctx, internal.WithUrlQuery(query))
 }
 
 func (c meshTenantClient) Delete(ctx context.Context, uuid string) error {

@@ -227,7 +227,7 @@ func (d *buildingBlocksDataSource) Read(ctx context.Context, req datasource.Read
 		return
 	}
 
-	filter := client.MeshBuildingBlockV2ListFilter{
+	blocks, err := d.client.List(ctx, client.MeshBuildingBlockV2ListFilter{
 		WorkspaceIdentifier:          config.WorkspaceIdentifier,
 		ProjectIdentifier:            config.ProjectIdentifier,
 		PlatformIdentifier:           config.PlatformIdentifier,
@@ -240,9 +240,7 @@ func (d *buildingBlocksDataSource) Read(ctx context.Context, req datasource.Read
 		Status:                       config.Status,
 		ManagedByWorkspaceIdentifier: config.ManagedByWorkspaceIdentifier,
 		ManagedByDefinitionUuid:      config.ManagedByDefinitionUuid,
-	}
-
-	blocks, err := d.client.List(ctx, &filter)
+	})
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to list building blocks", err.Error())
 		return

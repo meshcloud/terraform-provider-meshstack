@@ -17,26 +17,23 @@ func (m MeshServiceInstanceClient) Read(_ context.Context, instanceId string) (*
 	return nil, nil
 }
 
-func (m MeshServiceInstanceClient) List(_ context.Context, filter *client.MeshServiceInstanceFilter) ([]client.MeshServiceInstance, error) {
+func (m MeshServiceInstanceClient) List(_ context.Context, filter client.MeshServiceInstanceFilter) ([]client.MeshServiceInstance, error) {
 	var result []client.MeshServiceInstance
 	for _, serviceInstance := range m.Store.Values() {
-		// Apply filters if provided
-		if filter != nil {
-			if filter.WorkspaceIdentifier != nil && serviceInstance.Metadata.OwnedByWorkspace != *filter.WorkspaceIdentifier {
-				continue
-			}
-			if filter.ProjectIdentifier != nil && serviceInstance.Metadata.OwnedByProject != *filter.ProjectIdentifier {
-				continue
-			}
-			if filter.MarketplaceIdentifier != nil && serviceInstance.Metadata.MarketplaceIdentifier != *filter.MarketplaceIdentifier {
-				continue
-			}
-			if filter.ServiceIdentifier != nil && serviceInstance.Spec.ServiceId != *filter.ServiceIdentifier {
-				continue
-			}
-			if filter.PlanIdentifier != nil && serviceInstance.Spec.PlanId != *filter.PlanIdentifier {
-				continue
-			}
+		if filter.WorkspaceIdentifier != nil && serviceInstance.Metadata.OwnedByWorkspace != *filter.WorkspaceIdentifier {
+			continue
+		}
+		if filter.ProjectIdentifier != nil && serviceInstance.Metadata.OwnedByProject != *filter.ProjectIdentifier {
+			continue
+		}
+		if filter.MarketplaceIdentifier != nil && serviceInstance.Metadata.MarketplaceIdentifier != *filter.MarketplaceIdentifier {
+			continue
+		}
+		if filter.ServiceIdentifier != nil && serviceInstance.Spec.ServiceId != *filter.ServiceIdentifier {
+			continue
+		}
+		if filter.PlanIdentifier != nil && serviceInstance.Spec.PlanId != *filter.PlanIdentifier {
+			continue
 		}
 		result = append(result, *serviceInstance)
 	}

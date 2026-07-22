@@ -66,6 +66,9 @@ func (c HttpClient) doRequest(ctx context.Context, method string, url *url.URL, 
 	for _, option := range options {
 		option(&opts)
 	}
+	if opts.optionErr != nil {
+		return nil, opts.optionErr
+	}
 	req, err := c.buildRequest(ctx, method, *url, opts)
 	if err != nil {
 		return nil, err

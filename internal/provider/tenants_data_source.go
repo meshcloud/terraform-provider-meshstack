@@ -155,7 +155,7 @@ func (d *tenantsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		return
 	}
 
-	tenants, err := d.meshTenantClient.List(ctx, &client.MeshTenantQuery{
+	tenants, err := d.meshTenantClient.List(ctx, client.MeshTenantQuery{
 		Workspace:      workspace,
 		Project:        project,
 		Platform:       platform,

@@ -59,14 +59,16 @@ func (c meshProjectClient) Read(ctx context.Context, workspace string, name stri
 	return c.meshObject.Get(ctx, c.projectId(workspace, name))
 }
 
+type meshProjectListQuery struct {
+	WorkspaceIdentifier string  `json:"workspaceIdentifier"`
+	PaymentIdentifier   *string `json:"paymentIdentifier"`
+}
+
 func (c meshProjectClient) List(ctx context.Context, workspaceIdentifier string, paymentMethodIdentifier *string) ([]MeshProject, error) {
-	options := []internal.RequestOption{
-		internal.WithUrlQuery("workspaceIdentifier", workspaceIdentifier),
-	}
-	if paymentMethodIdentifier != nil {
-		options = append(options, internal.WithUrlQuery("paymentIdentifier", *paymentMethodIdentifier))
-	}
-	return c.meshObject.List(ctx, options...)
+	return c.meshObject.List(ctx, internal.WithUrlQuery(meshProjectListQuery{
+		WorkspaceIdentifier: workspaceIdentifier,
+		PaymentIdentifier:   paymentMethodIdentifier,
+	}))
 }
 
 func (c meshProjectClient) Create(ctx context.Context, project *MeshProjectCreate) (*MeshProject, error) {

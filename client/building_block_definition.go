@@ -76,13 +76,19 @@ func newBuildingBlockDefinitionClient(ctx context.Context, httpClient internal.H
 	}
 }
 
+type meshBuildingBlockDefinitionListQuery struct {
+	// IncludeAllPublished is always true here: list definitions published across the platform in
+	// addition to the workspace's own. (A false bool would be dropped by WithUrlQuery, which is fine —
+	// this endpoint is only ever called with it set.)
+	IncludeAllPublished bool    `json:"includeAllPublished"`
+	OwnedByWorkspace    *string `json:"ownedByWorkspace"`
+}
+
 func (c meshBuildingBlockDefinitionClient) List(ctx context.Context, workspaceIdentifier *string) ([]MeshBuildingBlockDefinition, error) {
-	var options []internal.RequestOption
-	options = append(options, internal.WithUrlQuery("includeAllPublished", "true"))
-	if workspaceIdentifier != nil {
-		options = append(options, internal.WithUrlQuery("ownedByWorkspace", *workspaceIdentifier))
-	}
-	return c.meshObject.List(ctx, options...)
+	return c.meshObject.List(ctx, internal.WithUrlQuery(meshBuildingBlockDefinitionListQuery{
+		IncludeAllPublished: true,
+		OwnedByWorkspace:    workspaceIdentifier,
+	}))
 }
 
 func (c meshBuildingBlockDefinitionClient) Read(ctx context.Context, uuid string) (*MeshBuildingBlockDefinition, error) {

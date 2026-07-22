@@ -146,7 +146,7 @@ func (c MeshObjectClient[M]) List(ctx context.Context, options ...RequestOption)
 		}
 		response, err := DoAuthorizedRequest[paginatedResponse](ctx, c.HttpClient, http.MethodGet, c.ApiUrl, append(options,
 			WithAccept(c.MeshObjectMimeType()),
-			WithUrlQuery("page", pageNumber),
+			WithUrlQuery(map[string]any{"page": pageNumber}),
 		)...)
 		if err != nil {
 			return result, fmt.Errorf("error getting page %d: %w", pageNumber, err)

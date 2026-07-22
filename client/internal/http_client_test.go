@@ -275,7 +275,8 @@ func TestHttpClient(t *testing.T) {
 }
 
 func TestUrlQueryOptions(t *testing.T) {
-	t.Run("WithUrlQuery sets query parameters", func(t *testing.T) {
+	queryFrom := func(t *testing.T, query any) url.Values {
+		t.Helper()
 		var gotQuery url.Values
 		client := newTestClientWithServer(t, func(resp http.ResponseWriter, req *http.Request) {
 			gotQuery = req.URL.Query()
@@ -283,12 +284,41 @@ func TestUrlQueryOptions(t *testing.T) {
 			_, _ = resp.Write([]byte(`"ok"`))
 		})
 		_, err := DoRequest[string](t.Context(), client, http.MethodGet, client.RootUrl.JoinPath("list"),
-			WithUrlQuery("definitionUuid", "abc"),
-			WithUrlQuery("status", "SUCCEEDED"),
+			WithUrlQuery(query),
 		)
 		require.NoError(t, err)
-		assert.Equal(t, "abc", gotQuery.Get("definitionUuid"))
-		assert.Equal(t, "SUCCEEDED", gotQuery.Get("status"))
+		return gotQuery
+	}
+
+	t.Run("a map is sent verbatim", func(t *testing.T) {
+		got := queryFrom(t, map[string]string{"definitionUuid": "abc", "status": "SUCCEEDED"})
+		assert.Equal(t, "abc", got.Get("definitionUuid"))
+		assert.Equal(t, "SUCCEEDED", got.Get("status"))
+	})
+
+	t.Run("map values are kept even when zero", func(t *testing.T) {
+		got := queryFrom(t, map[string]any{"page": 0})
+		assert.Equal(t, "0", got.Get("page"))
+	})
+
+	t.Run("struct fields are named by json tag and zero fields are dropped", func(t *testing.T) {
+		type filter struct {
+			Identifier *string `json:"identifier"`
+			Name       string  `json:"name"`
+			Restricted *bool   `json:"restricted"`
+		}
+		got := queryFrom(t, filter{Identifier: new("abc")})
+		assert.Equal(t, "abc", got.Get("identifier"))
+		assert.False(t, got.Has("name"), "zero string field must be dropped")
+		assert.False(t, got.Has("restricted"), "nil pointer field must be dropped")
+	})
+
+	t.Run("a zero-value struct adds no params", func(t *testing.T) {
+		type filter struct {
+			Identifier *string `json:"identifier"`
+		}
+		got := queryFrom(t, &filter{})
+		assert.Empty(t, got)
 	})
 }
 

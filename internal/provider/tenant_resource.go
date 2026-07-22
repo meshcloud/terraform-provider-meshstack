@@ -311,10 +311,10 @@ func (r *tenantResource) upgradeFromV0(ctx context.Context, req resource.Upgrade
 // listSingleTenant resolves the single active (not soft-deleted) tenant for a workspace/project/platform
 // composite, erroring if zero or more than one match.
 func (r *tenantResource) listSingleTenant(ctx context.Context, workspace, project, platform string) (*client.MeshTenant, error) {
-	tenants, err := r.meshTenantClient.List(ctx, &client.MeshTenantQuery{
+	tenants, err := r.meshTenantClient.List(ctx, client.MeshTenantQuery{
 		Workspace: workspace,
-		Project:   &project,
-		Platform:  &platform,
+		Project:   new(project),
+		Platform:  new(platform),
 	})
 	if err != nil {
 		return nil, err

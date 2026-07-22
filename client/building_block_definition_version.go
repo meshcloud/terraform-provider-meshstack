@@ -198,8 +198,14 @@ func newBuildingBlockDefinitionVersionClient(ctx context.Context, httpClient int
 	}
 }
 
+type meshBuildingBlockDefinitionVersionListQuery struct {
+	BuildingBlockDefinitionUuid string `json:"buildingBlockDefinitionUuid"`
+}
+
 func (c meshBuildingBlockDefinitionVersionClient) List(ctx context.Context, buildingBlockDefinitionUuid string) ([]MeshBuildingBlockDefinitionVersion, error) {
-	return c.meshObject.List(ctx, internal.WithUrlQuery("buildingBlockDefinitionUuid", buildingBlockDefinitionUuid))
+	return c.meshObject.List(ctx, internal.WithUrlQuery(meshBuildingBlockDefinitionVersionListQuery{
+		BuildingBlockDefinitionUuid: buildingBlockDefinitionUuid,
+	}))
 }
 
 func (c meshBuildingBlockDefinitionVersionClient) Create(ctx context.Context, ownedByWorkspace string, versionSpec MeshBuildingBlockDefinitionVersionSpec) (*MeshBuildingBlockDefinitionVersion, error) {

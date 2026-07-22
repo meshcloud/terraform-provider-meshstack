@@ -62,7 +62,7 @@ func (m MeshTenantV4Client) Delete(_ context.Context, uuid string) error {
 	return nil
 }
 
-func (m MeshTenantV4Client) List(_ context.Context, query *client.MeshTenantV4Query) ([]client.MeshTenantV4, error) {
+func (m MeshTenantV4Client) List(_ context.Context, query client.MeshTenantV4Query) ([]client.MeshTenantV4, error) {
 	var result []client.MeshTenantV4
 	for _, t := range m.Store.Values() {
 		if t.Metadata.OwnedByWorkspace != query.Workspace {

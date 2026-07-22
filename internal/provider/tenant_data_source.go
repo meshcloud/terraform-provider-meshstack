@@ -134,7 +134,7 @@ func (d *tenantDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 
 	// The v4 GA singular GET is by uuid, which composite-key callers don't have; resolve via the list
 	// endpoint filtered by workspace/project/platform.
-	tenants, err := d.meshTenantClient.List(ctx, &client.MeshTenantQuery{Workspace: workspace, Project: &project, Platform: &platform})
+	tenants, err := d.meshTenantClient.List(ctx, client.MeshTenantQuery{Workspace: workspace, Project: &project, Platform: &platform})
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read tenant", err.Error())
 		return

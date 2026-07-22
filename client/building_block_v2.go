@@ -140,33 +140,36 @@ type MeshBuildingBlockOutput struct {
 // MeshBuildingBlockV2ListFilter holds the optional query filters for listing building blocks
 // via the v2-preview list endpoint. All scalar fields are nil when unset (omitted from the
 // query). The backend returns only active building blocks; soft-deleted ones are not listed.
+// MeshBuildingBlockV2ListFilter holds the optional filters for the V2 building block list endpoint.
+// The json tags are the query param names and must match the backend fetchBuildingBlocksV2
+// @RequestParam names exactly; a typo silently disables the filter.
 type MeshBuildingBlockV2ListFilter struct {
-	WorkspaceIdentifier *string
-	ProjectIdentifier   *string
-	PlatformIdentifier  *string
-	Name                *string
+	WorkspaceIdentifier *string `json:"workspaceIdentifier"`
+	ProjectIdentifier   *string `json:"projectIdentifier"`
+	PlatformIdentifier  *string `json:"platformIdentifier"`
+	Name                *string `json:"name"`
 	// DefinitionUuid filters by the owning building block definition's UUID (not a version).
-	DefinitionUuid *string
+	DefinitionUuid *string `json:"definitionUuid"`
 	// VersionUuid filters by a specific building block definition version UUID.
-	VersionUuid *string
+	VersionUuid *string `json:"versionUuid"`
 	// VersionNumber filters by the literal definition version number. The backend parses it
 	// leniently, so both "v1" and "1" match version 1.
-	VersionNumber *string
-	TenantUuid    *string
+	VersionNumber *string `json:"versionNumber"`
+	TenantUuid    *string `json:"tenantUuid"`
 	// TargetKind filters by target ref kind, one of meshTenant or meshWorkspace.
-	TargetKind *string
-	Status     *string
+	TargetKind *string `json:"targetRefKind"`
+	Status     *string `json:"status"`
 	// ManagedByWorkspaceIdentifier and ManagedByDefinitionUuid select the platform-operator
 	// (managed) permission scope: building blocks created from definitions owned by the given
 	// workspace / definition. Requires the MANAGED_BUILDINGBLOCK_LIST authority.
-	ManagedByWorkspaceIdentifier *string
-	ManagedByDefinitionUuid      *string
+	ManagedByWorkspaceIdentifier *string `json:"managedByWorkspaceIdentifier"`
+	ManagedByDefinitionUuid      *string `json:"managedByDefinitionUuid"`
 }
 
 type MeshBuildingBlockV2Client interface {
 	Read(ctx context.Context, uuid string) (*MeshBuildingBlockV2, error)
 	ReadFunc(uuid string) func(ctx context.Context) (*MeshBuildingBlockV2, error)
-	List(ctx context.Context, filter *MeshBuildingBlockV2ListFilter) ([]MeshBuildingBlockV2, error)
+	List(ctx context.Context, filter MeshBuildingBlockV2ListFilter) ([]MeshBuildingBlockV2, error)
 	Create(ctx context.Context, bb *MeshBuildingBlockV2) (*MeshBuildingBlockV2, error)
 	Update(ctx context.Context, bb *MeshBuildingBlockV2) (*MeshBuildingBlockV2, error)
 	Delete(ctx context.Context, uuid string, purge bool) error
@@ -191,33 +194,8 @@ func (c meshBuildingBlockV2Client) ReadFunc(uuid string) func(ctx context.Contex
 	}
 }
 
-func (c meshBuildingBlockV2Client) List(ctx context.Context, filter *MeshBuildingBlockV2ListFilter) ([]MeshBuildingBlockV2, error) {
-	var options []internal.RequestOption
-
-	// Map each non-nil scalar filter to its query param. Names must match the backend
-	// fetchBuildingBlocksV2 @RequestParam names exactly; a typo silently disables the filter.
-	if filter != nil {
-		for key, value := range map[string]*string{
-			"workspaceIdentifier":          filter.WorkspaceIdentifier,
-			"projectIdentifier":            filter.ProjectIdentifier,
-			"platformIdentifier":           filter.PlatformIdentifier,
-			"name":                         filter.Name,
-			"definitionUuid":               filter.DefinitionUuid,
-			"versionUuid":                  filter.VersionUuid,
-			"versionNumber":                filter.VersionNumber,
-			"tenantUuid":                   filter.TenantUuid,
-			"targetRefKind":                filter.TargetKind,
-			"status":                       filter.Status,
-			"managedByWorkspaceIdentifier": filter.ManagedByWorkspaceIdentifier,
-			"managedByDefinitionUuid":      filter.ManagedByDefinitionUuid,
-		} {
-			if value != nil {
-				options = append(options, internal.WithUrlQuery(key, *value))
-			}
-		}
-	}
-
-	return c.meshObject.List(ctx, options...)
+func (c meshBuildingBlockV2Client) List(ctx context.Context, filter MeshBuildingBlockV2ListFilter) ([]MeshBuildingBlockV2, error) {
+	return c.meshObject.List(ctx, internal.WithUrlQuery(filter))
 }
 
 func (c meshBuildingBlockV2Client) Create(ctx context.Context, bb *MeshBuildingBlockV2) (*MeshBuildingBlockV2, error) {

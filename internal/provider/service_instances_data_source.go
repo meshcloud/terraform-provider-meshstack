@@ -88,15 +88,13 @@ func (d *serviceInstancesDataSource) Read(ctx context.Context, req datasource.Re
 		return
 	}
 
-	filter := &client.MeshServiceInstanceFilter{
+	serviceInstances, err := d.meshServiceInstanceClient.List(ctx, client.MeshServiceInstanceFilter{
 		WorkspaceIdentifier:   workspaceIdentifier,
 		ProjectIdentifier:     projectIdentifier,
 		MarketplaceIdentifier: marketplaceIdentifier,
 		ServiceIdentifier:     serviceIdentifier,
 		PlanIdentifier:        planIdentifier,
-	}
-
-	serviceInstances, err := d.meshServiceInstanceClient.List(ctx, filter)
+	})
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read service instances", err.Error())
 		return

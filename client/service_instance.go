@@ -29,7 +29,7 @@ type MeshServiceInstanceSpec struct {
 
 type MeshServiceInstanceClient interface {
 	Read(ctx context.Context, instanceId string) (*MeshServiceInstance, error)
-	List(ctx context.Context, filter *MeshServiceInstanceFilter) ([]MeshServiceInstance, error)
+	List(ctx context.Context, filter MeshServiceInstanceFilter) ([]MeshServiceInstance, error)
 }
 
 type meshServiceInstanceClient struct {
@@ -37,11 +37,11 @@ type meshServiceInstanceClient struct {
 }
 
 type MeshServiceInstanceFilter struct {
-	WorkspaceIdentifier   *string
-	ProjectIdentifier     *string
-	MarketplaceIdentifier *string
-	ServiceIdentifier     *string
-	PlanIdentifier        *string
+	WorkspaceIdentifier   *string `json:"workspaceIdentifier"`
+	ProjectIdentifier     *string `json:"projectIdentifier"`
+	MarketplaceIdentifier *string `json:"marketplaceIdentifier"`
+	ServiceIdentifier     *string `json:"serviceIdentifier"`
+	PlanIdentifier        *string `json:"planIdentifier"`
 }
 
 func newServiceInstanceClient(ctx context.Context, httpClient internal.HttpClient) MeshServiceInstanceClient {
@@ -52,24 +52,6 @@ func (c meshServiceInstanceClient) Read(ctx context.Context, instanceId string) 
 	return c.meshObject.Get(ctx, instanceId)
 }
 
-func (c meshServiceInstanceClient) List(ctx context.Context, filter *MeshServiceInstanceFilter) ([]MeshServiceInstance, error) {
-	var options []internal.RequestOption
-	if filter != nil {
-		if filter.WorkspaceIdentifier != nil {
-			options = append(options, internal.WithUrlQuery("workspaceIdentifier", *filter.WorkspaceIdentifier))
-		}
-		if filter.ProjectIdentifier != nil {
-			options = append(options, internal.WithUrlQuery("projectIdentifier", *filter.ProjectIdentifier))
-		}
-		if filter.MarketplaceIdentifier != nil {
-			options = append(options, internal.WithUrlQuery("marketplaceIdentifier", *filter.MarketplaceIdentifier))
-		}
-		if filter.ServiceIdentifier != nil {
-			options = append(options, internal.WithUrlQuery("serviceIdentifier", *filter.ServiceIdentifier))
-		}
-		if filter.PlanIdentifier != nil {
-			options = append(options, internal.WithUrlQuery("planIdentifier", *filter.PlanIdentifier))
-		}
-	}
-	return c.meshObject.List(ctx, options...)
+func (c meshServiceInstanceClient) List(ctx context.Context, filter MeshServiceInstanceFilter) ([]MeshServiceInstance, error) {
+	return c.meshObject.List(ctx, internal.WithUrlQuery(filter))
 }
