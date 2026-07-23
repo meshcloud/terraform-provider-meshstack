@@ -1,14 +1,15 @@
 ---
-name: new-resource-datasource
-description: End-to-end walkthrough for adding a new meshStack resource or data source — the implementation, the example .tf files, the testconfig builder, and a good TestAcc test (create→update→import, plancheck/statecheck, xknownvalue). Use when adding or substantially reworking a resource/data source, or when writing its acceptance test. Cites the cleanest existing examples to copy from.
+name: resource-development
+description: How to develop meshStack Terraform resources and data sources — the implementation, example .tf files, the testconfig builder, a good create→update→import TestAcc test (plancheck/statecheck, xknownvalue), and the cross-cutting schema/client design conventions (meshObject refs, DTOs, Id/Uuid naming, value receivers, list-query structs, preview API, computed-only outputs). Use when adding or reworking a resource/data source, writing its acceptance test, or applying the provider's schema/client conventions. Cites the cleanest existing examples to copy from.
 ---
 
-# Adding a resource / data source (with a good TestAcc test)
+# Developing resources & data sources
 
-The end-to-end procedure for adding a new meshStack resource or data source. This file is the
-walkthrough; load the companion **`REFERENCE.md`** for the full `testconfig` `Config` API, builder
-rules, the builder-chain table, the `xknownvalue` state-check helpers, and complete worked code
-examples (builder, TestAcc test, data source test, computed-only field).
+The end-to-end procedure for adding or reworking a meshStack resource or data source, plus the
+schema/client design conventions that apply to all of them. This file is the walkthrough; load the
+companion **`REFERENCE.md`** for the full `testconfig` `Config` API, builder rules, the
+builder-chain table, the `xknownvalue` state-check helpers, and complete worked code examples
+(builder, TestAcc test, data source test, computed-only field).
 
 ## Golden-path exemplars (copy these)
 
@@ -63,6 +64,38 @@ validation, `Description` the block docs); then set at most one behaviour flag:
 
 Only refs that carry extra fields (`target_ref`, `building_block_definition_version_ref`) stay
 bespoke.
+
+On the client side these refs deserialize into the two shared DTO structs in `client/refs.go` —
+`NamedRef` (`{name, kind}`) and `UuidRef` (`{uuid, kind}`), the counterparts of `meshRefByName` /
+`meshRefByUuid`. Use one of them for any `{name|uuid, kind}` field rather than declaring a new
+named type; a ref that adds fields (e.g. `MeshBuildingBlockV2DefinitionVersionRef`'s `content_hash`)
+**embeds** the matching struct by value — both `json` and `tfsdk` reflection promote the embedded
+fields. Only refs mixing name *and* uuid (`MeshBuildingBlockV2TargetRef`) stay bespoke.
+
+## Client & schema conventions
+
+Cross-cutting rules for the schema and its backing client, beyond the ref/DTO shape above:
+
+- **Naming — `Id`/`Uuid`, never `ID`/`UUID`.** For any acronym of 2+ letters only the first letter
+  is uppercase (`TenantId`, `ProjectUuid`) — it keeps mixed identifiers like `apiKeyId` readable.
+- **Value receivers for client structs.** All client implementation and mock structs use value
+  (not pointer) receivers, and `new*Client` functions return the value — the interface is satisfied
+  by value, so a pointer return would only invite nil handling.
+- **List query params go through a json-tagged struct, not an ad-hoc map.** A `List` method (and
+  its interface signature) builds one query struct and hands it **by value** to
+  `internal.WithUrlQuery`, which names each param from the `json` tag and drops zero-value fields
+  (an implicit `omitempty` — no pointer or `,omitempty` needed; use a pointer only to send an
+  explicit zero). Reach for a `map[string]string` only in the rare verbatim case where a zero value
+  must still be transmitted (e.g. `page=0` in the paginator), which a struct would omit.
+- **Pointer + `,omitempty` = actually-nullable only.** The `modern-go` skill is the single home for
+  this rule — value-typed fields take neither.
+- **Preview-API resources carry the shared disclaimer.** When a resource/data source's HTTP client
+  uses an `apiVersion` ending in `-preview`, append `previewDisclaimer()` (`schema_utils.go`) to its
+  `MarkdownDescription` — never inline a custom string. A **breaking** change to a `-preview`
+  meshObject API needs a cross-repo handshake (meshcloud-internal — see meshfed-release's
+  `terraform-provider-compat` skill): a matching provider PR landing alongside the API change plus a
+  minimum-provider-version entry, so meshStack can surface "needs provider ≥ vX.Y.Z" instead of a
+  cryptic failure.
 
 ## The builder
 

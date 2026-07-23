@@ -1,21 +1,39 @@
 ---
-name: scratch-config-testing
-description: Build and run a meshStack Terraform config in the git-ignored scratch/ dir against a local meshStack, using the dev-built provider binary via dev_overrides. Use when reproducing or debugging a provider bug or a failing acceptance test as a standalone, re-runnable config — by dumping a test's HCL or hand-writing one.
+name: scratch-config
+description: Build and run a meshStack Terraform config in the git-ignored scratch/ dir against a meshStack you hold API credentials for (a local dev stack or a remote dev/sandbox), using the dev-built provider binary via dev_overrides. Use to reproduce or debug a provider bug or a failing acceptance test, OR to scaffold a demo / a working starting point for platform engineering — by dumping a test's HCL or hand-writing one.
 ---
 
-# scratch-config-testing
+# scratch-config
 
-Turn an acceptance test's generated HCL (or hand-written HCL) into a **standalone,
-re-runnable** Terraform config under git-ignored `scratch/`, run with the locally-built
-provider against a local meshStack. Complements the **acceptance-testing** skill (brings up the
-backend and runs the suite). The `testconfig` builders
-make a dumped config self-contained: applied to an empty meshStack it creates its full
-dependency chain (workspace → dependent resources).
+A **standalone, re-runnable** Terraform config under git-ignored `scratch/`, run with the
+locally-built provider against **any meshStack you hold API credentials for**. Two uses:
+
+- **Debug** — turn an acceptance test's generated HCL (or hand-written HCL) into a config you can
+  `plan`/`apply` yourself to reproduce a provider bug or a failing test.
+- **Scaffold** — grow a working example from an acceptance test (or from scratch) into a demo or a
+  starting point for real platform-engineering work.
+
+Complements the **acceptance-testing** skill (brings up a local backend and runs the suite). The
+`testconfig` builders make a dumped config self-contained: applied to an empty meshStack it creates
+its full dependency chain (workspace → dependent resources).
+
+`scratch/` is **git-ignored and ephemeral** — a playground, not a home. Once a config works and is
+worth keeping (a demo, a reusable example, a module you intend to apply for real), **move it out of
+`scratch/`, document it, and commit it** — e.g. into `examples/` or a proper module repo. Nothing in
+`scratch/` is tracked, so anything left there is lost on the next `rm -rf scratch/`.
 
 ## Prerequisites
 
-1. Local meshStack up — see the **acceptance-testing** skill (Backend bring-up).
-2. Provider env vars exported (the `http://localhost` guard applies):
+1. **A meshStack + API credentials.** A scratch/manual run drives Terraform yourself, so — unlike
+   the acceptance suite, which a test-harness guard (`provider_test.go`) pins to `http://localhost`
+   (so a failed cleanup is fixed by rebuilding the local backend DB, not by touching shared data) —
+   it can target any meshStack you have an API key for:
+   - **meshcloud-internal:** a local backend from the **acceptance-testing** skill (Backend
+     bring-up). Endpoint `http://localhost:8080`.
+   - **any dev/sandbox meshStack:** set `MESHSTACK_ENDPOINT` / `MESHSTACK_API_KEY` /
+     `MESHSTACK_API_SECRET` to its values. `scratch/` applies **real** changes to that meshStack —
+     never point it at a production instance.
+2. Export the provider env vars so the child process picks them up:
 
    ```bash
    set -a && source .env && set +a   # MESHSTACK_ENDPOINT, MESHSTACK_API_KEY, MESHSTACK_API_SECRET
@@ -79,7 +97,11 @@ terraform destroy      # clean up the meshObjects when done
 Provider-side logs: `TF_LOG_PROVIDER=debug terraform apply`. To step through with a debugger,
 build with `go build -gcflags="all=-N -l"` and attach delve to the running provider process.
 
-## terraform-implementation BBDs (real `tf-block-runner`)
+## terraform-implementation BBDs (meshcloud-internal — real `tf-block-runner`)
+
+*meshcloud-internal:* this path needs the private local dev stack (`meshfed-release`'s
+`local-dev-stack` skill) — the `tf-block-runner`, `meshfed-api`, the dev seed and its
+`building-blocks.pem` are not available to an external contributor.
 
 The standard local fan-out from the **`local-dev-stack`** skill already runs
 the **`tf-block-runner`** behind the multiplexer (mux `:8300`), so a `meshstack_building_block_definition`
@@ -118,3 +140,7 @@ One gotcha when hand-writing such a config:
   inspection — its provider is injected in-process via reattach, so that dir is **not**
   runnable standalone. This skill's output is, because of the `provider.tf` + dev_override.
 - `scratch/` is git-ignored; delete freely with `rm -rf scratch/`.
+- **State lives in `scratch/` too** (local `terraform.tfstate`), so it vanishes with the dir — fine
+  for throwaway play. If a config graduates into something you apply for real, move it out (above)
+  and configure **remote state** (e.g. an S3/GCS/Terraform Cloud backend) so the state survives and
+  can be shared; don't rely on the local file under `scratch/`.

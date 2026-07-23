@@ -8,6 +8,23 @@ description: Run and debug the meshStack provider acceptance tests (TF_ACC=1) ag
 These tests run against a real local meshStack backend. Bring it up first (next section), then run
 all commands here from the `terraform-provider-meshstack/` directory.
 
+## Why local-only, and why that's safe
+
+The suite is **state-independent by design**: every test creates the resources it needs — workspaces
+and other basics — with **random-suffixed names**, so runs never collide with each other or with
+pre-existing data, and don't depend on any particular DB state. Preserve this when adding tests:
+never hardcode a name that a parallel run or a re-run could clash on.
+
+The `http://localhost` guard (`provider_test.go`, `DefaultTestPreCheck`) is therefore **not** because
+the tests destroy other data — it's a *cleanup* safety net. If a test's teardown fails, a throwaway
+local backend can be wiped and brought up clean (see Backend bring-up), whereas a shared meshStack
+can't; so point the suite only at a local stack you can rebuild.
+
+Persistent-instance coverage is a separate, complementary suite (*meshcloud-internal*):
+`../meshstack-smoke-tests` runs against a real, persistent `meshstack-dev`, always exercising the
+provider from this repo's `main`/trunk (not a released version) so provider bugs surface before a
+release.
+
 ## Backend bring-up
 
 The backend lives in the sibling **`meshfed-release`** repo (assume `../meshfed-release`); its

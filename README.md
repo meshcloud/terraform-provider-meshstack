@@ -1,108 +1,42 @@
 # meshStack Terraform Provider
 
-This is the repository for the meshStack Terraform Provider, which allows one to use Terraform with meshStack by meshcloud. Learn more about meshcloud at https://www.meshcloud.io. This provider is officially registered and documented under [terraform registry](https://registry.terraform.io/providers/meshcloud/meshstack/latest/docs).
+The official [Terraform](https://www.terraform.io) provider for [meshStack](https://www.meshcloud.io)
+by meshcloud. It lets you manage meshStack resources — workspaces, projects, building blocks, tenants,
+and more — as code.
 
-For general information about Terraform, visit the [official website](https://www.terraform.io).
+The provider is published on the Terraform Registry, with full documentation and examples:
+**[registry.terraform.io/providers/meshcloud/meshstack](https://registry.terraform.io/providers/meshcloud/meshstack/latest/docs)**.
 
-## Support, Bugs, Feature Requests
+## Usage
 
-Please submit support questions via email to support@meshcloud.io. Support questions submitted under the Issues section of this repo will be handled on a "best effort" basis.
+Declare the provider and let Terraform pull the released version from the registry:
 
-Feature requests can be submitted at [feedback.meshcloud.io](https://feedback.meshcloud.io).
-
-## Local Development
-
-To use the provider locally during development place the following in `~/.terraformrc`:
-
-```
-provider_installation {
-
-  dev_overrides {
-      "meshcloud/meshstack" = "<GOBIN>",
-      "registry.terraform.io/meshcloud/meshstack" = "<GOBIN>"
+```hcl
+terraform {
+  required_providers {
+    meshstack = {
+      source = "meshcloud/meshstack"
+    }
   }
+}
 
-  # For all other providers, install them directly from their origin provider
-  # registries as normal. If you omit this, Terraform will _only_ use
-  # the dev_overrides block, and so no other providers will be available.
-  direct {}
+provider "meshstack" {
+  endpoint  = "https://your.meshstack.example" # or MESHSTACK_ENDPOINT
+  apikey    = "..."                            # or MESHSTACK_API_KEY
+  apisecret = "..."                            # or MESHSTACK_API_SECRET
 }
 ```
 
-Replace `<GOBIN>` with the output of `go env GOBIN` or `go env GOPATH` + `/bin`.
-Run `go install` to update your local provider installation.
-If everything is working correctly Terraform will show a warning that dev overrides are being used.
+See the [registry documentation](https://registry.terraform.io/providers/meshcloud/meshstack/latest/docs)
+for the full list of resources, data sources, and example configurations.
 
-Note: `task` is also available via `nix`, for example
-```bash
-nix develop --command task testacc
-```
+## Support, bugs, feature requests
 
-Debugging can be enabled by setting `TF_LOG=DEBUG` or `TF_ACC_LOG=DEBUG` (when running tests), 
-which shows all full HTTP request and response communication.
+- **Support questions**: email support@meshcloud.io. Questions filed as GitHub issues are handled on a
+  best-effort basis.
+- **Feature requests**: [feedback.meshcloud.io](https://feedback.meshcloud.io).
 
-## Running Tests
+## Contributing / development
 
-This project uses [Task](https://taskfile.dev) for common development workflows. 
-The available tasks can be found in `Taskfile.yml`.
-
-### Acceptance Tests
-
-Acceptance tests run against a real meshStack API and require environment variables to be configured in a `.env` file:
-
-```bash
-# Run all acceptance tests
-task testacc
-
-# Run specific acceptance test(s) by name pattern
-task testacc -- -run=BuildingBlockDefinition
-
-# Run multiple specific tests
-task testacc -- -run=BuildingBlock|Workspace
-```
-
-### Unit Tests
-
-```bash
-# Run unit tests only (excludes acceptance tests)
-task test
-
-# Run specific unit test(s)
-task test -- -run=TestValidation
-```
-
-### Other Development Tasks
-
-```bash
-# Build the provider
-task build
-
-# Install provider locally
-task install
-
-# Run linter (also checks formatting)
-task lint
-
-# Fix formatting and linting issues
-task lint -- --fix
-
-# Generate documentation
-task generate
-
-# Clean build artifacts
-task clean
-```
-
-## Code Formatting
-
-This project uses golangci-lint with the gci formatter to enforce consistent import ordering:
-
-1. Go standard library imports
-2. External dependencies (third-party packages)
-3. Local modules (this repository's packages)
-
-Each section is separated by a blank line. To format your code, run:
-
-```bash
-task lint -- --fix
-```
+Building the provider from source, running tests, and adding resources are covered in
+[`DEVELOPMENT.md`](DEVELOPMENT.md) (and the always-on conventions in [`AGENTS.md`](AGENTS.md)).

@@ -9,6 +9,10 @@ description: Modern Go idioms used in this repo (Go 1.26) — the new(expression
 the codebase's generics. To keep the tree on those idioms, run the go1.26 [`go fix`](#go-fix--the-go126-modernizer-pass)
 modernizer pass occasionally.
 
+Bumping the Go version is a **two-file** change: `flake.nix` pins the toolchain (`go_1_26` and the
+`GOROOT` derived from it), so a `go.mod` bump must update the flake's pin in lock-step — otherwise
+`nix develop` builds against a different Go than `go.mod` targets.
+
 ## `new(expression)` for pointers
 
 Go 1.26 extended the `new` builtin to accept an **expression**, not just a type — it allocates,
@@ -33,8 +37,18 @@ m[method]      = new(sync.Map)                                     // client/int
 - Use it for inline pointer creation in struct literals, args, and returns.
 - Works with any expression: `new(a + b)`, `new(convertSecret(in.Argument.X, "argument"))`.
 - Chaining works: `new(new("v"))` → `**string`.
-- Pair with the data-structure rule: pointers + `omitempty` only for fields **actually nullable**
-  in the backend API; non-nullable fields use value types.
+
+### Nullability: pointer + `,omitempty` only when actually nullable
+
+This skill is the repo's single home for the rule. Use a **pointer + `,omitempty`** for a field
+**only if it is genuinely nullable in the backend API**; a non-nullable field uses a value type
+with no `,omitempty`. Rationale: the pointer models "absent", and `,omitempty` drops it from the
+request body — pairing them on a truly-optional field is what makes round-trips clean.
+
+`,omitempty` on a **value-typed struct** (`types.List`, `types.Set`, a `Variant`) is *dead* —
+`encoding/json` never omits struct types — so it must not be added there; a struct with a custom
+marshaler emits its zero value (e.g. `null`) regardless. The [`go fix` `omitzero`](#go-fix--the-go126-modernizer-pass)
+analyzer strips exactly these dead tags.
 
 ## Generics
 
@@ -100,7 +114,7 @@ go fix -diff ./...        # preview every suggested fix as a unified diff — re
 go fix ./...              # apply them in place
 ```
 
-Not part of CI or `task lint` (lint is golangci-lint only — see AGENTS.md "Lint policy"). Treat
+Not part of CI or `task lint` (lint is golangci-lint only — see AGENTS.md "Always-on rules"). Treat
 `go fix` as an occasional, human-reviewed sweep, not an automated gate: some analyzers report
 non-problems, so always read `-diff` first and commit the result as its own `chore`.
 

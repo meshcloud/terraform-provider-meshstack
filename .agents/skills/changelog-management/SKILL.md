@@ -90,4 +90,4 @@ FIXES:
 3. Add your bullet(s) under the right category.
 4. Confirm no "Unreleased" heading exists and the top version number is the one you'd tag now.
 
-See `AGENTS.md` → Code review (CHANGELOG entries are required for user-facing changes).
+See `AGENTS.md` → Always-on rules (a `CHANGELOG.md` entry is required for user-facing changes).
