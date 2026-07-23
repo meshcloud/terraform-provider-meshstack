@@ -25,15 +25,15 @@ Example dependency graphs:
 BBD -> BB
 meshstack_building_block_definition
   └─ version_latest / version_latest_release
-     └─ meshstack_building_block_v2.spec.building_block_definition_version_ref
+     └─ meshstack_building_block.spec.building_block_definition_version_ref
 
 Tenant BB dependency chain
 meshstack_workspace
   └─ meshstack_location
      └─ meshstack_platform (identifier)
         └─ meshstack_landingzone
-           └─ meshstack_tenant_v4
-              └─ meshstack_building_block_v2 (target_ref)
+           └─ meshstack_tenant
+              └─ meshstack_building_block (target_ref)
 ```
 
 ## Example Usage
