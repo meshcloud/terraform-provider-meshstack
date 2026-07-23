@@ -1,3 +1,14 @@
+# v0.25.0
+
+Requires meshStack 2026.31.0 or later (previously 2026.30.0).
+
+BREAKING CHANGES:
+- `meshstack_tenant` and `meshstack_tenants` now use the meshTenant v4 GA media type instead of the v4 preview media type. They require a meshStack backend that has promoted meshTenant v4 to GA; older backends that only serve the `-preview` media type return HTTP 415 (Unsupported Media Type).
+- The deprecated `meshstack_tenant_v4` resource and data source have been removed. Migrate to `meshstack_tenant` / `meshstack_tenants`. Because v0.25.0 no longer knows the `meshstack_tenant_v4` type, add a `moved` block on v0.24.x (which still ships both the `moved` support and the deprecated type) and apply it before upgrading to v0.25.0.
+- The deprecated `meshstack_building_block_v2` resource and data source have been removed. Migrate to `meshstack_building_block` / `meshstack_building_blocks`. Because v0.25.0 no longer knows the `meshstack_building_block_v2` type, add a `moved` block on a v0.24.x release (which still ships both the `moved` support and the deprecated type) and apply it before upgrading to v0.25.0.
+- The legacy `meshstack_buildingblock` (no underscore, v1) resource and data source have been removed. Migrate to `meshstack_building_block` / `meshstack_building_blocks`. Because v0.25.0 no longer knows the `meshstack_buildingblock` type, add a `moved` block on a v0.24.x release (which still ships both the `moved` support and the deprecated type) and apply it before upgrading to v0.25.0.
+- The `meshstack_building_block_definition` resource and data sources now use the GA `application/vnd.meshcloud.api.meshbuildingblockdefinition.v1.hal+json` media type (and the version sibling) instead of v1-preview, and the preview disclaimers were removed. This requires a meshStack release where the meshBuildingBlockDefinition v1 API is GA. (Behaviourally identical to v0.23.2, which used the preview media type of the same shape.)
+
 # v0.24.2
 
 Requires meshStack 2026.30.0 or later (previously 2026.29.0).

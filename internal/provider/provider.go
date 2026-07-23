@@ -171,14 +171,11 @@ func (p *MeshStackProvider) Resources(_ context.Context) []func() resource.Resou
 	return []func() resource.Resource{
 		NewProjectResource,
 		NewTenantResource,
-		NewTenantV4Resource,
 		NewProjectUserBindingResource,
 		NewProjectGroupBindingResource,
 		NewWorkspaceUserBindingResource,
 		NewWorkspaceGroupBindingResource,
 		NewWorkspaceResource,
-		NewBuildingblockResource,
-		NewBuildingBlockV2Resource,
 		NewBuildingBlockResource,
 		NewBuildingBlockDefinitionResource,
 		NewTagDefinitionResource,
@@ -195,8 +192,6 @@ func (p *MeshStackProvider) Resources(_ context.Context) []func() resource.Resou
 
 func (p *MeshStackProvider) DataSources(_ context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
-		NewBuildingBlockDataSource,
-		NewBuildingBlockV2DataSource,
 		NewBuildingBlocksDataSource,
 		NewBuildingBlockDefinitionsDataSource,
 		NewProjectDataSource,
@@ -207,7 +202,6 @@ func (p *MeshStackProvider) DataSources(_ context.Context) []func() datasource.D
 		NewTenantDataSource,
 		NewTagDefinitionDataSource,
 		NewTagDefinitionsDataSource,
-		NewTenantV4DataSource,
 		NewTenantsDataSource,
 		NewLandingZoneDataSource,
 		NewLandingZonesDataSource,

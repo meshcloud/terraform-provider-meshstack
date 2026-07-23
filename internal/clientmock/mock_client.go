@@ -15,7 +15,6 @@ import (
 
 type Client struct {
 	ApiKey                         MeshApiKeyClient
-	BuildingBlock                  meshBuildingBlockClient
 	BuildingBlockRun               MeshBuildingBlockRunClient
 	BuildingBlockDefinition        meshBuildingBlockDefinitionClient
 	BuildingBlockDefinitionVersion meshBuildingBlockDefinitionVersionClient
@@ -33,7 +32,6 @@ type Client struct {
 	ServiceInstance                MeshServiceInstanceClient
 	TagDefinition                  MeshTagDefinitionClient
 	Tenant                         MeshTenantClient
-	TenantV4                       MeshTenantV4Client
 	Workspace                      MeshWorkspaceClient
 	WorkspaceGroupBinding          MeshWorkspaceGroupBindingClient
 	WorkspaceUserBinding           MeshWorkspaceUserBindingClient
@@ -42,7 +40,6 @@ type Client struct {
 func (c *Client) AsClient() client.Client {
 	return client.Client{
 		ApiKey:                         c.ApiKey,
-		BuildingBlock:                  c.BuildingBlock,
 		BuildingBlockRun:               c.BuildingBlockRun,
 		BuildingBlockDefinition:        c.BuildingBlockDefinition,
 		BuildingBlockDefinitionVersion: c.BuildingBlockDefinitionVersion,
@@ -60,7 +57,6 @@ func (c *Client) AsClient() client.Client {
 		ServiceInstance:                c.ServiceInstance,
 		TagDefinition:                  c.TagDefinition,
 		Tenant:                         c.Tenant,
-		TenantV4:                       c.TenantV4,
 		Workspace:                      c.Workspace,
 		WorkspaceGroupBinding:          c.WorkspaceGroupBinding,
 		WorkspaceUserBinding:           c.WorkspaceUserBinding,
@@ -71,16 +67,10 @@ func NewMock() Client {
 	bbdVersionStore := NewStore[client.MeshBuildingBlockDefinitionVersion]()
 	buildingBlockRunStore := NewStore[client.MeshBuildingBlockRun]()
 	buildingBlockRunLogStore := NewStore[client.MeshBuildingBlockRunLogs]()
-	// The v1 and v2/v3 building block clients share one store: on the real backend a building block
-	// is a single entity exposed by both APIs (same uuid), so a v1-created block is readable via
-	// v2/v3. The v1 client maps to/from the v2 representation (see meshBuildingBlockClient), which is
-	// what lets the v1->v3 `moved` migration refresh-Read find the block. The tenant store is shared
-	// so the v1 client can resolve tenant_identifier <-> tenant target_ref uuid.
 	buildingBlockStore := NewStore[client.MeshBuildingBlockV2]()
 	tenantStore := NewStore[client.MeshTenant]()
 	return Client{
 		ApiKey:                         MeshApiKeyClient{Store: NewStore[client.MeshApiKey]()},
-		BuildingBlock:                  meshBuildingBlockClient{Store: buildingBlockStore, BbdVersionStore: bbdVersionStore, TenantStore: tenantStore},
 		BuildingBlockRun:               MeshBuildingBlockRunClient{Store: buildingBlockRunStore, LogStore: buildingBlockRunLogStore},
 		BuildingBlockDefinition:        meshBuildingBlockDefinitionClient{Store: NewStore[client.MeshBuildingBlockDefinition](), StoreVersion: bbdVersionStore},
 		BuildingBlockDefinitionVersion: meshBuildingBlockDefinitionVersionClient{Store: bbdVersionStore},
@@ -98,7 +88,6 @@ func NewMock() Client {
 		ServiceInstance:                MeshServiceInstanceClient{Store: NewStore[client.MeshServiceInstance]()},
 		TagDefinition:                  MeshTagDefinitionClient{Store: NewStore[client.MeshTagDefinition]()},
 		Tenant:                         MeshTenantClient{Store: tenantStore},
-		TenantV4:                       MeshTenantV4Client{Store: NewStore[client.MeshTenantV4]()},
 		Workspace:                      MeshWorkspaceClient{Store: NewStore[client.MeshWorkspace]()},
 		WorkspaceGroupBinding:          MeshWorkspaceGroupBindingClient{Store: NewStore[client.MeshWorkspaceGroupBinding]()},
 		WorkspaceUserBinding:           MeshWorkspaceUserBindingClient{Store: NewStore[client.MeshWorkspaceUserBinding]()},

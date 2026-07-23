@@ -33,7 +33,7 @@ func (d *tenantDataSource) Metadata(ctx context.Context, req datasource.Metadata
 
 func (d *tenantDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Single tenant by workspace, project, and platform." + previewDisclaimer(),
+		MarkdownDescription: "Single tenant by workspace, project, and platform.",
 
 		Attributes: map[string]schema.Attribute{
 			"metadata": schema.SingleNestedAttribute{

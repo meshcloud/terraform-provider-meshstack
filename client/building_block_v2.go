@@ -57,6 +57,11 @@ type MeshBuildingBlockV2Spec struct {
 	ParentBuildingBlocks types.Set[MeshBuildingBlockParent] `json:"parentBuildingBlocks" tfsdk:"parent_building_blocks"`
 }
 
+type MeshBuildingBlockParent struct {
+	BuildingBlockUuid string `json:"buildingBlockUuid" tfsdk:"buildingblock_uuid"`
+	DefinitionUuid    string `json:"definitionUuid" tfsdk:"definition_uuid"`
+}
+
 type MeshBuildingBlockInput struct {
 	Value          types.SecretOrAny                                `json:"value" tfsdk:"value"`
 	ValueType      *enum.Entry[MeshBuildingBlockIOType]             `json:"valueType,omitempty" tfsdk:"-"`

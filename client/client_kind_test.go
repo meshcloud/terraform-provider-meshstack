@@ -11,7 +11,6 @@ import (
 func TestKind(t *testing.T) {
 	// verify hardcoded kind strings match InferKind for all client types
 	assert.Equal(t, internal.InferKind[MeshApiKey](), MeshObjectKind.ApiKey)
-	assert.Equal(t, internal.InferKind[MeshBuildingBlock](), MeshObjectKind.BuildingBlock)
 	assert.Equal(t, internal.InferKind[MeshBuildingBlockV2](), MeshObjectKind.BuildingBlock)
 	assert.Equal(t, internal.InferKind[MeshBuildingBlockDefinition](), MeshObjectKind.BuildingBlockDefinition)
 	assert.Equal(t, internal.InferKind[MeshBuildingBlockDefinitionVersion](), MeshObjectKind.BuildingBlockDefinitionVersion)
@@ -27,7 +26,6 @@ func TestKind(t *testing.T) {
 	assert.Equal(t, internal.InferKind[MeshServiceInstance](), MeshObjectKind.ServiceInstance)
 	assert.Equal(t, internal.InferKind[MeshTagDefinition](), MeshObjectKind.TagDefinition)
 	assert.Equal(t, internal.InferKind[MeshTenant](), MeshObjectKind.Tenant)
-	assert.Equal(t, internal.InferKind[MeshTenantV4](), MeshObjectKind.Tenant)
 	assert.Equal(t, internal.InferKind[MeshWorkspace](), MeshObjectKind.Workspace)
 	assert.Equal(t, internal.InferKind[MeshWorkspaceGroupBinding](), MeshObjectKind.WorkspaceGroupBinding)
 	assert.Equal(t, internal.InferKind[MeshWorkspaceUserBinding](), MeshObjectKind.WorkspaceUserBinding)
