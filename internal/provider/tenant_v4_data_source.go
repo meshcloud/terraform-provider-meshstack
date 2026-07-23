@@ -120,15 +120,10 @@ func (d *tenantV4DataSource) Schema(_ context.Context, _ datasource.SchemaReques
 						ElementType:         types.ListType{ElemType: types.StringType},
 						Computed:            true,
 					},
-					"quotas": schema.ListNestedAttribute{
-						MarkdownDescription: "The effective quotas meshStack applied to this tenant.",
+					"applied_quotas": schema.MapAttribute{
+						MarkdownDescription: "The effective quotas meshStack applied to this tenant, as a `key -> value` map.",
+						ElementType:         types.Int64Type,
 						Computed:            true,
-						NestedObject: schema.NestedAttributeObject{
-							Attributes: map[string]schema.Attribute{
-								"key":   schema.StringAttribute{Computed: true},
-								"value": schema.Int64Attribute{Computed: true},
-							},
-						},
 					},
 				},
 			},
