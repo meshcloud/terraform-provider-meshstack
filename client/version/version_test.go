@@ -10,7 +10,7 @@ import (
 
 func TestParse(t *testing.T) {
 	assertErrorContainsAllOf := func(contains ...string) assert.ErrorAssertionFunc {
-		return func(t assert.TestingT, err error, msgAndArgs ...interface{}) bool {
+		return func(t assert.TestingT, err error, msgAndArgs ...any) bool {
 			assert.NotEmpty(t, contains)
 			allOk := true
 			for _, contain := range contains {

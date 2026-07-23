@@ -315,13 +315,13 @@ type tagValueNumber struct {
 }
 
 type tagValueSingleSelect struct {
-	Options      types.List   `json:"options,omitempty" tfsdk:"options"`
+	Options      types.List   `json:"options" tfsdk:"options"`
 	DefaultValue types.String `json:"defaultValue" tfsdk:"default_value"`
 }
 
 type tagValueMultiSelect struct {
-	Options      types.List `json:"options,omitempty" tfsdk:"options"`
-	DefaultValue types.List `json:"defaultValue,omitempty" tfsdk:"default_value"`
+	Options      types.List `json:"options" tfsdk:"options"`
+	DefaultValue types.List `json:"defaultValue" tfsdk:"default_value"`
 }
 
 // Create creates the resource and sets the initial Terraform state.

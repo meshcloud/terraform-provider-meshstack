@@ -169,7 +169,7 @@ func unquoteAttributeNames(tokens hclwrite.Tokens) (hclwrite.Tokens, quotedNameM
 // identifiers, so we temporarily sanitize them for hclwrite, then restore the original form.
 func requoteAttributeNames(tokens hclwrite.Tokens, inverted map[string]string) hclwrite.Tokens {
 	var result hclwrite.Tokens
-	for i := 0; i < len(tokens); i++ {
+	for i := range tokens {
 		if tokens[i].Type == hclsyntax.TokenIdent {
 			if original, ok := inverted[string(tokens[i].Bytes)]; ok && i+1 < len(tokens) && tokens[i+1].Type == hclsyntax.TokenEqual {
 				result = append(result,

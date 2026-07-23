@@ -94,8 +94,8 @@ type MeshBuildingBlockDefinitionInput struct {
 	// Otherwise, the [types.Variant] is of [types.Any] (case [types.Variant.Y]).
 	// As this is a fallback detection when JSON (un)marshaling,
 	// types.Any must go second as [types.Variant] intentionally prefers X over Y.
-	Argument                    types.SecretOrAny `json:"argument,omitempty" tfsdk:"argument"`
-	DefaultValue                types.SecretOrAny `json:"defaultValue,omitempty" tfsdk:"default_value"`
+	Argument                    types.SecretOrAny `json:"argument" tfsdk:"argument"`
+	DefaultValue                types.SecretOrAny `json:"defaultValue" tfsdk:"default_value"`
 	UpdateableByConsumer        bool              `json:"updateableByConsumer" tfsdk:"updateable_by_consumer"`
 	SelectableValues            types.Set[string] `json:"selectableValues,omitempty" tfsdk:"selectable_values"`
 	Description                 *string           `json:"description,omitempty" tfsdk:"description"`
