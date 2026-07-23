@@ -473,13 +473,11 @@ resource "meshstack_platform" "example_aks" {
         disable_ssl_validation = false
 
         replication = {
-          access_token = {
-            secret_value = "top-secret-value"
-            # This is a workaround if secret_value is non-ephemeral.
-            # If ephemeral, secret_version should be set to "v1" or similar
-            # and changed if secret rotation is desired.
-            secret_version = nonsensitive(sha256("top-secret-value"))
-          }
+          # non_ephemeral_secret builds the secret block for a value kept in config or state. It sets
+          # secret_version to sha256(secret_value), so the value is sent again whenever it changes.
+          # For an ephemeral secret, set secret_value from an ephemeral resource and manage
+          # secret_version yourself.
+          access_token = provider::meshstack::non_ephemeral_secret("top-secret-value")
 
           service_principal = {
             entra_tenant = "dev-mycompany.onmicrosoft.com"
@@ -2128,6 +2126,11 @@ that must be replaced before `tofu plan` / `terraform plan` can succeed.
 You must replace each `secret_value = null` with an actual value and decide how to manage `secret_version`
 before running `tofu plan` / `terraform plan`. See the schema documentation above for details on `secret_value`,
 `secret_version`, and `secret_hash`.
+
+For a value kept in config or state rather than supplied via an [`ephemeral`](https://developer.hashicorp.com/terraform/language/resources/ephemeral)
+resource, the [`provider::meshstack::non_ephemeral_secret`](../functions/non_ephemeral_secret.md) function fills in both
+`secret_value` and a matching `secret_version` in one call, so the secret is sent again whenever the value changes.
+Prefer an `ephemeral` resource where practical, or keyless authentication such as workload identity federation.
 
 For a detailed step-by-step walkthrough using the `meshstack_building_block_definition` resource see
 [How to Import an Existing Building Block Definition into OpenTofu](https://docs.meshcloud.io/guides/core/how-to-import-bbd-into-opentofu/).

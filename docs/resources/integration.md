@@ -45,10 +45,12 @@ resource "meshstack_integration" "example_azure_devops" {
       azuredevops = {
         base_url     = "https://dev.azure.com"
         organization = "my-organization"
-        personal_access_token = {
-          secret_value   = "mock-pat-token-12345"
-          secret_version = null
-        }
+
+        # non_ephemeral_secret ties rotation to the value's hash. Change the value and secret_version
+        # changes with it, which sends the write only secret_value again. An unchanged value produces
+        # no diff. Wrap a sensitive input in nonsensitive() to keep the version hash visible in plans.
+        # See the non_ephemeral_secret function docs.
+        personal_access_token = provider::meshstack::non_ephemeral_secret("mock-pat-token-12345")
       }
     }
   }
@@ -352,6 +354,11 @@ that must be replaced before `tofu plan` / `terraform plan` can succeed.
 You must replace each `secret_value = null` with an actual value and decide how to manage `secret_version`
 before running `tofu plan` / `terraform plan`. See the schema documentation above for details on `secret_value`,
 `secret_version`, and `secret_hash`.
+
+For a value kept in config or state rather than supplied via an [`ephemeral`](https://developer.hashicorp.com/terraform/language/resources/ephemeral)
+resource, the [`provider::meshstack::non_ephemeral_secret`](../functions/non_ephemeral_secret.md) function fills in both
+`secret_value` and a matching `secret_version` in one call, so the secret is sent again whenever the value changes.
+Prefer an `ephemeral` resource where practical, or keyless authentication such as workload identity federation.
 
 For a detailed step-by-step walkthrough using the `meshstack_building_block_definition` resource see
 [How to Import an Existing Building Block Definition into OpenTofu](https://docs.meshcloud.io/guides/core/how-to-import-bbd-into-opentofu/).

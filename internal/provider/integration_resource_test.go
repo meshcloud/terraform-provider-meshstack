@@ -17,6 +17,12 @@ import (
 
 // updateIntegrationDisplayName clones the config and replaces "Integration" with "Updated Integration"
 // in the integration resource's spec.display_name.
+// azureDevopsPatPath is a factory (fresh path per call) to work around the slice copy/clone bug
+// in tfjsonpath.Path.AtMapKey. Mirrors aksSecretPath in the platform test.
+func azureDevopsPatPath() tfjsonpath.Path {
+	return tfjsonpath.New("spec").AtMapKey("config").AtMapKey("azuredevops").AtMapKey("personal_access_token")
+}
+
 func updateIntegrationDisplayName(t *testing.T, config testconfig.Config, originalName string) string {
 	t.Helper()
 	updatedName := strings.Replace(originalName, "Integration", "Updated Integration", 1)
@@ -103,27 +109,19 @@ func TestAccIntegrationResource(t *testing.T) {
 						xknownvalue.Ref(resourceAddress, "meshIntegration", &resourceUuid),
 					},
 				},
-				{
-					ImportState:     true,
-					ImportStateKind: resource.ImportBlockWithID,
-					ImportStateIdFunc: func(state *terraform.State) (string, error) {
-						return resourceUuid, nil
-					},
-					ResourceName: resourceAddress.String(),
-				},
-				// Step 4: Change a secret value and apply
+				// A different value gives a different secret_version hash, which rotates secret_value.
 				{
 					Config: func() string {
 						u := config.WithFirstBlock(
 							testconfig.Descend("spec", "config", "azuredevops", "personal_access_token")(
-								testconfig.Descend("secret_value")(testconfig.SetString("updated-plaintext-secret")),
-								testconfig.Descend("secret_version")(testconfig.SetRawExpr(`"v1"`)),
+								testconfig.SetRawExpr(`provider::meshstack::non_ephemeral_secret("updated-plaintext-secret")`),
 							))
 						return u.String()
 					}(),
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectResourceAction(resourceAddress.String(), plancheck.ResourceActionUpdate),
+							plancheck.ExpectKnownValue(resourceAddress.String(), azureDevopsPatPath().AtMapKey("secret_version"), knownvalue.StringExact("b889814ec3c1da42df5abf57be4e989de7411b326ba30050fea6366185c0e206")),
 						},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
@@ -131,6 +129,25 @@ func TestAccIntegrationResource(t *testing.T) {
 						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("spec"), checkIntegrationSpec("02_azure_devops", "Azure DevOps Integration")),
 						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("status"), checkIntegrationStatus()),
 						xknownvalue.Ref(resourceAddress, "meshIntegration", &resourceUuid),
+					},
+				},
+				// On import the config wants secret_version as the value's sha256, but the backend
+				// returns its own hash, so the two differ and the first plan sends the secret again.
+				// That plan is expected, not drift, and matches the platform AKS example.
+				{
+					ImportState:     true,
+					ImportStateKind: resource.ImportBlockWithID,
+					ImportStateIdFunc: func(state *terraform.State) (string, error) {
+						return resourceUuid, nil
+					},
+					ResourceName:       resourceAddress.String(),
+					ExpectNonEmptyPlan: true,
+					ImportPlanChecks: resource.ImportPlanChecks{
+						PreApply: []plancheck.PlanCheck{
+							plancheck.ExpectResourceAction(resourceAddress.String(), plancheck.ResourceActionUpdate),
+							plancheck.ExpectUnknownValue(resourceAddress.String(), azureDevopsPatPath().AtMapKey("secret_hash")),
+							plancheck.ExpectKnownValue(resourceAddress.String(), azureDevopsPatPath().AtMapKey("secret_version"), knownvalue.StringExact("b889814ec3c1da42df5abf57be4e989de7411b326ba30050fea6366185c0e206")),
+						},
 					},
 				},
 			},

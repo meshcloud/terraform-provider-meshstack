@@ -225,6 +225,7 @@ func (p *MeshStackProvider) Functions(_ context.Context) []func() function.Funct
 		NewLoadImageFileFunction,
 		NewLoadFileFunction,
 		NewEncodeFileFunction,
+		NewNonEphemeralSecretFunction,
 	}
 }
 

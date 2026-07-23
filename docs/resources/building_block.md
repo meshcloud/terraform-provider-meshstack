@@ -279,6 +279,11 @@ You must replace each `secret_value = null` with an actual value and decide how 
 before running `tofu plan` / `terraform plan`. See the schema documentation above for details on `secret_value`,
 `secret_version`, and `secret_hash`.
 
+For a value kept in config or state rather than supplied via an [`ephemeral`](https://developer.hashicorp.com/terraform/language/resources/ephemeral)
+resource, the [`provider::meshstack::non_ephemeral_secret`](../functions/non_ephemeral_secret.md) function fills in both
+`secret_value` and a matching `secret_version` in one call, so the secret is sent again whenever the value changes.
+Prefer an `ephemeral` resource where practical, or keyless authentication such as workload identity federation.
+
 For a detailed step-by-step walkthrough using the `meshstack_building_block_definition` resource see
 [How to Import an Existing Building Block Definition into OpenTofu](https://docs.meshcloud.io/guides/core/how-to-import-bbd-into-opentofu/).
 The secret handling options described there also apply to any resource containing sensitive secrets, such as this one.
