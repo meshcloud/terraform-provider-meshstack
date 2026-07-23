@@ -75,6 +75,7 @@ func (r *tenantResource) Create(ctx context.Context, req resource.CreateRequest,
 			PlatformRef:      plan.Spec.PlatformRef,
 			PlatformTenantId: plan.Spec.PlatformTenantId,
 			LandingZoneRef:   plan.Spec.LandingZoneRef,
+			RequestedQuotas:  plan.Spec.RequestedQuotas,
 			Quotas:           plan.Spec.Quotas,
 		},
 	}
@@ -94,7 +95,7 @@ func (r *tenantResource) Create(ctx context.Context, req resource.CreateRequest,
 		}
 	}
 
-	model := tenantResourceModelFromDto(tenant, plan.Spec.Quotas, plan.WaitForCompletion)
+	model := tenantResourceModelFromDto(tenant, plan.Spec.Quotas, plan.Spec.RequestedQuotas, plan.WaitForCompletion)
 	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, model, tenantConverterOptions()...)...)
 }
 
@@ -115,9 +116,9 @@ func (r *tenantResource) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
-	// spec.quotas is Optional (not computed), so preserve the configured value from state rather than
-	// the backend's (possibly landing-zone-defaulted) spec.quotas.
-	model := tenantResourceModelFromDto(tenant, state.Spec.Quotas, state.WaitForCompletion)
+	// spec.requested_quotas / spec.quotas are Optional (not computed), so preserve the configured value
+	// from state rather than the backend's (possibly landing-zone-defaulted) spec quotas.
+	model := tenantResourceModelFromDto(tenant, state.Spec.Quotas, state.Spec.RequestedQuotas, state.WaitForCompletion)
 	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, model, tenantConverterOptions()...)...)
 }
 
@@ -265,6 +266,7 @@ func (r *tenantResource) moveFromV4(ctx context.Context, req resource.MoveStateR
 			Spec: client.MeshTenantSpec{PlatformTenantId: src.Spec.PlatformTenantId.ValueStringPointer()},
 		},
 		quotas,
+		nil,
 		true,
 	)
 	resp.Diagnostics.Append(generic.Set(ctx, &resp.TargetState, target, tenantConverterOptions()...)...)
@@ -301,10 +303,10 @@ func (r *tenantResource) upgradeFromV0(ctx context.Context, req resource.Upgrade
 		return
 	}
 
-	// spec.quotas is Optional (not computed) and echoes the configured value; a migrated config that
+	// spec quotas are Optional (not computed) and echo the configured value; a migrated config that
 	// omits quotas plans null, so carry null here (not the backend's effective quotas, often an empty
-	// set) to avoid a spurious spec.quotas diff that would route to the unsupported tenant Update.
-	model := tenantResourceModelFromDto(tenant, nil, true)
+	// set) to avoid a spurious spec quota diff that would route to the unsupported tenant Update.
+	model := tenantResourceModelFromDto(tenant, nil, nil, true)
 	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, model, tenantConverterOptions()...)...)
 }
 
@@ -439,13 +441,21 @@ func tenantBodyAttributes() map[string]schema.Attribute {
 					OptionalComputed: true,
 					RequiresReplace:  true,
 				}),
-				"quotas": schema.SetNestedAttribute{
-					MarkdownDescription: "Quotas to apply to the tenant at creation. If omitted, the landing zone's " +
-						"default quotas apply. Set only at creation: " +
-						"the meshTenant API cannot update a tenant, so changing this on an existing tenant is rejected. " +
-						"To change a live tenant's quotas, file a quota request in the meshStack panel " +
+				"requested_quotas": schema.MapAttribute{
+					MarkdownDescription: "Quotas to apply to the tenant at creation, as a `key -> value` map (e.g. " +
+						"`{ \"limits.cpu\" = 4 }`). If omitted, the landing zone's default quotas apply. Set only at " +
+						"creation: the meshTenant API cannot update a tenant, so changing this on an existing tenant is " +
+						"rejected. To change a live tenant's quotas, file a quota request in the meshStack panel " +
 						"(Tenant > Settings > Quotas), which is subject to platform-operator approval.",
-					Optional: true,
+					ElementType: types.Int64Type,
+					Optional:    true,
+				},
+				"quotas": schema.SetNestedAttribute{
+					MarkdownDescription: "Deprecated: use `requested_quotas` instead, which models quotas as a " +
+						"`key -> value` map. Providing both is rejected when they disagree. Quotas to apply to the tenant " +
+						"at creation as a list of `{key, value}` entries.",
+					DeprecationMessage: "Use `requested_quotas` (a key -> value map) instead.",
+					Optional:           true,
 					NestedObject: schema.NestedAttributeObject{
 						Attributes: map[string]schema.Attribute{
 							"key":   schema.StringAttribute{Required: true},
@@ -478,17 +488,12 @@ func tenantBodyAttributes() map[string]schema.Attribute {
 					ElementType:         types.ListType{ElemType: types.StringType},
 					Computed:            true,
 				},
-				"quotas": schema.SetNestedAttribute{
-					MarkdownDescription: "The effective quotas meshStack applied to this tenant. These can differ from the " +
-						"requested `spec.quotas` once the landing zone's default quotas are merged in or a platform operator " +
-						"adjusts them.",
-					Computed: true,
-					NestedObject: schema.NestedAttributeObject{
-						Attributes: map[string]schema.Attribute{
-							"key":   schema.StringAttribute{Computed: true},
-							"value": schema.Int64Attribute{Computed: true},
-						},
-					},
+				"applied_quotas": schema.MapAttribute{
+					MarkdownDescription: "The effective quotas meshStack applied to this tenant, as a `key -> value` map. " +
+						"These can differ from the requested `spec.requested_quotas` once the landing zone's default quotas " +
+						"are merged in or a platform operator adjusts them.",
+					ElementType: types.Int64Type,
+					Computed:    true,
 				},
 			},
 		},

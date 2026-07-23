@@ -35,9 +35,9 @@ type MeshTenantV4Status struct {
 	PlatformTypeIdentifier      string              `json:"platformTypeIdentifier" tfsdk:"platform_type_identifier"`
 	PlatformWorkspaceIdentifier *string             `json:"platformWorkspaceIdentifier" tfsdk:"platform_workspace_identifier"`
 	Tags                        map[string][]string `json:"tags" tfsdk:"tags"`
-	// Quotas are the effective quotas meshStack applied to the tenant, distinct from the create-only
-	// spec.quotas which carries only the requested values.
-	Quotas []MeshTenantQuota `json:"quotas" tfsdk:"quotas"`
+	// AppliedQuotas are the effective quotas meshStack applied to the tenant as a key->value map,
+	// distinct from the create-only spec.quotas which carries only the requested values.
+	AppliedQuotas map[string]int64 `json:"appliedQuotas" tfsdk:"applied_quotas"`
 }
 
 type MeshTenantV4Create struct {
@@ -132,10 +132,14 @@ type MeshTenantMetadata struct {
 }
 
 type MeshTenantSpec struct {
-	PlatformRef      UuidRef                    `json:"platformRef" tfsdk:"platform_ref"`
-	PlatformTenantId *string                    `json:"platformTenantId" tfsdk:"platform_tenant_id"`
-	LandingZoneRef   *NamedRef                  `json:"landingZoneRef" tfsdk:"landing_zone_ref"`
-	Quotas           types.Set[MeshTenantQuota] `json:"quotas" tfsdk:"quotas"`
+	PlatformRef      UuidRef   `json:"platformRef" tfsdk:"platform_ref"`
+	PlatformTenantId *string   `json:"platformTenantId" tfsdk:"platform_tenant_id"`
+	LandingZoneRef   *NamedRef `json:"landingZoneRef" tfsdk:"landing_zone_ref"`
+	// RequestedQuotas is the preferred key->value form for requesting quotas at creation, e.g.
+	// {"limits.cpu": 4}.
+	RequestedQuotas map[string]int64 `json:"requestedQuotas" tfsdk:"requested_quotas"`
+	// Deprecated: superseded by RequestedQuotas; retained so existing configurations keep working.
+	Quotas types.Set[MeshTenantQuota] `json:"quotas" tfsdk:"quotas"`
 }
 
 type MeshTenantStatus struct {
@@ -143,10 +147,11 @@ type MeshTenantStatus struct {
 	PlatformTypeIdentifier string              `json:"platformTypeIdentifier" tfsdk:"platform_type_identifier"`
 	PlatformWorkspaceId    *string             `json:"platformWorkspaceId" tfsdk:"platform_workspace_id"`
 	Tags                   map[string][]string `json:"tags" tfsdk:"tags"`
-	// Quotas are the effective quotas meshStack applied to the tenant. spec.quotas carries only the
-	// values requested at create (create-only); the effective quotas here can differ once landing-zone
-	// defaults are merged in or an operator adjusts them, so drift is tracked against these.
-	Quotas types.Set[MeshTenantQuota] `json:"quotas" tfsdk:"quotas"`
+	// AppliedQuotas are the effective quotas meshStack applied to the tenant as a key->value map.
+	// spec.requested_quotas carries only the values requested at create (create-only); the effective
+	// quotas here can differ once landing-zone defaults are merged in or an operator adjusts them, so
+	// drift is tracked against these.
+	AppliedQuotas map[string]int64 `json:"appliedQuotas" tfsdk:"applied_quotas"`
 }
 
 type MeshTenantQuota struct {
@@ -165,10 +170,13 @@ type MeshTenantCreateMetadata struct {
 }
 
 type MeshTenantCreateSpec struct {
-	PlatformRef      UuidRef                    `json:"platformRef" tfsdk:"platform_ref"`
-	LandingZoneRef   *NamedRef                  `json:"landingZoneRef" tfsdk:"landing_zone_ref"`
-	PlatformTenantId *string                    `json:"platformTenantId" tfsdk:"platform_tenant_id"`
-	Quotas           types.Set[MeshTenantQuota] `json:"quotas" tfsdk:"quotas"`
+	PlatformRef      UuidRef   `json:"platformRef" tfsdk:"platform_ref"`
+	LandingZoneRef   *NamedRef `json:"landingZoneRef" tfsdk:"landing_zone_ref"`
+	PlatformTenantId *string   `json:"platformTenantId" tfsdk:"platform_tenant_id"`
+	// RequestedQuotas is the preferred key->value form; Quotas is the deprecated list form. Only one
+	// should be set — the backend rejects a create that carries both with conflicting values.
+	RequestedQuotas map[string]int64          `json:"requestedQuotas,omitempty" tfsdk:"requested_quotas"`
+	Quotas          types.Set[MeshTenantQuota] `json:"quotas,omitempty" tfsdk:"quotas"`
 }
 
 type MeshTenantQuery struct {

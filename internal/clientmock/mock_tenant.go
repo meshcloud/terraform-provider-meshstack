@@ -32,6 +32,10 @@ func (m MeshTenantClient) Create(_ context.Context, tenant *client.MeshTenantCre
 	// Simulate a successful tenant creation with platformTenantId set
 	tenantName := tenant.Metadata.OwnedByWorkspace + "." + tenant.Metadata.OwnedByProject + "." + tenant.Spec.PlatformRef.Uuid
 
+	// The mock applies the requested quotas verbatim (no bounds/landing-zone-default resolution), so the
+	// effective status.appliedQuotas mirrors whichever requested form the caller sent.
+	appliedQuotas := effectiveQuotas(tenant.Spec.RequestedQuotas, tenant.Spec.Quotas)
+
 	created := &client.MeshTenant{
 		Metadata: client.MeshTenantMetadata{
 			Uuid:             id,
@@ -42,6 +46,7 @@ func (m MeshTenantClient) Create(_ context.Context, tenant *client.MeshTenantCre
 			PlatformRef:      tenant.Spec.PlatformRef,
 			PlatformTenantId: new(acctest.RandString(16)),
 			LandingZoneRef:   tenant.Spec.LandingZoneRef,
+			RequestedQuotas:  tenant.Spec.RequestedQuotas,
 			Quotas:           tenant.Spec.Quotas,
 		},
 		Status: client.MeshTenantStatus{
@@ -49,9 +54,7 @@ func (m MeshTenantClient) Create(_ context.Context, tenant *client.MeshTenantCre
 			PlatformTypeIdentifier: "mock-platform-type",
 			PlatformWorkspaceId:    new("mock-platform-workspace-id"),
 			Tags:                   map[string][]string{},
-			// The mock applies the requested quotas verbatim (no bounds/landing-zone-default resolution),
-			// so effective status.quotas mirrors the requested spec.quotas.
-			Quotas: tenant.Spec.Quotas,
+			AppliedQuotas:          appliedQuotas,
 		},
 	}
 
@@ -62,6 +65,23 @@ func (m MeshTenantClient) Create(_ context.Context, tenant *client.MeshTenantCre
 func (m MeshTenantClient) Delete(_ context.Context, uuid string) error {
 	m.Store.Delete(uuid)
 	return nil
+}
+
+// effectiveQuotas resolves the quotas a create request carried — the preferred key->value map or the
+// deprecated {key, value} list — into the single map the backend reports back as status.appliedQuotas.
+// Returns nil when no quotas were requested, so status renders as null rather than an empty map.
+func effectiveQuotas(requested map[string]int64, quotas []client.MeshTenantQuota) map[string]int64 {
+	if requested != nil {
+		return requested
+	}
+	if len(quotas) == 0 {
+		return nil
+	}
+	out := make(map[string]int64, len(quotas))
+	for _, q := range quotas {
+		out[q.Key] = q.Value
+	}
+	return out
 }
 
 func (m MeshTenantClient) List(_ context.Context, query client.MeshTenantQuery) ([]client.MeshTenant, error) {

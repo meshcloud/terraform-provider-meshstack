@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -58,7 +57,7 @@ type tenantV4ResourceStatusModel struct {
 	PlatformTypeIdentifier      types.String `tfsdk:"platform_type_identifier"`
 	PlatformWorkspaceIdentifier types.String `tfsdk:"platform_workspace_identifier"`
 	Tags                        types.Map    `tfsdk:"tags"`
-	Quotas                      types.Set    `tfsdk:"quotas"`
+	AppliedQuotas               types.Map    `tfsdk:"applied_quotas"`
 }
 
 func NewTenantV4Resource() resource.Resource {
@@ -180,15 +179,10 @@ func (r *tenantV4Resource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						ElementType:         types.ListType{ElemType: types.StringType},
 						Computed:            true,
 					},
-					"quotas": schema.SetNestedAttribute{
-						MarkdownDescription: "The effective quotas applied to the tenant.",
+					"applied_quotas": schema.MapAttribute{
+						MarkdownDescription: "The effective quotas applied to the tenant, as a `key -> value` map.",
+						ElementType:         types.Int64Type,
 						Computed:            true,
-						NestedObject: schema.NestedAttributeObject{
-							Attributes: map[string]schema.Attribute{
-								"key":   schema.StringAttribute{Computed: true},
-								"value": schema.Int64Attribute{Computed: true},
-							},
-						},
 					},
 				},
 			},
@@ -216,13 +210,10 @@ func (r *tenantV4Resource) setStateFromResponse(ctx context.Context, tenant *cli
 	}
 	diags.Append(state.SetAttribute(ctx, path.Root("spec"), spec)...)
 
-	quotaAttributeTypes := map[string]attr.Type{
-		"key":   types.StringType,
-		"value": types.Int64Type,
-	}
-	// Effective quotas come from status.quotas, populated by the backend. spec.quotas is create-only and
-	// carries only the requested values, so it is not a reliable source for the applied quotas.
-	quotasStatus, d := types.SetValueFrom(ctx, types.ObjectType{AttrTypes: quotaAttributeTypes}, tenant.Status.Quotas)
+	// Effective quotas come from status.appliedQuotas, populated by the backend. spec.quotas is
+	// create-only and carries only the requested values, so it is not a reliable source for the applied
+	// quotas.
+	appliedQuotas, d := types.MapValueFrom(ctx, types.Int64Type, tenant.Status.AppliedQuotas)
 	diags.Append(d...)
 
 	tagsValue, d := types.MapValueFrom(ctx, types.ListType{ElemType: types.StringType}, tenant.Status.Tags)
@@ -233,7 +224,7 @@ func (r *tenantV4Resource) setStateFromResponse(ctx context.Context, tenant *cli
 		PlatformTypeIdentifier:      types.StringValue(tenant.Status.PlatformTypeIdentifier),
 		PlatformWorkspaceIdentifier: types.StringPointerValue(tenant.Status.PlatformWorkspaceIdentifier),
 		Tags:                        tagsValue,
-		Quotas:                      quotasStatus,
+		AppliedQuotas:               appliedQuotas,
 	}
 	diags.Append(state.SetAttribute(ctx, path.Root("status"), status)...)
 }
