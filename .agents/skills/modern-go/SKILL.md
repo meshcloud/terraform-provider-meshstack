@@ -1,12 +1,13 @@
 ---
 name: modern-go
-description: Modern Go idioms used in this repo (Go 1.26) — the new(expression) builtin for inline pointers, and the generics patterns the codebase relies on (typed clients, mock stores, variant unions, the generic TF value-conversion layer, map/iter helpers). Use when writing or reviewing Go that creates pointers, defines type-parameterized helpers, or touches generic.Set/Get.
+description: Modern Go idioms used in this repo (Go 1.26) — the new(expression) builtin for inline pointers, the generics patterns the codebase relies on (typed clients, mock stores, variant unions, the generic TF value-conversion layer, map/iter helpers), and the go1.26 `go fix` modernizer pass. Use when writing or reviewing Go that creates pointers, defines type-parameterized helpers, touches generic.Set/Get, or running a modernization sweep.
 ---
 
 # Modern Go in this repo
 
 `go.mod` declares **`go 1.26`**. Two idioms matter most here: `new(expression)` for pointers, and
-the codebase's generics.
+the codebase's generics. To keep the tree on those idioms, run the go1.26 [`go fix`](#go-fix--the-go126-modernizer-pass)
+modernizer pass occasionally.
 
 ## `new(expression)` for pointers
 
@@ -85,3 +86,37 @@ iter.PickFirst / iter.Map / iter.MapAndSortBy     // internal/util/iter/iter.go
 
 Prefer `comparable` / a small method interface over `any` when the function actually requires it —
 it pushes misuse to compile time.
+
+## `go fix` — the go1.26 modernizer pass
+
+Go 1.26 reworked `go fix` into an analyzer-driven modernizer: each analyzer reports an
+*opportunity for improvement* and carries a fix that is **safe to apply** (unlike `go vet`, which
+only reports). It is how you keep the tree on the idioms above — e.g. it rewrites a stale
+`interface{}` to `any` and a 3-clause counting loop to `for i := range`.
+
+```bash
+go tool fix help          # list registered analyzers (any, rangeint, omitzero, newexpr, minmax, …)
+go fix -diff ./...        # preview every suggested fix as a unified diff — review before applying
+go fix ./...              # apply them in place
+```
+
+Not part of CI or `task lint` (lint is golangci-lint only — see AGENTS.md "Lint policy"). Treat
+`go fix` as an occasional, human-reviewed sweep, not an automated gate: some analyzers report
+non-problems, so always read `-diff` first and commit the result as its own `chore`.
+
+**Read each fix, don't rubber-stamp it.** The concrete pass on this repo (commit `chore: apply
+go1.26 go fix idioms`) is the worked example:
+
+- `any` — `interface{}` → `any` in a test helper signature. Pure syntax.
+- `rangeint` — `for i := 0; i < len(tokens); i++` → `for i := range tokens`. Pure syntax.
+- `omitzero` — the one needing judgement. It flagged `,omitempty` on struct-typed framework fields
+  (`types.SecretOrAny`, `types.List`) and **stripped the tag** rather than take its own alternative
+  fix (`,omitempty` → `,omitzero`, flagged "behavior change" and ignored by default). Correct here:
+  `encoding/json` never omits *struct* types, so `,omitempty` on them was already dead — the field
+  always serialized (`Variant` marshals its zero value to `null`), so dropping the tag is a no-op.
+  This dovetails with the pointers rule above: `omitempty` earns its place only on genuinely
+  nullable fields (pointers, slices, maps), never on a value-typed struct.
+
+The `newexpr` analyzer (→ `new(expression)`) and `minmax` are also registered, so a future sweep
+keeps the codebase aligned with the [`new(expression)`](#newexpression-for-pointers) idiom
+automatically.

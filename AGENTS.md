@@ -5,7 +5,7 @@ and humans. Deeper, on-demand procedures live in skills under `.agents/skills/` 
 referenced from the relevant sections below:
 - **`new-resource-datasource`** — end-to-end walkthrough for adding a resource/data source + its TestAcc test.
 - **`github-ci`** — GitHub Actions workflow conventions and action SHA-pinning.
-- **`modern-go`** — Go 1.26 `new(expression)` and the codebase's generics.
+- **`modern-go`** — Go 1.26 `new(expression)`, the codebase's generics, and the `go fix` modernizer pass.
 - **`changelog-management`** — pick the next version and maintain `CHANGELOG.md`.
 - **`acceptance-testing`** — bring up the local backend (via meshfed-release's `local-dev-stack`) and run/debug the suite.
 - **`scratch-config-testing`** — run a config in git-ignored `scratch/` against a local meshStack via the dev-built binary to reproduce/debug bugs; also documents the optional `tf-block-runner` swap for exercising terraform-implementation BBDs (not for acceptance testing).
