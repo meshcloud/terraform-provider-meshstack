@@ -144,17 +144,14 @@ func TestAccTenant(t *testing.T) {
 	})
 
 	// quotas covers the create-only quota flow: a tenant requesting an in-bounds quota applies it, and
-	// the effective quotas are read back from status.quotas (distinct from the requested spec.quotas).
-	// Runs in both modes — the mock echoes the requested quota into status, the real backend validates
-	// it against the platform quota definition and applies it.
+	// the effective quotas are read back from status.applied_quotas (distinct from the requested
+	// spec.requested_quotas). Runs in both modes — the mock echoes the requested quota into status, the
+	// real backend validates it against the platform quota definition and applies it.
 	t.Run("quotas", func(t *testing.T) {
 		config, tenantAddr := tenantQuotaConfig(t, 4000, 4000, 2000)
 
-		quotaSet := knownvalue.SetExact([]knownvalue.Check{
-			knownvalue.ObjectExact(map[string]knownvalue.Check{
-				"key":   knownvalue.StringExact("limits.cpu"),
-				"value": knownvalue.Int64Exact(2000),
-			}),
+		quotaMap := knownvalue.MapExact(map[string]knownvalue.Check{
+			"limits.cpu": knownvalue.Int64Exact(2000),
 		})
 
 		ApplyAndTest(t, resource.TestCase{
@@ -162,10 +159,10 @@ func TestAccTenant(t *testing.T) {
 				{
 					Config: config.String(),
 					ConfigStateChecks: []statecheck.StateCheck{
-						// Requested quotas echo the config verbatim (spec.quotas is create-only, Optional).
-						statecheck.ExpectKnownValue(tenantAddr.String(), tfjsonpath.New("spec").AtMapKey("quotas"), quotaSet),
-						// Effective quotas come from status.quotas, populated by the backend.
-						statecheck.ExpectKnownValue(tenantAddr.String(), tfjsonpath.New("status").AtMapKey("quotas"), quotaSet),
+						// Requested quotas echo the config verbatim (spec.requested_quotas is create-only, Optional).
+						statecheck.ExpectKnownValue(tenantAddr.String(), tfjsonpath.New("spec").AtMapKey("requested_quotas"), quotaMap),
+						// Effective quotas come from status.applied_quotas, populated by the backend.
+						statecheck.ExpectKnownValue(tenantAddr.String(), tfjsonpath.New("status").AtMapKey("applied_quotas"), quotaMap),
 					},
 				},
 			},
@@ -181,7 +178,7 @@ func TestAccTenant(t *testing.T) {
 		// quota value, so step 2 is an in-place update of the existing tenant rather than a full replace.
 		config, _ := tenantQuotaConfig(t, 4000, 4000, 2000)
 		changedConfig := config.WithFirstBlock(
-			testconfig.Descend("spec", "quotas")(testconfig.SetRawExpr(`[{ key = "limits.cpu", value = %d }]`, 3000)),
+			testconfig.Descend("spec", "requested_quotas")(testconfig.SetRawExpr(`{ "limits.cpu" = %d }`, 3000)),
 		)
 
 		ApplyAndTest(t, resource.TestCase{
@@ -304,7 +301,7 @@ func TestAccTenant(t *testing.T) {
 
 // tenantQuotaConfig builds a full tenant config whose platform defines a `limits.cpu` quota with the
 // given max/threshold (min is fixed at 1) and whose tenant requests requestedCpu for that quota. The
-// bespoke quota_definitions and spec.quotas are layered onto the standard builders via SetRawExpr.
+// bespoke quota_definitions and spec.requested_quotas are layered onto the standard builders via SetRawExpr.
 func tenantQuotaConfig(t *testing.T, maxCpu, threshold, requestedCpu int64) (testconfig.Config, testconfig.Traversal) {
 	t.Helper()
 	workspaceConfig, workspaceAddr := testconfig.Workspace(t)
@@ -319,8 +316,8 @@ func tenantQuotaConfig(t *testing.T, maxCpu, threshold, requestedCpu int64) (tes
 	landingZoneConfig, landingZoneAddr := testconfig.LandingZone(t, workspaceAddr, platformAddr, platformTypeAddr)
 	tenantConfig, tenantAddr := testconfig.Tenant(t, projectAddr, platformAddr, landingZoneAddr)
 	tenantConfig = tenantConfig.WithFirstBlock(
-		testconfig.Descend("spec", "quotas")(testconfig.SetRawExpr(
-			`[{ key = "limits.cpu", value = %d }]`, requestedCpu,
+		testconfig.Descend("spec", "requested_quotas")(testconfig.SetRawExpr(
+			`{ "limits.cpu" = %d }`, requestedCpu,
 		)),
 	)
 	config := tenantConfig.Join(workspaceConfig, projectConfig, platformConfig, landingZoneConfig)

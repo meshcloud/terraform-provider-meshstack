@@ -62,8 +62,15 @@ func (d *tenantDataSource) Schema(ctx context.Context, req datasource.SchemaRequ
 						Description: "Reference to the landing zone assigned to this tenant, identified by its name (the landing zone identifier).",
 						Output:      true,
 					}),
+					"requested_quotas": schema.MapAttribute{
+						MarkdownDescription: "The quotas requested for this tenant at creation, as a `key -> value` map.",
+						ElementType:         types.Int64Type,
+						Computed:            true,
+					},
 					"quotas": schema.SetNestedAttribute{
-						Computed: true,
+						MarkdownDescription: "Deprecated: use `requested_quotas` instead. The requested quotas as a list of `{key, value}` entries.",
+						DeprecationMessage:  "Use `requested_quotas` (a key -> value map) instead.",
+						Computed:            true,
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
 								"key":   schema.StringAttribute{Computed: true},
@@ -95,15 +102,10 @@ func (d *tenantDataSource) Schema(ctx context.Context, req datasource.SchemaRequ
 						ElementType:         types.ListType{ElemType: types.StringType},
 						Computed:            true,
 					},
-					"quotas": schema.SetNestedAttribute{
-						MarkdownDescription: "The effective quotas meshStack applied to this tenant.",
+					"applied_quotas": schema.MapAttribute{
+						MarkdownDescription: "The effective quotas meshStack applied to this tenant, as a `key -> value` map.",
+						ElementType:         types.Int64Type,
 						Computed:            true,
-						NestedObject: schema.NestedAttributeObject{
-							Attributes: map[string]schema.Attribute{
-								"key":   schema.StringAttribute{Computed: true},
-								"value": schema.Int64Attribute{Computed: true},
-							},
-						},
 					},
 				},
 			},

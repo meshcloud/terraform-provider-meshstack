@@ -79,16 +79,8 @@ Read-Only:
 
 Read-Only:
 
+- `applied_quotas` (Map of Number) The effective quotas meshStack applied to this tenant, as a `key -> value` map.
 - `platform_type_identifier` (String) Identifier of the platform type.
 - `platform_workspace_identifier` (String) Identifier of the platform workspace.
-- `quotas` (Attributes List) The effective quotas meshStack applied to this tenant. (see [below for nested schema](#nestedatt--status--quotas))
 - `tags` (Map of List of String) Tags assigned to this tenant.
 - `tenant_name` (String) Name of the tenant.
-
-<a id="nestedatt--status--quotas"></a>
-### Nested Schema for `status.quotas`
-
-Read-Only:
-
-- `key` (String)
-- `value` (Number)

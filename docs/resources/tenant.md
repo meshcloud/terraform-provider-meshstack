@@ -92,7 +92,8 @@ Optional:
 
 - `landing_zone_ref` (Attributes) Reference to the landing zone to assign to this tenant, identified by its name (the landing zone identifier). (see [below for nested schema](#nestedatt--spec--landing_zone_ref))
 - `platform_tenant_id` (String) The identifier of the tenant on the platform (e.g. GCP project ID or Azure subscription ID). If this is not set, a new tenant will be created. If this is set, an existing tenant will be imported. Otherwise, this field will be empty until a successful replication has run.
-- `quotas` (Attributes Set) Quotas to apply to the tenant at creation. If omitted, the landing zone's default quotas apply. Set only at creation: the meshTenant API cannot update a tenant, so changing this on an existing tenant is rejected. To change a live tenant's quotas, file a quota request in the meshStack panel (Tenant > Settings > Quotas), which is subject to platform-operator approval. (see [below for nested schema](#nestedatt--spec--quotas))
+- `quotas` (Attributes Set, Deprecated) Deprecated: use `requested_quotas` instead, which models quotas as a `key -> value` map. Providing both is rejected when they disagree. Quotas to apply to the tenant at creation as a list of `{key, value}` entries. (see [below for nested schema](#nestedatt--spec--quotas))
+- `requested_quotas` (Map of Number) Quotas to apply to the tenant at creation, as a `key -> value` map (e.g. `{ "limits.cpu" = 4 }`). If omitted, the landing zone's default quotas apply. Set only at creation: the meshTenant API cannot update a tenant, so changing this on an existing tenant is rejected. To change a live tenant's quotas, file a quota request in the meshStack panel (Tenant > Settings > Quotas), which is subject to platform-operator approval.
 
 <a id="nestedatt--spec--platform_ref"></a>
 ### Nested Schema for `spec.platform_ref`
@@ -139,19 +140,11 @@ Read-Only:
 
 Read-Only:
 
+- `applied_quotas` (Map of Number) The effective quotas meshStack applied to this tenant, as a `key -> value` map. These can differ from the requested `spec.requested_quotas` once the landing zone's default quotas are merged in or a platform operator adjusts them.
 - `platform_type_identifier` (String) Identifier of the tenant's platform type — the kind of platform (e.g. `aws`, `azure`), not the specific platform instance the tenant lives on.
 - `platform_workspace_id` (String) For platforms that represent a workspace as a platform-side container (e.g. a Cloud Foundry Organization or an OpenStack Domain), the platform's own id of that container (an id assigned by the external platform, not a meshWorkspace identifier). Null for platforms with no such concept or until the tenant has been replicated.
-- `quotas` (Attributes Set) The effective quotas meshStack applied to this tenant. These can differ from the requested `spec.quotas` once the landing zone's default quotas are merged in or a platform operator adjusts them. (see [below for nested schema](#nestedatt--status--quotas))
 - `tags` (Map of List of String) Tags assigned to this tenant.
 - `tenant_name` (String) Name of the tenant, currently the owning workspace, project and platform (instance) identifiers joined by dots (`<workspace>.<project>.<platform>.<location>`). Treat this as an opaque string and do not parse it: the format is not guaranteed and may change unexpectedly, for example when the location segment becomes optional or when a tenant is moved across projects.
-
-<a id="nestedatt--status--quotas"></a>
-### Nested Schema for `status.quotas`
-
-Read-Only:
-
-- `key` (String)
-- `value` (Number)
 
 ## Import
 

@@ -104,19 +104,11 @@ Read-Only:
 
 Read-Only:
 
+- `applied_quotas` (Map of Number) The effective quotas applied to the tenant, as a `key -> value` map.
 - `platform_type_identifier` (String) Identifier of the platform type.
 - `platform_workspace_identifier` (String) Some platforms create representations of workspaces, in such cases this will contain the identifier of the workspace on the platform.
-- `quotas` (Attributes Set) The effective quotas applied to the tenant. (see [below for nested schema](#nestedatt--status--quotas))
 - `tags` (Map of List of String) Tags assigned to this tenant.
 - `tenant_name` (String) The full tenant name, a concatenation of the workspace identifier, project identifier and platform identifier.
-
-<a id="nestedatt--status--quotas"></a>
-### Nested Schema for `status.quotas`
-
-Read-Only:
-
-- `key` (String)
-- `value` (Number)
 
 ## Import
 

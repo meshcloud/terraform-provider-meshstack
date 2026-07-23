@@ -38,13 +38,14 @@ type tenantResourceModel struct {
 	WaitForCompletion bool                      `tfsdk:"wait_for_completion"`
 }
 
-// tenantResourceModelFromDto builds the resource state from an API response. specQuotas is the known
-// (configured) spec.quotas carried from plan/state: spec.quotas is Optional (not computed), so it must
-// echo the configured value verbatim to avoid an inconsistent-result-after-apply error when the
-// backend defaults or reorders quotas.
-func tenantResourceModelFromDto(dto *client.MeshTenant, specQuotas clientTypes.Set[client.MeshTenantQuota], waitForCompletion bool) tenantResourceModel {
+// tenantResourceModelFromDto builds the resource state from an API response. specQuotas and
+// specRequestedQuotas are the known (configured) spec quota fields carried from plan/state: both are
+// Optional (not computed), so they must echo the configured value verbatim to avoid an
+// inconsistent-result-after-apply error when the backend defaults or reorders quotas.
+func tenantResourceModelFromDto(dto *client.MeshTenant, specQuotas clientTypes.Set[client.MeshTenantQuota], specRequestedQuotas map[string]int64, waitForCompletion bool) tenantResourceModel {
 	spec := dto.Spec
 	spec.Quotas = specQuotas
+	spec.RequestedQuotas = specRequestedQuotas
 	return tenantResourceModel{
 		Ref:               tenantRef{Kind: client.MeshObjectKind.Tenant, Uuid: dto.Metadata.Uuid},
 		Metadata:          dto.Metadata,
