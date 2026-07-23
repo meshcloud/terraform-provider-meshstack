@@ -733,9 +733,9 @@ terraform plan -generate-config-out=generated_resources.tf
 ```
 
 Copy the generated configuration into your root module to start managing the resource with OpenTofu or Terraform.
-Note that the generated configuration may require minor adjustments or cleanup — always run `tofu plan` / `terraform plan` afterwards to verify 
+Note that the generated configuration may require minor adjustments or cleanup, so always run `tofu plan` / `terraform plan` afterwards to verify 
 that the configuration fully matches the imported state and that no unintended changes are pending.
-If the plan only shows the import of the resource (no other changes), you can run `tofu apply` / `terraform apply` to complete the import — from that point on, 
+If the plan only shows the import of the resource (no other changes), you can run `tofu apply` / `terraform apply` to complete the import. From that point on,
 the resource is fully managed via OpenTofu or Terraform.
 
 ### Handling Write-Only Attributes (Secrets)
@@ -753,5 +753,5 @@ resource, the [`provider::meshstack::non_ephemeral_secret`](../functions/non_eph
 `secret_value` and a matching `secret_version` in one call, so the secret is sent again whenever the value changes.
 Prefer an `ephemeral` resource where practical, or keyless authentication such as workload identity federation.
 
-For a detailed step-by-step walkthrough — including secret handling options — see
+For a detailed walkthrough that covers secret handling options, see
 [How to Import an Existing Building Block Definition into OpenTofu](https://docs.meshcloud.io/guides/core/how-to-import-bbd-into-opentofu/).
