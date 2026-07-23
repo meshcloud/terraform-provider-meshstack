@@ -81,7 +81,7 @@ func TestAccLandingZonesDataSource(t *testing.T) {
 			testconfig.ExtractAddress(&dataSourceAddress),
 			testconfig.Descend("platform_uuid")(testconfig.SetAddr(platformAddr, "metadata", "uuid")),
 			testconfig.Descend("provider")(testconfig.SetRawExpr("meshstack-other")),
-		).Join(supportConfig, example.TestSupportConfig(t, "_other_provider"))
+		).Join(supportConfig, testconfig.OtherProviderConfig(t))
 
 		var apiKeyClientId, apiKeyClientSecret lazyVariable
 		ApplyAndTest(t, resource.TestCase{Steps: []resource.TestStep{

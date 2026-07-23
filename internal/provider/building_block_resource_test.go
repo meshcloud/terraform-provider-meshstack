@@ -481,7 +481,7 @@ func TestAccBuildingBlock(t *testing.T) {
 
 		// Steps 2+ keep the meshstack-other provider alias configured (the MANAGED key minted above); the
 		// block itself is admin-managed, so every step passes the key credentials as config variables.
-		otherProviderConfig := testconfig.Resource{Name: "building_block"}.TestSupportConfig(t, "_other_provider")
+		otherProviderConfig := testconfig.OtherProviderConfig(t)
 
 		// v2 of the definition adds a defaulted platform-operator input `tier`. Re-draft (new v2 draft;
 		// version_latest_release still v1) then re-release (v2 released) mirror the version dance in 06, so
@@ -874,7 +874,7 @@ func TestAccBuildingBlock(t *testing.T) {
 		step1Config := workspaceConfig.Join(buildingBlockDefinitionConfig, otherWorkspaceConfig, apiKeyConfig)
 
 		// Step 2 config: the "other" provider creates a BB with consumer-only inputs.
-		otherProviderConfig := testconfig.Resource{Name: "building_block"}.TestSupportConfig(t, "_other_provider")
+		otherProviderConfig := testconfig.OtherProviderConfig(t)
 
 		// Reuses the workspace example (resource_01_workspace.tf) 1:1; the BBD above marks its
 		// `environment` input non-updateable-by-consumer.
@@ -1185,7 +1185,7 @@ func TestAccBuildingBlock(t *testing.T) {
 			step1Config := workspaceConfig.Join(bbdConfig, otherWorkspaceConfig, apiKeyConfig)
 
 			// The consumer creates the BB via the meshstack-other provider (its workspace-scoped key).
-			otherProviderConfig := testconfig.Resource{Name: "building_block"}.TestSupportConfig(t, "_other_provider")
+			otherProviderConfig := testconfig.OtherProviderConfig(t)
 
 			var buildingBlockAddr testconfig.Traversal
 			bbConfig := bbdResource.TestSupportConfig(t, "").WithFirstBlock(

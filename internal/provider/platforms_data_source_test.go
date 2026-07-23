@@ -107,7 +107,7 @@ func TestAccPlatformsDataSource(t *testing.T) {
 			testconfig.Descend("owned_by_workspace")(testconfig.SetAddr(operatorWorkspaceAddr, "metadata", "name")),
 			// use the restricted consumer api key via the meshstack-other provider alias
 			testconfig.Descend("provider")(testconfig.SetRawExpr("meshstack-other")),
-		).Join(supportConfig, example.TestSupportConfig(t, "_other_provider"))
+		).Join(supportConfig, testconfig.OtherProviderConfig(t))
 
 		// pubPlatformUuid is captured from P_pub in the setup step and asserted to be the (only) platform
 		// the consumer lists in the second step, proving P_priv is absent.

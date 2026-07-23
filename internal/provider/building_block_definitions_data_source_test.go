@@ -106,7 +106,7 @@ func TestAccBuildingBlockDefinitionsDataSource(t *testing.T) {
 			supportConfig,
 			// but make the data source use a different provider using the api key from the other workspace
 			// (credentials are passed in as variables in the second step)
-			example.TestSupportConfig(t, "_other_provider"),
+			testconfig.OtherProviderConfig(t),
 		)
 
 		var apiKeyClientId, apiKeyClientSecret lazyVariable
