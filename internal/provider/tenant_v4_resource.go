@@ -81,8 +81,9 @@ func (r *tenantV4Resource) Configure(_ context.Context, req resource.ConfigureRe
 
 func (r *tenantV4Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Manages a `meshTenant` with API version 4." + previewDisclaimer(),
-		DeprecationMessage:  "Use `meshstack_tenant` instead, which now runs on the meshTenant v4 API. Migrate existing resources with a `moved` block whose `from` is the `meshstack_tenant_v4` resource and whose `to` is the corresponding `meshstack_tenant` resource.",
+		MarkdownDescription: "Manages a `meshTenant` with API version 4." +
+			deprecatedDisclaimer("Use `meshstack_tenant` instead (now on the meshTenant v4 API); migrate with a `moved` block.") + previewDisclaimer(),
+		DeprecationMessage: "Use `meshstack_tenant` instead, which now runs on the meshTenant v4 API. Migrate existing resources with a `moved` block whose `from` is the `meshstack_tenant_v4` resource and whose `to` is the corresponding `meshstack_tenant` resource.",
 
 		Attributes: map[string]schema.Attribute{
 			"ref": meshRefByUuid(meshRefOptions{Kind: client.MeshObjectKind.Tenant, Description: "Reference to this tenant, can be used as `target_ref` in building block resources.", Output: true}),

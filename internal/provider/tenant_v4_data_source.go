@@ -37,8 +37,9 @@ func (d *tenantV4DataSource) Configure(_ context.Context, req datasource.Configu
 
 func (d *tenantV4DataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Fetches details of a single tenant by UUID." + previewDisclaimer(),
-		DeprecationMessage:  "Use the `meshstack_tenants` data source instead, which runs on the meshTenant v4 API and can filter by workspace, project and platform.",
+		MarkdownDescription: "Fetches details of a single tenant by UUID." +
+			deprecatedDisclaimer("Use the `meshstack_tenants` data source instead.") + previewDisclaimer(),
+		DeprecationMessage: "Use the `meshstack_tenants` data source instead, which runs on the meshTenant v4 API and can filter by workspace, project and platform.",
 		Attributes: map[string]schema.Attribute{
 			"metadata": schema.SingleNestedAttribute{
 				MarkdownDescription: "Tenant metadata.",

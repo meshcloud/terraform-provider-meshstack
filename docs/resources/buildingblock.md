@@ -4,11 +4,14 @@ page_title: "meshstack_buildingblock Resource - terraform-provider-meshstack"
 subcategory: ""
 description: |-
   Manage Building Block assignment.
+  ~> Deprecated: Use meshstack_building_block (with _) instead; migrate state with a moved block.
 ---
 
 # meshstack_buildingblock (Resource)
 
 Manage Building Block assignment.
+
+~> **Deprecated:** Use `meshstack_building_block` (with `_`) instead; migrate state with a `moved` block.
 
 ## Example Usage
 

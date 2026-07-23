@@ -51,8 +51,9 @@ func (r *buildingblockResource) Configure(_ context.Context, req resource.Config
 
 func (r *buildingblockResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Manage Building Block assignment.",
-		DeprecationMessage:  "Use `meshstack_building_block` (with `_`) instead. You can migrate state with a `moved` block from `meshstack_buildingblock` to `meshstack_building_block`.",
+		MarkdownDescription: "Manage Building Block assignment." +
+			deprecatedDisclaimer("Use `meshstack_building_block` (with `_`) instead; migrate state with a `moved` block."),
+		DeprecationMessage: "Use `meshstack_building_block` (with `_`) instead. You can migrate state with a `moved` block from `meshstack_buildingblock` to `meshstack_building_block`.",
 
 		Attributes: map[string]schema.Attribute{
 			"metadata": schema.SingleNestedAttribute{
