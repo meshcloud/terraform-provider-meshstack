@@ -14,4 +14,8 @@ resource "meshstack_workspace_user_binding" "example" {
   subject = {
     name = "user@meshcloud.io"
   }
+
+  # Optional. If omitted, the binding never expires. If recertification is enabled
+  # for the role, meshStack assigns the maximum allowed expiry date instead.
+  expiry_date = "2026-12-31"
 }
