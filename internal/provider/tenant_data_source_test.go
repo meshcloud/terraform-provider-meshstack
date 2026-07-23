@@ -40,7 +40,7 @@ func TestAccTenantDataSource(t *testing.T) {
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(dsAddress.String(), tfjsonpath.New("metadata").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
 					statecheck.ExpectKnownValue(dsAddress.String(), tfjsonpath.New("spec").AtMapKey("platform_ref").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
-					statecheck.ExpectKnownValue(dsAddress.String(), tfjsonpath.New("status").AtMapKey("tenant_identifier"), xknownvalue.NotEmptyString()),
+					statecheck.ExpectKnownValue(dsAddress.String(), tfjsonpath.New("status").AtMapKey("tenant_name"), xknownvalue.NotEmptyString()),
 					statecheck.ExpectKnownValue(dsAddress.String(), tfjsonpath.New("status").AtMapKey("platform_type_identifier"), xknownvalue.NotEmptyString()),
 				},
 			},

@@ -4,6 +4,7 @@ Requires meshStack 2026.29.0 or later (previously 2026.24.0).
 
 BREAKING CHANGES:
 - Release binaries are now published only for `linux` and `darwin` on `amd64` and `arm64`. Builds for `windows`, `freebsd`, `386` and 32-bit `arm` are no longer produced.
+- `meshstack_tenant` and `meshstack_tenants`: the tenant `status.tenant_identifier` output was renamed to `status.tenant_name`. The value is unchanged (still the fully-qualified `<workspace>.<project>.<platform>.<location>`); update any references from `status.tenant_identifier` to `status.tenant_name`.
 
 FEATURES:
 - `meshstack_building_block_definition`: `version_spec.dependency_refs` now use the `dependencyDefinitionRefs` field (`{uuid, kind}`) instead of the deprecated `dependencyDefinitionUuids` (bare UUID array), so a dependency's `kind` round-trips. The resource schema is unchanged (no config or state migration). Upgrade **before** the backend removes `dependencyDefinitionUuids`, otherwise dependencies silently stop round-tripping. Content-hash bumped (to v5 in this release, together with the manual-outputs fix below); an older `content_hash` is recomputed rather than flagged changed, as in the v0.23.2 fix.

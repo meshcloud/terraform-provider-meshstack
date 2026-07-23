@@ -51,7 +51,7 @@ func TestAccTenant(t *testing.T) {
 						statecheck.ExpectKnownValue(tenantAddr.String(), tfjsonpath.New("spec").AtMapKey("landing_zone_ref").AtMapKey("name"), xknownvalue.NotEmptyString()),
 
 						// Status
-						statecheck.ExpectKnownValue(tenantAddr.String(), tfjsonpath.New("status").AtMapKey("tenant_identifier"), xknownvalue.NotEmptyString()),
+						statecheck.ExpectKnownValue(tenantAddr.String(), tfjsonpath.New("status").AtMapKey("tenant_name"), xknownvalue.NotEmptyString()),
 						statecheck.ExpectKnownValue(tenantAddr.String(), tfjsonpath.New("status").AtMapKey("platform_type_identifier"), xknownvalue.NotEmptyString()),
 					},
 				},

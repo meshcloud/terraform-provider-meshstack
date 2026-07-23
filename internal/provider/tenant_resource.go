@@ -461,8 +461,8 @@ func tenantBodyAttributes() map[string]schema.Attribute {
 			Computed:            true,
 			PlanModifiers:       []planmodifier.Object{objectplanmodifier.UseStateForUnknown()},
 			Attributes: map[string]schema.Attribute{
-				"tenant_identifier": schema.StringAttribute{
-					MarkdownDescription: "Fully-qualified identifier of the tenant: the owning workspace, project and platform (instance) identifiers joined by dots (`<workspace>.<project>.<platform>.<location>`).",
+				"tenant_name": schema.StringAttribute{
+					MarkdownDescription: "Name of the tenant, currently the owning workspace, project and platform (instance) identifiers joined by dots (`<workspace>.<project>.<platform>.<location>`). Treat this as an opaque string and do not parse it: the format is not guaranteed and may change unexpectedly, for example when the location segment becomes optional or when a tenant is moved across projects.",
 					Computed:            true,
 				},
 				"platform_type_identifier": schema.StringAttribute{

@@ -30,7 +30,7 @@ func (m MeshTenantClient) Create(_ context.Context, tenant *client.MeshTenantCre
 	id := uuid.NewString()
 
 	// Simulate a successful tenant creation with platformTenantId set
-	tenantIdentifier := tenant.Metadata.OwnedByWorkspace + "." + tenant.Metadata.OwnedByProject + "." + tenant.Spec.PlatformRef.Uuid
+	tenantName := tenant.Metadata.OwnedByWorkspace + "." + tenant.Metadata.OwnedByProject + "." + tenant.Spec.PlatformRef.Uuid
 
 	created := &client.MeshTenant{
 		Metadata: client.MeshTenantMetadata{
@@ -45,7 +45,7 @@ func (m MeshTenantClient) Create(_ context.Context, tenant *client.MeshTenantCre
 			Quotas:           tenant.Spec.Quotas,
 		},
 		Status: client.MeshTenantStatus{
-			TenantIdentifier:       tenantIdentifier,
+			TenantName:             tenantName,
 			PlatformTypeIdentifier: "mock-platform-type",
 			PlatformWorkspaceId:    new("mock-platform-workspace-id"),
 			Tags:                   map[string][]string{},
