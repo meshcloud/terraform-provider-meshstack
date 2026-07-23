@@ -23,7 +23,7 @@ Builder rules:
 - Declare all `Traversal` vars upfront with `var` before `WithFirstBlock` calls that populate them.
 - Return inline (`return expr.Join(...), addr`); consolidate all modifiers into a single `WithFirstBlock`.
 - Use explicit version suffixes in file names when multiple versions exist
-  (`build_building_block_v1.go`, `build_building_block_v2.go`); omit when only one version exists.
+  (e.g. `build_foo_v1.go`, `build_foo_v2.go`); omit when only one version exists (`build_foo.go`).
 
 Modifier preference order: `SetString`/`SetValue` (literals) → `SetAddr(addr, "metadata", "name")`
 (resource references) → `SetRawExpr(format, args...)` (complex HCL, last resort). For
@@ -135,9 +135,6 @@ testconfig.BBDTerraform(t)                                                 → (
 testconfig.BBDWithIntegration(t, suffix)                                   → (config, buildingBlockDefinitionAddr)
 testconfig.BBDManual(t)                                                    → (config, buildingBlockDefinitionAddr)
 testconfig.BBDGitlabPipeline(t)                                            → (config, buildingBlockDefinitionAddr)
-testconfig.BBv1Tenant(t)                                                   → (config, buildingBlockAddr)
-testconfig.BBv2Workspace(t)                                                → (config, buildingBlockAddr)
-testconfig.BBv2Tenant(t)                                                   → (config, buildingBlockAddr)
 ```
 
 ## State check helpers (`xknownvalue`)

@@ -15,7 +15,6 @@ import (
 
 type Client struct {
 	ApiKey                         MeshApiKeyClient
-	BuildingBlock                  meshBuildingBlockClient
 	BuildingBlockRun               MeshBuildingBlockRunClient
 	BuildingBlockDefinition        meshBuildingBlockDefinitionClient
 	BuildingBlockDefinitionVersion meshBuildingBlockDefinitionVersionClient
@@ -41,7 +40,6 @@ type Client struct {
 func (c *Client) AsClient() client.Client {
 	return client.Client{
 		ApiKey:                         c.ApiKey,
-		BuildingBlock:                  c.BuildingBlock,
 		BuildingBlockRun:               c.BuildingBlockRun,
 		BuildingBlockDefinition:        c.BuildingBlockDefinition,
 		BuildingBlockDefinitionVersion: c.BuildingBlockDefinitionVersion,
@@ -69,16 +67,10 @@ func NewMock() Client {
 	bbdVersionStore := NewStore[client.MeshBuildingBlockDefinitionVersion]()
 	buildingBlockRunStore := NewStore[client.MeshBuildingBlockRun]()
 	buildingBlockRunLogStore := NewStore[client.MeshBuildingBlockRunLogs]()
-	// The v1 and v2/v3 building block clients share one store: on the real backend a building block
-	// is a single entity exposed by both APIs (same uuid), so a v1-created block is readable via
-	// v2/v3. The v1 client maps to/from the v2 representation (see meshBuildingBlockClient), which is
-	// what lets the v1->v3 `moved` migration refresh-Read find the block. The tenant store is shared
-	// so the v1 client can resolve tenant_identifier <-> tenant target_ref uuid.
 	buildingBlockStore := NewStore[client.MeshBuildingBlockV2]()
 	tenantStore := NewStore[client.MeshTenant]()
 	return Client{
 		ApiKey:                         MeshApiKeyClient{Store: NewStore[client.MeshApiKey]()},
-		BuildingBlock:                  meshBuildingBlockClient{Store: buildingBlockStore, BbdVersionStore: bbdVersionStore, TenantStore: tenantStore},
 		BuildingBlockRun:               MeshBuildingBlockRunClient{Store: buildingBlockRunStore, LogStore: buildingBlockRunLogStore},
 		BuildingBlockDefinition:        meshBuildingBlockDefinitionClient{Store: NewStore[client.MeshBuildingBlockDefinition](), StoreVersion: bbdVersionStore},
 		BuildingBlockDefinitionVersion: meshBuildingBlockDefinitionVersionClient{Store: bbdVersionStore},

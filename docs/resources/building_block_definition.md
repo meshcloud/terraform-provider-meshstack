@@ -344,7 +344,7 @@ resource "meshstack_building_block_definition" "example_05_gitlab_pipeline" {
 ### Read-Only
 
 - `ref` (Attributes) Reference to this building block definition. Reuse in `version_spec.dependency_refs` of other building block definitions. (see [below for nested schema](#nestedatt--ref))
-- `version_latest` (Attributes) Latest version (including drafts). Useful for wiring `meshstack_building_block_v2.spec.building_block_definition_version_ref`. (see [below for nested schema](#nestedatt--version_latest))
+- `version_latest` (Attributes) Latest version (including drafts). Useful for wiring `meshstack_building_block.spec.building_block_definition_version_ref`. (see [below for nested schema](#nestedatt--version_latest))
 - `versions` (Attributes List) List of all available versions of this building block definition. Never empty. (see [below for nested schema](#nestedatt--versions))
 
 <a id="nestedatt--metadata"></a>

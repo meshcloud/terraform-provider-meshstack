@@ -600,7 +600,7 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 			},
 
 			"version_latest": schema.SingleNestedAttribute{
-				MarkdownDescription: "Latest version (including drafts). Useful for wiring `meshstack_building_block_v2.spec.building_block_definition_version_ref`.",
+				MarkdownDescription: "Latest version (including drafts). Useful for wiring `meshstack_building_block.spec.building_block_definition_version_ref`.",
 				Computed:            true,
 				Attributes:          versionAttributes,
 			},

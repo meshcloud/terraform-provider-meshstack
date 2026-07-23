@@ -19,7 +19,6 @@ type HttpError = internal.HttpError
 
 type Client struct {
 	ApiKey                         MeshApiKeyClient
-	BuildingBlock                  MeshBuildingBlockClient
 	BuildingBlockV2                MeshBuildingBlockV2Client
 	BuildingBlockRun               MeshBuildingBlockRunClient
 	BuildingBlockDefinition        MeshBuildingBlockDefinitionClient
@@ -74,7 +73,6 @@ func New(ctx context.Context, rootUrl *url.URL, userAgent string, auth Authoriza
 
 	return Client{
 		ApiKey:                         newApiKeyClient(ctx, httpClient),
-		BuildingBlock:                  newBuildingBlockClient(ctx, httpClient),
 		BuildingBlockV2:                newBuildingBlockV2Client(ctx, httpClient),
 		BuildingBlockRun:               newBuildingBlockRunClient(ctx, httpClient),
 		BuildingBlockDefinition:        newBuildingBlockDefinitionClient(ctx, httpClient),
