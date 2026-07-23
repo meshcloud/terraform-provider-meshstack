@@ -14,4 +14,8 @@ resource "meshstack_workspace_group_binding" "example" {
   subject = {
     name = "my-user-group"
   }
+
+  # Optional. If omitted, the binding never expires. If recertification is enabled
+  # for the role, meshStack assigns the maximum allowed expiry date instead.
+  expiry_date = "2026-12-31"
 }
