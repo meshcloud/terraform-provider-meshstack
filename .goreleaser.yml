@@ -19,13 +19,18 @@ builds:
   # Build only the platforms our users actually run on. The registry publishes whatever
   # archives a release contains (min one), so dropping the other targets just skips low-usage
   # platforms and speeds up releases; amd64 + arm64 on linux/darwin covers every real consumer
-  # (Apple Silicon, Intel Macs, and amd64/arm64 CI runners).
+  # (Apple Silicon, Intel Macs, and amd64/arm64 CI runners), plus windows/amd64.
   goos:
     - linux
     - darwin
+    - windows
   goarch:
     - amd64
     - arm64
+  # windows is published only for amd64 (no 32-bit x86 or arm64 windows target).
+  ignore:
+    - goos: windows
+      goarch: arm64
   binary: '{{ .ProjectName }}_v{{ .Version }}'
 archives:
 - formats:
