@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -179,10 +180,14 @@ func (r *tenantV4Resource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						ElementType:         types.ListType{ElemType: types.StringType},
 						Computed:            true,
 					},
-					"applied_quotas": schema.MapAttribute{
-						MarkdownDescription: "The effective quotas applied to the tenant, as a `key -> value` map.",
-						ElementType:         types.Int64Type,
+					"applied_quotas": schema.MapNestedAttribute{
+						MarkdownDescription: "The effective quotas applied to the tenant, as a map keyed by quota key whose value is an object carrying the applied `value`.",
 						Computed:            true,
+						NestedObject: schema.NestedAttributeObject{
+							Attributes: map[string]schema.Attribute{
+								"value": schema.Int64Attribute{Computed: true},
+							},
+						},
 					},
 				},
 			},
@@ -212,8 +217,9 @@ func (r *tenantV4Resource) setStateFromResponse(ctx context.Context, tenant *cli
 
 	// Effective quotas come from status.appliedQuotas, populated by the backend. spec.quotas is
 	// create-only and carries only the requested values, so it is not a reliable source for the applied
-	// quotas.
-	appliedQuotas, d := types.MapValueFrom(ctx, types.Int64Type, tenant.Status.AppliedQuotas)
+	// quotas. Each applied quota value is a structured object ({value}), matching the meshTenant v4 API.
+	appliedQuotaType := types.ObjectType{AttrTypes: map[string]attr.Type{"value": types.Int64Type}}
+	appliedQuotas, d := types.MapValueFrom(ctx, appliedQuotaType, tenant.Status.AppliedQuotas)
 	diags.Append(d...)
 
 	tagsValue, d := types.MapValueFrom(ctx, types.ListType{ElemType: types.StringType}, tenant.Status.Tags)
