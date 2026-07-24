@@ -100,8 +100,22 @@ func (d *tenantsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 									Description: "Reference to the landing zone assigned to this tenant, identified by its name (the landing zone identifier).",
 									Output:      true,
 								}),
-								"quotas": schema.ListNestedAttribute{
+								"requested_quotas": schema.MapNestedAttribute{
+									MarkdownDescription: "The quotas requested for this tenant at creation, as a map keyed by quota key " +
+										"whose value is an object carrying the requested `value`. This is a create-time input that the " +
+										"meshStack API does not return on read, so it is typically null here; read the effective quotas " +
+										"from `status.applied_quotas` instead.",
 									Computed: true,
+									NestedObject: schema.NestedAttributeObject{
+										Attributes: map[string]schema.Attribute{
+											"value": schema.Int64Attribute{Computed: true},
+										},
+									},
+								},
+								"quotas": schema.ListNestedAttribute{
+									MarkdownDescription: "Deprecated: use `requested_quotas` instead. The requested quotas as a list of `{key, value}` entries.",
+									DeprecationMessage:  "Use `requested_quotas` (a key -> value map) instead.",
+									Computed:            true,
 									NestedObject: schema.NestedAttributeObject{
 										Attributes: map[string]schema.Attribute{
 											"key":   schema.StringAttribute{Computed: true},
@@ -130,6 +144,15 @@ func (d *tenantsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 									MarkdownDescription: "Tags assigned to this tenant.",
 									ElementType:         types.ListType{ElemType: types.StringType},
 									Computed:            true,
+								},
+								"applied_quotas": schema.MapNestedAttribute{
+									MarkdownDescription: "The effective quotas meshStack applied to this tenant, as a map keyed by quota key whose value is an object carrying the applied `value`.",
+									Computed:            true,
+									NestedObject: schema.NestedAttributeObject{
+										Attributes: map[string]schema.Attribute{
+											"value": schema.Int64Attribute{Computed: true},
+										},
+									},
 								},
 							},
 						},

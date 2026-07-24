@@ -33,6 +33,13 @@ func (m MeshTenantV4Client) Create(_ context.Context, tenant *client.MeshTenantV
 	// Simulate a successful tenant creation with platformTenantId set
 	tenantName := tenant.Metadata.OwnedByWorkspace + "." + tenant.Metadata.OwnedByProject + "." + tenant.Spec.PlatformIdentifier
 
+	// The mock applies requested quotas verbatim, so effective status.appliedQuotas mirrors spec.quotas.
+	var quotas []client.MeshTenantQuota
+	if tenant.Spec.Quotas != nil {
+		quotas = *tenant.Spec.Quotas
+	}
+	appliedQuotas := effectiveQuotas(nil, quotas)
+
 	created := &client.MeshTenantV4{
 		Metadata: client.MeshTenantV4Metadata{
 			Uuid:             id,
@@ -50,6 +57,7 @@ func (m MeshTenantV4Client) Create(_ context.Context, tenant *client.MeshTenantV
 			TenantName:             tenantName,
 			PlatformTypeIdentifier: "mock-platform-type",
 			Tags:                   map[string][]string{},
+			AppliedQuotas:          appliedQuotas,
 		},
 	}
 
