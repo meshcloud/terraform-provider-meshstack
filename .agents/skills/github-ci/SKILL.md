@@ -60,8 +60,14 @@ service-container images, which rebuild from develop on merge. So a provider cha
 backend change fails acc here until the backend lands. That is the correct merge order, not a
 workaround:
 
-1. Open the companion PR in `meshfed-release` (same branch name). Its `terraform-provider-acceptance`
-   job builds the backend from source, pairs this provider branch, and validates the pair.
+1. Open the companion PR in `meshfed-release` on a branch with the **exact same name**. The pairing
+   is *by branch name*: meshfed-release's `terraform-provider-acceptance` job checks out the provider
+   branch matching its own, builds the backend from source, and runs this repo's acceptance suite
+   against backend + provider changes **combined**. Identical branch names are precisely what let
+   that CI pick up your provider PR and validate the pair before either side merges — so name the two
+   branches identically from the start. The name must be **`feature/`-prefixed** (e.g.
+   `feature/BD-1234-thing`): meshfed-release's branch rules require it, so a non-`feature/` branch
+   won't pair.
 2. Merge that PR → `:latest` rebuilds.
 3. Re-run this provider PR's acceptance job → it now runs against the rebuilt backend → green → merge.
 

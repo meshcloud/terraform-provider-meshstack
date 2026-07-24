@@ -167,3 +167,9 @@ fields plus the derived field — do **not** modify client types or call `SetAtt
 Iterate with the mock client first (`task test -- -run TestAcc<Name>`), then against a real
 backend (`task testacc -- -run TestAcc<Name>`). For the local backend bring-up + suite runbook see
 the **`acceptance-testing`** skill.
+
+If the change also needs a **`meshfed-release` backend change**, open the provider PR and the
+backend PR on branches with the **identical, `feature/`-prefixed name** (meshfed-release's branch
+rules require the prefix) — meshfed-release CI pairs them by branch name and runs this repo's
+acceptance suite against both combined. Full merge order in **`github-ci`** → "Companion
+meshfed-release changes".
