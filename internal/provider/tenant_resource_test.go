@@ -151,7 +151,9 @@ func TestAccTenant(t *testing.T) {
 		config, tenantAddr := tenantQuotaConfig(t, 4000, 4000, 2000)
 
 		quotaMap := knownvalue.MapExact(map[string]knownvalue.Check{
-			"limits.cpu": knownvalue.Int64Exact(2000),
+			"limits.cpu": knownvalue.ObjectExact(map[string]knownvalue.Check{
+				"value": knownvalue.Int64Exact(2000),
+			}),
 		})
 
 		ApplyAndTest(t, resource.TestCase{
@@ -178,7 +180,7 @@ func TestAccTenant(t *testing.T) {
 		// quota value, so step 2 is an in-place update of the existing tenant rather than a full replace.
 		config, _ := tenantQuotaConfig(t, 4000, 4000, 2000)
 		changedConfig := config.WithFirstBlock(
-			testconfig.Descend("spec", "requested_quotas")(testconfig.SetRawExpr(`{ "limits.cpu" = %d }`, 3000)),
+			testconfig.Descend("spec", "requested_quotas")(testconfig.SetRawExpr(`{ "limits.cpu" = { value = %d } }`, 3000)),
 		)
 
 		ApplyAndTest(t, resource.TestCase{
@@ -317,7 +319,7 @@ func tenantQuotaConfig(t *testing.T, maxCpu, threshold, requestedCpu int64) (tes
 	tenantConfig, tenantAddr := testconfig.Tenant(t, projectAddr, platformAddr, landingZoneAddr)
 	tenantConfig = tenantConfig.WithFirstBlock(
 		testconfig.Descend("spec", "requested_quotas")(testconfig.SetRawExpr(
-			`{ "limits.cpu" = %d }`, requestedCpu,
+			`{ "limits.cpu" = { value = %d } }`, requestedCpu,
 		)),
 	)
 	config := tenantConfig.Join(workspaceConfig, projectConfig, platformConfig, landingZoneConfig)

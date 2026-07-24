@@ -95,6 +95,8 @@ func (r *tenantResource) Create(ctx context.Context, req resource.CreateRequest,
 		}
 	}
 
+	warnOnUnrealizedQuotas(plan.Spec, tenant.Status, &resp.Diagnostics)
+
 	model := tenantResourceModelFromDto(tenant, plan.Spec.Quotas, plan.Spec.RequestedQuotas, plan.WaitForCompletion)
 	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, model, tenantConverterOptions()...)...)
 }
@@ -115,6 +117,10 @@ func (r *tenantResource) Read(ctx context.Context, req resource.ReadRequest, res
 		resp.State.RemoveResource(ctx)
 		return
 	}
+
+	// Warn (against the requested quotas carried in state) when the effective quotas drifted from what
+	// was requested — e.g. an operator lowered a value or a pending quota request has not been approved.
+	warnOnUnrealizedQuotas(state.Spec, tenant.Status, &resp.Diagnostics)
 
 	// spec.requested_quotas / spec.quotas are Optional (not computed), so preserve the configured value
 	// from state rather than the backend's (possibly landing-zone-defaulted) spec quotas.
@@ -441,14 +447,23 @@ func tenantBodyAttributes() map[string]schema.Attribute {
 					OptionalComputed: true,
 					RequiresReplace:  true,
 				}),
-				"requested_quotas": schema.MapAttribute{
-					MarkdownDescription: "Quotas to apply to the tenant at creation, as a `key -> value` map (e.g. " +
-						"`{ \"limits.cpu\" = 4 }`). If omitted, the landing zone's default quotas apply. Set only at " +
-						"creation: the meshTenant API cannot update a tenant, so changing this on an existing tenant is " +
-						"rejected. To change a live tenant's quotas, file a quota request in the meshStack panel " +
+				"requested_quotas": schema.MapNestedAttribute{
+					MarkdownDescription: "Quotas to apply to the tenant at creation, as a map keyed by quota key whose " +
+						"value is an object carrying the requested `value` (e.g. `{ \"limits.cpu\" = { value = 4 } }`). " +
+						"The value is wrapped in an object to match the meshStack API and to allow per-quota fields to be " +
+						"added later without a breaking change. If omitted, the landing zone's default quotas apply. Set " +
+						"only at creation: the meshTenant API cannot update a tenant, so changing this on an existing tenant " +
+						"is rejected. To change a live tenant's quotas, file a quota request in the meshStack panel " +
 						"(Tenant > Settings > Quotas), which is subject to platform-operator approval.",
-					ElementType: types.Int64Type,
-					Optional:    true,
+					Optional: true,
+					NestedObject: schema.NestedAttributeObject{
+						Attributes: map[string]schema.Attribute{
+							"value": schema.Int64Attribute{
+								MarkdownDescription: "The requested quota value.",
+								Required:            true,
+							},
+						},
+					},
 				},
 				"quotas": schema.SetNestedAttribute{
 					MarkdownDescription: "Deprecated: use `requested_quotas` instead, which models quotas as a " +
@@ -488,12 +503,20 @@ func tenantBodyAttributes() map[string]schema.Attribute {
 					ElementType:         types.ListType{ElemType: types.StringType},
 					Computed:            true,
 				},
-				"applied_quotas": schema.MapAttribute{
-					MarkdownDescription: "The effective quotas meshStack applied to this tenant, as a `key -> value` map. " +
-						"These can differ from the requested `spec.requested_quotas` once the landing zone's default quotas " +
-						"are merged in or a platform operator adjusts them.",
-					ElementType: types.Int64Type,
-					Computed:    true,
+				"applied_quotas": schema.MapNestedAttribute{
+					MarkdownDescription: "The effective quotas meshStack applied to this tenant, as a map keyed by quota " +
+						"key whose value is an object carrying the applied `value`. These can differ from the requested " +
+						"`spec.requested_quotas` once the landing zone's default quotas are merged in or a platform operator " +
+						"adjusts them; the provider emits a warning when they do.",
+					Computed: true,
+					NestedObject: schema.NestedAttributeObject{
+						Attributes: map[string]schema.Attribute{
+							"value": schema.Int64Attribute{
+								MarkdownDescription: "The applied quota value.",
+								Computed:            true,
+							},
+						},
+					},
 				},
 			},
 		},

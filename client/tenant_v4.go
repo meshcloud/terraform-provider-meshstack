@@ -36,8 +36,10 @@ type MeshTenantV4Status struct {
 	PlatformWorkspaceIdentifier *string             `json:"platformWorkspaceIdentifier" tfsdk:"platform_workspace_identifier"`
 	Tags                        map[string][]string `json:"tags" tfsdk:"tags"`
 	// AppliedQuotas are the effective quotas meshStack applied to the tenant as a key->value map,
-	// distinct from the create-only spec.quotas which carries only the requested values.
-	AppliedQuotas map[string]int64 `json:"appliedQuotas" tfsdk:"applied_quotas"`
+	// distinct from the create-only spec.quotas which carries only the requested values. Each value is a
+	// structured object (e.g. `{"limits.cpu": {"value": 4}}`) so the preview API can grow per-quota
+	// fields without a breaking change to the map shape.
+	AppliedQuotas map[string]AppliedQuotaValue `json:"appliedQuotas" tfsdk:"applied_quotas"`
 }
 
 type MeshTenantV4Create struct {
@@ -136,8 +138,9 @@ type MeshTenantSpec struct {
 	PlatformTenantId *string   `json:"platformTenantId" tfsdk:"platform_tenant_id"`
 	LandingZoneRef   *NamedRef `json:"landingZoneRef" tfsdk:"landing_zone_ref"`
 	// RequestedQuotas is the preferred key->value form for requesting quotas at creation, e.g.
-	// {"limits.cpu": 4}.
-	RequestedQuotas map[string]int64 `json:"requestedQuotas" tfsdk:"requested_quotas"`
+	// {"limits.cpu": {"value": 4}}. The backend does not return it on read (it is a create-time input),
+	// so the resource echoes the configured value from state.
+	RequestedQuotas map[string]RequestQuotaValue `json:"requestedQuotas" tfsdk:"requested_quotas"`
 	// Deprecated: superseded by RequestedQuotas; retained so existing configurations keep working.
 	Quotas types.Set[MeshTenantQuota] `json:"quotas" tfsdk:"quotas"`
 }
@@ -147,16 +150,30 @@ type MeshTenantStatus struct {
 	PlatformTypeIdentifier string              `json:"platformTypeIdentifier" tfsdk:"platform_type_identifier"`
 	PlatformWorkspaceId    *string             `json:"platformWorkspaceId" tfsdk:"platform_workspace_id"`
 	Tags                   map[string][]string `json:"tags" tfsdk:"tags"`
-	// AppliedQuotas are the effective quotas meshStack applied to the tenant as a key->value map.
-	// spec.requested_quotas carries only the values requested at create (create-only); the effective
-	// quotas here can differ once landing-zone defaults are merged in or an operator adjusts them, so
-	// drift is tracked against these.
-	AppliedQuotas map[string]int64 `json:"appliedQuotas" tfsdk:"applied_quotas"`
+	// AppliedQuotas are the effective quotas meshStack applied to the tenant as a key->value map, each
+	// value a structured object (e.g. `{"limits.cpu": {"value": 4}}`). spec.requested_quotas carries
+	// only the values requested at create (create-only); the effective quotas here can differ once
+	// landing-zone defaults are merged in or an operator adjusts them, so drift is tracked against these.
+	AppliedQuotas map[string]AppliedQuotaValue `json:"appliedQuotas" tfsdk:"applied_quotas"`
 }
 
 type MeshTenantQuota struct {
 	Key   string `json:"key" tfsdk:"key"`
 	Value int64  `json:"value" tfsdk:"value"`
+}
+
+// RequestQuotaValue is a requested tenant quota value. The scalar is wrapped in an object (rather than
+// a bare number) so the v4 preview API can grow per-quota fields — e.g. a unit — without a breaking
+// change to the requested_quotas map shape.
+type RequestQuotaValue struct {
+	Value int64 `json:"value" tfsdk:"value"`
+}
+
+// AppliedQuotaValue is a tenant quota value as actually applied by the backend. Kept distinct from
+// RequestQuotaValue so it can later carry applied-only context (e.g. why the applied value differs
+// from what was requested).
+type AppliedQuotaValue struct {
+	Value int64 `json:"value" tfsdk:"value"`
 }
 
 type MeshTenantCreate struct {
@@ -175,8 +192,8 @@ type MeshTenantCreateSpec struct {
 	PlatformTenantId *string   `json:"platformTenantId" tfsdk:"platform_tenant_id"`
 	// RequestedQuotas is the preferred key->value form; Quotas is the deprecated list form. Only one
 	// should be set — the backend rejects a create that carries both with conflicting values.
-	RequestedQuotas map[string]int64          `json:"requestedQuotas,omitempty" tfsdk:"requested_quotas"`
-	Quotas          types.Set[MeshTenantQuota] `json:"quotas,omitempty" tfsdk:"quotas"`
+	RequestedQuotas map[string]RequestQuotaValue `json:"requestedQuotas,omitempty" tfsdk:"requested_quotas"`
+	Quotas          types.Set[MeshTenantQuota]   `json:"quotas,omitempty" tfsdk:"quotas"`
 }
 
 type MeshTenantQuery struct {

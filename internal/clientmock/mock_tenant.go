@@ -70,16 +70,20 @@ func (m MeshTenantClient) Delete(_ context.Context, uuid string) error {
 // effectiveQuotas resolves the quotas a create request carried — the preferred key->value map or the
 // deprecated {key, value} list — into the single map the backend reports back as status.appliedQuotas.
 // Returns nil when no quotas were requested, so status renders as null rather than an empty map.
-func effectiveQuotas(requested map[string]int64, quotas []client.MeshTenantQuota) map[string]int64 {
+func effectiveQuotas(requested map[string]client.RequestQuotaValue, quotas []client.MeshTenantQuota) map[string]client.AppliedQuotaValue {
 	if requested != nil {
-		return requested
+		out := make(map[string]client.AppliedQuotaValue, len(requested))
+		for k, v := range requested {
+			out[k] = client.AppliedQuotaValue{Value: v.Value}
+		}
+		return out
 	}
 	if len(quotas) == 0 {
 		return nil
 	}
-	out := make(map[string]int64, len(quotas))
+	out := make(map[string]client.AppliedQuotaValue, len(quotas))
 	for _, q := range quotas {
-		out[q.Key] = q.Value
+		out[q.Key] = client.AppliedQuotaValue{Value: q.Value}
 	}
 	return out
 }

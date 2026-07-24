@@ -60,7 +60,7 @@ Read-Only:
 - `platform_ref` (Attributes) Reference to the platform this tenant belongs to, identified by its uuid. (see [below for nested schema](#nestedatt--spec--platform_ref))
 - `platform_tenant_id` (String)
 - `quotas` (Attributes Set, Deprecated) Deprecated: use `requested_quotas` instead. The requested quotas as a list of `{key, value}` entries. (see [below for nested schema](#nestedatt--spec--quotas))
-- `requested_quotas` (Map of Number) The quotas requested for this tenant at creation, as a `key -> value` map.
+- `requested_quotas` (Attributes Map) The quotas requested for this tenant at creation, as a map keyed by quota key whose value is an object carrying the requested `value`. This is a create-time input that the meshStack API does not return on read, so it is typically null here; read the effective quotas from `status.applied_quotas` instead. (see [below for nested schema](#nestedatt--spec--requested_quotas))
 
 <a id="nestedatt--spec--landing_zone_ref"></a>
 ### Nested Schema for `spec.landing_zone_ref`
@@ -89,14 +89,29 @@ Read-Only:
 - `value` (Number)
 
 
+<a id="nestedatt--spec--requested_quotas"></a>
+### Nested Schema for `spec.requested_quotas`
+
+Read-Only:
+
+- `value` (Number)
+
+
 
 <a id="nestedatt--status"></a>
 ### Nested Schema for `status`
 
 Read-Only:
 
-- `applied_quotas` (Map of Number) The effective quotas meshStack applied to this tenant, as a `key -> value` map.
+- `applied_quotas` (Attributes Map) The effective quotas meshStack applied to this tenant, as a map keyed by quota key whose value is an object carrying the applied `value`. (see [below for nested schema](#nestedatt--status--applied_quotas))
 - `platform_type_identifier` (String) Identifier of the tenant's platform type — the kind of platform (e.g. `aws`, `azure`), not the specific platform instance the tenant lives on.
 - `platform_workspace_id` (String) For platforms that represent a workspace as a platform-side container (e.g. a Cloud Foundry Organization or an OpenStack Domain), the platform's own id of that container (an id assigned by the external platform, not a meshWorkspace identifier). Null for platforms with no such concept or until the tenant has been replicated.
 - `tags` (Map of List of String) Tags assigned to this tenant.
 - `tenant_name` (String) Name of the tenant, currently the owning workspace, project and platform (instance) identifiers joined by dots (`<workspace>.<project>.<platform>.<location>`). Treat this as an opaque string and do not parse it: the format is not guaranteed and may change unexpectedly, for example when the location segment becomes optional or when a tenant is moved across projects.
+
+<a id="nestedatt--status--applied_quotas"></a>
+### Nested Schema for `status.applied_quotas`
+
+Read-Only:
+
+- `value` (Number)
