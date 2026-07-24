@@ -1,3 +1,8 @@
+# v0.24.2
+
+FEATURES:
+- Release binaries are now published for `windows` on `amd64` again, in addition to `linux` and `darwin` on `amd64` and `arm64`. This partially restores the `windows` builds dropped in v0.24.1 (still no `freebsd`, `386`, 32-bit `arm`, or `windows/arm64`).
+
 # v0.24.1
 
 Requires meshStack 2026.29.0 or later (previously 2026.24.0).
