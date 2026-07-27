@@ -5,6 +5,7 @@ subcategory: ""
 description: |-
   Represents a meshStack workspace.
   ~> Note: Managing workspaces requires an API key with sufficient admin permissions.
+  ~> Tag Management: Workspace tags can be managed inline using metadata.tags or via dedicated tag resources (meshstack_workspace_tags for authoritative management of all tags, or meshstack_workspace_tag for managing a single tag). Choose one approach per workspace; do not mix inline tags on meshstack_workspace with dedicated tag resources, as doing so will cause state drift and plan conflicts.
 ---
 
 # meshstack_workspace (Resource)
@@ -12,6 +13,8 @@ description: |-
 Represents a meshStack workspace.
 
 ~> **Note:** Managing workspaces requires an API key with sufficient admin permissions.
+
+~> **Tag Management:** Workspace tags can be managed inline using `metadata.tags` or via dedicated tag resources (`meshstack_workspace_tags` for authoritative management of all tags, or `meshstack_workspace_tag` for managing a single tag). Choose one approach per workspace; **do not mix inline `tags` on `meshstack_workspace` with dedicated tag resources**, as doing so will cause state drift and plan conflicts.
 
 ## Example Usage
 
