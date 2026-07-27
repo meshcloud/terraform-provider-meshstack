@@ -48,7 +48,10 @@ func (r *workspaceResource) Configure(_ context.Context, req resource.ConfigureR
 
 func (r *workspaceResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Represents a meshStack workspace.\n\n~> **Note:** Managing workspaces requires an API key with sufficient admin permissions.",
+		MarkdownDescription: "Represents a meshStack workspace.\n\n" +
+			"~> **Note:** Managing workspaces requires an API key with sufficient admin permissions.\n\n" +
+			"~> **Tag Management:** Workspace tags can be managed inline using `metadata.tags` or via dedicated tag resources (`meshstack_workspace_tags` for authoritative management of all tags, or `meshstack_workspace_tag` for managing a single tag). " +
+			"Choose one approach per workspace; **do not mix inline `tags` on `meshstack_workspace` with dedicated tag resources**, as doing so will cause state drift and plan conflicts.",
 
 		Attributes: map[string]schema.Attribute{
 			"ref": meshRefByName(meshRefOptions{Kind: client.MeshObjectKind.Workspace, Description: "Reference to this workspace, can be used as `target_ref` in building block resources.", Output: true}),

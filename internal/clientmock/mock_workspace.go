@@ -14,15 +14,32 @@ type MeshWorkspaceClient struct {
 
 func (m MeshWorkspaceClient) Read(_ context.Context, name string) (*client.MeshWorkspace, error) {
 	v, _ := m.Store.Get(name)
-	return v, nil
+	if v == nil {
+		return nil, nil
+	}
+	// Return a copy to avoid mutation side effects
+	cp := *v
+	if v.Metadata.Tags != nil {
+		cp.Metadata.Tags = make(map[string][]string, len(v.Metadata.Tags))
+		for k, val := range v.Metadata.Tags {
+			cp.Metadata.Tags[k] = append([]string(nil), val...)
+		}
+	}
+	return &cp, nil
 }
 
 func (m MeshWorkspaceClient) Create(_ context.Context, workspace *client.MeshWorkspaceCreate) (*client.MeshWorkspace, error) {
+	tagsCopy := make(map[string][]string)
+	if workspace.Metadata.Tags != nil {
+		for k, v := range workspace.Metadata.Tags {
+			tagsCopy[k] = append([]string(nil), v...)
+		}
+	}
 	created := &client.MeshWorkspace{
 		Metadata: client.MeshWorkspaceMetadata{
 			Name:      workspace.Metadata.Name,
 			CreatedOn: time.Now().UTC().Format(time.RFC3339),
-			Tags:      workspace.Metadata.Tags,
+			Tags:      tagsCopy,
 		},
 		Spec: workspace.Spec,
 	}
@@ -37,9 +54,24 @@ func (m MeshWorkspaceClient) Update(_ context.Context, name string, workspace *c
 		return nil, fmt.Errorf("workspace not found: %s", name)
 	}
 
-	existing.Spec = workspace.Spec
-	existing.Metadata.Tags = workspace.Metadata.Tags
-	return existing, nil
+	tagsCopy := make(map[string][]string)
+	if workspace.Metadata.Tags != nil {
+		for k, v := range workspace.Metadata.Tags {
+			tagsCopy[k] = append([]string(nil), v...)
+		}
+	}
+
+	updated := &client.MeshWorkspace{
+		Metadata: client.MeshWorkspaceMetadata{
+			Name:      existing.Metadata.Name,
+			CreatedOn: existing.Metadata.CreatedOn,
+			DeletedOn: existing.Metadata.DeletedOn,
+			Tags:      tagsCopy,
+		},
+		Spec: workspace.Spec,
+	}
+	m.Store.Set(name, updated)
+	return updated, nil
 }
 
 func (m MeshWorkspaceClient) Delete(_ context.Context, name string) error {
