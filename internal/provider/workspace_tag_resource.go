@@ -121,14 +121,14 @@ func (r *workspaceTagResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
-	existingTags := workspace.Metadata.Tags
-	if existingTags == nil {
-		existingTags = make(map[string][]string)
+	tags := make(map[string][]string, len(workspace.Metadata.Tags)+1)
+	for k, v := range workspace.Metadata.Tags {
+		tags[k] = v
 	}
-	existingTags[key] = values
+	tags[key] = values
 
 	updatePayload := client.MeshWorkspaceCreate{
-		Metadata: client.MeshWorkspaceCreateMetadata{Name: wsName, Tags: existingTags},
+		Metadata: client.MeshWorkspaceCreateMetadata{Name: wsName, Tags: tags},
 		Spec:     workspace.Spec,
 	}
 	updated, err := r.meshWorkspaceClient.Update(ctx, wsName, &updatePayload)
@@ -213,14 +213,14 @@ func (r *workspaceTagResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 
-	existingTags := workspace.Metadata.Tags
-	if existingTags == nil {
-		existingTags = make(map[string][]string)
+	tags := make(map[string][]string, len(workspace.Metadata.Tags)+1)
+	for k, v := range workspace.Metadata.Tags {
+		tags[k] = v
 	}
-	existingTags[key] = values
+	tags[key] = values
 
 	updatePayload := client.MeshWorkspaceCreate{
-		Metadata: client.MeshWorkspaceCreateMetadata{Name: wsName, Tags: existingTags},
+		Metadata: client.MeshWorkspaceCreateMetadata{Name: wsName, Tags: tags},
 		Spec:     workspace.Spec,
 	}
 	updated, err := r.meshWorkspaceClient.Update(ctx, wsName, &updatePayload)
@@ -265,13 +265,15 @@ func (r *workspaceTagResource) Delete(ctx context.Context, req resource.DeleteRe
 		return
 	}
 
-	existingTags := workspace.Metadata.Tags
-	if existingTags != nil {
-		delete(existingTags, key)
+	tags := make(map[string][]string, len(workspace.Metadata.Tags))
+	for k, v := range workspace.Metadata.Tags {
+		if k != key {
+			tags[k] = v
+		}
 	}
 
 	updatePayload := client.MeshWorkspaceCreate{
-		Metadata: client.MeshWorkspaceCreateMetadata{Name: wsName, Tags: existingTags},
+		Metadata: client.MeshWorkspaceCreateMetadata{Name: wsName, Tags: tags},
 		Spec:     workspace.Spec,
 	}
 	_, err = r.meshWorkspaceClient.Update(ctx, wsName, &updatePayload)
