@@ -15,11 +15,3 @@ func WorkspaceTags(t *testing.T, workspaceAddr Traversal) (config Config, worksp
 		Descend("spec", "tags")(SetRawExpr(`{(%s) = ["12345"]}`, tagDefinitionAddr.Join("spec", "key"))),
 	).Join(tagConfig), workspaceTagsAddr
 }
-
-// WorkspaceTagsAndWorkspace builds a meshstack_workspace_tags config with a new workspace.
-func WorkspaceTagsAndWorkspace(t *testing.T) (config Config, workspaceTagsAddr, workspaceAddr Traversal) {
-	t.Helper()
-	workspaceConfig, workspaceAddr := WorkspaceWithoutTags(t)
-	config, workspaceTagsAddr = WorkspaceTags(t, workspaceAddr)
-	return config.Join(workspaceConfig), workspaceTagsAddr, workspaceAddr
-}

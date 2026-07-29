@@ -133,9 +133,10 @@ func (r *workspaceResource) Create(ctx context.Context, req resource.CreateReque
 		return
 	}
 
-	// Keep the tags the user declared rather than the superset the API returns (an entry for every
-	// defined tag property plus injected restricted-tag defaults), which would break plan/apply
-	// consistency. Mirrors the project / landing zone resources.
+	// Keep the tags the user declared rather than what the API echoes back: it may carry entries the
+	// caller never sent (injected restricted-tag defaults) and returns no entry at all for a tag declared
+	// with an empty value list, either of which would break plan/apply consistency. Mirrors the project /
+	// landing zone resources.
 	createdWorkspace.Metadata.Tags = workspace.Metadata.Tags
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, newWorkspaceModel(createdWorkspace))...)
@@ -166,10 +167,9 @@ func (r *workspaceResource) Read(ctx context.Context, req resource.ReadRequest, 
 		return
 	}
 
-	// Keep only the tags we already track. The API returns a superset (every schema property plus
-	// injected restricted-tag defaults) that the caller may be unable to manage, so mirroring it
-	// verbatim would surface as drift. On import there is no prior state (tags is null); we keep the
-	// full set so a normal import round-trips.
+	// Keep only the tags we already track. The API may return entries the caller never sent and cannot
+	// manage (injected restricted-tag defaults), so mirroring it verbatim would surface as drift. On
+	// import there is no prior state (tags is null); we keep the full set so a normal import round-trips.
 	workspace.Metadata.Tags = reconcileTrackedTags(ctx, req.State, path.Root("metadata").AtName("tags"), workspace.Metadata.Tags, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return

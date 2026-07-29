@@ -2,6 +2,8 @@ package testconfig
 
 import (
 	"testing"
+
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 )
 
 // WorkspaceTag builds a meshstack_workspace_tag config wired to the given workspace address.
@@ -10,17 +12,12 @@ func WorkspaceTag(t *testing.T, workspaceAddr Traversal) (config Config, workspa
 	t.Helper()
 	tagConfig, tagDefinitionAddr, tagKey := TagDefinition(t, "meshWorkspace")
 	return Resource{Name: "workspace_tag"}.Config(t).WithFirstBlock(
+		// Rename the block per run so several tag resources can coexist in one config — the primary use
+		// case for this resource. Callers address it through the returned traversal, not by name.
+		RenameKey("workspace_tag_"+acctest.RandString(8)),
 		ExtractAddress(&workspaceTagAddr),
 		Descend("metadata", "workspace_identifier")(SetAddr(workspaceAddr, "metadata", "name")),
 		Descend("metadata", "key")(SetAddr(tagDefinitionAddr, "spec", "key")),
 		Descend("spec", "values")(SetRawExpr(`["12345"]`)),
 	).Join(tagConfig), workspaceTagAddr, tagKey
-}
-
-// WorkspaceTagAndWorkspace builds a meshstack_workspace_tag config with a new workspace.
-func WorkspaceTagAndWorkspace(t *testing.T) (config Config, workspaceTagAddr Traversal, workspaceAddr Traversal) {
-	t.Helper()
-	workspaceConfig, workspaceAddr := WorkspaceWithoutTags(t)
-	config, workspaceTagAddr, _ = WorkspaceTag(t, workspaceAddr)
-	return config.Join(workspaceConfig), workspaceTagAddr, workspaceAddr
 }
