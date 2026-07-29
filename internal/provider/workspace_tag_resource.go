@@ -22,7 +22,7 @@ var (
 )
 
 // Both dedicated tag resources are read-modify-write wrappers around the whole meshWorkspace
-// meshObject
+// meshObject.
 const workspaceTagCaveats = "!> **Not recommended for general use.** Prefer managing tags inline via `metadata.tags` on " +
 	"`meshstack_workspace`. Only reach for this resource when the workspace itself is not managed by your Terraform " +
 	"configuration (for example it was created in the meshStack panel or by another team) and you understand the " +
@@ -38,8 +38,13 @@ const workspaceTagCaveats = "!> **Not recommended for general use.** Prefer mana
 	"~> **Race conditions.** The read-modify-write cycle is not atomic and the API offers no optimistic locking. A " +
 	"concurrent write to the same workspace — another apply of these resources, the `meshstack_workspace` resource " +
 	"itself, a panel user, or any other automation — can silently clobber this resource's tags or be clobbered by " +
-	"them. Keep all tags of a workspace in a single resource in a single Terraform state, and never run two applies " +
-	"against the same workspace in parallel.\n\n" +
+	"them. **This includes a single apply:** Terraform walks resources that do not depend on each other in parallel " +
+	"(`-parallelism`, 10 by default) and the provider does not serialize these writes, so two " +
+	"`meshstack_workspace_tag` resources on the same workspace can each read the same tag map and then overwrite each " +
+	"other — one tag silently goes missing while the apply reports success. Manage all tags of a workspace from a " +
+	"single resource in a single Terraform state; if you must spread them across several `meshstack_workspace_tag` " +
+	"resources, chain them with `depends_on` so they apply one after another. Never run two applies against the same " +
+	"workspace in parallel.\n\n" +
 
 	"~> **Cannot manage tags that are mandatory at workspace creation.** This resource can only set a tag on a " +
 	"workspace that already exists, so it cannot supply tag values that meshStack requires when the workspace is " +
