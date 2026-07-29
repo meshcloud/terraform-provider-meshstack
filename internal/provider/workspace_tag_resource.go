@@ -161,26 +161,15 @@ func (r *workspaceTagResource) Create(ctx context.Context, req resource.CreateRe
 		Metadata: client.MeshWorkspaceCreateMetadata{Name: wsName, Tags: tags},
 		Spec:     workspace.Spec,
 	}
-	updated, err := r.meshWorkspaceClient.Update(ctx, wsName, &updatePayload)
-	if err != nil {
+	if _, err := r.meshWorkspaceClient.Update(ctx, wsName, &updatePayload); err != nil {
 		resp.Diagnostics.AddError("Error Updating Workspace Tag", fmt.Sprintf("Could not set tag '%s' on workspace '%s': %v", key, wsName, err))
 		return
 	}
 
-	returnedVals, ok := updated.Metadata.Tags[key]
-	if !ok {
-		returnedVals = values
-	}
-	valList, diags := types.ListValueFrom(ctx, types.StringType, returnedVals)
-	resp.Diagnostics.Append(diags...)
-
-	resp.Diagnostics.Append(resp.State.Set(ctx, workspaceTagModel{
-		Metadata: workspaceTagMetadata{
-			WorkspaceIdentifier: types.StringValue(wsName),
-			Key:                 types.StringValue(key),
-		},
-		Spec: workspaceTagSpec{Values: valList},
-	})...)
+	// Keep the values the user declared rather than what the API echoes back. The backend may
+	// normalize or default them, and writing that into the Required spec.values would break
+	// plan/apply consistency. Mirrors workspace_resource.go.
+	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
 func (r *workspaceTagResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -253,26 +242,13 @@ func (r *workspaceTagResource) Update(ctx context.Context, req resource.UpdateRe
 		Metadata: client.MeshWorkspaceCreateMetadata{Name: wsName, Tags: tags},
 		Spec:     workspace.Spec,
 	}
-	updated, err := r.meshWorkspaceClient.Update(ctx, wsName, &updatePayload)
-	if err != nil {
+	if _, err := r.meshWorkspaceClient.Update(ctx, wsName, &updatePayload); err != nil {
 		resp.Diagnostics.AddError("Error Updating Workspace Tag", fmt.Sprintf("Could not set tag '%s' on workspace '%s': %v", key, wsName, err))
 		return
 	}
 
-	returnedVals, ok := updated.Metadata.Tags[key]
-	if !ok {
-		returnedVals = values
-	}
-	valList, diags := types.ListValueFrom(ctx, types.StringType, returnedVals)
-	resp.Diagnostics.Append(diags...)
-
-	resp.Diagnostics.Append(resp.State.Set(ctx, workspaceTagModel{
-		Metadata: workspaceTagMetadata{
-			WorkspaceIdentifier: types.StringValue(wsName),
-			Key:                 types.StringValue(key),
-		},
-		Spec: workspaceTagSpec{Values: valList},
-	})...)
+	// Keep the declared values rather than the API's, mirroring Create.
+	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
 func (r *workspaceTagResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {

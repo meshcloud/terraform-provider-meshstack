@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -119,15 +118,15 @@ func (r *workspaceTagsResource) Create(ctx context.Context, req resource.CreateR
 		Metadata: client.MeshWorkspaceCreateMetadata{Name: wsName, Tags: tags},
 		Spec:     workspace.Spec,
 	}
-	updated, err := r.meshWorkspaceClient.Update(ctx, wsName, &updatePayload)
-	if err != nil {
+	if _, err := r.meshWorkspaceClient.Update(ctx, wsName, &updatePayload); err != nil {
 		resp.Diagnostics.AddError("Error Updating Workspace Tags", fmt.Sprintf("Could not update tags for workspace '%s': %v", wsName, err))
 		return
 	}
 
-	state, diags := newWorkspaceTagsModel(ctx, wsName, tags, updated.Metadata.Tags)
-	resp.Diagnostics.Append(diags...)
-	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+	// Keep the tags the user declared rather than the superset the API returns (an entry for every
+	// defined tag property plus injected restricted-tag defaults), which would break plan/apply
+	// consistency on the Required spec.tags. Mirrors workspace_resource.go.
+	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
 func (r *workspaceTagsResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -148,11 +147,22 @@ func (r *workspaceTagsResource) Read(ctx context.Context, req resource.ReadReque
 		return
 	}
 
-	// Authoritative read: surface all non-empty tags from the API so external changes show as drift.
-	// The API returns empty-list entries for every defined tag property (superset); discard those.
+	// Authoritative read: surface the API's tags so external changes show as drift. The API returns an
+	// entry for every defined tag property (empty list when unset), so an untracked key is only adopted
+	// when it carries values — otherwise every defined-but-unset property would look like an external
+	// addition. Keys already tracked are mirrored verbatim, including an empty list, so a declared
+	// `k = []` converges instead of being dropped from state on every refresh.
+	tracked := make(map[string][]string)
+	if !state.Spec.Tags.IsNull() {
+		resp.Diagnostics.Append(state.Spec.Tags.ElementsAs(ctx, &tracked, false)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
 	result := make(map[string][]string, len(workspace.Metadata.Tags))
 	for k, v := range workspace.Metadata.Tags {
-		if len(v) > 0 {
+		if _, ok := tracked[k]; ok || len(v) > 0 {
 			result[k] = v
 		}
 	}
@@ -194,15 +204,13 @@ func (r *workspaceTagsResource) Update(ctx context.Context, req resource.UpdateR
 		Metadata: client.MeshWorkspaceCreateMetadata{Name: wsName, Tags: tags},
 		Spec:     workspace.Spec,
 	}
-	updated, err := r.meshWorkspaceClient.Update(ctx, wsName, &updatePayload)
-	if err != nil {
+	if _, err := r.meshWorkspaceClient.Update(ctx, wsName, &updatePayload); err != nil {
 		resp.Diagnostics.AddError("Error Updating Workspace Tags", fmt.Sprintf("Could not update tags for workspace '%s': %v", wsName, err))
 		return
 	}
 
-	state, diags := newWorkspaceTagsModel(ctx, wsName, tags, updated.Metadata.Tags)
-	resp.Diagnostics.Append(diags...)
-	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+	// Keep the declared tags rather than the API's superset, mirroring Create.
+	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
 func (r *workspaceTagsResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -243,24 +251,4 @@ func (r *workspaceTagsResource) ImportState(ctx context.Context, req resource.Im
 	emptyTags, diags := types.MapValueFrom(ctx, types.ListType{ElemType: types.StringType}, map[string][]string{})
 	resp.Diagnostics.Append(diags...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("spec").AtName("tags"), emptyTags)...)
-}
-
-// newWorkspaceTagsModel builds the state model after a Create/Update. For each key the caller
-// declared in planned, it uses the API-returned value if the backend echoed it back, otherwise
-// falls back to the planned value (e.g. when the key is absent from the response).
-func newWorkspaceTagsModel(ctx context.Context, wsName string, planned, returned map[string][]string) (workspaceTagsModel, diag.Diagnostics) {
-	merged := make(map[string][]string, len(planned))
-	for k, planVal := range planned {
-		if retVal, ok := returned[k]; ok {
-			merged[k] = retVal
-		} else {
-			merged[k] = planVal
-		}
-	}
-
-	tagsMap, diags := types.MapValueFrom(ctx, types.ListType{ElemType: types.StringType}, merged)
-	return workspaceTagsModel{
-		Metadata: workspaceTagsMetadata{WorkspaceIdentifier: types.StringValue(wsName)},
-		Spec:     workspaceTagsSpec{Tags: tagsMap},
-	}, diags
 }
