@@ -122,7 +122,7 @@ Read-Only:
 
 Read-Only:
 
-- `applied_quotas` (Attributes Map) The effective quotas meshStack applied to this tenant, as a map keyed by quota key whose value is an object carrying the applied `value`. (see [below for nested schema](#nestedatt--tenants--status--applied_quotas))
+- `applied_quotas` (Attributes Map) The effective quotas meshStack applied to this tenant, as a map keyed by quota key whose value is an object carrying the applied `value`. These are the quotas in effect: the landing zone's default quotas, overlaid with the quotas requested at creation and with any later change by a platform operator or an approved quota request. (see [below for nested schema](#nestedatt--tenants--status--applied_quotas))
 - `platform_type_identifier` (String) Identifier of the tenant's platform type — the kind of platform (e.g. `aws`, `azure`), not the specific platform instance the tenant lives on.
 - `platform_workspace_id` (String) For platforms that represent a workspace as a platform-side container (e.g. a Cloud Foundry Organization or an OpenStack Domain), the platform's own id of that container (an id assigned by the external platform, not a meshWorkspace identifier). Null for platforms with no such concept or until the tenant has been replicated.
 - `tags` (Map of List of String) Tags assigned to this tenant.

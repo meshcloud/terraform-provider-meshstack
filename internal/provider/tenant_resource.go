@@ -119,7 +119,7 @@ func (r *tenantResource) Read(ctx context.Context, req resource.ReadRequest, res
 	}
 
 	// Warn (against the requested quotas carried in state) when the effective quotas drifted from what
-	// was requested — e.g. an operator lowered a value or a pending quota request has not been approved.
+	// was requested — the tenant's quotas were changed outside Terraform, e.g. by a platform operator.
 	warnOnUnrealizedQuotas(state.Spec, tenant.Status, &resp.Diagnostics)
 
 	// spec.requested_quotas / spec.quotas are Optional (not computed), so preserve the configured value
@@ -451,9 +451,14 @@ func tenantBodyAttributes() map[string]schema.Attribute {
 					MarkdownDescription: "Quotas to apply to the tenant at creation, as a map keyed by quota key whose " +
 						"value is an object carrying the requested `value` (e.g. `{ \"limits.cpu\" = { value = 4 } }`). " +
 						"The value is wrapped in an object to match the meshStack API and to allow per-quota fields to be " +
-						"added later without a breaking change. If omitted, the landing zone's default quotas apply. Set " +
-						"only at creation: the meshTenant API cannot update a tenant, so changing this on an existing tenant " +
-						"is rejected. To change a live tenant's quotas, file a quota request in the meshStack panel " +
+						"added later without a breaking change. Requested values are applied as configured, merged into " +
+						"the landing zone's default quotas, which apply for every key not requested here. A value outside " +
+						"the quota's `[min_value, max_value]` bounds is rejected, as is an increase beyond the platform's " +
+						"auto-approval threshold (measured against those landing-zone defaults) unless the API key has " +
+						"admin privileges: the meshObject API refuses such a request rather than queueing it for operator " +
+						"approval, so an apply never reports success on quotas that are not in effect. Set only at " +
+						"creation: the meshTenant API cannot update a tenant, so changing this on an existing tenant is " +
+						"rejected. To change a live tenant's quotas, file a quota request in the meshStack panel " +
 						"(Tenant > Settings > Quotas), which is subject to platform-operator approval.",
 					Optional: true,
 					NestedObject: schema.NestedAttributeObject{
@@ -505,9 +510,11 @@ func tenantBodyAttributes() map[string]schema.Attribute {
 				},
 				"applied_quotas": schema.MapNestedAttribute{
 					MarkdownDescription: "The effective quotas meshStack applied to this tenant, as a map keyed by quota " +
-						"key whose value is an object carrying the applied `value`. These can differ from the requested " +
-						"`spec.requested_quotas` once the landing zone's default quotas are merged in or a platform operator " +
-						"adjusts them; the provider emits a warning when they do.",
+						"key whose value is an object carrying the applied `value`. This is a superset of " +
+						"`spec.requested_quotas`: it also carries the landing zone's default quotas for keys that were not " +
+						"requested. A requested key whose applied value differs was changed after creation — by a platform " +
+						"operator, or by a quota request approved in the meshStack panel — and the provider emits a warning " +
+						"when that happens, since `spec.requested_quotas` is create-only and cannot reconcile it.",
 					Computed: true,
 					NestedObject: schema.NestedAttributeObject{
 						Attributes: map[string]schema.Attribute{

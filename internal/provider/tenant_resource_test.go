@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"fmt"
 	"regexp"
 	"testing"
 
@@ -148,7 +149,7 @@ func TestAccTenant(t *testing.T) {
 	// spec.requested_quotas). Runs in both modes — the mock echoes the requested quota into status, the
 	// real backend validates it against the platform quota definition and applies it.
 	t.Run("quotas", func(t *testing.T) {
-		config, tenantAddr := tenantQuotaConfig(t, 4000, 4000, 2000)
+		config, tenantAddr := tenantQuotaConfig(t, tenantQuotaOptions{maxCpu: 4000, threshold: 4000, requestedCpu: 2000})
 
 		quotaMap := knownvalue.MapExact(map[string]knownvalue.Check{
 			"limits.cpu": knownvalue.ObjectExact(map[string]knownvalue.Check{
@@ -178,7 +179,7 @@ func TestAccTenant(t *testing.T) {
 	t.Run("quotas_change_rejected", func(t *testing.T) {
 		// Reuse the same base config (same prerequisite resources) and change only the tenant's requested
 		// quota value, so step 2 is an in-place update of the existing tenant rather than a full replace.
-		config, _ := tenantQuotaConfig(t, 4000, 4000, 2000)
+		config, _ := tenantQuotaConfig(t, tenantQuotaOptions{maxCpu: 4000, threshold: 4000, requestedCpu: 2000})
 		changedConfig := config.WithFirstBlock(
 			testconfig.Descend("spec", "requested_quotas")(testconfig.SetRawExpr(`{ "limits.cpu" = { value = %d } }`, 3000)),
 		)
@@ -203,13 +204,81 @@ func TestAccTenant(t *testing.T) {
 		if IsMockClientTest() {
 			t.Skip("quota bounds are enforced by the backend; requires a real meshStack")
 		}
-		config, _ := tenantQuotaConfig(t, 100, 100, 101)
+		config, _ := tenantQuotaConfig(t, tenantQuotaOptions{maxCpu: 100, threshold: 100, requestedCpu: 101})
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
 					Config:      config.String(),
 					ExpectError: regexp.MustCompile(`is out of range`),
+				},
+			},
+		})
+	})
+
+	// quotas_above_auto_approval_threshold asserts the second create-time guardrail: a requested increase
+	// beyond the platform's auto-approval threshold is refused outright instead of being queued for
+	// operator approval, because the meshObject API has no quota-request representation and a pending
+	// request would let an apply report success on quotas that are not in effect. Enforced only for
+	// non-admin API keys, and the mock enforces no threshold, so this is acceptance-only.
+	t.Run("quotas_above_auto_approval_threshold", func(t *testing.T) {
+		if IsMockClientTest() {
+			t.Skip("the auto-approval threshold is enforced by the backend; requires a real meshStack")
+		}
+		config, _ := tenantQuotaConfig(t, tenantQuotaOptions{maxCpu: 8000, threshold: 2000, requestedCpu: 4000})
+
+		ApplyAndTest(t, resource.TestCase{
+			Steps: []resource.TestStep{
+				{
+					Config:      config.String(),
+					ExpectError: regexp.MustCompile(`exceeds the auto-approval threshold`),
+				},
+			},
+		})
+	})
+
+	// quotas_landing_zone_defaults covers the case where the effective quotas legitimately differ from
+	// what was requested: meshStack merges the landing zone's default quotas into the tenant's quotas, so
+	// status.applied_quotas is a strict superset of spec.requested_quotas — it also carries limits.memory,
+	// which the tenant never requested. The second step asserts this does not turn into perpetual drift:
+	// spec keeps the configured request (it is Optional, echoed from state) while status keeps the backend
+	// truth, and the plan is empty. Runs in both modes — the mock overlays landing-zone defaults as the
+	// backend does.
+	t.Run("quotas_landing_zone_defaults", func(t *testing.T) {
+		config, tenantAddr := tenantQuotaConfig(t, tenantQuotaOptions{
+			maxCpu: 4000, threshold: 4000, requestedCpu: 2000, landingZoneMemoryDefault: 8192,
+		})
+
+		requestedQuotas := knownvalue.MapExact(map[string]knownvalue.Check{
+			"limits.cpu": knownvalue.ObjectExact(map[string]knownvalue.Check{
+				"value": knownvalue.Int64Exact(2000),
+			}),
+		})
+		appliedQuotas := knownvalue.MapExact(map[string]knownvalue.Check{
+			"limits.cpu": knownvalue.ObjectExact(map[string]knownvalue.Check{
+				"value": knownvalue.Int64Exact(2000),
+			}),
+			"limits.memory": knownvalue.ObjectExact(map[string]knownvalue.Check{
+				"value": knownvalue.Int64Exact(8192),
+			}),
+		})
+
+		quotaStateChecks := []statecheck.StateCheck{
+			statecheck.ExpectKnownValue(tenantAddr.String(), tfjsonpath.New("spec").AtMapKey("requested_quotas"), requestedQuotas),
+			statecheck.ExpectKnownValue(tenantAddr.String(), tfjsonpath.New("status").AtMapKey("applied_quotas"), appliedQuotas),
+		}
+
+		ApplyAndTest(t, resource.TestCase{
+			Steps: []resource.TestStep{
+				{
+					Config:            config.String(),
+					ConfigStateChecks: quotaStateChecks,
+				},
+				{
+					// Refresh reads the landing-zone-defaulted applied quotas back; the plan must stay empty.
+					Config:            config.String(),
+					PlanOnly:          true,
+					ConfigStateChecks: quotaStateChecks,
 				},
 			},
 		})
@@ -301,25 +370,55 @@ func TestAccTenant(t *testing.T) {
 	})
 }
 
-// tenantQuotaConfig builds a full tenant config whose platform defines a `limits.cpu` quota with the
-// given max/threshold (min is fixed at 1) and whose tenant requests requestedCpu for that quota. The
-// bespoke quota_definitions and spec.requested_quotas are layered onto the standard builders via SetRawExpr.
-func tenantQuotaConfig(t *testing.T, maxCpu, threshold, requestedCpu int64) (testconfig.Config, testconfig.Traversal) {
+// tenantQuotaOptions parameterizes tenantQuotaConfig: the platform's `limits.cpu` quota definition
+// (min is fixed at 1) and the value the tenant requests for it.
+type tenantQuotaOptions struct {
+	maxCpu       int64
+	threshold    int64
+	requestedCpu int64
+	// landingZoneMemoryDefault, when non-zero, additionally defines a `limits.memory` quota on the
+	// platform and makes it a landing zone default. The tenant never requests that key, so the backend
+	// merges it into the tenant's effective quotas and status.applied_quotas becomes a strict superset
+	// of spec.requested_quotas.
+	landingZoneMemoryDefault int64
+}
+
+// tenantQuotaConfig builds a full tenant config whose platform defines the quotas described by opts and
+// whose tenant requests opts.requestedCpu for `limits.cpu`. The bespoke quota_definitions, landing zone
+// quotas and spec.requested_quotas are layered onto the standard builders via SetRawExpr.
+func tenantQuotaConfig(t *testing.T, opts tenantQuotaOptions) (testconfig.Config, testconfig.Traversal) {
 	t.Helper()
 	workspaceConfig, workspaceAddr := testconfig.Workspace(t)
 	projectConfig, projectAddr := testconfig.Project(t, workspaceAddr)
 	platformConfig, platformAddr, platformTypeAddr := testconfig.CustomPlatform(t, workspaceAddr)
-	platformConfig = platformConfig.WithFirstBlock(
-		testconfig.Descend("spec", "quota_definitions")(testconfig.SetRawExpr(
-			`[{ quota_key = "limits.cpu", min_value = 1, max_value = %d, unit = "cores", auto_approval_threshold = %d, description = "vCPU limit", label = "CPU" }]`,
-			maxCpu, threshold,
-		)),
+
+	quotaDefinitions := fmt.Sprintf(
+		`{ quota_key = "limits.cpu", min_value = 1, max_value = %d, unit = "cores", auto_approval_threshold = %d, description = "vCPU limit", label = "CPU" }`,
+		opts.maxCpu, opts.threshold,
 	)
+	if opts.landingZoneMemoryDefault != 0 {
+		quotaDefinitions += fmt.Sprintf(
+			`, { quota_key = "limits.memory", min_value = 1, max_value = %d, unit = "MiB", auto_approval_threshold = %d, description = "Memory limit", label = "Memory" }`,
+			opts.landingZoneMemoryDefault, opts.landingZoneMemoryDefault,
+		)
+	}
+	platformConfig = platformConfig.WithFirstBlock(
+		testconfig.Descend("spec", "quota_definitions")(testconfig.SetRawExpr("[%s]", quotaDefinitions)),
+	)
+
 	landingZoneConfig, landingZoneAddr := testconfig.LandingZone(t, workspaceAddr, platformAddr, platformTypeAddr)
+	if opts.landingZoneMemoryDefault != 0 {
+		landingZoneConfig = landingZoneConfig.WithFirstBlock(
+			testconfig.Descend("spec", "quotas")(testconfig.SetRawExpr(
+				`[{ key = "limits.memory", value = %d }]`, opts.landingZoneMemoryDefault,
+			)),
+		)
+	}
+
 	tenantConfig, tenantAddr := testconfig.Tenant(t, projectAddr, platformAddr, landingZoneAddr)
 	tenantConfig = tenantConfig.WithFirstBlock(
 		testconfig.Descend("spec", "requested_quotas")(testconfig.SetRawExpr(
-			`{ "limits.cpu" = { value = %d } }`, requestedCpu,
+			`{ "limits.cpu" = { value = %d } }`, opts.requestedCpu,
 		)),
 	)
 	config := tenantConfig.Join(workspaceConfig, projectConfig, platformConfig, landingZoneConfig)
