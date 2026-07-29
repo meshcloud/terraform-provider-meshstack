@@ -5,7 +5,7 @@ subcategory: ""
 description: |-
   Represents a meshStack workspace.
   ~> Note: Managing workspaces requires an API key with sufficient admin permissions.
-  ~> Tag Management: Workspace tags can be managed inline using metadata.tags or via dedicated tag resources (meshstack_workspace_tags for authoritative management of all tags, or meshstack_workspace_tag for managing a single tag). Choose one approach per workspace; do not mix inline tags on meshstack_workspace with dedicated tag resources, as doing so will cause state drift and plan conflicts.
+  ~> Tag Management: Manage a workspace's tags inline via metadata.tags here. This is the recommended approach and the only one that can set tags meshStack requires at workspace creation. The dedicated meshstack_workspace_tags / meshstack_workspace_tag resources exist for workspaces this configuration does not create, and carry caveats (full-workspace rewrites, races, provisional schema) documented on those resources — reach for them only when necessary. Whichever approach you choose, use exactly one per workspace; do not mix inline tags with the dedicated tag resources, as doing so causes state drift and plan conflicts.
 ---
 
 # meshstack_workspace (Resource)
@@ -14,7 +14,7 @@ Represents a meshStack workspace.
 
 ~> **Note:** Managing workspaces requires an API key with sufficient admin permissions.
 
-~> **Tag Management:** Workspace tags can be managed inline using `metadata.tags` or via dedicated tag resources (`meshstack_workspace_tags` for authoritative management of all tags, or `meshstack_workspace_tag` for managing a single tag). Choose one approach per workspace; **do not mix inline `tags` on `meshstack_workspace` with dedicated tag resources**, as doing so will cause state drift and plan conflicts.
+~> **Tag Management:** Manage a workspace's tags inline via `metadata.tags` here. This is the recommended approach and the only one that can set tags meshStack requires at workspace creation. The dedicated `meshstack_workspace_tags` / `meshstack_workspace_tag` resources exist for workspaces this configuration does not create, and carry caveats (full-workspace rewrites, races, provisional schema) documented on those resources — reach for them only when necessary. Whichever approach you choose, use exactly one per workspace; **do not mix inline `tags` with the dedicated tag resources**, as doing so causes state drift and plan conflicts.
 
 ## Example Usage
 

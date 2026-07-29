@@ -4,17 +4,29 @@ page_title: "meshstack_workspace_tags Resource - terraform-provider-meshstack"
 subcategory: ""
 description: |-
   Authoritatively manages all tags for a meshStack workspace.
-  ~> Note: Managing workspace tags authoritatively replaces all tags on the target workspace. Do not mix meshstack_workspace_tags with inline tags on meshstack_workspace or with meshstack_workspace_tag resources on the same workspace.
-  ~> Concurrency: Concurrent Terraform applies of multiple tag resources targeting the same workspace are not safe — the underlying API has no patch endpoint, so a read-then-write pattern is used and concurrent operations may clobber each other.
+  !> Not recommended for general use. Prefer managing tags inline via metadata.tags on meshstack_workspace. Only reach for this resource when the workspace itself is not managed by your Terraform configuration (for example it was created in the meshStack panel or by another team) and you understand the trade-offs below. All of them follow from the same limitation: the meshObject API has no endpoint for individual tags, so every create, update and delete here reads the entire meshWorkspace object and writes it back with the tags replaced.
+  ~> The entire workspace is rewritten on every change. The Terraform plan only shows a tag changing, but each apply issues a full workspace update. Everything meshStack does on a workspace update — audit-log entries, notifications etc. — happens every time, and any workspace field changed outside Terraform between this resource's read and its write is written back with the value it read.
+  ~> Race conditions. The read-modify-write cycle is not atomic and the API offers no optimistic locking. A concurrent write to the same workspace — another apply of these resources, the meshstack_workspace resource itself, a panel user, or any other automation — can silently clobber this resource's tags or be clobbered by them. Keep all tags of a workspace in a single resource in a single Terraform state, and never run two applies against the same workspace in parallel.
+  ~> Cannot manage tags that are mandatory at workspace creation. This resource can only set a tag on a workspace that already exists, so it cannot supply tag values that meshStack requires when the workspace is created — the meshstack_workspace create fails before this resource ever runs. Set mandatory tags inline via metadata.tags on meshstack_workspace.
+  ~> Subject to change. This resource is provisional. Once meshStack's meshObject API supports workspace tags as individual meshObjects, it will be reworked in terms of that API.
+  ~> Note: This resource is authoritative: applying it replaces all tags on the target workspace, and destroying it removes them all. Do not mix meshstack_workspace_tags with inline tags on meshstack_workspace or with meshstack_workspace_tag resources on the same workspace.
 ---
 
 # meshstack_workspace_tags (Resource)
 
 Authoritatively manages all tags for a meshStack workspace.
 
-~> **Note:** Managing workspace tags authoritatively replaces **all** tags on the target workspace. Do not mix `meshstack_workspace_tags` with inline `tags` on `meshstack_workspace` or with `meshstack_workspace_tag` resources on the same workspace.
+!> **Not recommended for general use.** Prefer managing tags inline via `metadata.tags` on `meshstack_workspace`. Only reach for this resource when the workspace itself is not managed by your Terraform configuration (for example it was created in the meshStack panel or by another team) and you understand the trade-offs below. All of them follow from the same limitation: the meshObject API has no endpoint for individual tags, so every create, update and delete here reads the entire `meshWorkspace` object and writes it back with the tags replaced.
 
-~> **Concurrency:** Concurrent Terraform applies of multiple tag resources targeting the same workspace are not safe — the underlying API has no patch endpoint, so a read-then-write pattern is used and concurrent operations may clobber each other.
+~> **The entire workspace is rewritten on every change.** The Terraform plan only shows a tag changing, but each apply issues a full workspace update. Everything meshStack does on a workspace update — audit-log entries, notifications etc. — happens every time, and any workspace field changed outside Terraform between this resource's read and its write is written back with the value it read.
+
+~> **Race conditions.** The read-modify-write cycle is not atomic and the API offers no optimistic locking. A concurrent write to the same workspace — another apply of these resources, the `meshstack_workspace` resource itself, a panel user, or any other automation — can silently clobber this resource's tags or be clobbered by them. Keep all tags of a workspace in a single resource in a single Terraform state, and never run two applies against the same workspace in parallel.
+
+~> **Cannot manage tags that are mandatory at workspace creation.** This resource can only set a tag on a workspace that already exists, so it cannot supply tag values that meshStack requires when the workspace is created — the `meshstack_workspace` create fails before this resource ever runs. Set mandatory tags inline via `metadata.tags` on `meshstack_workspace`.
+
+~> **Subject to change.** This resource is provisional. Once meshStack's meshObject API supports workspace tags as individual meshObjects, it will be reworked in terms of that API.
+
+~> **Note:** This resource is authoritative: applying it replaces **all** tags on the target workspace, and destroying it removes them all. Do not mix `meshstack_workspace_tags` with inline `tags` on `meshstack_workspace` or with `meshstack_workspace_tag` resources on the same workspace.
 
 ## Example Usage
 
