@@ -55,9 +55,10 @@ func (r *workspaceTagsResource) Configure(_ context.Context, req resource.Config
 func (r *workspaceTagsResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Authoritatively manages all tags for a meshStack workspace.\n\n" +
-			"~> **Note:** Managing workspace tags authoritatively replaces **all** tags on the target workspace. " +
-			"Do not mix `meshstack_workspace_tags` with inline `tags` on `meshstack_workspace` or with `meshstack_workspace_tag` resources on the same workspace.\n\n" +
-			"~> **Concurrency:** Concurrent Terraform applies of multiple tag resources targeting the same workspace are not safe — the underlying API has no patch endpoint, so a read-then-write pattern is used and concurrent operations may clobber each other.",
+			workspaceTagCaveats + "\n\n" +
+			"~> **Note:** This resource is authoritative: applying it replaces **all** tags on the target workspace, and " +
+			"destroying it removes them all. Do not mix `meshstack_workspace_tags` with inline `tags` on " +
+			"`meshstack_workspace` or with `meshstack_workspace_tag` resources on the same workspace.",
 
 		Attributes: map[string]schema.Attribute{
 			"metadata": schema.SingleNestedAttribute{
