@@ -216,22 +216,33 @@ func TestAccTenant(t *testing.T) {
 		})
 	})
 
-	// quotas_above_auto_approval_threshold asserts the second create-time guardrail: a requested increase
-	// beyond the platform's auto-approval threshold is refused outright instead of being queued for
-	// operator approval, because the meshObject API has no quota-request representation and a pending
-	// request would let an apply report success on quotas that are not in effect. Enforced only for
-	// non-admin API keys, and the mock enforces no threshold, so this is acceptance-only.
-	t.Run("quotas_above_auto_approval_threshold", func(t *testing.T) {
+	// quotas_above_auto_approval_threshold_admin_key covers the second create-time guardrail from the side
+	// this suite can actually exercise. A request beyond the platform's auto-approval threshold is refused
+	// outright rather than queued for operator approval — but only for non-admin callers; a key holding
+	// ADM_TENANT_SAVE may exceed the threshold, since it also defines the platform's quota limits. Every
+	// key that can run this suite is such an admin key (creating platforms and workspaces requires it), so
+	// the assertion here is that the above-threshold request goes through and is applied as configured. A
+	// backend change that started rejecting admin callers would break provider users the same way and must
+	// fail here. The non-admin rejection is regression-tested backend-side, in meshfed-release's
+	// MeshTenantQuotaBoundsScenarios, which mints a key scoped to PUBLIC_API + TENANT_SAVE.
+	t.Run("quotas_above_auto_approval_threshold_admin_key", func(t *testing.T) {
 		if IsMockClientTest() {
 			t.Skip("the auto-approval threshold is enforced by the backend; requires a real meshStack")
 		}
-		config, _ := tenantQuotaConfig(t, tenantQuotaOptions{maxCpu: 8000, threshold: 2000, requestedCpu: 4000})
+		config, tenantAddr := tenantQuotaConfig(t, tenantQuotaOptions{maxCpu: 8000, threshold: 2000, requestedCpu: 4000})
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
-					Config:      config.String(),
-					ExpectError: regexp.MustCompile(`exceeds the auto-approval threshold`),
+					Config: config.String(),
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(tenantAddr.String(), tfjsonpath.New("status").AtMapKey("applied_quotas"),
+							knownvalue.MapExact(map[string]knownvalue.Check{
+								"limits.cpu": knownvalue.ObjectExact(map[string]knownvalue.Check{
+									"value": knownvalue.Int64Exact(4000),
+								}),
+							})),
+					},
 				},
 			},
 		})
