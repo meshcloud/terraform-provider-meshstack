@@ -55,8 +55,12 @@ func (r *workspaceTagsResource) Schema(_ context.Context, _ resource.SchemaReque
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Authoritatively manages all tags for a meshStack workspace.\n\n" +
 			workspaceTagCaveats + "\n\n" +
-			"~> **Note:** This resource is authoritative: applying it replaces **all** tags on the target workspace, and " +
-			"destroying it removes them all. Do not mix `meshstack_workspace_tags` with inline `tags` on " +
+			"~> **Note:** This resource is authoritative on write: every apply replaces **all** tags on the target " +
+			"workspace with the ones configured here, and destroying it removes them all. It is not authoritative on " +
+			"read — refresh only tracks the keys you configure, so a tag added under another key outside Terraform is " +
+			"not reported as drift, and is removed by the next apply that writes this resource. This is deliberate: " +
+			"meshStack injects defaults for restricted tag definitions into every workspace, and adopting those would " +
+			"produce a plan that never converges. Do not mix `meshstack_workspace_tags` with inline `tags` on " +
 			"`meshstack_workspace` or with `meshstack_workspace_tag` resources on the same workspace.",
 
 		Attributes: map[string]schema.Attribute{
@@ -78,9 +82,11 @@ func (r *workspaceTagsResource) Schema(_ context.Context, _ resource.SchemaReque
 				Required:            true,
 				Attributes: map[string]schema.Attribute{
 					"tags": schema.MapAttribute{
-						MarkdownDescription: "All tags to set on the workspace. This map is authoritative: any tags not listed here will be removed.",
-						ElementType:         types.ListType{ElemType: types.StringType},
-						Required:            true,
+						MarkdownDescription: "All tags to set on the workspace. This map is authoritative: every apply writes " +
+							"exactly these tags, so any tag not listed here is removed. Only these keys are tracked on refresh — " +
+							"tags added under other keys outside Terraform do not show up as drift.",
+						ElementType: types.ListType{ElemType: types.StringType},
+						Required:    true,
 					},
 				},
 			},
@@ -147,27 +153,23 @@ func (r *workspaceTagsResource) Read(ctx context.Context, req resource.ReadReque
 		return
 	}
 
-	// Authoritative read: surface the API's tags so external changes show as drift. The API returns an
-	// entry for every defined tag property (empty list when unset), so an untracked key is only adopted
-	// when it carries values — otherwise every defined-but-unset property would look like an external
-	// addition. Keys already tracked are mirrored verbatim, including an empty list, so a declared
-	// `k = []` converges instead of being dropped from state on every refresh.
-	tracked := make(map[string][]string)
-	if !state.Spec.Tags.IsNull() {
-		resp.Diagnostics.Append(state.Spec.Tags.ElementsAs(ctx, &tracked, false)...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
+	// Track only the keys this resource declares. The API returns a superset — an entry for every
+	// defined tag property (empty list when unset) plus the defaults meshStack injects for restricted
+	// tag definitions — and adopting those would produce a plan that wants to delete a tag the backend
+	// re-injects on the next apply, forever. The trade-off: a tag added under an untracked key outside
+	// Terraform is not reported as drift; the next apply removes it, because Update writes exactly the
+	// declared tags. Mirrors workspace_resource.go.
+	tags := reconcileTrackedTags(ctx, req.State, path.Root("spec").AtName("tags"), workspace.Metadata.Tags, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
-	result := make(map[string][]string, len(workspace.Metadata.Tags))
-	for k, v := range workspace.Metadata.Tags {
-		if _, ok := tracked[k]; ok || len(v) > 0 {
-			result[k] = v
-		}
+	// spec.tags is Required and must never be null; a workspace with no tags at all yields a nil map.
+	if tags == nil {
+		tags = map[string][]string{}
 	}
 
-	tagsMap, diags := types.MapValueFrom(ctx, types.ListType{ElemType: types.StringType}, result)
+	tagsMap, diags := types.MapValueFrom(ctx, types.ListType{ElemType: types.StringType}, tags)
 	resp.Diagnostics.Append(diags...)
 	state.Spec.Tags = tagsMap
 
@@ -246,9 +248,10 @@ func (r *workspaceTagsResource) Delete(ctx context.Context, req resource.DeleteR
 func (r *workspaceTagsResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("metadata").AtName("workspace_identifier"), req.ID)...)
 
-	// Initialise spec.tags to an empty map so the null-into-value-struct decode in Read succeeds.
-	// Read runs immediately after ImportState and populates the actual tags from the API.
-	emptyTags, diags := types.MapValueFrom(ctx, types.ListType{ElemType: types.StringType}, map[string][]string{})
-	resp.Diagnostics.Append(diags...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("spec").AtName("tags"), emptyTags)...)
+	// Leave spec.tags null rather than empty: Read passes the API's tags through unchanged when there is
+	// no prior state, so an import round-trips every tag on the workspace instead of reconciling against
+	// an empty tracked set and importing nothing. Setting the attribute — even to null — materialises the
+	// spec object, which the null-into-value-struct decode in Read requires.
+	nullTags := types.MapNull(types.ListType{ElemType: types.StringType})
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("spec").AtName("tags"), nullTags)...)
 }

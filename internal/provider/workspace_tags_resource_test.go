@@ -50,6 +50,17 @@ func TestAccWorkspaceTags(t *testing.T) {
 				},
 			},
 			{
+				// Restore the tag so the import below runs against a workspace that actually has tags.
+				Config: config.String(),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(workspaceTagsAddr.String(), plancheck.ResourceActionUpdate),
+					},
+				},
+			},
+			{
+				// Read must pass the API's tags through when there is no prior state, rather than
+				// reconcile against an empty tracked set and import nothing.
 				ImportState:     true,
 				ImportStateKind: resource.ImportBlockWithID,
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
