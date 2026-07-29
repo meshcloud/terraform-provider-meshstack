@@ -157,21 +157,27 @@ type MeshTenantStatus struct {
 	AppliedQuotas map[string]AppliedQuotaValue `json:"appliedQuotas" tfsdk:"applied_quotas"`
 }
 
+// MeshTenantQuota is the {key, value} element of the deprecated list-form spec.quotas, superseded by
+// the requested_quotas / applied_quotas maps. It is still the quota shape of the deprecated
+// meshstack_tenant_v4 resource, so it carries no godoc deprecation marker.
 type MeshTenantQuota struct {
 	Key   string `json:"key" tfsdk:"key"`
 	Value int64  `json:"value" tfsdk:"value"`
 }
 
-// RequestQuotaValue is a requested tenant quota value. The scalar is wrapped in an object (rather than
-// a bare number) so the v4 preview API can grow per-quota fields — e.g. a unit — without a breaking
-// change to the requested_quotas map shape.
+// RequestQuotaValue is a tenant quota value as requested at create time. The scalar is wrapped in an
+// object (rather than a bare number) so the v4 preview API can grow per-quota fields — e.g. a unit —
+// without a breaking change to the requested_quotas map shape.
+//
+// Its shape is identical to AppliedQuotaValue, deliberately so: the resource must echo the configured
+// request in spec while reading effective values from status, and separate types turn mixing the two
+// into a compile error rather than the requested-vs-applied conflation this map form fixes.
 type RequestQuotaValue struct {
 	Value int64 `json:"value" tfsdk:"value"`
 }
 
-// AppliedQuotaValue is a tenant quota value as actually applied by the backend. Kept distinct from
-// RequestQuotaValue so it can later carry applied-only context (e.g. why the applied value differs
-// from what was requested).
+// AppliedQuotaValue is a tenant quota value as actually applied by the backend. See RequestQuotaValue
+// for why the two are not a single type.
 type AppliedQuotaValue struct {
 	Value int64 `json:"value" tfsdk:"value"`
 }
@@ -190,10 +196,11 @@ type MeshTenantCreateSpec struct {
 	PlatformRef      UuidRef   `json:"platformRef" tfsdk:"platform_ref"`
 	LandingZoneRef   *NamedRef `json:"landingZoneRef" tfsdk:"landing_zone_ref"`
 	PlatformTenantId *string   `json:"platformTenantId" tfsdk:"platform_tenant_id"`
-	// RequestedQuotas is the preferred key->value form; Quotas is the deprecated list form. Only one
-	// should be set — the backend rejects a create that carries both with conflicting values.
+	// RequestedQuotas is the preferred key->value form. Only one of the two quota fields should be
+	// set — the backend rejects a create that carries both with conflicting values.
 	RequestedQuotas map[string]RequestQuotaValue `json:"requestedQuotas,omitempty" tfsdk:"requested_quotas"`
-	Quotas          types.Set[MeshTenantQuota]   `json:"quotas,omitempty" tfsdk:"quotas"`
+	// Deprecated: superseded by RequestedQuotas; retained so existing configurations keep working.
+	Quotas types.Set[MeshTenantQuota] `json:"quotas,omitempty" tfsdk:"quotas"`
 }
 
 type MeshTenantQuery struct {

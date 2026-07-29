@@ -110,7 +110,7 @@ func (d *tenantDataSource) Schema(ctx context.Context, req datasource.SchemaRequ
 						Computed:            true,
 					},
 					"applied_quotas": schema.MapNestedAttribute{
-						MarkdownDescription: "The effective quotas meshStack applied to this tenant, as a map keyed by quota key whose value is an object carrying the applied `value`.",
+						MarkdownDescription: "The effective quotas meshStack applied to this tenant, as a map keyed by quota key whose value is an object carrying the applied `value`. These are the quotas in effect: the landing zone's default quotas, overlaid with the quotas requested at creation and with any later change by a platform operator or an approved quota request.",
 						Computed:            true,
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{

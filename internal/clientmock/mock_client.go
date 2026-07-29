@@ -78,6 +78,8 @@ func NewMock() Client {
 	// so the v1 client can resolve tenant_identifier <-> tenant target_ref uuid.
 	buildingBlockStore := NewStore[client.MeshBuildingBlockV2]()
 	tenantStore := NewStore[client.MeshTenant]()
+	// Shared with the tenant client so a tenant create can resolve its landing zone's default quotas.
+	landingZoneStore := NewStore[client.MeshLandingZone]()
 	return Client{
 		ApiKey:                         MeshApiKeyClient{Store: NewStore[client.MeshApiKey]()},
 		BuildingBlock:                  meshBuildingBlockClient{Store: buildingBlockStore, BbdVersionStore: bbdVersionStore, TenantStore: tenantStore},
@@ -87,7 +89,7 @@ func NewMock() Client {
 		BuildingBlockRunner:            MeshBuildingBlockRunnerClient{Store: NewStore[client.MeshBuildingBlockRunner]()},
 		BuildingBlockV2:                MeshBuildingBlockV2Client{Store: buildingBlockStore, BbdVersionStore: bbdVersionStore},
 		Integration:                    MeshIntegrationClient{Store: NewStore[client.MeshIntegration]()},
-		LandingZone:                    MeshLandingZoneClient{Store: NewStore[client.MeshLandingZone]()},
+		LandingZone:                    MeshLandingZoneClient{Store: landingZoneStore},
 		Location:                       MeshLocationClient{Store: NewStore[client.MeshLocation]()},
 		PaymentMethod:                  MeshPaymentMethodClient{Store: NewStore[client.MeshPaymentMethod]()},
 		Platform:                       MeshPlatformClient{Store: NewStore[client.MeshPlatform]()},
@@ -97,7 +99,7 @@ func NewMock() Client {
 		ProjectUserBinding:             MeshProjectUserBindingClient{Store: NewStore[client.MeshProjectUserBinding]()},
 		ServiceInstance:                MeshServiceInstanceClient{Store: NewStore[client.MeshServiceInstance]()},
 		TagDefinition:                  MeshTagDefinitionClient{Store: NewStore[client.MeshTagDefinition]()},
-		Tenant:                         MeshTenantClient{Store: tenantStore},
+		Tenant:                         MeshTenantClient{Store: tenantStore, LandingZoneStore: landingZoneStore},
 		TenantV4:                       MeshTenantV4Client{Store: NewStore[client.MeshTenantV4]()},
 		Workspace:                      MeshWorkspaceClient{Store: NewStore[client.MeshWorkspace]()},
 		WorkspaceGroupBinding:          MeshWorkspaceGroupBindingClient{Store: NewStore[client.MeshWorkspaceGroupBinding]()},

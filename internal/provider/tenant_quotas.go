@@ -45,11 +45,11 @@ func appliedQuotaValues(status client.MeshTenantStatus) map[string]int64 {
 
 // quotaRealizationWarning compares the quotas a caller requested against the quotas meshStack actually
 // applied and returns a warning (summary, detail, ok=true) when a requested quota was not realized to
-// the requested value. A mismatch is expected rather than an error: meshStack merges the landing zone's
-// default quotas with the request, and a requested increase beyond a platform's auto-approval threshold
-// needs a platform operator to approve the quota request before it takes effect, so the applied value
-// can differ from — or lag behind — what was requested. Returns ok=false when nothing was requested or
-// every requested quota was applied verbatim.
+// the requested value. A mismatch is a warning rather than an error because it is not the provider's to
+// fix: a create applies the requested values verbatim (the API rejects a request it cannot apply), so a
+// divergence means the tenant's quotas were changed outside Terraform — a platform operator adjusted
+// them, or a quota request filed in the panel was approved. Returns ok=false when nothing was requested
+// or every requested quota is still applied verbatim.
 func quotaRealizationWarning(requested, applied map[string]int64) (summary, detail string, ok bool) {
 	if len(requested) == 0 {
 		return "", "", false
@@ -79,10 +79,11 @@ func quotaRealizationWarning(requested, applied map[string]int64) (summary, deta
 	summary = "Requested tenant quotas were not fully applied"
 	detail = "meshStack applied quota values that differ from what was requested:\n" +
 		strings.Join(lines, "\n") +
-		"\n\nThis is usually expected: the landing zone's default quotas are merged with the request, and a " +
-		"requested increase beyond a platform's auto-approval threshold needs a platform operator to approve the " +
-		"quota request before it takes effect. Review the tenant's quota requests in the meshStack panel " +
-		"(Tenant > Settings > Quotas) if a value should already have been applied."
+		"\n\nRequested quotas are applied as configured when the tenant is created, so a difference means the " +
+		"tenant's quotas were changed after creation — a platform operator adjusted them, or a quota request " +
+		"filed in the meshStack panel was approved. Terraform cannot reconcile this: spec.requested_quotas is " +
+		"create-only. Review the tenant's quotas in the meshStack panel (Tenant > Settings > Quotas), and align " +
+		"spec.requested_quotas with the applied values to silence this warning."
 	return summary, detail, true
 }
 

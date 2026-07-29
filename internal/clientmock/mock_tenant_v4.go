@@ -34,11 +34,13 @@ func (m MeshTenantV4Client) Create(_ context.Context, tenant *client.MeshTenantV
 	tenantName := tenant.Metadata.OwnedByWorkspace + "." + tenant.Metadata.OwnedByProject + "." + tenant.Spec.PlatformIdentifier
 
 	// The mock applies requested quotas verbatim, so effective status.appliedQuotas mirrors spec.quotas.
+	// Unlike the current tenant client this ignores landing-zone default quotas: the deprecated v4
+	// resource identifies its landing zone by identifier, which the mock does not resolve to a stored one.
 	var quotas []client.MeshTenantQuota
 	if tenant.Spec.Quotas != nil {
 		quotas = *tenant.Spec.Quotas
 	}
-	appliedQuotas := effectiveQuotas(nil, quotas)
+	appliedQuotas := effectiveQuotas(nil, nil, quotas)
 
 	created := &client.MeshTenantV4{
 		Metadata: client.MeshTenantV4Metadata{
