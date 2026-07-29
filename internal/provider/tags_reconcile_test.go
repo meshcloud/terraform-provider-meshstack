@@ -6,9 +6,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestReconcileTags pins the reconciliation the tags fix relies on: the meshObject API returns a
-// superset of the caller's tags (an empty-list entry for every schema property plus injected
-// restricted-tag defaults), and only the keys already tracked in state must survive.
+// TestReconcileTags pins the reconciliation the tags fix relies on: the meshObject API may return tags
+// the caller never sent (injected restricted-tag defaults, and for some kinds an empty-list entry per
+// defined schema property), and only the keys already tracked in state must survive. Verified against
+// meshWorkspace: a tag declared with no values comes back absent entirely, so it must survive on its
+// tracked empty value rather than read as a deletion.
 func TestReconcileTags(t *testing.T) {
 	tests := map[string]struct {
 		tracked map[string][]string
@@ -33,6 +35,14 @@ func TestReconcileTags(t *testing.T) {
 			tracked: map[string][]string{"env": {"prod"}, "gone": {"x"}},
 			apiTags: map[string][]string{"env": {"prod"}},
 			want:    map[string][]string{"env": {"prod"}},
+		},
+		"keeps a tracked key declared with no values that the API omits": {
+			// The API cannot represent an empty-valued tag — a PUT with `{"empty": []}` comes back as
+			// `"tags": {}` — so an absent key with no tracked values must survive as empty rather than be
+			// read as an external deletion, which would never converge.
+			tracked: map[string][]string{"env": {"prod"}, "empty": {}},
+			apiTags: map[string][]string{"env": {"prod"}},
+			want:    map[string][]string{"env": {"prod"}, "empty": {}},
 		},
 		"nothing tracked yields empty result": {
 			// "only restricted": the caller declares no tags, the backend injects a restricted default.

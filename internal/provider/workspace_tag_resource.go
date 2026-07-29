@@ -35,6 +35,14 @@ const workspaceTagCaveats = "!> **Not recommended for general use.** Prefer mana
 	"notifications etc. — happens every time, and any workspace field changed outside Terraform between this " +
 	"resource's read and its write is written back with the value it read.\n\n" +
 
+	"~> **Tags you do not manage are written back verbatim.** Preserving a workspace's other tags is what lets " +
+	"several `meshstack_workspace_tag` resources coexist, but the object read back can carry entries nobody " +
+	"declared here — notably the defaults meshStack injects for restricted tag definitions on a workspace " +
+	"registered through the panel — and every write sends all of them back. So this resource writes tag entries " +
+	"you never configured, and if your meshStack rejects writing a restricted tag's value, the update fails and no " +
+	"tag on that workspace can be managed with this resource — use inline `metadata.tags` on `meshstack_workspace` " +
+	"instead. `meshstack_workspace_tags` is unaffected: it sends exactly the tags you configure.\n\n" +
+
 	"~> **Race conditions.** The read-modify-write cycle is not atomic and the API offers no optimistic locking. A " +
 	"concurrent write to the same workspace — another apply of these resources, the `meshstack_workspace` resource " +
 	"itself, a panel user, or any other automation — can silently clobber this resource's tags or be clobbered by " +
@@ -199,9 +207,16 @@ func (r *workspaceTagResource) Read(ctx context.Context, req resource.ReadReques
 
 	vals, ok := workspace.Metadata.Tags[key]
 	if !ok {
-		// Tag key no longer exists on workspace.
-		resp.State.RemoveResource(ctx)
-		return
+		// The API cannot represent a tag with no values — a PUT carrying `{"k": []}` comes back with
+		// `"tags": {}` — so for a resource whose tracked value list is empty, "absent" is that same state
+		// and must not be read as a deletion, or the resource is destroyed and recreated on every apply.
+		// On import there is no prior state (values is null), so an absent key really is missing.
+		declaredEmpty := !state.Spec.Values.IsNull() && len(state.Spec.Values.Elements()) == 0
+		if !declaredEmpty {
+			resp.State.RemoveResource(ctx)
+			return
+		}
+		vals = []string{}
 	}
 
 	valList, diags := types.ListValueFrom(ctx, types.StringType, vals)
@@ -307,9 +322,8 @@ func (r *workspaceTagResource) ImportState(ctx context.Context, req resource.Imp
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("metadata").AtName("workspace_identifier"), parts[0])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("metadata").AtName("key"), parts[1])...)
 
-	// Initialise spec.values to an empty list so the null-into-value-struct decode in Read succeeds.
-	// Read runs immediately after ImportState and populates the actual tag values from the API.
-	emptyValues, diags := types.ListValueFrom(ctx, types.StringType, []string{})
-	resp.Diagnostics.Append(diags...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("spec").AtName("values"), emptyValues)...)
+	// Leave spec.values null rather than empty: Read distinguishes "no prior state" (import) from a
+	// tracked empty list, and only the latter may treat an absent tag key as still present. Setting the
+	// attribute — even to null — materialises the spec object, which the decode in Read requires.
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("spec").AtName("values"), types.ListNull(types.StringType))...)
 }

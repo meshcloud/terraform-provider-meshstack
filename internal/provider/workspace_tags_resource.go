@@ -59,8 +59,10 @@ func (r *workspaceTagsResource) Schema(_ context.Context, _ resource.SchemaReque
 			"workspace with the ones configured here, and destroying it removes them all. It is not authoritative on " +
 			"read — refresh only tracks the keys you configure, so a tag added under another key outside Terraform is " +
 			"not reported as drift, and is removed by the next apply that writes this resource. This is deliberate: " +
-			"meshStack injects defaults for restricted tag definitions into every workspace, and adopting those would " +
-			"produce a plan that never converges. Do not mix `meshstack_workspace_tags` with inline `tags` on " +
+			"a workspace registered through the meshStack panel carries the defaults meshStack injects for " +
+			"restricted tag definitions, and adopting those would produce a plan that never converges. Note also that a " +
+			"tag declared with an empty value list is kept in state, because the API returns no entry for it at all. Do " +
+			"not mix `meshstack_workspace_tags` with inline `tags` on " +
 			"`meshstack_workspace` or with `meshstack_workspace_tag` resources on the same workspace.",
 
 		Attributes: map[string]schema.Attribute{
@@ -129,9 +131,10 @@ func (r *workspaceTagsResource) Create(ctx context.Context, req resource.CreateR
 		return
 	}
 
-	// Keep the tags the user declared rather than the superset the API returns (an entry for every
-	// defined tag property plus injected restricted-tag defaults), which would break plan/apply
-	// consistency on the Required spec.tags. Mirrors workspace_resource.go.
+	// Keep the tags the user declared rather than what the API echoes back. It may carry entries the
+	// caller never sent (injected restricted-tag defaults) and drops any tag declared with no values,
+	// either of which would break plan/apply consistency on the Required spec.tags. Mirrors
+	// workspace_resource.go.
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
@@ -153,12 +156,11 @@ func (r *workspaceTagsResource) Read(ctx context.Context, req resource.ReadReque
 		return
 	}
 
-	// Track only the keys this resource declares. The API returns a superset — an entry for every
-	// defined tag property (empty list when unset) plus the defaults meshStack injects for restricted
-	// tag definitions — and adopting those would produce a plan that wants to delete a tag the backend
-	// re-injects on the next apply, forever. The trade-off: a tag added under an untracked key outside
-	// Terraform is not reported as drift; the next apply removes it, because Update writes exactly the
-	// declared tags. Mirrors workspace_resource.go.
+	// Track only the keys this resource declares. A workspace registered through the meshStack panel
+	// carries the defaults meshStack injects for restricted tag definitions, and adopting one would
+	// produce a plan that wants to delete a tag the backend keeps re-applying, forever. The trade-off: a
+	// tag added under an untracked key outside Terraform is not reported as drift; the next apply removes
+	// it, because Update writes exactly the declared tags. Mirrors workspace_resource.go.
 	tags := reconcileTrackedTags(ctx, req.State, path.Root("spec").AtName("tags"), workspace.Metadata.Tags, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
@@ -246,6 +248,16 @@ func (r *workspaceTagsResource) Delete(ctx context.Context, req resource.DeleteR
 }
 
 func (r *workspaceTagsResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	// An empty identifier would target the workspace collection endpoint, whose list response unmarshals
+	// into a zero-valued workspace without error — an import that "succeeds" with garbage state.
+	if req.ID == "" {
+		resp.Diagnostics.AddError(
+			"Unexpected Import Identifier",
+			fmt.Sprintf("Expected import identifier with format: workspace_identifier. Got: %q", req.ID),
+		)
+		return
+	}
+
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("metadata").AtName("workspace_identifier"), req.ID)...)
 
 	// Leave spec.tags null rather than empty: Read passes the API's tags through unchanged when there is
