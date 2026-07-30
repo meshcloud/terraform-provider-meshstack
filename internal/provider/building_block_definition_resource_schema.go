@@ -12,7 +12,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -165,10 +164,12 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 				},
 				"display_order": schema.Int64Attribute{
 					MarkdownDescription: "Numeric value controlling in which order the inputs are displayed in the UI. " +
-						"Cannot be changed on a released version. When omitted, uses existing value, if any. Otherwise defaults to `0`.",
+						"Cannot be changed on a released version. When omitted, uses existing value from state.",
 					Optional: true,
 					Computed: true,
-					Default:  int64default.StaticInt64(0),
+					PlanModifiers: []planmodifier.Int64{
+						int64planmodifier.UseStateForUnknown(),
+					},
 				},
 			},
 		},
