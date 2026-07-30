@@ -560,9 +560,11 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 		})
 	})
 
-	// Sparse override lifecycle on a draft: flipping and removing overrides updates in place and re-prunes.
-	// Dropping the approval override - which the stateful backend would otherwise preserve - exercises the
-	// full-set send that resets it, and region is renamed. State must end up holding only region.
+	// Sparse override lifecycle on a draft: flipping, removing and re-adding overrides updates in place and
+	// re-prunes. Dropping the approval override - which the stateful backend would otherwise preserve -
+	// exercises the full-set send that resets it, and region is renamed. Re-adding approval afterwards covers
+	// a new override key on an existing resource, whose backend-derived display_name/type/display_order must
+	// be planned unknown rather than null (no prior state for that key).
 	t.Run("13_manual_output_override_update", func(t *testing.T) {
 		config, addr := testconfig.BBDManual(t)
 		withOutputs := func(outputs string) testconfig.Config {
@@ -581,6 +583,10 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 		updated := withOutputs(`{
       region = { display_name = "Region Renamed" }
     }`)
+		readded := withOutputs(`{
+      approval = { assignment_type = "SUMMARY" }
+      region   = { display_name = "Region Renamed" }
+    }`)
 
 		initialOutputs := knownvalue.MapExact(map[string]knownvalue.Check{
 			"approval": xknownvalue.MapExact(map[string]knownvalue.Check{
@@ -597,6 +603,20 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 			}),
 		})
 		updatedOutputs := knownvalue.MapExact(map[string]knownvalue.Check{
+			"region": xknownvalue.MapExact(map[string]knownvalue.Check{
+				"display_name":    knownvalue.StringExact("Region Renamed"),
+				"type":            knownvalue.StringExact("STRING"),
+				"assignment_type": knownvalue.StringExact("NONE"),
+				"display_order":   knownvalue.Int64Exact(1),
+			}),
+		})
+		readdedOutputs := knownvalue.MapExact(map[string]knownvalue.Check{
+			"approval": xknownvalue.MapExact(map[string]knownvalue.Check{
+				"display_name":    knownvalue.StringExact("Approval"),
+				"type":            knownvalue.StringExact("BOOLEAN"),
+				"assignment_type": knownvalue.StringExact("SUMMARY"),
+				"display_order":   knownvalue.Int64Exact(0),
+			}),
 			"region": xknownvalue.MapExact(map[string]knownvalue.Check{
 				"display_name":    knownvalue.StringExact("Region Renamed"),
 				"type":            knownvalue.StringExact("STRING"),
@@ -623,6 +643,18 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_spec").AtMapKey("outputs"), updatedOutputs),
+						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest"), expectedVersion(1, versionStateDraft)),
+					},
+				},
+				{
+					Config: readded.String(),
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PreApply: []plancheck.PlanCheck{
+							plancheck.ExpectResourceAction(addr.String(), plancheck.ResourceActionUpdate),
+						},
+					},
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_spec").AtMapKey("outputs"), readdedOutputs),
 						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest"), expectedVersion(1, versionStateDraft)),
 					},
 				},
