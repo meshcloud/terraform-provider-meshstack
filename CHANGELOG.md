@@ -9,6 +9,9 @@ FEATURES:
 - `meshstack_platform` (singular) and the new `meshstack_platforms` document their cross-workspace visibility: for a platform the caller only consumes, `spec.config` is omitted (owner/contributor/admin still receive it, with secrets always hashed).
 - `meshstack_workspace_user_binding` / `meshstack_workspace_group_binding`: new `expiry_date` attribute (ISO 8601 date, `YYYY-MM-DD`), after which the binding is no longer effective. It is optional and computed: set it on create to expire the binding on that date, or omit it to never expire — unless recertification is enabled for the bound role, in which case meshStack assigns the maximum allowed expiry date (today plus the configured recertification period) and reads it back. An explicitly configured date beyond that maximum (or in the past) is rejected. Changing it forces replacement (bindings cannot be updated in place).
 
+FIXES:
+- `meshstack_building_block_definition`: fixed plan drift on `version_spec.inputs.<key>.display_order` when importing existing resources or upgrading from a provider version where `display_order` was absent or state held server-assigned non-zero positions. When `display_order` was introduced in commit `46c496c6`, a schema default of `0` was added. Because HCL configurations omit `display_order`, Terraform evaluated the missing attribute as `0`, planning unwanted normalization changes (`1 → 0`, `2 → 0`) against state populated by the meshStack API. The attribute now uses `UseStateForUnknown()` plan modifier instead of a static default, preserving server-assigned values from state.
+
 # v0.24.2
 
 FEATURES:

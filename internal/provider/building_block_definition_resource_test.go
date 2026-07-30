@@ -428,7 +428,7 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 		redraft := withInputs(`{
       approval = { display_name = "Approval", type = "BOOLEAN", assignment_type = "PLATFORM_OPERATOR_MANUAL_INPUT" }
       region   = { display_name = "Region", type = "SINGLE_SELECT", assignment_type = "USER_INPUT", selectable_values = ["eu", "us"] }
-      ticket   = { display_name = "Ticket", type = "STRING", assignment_type = "STATIC", argument = jsonencode("T-1") }
+      ticket   = { display_name = "Ticket", type = "STRING", assignment_type = "STATIC", argument = jsonencode("T-1"), display_order = 1 }
     }`)
 
 		// Outputs are omitted, so every derived output is a non-override (assignment NONE, display_name = the
@@ -1092,7 +1092,7 @@ func checksForImplementation(exampleSuffix string) (checkInputs, checkImplementa
 					"selectable_values":              knownvalue.Null(),
 					"argument":                       knownvalue.Null(),
 					"default_value":                  knownvalue.Null(),
-					"display_order":                  knownvalue.Int64Exact(0),
+					"display_order":                  knownvalue.Int64Exact(3),
 				}),
 				"some-file.yaml": xknownvalue.MapExact(map[string]knownvalue.Check{
 					"display_name":                   knownvalue.StringExact("Some input file"),
@@ -1107,7 +1107,7 @@ func checksForImplementation(exampleSuffix string) (checkInputs, checkImplementa
 					"validation_regex_error_message": knownvalue.Null(),
 					"selectable_values":              knownvalue.Null(),
 					"sensitive":                      knownvalue.Null(),
-					"display_order":                  knownvalue.Int64Exact(0),
+					"display_order":                  knownvalue.Int64Exact(4),
 				}),
 			}),
 			xknownvalue.MapExact(map[string]knownvalue.Check{

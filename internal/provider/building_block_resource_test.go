@@ -494,6 +494,7 @@ func TestAccBuildingBlock(t *testing.T) {
   assignment_type        = "PLATFORM_OPERATOR_MANUAL_INPUT"
   default_value          = jsonencode("bronze")
   updateable_by_consumer = true
+  display_order          = 1
 }`)))
 		}
 		bbdV2Draft := withTier(buildingBlockDefinitionConfig).WithFirstBlock(testconfig.Descend("version_spec", "draft")(testconfig.SetRawExpr("true")))

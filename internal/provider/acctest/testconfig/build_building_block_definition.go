@@ -45,6 +45,8 @@ func BBDTerraform(t *testing.T) (config Config, buildingBlockDefinitionAddr Trav
 				Descend("symbol")(SetRawExpr(`provider::meshstack::load_image_file("testdata/images/image.png")`)),
 			),
 			Descend("version_spec")(
+				Descend("inputs", "SOMETHING_VERY_SECRET", "display_order")(SetRawExpr("3")),
+				Descend("inputs", "some-file.yaml", "display_order")(SetRawExpr("4")),
 				Descend("inputs", "some-file.yaml", "argument")(SetRawExpr(`jsonencode(provider::meshstack::encode_file("some-content"))`)),
 				Descend("dependency_refs")(SetRawExpr("[%s.ref]", dependencyBBDAddr)),
 			),
