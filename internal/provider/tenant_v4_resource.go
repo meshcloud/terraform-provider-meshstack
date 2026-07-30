@@ -356,9 +356,16 @@ func (r *tenantV4Resource) Delete(ctx context.Context, req resource.DeleteReques
 
 	// Poll for deletion completion if wait_for_completion is true
 	if state.WaitForCompletion.ValueBool() {
-		if err := poll.AtMostFor(30*time.Minute, r.meshTenantV4Client.ReadFunc(uuid)).
+		var lastSeen *client.MeshTenantV4
+		if err := poll.AtMostFor(30*time.Minute, r.meshTenantV4Client.ReadFunc(uuid), poll.WithLastResultTo(&lastSeen)).
 			Until(ctx, (*client.MeshTenantV4).DeletionSuccessful); err != nil {
-			resp.Diagnostics.AddError("Failed to await tenant deletion", err.Error())
+			resp.Diagnostics.AddError("Failed to await tenant deletion", fmt.Sprintf(
+				"Could not confirm deletion of tenant %s: %s. Last observed state: %s. "+
+					"meshStack deletes a tenant asynchronously, so the provider waits for the deletion to complete; "+
+					"a deletion that never completes usually means the platform replicator is not processing it. "+
+					"Check the tenant in the meshStack panel.",
+				uuid, err, lastSeen.DeletionState(),
+			))
 			return
 		}
 	}

@@ -2,6 +2,7 @@ package clientmock
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -17,10 +18,16 @@ type MeshTenantClient struct {
 }
 
 func (m MeshTenantClient) Read(_ context.Context, uuid string) (*client.MeshTenant, error) {
-	if t, ok := m.Store.Get(uuid); ok {
-		return t, nil
+	t, ok := m.Store.Get(uuid)
+	if !ok {
+		return nil, nil
 	}
-	return nil, nil
+	if t.Status.Lifecycle.State == client.TenantLifecycleStateMarkedForDeletion {
+		deleted := *t
+		deleted.Status.Lifecycle.State = client.TenantLifecycleStateDeleted
+		m.Store.Set(uuid, &deleted)
+	}
+	return t, nil
 }
 
 func (m MeshTenantClient) ReadFunc(uuid string) func(ctx context.Context) (*client.MeshTenant, error) {
@@ -59,6 +66,7 @@ func (m MeshTenantClient) Create(_ context.Context, tenant *client.MeshTenantCre
 			PlatformWorkspaceId:    new("mock-platform-workspace-id"),
 			Tags:                   map[string][]string{},
 			AppliedQuotas:          appliedQuotas,
+			Lifecycle:              client.MeshTenantLifecycle{State: client.TenantLifecycleStateActive},
 		},
 	}
 
@@ -67,7 +75,16 @@ func (m MeshTenantClient) Create(_ context.Context, tenant *client.MeshTenantCre
 }
 
 func (m MeshTenantClient) Delete(_ context.Context, uuid string) error {
-	m.Store.Delete(uuid)
+	t, ok := m.Store.Get(uuid)
+	if !ok {
+		return nil
+	}
+	marked := *t
+	marked.Status.Lifecycle = client.MeshTenantLifecycle{
+		State:             client.TenantLifecycleStateMarkedForDeletion,
+		MarkedForDeletion: &client.MeshTenantLifecycleAction{Timestamp: time.Now().UTC().Format(time.RFC3339)},
+	}
+	m.Store.Set(uuid, &marked)
 	return nil
 }
 
@@ -120,6 +137,9 @@ func effectiveQuotas(landingZoneDefaults map[string]int64, requested map[string]
 func (m MeshTenantClient) List(_ context.Context, query client.MeshTenantQuery) ([]client.MeshTenant, error) {
 	var result []client.MeshTenant
 	for _, t := range m.Store.Values() {
+		if t.Status.Lifecycle.State != client.TenantLifecycleStateActive {
+			continue
+		}
 		if t.Metadata.OwnedByWorkspace != query.Workspace {
 			continue
 		}

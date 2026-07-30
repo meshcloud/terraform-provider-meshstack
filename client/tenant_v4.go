@@ -6,6 +6,7 @@ import (
 
 	"github.com/meshcloud/terraform-provider-meshstack/client/internal"
 	"github.com/meshcloud/terraform-provider-meshstack/client/types"
+	"github.com/meshcloud/terraform-provider-meshstack/client/types/enum"
 )
 
 type MeshTenantV4 struct {
@@ -40,6 +41,25 @@ type MeshTenantV4Status struct {
 	// structured object (e.g. `{"limits.cpu": {"value": 4}}`) so the preview API can grow per-quota
 	// fields without a breaking change to the map shape.
 	AppliedQuotas map[string]AppliedQuotaValue `json:"appliedQuotas" tfsdk:"applied_quotas"`
+	Lifecycle     MeshTenantLifecycle          `json:"lifecycle" tfsdk:"-"`
+}
+
+type TenantLifecycleState string
+
+var (
+	TenantLifecycleStates                 = enum.Enum[TenantLifecycleState]{}
+	TenantLifecycleStateActive            = TenantLifecycleStates.Entry("ACTIVE")
+	TenantLifecycleStateMarkedForDeletion = TenantLifecycleStates.Entry("MARKED_FOR_DELETION")
+	TenantLifecycleStateDeleted           = TenantLifecycleStates.Entry("DELETED")
+)
+
+type MeshTenantLifecycle struct {
+	State             enum.Entry[TenantLifecycleState] `json:"state" tfsdk:"-"`
+	MarkedForDeletion *MeshTenantLifecycleAction       `json:"markedForDeletion" tfsdk:"-"`
+}
+
+type MeshTenantLifecycleAction struct {
+	Timestamp string `json:"timestamp" tfsdk:"-"`
 }
 
 type MeshTenantV4Create struct {
@@ -118,7 +138,14 @@ func (tenant *MeshTenantV4) CreationSuccessful() (done bool, err error) {
 }
 
 func (tenant *MeshTenantV4) DeletionSuccessful() (done bool, err error) {
-	return tenant == nil, nil
+	return tenant == nil || tenant.Status.Lifecycle.State == TenantLifecycleStateDeleted, nil
+}
+
+func (tenant *MeshTenantV4) DeletionState() string {
+	if tenant == nil {
+		return tenantNotObserved
+	}
+	return tenantDeletionState(tenant.Status.Lifecycle)
 }
 
 type MeshTenant struct {
@@ -155,6 +182,7 @@ type MeshTenantStatus struct {
 	// only the values requested at create (create-only); the effective quotas here can differ once
 	// landing-zone defaults are merged in or an operator adjusts them, so drift is tracked against these.
 	AppliedQuotas map[string]AppliedQuotaValue `json:"appliedQuotas" tfsdk:"applied_quotas"`
+	Lifecycle     MeshTenantLifecycle          `json:"lifecycle" tfsdk:"-"`
 }
 
 // MeshTenantQuota is the {key, value} element of the deprecated list-form spec.quotas, superseded by
@@ -262,5 +290,30 @@ func (tenant *MeshTenant) CreationSuccessful() (done bool, err error) {
 }
 
 func (tenant *MeshTenant) DeletionSuccessful() (done bool, err error) {
-	return tenant == nil, nil
+	return tenant == nil || tenant.Status.Lifecycle.State == TenantLifecycleStateDeleted, nil
+}
+
+func (tenant *MeshTenant) DeletionState() string {
+	if tenant == nil {
+		return tenantNotObserved
+	}
+	return tenantDeletionState(tenant.Status.Lifecycle)
+}
+
+const tenantNotObserved = "no successful read after the delete request"
+
+func tenantDeletionState(lifecycle MeshTenantLifecycle) string {
+	switch {
+	case lifecycle.State == TenantLifecycleStateDeleted:
+		return "DELETED"
+	case lifecycle.State == TenantLifecycleStateMarkedForDeletion && lifecycle.MarkedForDeletion != nil:
+		return fmt.Sprintf(
+			"MARKED_FOR_DELETION since %s, awaiting deletion approval, cleanup of the tenant's resources, or the platform deletion the replicator confirms",
+			lifecycle.MarkedForDeletion.Timestamp,
+		)
+	case lifecycle.State == TenantLifecycleStateMarkedForDeletion:
+		return "MARKED_FOR_DELETION, awaiting deletion approval, cleanup of the tenant's resources, or the platform deletion the replicator confirms"
+	default:
+		return fmt.Sprintf("%s, meshStack accepted the delete request but has not acted on it", lifecycle.State)
+	}
 }
