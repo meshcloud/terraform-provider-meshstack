@@ -164,11 +164,12 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 				},
 				"display_order": schema.Int64Attribute{
 					MarkdownDescription: "Numeric value controlling in which order the inputs are displayed in the UI. " +
-						"Cannot be changed on a released version. When omitted, uses existing value from state.",
+						"Cannot be changed on a released version. When omitted, uses the existing value from state, if any. " +
+						"Otherwise the backend assigns one (`0` for a newly declared input).",
 					Optional: true,
 					Computed: true,
 					PlanModifiers: []planmodifier.Int64{
-						int64planmodifier.UseStateForUnknown(),
+						int64planmodifier.UseNonNullStateForUnknown(),
 					},
 				},
 			},
@@ -182,7 +183,7 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 			Optional: true,
 			Computed: true,
 			PlanModifiers: []planmodifier.String{
-				stringplanmodifier.UseStateForUnknown(),
+				stringplanmodifier.UseNonNullStateForUnknown(),
 			},
 		},
 		"assignment_type": schema.StringAttribute{
@@ -206,7 +207,7 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 				stringvalidator.OneOf(client.MeshBuildingBlockOutputIOTypes.Strings()...),
 			},
 			PlanModifiers: []planmodifier.String{
-				stringplanmodifier.UseStateForUnknown(),
+				stringplanmodifier.UseNonNullStateForUnknown(),
 			},
 		},
 		"display_order": schema.Int64Attribute{
@@ -216,7 +217,7 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 			Optional: true,
 			Computed: true,
 			PlanModifiers: []planmodifier.Int64{
-				int64planmodifier.UseStateForUnknown(),
+				int64planmodifier.UseNonNullStateForUnknown(),
 			},
 		},
 	},
