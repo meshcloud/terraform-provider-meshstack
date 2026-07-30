@@ -15,10 +15,17 @@ type MeshTenantV4Client struct {
 }
 
 func (m MeshTenantV4Client) Read(_ context.Context, uuid string) (*client.MeshTenantV4, error) {
-	if t, ok := m.Store.Get(uuid); ok {
-		return t, nil
+	t, ok := m.Store.Get(uuid)
+	if !ok {
+		return nil, nil
 	}
-	return nil, nil
+	if t.Status.Lifecycle.State == client.TenantLifecycleStateMarkedForDeletion {
+		deleted := *t
+		deleted.Status.Lifecycle.State = client.TenantLifecycleStateDeleted
+		deleted.Metadata.DeletedOn = new(time.Now().UTC().Format(time.RFC3339))
+		m.Store.Set(uuid, &deleted)
+	}
+	return t, nil
 }
 
 func (m MeshTenantV4Client) ReadFunc(uuid string) func(ctx context.Context) (*client.MeshTenantV4, error) {
@@ -60,6 +67,7 @@ func (m MeshTenantV4Client) Create(_ context.Context, tenant *client.MeshTenantV
 			PlatformTypeIdentifier: "mock-platform-type",
 			Tags:                   map[string][]string{},
 			AppliedQuotas:          appliedQuotas,
+			Lifecycle:              client.MeshTenantLifecycle{State: client.TenantLifecycleStateActive},
 		},
 	}
 
@@ -68,13 +76,27 @@ func (m MeshTenantV4Client) Create(_ context.Context, tenant *client.MeshTenantV
 }
 
 func (m MeshTenantV4Client) Delete(_ context.Context, uuid string) error {
-	m.Store.Delete(uuid)
+	t, ok := m.Store.Get(uuid)
+	if !ok {
+		return nil
+	}
+	marked := *t
+	markedOn := time.Now().UTC().Format(time.RFC3339)
+	marked.Metadata.MarkedForDeletionOn = &markedOn
+	marked.Status.Lifecycle = client.MeshTenantLifecycle{
+		State:             client.TenantLifecycleStateMarkedForDeletion,
+		MarkedForDeletion: &client.MeshTenantLifecycleAction{Timestamp: markedOn},
+	}
+	m.Store.Set(uuid, &marked)
 	return nil
 }
 
 func (m MeshTenantV4Client) List(_ context.Context, query client.MeshTenantV4Query) ([]client.MeshTenantV4, error) {
 	var result []client.MeshTenantV4
 	for _, t := range m.Store.Values() {
+		if t.Status.Lifecycle.State != client.TenantLifecycleStateActive {
+			continue
+		}
 		if t.Metadata.OwnedByWorkspace != query.Workspace {
 			continue
 		}
