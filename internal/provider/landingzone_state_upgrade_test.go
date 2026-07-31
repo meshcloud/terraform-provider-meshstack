@@ -4,9 +4,8 @@ import (
 	"testing"
 )
 
-// v0.23.3 wrote landing zone state at schema version 0 without a `ref` key (added in v0.24.0) and
-// with tags as a set. Reading it back must not choke on the missing ref.
-const landingZoneStateV0WithoutRef = `{
+// v0.23.3 wrote landing zone state at schema version 0 without a `ref` key and with tags as a set.
+const landingZoneStateLegacy = `{
   "metadata": {
     "name": "example-default",
     "owned_by_workspace": "my-workspace",
@@ -33,7 +32,7 @@ const landingZoneStateV0WithoutRef = `{
   "status": {"disabled": false, "restricted": false}
 }`
 
-func TestLandingZoneUpgradeStateV0(t *testing.T) {
+func TestLandingZoneUpgradeState(t *testing.T) {
 	// The prior schema must not carry `ref`, but the live schema still must.
 	if _, ok := landingZoneSchemaV0Once().Attributes["ref"]; ok {
 		t.Error("prior v0 schema declares ref; state written before v0.24.0 has no such key")
@@ -43,7 +42,7 @@ func TestLandingZoneUpgradeStateV0(t *testing.T) {
 	}
 
 	var upgraded landingZoneModel
-	diags := UpgradeResourceStateFromJSON(t, &landingZoneResource{}, 0, landingZoneStateV0WithoutRef, &upgraded)
+	diags := UpgradeResourceStateFromJSON(t, &landingZoneResource{}, 0, landingZoneStateLegacy, &upgraded)
 	if diags.HasError() {
 		t.Fatalf("upgrade produced errors: %s", diags)
 	}

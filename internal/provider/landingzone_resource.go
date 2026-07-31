@@ -3,17 +3,13 @@ package provider
 import (
 	"context"
 	"fmt"
-	"maps"
 	"regexp"
-	"sync"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -53,16 +49,6 @@ type landingZoneRefOutput struct {
 // The client struct has no `ref` field, so we wrap it here rather than mutating client types.
 type landingZoneModel struct {
 	Ref      landingZoneRefOutput           `tfsdk:"ref"`
-	Metadata client.MeshLandingZoneMetadata `tfsdk:"metadata"`
-	Spec     client.MeshLandingZoneSpec     `tfsdk:"spec"`
-	Status   client.MeshLandingZoneStatus   `tfsdk:"status"`
-}
-
-// landingZoneModelV0 reads schema-version-0 state, which spans releases from before `ref` existed
-// (added in v0.24.0) up to v0.24.0 itself. Older state has no `ref` key at all, which unmarshals to
-// null and cannot be reflected into the non-nullable landingZoneRefOutput. The ref is name-derived,
-// so the upgrader drops it here and recomputes it.
-type landingZoneModelV0 struct {
 	Metadata client.MeshLandingZoneMetadata `tfsdk:"metadata"`
 	Spec     client.MeshLandingZoneSpec     `tfsdk:"spec"`
 	Status   client.MeshLandingZoneStatus   `tfsdk:"status"`
@@ -603,55 +589,9 @@ func (r *landingZoneResource) ImportState(ctx context.Context, req resource.Impo
 	resource.ImportStatePassthroughID(ctx, path.Root("metadata").AtName("name"), req, resp)
 }
 
-// landingZoneSchemaV0Once builds the v0 schema for the state upgrader: the current schema with
-// metadata.tags as its old set(string) type. v1 corrected tags to list(string) (tag values are
-// lists, not sets), so this exists only to read v0 state.
-var landingZoneSchemaV0Once = sync.OnceValue(func() schema.Schema {
-	var schemaResp resource.SchemaResponse
-	(&landingZoneResource{}).Schema(context.Background(), resource.SchemaRequest{}, &schemaResp)
-	s := schemaResp.Schema
-	s.Version = 0
-
-	metadata, ok := s.Attributes["metadata"].(schema.SingleNestedAttribute)
-	if !ok {
-		panic("landing zone metadata attribute is not a SingleNestedAttribute")
-	}
-	metadata.Attributes = maps.Clone(metadata.Attributes)
-	metadata.Attributes["tags"] = schema.MapAttribute{
-		ElementType: types.SetType{ElemType: types.StringType},
-		Optional:    true,
-		Computed:    true,
-		Default:     mapdefault.StaticValue(types.MapValueMust(types.SetType{ElemType: types.StringType}, map[string]attr.Value{})),
-	}
-	s.Attributes = maps.Clone(s.Attributes)
-	s.Attributes["metadata"] = metadata
-	// Drop `ref`: it only entered the schema in v0.24.0, while version 0 also covers every release
-	// before that. Keeping it here would make state written by <= v0.23.3 unreadable (null object into
-	// landingZoneRefOutput); state written by v0.24.0 simply has its `ref` key ignored on unmarshal.
-	delete(s.Attributes, "ref")
-	return s
-})
-
 func (r *landingZoneResource) UpgradeState(_ context.Context) map[int64]resource.StateUpgrader {
 	prior := landingZoneSchemaV0Once()
 	return map[int64]resource.StateUpgrader{
-		0: {PriorSchema: &prior, StateUpgrader: r.upgradeTagsSetToListV0},
+		0: {PriorSchema: &prior, StateUpgrader: r.upgradeTagsSetToList},
 	}
-}
-
-// upgradeTagsSetToListV0 migrates v0 (tags as set) state to v1 (list). The Go model holds tags as
-// map[string][]string, so a read-then-write under the current schema does the conversion losslessly.
-func (r *landingZoneResource) upgradeTagsSetToListV0(ctx context.Context, req resource.UpgradeStateRequest, resp *resource.UpgradeStateResponse) {
-	var prior landingZoneModelV0
-	resp.Diagnostics.Append(req.State.Get(ctx, &prior)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	resp.Diagnostics.Append(resp.State.Set(ctx, landingZoneModel{
-		Ref:      landingZoneRefOutput{Name: prior.Metadata.Name, Kind: client.MeshObjectKind.LandingZone},
-		Metadata: prior.Metadata,
-		Spec:     prior.Spec,
-		Status:   prior.Status,
-	})...)
 }
