@@ -10,7 +10,11 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
+	fwresource "github.com/hashicorp/terraform-plugin-framework/resource"
+	fwschema "github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
+	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/stretchr/testify/require"
 
@@ -157,6 +161,55 @@ func moduleRoot(t *testing.T) string {
 		require.NotEqualf(t, parent, dir, "could not locate go.mod above %s", dir)
 		dir = parent
 	}
+}
+
+// ResourceSchemaForTest returns a resource's current schema, so tests can assert on its attributes
+// without importing the framework themselves.
+func ResourceSchemaForTest(t *testing.T, r fwresource.Resource) fwschema.Schema {
+	t.Helper()
+
+	var resp fwresource.SchemaResponse
+	r.Schema(context.Background(), fwresource.SchemaRequest{}, &resp)
+	require.False(t, resp.Diagnostics.HasError(), "building schema: %s", resp.Diagnostics)
+
+	return resp.Schema
+}
+
+// UpgradeResourceStateFromJSON drives a resource's state upgrader over raw prior-state JSON the way
+// the framework does — JSON keys absent from the prior schema are skipped, and attributes the prior
+// schema declares but the JSON omits decode to null — then reads the upgraded state into target.
+// Returns the upgrade's diagnostics so a test can assert on a rejected upgrade too.
+//
+// Driving the upgrader directly is what makes a pre-release state shape testable at all: reproducing
+// it through Terraform would mean installing an older published provider and applying against a real
+// backend.
+func UpgradeResourceStateFromJSON(t *testing.T, r fwresource.ResourceWithUpgradeState, version int64, rawJSON string, target any) diag.Diagnostics {
+	t.Helper()
+
+	ctx := context.Background()
+
+	upgrader, ok := r.UpgradeState(ctx)[version]
+	require.Truef(t, ok, "resource declares no state upgrader for version %d", version)
+	require.NotNilf(t, upgrader.PriorSchema, "state upgrader for version %d has no PriorSchema", version)
+
+	priorValue, err := tfprotov6.RawState{JSON: []byte(rawJSON)}.UnmarshalWithOpts(
+		upgrader.PriorSchema.Type().TerraformType(ctx),
+		tfprotov6.UnmarshalOpts{ValueFromJSONOpts: tftypes.ValueFromJSONOpts{IgnoreUndefinedAttributes: true}},
+	)
+	require.NoError(t, err, "decoding prior state against the upgrader's PriorSchema")
+
+	req := fwresource.UpgradeStateRequest{State: &tfsdk.State{Raw: priorValue, Schema: *upgrader.PriorSchema}}
+	// Raw is left unset, as the framework does when it calls the upgrader.
+	resp := fwresource.UpgradeStateResponse{State: tfsdk.State{Schema: ResourceSchemaForTest(t, r)}}
+
+	upgrader.StateUpgrader(ctx, req, &resp)
+	if resp.Diagnostics.HasError() {
+		return resp.Diagnostics
+	}
+
+	resp.Diagnostics.Append(resp.State.Get(ctx, target)...)
+
+	return resp.Diagnostics
 }
 
 // sanitizeTestName turns a *testing.T name into a relative path. Subtest separators ("/")

@@ -20,6 +20,7 @@ FIXES:
 
 - `meshstack_building_block_definition`: fixed plan drift on `version_spec.inputs.<key>.display_order` when importing existing resources or upgrading from a provider version where `display_order` was absent or state held server-assigned non-zero positions. When `display_order` was introduced in commit `46c496c6`, a schema default of `0` was added. Because HCL configurations omit `display_order`, Terraform evaluated the missing attribute as `0`, planning unwanted normalization changes (`1 → 0`, `2 → 0`) against state populated by the meshStack API. The attribute now uses the `UseNonNullStateForUnknown()` plan modifier instead of a static default, preserving server-assigned values from state while leaving a newly declared input's `display_order` known-after-apply.
 
+- `meshstack_landingzone`: upgrading from v0.23.3 or earlier now works. The schema version 0 → 1 tag migration added in v0.24.1 read prior state through the current schema, which includes the computed `ref` that only exists since v0.24.0. State written by an older provider has no `ref`, so every plan failed with *"Value Conversion Error … Received null value, however the target type cannot handle null values. Path: ref"*. The upgrader no longer expects `ref` in prior state and derives it from `metadata.name` instead. Upgrading from v0.24.0 is unaffected and stays supported.
 
 # v0.24.2
 
