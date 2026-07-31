@@ -58,6 +58,16 @@ type landingZoneModel struct {
 	Status   client.MeshLandingZoneStatus   `tfsdk:"status"`
 }
 
+// landingZoneModelV0 reads schema-version-0 state, which spans releases from before `ref` existed
+// (added in v0.24.0) up to v0.24.0 itself. Older state has no `ref` key at all, which unmarshals to
+// null and cannot be reflected into the non-nullable landingZoneRefOutput. The ref is name-derived,
+// so the upgrader drops it here and recomputes it.
+type landingZoneModelV0 struct {
+	Metadata client.MeshLandingZoneMetadata `tfsdk:"metadata"`
+	Spec     client.MeshLandingZoneSpec     `tfsdk:"spec"`
+	Status   client.MeshLandingZoneStatus   `tfsdk:"status"`
+}
+
 func landingZoneModelFrom(lz *client.MeshLandingZone) landingZoneModel {
 	return landingZoneModel{
 		Ref:      landingZoneRefOutput{Name: lz.Metadata.Name, Kind: client.MeshObjectKind.LandingZone},
@@ -615,6 +625,10 @@ var landingZoneSchemaV0Once = sync.OnceValue(func() schema.Schema {
 	}
 	s.Attributes = maps.Clone(s.Attributes)
 	s.Attributes["metadata"] = metadata
+	// Drop `ref`: it only entered the schema in v0.24.0, while version 0 also covers every release
+	// before that. Keeping it here would make state written by <= v0.23.3 unreadable (null object into
+	// landingZoneRefOutput); state written by v0.24.0 simply has its `ref` key ignored on unmarshal.
+	delete(s.Attributes, "ref")
 	return s
 })
 
@@ -628,10 +642,16 @@ func (r *landingZoneResource) UpgradeState(_ context.Context) map[int64]resource
 // upgradeTagsSetToListV0 migrates v0 (tags as set) state to v1 (list). The Go model holds tags as
 // map[string][]string, so a read-then-write under the current schema does the conversion losslessly.
 func (r *landingZoneResource) upgradeTagsSetToListV0(ctx context.Context, req resource.UpgradeStateRequest, resp *resource.UpgradeStateResponse) {
-	var model landingZoneModel
-	resp.Diagnostics.Append(req.State.Get(ctx, &model)...)
+	var prior landingZoneModelV0
+	resp.Diagnostics.Append(req.State.Get(ctx, &prior)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	resp.Diagnostics.Append(resp.State.Set(ctx, model)...)
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, landingZoneModel{
+		Ref:      landingZoneRefOutput{Name: prior.Metadata.Name, Kind: client.MeshObjectKind.LandingZone},
+		Metadata: prior.Metadata,
+		Spec:     prior.Spec,
+		Status:   prior.Status,
+	})...)
 }
