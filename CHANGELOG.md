@@ -1,3 +1,8 @@
+# v0.24.4
+
+FEATURES:
+- New `meshstack_instance` data source exposes information about the meshStack instance the provider is configured against: `endpoint` (from the provider configuration), and `version`, `is_four_eyes_enabled`, `metadata` (subsystem git commit SHAs) and `admin_workspace_identifier` (the admin/partner workspace) from the public, unauthenticated `/mesh/info` endpoint. Lets modules read the endpoint the provider is already configured with instead of threading a separate `meshstack_endpoint` variable through every caller, and resolves the admin workspace without hardcoding its identifier. `admin_workspace_identifier` requires a meshStack version that returns `adminWorkspaceIdentifier` from `/mesh/info`; it reads as an empty string on older instances.
+
 # v0.24.3
 
 Requires meshStack 2026.30.0 or later (previously 2026.29.0).

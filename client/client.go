@@ -28,6 +28,7 @@ type Client struct {
 	Integration                    MeshIntegrationClient
 	LandingZone                    MeshLandingZoneClient
 	Location                       MeshLocationClient
+	MeshInfo                       MeshInfoClient
 	PaymentMethod                  MeshPaymentMethodClient
 	Platform                       MeshPlatformClient
 	PlatformType                   MeshPlatformTypeClient
@@ -84,6 +85,7 @@ func New(ctx context.Context, rootUrl *url.URL, userAgent string, auth Authoriza
 		Integration:                    newIntegrationClient(ctx, httpClient),
 		LandingZone:                    newLandingZoneClient(ctx, httpClient),
 		Location:                       newLocationClient(ctx, httpClient),
+		MeshInfo:                       newMeshInfoClient(httpClient),
 		PaymentMethod:                  newPaymentMethodClient(ctx, httpClient),
 		Platform:                       newPlatformClient(ctx, httpClient),
 		PlatformType:                   newPlatformTypeClient(ctx, httpClient),
@@ -101,18 +103,15 @@ func New(ctx context.Context, rootUrl *url.URL, userAgent string, auth Authoriza
 }
 
 func checkMeshVersion(ctx context.Context, httpClient internal.HttpClient) error {
-	type MeshInfo struct {
-		Version version.Version `json:"version"`
+	dto, err := fetchMeshInfo(ctx, httpClient)
+	if err != nil {
+		return err
 	}
-
-	meshInfoEndpoint := httpClient.RootUrl.JoinPath("/mesh/info")
-	if meshInfo, err := internal.DoRequest[MeshInfo](ctx, httpClient, "GET", meshInfoEndpoint); err != nil {
-		return fmt.Errorf("failed to retrieve meshStack version information from %s endpoint: %w", meshInfoEndpoint, err)
-	} else if meshInfo.Version.Less(MinMeshStackVersion) {
+	if dto.Version.Less(MinMeshStackVersion) {
 		if os.Getenv("MESHSTACK_SKIP_VERSION_CHECK") == "true" {
 			return nil
 		}
-		return fmt.Errorf("unsupported meshStack version: meshStack is running version %s, but this client requires version %s or higher", meshInfo.Version, MinMeshStackVersion)
+		return fmt.Errorf("unsupported meshStack version: meshStack is running version %s, but this client requires version %s or higher", dto.Version, MinMeshStackVersion)
 	}
 	return nil
 }
