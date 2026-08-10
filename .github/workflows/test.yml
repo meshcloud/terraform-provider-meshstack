@@ -282,7 +282,7 @@ jobs:
           HEALTH_ENDPOINTS=(
             "meshfed-api|http://localhost:8180/actuator/health"
             "replicator|http://localhost:7180/actuator/health"
-            "block-coordinator-api|http://localhost:8083/actuator/health"
+            "block-coordinator-api|http://localhost:8183/actuator/health"
             "mux|http://localhost:8309/healthz"
           )
 
@@ -325,23 +325,35 @@ jobs:
           }
 
           wait_http() {
-            local url="$1" name="$2" deadline=$(( SECONDS + ${3:-360} ))
+            local url="$1" name="$2" deadline=$(( SECONDS + ${3:-360} )) status
             echo "waiting for $name ($url)..."
-            until curl -sf "$url" -o /dev/null; do
+            while true; do
+              # Capture the status instead of relying on curl's exit code, so a timeout can report what
+              # the endpoint last answered. curl already writes 000 for a connection-level failure, so
+              # only an empty result needs covering.
+              status=$(curl -s -o /dev/null -m 10 -w '%{http_code}' "$url" 2>/dev/null || true)
+              if [ "${status:-000}" = 200 ]; then
+                echo "$name healthy"
+                return 0
+              fi
               if [ "$SECONDS" -gt "$deadline" ]; then
-                echo "::error::timeout waiting for $name ($url)"
+                echo "::error::timeout waiting for $name ($url), last status HTTP ${status:-000}"
                 diagnose_backend
                 return 1
               fi
               sleep 3
             done
-            echo "$name healthy"
           }
           # meshfed-api is the gate: it bootstraps API keys into Keycloak, so tests run before it is
           # healthy fail with auth errors.
           wait_http http://localhost:8180/actuator/health meshfed-api 420
           wait_http http://localhost:7180/actuator/health replicator 240
-          wait_http http://localhost:8083/actuator/health block-coordinator-api 240
+          # block-coordinator-api answers /actuator/health on its own management port (8183), not the app
+          # port: meshfed-release set management.server.port for Prometheus scraping, which takes the
+          # endpoint off 8083. Probing 8083 hits the runner API instead, whose filter chain requires the
+          # BLOCK_RUNNER role, so it answers 401 and the gate waits out the whole deadline on a healthy
+          # container. meshfed-release fixed its own CI the same way in 6ce17457ed.
+          wait_http http://localhost:8183/actuator/health block-coordinator-api 240
           wait_http http://localhost:8309/healthz mux 120
           echo "mux routing:"; curl -s http://localhost:8309/status || true
 
