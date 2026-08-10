@@ -31,6 +31,9 @@
             # https://github.com/golangci/golangci-lint
             golangci-lint
 
+            # https://www.shellcheck.net — lints .github/scripts (task lint:shell)
+            shellcheck
+
             # https://github.com/hashicorp/terraform-plugin-docs
             terraform-plugin-docs
 

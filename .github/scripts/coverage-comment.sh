@@ -33,6 +33,8 @@ total_percent() { go tool cover -func="$1" | tail -1 | awk '{print $NF}'; }
 top_uncovered() { awk '$3 == "0.0%" { print; if (++n == 10) exit }' "$1"; }
 
 # Unit figure (shown in both stages); computed from the unit data dir when present.
+# The backticks in the cells below are markdown code spans, not shell expansions.
+# shellcheck disable=SC2016
 UNIT_CELL='`n/a`'
 if have_data covdata/unit; then
   go tool covdata textfmt -i=covdata/unit -o=unit.txt
@@ -45,6 +47,7 @@ case "$MODE" in
     if have_data covdata/unit; then
       UNCOVERED=$(top_uncovered unit.txt)
     else
+      # shellcheck disable=SC2016
       UNIT_CELL='`n/a (no coverage produced)`'
       UNCOVERED=""
     fi
@@ -64,6 +67,7 @@ case "$MODE" in
       COMBINED_CELL="\`$(total_percent merged.txt)\`"
       UNCOVERED=$(top_uncovered merged-summary.txt)
     else
+      # shellcheck disable=SC2016
       COMBINED_CELL='`n/a (no coverage produced)`'
       UNCOVERED=""
     fi

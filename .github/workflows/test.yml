@@ -61,6 +61,20 @@ jobs:
         run: |
           echo "::error::Linting or formatting issues detected. Run 'golangci-lint run --fix' locally to automatically fix these issues, then commit the changes."
 
+  shellcheck:
+    name: Shell Lint (CI scripts)
+    needs: [ build ]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      # shellcheck ships in the ubuntu-latest image, so no install step is needed.
+      - name: shellcheck
+        run: shellcheck .github/scripts/*.sh
+      - name: Suggest fix command on failure
+        if: failure()
+        run: |
+          echo "::error::shellcheck found issues in .github/scripts. Run 'task lint:shell' locally to reproduce."
+
   generate:
     name: Generate Terraform Provider Docs
     needs: [ build ]
@@ -297,23 +311,7 @@ jobs:
           TF_ACC: "1"
           TF_ACC_PROVIDER_HOST: registry.opentofu.org
         shell: bash
-        run: |
-          mkdir -p covdata/acc
-          export TF_ACC_TERRAFORM_PATH="$(command -v tofu)"
-          # Select acceptance tests by the `TestAcc` naming convention across ALL packages (./...)
-          # rather than restricting to ./internal/provider, so acceptance tests added in any package
-          # are picked up automatically. Coverage is attributed across all packages via
-          # -coverpkg=./... so the merged report reflects the real end-to-end exercise of the client
-          # and helper packages too; it is emitted as a binary coverage-data dir for merging with the
-          # unit job's data.
-          #
-          # Tee the output to a file so the next step can verify the run actually finished: a
-          # self-hosted-runner truncation can cut the test process short while this step still exits
-          # 0, which would otherwise pass as a green run. The default shell is `bash -eo pipefail`,
-          # so a genuine test failure still propagates through the pipe and fails this step.
-          go tool gotestsum --junitfile junit-acc.xml --format testdox -- \
-            -coverpkg=./... -count=1 -timeout 10m -run 'TestAcc' ./... \
-            -args -test.gocoverdir="$PWD/covdata/acc" 2>&1 | tee acc-output.log
+        run: .github/scripts/run-acceptance-tests.sh
 
       # Distinguish a truncated run from a real failure. gotestsum prints a final "DONE N tests ..."
       # summary only when the run completes; its absence means the self-hosted runner cut the process
@@ -365,63 +363,4 @@ jobs:
           RUN_ATTEMPT: ${{ github.run_attempt }}
           HEAD_REF: ${{ github.head_ref }}
         shell: bash
-        run: |
-          set -euo pipefail
-          MARKER='<!-- acceptance-advisory -->'
-
-          # Link straight to THIS acceptance job, not the run: the run page shows green on purpose
-          # (the acc step is continue-on-error), so the failing/truncated step is only visible inside
-          # the job. Resolve the job's html_url by matching the ephemeral runner that ran it; fall back
-          # to the run URL if the lookup fails.
-          RUN_URL="$SERVER_URL/$REPO/actions/runs/$RUN_ID"
-          JOB_URL=$(gh api "repos/$REPO/actions/runs/$RUN_ID/attempts/$RUN_ATTEMPT/jobs" \
-            --jq ".jobs[] | select(.runner_name == \"${RUNNER_NAME:-}\") | .html_url" 2>/dev/null | head -n1 || true)
-          [ -n "$JOB_URL" ] || JOB_URL="$RUN_URL"
-
-          # Best-effort link to a same-branch companion PR in the (private) meshfed-release repo. This
-          # public repo's token cannot query that repo, so we build a branch-filtered PR search URL by
-          # convention rather than confirming one exists — it resolves for authorized users and 404s
-          # for everyone else.
-          MESHFED_PR_SEARCH="$SERVER_URL/meshcloud/meshfed-release/pulls?q=is%3Apr+head%3A${HEAD_REF}"
-
-          existing=$(gh api "repos/$REPO/issues/$PR/comments" --paginate \
-            --jq ".[] | select(.body | startswith(\"$MARKER\")) | .id" | head -n1 || true)
-
-          upsert() { # $1 = body
-            if [ -n "$existing" ]; then
-              gh api -X PATCH "repos/$REPO/issues/comments/$existing" -f body="$1" >/dev/null
-              echo "updated advisory comment $existing"
-            else
-              gh api -X POST "repos/$REPO/issues/$PR/comments" -f body="$1" >/dev/null
-              echo "posted advisory comment"
-            fi
-          }
-
-          # Incomplete run (truncated/killed by the runner): the result is unknown, so surface it
-          # loudly and never delete an existing warning by mistaking it for a pass.
-          if [ "$COMPLETE" != "true" ]; then
-            upsert "$(printf '%s\n%s\n\n%s' "$MARKER" \
-              "🛑 **The acceptance run did not complete.** The self-hosted runner truncated or killed the test process before gotestsum reported a summary, so the result is **unknown — not a pass**. Re-run the job; if it recurs it is a runner-infra issue." \
-              "🔗 [View the acceptance job]($JOB_URL)")"
-            exit 0
-          fi
-
-          # Completed run — act only on a definitive pass/fail; ignore cancelled/skipped.
-          case "$OUTCOME" in
-            success)
-              if [ -n "$existing" ]; then
-                gh api -X DELETE "repos/$REPO/issues/comments/$existing"
-                echo "acceptance green — deleted advisory comment $existing"
-              else
-                echo "acceptance green — no advisory comment to delete"
-              fi
-              ;;
-            failure)
-              upsert "$(printf '%s\n%s\n\n%s' "$MARKER" \
-                "❌ **Acceptance tests failed — this blocks merge.** The job runs against the last *merged* meshfed-release backend (\`:latest\`). If this change needs a companion backend change, get its meshfed-release PR green and **merged first** (that rebuilds \`:latest\`), then **re-run this job**; otherwise it is a regression to fix. Measured coverage for this run is in the coverage comment above." \
-                "🔗 [Failing acceptance job]($JOB_URL) · [companion meshfed-release PR — same branch]($MESHFED_PR_SEARCH) (private; 404 without access)")"
-              ;;
-            *)
-              echo "acceptance outcome '$OUTCOME' — leaving any existing comment untouched"
-              ;;
-          esac
+        run: .github/scripts/acceptance-pr-comment.sh

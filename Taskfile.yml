@@ -31,6 +31,11 @@ tasks:
     cmds:
       - golangci-lint run {{.CLI_ARGS}}
 
+  lint:shell:
+    desc: Shellcheck the CI scripts in .github/scripts
+    cmds:
+      - shellcheck .github/scripts/*.sh
+
   generate:
     desc: Generate documentation
     cmds:
