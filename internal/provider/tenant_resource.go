@@ -54,7 +54,7 @@ func (r *tenantResource) Configure(_ context.Context, req resource.ConfigureRequ
 
 func (r *tenantResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Version:             1,
+		Version:             2,
 		MarkdownDescription: "Manages a `meshTenant`." + previewDisclaimer(),
 		Attributes:          tenantBodyAttributes(),
 	}
@@ -76,7 +76,6 @@ func (r *tenantResource) Create(ctx context.Context, req resource.CreateRequest,
 			PlatformTenantId: plan.Spec.PlatformTenantId,
 			LandingZoneRef:   plan.Spec.LandingZoneRef,
 			RequestedQuotas:  plan.Spec.RequestedQuotas,
-			Quotas:           plan.Spec.Quotas, //nolint:staticcheck // bridging the deprecated quotas field for backward compatibility
 		},
 	}
 
@@ -97,7 +96,7 @@ func (r *tenantResource) Create(ctx context.Context, req resource.CreateRequest,
 
 	warnOnUnrealizedQuotas(plan.Spec, tenant.Status, &resp.Diagnostics)
 
-	model := tenantResourceModelFromDto(tenant, plan.Spec.Quotas, plan.Spec.RequestedQuotas, plan.WaitForCompletion) //nolint:staticcheck // bridging the deprecated quotas field for backward compatibility
+	model := tenantResourceModelFromDto(tenant, plan.Spec.RequestedQuotas, plan.WaitForCompletion)
 	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, model, tenantConverterOptions()...)...)
 }
 
@@ -122,9 +121,7 @@ func (r *tenantResource) Read(ctx context.Context, req resource.ReadRequest, res
 	// was requested — the tenant's quotas were changed outside Terraform, e.g. by a platform operator.
 	warnOnUnrealizedQuotas(state.Spec, tenant.Status, &resp.Diagnostics)
 
-	// spec.requested_quotas / spec.quotas are Optional (not computed), so preserve the configured value
-	// from state rather than the backend's (possibly landing-zone-defaulted) spec quotas.
-	model := tenantResourceModelFromDto(tenant, state.Spec.Quotas, state.Spec.RequestedQuotas, state.WaitForCompletion) //nolint:staticcheck // bridging the deprecated quotas field for backward compatibility
+	model := tenantResourceModelFromDto(tenant, state.Spec.RequestedQuotas, state.WaitForCompletion)
 	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, model, tenantConverterOptions()...)...)
 }
 
@@ -258,17 +255,12 @@ func (r *tenantResource) moveFromV4(ctx context.Context, req resource.MoveStateR
 		return
 	}
 
-	// spec.quotas is optional (not computed); carry the source's value so a configured value survives
-	// the move without churn.
+	// The source's spec.quotas is optional (not computed), so it holds what the caller configured.
 	var quotas clientTypes.Set[client.MeshTenantQuota]
 	if !src.Spec.Quotas.IsNull() && !src.Spec.Quotas.IsUnknown() {
 		resp.Diagnostics.Append(src.Spec.Quotas.ElementsAs(ctx, &quotas, false)...)
 	}
 
-	// Carry only the tenant uuid, its owning workspace/project, the configured spec.quotas and the
-	// client-side wait_for_completion toggle; the ref/platform_ref/landing_zone_ref/status outputs are
-	// left at their zero value and get overwritten by the refresh Read that follows the move (it
-	// re-reads the tenant by uuid).
 	target := tenantResourceModelFromDto(
 		&client.MeshTenant{
 			Metadata: client.MeshTenantMetadata{
@@ -278,19 +270,23 @@ func (r *tenantResource) moveFromV4(ctx context.Context, req resource.MoveStateR
 			},
 			Spec: client.MeshTenantSpec{PlatformTenantId: src.Spec.PlatformTenantId.ValueStringPointer()},
 		},
-		quotas,
-		nil,
+		quotaListToRequestedMap(quotas),
 		true,
 	)
 	resp.Diagnostics.Append(generic.Set(ctx, &resp.TargetState, target, tenantConverterOptions()...)...)
 }
 
 func (r *tenantResource) UpgradeState(_ context.Context) map[int64]resource.StateUpgrader {
-	priorSchema := tenantV0Schema()
+	priorV0Schema := tenantV0Schema()
+	priorV1Schema := tenantSchemaV1Once()
 	return map[int64]resource.StateUpgrader{
 		0: {
-			PriorSchema:   &priorSchema,
+			PriorSchema:   &priorV0Schema,
 			StateUpgrader: r.upgradeFromV0,
+		},
+		1: {
+			PriorSchema:   &priorV1Schema,
+			StateUpgrader: r.upgradeFromV1,
 		},
 	}
 }
@@ -316,10 +312,9 @@ func (r *tenantResource) upgradeFromV0(ctx context.Context, req resource.Upgrade
 		return
 	}
 
-	// spec quotas are Optional (not computed) and echo the configured value; a migrated config that
-	// omits quotas plans null, so carry null here (not the backend's effective quotas, often an empty
-	// set) to avoid a spurious spec quota diff that would route to the unsupported tenant Update.
-	model := tenantResourceModelFromDto(tenant, nil, nil, true)
+	// Carry null rather than the backend's effective quotas: a migrated configuration that omits quotas
+	// plans null, and a spec quota diff would route to Update, which the meshTenant API does not support.
+	model := tenantResourceModelFromDto(tenant, nil, true)
 	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, model, tenantConverterOptions()...)...)
 }
 
@@ -474,19 +469,6 @@ func tenantBodyAttributes() map[string]schema.Attribute {
 								MarkdownDescription: "The requested quota value.",
 								Required:            true,
 							},
-						},
-					},
-				},
-				"quotas": schema.SetNestedAttribute{
-					MarkdownDescription: "Deprecated: use `requested_quotas` instead, which models quotas as a " +
-						"`key -> value` map. Providing both is rejected when they disagree. Quotas to apply to the tenant " +
-						"at creation as a list of `{key, value}` entries.",
-					DeprecationMessage: "Use `requested_quotas` (a key -> value map) instead.",
-					Optional:           true,
-					NestedObject: schema.NestedAttributeObject{
-						Attributes: map[string]schema.Attribute{
-							"key":   schema.StringAttribute{Required: true},
-							"value": schema.Int64Attribute{Required: true},
 						},
 					},
 				},

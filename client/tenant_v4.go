@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client/internal"
-	"github.com/meshcloud/terraform-provider-meshstack/client/types"
 	"github.com/meshcloud/terraform-provider-meshstack/client/types/enum"
 )
 
@@ -168,8 +167,6 @@ type MeshTenantSpec struct {
 	// {"limits.cpu": {"value": 4}}. The backend does not return it on read (it is a create-time input),
 	// so the resource echoes the configured value from state.
 	RequestedQuotas map[string]RequestQuotaValue `json:"requestedQuotas" tfsdk:"requested_quotas"`
-	// Deprecated: superseded by RequestedQuotas; retained so existing configurations keep working.
-	Quotas types.Set[MeshTenantQuota] `json:"quotas" tfsdk:"quotas"`
 }
 
 type MeshTenantStatus struct {
@@ -221,14 +218,10 @@ type MeshTenantCreateMetadata struct {
 }
 
 type MeshTenantCreateSpec struct {
-	PlatformRef      UuidRef   `json:"platformRef" tfsdk:"platform_ref"`
-	LandingZoneRef   *NamedRef `json:"landingZoneRef" tfsdk:"landing_zone_ref"`
-	PlatformTenantId *string   `json:"platformTenantId" tfsdk:"platform_tenant_id"`
-	// RequestedQuotas is the preferred key->value form. Only one of the two quota fields should be
-	// set — the backend rejects a create that carries both with conflicting values.
-	RequestedQuotas map[string]RequestQuotaValue `json:"requestedQuotas,omitempty" tfsdk:"requested_quotas"`
-	// Deprecated: superseded by RequestedQuotas; retained so existing configurations keep working.
-	Quotas types.Set[MeshTenantQuota] `json:"quotas,omitempty" tfsdk:"quotas"`
+	PlatformRef      UuidRef                      `json:"platformRef" tfsdk:"platform_ref"`
+	LandingZoneRef   *NamedRef                    `json:"landingZoneRef" tfsdk:"landing_zone_ref"`
+	PlatformTenantId *string                      `json:"platformTenantId" tfsdk:"platform_tenant_id"`
+	RequestedQuotas  map[string]RequestQuotaValue `json:"requestedQuotas,omitempty" tfsdk:"requested_quotas"`
 }
 
 type MeshTenantQuery struct {

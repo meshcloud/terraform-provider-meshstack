@@ -112,17 +112,6 @@ func (d *tenantsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 										},
 									},
 								},
-								"quotas": schema.ListNestedAttribute{
-									MarkdownDescription: "Deprecated: use `requested_quotas` instead. The requested quotas as a list of `{key, value}` entries.",
-									DeprecationMessage:  "Use `requested_quotas` (a key -> value map) instead.",
-									Computed:            true,
-									NestedObject: schema.NestedAttributeObject{
-										Attributes: map[string]schema.Attribute{
-											"key":   schema.StringAttribute{Computed: true},
-											"value": schema.Int64Attribute{Computed: true},
-										},
-									},
-								},
 							},
 						},
 						"status": schema.SingleNestedAttribute{

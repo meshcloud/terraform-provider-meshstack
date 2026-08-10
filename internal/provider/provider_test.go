@@ -176,6 +176,18 @@ func ResourceSchemaForTest(t *testing.T, r fwresource.Resource) fwschema.Schema 
 	return resp.Schema
 }
 
+// HasNestedAttributeForTest reports whether a schema's single-nested attribute declares the given
+// child, e.g. spec.quotas.
+func HasNestedAttributeForTest(t *testing.T, s fwschema.Schema, parent, child string) bool {
+	t.Helper()
+
+	nested, ok := s.Attributes[parent].(fwschema.SingleNestedAttribute)
+	require.Truef(t, ok, "%s attribute is %T, want SingleNestedAttribute", parent, s.Attributes[parent])
+
+	_, found := nested.Attributes[child]
+	return found
+}
+
 // UpgradeResourceStateFromJSON drives a resource's state upgrader over raw prior-state JSON the way
 // the framework does — JSON keys absent from the prior schema are skipped, and attributes the prior
 // schema declares but the JSON omits decode to null — then reads the upgraded state into target.

@@ -45,7 +45,7 @@ func (m MeshTenantClient) Create(_ context.Context, tenant *client.MeshTenantCre
 	// The mock applies the requested quotas verbatim (it enforces no bounds or auto-approval threshold),
 	// but does overlay them on the landing zone's default quotas as the backend does, so
 	// status.appliedQuotas can legitimately carry keys the caller never requested.
-	appliedQuotas := effectiveQuotas(m.landingZoneDefaultQuotas(tenant.Spec.LandingZoneRef), tenant.Spec.RequestedQuotas, tenant.Spec.Quotas) //nolint:staticcheck // the mock must keep serving the deprecated quotas form
+	appliedQuotas := effectiveQuotas(m.landingZoneDefaultQuotas(tenant.Spec.LandingZoneRef), tenant.Spec.RequestedQuotas, nil)
 
 	created := &client.MeshTenant{
 		Metadata: client.MeshTenantMetadata{
@@ -58,7 +58,6 @@ func (m MeshTenantClient) Create(_ context.Context, tenant *client.MeshTenantCre
 			PlatformTenantId: new(acctest.RandString(16)),
 			LandingZoneRef:   tenant.Spec.LandingZoneRef,
 			RequestedQuotas:  tenant.Spec.RequestedQuotas,
-			Quotas:           tenant.Spec.Quotas, //nolint:staticcheck // the mock must keep serving the deprecated quotas form
 		},
 		Status: client.MeshTenantStatus{
 			TenantName:             tenantName,

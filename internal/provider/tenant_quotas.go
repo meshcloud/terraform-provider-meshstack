@@ -8,27 +8,19 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
+	clientTypes "github.com/meshcloud/terraform-provider-meshstack/client/types"
 )
 
-// requestedQuotaValues flattens the quotas a caller requested — from the preferred requested_quotas
-// map or, failing that, the deprecated quotas list — into a plain key->value map. Returns nil when no
-// quotas were requested.
+// requestedQuotaValues flattens spec.requested_quotas into a plain key->value map. Returns nil when empty.
 func requestedQuotaValues(spec client.MeshTenantSpec) map[string]int64 {
-	if len(spec.RequestedQuotas) > 0 {
-		out := make(map[string]int64, len(spec.RequestedQuotas))
-		for k, v := range spec.RequestedQuotas {
-			out[k] = v.Value
-		}
-		return out
+	if len(spec.RequestedQuotas) == 0 {
+		return nil
 	}
-	if deprecated := spec.Quotas; len(deprecated) > 0 { //nolint:staticcheck // bridging the deprecated quotas field for backward compatibility
-		out := make(map[string]int64, len(deprecated))
-		for _, q := range deprecated {
-			out[q.Key] = q.Value
-		}
-		return out
+	out := make(map[string]int64, len(spec.RequestedQuotas))
+	for k, v := range spec.RequestedQuotas {
+		out[k] = v.Value
 	}
-	return nil
+	return out
 }
 
 // appliedQuotaValues flattens status.applied_quotas into a plain key->value map. Returns nil when empty.
@@ -93,4 +85,20 @@ func warnOnUnrealizedQuotas(spec client.MeshTenantSpec, status client.MeshTenant
 	if summary, detail, ok := quotaRealizationWarning(requestedQuotaValues(spec), appliedQuotaValues(status)); ok {
 		diags.AddWarning(summary, detail)
 	}
+}
+
+// quotaListToRequestedMap translates the removed list-form spec.quotas into the spec.requested_quotas
+// map, so a configuration that restates the same quotas as a map plans no change — and it must not plan
+// one, because the meshTenant API cannot update the quotas of an existing tenant. Returns nil for an
+// empty list: an empty map would itself plan as a change against a configuration that omits the
+// Optional attribute.
+func quotaListToRequestedMap(quotas clientTypes.Set[client.MeshTenantQuota]) map[string]client.RequestQuotaValue {
+	if len(quotas) == 0 {
+		return nil
+	}
+	out := make(map[string]client.RequestQuotaValue, len(quotas))
+	for _, q := range quotas {
+		out[q.Key] = client.RequestQuotaValue{Value: q.Value}
+	}
+	return out
 }

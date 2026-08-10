@@ -92,7 +92,6 @@ Optional:
 
 - `landing_zone_ref` (Attributes) Reference to the landing zone to assign to this tenant, identified by its name (the landing zone identifier). (see [below for nested schema](#nestedatt--spec--landing_zone_ref))
 - `platform_tenant_id` (String) The identifier of the tenant on the platform (e.g. GCP project ID or Azure subscription ID). If this is not set, a new tenant will be created. If this is set, an existing tenant will be imported. Otherwise, this field will be empty until a successful replication has run.
-- `quotas` (Attributes Set, Deprecated) Deprecated: use `requested_quotas` instead, which models quotas as a `key -> value` map. Providing both is rejected when they disagree. Quotas to apply to the tenant at creation as a list of `{key, value}` entries. (see [below for nested schema](#nestedatt--spec--quotas))
 - `requested_quotas` (Attributes Map) Quotas to apply to the tenant at creation, as a map keyed by quota key whose value is an object carrying the requested `value` (e.g. `{ "limits.cpu" = { value = 4 } }`). The value is wrapped in an object to match the meshStack API and to allow per-quota fields to be added later without a breaking change. Requested values are applied as configured, merged into the landing zone's default quotas, which apply for every key not requested here. A value outside the quota's `[min_value, max_value]` bounds is rejected, as is an increase beyond the platform's auto-approval threshold (measured against those landing-zone defaults) unless the API key has admin privileges: the meshObject API refuses such a request rather than queueing it for operator approval, so an apply never reports success on quotas that are not in effect. Set only at creation: the meshTenant API cannot update a tenant, so changing this on an existing tenant is rejected. To change a live tenant's quotas, file a quota request in the meshStack panel (Tenant > Settings > Quotas), which is subject to platform-operator approval. (see [below for nested schema](#nestedatt--spec--requested_quotas))
 
 <a id="nestedatt--spec--platform_ref"></a>
@@ -114,15 +113,6 @@ Optional:
 
 - `kind` (String) meshObject type, always `meshLandingZone`.
 - `name` (String) Named identifier (`metadata.name`) of `meshLandingZone`.
-
-
-<a id="nestedatt--spec--quotas"></a>
-### Nested Schema for `spec.quotas`
-
-Required:
-
-- `key` (String)
-- `value` (Number)
 
 
 <a id="nestedatt--spec--requested_quotas"></a>

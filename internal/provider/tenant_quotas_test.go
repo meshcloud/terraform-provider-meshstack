@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 
@@ -67,10 +68,9 @@ func TestQuotaRealizationWarning(t *testing.T) {
 }
 
 func TestRequestedQuotaValues(t *testing.T) {
-	t.Run("prefers requested_quotas map", func(t *testing.T) {
+	t.Run("flattens the requested_quotas map", func(t *testing.T) {
 		spec := client.MeshTenantSpec{
 			RequestedQuotas: map[string]client.RequestQuotaValue{"limits.cpu": {Value: 4}},
-			Quotas:          clientTypes.Set[client.MeshTenantQuota]{{Key: "limits.cpu", Value: 99}},
 		}
 		got := requestedQuotaValues(spec)
 		if len(got) != 1 || got["limits.cpu"] != 4 {
@@ -78,18 +78,31 @@ func TestRequestedQuotaValues(t *testing.T) {
 		}
 	})
 
-	t.Run("falls back to deprecated quotas list", func(t *testing.T) {
-		spec := client.MeshTenantSpec{
-			Quotas: clientTypes.Set[client.MeshTenantQuota]{{Key: "limits.cpu", Value: 7}},
+	t.Run("nil when nothing requested", func(t *testing.T) {
+		if got := requestedQuotaValues(client.MeshTenantSpec{}); got != nil {
+			t.Fatalf("got %v, want nil", got)
 		}
-		got := requestedQuotaValues(spec)
-		if len(got) != 1 || got["limits.cpu"] != 7 {
-			t.Fatalf("got %v, want map[limits.cpu:7]", got)
+	})
+}
+
+func TestQuotaListToRequestedMap(t *testing.T) {
+	t.Run("translates the list into the requested_quotas map", func(t *testing.T) {
+		got := quotaListToRequestedMap(clientTypes.Set[client.MeshTenantQuota]{
+			{Key: "limits.cpu", Value: 4},
+			{Key: "limits.memory", Value: 8},
+		})
+
+		want := map[string]client.RequestQuotaValue{
+			"limits.cpu":    {Value: 4},
+			"limits.memory": {Value: 8},
+		}
+		if !reflect.DeepEqual(got, want) {
+			t.Fatalf("got %v, want %v", got, want)
 		}
 	})
 
-	t.Run("nil when nothing requested", func(t *testing.T) {
-		if got := requestedQuotaValues(client.MeshTenantSpec{}); got != nil {
+	t.Run("nil for an empty list", func(t *testing.T) {
+		if got := quotaListToRequestedMap(nil); got != nil {
 			t.Fatalf("got %v, want nil", got)
 		}
 	})

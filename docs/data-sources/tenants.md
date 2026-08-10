@@ -78,7 +78,6 @@ Read-Only:
 - `landing_zone_ref` (Attributes) Reference to the landing zone assigned to this tenant, identified by its name (the landing zone identifier). (see [below for nested schema](#nestedatt--tenants--spec--landing_zone_ref))
 - `platform_ref` (Attributes) Reference to the platform this tenant belongs to, identified by its uuid. (see [below for nested schema](#nestedatt--tenants--spec--platform_ref))
 - `platform_tenant_id` (String)
-- `quotas` (Attributes List, Deprecated) Deprecated: use `requested_quotas` instead. The requested quotas as a list of `{key, value}` entries. (see [below for nested schema](#nestedatt--tenants--spec--quotas))
 - `requested_quotas` (Attributes Map) The quotas requested for this tenant at creation, as a map keyed by quota key whose value is an object carrying the requested `value`. This is a create-time input that the meshStack API does not return on read, so it is typically null here; read the effective quotas from `status.applied_quotas` instead. (see [below for nested schema](#nestedatt--tenants--spec--requested_quotas))
 
 <a id="nestedatt--tenants--spec--landing_zone_ref"></a>
@@ -97,15 +96,6 @@ Read-Only:
 
 - `kind` (String) meshObject type, always `meshPlatform`.
 - `uuid` (String) UUID (`metadata.uuid`) of `meshPlatform`.
-
-
-<a id="nestedatt--tenants--spec--quotas"></a>
-### Nested Schema for `tenants.spec.quotas`
-
-Read-Only:
-
-- `key` (String)
-- `value` (Number)
 
 
 <a id="nestedatt--tenants--spec--requested_quotas"></a>

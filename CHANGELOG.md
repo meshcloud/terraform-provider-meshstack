@@ -1,6 +1,7 @@
 # v0.24.4
 
 BREAKING CHANGES:
+- `meshstack_tenant` (resource and data source) and `meshstack_tenants`: the deprecated `spec.quotas` set of `{key, value}` entries has been removed. Request quotas through the `spec.requested_quotas` map (`{ "limits.cpu" = { value = 4 } }`) and read the effective values from the computed `status.applied_quotas`; both shipped in v0.24.3. This only stops the provider from sending a field the meshTenant API deprecated, so it needs no newer meshStack version. Existing state is migrated automatically (`meshstack_tenant` schema version 1 -> 2): a quota recorded under `spec.quotas` is translated into `spec.requested_quotas`, so a configuration that restates the same quotas in the map form plans no change. Update any configuration still using `quotas = [...]`, which is no longer a valid argument. The deprecated `meshstack_tenant_v4` resource is unaffected and keeps its own `spec.quotas`.
 - `meshstack_building_block`: `spec.parent_building_blocks` is renamed to `spec.parent_building_block_refs`, and it now holds a plain set of building block references. Each element was a `{buildingblock_uuid, definition_uuid}` object and is now a `{kind, uuid}` ref (`kind` defaults to `meshBuildingBlock`). One ref replaces both fields, because meshStack derives a parent's definition from the referenced building block. The new name says what the attribute holds, and it changes in the same release as the element shape, so you edit each of these blocks only once. To migrate, rename the attribute, then replace each object with a ref:
 
   ```hcl
