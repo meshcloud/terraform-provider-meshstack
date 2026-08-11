@@ -26,6 +26,13 @@ export TF_ACC_TERRAFORM_PATH
 # self-hosted-runner truncation can cut the test process short while this step still exits 0, which
 # would otherwise pass as a green run. pipefail (set above) keeps a genuine test failure propagating
 # through the pipe.
-go tool gotestsum --junitfile junit-acc.xml --format testdox -- \
+#
+# `testname` prints each test as it finishes; `testdox` buffers a package's whole report until that
+# package ends. Since nearly every acceptance test is t.Parallel(), testdox meant ./internal/provider
+# emitted nothing for the ~5 minutes it runs and then everything at once — so a run cut short left a
+# log holding only the empty-package headers, identical no matter where it died. Streaming makes the
+# next truncation say which test it reached. The final "DONE N tests" summary the verify step greps
+# for is printed by both formats.
+go tool gotestsum --junitfile junit-acc.xml --format testname -- \
   -coverpkg=./... -count=1 -timeout 10m -run 'TestAcc' ./... \
   -args -test.gocoverdir="$PWD/covdata/acc" 2>&1 | tee acc-output.log
