@@ -5,7 +5,6 @@ subcategory: ""
 description: |-
   Manage a workspace or tenant building block created from a building block definition (BBD).
   A building block is usually managed by the app team that owns its workspace; a platform operator typically only creates one directly to test a draft BBD in the operator's own workspace. Building blocks can depend on each other via parent_building_block_refs, forming a dependency hierarchy in which a child's inputs draw their values from a parent's outputs (see building block concepts https://docs.meshcloud.io/concepts/building-block/).
-  ~> Preview: This resource is in preview. Breaking changes are possible without prior notice due to changes in the underlying meshStack preview API https://docs.meshcloud.io/api/technical-specifications#preview-endpoints or due to changes in this provider. Please ensure you are running the latest version of the provider and report any bugs via GitHub issues https://github.com/meshcloud/terraform-provider-meshstack/issues or via support@meshcloud.io.
 ---
 
 # meshstack_building_block (Resource)
@@ -13,8 +12,6 @@ description: |-
 Manage a workspace or tenant building block created from a building block definition (BBD).
 
 A building block is usually managed by the app team that owns its workspace; a platform operator typically only creates one directly to test a draft BBD in the operator's own workspace. Building blocks can depend on each other via `parent_building_block_refs`, forming a dependency hierarchy in which a child's inputs draw their values from a parent's outputs (see [building block concepts](https://docs.meshcloud.io/concepts/building-block/)).
-
-~> **Preview:** This resource is in preview. Breaking changes are possible without prior notice due to changes in the underlying [meshStack preview API](https://docs.meshcloud.io/api/technical-specifications#preview-endpoints) or due to changes in this provider. Please ensure you are running the latest version of the provider and report any bugs via [GitHub issues](https://github.com/meshcloud/terraform-provider-meshstack/issues) or via support@meshcloud.io.
 
 ## Example Usage
 
@@ -260,7 +257,6 @@ Read-Only:
 - `latest_dry_run_uuid` (String) UUID of the latest dry (DETECT) run for this Building Block, but only when it is the newest run; null otherwise.
 - `latest_run_uuid` (String) UUID of the latest modifying (apply/destroy) run for this Building Block. Excludes dry runs (see `latest_dry_run_uuid`). Null when no modifying run exists.
 - `outputs` (Attributes Map) Outputs of building block, available after a successful run. (see [below for nested schema](#nestedatt--status--outputs))
-- `status` (String, Deprecated) Execution status. One of `WAITING_FOR_DEPENDENT_INPUT`, `WAITING_FOR_OPERATOR_INPUT`, `WAITING_FOR_USER_INPUT`, `WAITING_FOR_APPROVAL`, `PENDING`, `IN_PROGRESS`, `SUCCEEDED`, `FAILED`, `ABORTED`. Use `succeeded`, or `health_status` and `action` for finer checks.
 - `succeeded` (Boolean) True when the latest run succeeded and the building block needs no attention: `health_status` is `SUCCEEDED` and `action` is one of `NO_ACTION`, `UPGRADE_AVAILABLE`, `REVIEW_DRIFT`. On meshStack versions before the `REVIEW_ABORTED_RUN` action an aborted run reads as succeeded.
 
 <a id="nestedatt--status--outputs"></a>

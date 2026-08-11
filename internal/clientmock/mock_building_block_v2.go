@@ -68,38 +68,20 @@ type MeshBuildingBlockV2Client struct {
 	BbdVersionStore *Store[client.MeshBuildingBlockDefinitionVersion]
 }
 
-// withDerivedParents rebuilds the deprecated parent entries, which do not survive deepCopyBB because
-// the wire format carries no definition uuid. The backend derives the same value from the referenced
-// building block for every response, and status.basedOnDraftVersion from the block's own version.
-func (m MeshBuildingBlockV2Client) withDerivedParents(bb *client.MeshBuildingBlockV2) *client.MeshBuildingBlockV2 {
-	if bb == nil {
-		return nil
+// withBasedOnDraftVersion derives status.basedOnDraftVersion from the block's version, as the backend
+// does for every response.
+func (m MeshBuildingBlockV2Client) withBasedOnDraftVersion(bb *client.MeshBuildingBlockV2) *client.MeshBuildingBlockV2 {
+	if bb == nil || bb.Status == nil {
+		return bb
 	}
-	parents := make(clientTypes.Set[client.MeshBuildingBlockV2Parent], 0, len(bb.Spec.ParentBuildingBlockRefs))
-	for _, ref := range bb.Spec.ParentBuildingBlockRefs {
-		parent := client.MeshBuildingBlockV2Parent{
-			UuidRef:           client.UuidRef{Kind: client.MeshObjectKind.BuildingBlock, Uuid: ref.Uuid},
-			BuildingBlockUuid: ref.Uuid,
-		}
-		if storedParent, ok := m.Store.Get(ref.Uuid); ok {
-			version, ok := m.BbdVersionStore.Get(storedParent.Spec.BuildingBlockDefinitionVersionRef.Uuid)
-			if ok && version.Spec.BuildingBlockDefinitionRef != nil {
-				parent.DefinitionUuid = version.Spec.BuildingBlockDefinitionRef.Uuid
-			}
-		}
-		parents = append(parents, parent)
-	}
-	bb.Spec.ParentBuildingBlocks = parents
-	if bb.Status != nil {
-		version, ok := m.BbdVersionStore.Get(bb.Spec.BuildingBlockDefinitionVersionRef.Uuid)
-		bb.Status.BasedOnDraftVersion = ok && version.Spec.State != nil && *version.Spec.State == client.MeshBuildingBlockDefinitionVersionStateDraft.Unwrap()
-	}
+	version, ok := m.BbdVersionStore.Get(bb.Spec.BuildingBlockDefinitionVersionRef.Uuid)
+	bb.Status.BasedOnDraftVersion = ok && version.Spec.State != nil && *version.Spec.State == client.MeshBuildingBlockDefinitionVersionStateDraft.Unwrap()
 	return bb
 }
 
 func (m MeshBuildingBlockV2Client) Read(_ context.Context, bbUuid string) (*client.MeshBuildingBlockV2, error) {
 	if bb, ok := m.Store.Get(bbUuid); ok {
-		return m.withDerivedParents(deepCopyBB(bb)), nil
+		return m.withBasedOnDraftVersion(deepCopyBB(bb)), nil
 	}
 	return nil, nil
 }
@@ -121,7 +103,7 @@ func (m MeshBuildingBlockV2Client) List(_ context.Context, filter client.MeshBui
 		if !mockBuildingBlockMatchesFilter(bb, filter) {
 			continue
 		}
-		result = append(result, *m.withDerivedParents(deepCopyBB(bb)))
+		result = append(result, *m.withBasedOnDraftVersion(deepCopyBB(bb)))
 	}
 	return result, nil
 }
@@ -145,9 +127,6 @@ func mockBuildingBlockMatchesFilter(bb *client.MeshBuildingBlockV2, filter clien
 		return false
 	}
 	if filter.TenantUuid != nil && (bb.Spec.TargetRef.Uuid == nil || *bb.Spec.TargetRef.Uuid != *filter.TenantUuid) {
-		return false
-	}
-	if filter.Status != nil && (bb.Status == nil || string(bb.Status.Status) != *filter.Status) {
 		return false
 	}
 	if filter.HealthStatus != nil && (bb.Status == nil || !slices.Contains(filter.HealthStatus, bb.Status.HealthStatus.String())) {
@@ -193,7 +172,7 @@ func (m MeshBuildingBlockV2Client) Create(_ context.Context, bb *client.MeshBuil
 
 	m.Store.Set(id, stored)
 	// Return a fresh deep copy so SetFromClientDto cannot mutate the store via the returned pointer.
-	return m.withDerivedParents(deepCopyBB(stored)), nil
+	return m.withBasedOnDraftVersion(deepCopyBB(stored)), nil
 }
 
 func (m MeshBuildingBlockV2Client) Update(_ context.Context, bb *client.MeshBuildingBlockV2) (*client.MeshBuildingBlockV2, error) {
@@ -240,7 +219,7 @@ func (m MeshBuildingBlockV2Client) Update(_ context.Context, bb *client.MeshBuil
 	stored.Status = finishedRun(*existing.Status)
 
 	m.Store.Set(*stored.Metadata.Uuid, stored)
-	return m.withDerivedParents(answered), nil
+	return m.withBasedOnDraftVersion(answered), nil
 }
 
 func (m MeshBuildingBlockV2Client) Delete(_ context.Context, bbUuid string, purge bool) error {
@@ -257,11 +236,10 @@ func (m MeshBuildingBlockV2Client) TriggerRun(_ context.Context, bbUuid string) 
 	stored.Status = finishedRun(*bb.Status)
 	m.Store.Set(bbUuid, stored)
 	// The answer keeps the run before, see Update.
-	return m.withDerivedParents(deepCopyBB(bb)), nil
+	return m.withBasedOnDraftVersion(deepCopyBB(bb)), nil
 }
 
 func finishedRun(status client.MeshBuildingBlockV2Status) *client.MeshBuildingBlockV2Status {
-	status.Status = client.BuildingBlockStatusSucceeded
 	status.HealthStatus = client.BuildingBlockHealthStatusSucceeded
 	status.Action = client.BuildingBlockActionNoAction
 	status.LatestRunUuid = new(uuid.NewString())

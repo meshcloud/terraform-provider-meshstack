@@ -458,8 +458,7 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 		Version: 1,
 		MarkdownDescription: "Manages a meshBuildingBlockDefinition in meshStack. " +
 			"Building Block Definitions define reusable automation components that can be executed on workspaces or tenants. " +
-			"This resource combines the building block definition metadata with version information in a single resource for simplified management." +
-			previewDisclaimer(),
+			"This resource combines the building block definition metadata with version information in a single resource for simplified management.",
 
 		Attributes: map[string]schema.Attribute{
 			"metadata": schema.SingleNestedAttribute{
@@ -691,7 +690,7 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 					"dependency_refs": schema.SetNestedAttribute{
 						MarkdownDescription: "Set of refs to building block definitions this definition depends on. " +
 							"Prefer reusable refs from `meshstack_building_block_definition.<name>.ref` or " +
-							"`one(data.meshstack_building_block_definitions.<name>.building_block_definitions).ref`.",
+							"`data.meshstack_building_block_definition.<name>.ref`.",
 						Optional:     true,
 						Computed:     true,
 						Default:      emptySetDefault(dependencyRefs),
@@ -878,7 +877,7 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 			},
 
 			"version_latest": schema.SingleNestedAttribute{
-				MarkdownDescription: "Latest version (including drafts). Useful for wiring `meshstack_building_block_v2.spec.building_block_definition_version_ref`.",
+				MarkdownDescription: "Latest version (including drafts). Useful for wiring `meshstack_building_block.spec.building_block_definition_version_ref`.",
 				Computed:            true,
 				Attributes:          versionAttributes,
 			},

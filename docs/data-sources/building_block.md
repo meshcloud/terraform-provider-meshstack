@@ -4,14 +4,11 @@ page_title: "meshstack_building_block Data Source - terraform-provider-meshstack
 subcategory: ""
 description: |-
   Read a single building block by UUID. It is read-only and mirrors the meshstack_building_block resource (metadata/spec/status/all_inputs, plus the resource's computed ref). Use meshstack_building_blocks to look building blocks up by filter instead of by UUID.
-  ~> Preview: This resource is in preview. Breaking changes are possible without prior notice due to changes in the underlying meshStack preview API https://docs.meshcloud.io/api/technical-specifications#preview-endpoints or due to changes in this provider. Please ensure you are running the latest version of the provider and report any bugs via GitHub issues https://github.com/meshcloud/terraform-provider-meshstack/issues or via support@meshcloud.io.
 ---
 
 # meshstack_building_block (Data Source)
 
 Read a single building block by UUID. It is read-only and mirrors the `meshstack_building_block` resource (`metadata`/`spec`/`status`/`all_inputs`, plus the resource's computed `ref`). Use `meshstack_building_blocks` to look building blocks up by filter instead of by UUID.
-
-~> **Preview:** This resource is in preview. Breaking changes are possible without prior notice due to changes in the underlying [meshStack preview API](https://docs.meshcloud.io/api/technical-specifications#preview-endpoints) or due to changes in this provider. Please ensure you are running the latest version of the provider and report any bugs via [GitHub issues](https://github.com/meshcloud/terraform-provider-meshstack/issues) or via support@meshcloud.io.
 
 ## Example Usage
 
@@ -136,7 +133,6 @@ Read-Only:
 - `latest_dry_run_uuid` (String) UUID of the latest dry (DETECT) run, but only when it is the newest run; null otherwise.
 - `latest_run_uuid` (String) UUID of the latest modifying (apply/destroy) run. Null when none exists.
 - `outputs` (Attributes Map) Outputs of the building block, available after a successful run. (see [below for nested schema](#nestedatt--status--outputs))
-- `status` (String, Deprecated) Execution status. One of `WAITING_FOR_DEPENDENT_INPUT`, `WAITING_FOR_OPERATOR_INPUT`, `WAITING_FOR_USER_INPUT`, `WAITING_FOR_APPROVAL`, `PENDING`, `IN_PROGRESS`, `SUCCEEDED`, `FAILED`, `ABORTED`. Use `succeeded`, or `health_status` and `action` for finer checks.
 - `succeeded` (Boolean) True when the latest run succeeded and the building block needs no attention: `health_status` is `SUCCEEDED` and `action` is one of `NO_ACTION`, `UPGRADE_AVAILABLE`, `REVIEW_DRIFT`. On meshStack versions before the `REVIEW_ABORTED_RUN` action an aborted run reads as succeeded.
 
 <a id="nestedatt--status--outputs"></a>

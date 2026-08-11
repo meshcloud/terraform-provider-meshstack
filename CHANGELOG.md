@@ -1,3 +1,14 @@
+# v0.28.0
+
+BREAKING CHANGES:
+- This release removes the deprecated `meshstack_building_block_v2` resource and data source. Replace them with `meshstack_building_block`, which exists as a resource and as a data source, or with `meshstack_building_blocks` if you read a set of building blocks by filter. A `moved` block needs a provider version that has both the old and the new resource type, and v0.28.0 no longer has `meshstack_building_block_v2`. Add the `moved` block on a v0.24.x to v0.27.x release and apply it before you upgrade to v0.28.0, because those releases still contain both the `moved` support and the deprecated type.
+- This release also removes the legacy `meshstack_buildingblock` (no underscore, v1) resource and data source. Replace them with `meshstack_building_block`, or with `meshstack_building_blocks` if you read a set of building blocks by filter. The rule for the `moved` block is the same: add it on a v0.24.x to v0.27.x release and apply it before you upgrade to v0.28.0, because v0.28.0 no longer has the `meshstack_buildingblock` type.
+- The `meshstack_building_block_definition` resource and data source and the `meshstack_building_block_definitions` data source now send the GA media types `application/vnd.meshcloud.api.meshBuildingBlockDefinition.v1.hal+json` and `application/vnd.meshcloud.api.meshBuildingBlockDefinitionVersion.v1.hal+json` instead of the `v1-preview` ones, and the provider no longer shows the preview disclaimer on them. You need a meshStack release in which the meshBuildingBlockDefinition v1 API is GA. The GA media types have the same shape as the preview ones, so the switch changes nothing else about them.
+- The `meshstack_building_block` resource, the `meshstack_building_block` data source and `meshstack_building_blocks` now send the GA media type `application/vnd.meshcloud.api.meshBuildingBlock.v2.hal+json` instead of the `v2-preview` one, and they are **no longer preview**. The provider no longer shows the preview disclaimer on them. That disclaimer said that breaking changes are possible without prior notice; breaking changes to them now follow the provider's normal deprecation process instead. You need a meshStack release in which the meshBuildingBlock v2 API is GA. The Terraform schema does not change: `spec.parent_building_block_refs` looks exactly as it does in v0.24.4. The GA media type carries the parents of a building block in `parentBuildingBlockRefs` alone, so the provider no longer sends the deprecated `parentBuildingBlocks` field. v0.24.4 sends both fields, because it also has to run against a backend that serves the v2-preview media type.
+- `meshstack_building_block` resource and data source, `meshstack_building_blocks`: the deprecated `status.status`
+  attribute and the deprecated `status` filter are removed. Read `status.succeeded`, or `status.health_status` and
+  `status.action`, and filter by `health_status` and `action`.
+
 # v0.27.1
 
 FEATURES:

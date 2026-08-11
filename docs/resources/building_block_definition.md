@@ -4,14 +4,11 @@ page_title: "meshstack_building_block_definition Resource - terraform-provider-m
 subcategory: ""
 description: |-
   Manages a meshBuildingBlockDefinition in meshStack. Building Block Definitions define reusable automation components that can be executed on workspaces or tenants. This resource combines the building block definition metadata with version information in a single resource for simplified management.
-  ~> Preview: This resource is in preview. Breaking changes are possible without prior notice due to changes in the underlying meshStack preview API https://docs.meshcloud.io/api/technical-specifications#preview-endpoints or due to changes in this provider. Please ensure you are running the latest version of the provider and report any bugs via GitHub issues https://github.com/meshcloud/terraform-provider-meshstack/issues or via support@meshcloud.io.
 ---
 
 # meshstack_building_block_definition (Resource)
 
 Manages a meshBuildingBlockDefinition in meshStack. Building Block Definitions define reusable automation components that can be executed on workspaces or tenants. This resource combines the building block definition metadata with version information in a single resource for simplified management.
-
-~> **Preview:** This resource is in preview. Breaking changes are possible without prior notice due to changes in the underlying [meshStack preview API](https://docs.meshcloud.io/api/technical-specifications#preview-endpoints) or due to changes in this provider. Please ensure you are running the latest version of the provider and report any bugs via [GitHub issues](https://github.com/meshcloud/terraform-provider-meshstack/issues) or via support@meshcloud.io.
 
 ## Example Usage
 
@@ -392,7 +389,7 @@ resource "meshstack_building_block_definition" "example_05_gitlab_pipeline" {
 ### Read-Only
 
 - `ref` (Attributes) Reference to this building block definition. Reuse in `version_spec.dependency_refs` of other building block definitions. (see [below for nested schema](#nestedatt--ref))
-- `version_latest` (Attributes) Latest version (including drafts). Useful for wiring `meshstack_building_block_v2.spec.building_block_definition_version_ref`. (see [below for nested schema](#nestedatt--version_latest))
+- `version_latest` (Attributes) Latest version (including drafts). Useful for wiring `meshstack_building_block.spec.building_block_definition_version_ref`. (see [below for nested schema](#nestedatt--version_latest))
 - `versions` (Attributes Map) All versions of this building block definition. Never empty. Keyed by `v<number>`, such as `versions["v2"]`. A `for` expression visits the keys in lexical order, so `v10` comes before `v2`. (see [below for nested schema](#nestedatt--versions))
 
 <a id="nestedatt--metadata"></a>
@@ -478,7 +475,7 @@ Required:
 Optional:
 
 - `deletion_mode` (String) Deletion behavior. One of `DELETE`, `PURGE`.
-- `dependency_refs` (Attributes Set) Set of refs to building block definitions this definition depends on. Prefer reusable refs from `meshstack_building_block_definition.<name>.ref` or `one(data.meshstack_building_block_definitions.<name>.building_block_definitions).ref`. (see [below for nested schema](#nestedatt--version_spec--dependency_refs))
+- `dependency_refs` (Attributes Set) Set of refs to building block definitions this definition depends on. Prefer reusable refs from `meshstack_building_block_definition.<name>.ref` or `data.meshstack_building_block_definition.<name>.ref`. (see [below for nested schema](#nestedatt--version_spec--dependency_refs))
 - `inputs` (Attributes Map) Map of input definitions for the building block. Keys are input names of at most 255 characters, values are input configuration objects. Inputs define parameters that building blocks can receive. (see [below for nested schema](#nestedatt--version_spec--inputs))
 - `only_apply_once_per_tenant` (Boolean) Whether this building block can only be applied once per tenant.
 - `outputs` (Attributes Map) Map of output definitions for the building block. Keys are output names of at most 255 characters, values are output configuration objects. Outputs define values that building blocks produce and can be consumed by other building blocks. If implementation type is `manual`, outputs are derived from the inputs by the backend (one output per input) and this attribute is a **sparse override**: declare only the outputs you want to customize (keyed by the matching input); the rest are derived. An empty map or omitting it entirely means "no overrides". A declared output's `display_name`, `display_order`, and `assignment_type` (any of `NONE`, `PLATFORM_TENANT_ID`, `SIGN_IN_URL`, `RESOURCE_URL`, `SUMMARY`) are honored; its `type` is always derived from the input's translated output type (`SINGLE_SELECT` becomes `STRING`, `MULTI_SELECT`/`LIST` become `CODE`) and must not be set. (see [below for nested schema](#nestedatt--version_spec--outputs))
