@@ -18,8 +18,9 @@ func BBWorkspace(t *testing.T) (config Config, buildingBlockAddr Traversal, buil
 	return Resource{Name: "building_block", Suffix: "_01_workspace"}.Config(t).WithFirstBlock(
 		ExtractAddress(&buildingBlockAddr),
 		// Wire only the version uuid (not the whole version_latest object, which carries
-		// content_hash). content_hash is a TF-only field that can't be recovered on import,
-		// so leaving it unset keeps ImportBlockWithID a no-op. Tests that exercise content_hash
+		// content_hash). content_hash is a TF-only field that import deliberately does not recover
+		// (see buildingBlockResource.ImportState for why it cannot be, for every caller), so
+		// leaving it unset keeps ImportBlockWithID a no-op. Tests that exercise content_hash
 		// set it explicitly in later steps.
 		Descend("spec", "building_block_definition_version_ref")(SetRawExpr(`{ uuid = %s }`, buildingBlockDefinitionAddr.Join("version_latest", "uuid"))),
 		Descend("spec", "target_ref")(SetAddr(workspaceAddr, "ref")),

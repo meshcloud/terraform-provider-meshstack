@@ -1110,6 +1110,13 @@ func (r *buildingBlockResource) ImportState(ctx context.Context, req resource.Im
 	// content_hash is json:"-" and never returned by the API, so import leaves it null.
 	// With the rerun semantics (state nil + plan non-nil = "newly set" → rerun), this is by design:
 	// the first apply after import triggers a run if content_hash is set in config.
+	//
+	// Import cannot recompute the hash either. The hash is a pure function of the referenced
+	// definition version's spec, and reading that version requires access to the workspace owning the
+	// definition, which the credentials importing a building block need not have: a workspace-scoped
+	// API key can use a building block whose definition lives elsewhere. Recomputing would therefore
+	// work for some keys and fail for others, and the imported state would depend on who imported it.
+	// A null hash costs one extra run, but it behaves the same for everyone.
 }
 
 // moveStateSchemasOnce caches the v1 and v2 source schemas so MoveState only
