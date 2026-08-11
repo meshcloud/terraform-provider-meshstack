@@ -4,11 +4,14 @@ page_title: "meshstack_buildingblock Data Source - terraform-provider-meshstack"
 subcategory: ""
 description: |-
   Single Building Block by UUID.
+  ~> Deprecated: Use the meshstack_building_block (with _) data source instead.
 ---
 
 # meshstack_buildingblock (Data Source)
 
 Single Building Block by UUID.
+
+~> **Deprecated:** Use the `meshstack_building_block` (with `_`) data source instead.
 
 ## Example Usage
 

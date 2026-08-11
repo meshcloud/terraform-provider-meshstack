@@ -33,7 +33,9 @@ func (d *buildingBlockV2DataSource) Metadata(ctx context.Context, req datasource
 
 func (d *buildingBlockV2DataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Single building block by UUID." + previewDisclaimer(),
+		MarkdownDescription: "Single building block by UUID." +
+			deprecatedDisclaimer("Use the `meshstack_building_block` data source instead.") + previewDisclaimer(),
+		DeprecationMessage: "Use the `meshstack_building_block` data source instead, which reads the same building block by UUID and reports its parents as refs. To look building blocks up by filter rather than by UUID, use the `meshstack_building_blocks` data source.",
 
 		Attributes: map[string]schema.Attribute{
 			"metadata": schema.SingleNestedAttribute{
