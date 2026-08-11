@@ -12,7 +12,7 @@ import (
 	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/xknownvalue"
 )
 
-func TestAccBuildingBlockDataSource(t *testing.T) {
+func TestAccBuildingblockDataSource(t *testing.T) {
 	if !IsMockClientTest() {
 		t.Skip("Skipping: BB v1 resource has no wait_for_completion, BB run stays PENDING and blocks destroy")
 	}

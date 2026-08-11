@@ -12,23 +12,23 @@ import (
 
 // Ensure provider defined types fully satisfy framework interfaces.
 var (
-	_ datasource.DataSource              = &buildingBlockDataSource{}
-	_ datasource.DataSourceWithConfigure = &buildingBlockDataSource{}
+	_ datasource.DataSource              = &buildingblockDataSource{}
+	_ datasource.DataSourceWithConfigure = &buildingblockDataSource{}
 )
 
-func NewBuildingBlockDataSource() datasource.DataSource {
-	return &buildingBlockDataSource{}
+func NewBuildingblockDataSource() datasource.DataSource {
+	return &buildingblockDataSource{}
 }
 
-type buildingBlockDataSource struct {
+type buildingblockDataSource struct {
 	meshBuildingBlockClient client.MeshBuildingBlockClient
 }
 
-func (d *buildingBlockDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+func (d *buildingblockDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_buildingblock"
 }
 
-func (d *buildingBlockDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (d *buildingblockDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Single Building Block by UUID.",
 
@@ -117,13 +117,13 @@ func (d *buildingBlockDataSource) Schema(ctx context.Context, req datasource.Sch
 	}
 }
 
-func (d *buildingBlockDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+func (d *buildingblockDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	resp.Diagnostics.Append(configureProviderClient(req.ProviderData, func(client client.Client) {
 		d.meshBuildingBlockClient = client.BuildingBlock
 	})...)
 }
 
-func (d *buildingBlockDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+func (d *buildingblockDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var uuid string
 	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("metadata").AtName("uuid"), &uuid)...)
 	if resp.Diagnostics.HasError() {

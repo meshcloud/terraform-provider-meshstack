@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 
-	"github.com/hashicorp/terraform-plugin-framework-jsontypes/jsontypes"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -12,7 +11,6 @@ import (
 	"github.com/meshcloud/terraform-provider-meshstack/client"
 	clientTypes "github.com/meshcloud/terraform-provider-meshstack/client/types"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/types/generic"
-	"github.com/meshcloud/terraform-provider-meshstack/internal/types/secret"
 )
 
 var (
@@ -47,27 +45,11 @@ type buildingBlocksDataSourceModel struct {
 	BuildingBlocks []buildingBlockListItem `tfsdk:"building_blocks"`
 }
 
-// buildingBlockListItem is the read-only, bbv3-aligned view of a single building block:
-// metadata / spec / status / all_inputs. It intentionally omits the resource's writable
-// spec.inputs; all backend inputs (with sensitive values reduced to a hash) are surfaced in
-// all_inputs instead.
 type buildingBlockListItem struct {
 	Metadata  client.MeshBuildingBlockV2Metadata `tfsdk:"metadata"`
-	Spec      buildingBlockListItemSpec          `tfsdk:"spec"`
+	Spec      buildingBlockReadSpec              `tfsdk:"spec"`
 	Status    *client.MeshBuildingBlockV2Status  `tfsdk:"status"`
 	AllInputs map[string]buildingBlockAllInput   `tfsdk:"all_inputs"`
-}
-
-type buildingBlockListItemSpec struct {
-	DisplayName                       string                                            `tfsdk:"display_name"`
-	BuildingBlockDefinitionVersionRef buildingBlockListItemVersionRef                   `tfsdk:"building_block_definition_version_ref"`
-	TargetRef                         client.MeshBuildingBlockV2TargetRef               `tfsdk:"target_ref"`
-	ParentBuildingBlocks              clientTypes.Set[client.MeshBuildingBlockV2Parent] `tfsdk:"parent_building_blocks"`
-}
-
-type buildingBlockListItemVersionRef struct {
-	Uuid string `tfsdk:"uuid"`
-	Kind string `tfsdk:"kind"`
 }
 
 func (d *buildingBlocksDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -83,9 +65,6 @@ func (d *buildingBlocksDataSource) Configure(_ context.Context, req datasource.C
 func (d *buildingBlocksDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	optionalString := func(md string) schema.StringAttribute {
 		return schema.StringAttribute{MarkdownDescription: md, Optional: true}
-	}
-	computedString := func(md string) schema.StringAttribute {
-		return schema.StringAttribute{MarkdownDescription: md, Computed: true}
 	}
 
 	resp.Schema = schema.Schema{
@@ -136,83 +115,9 @@ func (d *buildingBlocksDataSource) Schema(_ context.Context, _ datasource.Schema
 								"owned_by_workspace": computedString("The workspace containing this building block."),
 							},
 						},
-						"spec": schema.SingleNestedAttribute{
-							MarkdownDescription: "Building block specification.",
-							Computed:            true,
-							Attributes: map[string]schema.Attribute{
-								"display_name": computedString("Display name for the building block as shown in meshPanel."),
-								"building_block_definition_version_ref": schema.SingleNestedAttribute{
-									MarkdownDescription: "References the building block definition version this building block is based on.",
-									Computed:            true,
-									Attributes: map[string]schema.Attribute{
-										"uuid": computedString("UUID of the building block definition version."),
-										"kind": computedString("meshObject type, always `" + client.MeshObjectKind.BuildingBlockDefinitionVersion + "`."),
-									},
-								},
-								"target_ref": schema.SingleNestedAttribute{
-									MarkdownDescription: "References the building block target, a workspace or a tenant depending on the definition.",
-									Computed:            true,
-									Attributes: map[string]schema.Attribute{
-										"kind": computedString("Target kind, one of `meshTenant`, `meshWorkspace`."),
-										"uuid": computedString("UUID of the target tenant (for `meshTenant` targets)."),
-										"name": computedString("Identifier of the target workspace (for `meshWorkspace` targets)."),
-									},
-								},
-								"parent_building_blocks": schema.SetNestedAttribute{
-									MarkdownDescription: "Set of refs to the parent building blocks this block depends on, forming a dependency hierarchy " +
-										"in which a parent's outputs can feed this block's inputs (see [building block concepts](https://docs.meshcloud.io/concepts/building-block/)).",
-									Computed: true,
-									NestedObject: schema.NestedAttributeObject{
-										Attributes: map[string]schema.Attribute{
-											"kind": computedString("meshObject type, always `" + client.MeshObjectKind.BuildingBlock + "`."),
-											"uuid": computedString("UUID (`metadata.uuid`) of the parent `" + client.MeshObjectKind.BuildingBlock + "`."),
-										},
-									},
-								},
-							},
-						},
-						"status": schema.SingleNestedAttribute{
-							MarkdownDescription: "Current building block status.",
-							Computed:            true,
-							Attributes: map[string]schema.Attribute{
-								"status": computedString("Execution status. One of " + client.BuildingBlockStatuses.Markdown() + "."),
-								"force_purge": schema.BoolAttribute{MarkdownDescription: "True once a purge has been requested for this building block. " +
-									"A purge removes the block without a destroy run, leaving its cloud resources unmanaged (the lifecycle still reaches DELETED).", Computed: true},
-								"latest_run_uuid":     computedString("UUID of the latest modifying (apply/destroy) run. Null when none exists or when permissions are insufficient to read runs."),
-								"latest_dry_run_uuid": computedString("UUID of the latest dry (DETECT) run, but only when it is the newest run; null otherwise."),
-								"outputs": schema.MapNestedAttribute{
-									MarkdownDescription: "Outputs of the building block, available after a successful run.",
-									Computed:            true,
-									NestedObject: schema.NestedAttributeObject{
-										Attributes: map[string]schema.Attribute{
-											"value": schema.StringAttribute{
-												CustomType:          jsontypes.NormalizedType{},
-												MarkdownDescription: "Output value. Use `jsondecode(...)` to obtain a polymorphic value depending on `value_type`.",
-												Computed:            true,
-											},
-											"value_type":      computedString("Data type of the value. One of " + client.MeshBuildingBlockIOTypes.Markdown() + "."),
-											"assignment_type": computedString("How the output value is assigned. One of " + client.MeshBuildingBlockDefinitionOutputAssignmentTypes.Markdown() + "."),
-										},
-									},
-								},
-							},
-						},
-						"all_inputs": schema.MapNestedAttribute{
-							MarkdownDescription: "View of **all** inputs resolved by the backend — platform-operator, user, and " +
-								"static inputs (the latter derived from the BBD) — regardless of who set them.<br>" +
-								"Non-sensitive inputs show their plain value; sensitive inputs show only their hash.",
-							Computed: true,
-							NestedObject: schema.NestedAttributeObject{
-								Attributes: map[string]schema.Attribute{
-									"value": computedString("Non-sensitive input value, as a `jsonencode`d representation (e.g. `\"my-name\"` or `16`)."),
-									"sensitive": secret.DatasourceSchema(secret.DatasourceSchemaOptions{
-										MarkdownDescription: "Sensitive input value (hash only).",
-									}),
-									"value_type":      computedString("Data type of the value. One of " + client.MeshBuildingBlockIOTypes.Markdown() + "."),
-									"assignment_type": computedString("How the input value is assigned."),
-								},
-							},
-						},
+						"spec":       buildingBlockReadSpecAttribute(),
+						"status":     buildingBlockReadStatusAttribute(),
+						"all_inputs": buildingBlockReadAllInputsAttribute(),
 					},
 				},
 			},
@@ -249,31 +154,19 @@ func (d *buildingBlocksDataSource) Read(ctx context.Context, req datasource.Read
 	config.BuildingBlocks = make([]buildingBlockListItem, 0, len(blocks))
 	for i := range blocks {
 		bb := blocks[i]
-		item := buildingBlockListItem{
-			Metadata: bb.Metadata,
-			Spec: buildingBlockListItemSpec{
-				DisplayName: bb.Spec.DisplayName,
-				BuildingBlockDefinitionVersionRef: buildingBlockListItemVersionRef{
-					Uuid: bb.Spec.BuildingBlockDefinitionVersionRef.Uuid,
-					Kind: client.MeshObjectKind.BuildingBlockDefinitionVersion,
-				},
-				TargetRef:            bb.Spec.TargetRef,
-				ParentBuildingBlocks: bb.Spec.ParentBuildingBlocks,
-			},
+		config.BuildingBlocks = append(config.BuildingBlocks, buildingBlockListItem{
+			Metadata:  bb.Metadata,
+			Spec:      buildingBlockReadSpecFromDto(bb.Spec),
 			Status:    bb.Status,
-			AllInputs: make(map[string]buildingBlockAllInput, len(bb.Spec.Inputs)),
-		}
-		for key, input := range bb.Spec.Inputs {
-			item.AllInputs[key] = buildAllInput(input, &resp.Diagnostics)
-		}
-		config.BuildingBlocks = append(config.BuildingBlocks, item)
+			AllInputs: buildingBlockAllInputsFromDto(bb.Spec.Inputs, &resp.Diagnostics),
+		})
 	}
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	// generic.Set handles the client-specific types in the item models: clientTypes.Any (outputs
-	// value) and clientTypes.Set (parent_building_blocks). all_inputs sensitive values are already
+	// value) and clientTypes.Set (parent_building_block_refs). all_inputs sensitive values are already
 	// reduced to a hash-only secret.HashOnly by buildAllInput, so no secret converter is needed.
 	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, config,
 		withValueFromConverterForClientTypeAny(),

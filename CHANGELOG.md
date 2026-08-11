@@ -19,6 +19,7 @@ BREAKING CHANGES:
 
 FEATURES:
 - `meshstack_building_block`: new computed `ref` output (`{kind, uuid}`). You can use it directly as an entry of another building block's `spec.parent_building_block_refs`, instead of writing `metadata.uuid` yourself.
+- New `meshstack_building_block` **data source** reads a single building block by UUID. It returns `metadata`, `spec` (with `parent_building_block_refs` in the new ref form), `status`, `all_inputs` and the computed `ref`, which is exactly one element of `meshstack_building_blocks`. That data source looks building blocks up by filter, but it cannot filter by UUID.
 
 # v0.24.3
 
