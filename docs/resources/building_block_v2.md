@@ -135,7 +135,7 @@ Optional:
 Required:
 
 - `buildingblock_uuid` (String) UUID of the parent building block.
-- `definition_uuid` (String) UUID of the parent building block definition.
+- `definition_uuid` (String) UUID of the parent building block definition. meshStack derives it from the referenced building block and returns the derived value.
 
 
 <a id="nestedatt--spec--combined_inputs"></a>

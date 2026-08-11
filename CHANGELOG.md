@@ -1,3 +1,25 @@
+# v0.24.4
+
+BREAKING CHANGES:
+- `meshstack_building_block`: `spec.parent_building_blocks` is renamed to `spec.parent_building_block_refs`, and it now holds a plain set of building block references. Each element was a `{buildingblock_uuid, definition_uuid}` object and is now a `{kind, uuid}` ref (`kind` defaults to `meshBuildingBlock`). One ref replaces both fields, because meshStack derives a parent's definition from the referenced building block. The new name says what the attribute holds, and it changes in the same release as the element shape, so you edit each of these blocks only once. To migrate, rename the attribute, then replace each object with a ref:
+
+  ```hcl
+  # before
+  parent_building_blocks = [
+    { buildingblock_uuid = "<parent-uuid>", definition_uuid = "<parent-definition-uuid>" }
+  ]
+
+  # after — preferably using the parent resource's new computed `ref`
+  parent_building_block_refs = [meshstack_building_block.parent.ref]
+  # or, for a parent Terraform does not manage: [{ uuid = "<parent-uuid>" }]
+  ```
+
+  The provider migrates existing state by itself, so an upgrade does not plan a replacement. No newer meshStack is required.
+- `meshstack_building_blocks`: `spec.parent_building_blocks` is renamed to `spec.parent_building_block_refs` as well, and it reports each parent in the same ref shape, so it no longer reports a parent's `definition_uuid`. The deprecated `meshstack_building_block_v2` resource and data source are **unaffected** and keep their flat `spec.parent_building_blocks` with `buildingblock_uuid` and `definition_uuid`.
+
+FEATURES:
+- `meshstack_building_block`: new computed `ref` output (`{kind, uuid}`). You can use it directly as an entry of another building block's `spec.parent_building_block_refs`, instead of writing `metadata.uuid` yourself.
+
 # v0.24.3
 
 Requires meshStack 2026.30.0 or later (previously 2026.29.0).

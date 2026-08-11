@@ -18,13 +18,45 @@ func BBWorkspace(t *testing.T) (config Config, buildingBlockAddr Traversal, buil
 	return Resource{Name: "building_block", Suffix: "_01_workspace"}.Config(t).WithFirstBlock(
 		ExtractAddress(&buildingBlockAddr),
 		// Wire only the version uuid (not the whole version_latest object, which carries
-		// content_hash). content_hash is a TF-only field that import deliberately does not recover
-		// (see buildingBlockResource.ImportState for why it cannot be, for every caller), so
-		// leaving it unset keeps ImportBlockWithID a no-op. Tests that exercise content_hash
+		// content_hash). content_hash is a TF-only field that can't be recovered on import,
+		// so leaving it unset keeps ImportBlockWithID a no-op. Tests that exercise content_hash
 		// set it explicitly in later steps.
 		Descend("spec", "building_block_definition_version_ref")(SetRawExpr(`{ uuid = %s }`, buildingBlockDefinitionAddr.Join("version_latest", "uuid"))),
 		Descend("spec", "target_ref")(SetAddr(workspaceAddr, "ref")),
 	).Join(workspaceConfig, buildingBlockDefinitionConfig), buildingBlockAddr, buildingBlockDefinitionAddr, workspaceAddr
+}
+
+// BBWorkspaceParentChild builds a workspace, a building block definition owned by it, and two v3
+// building blocks from that definition, the child referencing the parent through
+// spec.parent_building_block_refs.
+func BBWorkspaceParentChild(t *testing.T) (config Config, parentAddr Traversal, childAddr Traversal) {
+	t.Helper()
+	workspaceConfig, workspaceAddr := Workspace(t)
+	var buildingBlockDefinitionAddr Traversal
+	buildingBlockDefinitionConfig := Resource{Name: "building_block", Suffix: "_01_workspace"}.TestSupportConfig(t, "").WithFirstBlock(
+		ExtractAddress(&buildingBlockDefinitionAddr),
+		OwnedByWorkspace(workspaceAddr),
+	)
+
+	// Both blocks are built from the same example file, so each one needs its own resource label.
+	buildingBlock := func(name string, extra ...ExpressionConsumer) (buildingBlockConfig Config, buildingBlockAddr Traversal) {
+		return Resource{Name: "building_block", Suffix: "_01_workspace"}.Config(t).WithFirstBlock(
+			append([]ExpressionConsumer{
+				RenameKey(name),
+				ExtractAddress(&buildingBlockAddr),
+				Descend("spec", "display_name")(SetString("my-" + name + "-building-block")),
+				// Reference only the version uuid, for the reason given in BBWorkspace.
+				Descend("spec", "building_block_definition_version_ref")(SetRawExpr(`{ uuid = %s }`, buildingBlockDefinitionAddr.Join("version_latest", "uuid"))),
+				Descend("spec", "target_ref")(SetAddr(workspaceAddr, "ref")),
+			}, extra...)...,
+		), buildingBlockAddr
+	}
+
+	parentConfig, parentAddr := buildingBlock("parent")
+	childConfig, childAddr := buildingBlock("child",
+		Descend("spec", "parent_building_block_refs")(SetRawExpr("[%s]", parentAddr.Join("ref"))),
+	)
+	return childConfig.Join(parentConfig, workspaceConfig, buildingBlockDefinitionConfig), parentAddr, childAddr
 }
 
 // BBTenant builds a workspace (+project/platform/landing-zone/tenant) and a v3 building block

@@ -59,10 +59,10 @@ type buildingBlockListItem struct {
 }
 
 type buildingBlockListItemSpec struct {
-	DisplayName                       string                                          `tfsdk:"display_name"`
-	BuildingBlockDefinitionVersionRef buildingBlockListItemVersionRef                 `tfsdk:"building_block_definition_version_ref"`
-	TargetRef                         client.MeshBuildingBlockV2TargetRef             `tfsdk:"target_ref"`
-	ParentBuildingBlocks              clientTypes.Set[client.MeshBuildingBlockParent] `tfsdk:"parent_building_blocks"`
+	DisplayName                       string                                            `tfsdk:"display_name"`
+	BuildingBlockDefinitionVersionRef buildingBlockListItemVersionRef                   `tfsdk:"building_block_definition_version_ref"`
+	TargetRef                         client.MeshBuildingBlockV2TargetRef               `tfsdk:"target_ref"`
+	ParentBuildingBlocks              clientTypes.Set[client.MeshBuildingBlockV2Parent] `tfsdk:"parent_building_blocks"`
 }
 
 type buildingBlockListItemVersionRef struct {
@@ -159,13 +159,13 @@ func (d *buildingBlocksDataSource) Schema(_ context.Context, _ datasource.Schema
 									},
 								},
 								"parent_building_blocks": schema.SetNestedAttribute{
-									MarkdownDescription: "Parent building blocks this block depends on, forming a dependency hierarchy " +
+									MarkdownDescription: "Set of refs to the parent building blocks this block depends on, forming a dependency hierarchy " +
 										"in which a parent's outputs can feed this block's inputs (see [building block concepts](https://docs.meshcloud.io/concepts/building-block/)).",
 									Computed: true,
 									NestedObject: schema.NestedAttributeObject{
 										Attributes: map[string]schema.Attribute{
-											"buildingblock_uuid": computedString("UUID of the parent building block."),
-											"definition_uuid":    computedString("UUID of the parent building block definition."),
+											"kind": computedString("meshObject type, always `" + client.MeshObjectKind.BuildingBlock + "`."),
+											"uuid": computedString("UUID (`metadata.uuid`) of the parent `" + client.MeshObjectKind.BuildingBlock + "`."),
 										},
 									},
 								},

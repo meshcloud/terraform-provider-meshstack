@@ -110,7 +110,7 @@ Read-Only:
 
 - `building_block_definition_version_ref` (Attributes) References the building block definition version this building block is based on. (see [below for nested schema](#nestedatt--building_blocks--spec--building_block_definition_version_ref))
 - `display_name` (String) Display name for the building block as shown in meshPanel.
-- `parent_building_blocks` (Attributes Set) Parent building blocks this block depends on, forming a dependency hierarchy in which a parent's outputs can feed this block's inputs (see [building block concepts](https://docs.meshcloud.io/concepts/building-block/)). (see [below for nested schema](#nestedatt--building_blocks--spec--parent_building_blocks))
+- `parent_building_block_refs` (Attributes Set) Set of refs to the parent building blocks this block depends on, forming a dependency hierarchy in which a parent's outputs can feed this block's inputs (see [building block concepts](https://docs.meshcloud.io/concepts/building-block/)). (see [below for nested schema](#nestedatt--building_blocks--spec--parent_building_block_refs))
 - `target_ref` (Attributes) References the building block target, a workspace or a tenant depending on the definition. (see [below for nested schema](#nestedatt--building_blocks--spec--target_ref))
 
 <a id="nestedatt--building_blocks--spec--building_block_definition_version_ref"></a>
@@ -122,13 +122,13 @@ Read-Only:
 - `uuid` (String) UUID of the building block definition version.
 
 
-<a id="nestedatt--building_blocks--spec--parent_building_blocks"></a>
-### Nested Schema for `building_blocks.spec.parent_building_blocks`
+<a id="nestedatt--building_blocks--spec--parent_building_block_refs"></a>
+### Nested Schema for `building_blocks.spec.parent_building_block_refs`
 
 Read-Only:
 
-- `buildingblock_uuid` (String) UUID of the parent building block.
-- `definition_uuid` (String) UUID of the parent building block definition.
+- `kind` (String) meshObject type, always `meshBuildingBlock`.
+- `uuid` (String) UUID (`metadata.uuid`) of the parent `meshBuildingBlock`.
 
 
 <a id="nestedatt--building_blocks--spec--target_ref"></a>

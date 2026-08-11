@@ -4,7 +4,7 @@ page_title: "meshstack_building_block Resource - terraform-provider-meshstack"
 subcategory: ""
 description: |-
   Manage a workspace or tenant building block created from a building block definition (BBD).
-  A building block is usually managed by the app team that owns its workspace; a platform operator typically only creates one directly to test a draft BBD in the operator's own workspace. Building blocks can depend on each other via parent_building_blocks, forming a dependency hierarchy in which a child's inputs draw their values from a parent's outputs (see building block concepts https://docs.meshcloud.io/concepts/building-block/).
+  A building block is usually managed by the app team that owns its workspace; a platform operator typically only creates one directly to test a draft BBD in the operator's own workspace. Building blocks can depend on each other via parent_building_block_refs, forming a dependency hierarchy in which a child's inputs draw their values from a parent's outputs (see building block concepts https://docs.meshcloud.io/concepts/building-block/).
   ~> Preview: This resource is in preview. Breaking changes are possible without prior notice due to changes in the underlying meshStack preview API https://docs.meshcloud.io/api/technical-specifications#preview-endpoints or due to changes in this provider. Please ensure you are running the latest version of the provider and report any bugs via GitHub issues https://github.com/meshcloud/terraform-provider-meshstack/issues or via support@meshcloud.io.
 ---
 
@@ -12,7 +12,7 @@ description: |-
 
 Manage a workspace or tenant building block created from a building block definition (BBD).
 
-A building block is usually managed by the app team that owns its workspace; a platform operator typically only creates one directly to test a draft BBD in the operator's own workspace. Building blocks can depend on each other via `parent_building_blocks`, forming a dependency hierarchy in which a child's inputs draw their values from a parent's outputs (see [building block concepts](https://docs.meshcloud.io/concepts/building-block/)).
+A building block is usually managed by the app team that owns its workspace; a platform operator typically only creates one directly to test a draft BBD in the operator's own workspace. Building blocks can depend on each other via `parent_building_block_refs`, forming a dependency hierarchy in which a child's inputs draw their values from a parent's outputs (see [building block concepts](https://docs.meshcloud.io/concepts/building-block/)).
 
 ~> **Preview:** This resource is in preview. Breaking changes are possible without prior notice due to changes in the underlying [meshStack preview API](https://docs.meshcloud.io/api/technical-specifications#preview-endpoints) or due to changes in this provider. Please ensure you are running the latest version of the provider and report any bugs via [GitHub issues](https://github.com/meshcloud/terraform-provider-meshstack/issues) or via support@meshcloud.io.
 
@@ -38,6 +38,10 @@ resource "meshstack_building_block" "example_workspace" {
         value = jsonencode("dev")
       }
     }
+
+    # Building blocks can depend on each other: a parent's outputs feed this block's inputs.
+    # Reference a parent by its computed `ref`.
+    # parent_building_block_refs = [meshstack_building_block.parent.ref]
   }
 
   # Purging is a last resort option for stuck deletions. Prefer regular delete behavior.
@@ -109,6 +113,7 @@ resource "meshstack_building_block" "example_tenant" {
 
 - `all_inputs` (Attributes Map) Computed read-only view of **all** inputs resolved by the backend — platform-operator, user, and static inputs (the latter derived from the BBD) — regardless of who set them.<br>Contrast with `spec.inputs`, which declares only the inputs this resource manages: an operator may manage just the operator inputs while the app team owns the user inputs, or vice versa. Non-sensitive inputs show their plain value; sensitive inputs show only their hash. Set values in `spec.inputs`. (see [below for nested schema](#nestedatt--all_inputs))
 - `metadata` (Attributes) Building block metadata. (see [below for nested schema](#nestedatt--metadata))
+- `ref` (Attributes) Reference to this building block, can be used in another building block's `spec.parent_building_block_refs`. (see [below for nested schema](#nestedatt--ref))
 - `status` (Attributes) Current building block status. (see [below for nested schema](#nestedatt--status))
 
 <a id="nestedatt--spec"></a>
@@ -123,7 +128,7 @@ Required:
 
 Optional:
 
-- `parent_building_blocks` (Attributes Set) Parent building blocks this block depends on, forming a dependency hierarchy: a parent's outputs can feed this block's inputs, so the parents listed here should align with the inputs that consume them (see [building block concepts](https://docs.meshcloud.io/concepts/building-block/)).<br>Parent building blocks can only change as part of a version upgrade; changing them on their own forces the building block to be replaced (destroyed and recreated). (see [below for nested schema](#nestedatt--spec--parent_building_blocks))
+- `parent_building_block_refs` (Attributes Set) Set of refs to the parent building blocks this block depends on, forming a dependency hierarchy: a parent's outputs can feed this block's inputs, so the parents listed here should align with the inputs that consume them (see [building block concepts](https://docs.meshcloud.io/concepts/building-block/)). Prefer reusable refs from `meshstack_building_block.<name>.ref`.<br>Parent building blocks can only change as part of a version upgrade; changing them on their own forces the building block to be replaced (destroyed and recreated). (see [below for nested schema](#nestedatt--spec--parent_building_block_refs))
 
 <a id="nestedatt--spec--building_block_definition_version_ref"></a>
 ### Nested Schema for `spec.building_block_definition_version_ref`
@@ -176,13 +181,13 @@ Optional:
 - `uuid` (String) UUID of the target tenant. Required when `kind = "meshTenant"`, must be omitted for `kind = "meshWorkspace"`.
 
 
-<a id="nestedatt--spec--parent_building_blocks"></a>
-### Nested Schema for `spec.parent_building_blocks`
+<a id="nestedatt--spec--parent_building_block_refs"></a>
+### Nested Schema for `spec.parent_building_block_refs`
 
-Required:
+Optional:
 
-- `buildingblock_uuid` (String) UUID of the parent building block.
-- `definition_uuid` (String) UUID of the parent building block definition.
+- `kind` (String) meshObject type, always `meshBuildingBlock`.
+- `uuid` (String) UUID (`metadata.uuid`) of `meshBuildingBlock`. Required; optional here only so a computed reference can be used inside a set, and enforced at plan time.
 
 
 
@@ -222,6 +227,15 @@ Read-Only:
 
 - `owned_by_workspace` (String) The workspace containing this building block.
 - `uuid` (String) UUID which uniquely identifies the building block.
+
+
+<a id="nestedatt--ref"></a>
+### Nested Schema for `ref`
+
+Read-Only:
+
+- `kind` (String) meshObject type, always `meshBuildingBlock`.
+- `uuid` (String) UUID (`metadata.uuid`) of `meshBuildingBlock`.
 
 
 <a id="nestedatt--status"></a>

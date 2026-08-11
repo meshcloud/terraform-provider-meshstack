@@ -74,7 +74,10 @@ func (m meshBuildingBlockClient) Create(_ context.Context, bb *client.MeshBuildi
 	// shared store (the real backend returns the same canonical representation either way).
 	materializeNullRows(inputs, m.BbdVersionStore, versionUuid)
 
-	parents := clientTypes.Set[client.MeshBuildingBlockParent](bb.Spec.ParentBuildingBlocks)
+	parentRefs := make(clientTypes.Set[client.UuidRef], 0, len(bb.Spec.ParentBuildingBlocks))
+	for _, parent := range bb.Spec.ParentBuildingBlocks {
+		parentRefs = append(parentRefs, client.UuidRef{Kind: client.MeshObjectKind.BuildingBlock, Uuid: parent.BuildingBlockUuid})
+	}
 
 	stored := &client.MeshBuildingBlockV2{
 		Metadata: client.MeshBuildingBlockV2Metadata{
@@ -87,9 +90,9 @@ func (m meshBuildingBlockClient) Create(_ context.Context, bb *client.MeshBuildi
 				Kind: client.MeshObjectKind.Tenant,
 				Uuid: &tenantUuid,
 			},
-			DisplayName:          bb.Spec.DisplayName,
-			Inputs:               inputs,
-			ParentBuildingBlocks: parents,
+			DisplayName:             bb.Spec.DisplayName,
+			Inputs:                  inputs,
+			ParentBuildingBlockRefs: parentRefs,
 		},
 		Status: &client.MeshBuildingBlockV2Status{
 			Status:        client.BuildingBlockStatusSucceeded,
@@ -149,6 +152,22 @@ func (m meshBuildingBlockClient) toV1(v2 *client.MeshBuildingBlockV2) (*client.M
 		status = string(v2.Status.Status.Unwrap())
 	}
 
+	// A parent ref carries no definition uuid, so the v1 shape takes it from the stored parent.
+	parents := make([]client.MeshBuildingBlockParent, 0, len(v2.Spec.ParentBuildingBlockRefs))
+	for _, parent := range v2.Spec.ParentBuildingBlockRefs {
+		var parentDefinitionUuid string
+		if storedParent, ok := m.Store.Get(parent.Uuid); ok {
+			parentDefinitionUuid, _, err = m.resolveDefinitionRef(storedParent.Spec.BuildingBlockDefinitionVersionRef.Uuid)
+			if err != nil {
+				return nil, err
+			}
+		}
+		parents = append(parents, client.MeshBuildingBlockParent{
+			BuildingBlockUuid: parent.Uuid,
+			DefinitionUuid:    parentDefinitionUuid,
+		})
+	}
+
 	return &client.MeshBuildingBlock{
 		Metadata: client.MeshBuildingBlockMetadata{
 			Uuid:              id,
@@ -160,7 +179,7 @@ func (m meshBuildingBlockClient) toV1(v2 *client.MeshBuildingBlockV2) (*client.M
 		Spec: client.MeshBuildingBlockSpec{
 			DisplayName:          v2.Spec.DisplayName,
 			Inputs:               inputs,
-			ParentBuildingBlocks: v2.Spec.ParentBuildingBlocks,
+			ParentBuildingBlocks: parents,
 		},
 		Status: client.MeshBuildingBlockStatus{
 			Status:  status,

@@ -46,6 +46,8 @@ type MeshBuildingBlockIO struct {
 	ValueType string `json:"valueType" tfsdk:"value_type"`
 }
 
+// MeshBuildingBlockParent is the v1 API's flat parent shape. The v2 API identifies a parent by
+// reference instead — see MeshBuildingBlockV2Parent.
 type MeshBuildingBlockParent struct {
 	BuildingBlockUuid string `json:"buildingBlockUuid" tfsdk:"buildingblock_uuid"`
 	DefinitionUuid    string `json:"definitionUuid" tfsdk:"definition_uuid"`

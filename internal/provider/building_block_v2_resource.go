@@ -16,7 +16,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -33,6 +32,49 @@ var (
 	_ resource.Resource              = &buildingBlockV2Resource{}
 	_ resource.ResourceWithConfigure = &buildingBlockV2Resource{}
 )
+
+var buildingBlockV2ParentsNestedObject = schema.NestedAttributeObject{
+	Attributes: map[string]schema.Attribute{
+		"buildingblock_uuid": schema.StringAttribute{
+			MarkdownDescription: "UUID of the parent building block.",
+			Required:            true,
+		},
+		"definition_uuid": schema.StringAttribute{
+			MarkdownDescription: "UUID of the parent building block definition. meshStack derives it from the referenced building block and returns the derived value.",
+			Required:            true,
+		},
+	},
+}
+
+// buildingBlockV2ParentModel exists because client.MeshBuildingBlockV2Parent tags buildingBlockUuid
+// and definitionUuid tfsdk:"-", so these two deprecated attributes need a model of their own.
+type buildingBlockV2ParentModel struct {
+	BuildingBlockUuid string `tfsdk:"buildingblock_uuid"`
+	DefinitionUuid    string `tfsdk:"definition_uuid"`
+}
+
+func buildingBlockV2ParentsToDto(parents []buildingBlockV2ParentModel) clientTypes.Set[client.MeshBuildingBlockV2Parent] {
+	dto := make(clientTypes.Set[client.MeshBuildingBlockV2Parent], 0, len(parents))
+	for _, parent := range parents {
+		dto = append(dto, client.MeshBuildingBlockV2Parent{
+			UuidRef:           client.UuidRef{Kind: client.MeshObjectKind.BuildingBlock, Uuid: parent.BuildingBlockUuid},
+			BuildingBlockUuid: parent.BuildingBlockUuid,
+			DefinitionUuid:    parent.DefinitionUuid,
+		})
+	}
+	return dto
+}
+
+func buildingBlockV2ParentsFromDto(dto clientTypes.Set[client.MeshBuildingBlockV2Parent]) []buildingBlockV2ParentModel {
+	parents := make([]buildingBlockV2ParentModel, 0, len(dto))
+	for _, parent := range dto {
+		parents = append(parents, buildingBlockV2ParentModel{
+			BuildingBlockUuid: parent.Uuid,
+			DefinitionUuid:    parent.DefinitionUuid,
+		})
+	}
+	return parents
+}
 
 // buildingBlockV2UserInputModel extends buildingBlockUserInputModel with sensitive input variants
 // specific to the BB v2 resource. Embedding flattens tfsdk tags so the framework sees all fields.
@@ -208,29 +250,8 @@ func (r *buildingBlockV2Resource) Schema(ctx context.Context, req resource.Schem
 						Optional:            true,
 						Computed:            true,
 						MarkdownDescription: "Set of parent building blocks.",
-						Default: setdefault.StaticValue(
-							types.SetValueMust(
-								types.ObjectType{
-									AttrTypes: map[string]attr.Type{
-										"buildingblock_uuid": types.StringType,
-										"definition_uuid":    types.StringType,
-									},
-								},
-								[]attr.Value{},
-							),
-						),
-						NestedObject: schema.NestedAttributeObject{
-							Attributes: map[string]schema.Attribute{
-								"buildingblock_uuid": schema.StringAttribute{
-									MarkdownDescription: "UUID of the parent building block.",
-									Required:            true,
-								},
-								"definition_uuid": schema.StringAttribute{
-									MarkdownDescription: "UUID of the parent building block definition.",
-									Required:            true,
-								},
-							},
-						},
+						Default:             emptySetDefault(buildingBlockV2ParentsNestedObject),
+						NestedObject:        buildingBlockV2ParentsNestedObject,
 					},
 				},
 			},
@@ -290,7 +311,9 @@ func (r *buildingBlockV2Resource) Create(ctx context.Context, req resource.Creat
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec").AtName("display_name"), &bb.Spec.DisplayName)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec").AtName("building_block_definition_version_ref").AtName("uuid"), &bb.Spec.BuildingBlockDefinitionVersionRef.Uuid)...)
 	bb.Spec.BuildingBlockDefinitionVersionRef.Kind = client.MeshObjectKind.BuildingBlockDefinitionVersion
-	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec").AtName("parent_building_blocks"), &bb.Spec.ParentBuildingBlocks)...)
+	var parents []buildingBlockV2ParentModel
+	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec").AtName("parent_building_blocks"), &parents)...)
+	bb.Spec.ParentBuildingBlocks = buildingBlockV2ParentsToDto(parents)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec").AtName("target_ref"), &bb.Spec.TargetRef)...)
 
 	// Set user inputs — use the v2-extended model to capture sensitive variants.
@@ -469,7 +492,7 @@ func setStateFromResponseV2(ctx context.Context, state *tfsdk.State, bb *client.
 	diags.Append(state.SetAttribute(ctx, path.Root("spec").AtName("building_block_definition_version_ref").AtName("uuid"), bb.Spec.BuildingBlockDefinitionVersionRef.Uuid)...)
 	diags.Append(state.SetAttribute(ctx, path.Root("spec").AtName("building_block_definition_version_ref").AtName("kind"), client.MeshObjectKind.BuildingBlockDefinitionVersion)...)
 	diags.Append(state.SetAttribute(ctx, path.Root("spec").AtName("target_ref"), bb.Spec.TargetRef)...)
-	diags.Append(state.SetAttribute(ctx, path.Root("spec").AtName("parent_building_blocks"), bb.Spec.ParentBuildingBlocks)...)
+	diags.Append(state.SetAttribute(ctx, path.Root("spec").AtName("parent_building_blocks"), buildingBlockV2ParentsFromDto(bb.Spec.ParentBuildingBlocks))...)
 
 	combinedInputs := make(map[string]buildingBlockIoModel)
 	for key, input := range bb.Spec.Inputs {

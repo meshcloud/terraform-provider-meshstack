@@ -61,9 +61,34 @@ type MeshBuildingBlockV2Client struct {
 	BbdVersionStore *Store[client.MeshBuildingBlockDefinitionVersion]
 }
 
+// withDerivedParents rebuilds the deprecated parent entries, which do not survive deepCopyBB because
+// the wire format carries no definition uuid. The backend derives the same value from the referenced
+// building block for every response.
+func (m MeshBuildingBlockV2Client) withDerivedParents(bb *client.MeshBuildingBlockV2) *client.MeshBuildingBlockV2 {
+	if bb == nil {
+		return nil
+	}
+	parents := make(clientTypes.Set[client.MeshBuildingBlockV2Parent], 0, len(bb.Spec.ParentBuildingBlockRefs))
+	for _, ref := range bb.Spec.ParentBuildingBlockRefs {
+		parent := client.MeshBuildingBlockV2Parent{
+			UuidRef:           client.UuidRef{Kind: client.MeshObjectKind.BuildingBlock, Uuid: ref.Uuid},
+			BuildingBlockUuid: ref.Uuid,
+		}
+		if storedParent, ok := m.Store.Get(ref.Uuid); ok {
+			version, ok := m.BbdVersionStore.Get(storedParent.Spec.BuildingBlockDefinitionVersionRef.Uuid)
+			if ok && version.Spec.BuildingBlockDefinitionRef != nil {
+				parent.DefinitionUuid = version.Spec.BuildingBlockDefinitionRef.Uuid
+			}
+		}
+		parents = append(parents, parent)
+	}
+	bb.Spec.ParentBuildingBlocks = parents
+	return bb
+}
+
 func (m MeshBuildingBlockV2Client) Read(_ context.Context, bbUuid string) (*client.MeshBuildingBlockV2, error) {
 	if bb, ok := m.Store.Get(bbUuid); ok {
-		return deepCopyBB(bb), nil
+		return m.withDerivedParents(deepCopyBB(bb)), nil
 	}
 	return nil, nil
 }
@@ -85,7 +110,7 @@ func (m MeshBuildingBlockV2Client) List(_ context.Context, filter client.MeshBui
 		if !mockBuildingBlockMatchesFilter(bb, filter) {
 			continue
 		}
-		result = append(result, *deepCopyBB(bb))
+		result = append(result, *m.withDerivedParents(deepCopyBB(bb)))
 	}
 	return result, nil
 }
@@ -156,7 +181,7 @@ func (m MeshBuildingBlockV2Client) Create(_ context.Context, bb *client.MeshBuil
 
 	m.Store.Set(id, stored)
 	// Return a fresh deep copy so SetFromClientDto cannot mutate the store via the returned pointer.
-	return deepCopyBB(stored), nil
+	return m.withDerivedParents(deepCopyBB(stored)), nil
 }
 
 func (m MeshBuildingBlockV2Client) Update(_ context.Context, bb *client.MeshBuildingBlockV2) (*client.MeshBuildingBlockV2, error) {
@@ -227,7 +252,7 @@ func (m MeshBuildingBlockV2Client) Update(_ context.Context, bb *client.MeshBuil
 	}
 
 	m.Store.Set(*stored.Metadata.Uuid, stored)
-	return deepCopyBB(stored), nil // fresh copy out (see Create)
+	return m.withDerivedParents(deepCopyBB(stored)), nil // fresh copy out (see Create)
 }
 
 func (m MeshBuildingBlockV2Client) Delete(_ context.Context, bbUuid string, purge bool) error {
@@ -265,5 +290,5 @@ func provisioningChanged(existing, stored *client.MeshBuildingBlockV2) bool {
 	if !reflect.DeepEqual(existing.Spec.Inputs, stored.Spec.Inputs) {
 		return true
 	}
-	return !reflect.DeepEqual(existing.Spec.ParentBuildingBlocks, stored.Spec.ParentBuildingBlocks)
+	return !reflect.DeepEqual(existing.Spec.ParentBuildingBlockRefs, stored.Spec.ParentBuildingBlockRefs)
 }

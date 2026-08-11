@@ -17,6 +17,10 @@ resource "meshstack_building_block" "example_workspace" {
         value = jsonencode("dev")
       }
     }
+
+    # Building blocks can depend on each other: a parent's outputs feed this block's inputs.
+    # Reference a parent by its computed `ref`.
+    # parent_building_block_refs = [meshstack_building_block.parent.ref]
   }
 
   # Purging is a last resort option for stuck deletions. Prefer regular delete behavior.

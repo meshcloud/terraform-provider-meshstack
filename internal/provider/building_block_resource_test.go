@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-testing/compare"
 	tfconfig "github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
@@ -102,10 +103,10 @@ func TestAccBuildingBlock(t *testing.T) {
 			)),
 		)
 		// Adding a parent without a version upgrade must force a replacement (RequiresReplaceIf →
-		// DestroyBeforeCreate). Derived from the last config so only parent_building_blocks changes.
+		// DestroyBeforeCreate). Derived from the last config so only parent_building_block_refs changes.
 		withParentsConfig := contentHashV2Config.WithFirstBlock(
-			testconfig.Descend("spec", "parent_building_blocks")(testconfig.SetRawExpr(
-				`[{ buildingblock_uuid = "11111111-1111-1111-1111-111111111111", definition_uuid = "22222222-2222-2222-2222-222222222222" }]`,
+			testconfig.Descend("spec", "parent_building_block_refs")(testconfig.SetRawExpr(
+				`[{ uuid = "11111111-1111-1111-1111-111111111111" }]`,
 			)),
 		)
 
@@ -1351,15 +1352,47 @@ func TestAccBuildingBlock(t *testing.T) {
 		})
 	})
 
+	// 13_parent_child is the only scenario with a real parent. Every other parent step uses a
+	// synthetic uuid and therefore never reaches a live backend.
+	t.Run("13_parent_child", func(t *testing.T) {
+		config, parentAddr, childAddr := testconfig.BBWorkspaceParentChild(t)
+
+		ApplyAndTest(t, resource.TestCase{
+			Steps: []resource.TestStep{
+				{
+					Config: config.String(),
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PreApply: []plancheck.PlanCheck{
+							plancheck.ExpectResourceAction(parentAddr.String(), plancheck.ResourceActionCreate),
+							plancheck.ExpectResourceAction(childAddr.String(), plancheck.ResourceActionCreate),
+						},
+					},
+					ConfigStateChecks: append(
+						bbv3StateChecks(childAddr, "my-child-building-block"),
+						statecheck.ExpectKnownValue(childAddr.String(), tfjsonpath.New("spec").AtMapKey("parent_building_block_refs"), knownvalue.SetSizeExact(1)),
+						statecheck.CompareValuePairs(
+							parentAddr.String(), tfjsonpath.New("ref"),
+							childAddr.String(), tfjsonpath.New("spec").AtMapKey("parent_building_block_refs").AtSliceIndex(0),
+							compare.ValuesSame(),
+						),
+					),
+				},
+				{
+					// The parent ref read back must hash to the same set element as the one the
+					// configuration declares, or this plan is not empty.
+					Config:   config.String(),
+					PlanOnly: true,
+				},
+			},
+		})
+	})
 }
 
-// bbv3StateChecks returns the baseline state checks shared by every BB v3 create/move step: a
-// non-empty metadata.uuid, the display name, the always-present "name" input, a non-empty status, and
-// a non-empty latest_run_uuid. Callers append scenario-specific input checks via extra — the
-// workspace and tenant examples both pass bbv3SizeEnvInputChecks.
+// bbv3StateChecks returns the baseline state checks shared by every BB v3 create and move step.
 func bbv3StateChecks(buildingBlockAddr testconfig.Traversal, displayName string, extra ...statecheck.StateCheck) []statecheck.StateCheck {
 	checks := []statecheck.StateCheck{
 		statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("metadata").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
+		xknownvalue.Ref(buildingBlockAddr, client.MeshObjectKind.BuildingBlock, nil),
 		statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact(displayName)),
 		statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("spec").AtMapKey("inputs").AtMapKey("name").AtMapKey("value"), knownvalue.StringExact(`"my-name"`)),
 		statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("status").AtMapKey("status"), xknownvalue.NotEmptyString()),
@@ -1410,20 +1443,20 @@ func Test_rerunNeeded(t *testing.T) {
 	v2b := BuildingBlockDefinitionVersionContentHash{hashVersion: 2, hashValue: "bbb"}.toBase64()
 	v1 := "v1:someLegacyHashValue"
 
-	spec := func(uuid string, contentHash *string, inputs map[string]*client.MeshBuildingBlockInput, parents ...client.MeshBuildingBlockParent) client.MeshBuildingBlockV2Spec {
+	spec := func(uuid string, contentHash *string, inputs map[string]*client.MeshBuildingBlockInput, parents ...client.UuidRef) client.MeshBuildingBlockV2Spec {
 		return client.MeshBuildingBlockV2Spec{
 			BuildingBlockDefinitionVersionRef: client.MeshBuildingBlockV2DefinitionVersionRef{
 				UuidRef:     client.UuidRef{Uuid: uuid},
 				ContentHash: contentHash,
 			},
-			Inputs:               inputs,
-			ParentBuildingBlocks: parents,
+			Inputs:                  inputs,
+			ParentBuildingBlockRefs: parents,
 		}
 	}
 	input := func(sensitive bool) *client.MeshBuildingBlockInput {
 		return &client.MeshBuildingBlockInput{IsSensitive: sensitive}
 	}
-	parent := client.MeshBuildingBlockParent{BuildingBlockUuid: "parent-1", DefinitionUuid: "def-1"}
+	parent := client.UuidRef{Kind: client.MeshObjectKind.BuildingBlock, Uuid: "parent-1"}
 
 	tests := []struct {
 		name  string

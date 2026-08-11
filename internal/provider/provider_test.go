@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	fwresource "github.com/hashicorp/terraform-plugin-framework/resource"
 	fwschema "github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -186,6 +187,39 @@ func ResourceSchemaForTest(t *testing.T, r fwresource.Resource) fwschema.Schema 
 func UpgradeResourceStateFromJSON(t *testing.T, r fwresource.ResourceWithUpgradeState, version int64, rawJSON string, target any) diag.Diagnostics {
 	t.Helper()
 
+	upgraded, diags := UpgradeResourceState(t, r, version, rawJSON)
+	if diags.HasError() {
+		return diags
+	}
+	diags.Append(upgraded.state.Get(context.Background(), target)...)
+
+	return diags
+}
+
+// UpgradedState wraps the state an upgrader produced so a test can read it one attribute at a time
+// without importing the framework.
+type UpgradedState struct {
+	t     *testing.T
+	state tfsdk.State
+}
+
+// Attribute reads the attribute at the given dotted path (e.g. "spec.display_name") into target.
+func (u UpgradedState) Attribute(attributePath string, target any) {
+	u.t.Helper()
+
+	p := path.Empty()
+	for _, step := range strings.Split(attributePath, ".") {
+		p = p.AtName(step)
+	}
+	diags := u.state.GetAttribute(context.Background(), p, target)
+	require.Falsef(u.t, diags.HasError(), "reading %s from the upgraded state: %s", attributePath, diags)
+}
+
+// UpgradeResourceState is UpgradeResourceStateFromJSON without the final whole-model read, for a
+// resource whose model cannot be read back through plain framework reflection.
+func UpgradeResourceState(t *testing.T, r fwresource.ResourceWithUpgradeState, version int64, rawJSON string) (UpgradedState, diag.Diagnostics) {
+	t.Helper()
+
 	ctx := context.Background()
 
 	upgrader, ok := r.UpgradeState(ctx)[version]
@@ -203,13 +237,8 @@ func UpgradeResourceStateFromJSON(t *testing.T, r fwresource.ResourceWithUpgrade
 	resp := fwresource.UpgradeStateResponse{State: tfsdk.State{Schema: ResourceSchemaForTest(t, r)}}
 
 	upgrader.StateUpgrader(ctx, req, &resp)
-	if resp.Diagnostics.HasError() {
-		return resp.Diagnostics
-	}
 
-	resp.Diagnostics.Append(resp.State.Get(ctx, target)...)
-
-	return resp.Diagnostics
+	return UpgradedState{t: t, state: resp.State}, resp.Diagnostics
 }
 
 // sanitizeTestName turns a *testing.T name into a relative path. Subtest separators ("/")

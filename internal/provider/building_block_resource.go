@@ -38,11 +38,12 @@ import (
 )
 
 var (
-	_ resource.Resource                = &buildingBlockResource{}
-	_ resource.ResourceWithConfigure   = &buildingBlockResource{}
-	_ resource.ResourceWithImportState = &buildingBlockResource{}
-	_ resource.ResourceWithModifyPlan  = &buildingBlockResource{}
-	_ resource.ResourceWithMoveState   = &buildingBlockResource{}
+	_ resource.Resource                 = &buildingBlockResource{}
+	_ resource.ResourceWithConfigure    = &buildingBlockResource{}
+	_ resource.ResourceWithImportState  = &buildingBlockResource{}
+	_ resource.ResourceWithModifyPlan   = &buildingBlockResource{}
+	_ resource.ResourceWithMoveState    = &buildingBlockResource{}
+	_ resource.ResourceWithUpgradeState = &buildingBlockResource{}
 )
 
 // defaultBuildingBlockTimeout is the fallback time to wait for a building block run to complete when
@@ -69,30 +70,25 @@ func (r *buildingBlockResource) Configure(_ context.Context, req resource.Config
 	})...)
 }
 
-// parentBuildingBlocksNestedObject is the NestedAttributeObject for parent_building_blocks.
-// Defined once and reused by both the Default and NestedObject fields.
-var parentBuildingBlocksNestedObject = schema.NestedAttributeObject{
-	Attributes: map[string]schema.Attribute{
-		"buildingblock_uuid": schema.StringAttribute{
-			MarkdownDescription: "UUID of the parent building block.",
-			Required:            true,
-		},
-		"definition_uuid": schema.StringAttribute{
-			MarkdownDescription: "UUID of the parent building block definition.",
-			Required:            true,
-		},
-	},
-}
+// parentBuildingBlockRefsNestedObject is defined once so the Default and the NestedObject field of
+// parent_building_block_refs share one element type.
+var parentBuildingBlockRefsNestedObject = func() schema.NestedAttributeObject {
+	ref := meshRefByUuid(meshRefOptions{Kind: client.MeshObjectKind.BuildingBlock, InSet: true})
+	return schema.NestedAttributeObject{Attributes: ref.Attributes, Validators: ref.Validators}
+}()
 
 func (r *buildingBlockResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		Version: 1,
 		MarkdownDescription: "Manage a workspace or tenant building block created from a building block definition (BBD).\n\n" +
 			"A building block is usually managed by the app team that owns its workspace; a platform operator " +
 			"typically only creates one directly to test a draft BBD in the operator's own workspace. " +
-			"Building blocks can depend on each other via `parent_building_blocks`, forming a dependency hierarchy " +
+			"Building blocks can depend on each other via `parent_building_block_refs`, forming a dependency hierarchy " +
 			"in which a child's inputs draw their values from a parent's outputs " +
 			"(see [building block concepts](https://docs.meshcloud.io/concepts/building-block/))." + previewDisclaimer(),
 		Attributes: map[string]schema.Attribute{
+			"ref": meshRefByUuid(meshRefOptions{Kind: client.MeshObjectKind.BuildingBlock, Description: "Reference to this building block, can be used in another building block's `spec.parent_building_block_refs`.", Output: true}),
+
 			"metadata": schema.SingleNestedAttribute{
 				MarkdownDescription: "Building block metadata.",
 				Computed:            true,
@@ -228,16 +224,17 @@ func (r *buildingBlockResource) Schema(ctx context.Context, req resource.SchemaR
 							},
 						},
 					},
-					"parent_building_blocks": schema.SetNestedAttribute{
+					"parent_building_block_refs": schema.SetNestedAttribute{
 						Optional: true,
 						Computed: true,
-						MarkdownDescription: "Parent building blocks this block depends on, forming a dependency hierarchy: " +
+						MarkdownDescription: "Set of refs to the parent building blocks this block depends on, forming a dependency hierarchy: " +
 							"a parent's outputs can feed this block's inputs, so the parents listed here should align with the " +
-							"inputs that consume them (see [building block concepts](https://docs.meshcloud.io/concepts/building-block/)).<br>" +
+							"inputs that consume them (see [building block concepts](https://docs.meshcloud.io/concepts/building-block/)). " +
+							"Prefer reusable refs from `meshstack_building_block.<name>.ref`.<br>" +
 							"Parent building blocks can only change as part of a version upgrade; changing them on their own " +
 							"forces the building block to be replaced (destroyed and recreated).",
-						Default:      emptySetDefault(parentBuildingBlocksNestedObject),
-						NestedObject: parentBuildingBlocksNestedObject,
+						Default:      emptySetDefault(parentBuildingBlockRefsNestedObject),
+						NestedObject: parentBuildingBlockRefsNestedObject,
 						PlanModifiers: []planmodifier.Set{
 							setplanmodifier.RequiresReplaceIf(
 								requiresReplaceParentsWhenVersionUnchanged,
@@ -356,8 +353,9 @@ func (r *buildingBlockResource) Schema(ctx context.Context, req resource.SchemaR
 
 type buildingBlockModel struct {
 	client.MeshBuildingBlockV2
-	WaitForCompletion bool `tfsdk:"wait_for_completion"`
-	PurgeOnDelete     bool `tfsdk:"purge_on_delete"`
+	Ref               client.UuidRef `tfsdk:"ref"`
+	WaitForCompletion bool           `tfsdk:"wait_for_completion"`
+	PurgeOnDelete     bool           `tfsdk:"purge_on_delete"`
 
 	AllInputs map[string]buildingBlockAllInput `tfsdk:"all_inputs"`
 	// Timeouts mirrors the schema's timeouts block so it round-trips through state via the generic
@@ -415,6 +413,7 @@ func (m *buildingBlockModel) SetFromClientDto(dto *client.MeshBuildingBlockV2, i
 	m.Spec.BuildingBlockDefinitionVersionRef.ContentHash = contentHash
 	// kind is a fixed discriminator; force it so it round-trips even if the backend omits it.
 	m.Spec.BuildingBlockDefinitionVersionRef.Kind = client.MeshObjectKind.BuildingBlockDefinitionVersion
+	m.Ref = client.UuidRef{Kind: client.MeshObjectKind.BuildingBlock, Uuid: *dto.Metadata.Uuid}
 
 	m.AllInputs = make(map[string]buildingBlockAllInput)
 
@@ -781,7 +780,7 @@ func (r *buildingBlockResource) Read(ctx context.Context, req resource.ReadReque
 	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, state, converterOptions...)...)
 }
 
-// requiresReplaceParentsWhenVersionUnchanged forces replacement when parent_building_blocks changes
+// requiresReplaceParentsWhenVersionUnchanged forces replacement when parent_building_block_refs changes
 // but the building block definition version does NOT. The backend only accepts a parent change as part
 // of a version-change PUT (requireParentsUnchanged on a same-version PUT → 400), so an in-place update of
 // parents alone is doomed. When the version uuid also changes, the in-place upgrade carries the parent
@@ -840,7 +839,7 @@ func rerunNeeded(plan, state client.MeshBuildingBlockV2Spec) bool {
 	}
 
 	// parent building blocks change detection
-	if !reflect.DeepEqual(plan.ParentBuildingBlocks, state.ParentBuildingBlocks) {
+	if !reflect.DeepEqual(plan.ParentBuildingBlockRefs, state.ParentBuildingBlockRefs) {
 		return true
 	}
 
@@ -1044,7 +1043,7 @@ func (r *buildingBlockResource) Update(ctx context.Context, req resource.UpdateR
 	// an explicit (non-dry) trigger-run.
 	backendWillRun := versionChanging ||
 		planInputsChanged(plan.Spec.Inputs, state.Spec.Inputs) ||
-		!reflect.DeepEqual(plan.Spec.ParentBuildingBlocks, state.Spec.ParentBuildingBlocks) ||
+		!reflect.DeepEqual(plan.Spec.ParentBuildingBlockRefs, state.Spec.ParentBuildingBlockRefs) ||
 		secretRotated
 	if needsRun && !backendWillRun {
 		if err := r.BuildingBlockClient.TriggerRun(ctx, *updated.Metadata.Uuid); err != nil {
@@ -1193,8 +1192,8 @@ func (r *buildingBlockResource) moveFromV2(ctx context.Context, req resource.Mov
 	var targetName types.String
 	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("spec").AtName("target_ref").AtName("name"), &targetName)...)
 
-	var parentBuildingBlocks types.Set
-	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("spec").AtName("parent_building_blocks"), &parentBuildingBlocks)...)
+	var flatParents []client.MeshBuildingBlockParent
+	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("spec").AtName("parent_building_blocks"), &flatParents)...)
 
 	// Read source inputs — use the v2 model to tolerate value_string_sensitive/value_code_sensitive
 	// that were added after the v2 resource's initial release.
@@ -1215,7 +1214,7 @@ func (r *buildingBlockResource) moveFromV2(ctx context.Context, req resource.Mov
 	if !targetName.IsNull() {
 		resp.Diagnostics.Append(resp.TargetState.SetAttribute(ctx, path.Root("spec").AtName("target_ref").AtName("name"), targetName.ValueStringPointer())...)
 	}
-	resp.Diagnostics.Append(resp.TargetState.SetAttribute(ctx, path.Root("spec").AtName("parent_building_blocks"), parentBuildingBlocks)...)
+	resp.Diagnostics.Append(resp.TargetState.SetAttribute(ctx, path.Root("spec").AtName("parent_building_block_refs"), parentRefsFromFlatParents(flatParents))...)
 
 	// Carry inputs over. A sensitive input's value cannot ride through state (secret_value is
 	// write-only). It must not be lost either: seed the sensitive block so the input stays MANAGED
@@ -1279,8 +1278,8 @@ func (r *buildingBlockResource) moveFromV1(ctx context.Context, req resource.Mov
 	// name-based ref would force destroy+recreate on first post-move plan.
 	// Leave target_ref unset so the post-move Read/refresh fills it from the live DTO.
 
-	var parentBuildingBlocks types.Set
-	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("spec").AtName("parent_building_blocks"), &parentBuildingBlocks)...)
+	var flatParents []client.MeshBuildingBlockParent
+	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("spec").AtName("parent_building_blocks"), &flatParents)...)
 
 	var userInputs map[string]buildingBlockUserInputModel
 	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("spec").AtName("inputs"), &userInputs)...)
@@ -1294,7 +1293,7 @@ func (r *buildingBlockResource) moveFromV1(ctx context.Context, req resource.Mov
 	// Leave building_block_definition_version_ref.uuid and target_ref unset — the post-move
 	// refresh (Read) will populate them from the live backend. This avoids the v1 definition uuid
 	// mismatch and the name-based tenant target_ref incompatibility.
-	resp.Diagnostics.Append(resp.TargetState.SetAttribute(ctx, path.Root("spec").AtName("parent_building_blocks"), parentBuildingBlocks)...)
+	resp.Diagnostics.Append(resp.TargetState.SetAttribute(ctx, path.Root("spec").AtName("parent_building_block_refs"), parentRefsFromFlatParents(flatParents))...)
 
 	for key, input := range userInputs {
 		jsonVal, err := userInputModelToJsonValue(input)

@@ -181,7 +181,7 @@ func (d *buildingBlockV2DataSource) Read(ctx context.Context, req datasource.Rea
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("spec").AtName("building_block_definition_version_ref").AtName("uuid"), bb.Spec.BuildingBlockDefinitionVersionRef.Uuid)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("spec").AtName("building_block_definition_version_ref").AtName("kind"), client.MeshObjectKind.BuildingBlockDefinitionVersion)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("spec").AtName("target_ref"), bb.Spec.TargetRef)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("spec").AtName("parent_building_blocks"), bb.Spec.ParentBuildingBlocks)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("spec").AtName("parent_building_blocks"), buildingBlockV2ParentsFromDto(bb.Spec.ParentBuildingBlocks))...)
 
 	// Read inputs
 	inputs := make(map[string]buildingBlockIoModel)
