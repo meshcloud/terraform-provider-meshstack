@@ -72,7 +72,7 @@ type meshBuildingBlockDefinitionClient struct {
 
 func newBuildingBlockDefinitionClient(ctx context.Context, httpClient internal.HttpClient) MeshBuildingBlockDefinitionClient {
 	return meshBuildingBlockDefinitionClient{
-		meshObject: internal.NewMeshObjectClient[MeshBuildingBlockDefinition](ctx, httpClient, "v1-preview"),
+		meshObject: internal.NewMeshObjectClient[MeshBuildingBlockDefinition](ctx, httpClient, "v1"),
 	}
 }
 

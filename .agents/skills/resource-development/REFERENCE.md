@@ -22,8 +22,9 @@ Builder rules:
   Call `config.Join(A, B)`, not chained `.Join(A).Join(B)`.
 - Declare all `Traversal` vars upfront with `var` before `WithFirstBlock` calls that populate them.
 - Return inline (`return expr.Join(...), addr`); consolidate all modifiers into a single `WithFirstBlock`.
-- Use explicit version suffixes in file names when multiple versions exist
-  (`build_building_block_v1.go`, `build_building_block_v2.go`); omit when only one version exists.
+- Use explicit version suffixes in file names when a resource has builders for two API versions at
+  the same time (`build_thing_v1.go`, `build_thing_v2.go`); omit the suffix when only one version
+  exists, which is the case for every builder today.
 
 Modifier preference order: `SetString`/`SetValue` (literals) → `SetAddr(addr, "metadata", "name")`
 (resource references) → `SetRawExpr(format, args...)` (complex HCL, last resort). For
@@ -135,9 +136,6 @@ testconfig.BBDTerraform(t)                                                 → (
 testconfig.BBDWithIntegration(t, suffix)                                   → (config, buildingBlockDefinitionAddr)
 testconfig.BBDManual(t)                                                    → (config, buildingBlockDefinitionAddr)
 testconfig.BBDGitlabPipeline(t)                                            → (config, buildingBlockDefinitionAddr)
-testconfig.BBv1Tenant(t)                                                   → (config, buildingBlockAddr)
-testconfig.BBv2Workspace(t)                                                → (config, buildingBlockAddr)
-testconfig.BBv2Tenant(t)                                                   → (config, buildingBlockAddr)
 ```
 
 ## State check helpers (`xknownvalue`)

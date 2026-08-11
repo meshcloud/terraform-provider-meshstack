@@ -4,14 +4,11 @@ page_title: "meshstack_building_blocks Data Source - terraform-provider-meshstac
 subcategory: ""
 description: |-
   List building blocks, with optional filters. Each returned building block is read-only and mirrors the meshstack_building_block resource (metadata/spec/status/all_inputs).
-  ~> Preview: This resource is in preview. Breaking changes are possible without prior notice due to changes in the underlying meshStack preview API https://docs.meshcloud.io/api/technical-specifications#preview-endpoints or due to changes in this provider. Please ensure you are running the latest version of the provider and report any bugs via GitHub issues https://github.com/meshcloud/terraform-provider-meshstack/issues or via support@meshcloud.io.
 ---
 
 # meshstack_building_blocks (Data Source)
 
 List building blocks, with optional filters. Each returned building block is read-only and mirrors the `meshstack_building_block` resource (`metadata`/`spec`/`status`/`all_inputs`).
-
-~> **Preview:** This resource is in preview. Breaking changes are possible without prior notice due to changes in the underlying [meshStack preview API](https://docs.meshcloud.io/api/technical-specifications#preview-endpoints) or due to changes in this provider. Please ensure you are running the latest version of the provider and report any bugs via [GitHub issues](https://github.com/meshcloud/terraform-provider-meshstack/issues) or via support@meshcloud.io.
 
 ## Example Usage
 

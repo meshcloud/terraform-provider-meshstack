@@ -100,8 +100,7 @@ func (d *buildingBlockDefinitionsDataSource) Schema(_ context.Context, _ datasou
 			"**Cross-Workspace Access**: When accessing building block definitions from workspaces other than your own " +
 			"using a workspace-scoped API key, the `content_hash` attribute will be null as it requires detailed version " +
 			"information that is not accessible without workspace permissions. The `versions`, `version_latest`, and " +
-			"`version_latest_release` attributes will still be populated with uuid, number, and state." +
-			"\n\n" + previewDisclaimer(),
+			"`version_latest_release` attributes will still be populated with uuid, number, and state.",
 		Attributes: map[string]schema.Attribute{
 			"workspace_identifier": schema.StringAttribute{
 				MarkdownDescription: "Optional workspace identifier filter (maps to `ownedByWorkspace` query param).",

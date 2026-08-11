@@ -4,14 +4,11 @@ page_title: "meshstack_building_block_definition Resource - terraform-provider-m
 subcategory: ""
 description: |-
   Manages a meshBuildingBlockDefinition in meshStack. Building Block Definitions define reusable automation components that can be executed on workspaces or tenants. This resource combines the building block definition metadata with version information in a single resource for simplified management.
-  ~> Preview: This resource is in preview. Breaking changes are possible without prior notice due to changes in the underlying meshStack preview API https://docs.meshcloud.io/api/technical-specifications#preview-endpoints or due to changes in this provider. Please ensure you are running the latest version of the provider and report any bugs via GitHub issues https://github.com/meshcloud/terraform-provider-meshstack/issues or via support@meshcloud.io.
 ---
 
 # meshstack_building_block_definition (Resource)
 
 Manages a meshBuildingBlockDefinition in meshStack. Building Block Definitions define reusable automation components that can be executed on workspaces or tenants. This resource combines the building block definition metadata with version information in a single resource for simplified management.
-
-~> **Preview:** This resource is in preview. Breaking changes are possible without prior notice due to changes in the underlying [meshStack preview API](https://docs.meshcloud.io/api/technical-specifications#preview-endpoints) or due to changes in this provider. Please ensure you are running the latest version of the provider and report any bugs via [GitHub issues](https://github.com/meshcloud/terraform-provider-meshstack/issues) or via support@meshcloud.io.
 
 ## Example Usage
 
@@ -347,7 +344,7 @@ resource "meshstack_building_block_definition" "example_05_gitlab_pipeline" {
 ### Read-Only
 
 - `ref` (Attributes) Reference to this building block definition. Reuse in `version_spec.dependency_refs` of other building block definitions. (see [below for nested schema](#nestedatt--ref))
-- `version_latest` (Attributes) Latest version (including drafts). Useful for wiring `meshstack_building_block_v2.spec.building_block_definition_version_ref`. (see [below for nested schema](#nestedatt--version_latest))
+- `version_latest` (Attributes) Latest version (including drafts). Useful for wiring `meshstack_building_block.spec.building_block_definition_version_ref`. (see [below for nested schema](#nestedatt--version_latest))
 - `versions` (Attributes List) List of all available versions of this building block definition. Never empty. (see [below for nested schema](#nestedatt--versions))
 
 <a id="nestedatt--metadata"></a>

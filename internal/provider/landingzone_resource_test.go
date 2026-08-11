@@ -19,7 +19,7 @@ import (
 
 // TestAccLandingZoneBuildingBlockRefRequiresUuid asserts the plan-time validator rejects a
 // building block ref object that is provided without a uuid (an assigned computed `.ref`, whose
-// uuid is unknown at plan time, stays allowed — see TestAccBuildingBlock/04_tenant_moved_from_v1).
+// uuid is unknown at plan time, stays allowed).
 func TestAccLandingZoneBuildingBlockRefRequiresUuid(t *testing.T) {
 	config, _ := testconfig.LandingZoneAndWorkspace(t)
 
