@@ -57,52 +57,8 @@ func TestMeshTenant_DeletionSuccessful(t *testing.T) {
 	}
 }
 
-func TestMeshTenantV4_DeletionSuccessful(t *testing.T) {
-	tests := []struct {
-		name     string
-		tenant   *MeshTenantV4
-		wantDone bool
-	}{
-		{
-			name:     "nil (404 — tenant purged)",
-			tenant:   nil,
-			wantDone: true,
-		},
-		{
-			name: "lifecycle DELETED (deletion completed, tenant still returned)",
-			tenant: &MeshTenantV4{Status: MeshTenantV4Status{
-				Lifecycle: MeshTenantLifecycle{State: TenantLifecycleStateDeleted},
-			}},
-			wantDone: true,
-		},
-		{
-			name: "lifecycle MARKED_FOR_DELETION (deletion still running)",
-			tenant: &MeshTenantV4{Status: MeshTenantV4Status{
-				Lifecycle: MeshTenantLifecycle{State: TenantLifecycleStateMarkedForDeletion},
-			}},
-			wantDone: false,
-		},
-		{
-			name: "lifecycle ACTIVE",
-			tenant: &MeshTenantV4{Status: MeshTenantV4Status{
-				Lifecycle: MeshTenantLifecycle{State: TenantLifecycleStateActive},
-			}},
-			wantDone: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			done, err := tt.tenant.DeletionSuccessful()
-			assert.Equal(t, tt.wantDone, done)
-			assert.NoError(t, err)
-		})
-	}
-}
-
 func TestTenantDeletionState(t *testing.T) {
 	assert.Equal(t, tenantNotObserved, (*MeshTenant)(nil).DeletionState())
-	assert.Equal(t, tenantNotObserved, (*MeshTenantV4)(nil).DeletionState())
 
 	assert.Equal(t, "DELETED",
 		(&MeshTenant{Status: MeshTenantStatus{
@@ -117,7 +73,7 @@ func TestTenantDeletionState(t *testing.T) {
 		"MARKED_FOR_DELETION since 2026-07-30T16:14:14Z",
 	)
 	assert.Contains(t,
-		(&MeshTenantV4{Status: MeshTenantV4Status{
+		(&MeshTenant{Status: MeshTenantStatus{
 			Lifecycle: MeshTenantLifecycle{State: TenantLifecycleStateMarkedForDeletion},
 		}}).DeletionState(),
 		"MARKED_FOR_DELETION, awaiting",

@@ -36,7 +36,7 @@ func (d *tenantsDataSource) Configure(_ context.Context, req datasource.Configur
 
 func (d *tenantsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Query tenants in a workspace with optional filters." + previewDisclaimer(),
+		MarkdownDescription: "Query tenants in a workspace with optional filters.",
 
 		Attributes: map[string]schema.Attribute{
 			"workspace": schema.StringAttribute{
