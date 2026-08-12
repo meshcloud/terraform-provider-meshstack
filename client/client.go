@@ -11,7 +11,7 @@ import (
 	"github.com/meshcloud/terraform-provider-meshstack/client/version"
 )
 
-var MinMeshStackVersion = version.MustParse("2026.30.0")
+var MinMeshStackVersion = version.MustParse("2026.32.0")
 
 // HttpError represents an HTTP error response with status code.
 // This error is returned when an HTTP request fails with a non-2XX status code.
@@ -37,7 +37,6 @@ type Client struct {
 	ServiceInstance                MeshServiceInstanceClient
 	TagDefinition                  MeshTagDefinitionClient
 	Tenant                         MeshTenantClient
-	TenantV4                       MeshTenantV4Client
 	Workspace                      MeshWorkspaceClient
 	WorkspaceGroupBinding          MeshWorkspaceGroupBindingClient
 	WorkspaceUserBinding           MeshWorkspaceUserBindingClient
@@ -93,7 +92,6 @@ func New(ctx context.Context, rootUrl *url.URL, userAgent string, auth Authoriza
 		ServiceInstance:                newServiceInstanceClient(ctx, httpClient),
 		TagDefinition:                  newTagDefinitionClient(ctx, httpClient),
 		Tenant:                         newTenantClient(ctx, httpClient),
-		TenantV4:                       newTenantV4Client(ctx, httpClient),
 		Workspace:                      newWorkspaceClient(ctx, httpClient),
 		WorkspaceGroupBinding:          newWorkspaceGroupBindingClient(ctx, httpClient),
 		WorkspaceUserBinding:           newWorkspaceUserBindingClient(ctx, httpClient),
