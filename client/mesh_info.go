@@ -42,8 +42,9 @@ func (c meshInfoClient) Read(ctx context.Context) (*MeshInfo, error) {
 	}
 
 	info.Endpoint = c.httpClient.RootUrl.String()
+	info.EnabledFeatureFlags = []string{}
 	if info.IsFourEyesEnabled {
-		info.EnabledFeatureFlags = []string{FeatureFlagFourEyesRoleApproval}
+		info.EnabledFeatureFlags = append(info.EnabledFeatureFlags, FeatureFlagFourEyesRoleApproval)
 	}
 
 	return &info, nil

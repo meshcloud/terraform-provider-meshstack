@@ -13,8 +13,6 @@ import (
 )
 
 func TestAccInstanceDataSource(t *testing.T) {
-	t.Parallel()
-
 	dataSourceAddress := testconfig.Traversal{"data.meshstack_instance", "this"}
 	config := testconfig.DataSource{Name: "instance"}.Config(t)
 

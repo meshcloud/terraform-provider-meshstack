@@ -7,6 +7,9 @@ BREAKING CHANGES:
 - The deprecated `meshstack_tenant_v4` resource and data source have been removed, along with the `moved` state mover that migrated from it (the source schema it was built from no longer exists). Migrate to `meshstack_tenant` / `meshstack_tenants` by adding a `moved` block on v0.24.x — which still ships both the mover and the deprecated type — and applying it before upgrading to v0.25.0.
 - `meshstack_platform_types`: the `category` filter no longer accepts `GITHUB`. meshStack retired the dedicated GitHub platform type, and the platforms that had it are now `CUSTOM`. Change any `category = "GITHUB"` filter to `category = "CUSTOM"`.
 
+FEATURES:
+- New `meshstack_instance` data source exposes information about the meshStack instance the provider is configured against — the endpoint from the provider configuration plus metadata from the public, unauthenticated `/mesh/info` endpoint. See the data source's documentation for the full attribute list. Lets modules read the endpoint directly instead of threading a separate `meshstack_endpoint` variable through every caller, and resolves the admin workspace without hardcoding its identifier.
+
 FIXES:
 - `MESHSTACK_SKIP_VERSION_CHECK=true` now skips the `GET /mesh/info` version-check request itself, instead of only suppressing the resulting version mismatch. Previously the opt-out was evaluated after the request had succeeded, so an unavailable meshStack still failed provider configuration — after blocking for the client's full retry budget (~4 minutes), because `/mesh/info` is a retried GET.
 
@@ -39,7 +42,9 @@ BREAKING CHANGES:
 - `meshstack_building_blocks`: `spec.parent_building_blocks` is renamed to `spec.parent_building_block_refs` as well, and it reports each parent in the same ref shape, so it no longer reports a parent's `definition_uuid`. The deprecated `meshstack_building_block_v2` resource and data source are **unaffected** and keep their flat `spec.parent_building_blocks` with `buildingblock_uuid` and `definition_uuid`.
 
 FEATURES:
-- New `meshstack_instance` data source exposes information about the meshStack instance the provider is configured against — the endpoint from the provider configuration plus metadata from the public, unauthenticated `/mesh/info` endpoint. See the data source's documentation for the full attribute list. Lets modules read the endpoint directly instead of threading a separate `meshstack_endpoint` variable through every caller, and resolves the admin workspace without hardcoding its identifier.
+- `meshstack_building_block`: new computed `ref` output (`{kind, uuid}`). You can use it directly as an entry of another building block's `spec.parent_building_block_refs`, instead of writing `metadata.uuid` yourself.
+- New `meshstack_building_block` **data source** reads a single building block by UUID. It returns `metadata`, `spec` (with `parent_building_block_refs` in the new ref form), `status`, `all_inputs` and the computed `ref`, which is exactly one element of `meshstack_building_blocks`. That data source looks building blocks up by filter, but it cannot filter by UUID.
+- The `meshstack_buildingblock` and `meshstack_building_block_v2` **data sources** are **deprecated**, and a future release removes them. Both read a single building block by UUID; replace them with the new `meshstack_building_block` data source, which reads the same block and reports its parents as `{kind, uuid}` refs. Use `meshstack_building_blocks` to read a set of building blocks by workspace, project, platform, definition or status. The migration also changes the input and output shape: `spec.inputs` becomes the read-only `all_inputs`, and both `all_inputs` and `status.outputs` carry a `jsonencode`d `value` instead of the typed `value_string` / `value_int` / … attributes.
 
 # v0.24.3
 
