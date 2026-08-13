@@ -69,7 +69,8 @@ func New(ctx context.Context, rootUrl *url.URL, userAgent string, auth Authoriza
 		},
 	)
 
-	if err := checkMeshVersion(ctx, httpClient); err != nil {
+	meshInfoClient := newMeshInfoClient(httpClient)
+	if err := checkMeshVersion(ctx, meshInfoClient); err != nil {
 		return Client{}, err
 	}
 
@@ -84,7 +85,7 @@ func New(ctx context.Context, rootUrl *url.URL, userAgent string, auth Authoriza
 		Integration:                    newIntegrationClient(ctx, httpClient),
 		LandingZone:                    newLandingZoneClient(ctx, httpClient),
 		Location:                       newLocationClient(ctx, httpClient),
-		MeshInfo:                       newMeshInfoClient(httpClient),
+		MeshInfo:                       meshInfoClient,
 		PaymentMethod:                  newPaymentMethodClient(ctx, httpClient),
 		Platform:                       newPlatformClient(ctx, httpClient),
 		PlatformType:                   newPlatformTypeClient(ctx, httpClient),
@@ -100,7 +101,7 @@ func New(ctx context.Context, rootUrl *url.URL, userAgent string, auth Authoriza
 	}, nil
 }
 
-func checkMeshVersion(ctx context.Context, httpClient internal.HttpClient) error {
+func checkMeshVersion(ctx context.Context, meshInfoClient MeshInfoClient) error {
 	// Skip before the request, not just before the comparison: /mesh/info is a GET on the retrying
 	// client, so an unavailable backend blocks provider configuration for the whole retry budget
 	// (~4 minutes) and then fails it. Opting out of the check has to opt out of that too.
@@ -108,12 +109,16 @@ func checkMeshVersion(ctx context.Context, httpClient internal.HttpClient) error
 		return nil
 	}
 
-	dto, err := fetchMeshInfo(ctx, httpClient)
+	info, err := meshInfoClient.Read(ctx)
 	if err != nil {
 		return err
 	}
-	if dto.Version.Less(MinMeshStackVersion) {
-		return fmt.Errorf("unsupported meshStack version: meshStack is running version %s, but this client requires version %s or higher", dto.Version, MinMeshStackVersion)
+	meshVersion, err := version.Parse(info.Version)
+	if err != nil {
+		return fmt.Errorf("failed to parse meshStack version %q: %w", info.Version, err)
+	}
+	if meshVersion.Less(MinMeshStackVersion) {
+		return fmt.Errorf("unsupported meshStack version: meshStack is running version %s, but this client requires version %s or higher", meshVersion, MinMeshStackVersion)
 	}
 	return nil
 }
