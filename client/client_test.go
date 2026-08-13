@@ -30,15 +30,15 @@ func TestCheckMeshVersion_SkipsRequestWhenOptedOut(t *testing.T) {
 	t.Run("MESHSTACK_SKIP_VERSION_CHECK=true skips the /mesh/info request entirely", func(t *testing.T) {
 		t.Setenv("MESHSTACK_SKIP_VERSION_CHECK", "true")
 		httpClient, transport := newUnreachableClient()
-		require.NoError(t, checkMeshVersion(t.Context(), httpClient))
+		require.NoError(t, checkMeshVersion(t.Context(), newMeshInfoClient(httpClient)))
 		assert.Zero(t, transport.calls, "opting out of the version check must not send a request that can block on retries")
 	})
 
 	t.Run("without the opt-out an unreachable /mesh/info fails", func(t *testing.T) {
 		t.Setenv("MESHSTACK_SKIP_VERSION_CHECK", "")
 		httpClient, transport := newUnreachableClient()
-		err := checkMeshVersion(t.Context(), httpClient)
-		require.ErrorContains(t, err, "failed to retrieve meshStack version information")
+		err := checkMeshVersion(t.Context(), newMeshInfoClient(httpClient))
+		require.ErrorContains(t, err, "failed to retrieve meshStack instance information")
 		assert.Equal(t, 1, transport.calls)
 	})
 }
