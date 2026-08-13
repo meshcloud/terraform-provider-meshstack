@@ -22,7 +22,7 @@ data "meshstack_instance" "this" {}
 ### Read-Only
 
 - `admin_workspace_identifier` (String) Identifier of the admin (partner) workspace, the only valid owner for admin-only resources such as `meshstack_integration` Entra ID integrations.
+- `enabled_feature_flags` (Set of String) Feature flags enabled on this meshStack instance. Currently the only possible entry is `four_eyes_role_approval` (the four-eyes principle / role approval).
 - `endpoint` (String) URL of the meshStack API this provider is configured against.
-- `is_four_eyes_enabled` (Boolean) Whether the four-eyes principle (role approval) is enabled on this meshStack instance.
 - `metadata` (Map of String) Git commit SHA of each meshStack subsystem making up this instance, keyed by subsystem name.
 - `version` (String) Version of the meshStack instance.

@@ -25,7 +25,7 @@ func TestAccInstanceDataSource(t *testing.T) {
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("endpoint"), xknownvalue.NotEmptyString()),
 					statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("version"), xknownvalue.NotEmptyString()),
-					statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("is_four_eyes_enabled"), knownvalue.NotNull()),
+					statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("enabled_feature_flags"), knownvalue.NotNull()),
 					statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("metadata"), knownvalue.NotNull()),
 					statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("admin_workspace_identifier"), knownvalue.StringExact(AdminWorkspaceIdentifier)),
 				},
