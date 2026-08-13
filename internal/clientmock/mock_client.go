@@ -24,6 +24,7 @@ type Client struct {
 	Integration                    MeshIntegrationClient
 	LandingZone                    MeshLandingZoneClient
 	Location                       MeshLocationClient
+	MeshInfo                       MeshInfoClient
 	PaymentMethod                  MeshPaymentMethodClient
 	Platform                       MeshPlatformClient
 	PlatformType                   MeshPlatformTypeClient
@@ -50,6 +51,7 @@ func (c *Client) AsClient() client.Client {
 		Integration:                    c.Integration,
 		LandingZone:                    c.LandingZone,
 		Location:                       c.Location,
+		MeshInfo:                       c.MeshInfo,
 		PaymentMethod:                  c.PaymentMethod,
 		Platform:                       c.Platform,
 		PlatformType:                   c.PlatformType,
@@ -89,6 +91,7 @@ func NewMock() Client {
 		Integration:                    MeshIntegrationClient{Store: NewStore[client.MeshIntegration]()},
 		LandingZone:                    MeshLandingZoneClient{Store: landingZoneStore},
 		Location:                       MeshLocationClient{Store: NewStore[client.MeshLocation]()},
+		MeshInfo:                       MeshInfoClient{},
 		PaymentMethod:                  MeshPaymentMethodClient{Store: NewStore[client.MeshPaymentMethod]()},
 		Platform:                       MeshPlatformClient{Store: NewStore[client.MeshPlatform]()},
 		PlatformType:                   MeshPlatformTypeClient{Store: NewStore[client.MeshPlatformType]()},
