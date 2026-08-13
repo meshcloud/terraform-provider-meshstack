@@ -92,6 +92,7 @@ Read-Only:
 - `platform_ref` (Attributes) Reference to the platform this landing zone belongs to. (see [below for nested schema](#nestedatt--landing_zones--spec--platform_ref))
 - `quotas` (Attributes List) Quota definitions for this landing zone. (see [below for nested schema](#nestedatt--landing_zones--spec--quotas))
 - `recommended_building_block_refs` (Attributes List) List of recommended building block references for this landing zone. (see [below for nested schema](#nestedatt--landing_zones--spec--recommended_building_block_refs))
+- `restricted` (Boolean) If true, only administrators and the workspace that owns this landing zone can see and assign it. Any other workspace cannot use it.
 
 <a id="nestedatt--landing_zones--spec--mandatory_building_block_refs"></a>
 ### Nested Schema for `landing_zones.spec.mandatory_building_block_refs`
@@ -363,4 +364,4 @@ Read-Only:
 Read-Only:
 
 - `disabled` (Boolean) True if the landing zone is disabled.
-- `restricted` (Boolean) If true, users will be unable to select this landing zone in meshPanel. Only Platform teams can create tenants using restricted landing zones with the meshObject API.
+- `restricted` (Boolean) Mirrors `spec.restricted`, which is the writable field. If true, only administrators and the workspace that owns this landing zone can see and assign it.

@@ -48,6 +48,11 @@ func landingZoneSpecDataSourceSchema() schema.Attribute {
 				MarkdownDescription: "Whether deletion replication is automated for this landing zone.",
 				Computed:            true,
 			},
+			"restricted": schema.BoolAttribute{
+				MarkdownDescription: "If true, only administrators and the workspace that owns this landing zone " +
+					"can see and assign it. Any other workspace cannot use it.",
+				Computed: true,
+			},
 			"info_link": schema.StringAttribute{
 				MarkdownDescription: "Link to additional information about the landing zone.",
 				Computed:            true,
@@ -133,8 +138,8 @@ func landingZoneStatusDataSourceSchema() schema.Attribute {
 				Computed:            true,
 			},
 			"restricted": schema.BoolAttribute{
-				MarkdownDescription: "If true, users will be unable to select this landing zone in meshPanel. " +
-					"Only Platform teams can create tenants using restricted landing zones with the meshObject API.",
+				MarkdownDescription: "Mirrors `spec.restricted`, which is the writable field. If true, only " +
+					"administrators and the workspace that owns this landing zone can see and assign it.",
 				Computed: true,
 			},
 		},

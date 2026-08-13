@@ -143,6 +143,51 @@ func TestAccLandingZone(t *testing.T) {
 		}, TouchesExclusively(client.MeshObjectKind.LandingZone))
 	})
 
+	t.Run("restricted", func(t *testing.T) {
+		configWithRestrictedAbsent, landingZoneAddr := testconfig.LandingZoneAndWorkspace(t)
+		addr := landingZoneAddr.String()
+
+		configWithRestrictedTrue := configWithRestrictedAbsent.WithFirstBlock(
+			testconfig.Descend("spec", "restricted")(testconfig.SetBool(true)))
+		configWithRestrictedFalse := configWithRestrictedAbsent.WithFirstBlock(
+			testconfig.Descend("spec", "restricted")(testconfig.SetBool(false)))
+
+		ApplyAndTest(t, resource.TestCase{
+			Steps: []resource.TestStep{
+				{
+					// If no `spec.restricted` is specified, we expect the tf provider to use `false` by default
+					// and the backend to return that same value in `status.restricted`. Note that the assertion on `status.restricted`
+					// only has teeth if this test runs as an acceptance test against a real backend.
+					Config: configWithRestrictedAbsent.String(),
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("spec").AtMapKey("restricted"), knownvalue.Bool(false)),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("status").AtMapKey("restricted"), knownvalue.Bool(false)),
+					},
+				},
+				{
+					Config: configWithRestrictedTrue.String(),
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PreApply: []plancheck.PlanCheck{
+							// Changing from restricted = false to restricted = true does an update-in-place (as opposed to replacing the resource):
+							plancheck.ExpectResourceAction(addr, plancheck.ResourceActionUpdate),
+						},
+					},
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("spec").AtMapKey("restricted"), knownvalue.Bool(true)),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("status").AtMapKey("restricted"), knownvalue.Bool(true)),
+					},
+				},
+				{
+					Config: configWithRestrictedFalse.String(),
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("spec").AtMapKey("restricted"), knownvalue.Bool(false)),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("status").AtMapKey("restricted"), knownvalue.Bool(false)),
+					},
+				},
+			},
+		})
+	})
+
 	config, landingZoneAddr := testconfig.LandingZoneAndWorkspace(t)
 	resourceAddress := landingZoneAddr.String()
 
