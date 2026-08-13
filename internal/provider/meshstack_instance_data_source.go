@@ -41,8 +41,9 @@ func (d *meshStackInstanceDataSource) Schema(ctx context.Context, req datasource
 				MarkdownDescription: "Version of the meshStack instance.",
 				Computed:            true,
 			},
-			"is_four_eyes_enabled": schema.BoolAttribute{
-				MarkdownDescription: "Whether the four-eyes principle (role approval) is enabled on this meshStack instance.",
+			"enabled_feature_flags": schema.SetAttribute{
+				MarkdownDescription: "Feature flags enabled on this meshStack instance. Currently the only possible entry is `four_eyes_role_approval` (the four-eyes principle / role approval).",
+				ElementType:         types.StringType,
 				Computed:            true,
 			},
 			"metadata": schema.MapAttribute{
