@@ -201,6 +201,7 @@ func (p *MeshStackProvider) DataSources(_ context.Context) []func() datasource.D
 		NewBuildingBlockDataSource,
 		NewBuildingBlocksDataSource,
 		NewBuildingBlockDefinitionsDataSource,
+		NewMeshStackInstanceDataSource,
 		NewProjectDataSource,
 		NewProjectsDataSource,
 		NewProjectUserBindingDataSource,
