@@ -43,12 +43,15 @@ func (m MeshLandingZoneClient) List(_ context.Context, query client.MeshLandingZ
 }
 
 func (m MeshLandingZoneClient) Create(_ context.Context, landingZone *client.MeshLandingZoneCreate) (*client.MeshLandingZone, error) {
+	spec := landingZone.Spec
+	spec.Restricted = new(restrictedOr(spec.Restricted, nil))
+
 	created := &client.MeshLandingZone{
 		Metadata: landingZone.Metadata,
-		Spec:     landingZone.Spec,
+		Spec:     spec,
 		Status: client.MeshLandingZoneStatus{
 			Disabled:   false,
-			Restricted: false,
+			Restricted: *spec.Restricted,
 		},
 	}
 	m.Store.Set(landingZone.Metadata.Name, created)
@@ -60,9 +63,26 @@ func (m MeshLandingZoneClient) Update(_ context.Context, name string, landingZon
 	if existing == nil {
 		return nil, fmt.Errorf("landing zone not found: %s", name)
 	}
+
+	spec := landingZone.Spec
+	spec.Restricted = new(restrictedOr(spec.Restricted, existing.Spec.Restricted))
+
 	existing.Metadata = landingZone.Metadata
-	existing.Spec = landingZone.Spec
+	existing.Spec = spec
+	existing.Status.Restricted = *spec.Restricted
 	return existing, nil
+}
+
+// restrictedOr mirrors the backend: an omitted spec.restricted keeps the stored value rather than
+// resetting it, so a landing zone restricted out of band survives an update that ignores the field.
+func restrictedOr(requested, stored *bool) bool {
+	if requested != nil {
+		return *requested
+	}
+	if stored != nil {
+		return *stored
+	}
+	return false
 }
 
 func (m MeshLandingZoneClient) Delete(_ context.Context, name string) error {
