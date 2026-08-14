@@ -342,4 +342,4 @@ Read-Only:
 Read-Only:
 
 - `disabled` (Boolean) True if the landing zone is disabled.
-- `restricted` (Boolean) Mirrors `spec.restricted`, which is the writable field. If true, only administrators and the workspace that owns this landing zone can see and assign it.
+- `restricted` (Boolean) Always the same value as `spec.restricted`, which is the field configured on the `meshstack_landingzone` resource. If true, only administrators and the workspace that owns this landing zone can see and assign it.
