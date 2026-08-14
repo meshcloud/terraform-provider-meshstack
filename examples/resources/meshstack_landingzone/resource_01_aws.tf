@@ -12,6 +12,7 @@ resource "meshstack_landingzone" "example" {
     description                   = "My Landing Zone Description"
     automate_deletion_approval    = false
     automate_deletion_replication = false
+    restricted                    = false
     info_link                     = "https://example.com/info-about-aws-landing-zone"
     platform_ref                  = data.meshstack_platform.example.ref
     platform_properties = {
