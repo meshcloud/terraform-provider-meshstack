@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
+	"github.com/meshcloud/terraform-provider-meshstack/internal/types/generic"
 )
 
 // required for backwards compatibility of older versions of LZ in meshObject API.
@@ -52,8 +53,11 @@ var landingZoneSchemaV0Once = sync.OnceValue(func() schema.Schema {
 
 // upgradeTagsSetToList migrates legacy tags to proper LZ v1 state.
 func (r *landingZoneResource) upgradeTagsSetToList(ctx context.Context, req resource.UpgradeStateRequest, resp *resource.UpgradeStateResponse) {
-	var prior landingZoneModelV0
-	resp.Diagnostics.Append(req.State.Get(ctx, &prior)...)
+	// generic.Get rather than req.State.Get: the prior schema is derived from the live one, so every
+	// attribute added since v0 decodes as null out of legacy state. The framework refuses to put a
+	// null into a value-typed field, generic.Get leaves it at its zero value — which is the schema
+	// default for those attributes anyway, and the refresh right after replaces it with the API's.
+	prior := generic.Get[landingZoneModelV0](ctx, req.State, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}

@@ -56,4 +56,9 @@ func TestLandingZoneUpgradeState(t *testing.T) {
 	if upgraded.Spec.DisplayName != "Example Default" {
 		t.Errorf("spec not carried over, got %+v", upgraded.Spec)
 	}
+	// spec.restricted postdates this state, so it decodes as null and has to land on the schema
+	// default instead of failing the upgrade.
+	if upgraded.Spec.Restricted {
+		t.Error("spec.restricted absent from legacy state should upgrade to false")
+	}
 }
