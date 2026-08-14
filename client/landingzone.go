@@ -23,11 +23,10 @@ type MeshLandingZoneSpec struct {
 	Description                 string `json:"description" tfsdk:"description"`
 	AutomateDeletionApproval    bool   `json:"automateDeletionApproval" tfsdk:"automate_deletion_approval"`
 	AutomateDeletionReplication bool   `json:"automateDeletionReplication" tfsdk:"automate_deletion_replication"`
-	// Nullable in the API: absent means "keep the stored value". The schema defaults this to false,
-	// so the provider always *sends* a value — the pointer is only needed when *reading* a state
-	// file that an older version of this Terraform provider wrote, at a time when this field did
-	// not exist yet; the attribute reads back as null there.
-	Restricted                   *bool                              `json:"restricted,omitempty" tfsdk:"restricted"`
+	// Nullable in the API, where absent means "keep the stored value" — hence no `,omitempty`: the
+	// schema defaults this to false, so the provider always states the value it wants and never
+	// asks the backend to keep whatever is stored.
+	Restricted                   bool                               `json:"restricted" tfsdk:"restricted"`
 	InfoLink                     *string                            `json:"infoLink,omitempty" tfsdk:"info_link"`
 	PlatformRef                  UuidRef                            `json:"platformRef" tfsdk:"platform_ref"`
 	PlatformProperties           *MeshLandingZonePlatformProperties `json:"platformProperties,omitempty" tfsdk:"platform_properties"`
