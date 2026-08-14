@@ -138,8 +138,9 @@ func landingZoneStatusDataSourceSchema() schema.Attribute {
 				Computed:            true,
 			},
 			"restricted": schema.BoolAttribute{
-				MarkdownDescription: "Mirrors `spec.restricted`, which is the writable field. If true, only " +
-					"administrators and the workspace that owns this landing zone can see and assign it.",
+				MarkdownDescription: "Always the same value as `spec.restricted`, which is the field configured " +
+					"on the `meshstack_landingzone` resource. If true, only administrators and the workspace that " +
+					"owns this landing zone can see and assign it.",
 				Computed: true,
 			},
 		},
