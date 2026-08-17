@@ -142,6 +142,9 @@ func dumpStepConfigs(t *testing.T, target string, steps []resource.TestStep) {
 		require.NoError(t, os.MkdirAll(stepDir, 0o755))
 		require.NoError(t, os.WriteFile(filepath.Join(stepDir, "main.tf"), []byte(step.Config), 0o644))
 		require.NoError(t, os.WriteFile(filepath.Join(stepDir, "provider.tf"), []byte(scratchProviderTf), 0o644))
+		// A step whose config declares variables (e.g. the random name suffix) needs their values
+		// alongside it; Write emits an .auto.tfvars.json file, which tofu/terraform loads on its own.
+		require.NoError(t, step.ConfigVariables.Write(stepDir))
 		written++
 	}
 

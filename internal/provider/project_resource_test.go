@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"testing"
 
+	tfconfig "github.com/hashicorp/terraform-plugin-testing/config"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
@@ -11,9 +13,16 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 
-	"github.com/meshcloud/terraform-provider-meshstack/client"
-	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
+	"github.com/meshcloud/terraform-provider-meshstack/examples"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/xknownvalue"
+)
+
+// Addresses and the tag key prefix of the blocks in
+// examples/resources/meshstack_project/resource-test-*.tf and its test-support files.
+const (
+	projectResourceAddr          = "meshstack_project.example"
+	projectWorkspaceResourceAddr = "meshstack_workspace.example"
+	projectTagKeyPrefix          = "test-key-project-"
 )
 
 func TestAccProject(t *testing.T) {
@@ -25,20 +34,16 @@ func TestAccProject(t *testing.T) {
 			t.Skip("relies on the backend injecting a restricted tag's default value on create")
 		}
 
-		tagConfig, tagAddr, tagKey := testconfig.TagDefinition(t, client.MeshObjectKind.Project)
-		restrictedTagConfig, _, _ := testconfig.RestrictedTagDefinitionWithDefault(t, client.MeshObjectKind.Project, "injected-default")
-		config, resourceAddress, _ := testconfig.ProjectAndWorkspace(t)
-		config = config.Join(tagConfig, restrictedTagConfig).WithFirstBlock(
-			testconfig.Descend("spec", "tags")(testconfig.SetRawExpr(`{ (%s) = ["blue"] }`, tagAddr.Join("spec", "key"))),
-		)
+		suffix := acctest.RandString(8)
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
-					Config: config.String(),
+					Config:          examples.Resource.TestStepConfig(t, "project", 3, "prerequisites", "restricted-tag"),
+					ConfigVariables: projectConfigVariables(suffix),
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("spec").AtMapKey("tags"), knownvalue.MapExact(map[string]knownvalue.Check{
-							tagKey: knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("blue")}),
+						statecheck.ExpectKnownValue(projectResourceAddr, tfjsonpath.New("spec").AtMapKey("tags"), knownvalue.MapExact(map[string]knownvalue.Check{
+							projectTagKeyPrefix + suffix: knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("blue")}),
 						})),
 					},
 					// Refresh reads back the injected superset; reconcileTrackedTags must reconcile it
@@ -51,54 +56,57 @@ func TestAccProject(t *testing.T) {
 		})
 	})
 
-	config, resourceAddress, workspaceAddr := testconfig.ProjectAndWorkspace(t)
-
-	updateConfig := config.WithFirstBlock(
-		testconfig.Descend("spec", "display_name")(testconfig.SetString("Updated Display Name")),
-	)
+	vars := projectConfigVariables(acctest.RandString(8))
 
 	ApplyAndTest(t, resource.TestCase{
 		Steps: []resource.TestStep{
 			{
-				Config: config.String(),
+				Config:          examples.Resource.TestStepConfig(t, "project", 1, "prerequisites"),
+				ConfigVariables: vars,
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectResourceAction(resourceAddress.String(), plancheck.ResourceActionCreate),
+						plancheck.ExpectResourceAction(projectResourceAddr, plancheck.ResourceActionCreate),
 					},
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("metadata").AtMapKey("name"), xknownvalue.NotEmptyString()),
-					statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("metadata").AtMapKey("owned_by_workspace"), xknownvalue.NotEmptyString()),
-					statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("My Project's Display Name")),
+					statecheck.ExpectKnownValue(projectResourceAddr, tfjsonpath.New("metadata").AtMapKey("name"), xknownvalue.NotEmptyString()),
+					statecheck.ExpectKnownValue(projectResourceAddr, tfjsonpath.New("metadata").AtMapKey("owned_by_workspace"), xknownvalue.NotEmptyString()),
+					statecheck.ExpectKnownValue(projectResourceAddr, tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("My Project's Display Name")),
 				},
 			},
 			{
-				Config: updateConfig.String(),
+				Config:          examples.Resource.TestStepConfig(t, "project", 2, "prerequisites"),
+				ConfigVariables: vars,
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectResourceAction(resourceAddress.String(), plancheck.ResourceActionUpdate),
+						plancheck.ExpectResourceAction(projectResourceAddr, plancheck.ResourceActionUpdate),
 					},
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("Updated Display Name")),
+					statecheck.ExpectKnownValue(projectResourceAddr, tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("Updated Display Name")),
 				},
 			},
 			{
-				ResourceName:    resourceAddress.String(),
+				ResourceName:    projectResourceAddr,
 				ImportState:     true,
 				ImportStateKind: resource.ImportBlockWithID,
+				ConfigVariables: vars,
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					rs := s.RootModule().Resources[resourceAddress.String()]
+					rs := s.RootModule().Resources[projectResourceAddr]
 					if rs == nil {
-						return "", fmt.Errorf("resource not found: %s", resourceAddress.String())
+						return "", fmt.Errorf("resource not found: %s", projectResourceAddr)
 					}
-					ws := s.RootModule().Resources[workspaceAddr.String()]
+					ws := s.RootModule().Resources[projectWorkspaceResourceAddr]
 					if ws == nil {
-						return "", fmt.Errorf("workspace resource not found: %s", workspaceAddr.String())
+						return "", fmt.Errorf("workspace resource not found: %s", projectWorkspaceResourceAddr)
 					}
 					return ws.Primary.Attributes["metadata.name"] + "." + rs.Primary.Attributes["metadata.name"], nil
 				},
 			},
 		},
 	})
+}
+
+func projectConfigVariables(suffix string) tfconfig.Variables {
+	return tfconfig.Variables{"suffix": tfconfig.StringVariable(suffix)}
 }
