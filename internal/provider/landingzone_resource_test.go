@@ -70,7 +70,7 @@ func TestAccLandingZone(t *testing.T) {
 					},
 				},
 			},
-		})
+		}, TouchesExclusively(client.MeshObjectKind.LandingZone))
 	})
 
 	t.Run("only_restricted_injected_no_declared_tags", func(t *testing.T) {
@@ -100,7 +100,7 @@ func TestAccLandingZone(t *testing.T) {
 					},
 				},
 			},
-		})
+		}, TouchesExclusively(client.MeshObjectKind.LandingZone))
 	})
 
 	t.Run("declared_restricted_tag_kept", func(t *testing.T) {
@@ -140,7 +140,7 @@ func TestAccLandingZone(t *testing.T) {
 					},
 				},
 			},
-		})
+		}, TouchesExclusively(client.MeshObjectKind.LandingZone))
 	})
 
 	config, landingZoneAddr := testconfig.LandingZoneAndWorkspace(t)
