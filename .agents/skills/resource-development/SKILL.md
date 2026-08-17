@@ -23,8 +23,10 @@ Mid-complexity, clean, and complete — prefer these over the large `building_bl
 | Example `.tf` (simple) | `examples/resources/meshstack_project/` (`resource.tf`, `import-by-string-id.tf`) |
 | Example `.tf` (complex, multi-file + `test-support_*`) | `examples/resources/meshstack_building_block_definition/` |
 | testconfig builder | `internal/provider/acctest/testconfig/build_project.go` |
-| Resource test (create→update→import) | `internal/provider/project_resource_test.go` |
-| Data source test | `internal/provider/project_data_source_test.go` |
+| Resource test, per-step example files (target state) | `internal/provider/project_resource_test.go` + `examples/resources/meshstack_project/resource-test-*.tf` |
+| Resource test, testconfig builder (still the majority) | `internal/provider/workspace_resource_test.go` |
+| Data source test, per-step example files (target state) | `internal/provider/project_data_source_test.go` + `examples/data-sources/meshstack_project/data-source-test-*.tf` |
+| Data source test, testconfig builder (still the majority) | `internal/provider/workspace_data_source_test.go` |
 | Named subtests for multiple examples | `internal/provider/integration_resource_test.go` |
 | State-check helpers | `internal/provider/acctest/xknownvalue/{not_empty_string,ref,map}.go` |
 
@@ -123,7 +125,28 @@ a worked `build_project.go` are in `REFERENCE.md`.
 A good test is multi-step (create → update → import), uses the builder, and asserts with
 `plancheck` (the planned action) + `statecheck`/`xknownvalue` (resulting state). Prefer the
 `xknownvalue` helpers (`NotEmptyString`, `Ref`, `MapExact`) over raw `knownvalue` where they fit.
-See `REFERENCE.md` for the full `TestAccProject` example.
+See `REFERENCE.md` for the full worked example.
+
+### Migration off `testconfig` (in progress)
+
+The `testconfig` builders are being retired: instead of mutating an example's HCL in Go, each test
+step gets its own checked-in config file next to the documented example. `meshstack_project` is
+migrated — resource and data source both — and is the reference; every other resource/data source
+still uses `testconfig` and its builders stay until it is migrated too. The migrated shape:
+
+- `examples/<kind>/meshstack_<name>/<kind-singular>-test-<index>.tf` — the example as step `<index>`
+  applies it (data sources swapped for test-created resources, names built from `var.suffix`).
+- `examples/<kind>/meshstack_<name>/test-support_<name>.tf` — the prerequisites those step files
+  reference, plus the `variable` blocks the test fills.
+- The test assembles a step with `examples.Resource.TestStepConfig(t, "<name>", <index>, "<support>"…)`
+  and passes the random suffix via `ConfigVariables`; resource addresses are plain string constants
+  (`meshstack_project.example`) instead of extracted `Traversal`s.
+- A test whose subject needs another example's resources concatenates that example's step config
+  instead of duplicating it — `project_data_source_test.go` applies the project resource example's
+  step 1 alongside its own `data-source-test-1.tf`.
+
+See `examples/README.md` for the file conventions, including the `-test-` filter that keeps the step
+files out of the generated docs.
 
 ## Data source test
 
