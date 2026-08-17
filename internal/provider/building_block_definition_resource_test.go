@@ -946,7 +946,7 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 					},
 				},
 			},
-		})
+		}, TouchesExclusively(client.MeshObjectKind.BuildingBlockDefinition))
 	})
 }
 

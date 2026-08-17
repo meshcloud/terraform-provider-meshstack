@@ -3,9 +3,12 @@ package provider
 import (
 	"context"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -73,14 +76,78 @@ provider "meshstack" {
 }
 `
 
+// restrictedTagLocks serialize the tests that create a restricted tag definition with a default
+// value. Such a definition is global to its meshObject kind: the backend adds the tag to every
+// resource of that kind, so a test running at the same time fails its empty-plan and import checks.
+// The random name suffix isolates the tag's key, not its effect.
+var restrictedTagLocks = map[string]*sync.RWMutex{
+	client.MeshObjectKind.BuildingBlockDefinition: {},
+	client.MeshObjectKind.LandingZone:             {},
+	client.MeshObjectKind.Project:                 {},
+}
+
+type ApplyAndTestOption func(*applyAndTestOptions)
+
+type applyAndTestOptions struct {
+	LockExclusiveKinds []string
+}
+
+// TouchesExclusively marks a test that creates a restricted tag definition with a default value for
+// the given kind. See restrictedTagLocks for why such a test cannot run next to others.
+func TouchesExclusively(kind string) ApplyAndTestOption {
+	return func(options *applyAndTestOptions) {
+		options.LockExclusiveKinds = append(options.LockExclusiveKinds, kind)
+	}
+}
+
+// acquireRestrictedTagLocks must run after t.Parallel() has returned. Until then the test is
+// paused, and a read lock taken earlier would make a writer wait for a test that has not started.
+func acquireRestrictedTagLocks(t *testing.T, options applyAndTestOptions) func() {
+	t.Helper()
+
+	slices.Sort(options.LockExclusiveKinds)
+
+	for _, kind := range options.LockExclusiveKinds {
+		if _, ok := restrictedTagLocks[kind]; !ok {
+			t.Fatalf("TouchesExclusively(%q): unknown meshObject kind, add it to restrictedTagLocks", kind)
+		}
+	}
+
+	releases := make([]func(), 0, len(restrictedTagLocks))
+	// Sorted, so every caller takes the locks in the same order. Ranging over the map directly
+	// would let writers of different kinds deadlock.
+	for _, kind := range slices.Sorted(maps.Keys(restrictedTagLocks)) {
+		lock := restrictedTagLocks[kind]
+		if slices.Contains(options.LockExclusiveKinds, kind) {
+			lock.Lock()
+			releases = append(releases, lock.Unlock)
+		} else {
+			lock.RLock()
+			releases = append(releases, lock.RUnlock)
+		}
+	}
+
+	return func() {
+		for _, release := range releases {
+			release()
+		}
+	}
+}
+
 // ApplyAndTest runs a TF test case. When TF_ACC is not set, it uses a mock
 // client (unit test mode). When TF_ACC is set, it runs against a real meshStack.
-// All tests using ApplyAndTest run in parallel.
+// All tests using ApplyAndTest run in parallel, except that a test marked with
+// TouchesExclusively runs alone.
 //
 // When MESHSTACK_SCRATCH_DUMP is set, it instead dumps each step's config to disk and
 // returns without running the test (see dumpStepConfigs).
-func ApplyAndTest(t *testing.T, testCase resource.TestCase) {
+func ApplyAndTest(t *testing.T, testCase resource.TestCase, opts ...ApplyAndTestOption) {
 	t.Helper()
+
+	var options applyAndTestOptions
+	for _, opt := range opts {
+		opt(&options)
+	}
 
 	if target := os.Getenv(envKeyScratchDump); target != "" {
 		dumpStepConfigs(t, target, testCase.Steps)
@@ -99,6 +166,8 @@ func ApplyAndTest(t *testing.T, testCase resource.TestCase) {
 		// os.Setenv (not t.Setenv) because t.Setenv is incompatible with the t.Parallel() call below.
 		require.NoError(t, os.Setenv("MESHSTACK_SKIP_VERSION_CHECK", "true")) //nolint:usetesting // see comment above
 		t.Parallel()
+		releaseRestrictedTagLocks := acquireRestrictedTagLocks(t, options)
+		defer releaseRestrictedTagLocks()
 		testCase.PreCheck = func() { DefaultTestPreCheck(t) }
 		testCase.ProtoV6ProviderFactories = ProviderFactoriesForTest()
 	}
