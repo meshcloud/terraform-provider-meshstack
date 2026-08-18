@@ -1,8 +1,9 @@
 package provider
 
 import (
-	"github.com/meshcloud/terraform-provider-meshstack/client"
-	clientTypes "github.com/meshcloud/terraform-provider-meshstack/client/types"
+	"github.com/meshcloud/meshstack-cli/client"
+	clientTypes "github.com/meshcloud/meshstack-cli/client/types"
+
 	"github.com/meshcloud/terraform-provider-meshstack/internal/types/generic"
 )
 

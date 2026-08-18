@@ -3,10 +3,9 @@ package provider
 import (
 	"testing"
 
+	"github.com/meshcloud/meshstack-cli/client"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/meshcloud/terraform-provider-meshstack/client"
 )
 
 // Captured from meshstack_building_block state as provider v0.24.3 wrote it at schema version 0.

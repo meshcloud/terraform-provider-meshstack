@@ -46,29 +46,12 @@ linters:
       # which is indistinguishable from a rule that passes — check any new rule by
       # compiling a file that violates it.
       rules:
-        client:
-          files:
-            - "**/client/*.go"
-            - "**/client/**/*.go"
-            - "!$test"
-          list-mode: strict
-          allow:
-            - $gostd
-            - github.com/meshcloud/terraform-provider-meshstack/client
-        client-test:
-          files:
-            - "**/client/*_test.go"
-            - "**/client/**/*_test.go"
-          list-mode: strict
-          allow:
-            - $gostd
-            - github.com/meshcloud/terraform-provider-meshstack/client
-            - github.com/stretchr/testify
+        # The 'client' and 'client-test' rules moved to meshstack-cli together with the
+        # client package. That repository keeps the client free of external
+        # dependencies, which is what keeps them out of this provider's dependency tree.
         provider:
           files:
             - "!$test"
-            - "!**/client/*.go"
-            - "!**/client/**/*.go"
             - "!**/internal/clientmock/*.go"
             - "!**/internal/clientmock/**/*.go"
             - "!**/internal/provider/acctest/*.go"
@@ -82,10 +65,11 @@ linters:
               desc: clientmock package must only be used in tests
           allow:
             - $gostd
-            # explicitly specifying 'client' and 'internal' suffixes
-            # prevents 'examples' package to be included in non-test files
-            - github.com/meshcloud/terraform-provider-meshstack/client
+            # explicitly specifying the 'internal' suffix prevents the 'examples'
+            # package from being included in non-test files
             - github.com/meshcloud/terraform-provider-meshstack/internal
+            - github.com/meshcloud/meshstack-cli/client
+            - github.com/meshcloud/meshstack-cli/pkg/login
             - github.com/hashicorp/terraform-plugin-framework/
             - github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry
             - github.com/hashicorp/terraform-plugin-framework-jsontypes/jsontypes # for 'any' value support
@@ -104,16 +88,14 @@ linters:
             - "**/examples/*.go"
             - "!**/internal/types/*.go"
             - "!**/internal/types/**/*.go"
-            - "!**/client/*_test.go"
-            - "!**/client/**/*_test.go"
             - "!**/internal/provider/provider_test.go" # contains common adapters for all tests, using non-testing deps.
           list-mode: strict
-          deny:
-            - pkg: github.com/meshcloud/terraform-provider-meshstack/client/internal
-              desc: Do not use client/internal in provider tests
+          # The former deny on client/internal is gone: it now lives in another module,
+          # where Go's internal rule makes it unreachable from here outright.
           allow:
             - $gostd
             - github.com/meshcloud/terraform-provider-meshstack # any packages are included in tests
+            - github.com/meshcloud/meshstack-cli
             - github.com/hashicorp/terraform-plugin-testing
             - github.com/hashicorp/terraform-plugin-framework/diag
             - github.com/hashicorp/hcl/v2 # hclwrite-based config manipulation in examples/
@@ -131,7 +113,7 @@ linters:
               desc: Always use 'hclog' or SDK logging
           allow:
             - $gostd
-            - github.com/meshcloud/terraform-provider-meshstack/client/types # only types should be used from client, if at all!
+            - github.com/meshcloud/meshstack-cli/client/types # only types should be used from client, if at all!
             - github.com/meshcloud/terraform-provider-meshstack/internal/util/
             - github.com/meshcloud/terraform-provider-meshstack/internal/types/
             - github.com/hashicorp/terraform-plugin-framework/

@@ -7,9 +7,8 @@ import (
 	"reflect"
 
 	"github.com/google/uuid"
-
-	"github.com/meshcloud/terraform-provider-meshstack/client"
-	clientTypes "github.com/meshcloud/terraform-provider-meshstack/client/types"
+	"github.com/meshcloud/meshstack-cli/client"
+	clientTypes "github.com/meshcloud/meshstack-cli/client/types"
 )
 
 // deepCopyBB returns a deep copy of bb via JSON round-trip, isolating the store from caller mutations.
