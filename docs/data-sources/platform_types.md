@@ -25,7 +25,7 @@ data "meshstack_platform_types" "all" {
 
 ### Optional
 
-- `category` (String) Filter platform types by category. Possible values: OPENSTACK, CLOUDFOUNDRY, SERVICEREGISTRY, AWS, OPENSHIFT, KUBERNETES, AZURE, GCP, AZURE_KUBERNETES_SERVICE, AZURE_RESOURCE_GROUP, CUSTOM, GITHUB.
+- `category` (String) Filter platform types by category. Possible values: OPENSTACK, CLOUDFOUNDRY, SERVICEREGISTRY, AWS, OPENSHIFT, KUBERNETES, AZURE, GCP, AZURE_KUBERNETES_SERVICE, AZURE_RESOURCE_GROUP, CUSTOM.
 - `lifecycle_status` (String) Filter platform types by lifecycle status
 
 ### Read-Only
