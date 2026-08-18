@@ -1,3 +1,11 @@
+# v0.26.0
+
+FIXES:
+- Setting `MESHSTACK_ENDPOINT` to an empty value now reports the same "Provider endpoint missing." error as leaving it unset. Previously an empty value was accepted, and the provider built a client against an empty URL, which failed later with a less helpful message. This comes from moving credential handling into a package shared with the meshStack CLI, which treats an empty value and an unset variable alike.
+
+NOTES:
+- The meshStack API client moved out of this repository into [meshstack-cli](https://github.com/meshcloud/meshstack-cli), so the provider and the meshStack CLI share one client instead of each carrying its own. The provider imports it as `github.com/meshcloud/meshstack-cli/client`, and reads its credentials through `github.com/meshcloud/meshstack-cli/pkg/login`. Nothing about the provider's configuration or its resources changes; only contributors who worked in `client/` are affected.
+
 # v0.25.2
 
 FIXES:

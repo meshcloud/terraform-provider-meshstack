@@ -7,10 +7,9 @@ import (
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/meshcloud/meshstack-cli/client"
+	"github.com/meshcloud/meshstack-cli/client/types/enum"
 	"github.com/stretchr/testify/require"
-
-	"github.com/meshcloud/terraform-provider-meshstack/client"
-	"github.com/meshcloud/terraform-provider-meshstack/client/types/enum"
 )
 
 // stubRunLogsClient is a stub MeshBuildingBlockRunClient returning canned logs/error for GetLogs.

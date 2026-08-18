@@ -98,5 +98,8 @@ require them.
 
 - `internal/provider/` — provider implementation (`provider.go`, `*_resource.go`, `*_data_source.go`).
 - `internal/provider/acctest/` — test-only HCL builders (`testconfig/`) and state-check helpers (`xknownvalue/`).
-- `client/` — meshStack API client (JWT auth, RESTful CRUD; shared ref DTOs in `refs.go`).
+- The meshStack API client (JWT auth, RESTful CRUD; shared ref DTOs in `refs.go`) is **no longer
+  in this repository**. It lives in [meshstack-cli](https://github.com/meshcloud/meshstack-cli),
+  imported as `github.com/meshcloud/meshstack-cli/client`, so the provider and the meshStack CLI
+  share one client. A change that needs a new client method is made there first.
 - `docs/` — generated registry docs (`task generate`); `examples/` — embedded `.tf` examples.

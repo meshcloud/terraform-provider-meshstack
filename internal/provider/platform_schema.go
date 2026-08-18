@@ -4,8 +4,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-
-	"github.com/meshcloud/terraform-provider-meshstack/client"
+	"github.com/meshcloud/meshstack-cli/client"
 )
 
 // platformConfigVisibilityNote documents the cross-workspace config redaction (see the marketplace

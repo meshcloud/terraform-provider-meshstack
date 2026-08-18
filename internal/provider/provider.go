@@ -3,8 +3,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"net/url"
-	"os"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -13,8 +11,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/meshcloud/meshstack-cli/client"
+	"github.com/meshcloud/meshstack-cli/pkg/login"
 
-	"github.com/meshcloud/terraform-provider-meshstack/client"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/util/logging"
 )
 
@@ -68,13 +67,6 @@ func (p *MeshStackProvider) Schema(_ context.Context, _ provider.SchemaRequest, 
 	}
 }
 
-const (
-	envKeyMeshstackEndpoint  = "MESHSTACK_ENDPOINT"
-	envKeyMeshstackApiKey    = "MESHSTACK_API_KEY"
-	envKeyMeshstackApiSecret = "MESHSTACK_API_SECRET"
-	envKeyMeshstackApiToken  = "MESHSTACK_API_TOKEN"
-)
-
 func (p *MeshStackProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
 	client.SetLogger(logging.TerraformClientLogger{MessagePrefix: "client: "})
 	var data MeshStackProviderModel
@@ -102,60 +94,45 @@ func configureProviderClient(providerData any, consumer func(client client.Clien
 }
 
 func newProviderClient(ctx context.Context, data MeshStackProviderModel, providerVersion string) (providerClient client.Client, diags diag.Diagnostics) {
-	var endpoint string
-	if !data.Endpoint.IsNull() && !data.Endpoint.IsUnknown() {
-		endpoint = data.Endpoint.ValueString()
-	} else {
-		var ok bool
-		endpoint, ok = os.LookupEnv(envKeyMeshstackEndpoint)
-		if !ok {
-			diags.AddError("Provider endpoint missing.", "Set provider.meshstack.endpoint or use MESHSTACK_ENDPOINT environment variable.")
-			return
-		}
-	}
+	// Provider block attributes outrank the environment. A null or unknown attribute
+	// reads as the empty string, which Merge treats as "not configured". The variable
+	// names come from pkg/login, so the provider and the meshStack CLI share one
+	// definition of them.
+	credentials := login.FromEnv().Merge(login.Credentials{
+		Endpoint:  data.Endpoint.ValueString(),
+		ApiKey:    data.ApiKey.ValueString(),
+		ApiSecret: data.ApiSecret.ValueString(),
+		ApiToken:  data.ApiToken.ValueString(),
+	})
 
-	parsedEndpoint, err := url.Parse(endpoint)
+	if credentials.Endpoint == "" {
+		diags.AddError("Provider endpoint missing.", fmt.Sprintf("Set provider.meshstack.endpoint or use %s environment variable.", login.EnvKeyEndpoint))
+		return
+	}
+	parsedEndpoint, err := credentials.EndpointURL()
 	if err != nil {
 		diags.AddError("Provider endpoint not valid.", "The value provided as the providers endpoint is not a valid URL.")
 		return
 	}
 
-	var apiToken string
-	if !data.ApiToken.IsNull() && !data.ApiToken.IsUnknown() {
-		apiToken = data.ApiToken.ValueString()
-	} else {
-		apiToken = os.Getenv(envKeyMeshstackApiToken)
-	}
-
-	var apiKey string
-	if !data.ApiKey.IsNull() && !data.ApiKey.IsUnknown() {
-		apiKey = data.ApiKey.ValueString()
-	} else {
-		apiKey = os.Getenv(envKeyMeshstackApiKey)
-	}
-
-	var apiSecret string
-	if !data.ApiSecret.IsNull() && !data.ApiSecret.IsUnknown() {
-		apiSecret = data.ApiSecret.ValueString()
-	} else {
-		apiSecret = os.Getenv(envKeyMeshstackApiSecret)
-	}
-
 	// Either apiToken or apiKey/apiSecret must be set for authorization against backend.
-	var auth client.Authorization
-	if apiToken == "" {
-		if apiKey == "" {
-			diags.AddError("Provider API key missing.", "Set provider.meshstack.apikey or use MESHSTACK_API_KEY environment variable.")
+	// Terraform diagnostics name the attribute that is missing, so the key and the
+	// secret are reported one by one instead of through Authorization's single error.
+	if credentials.ApiToken == "" {
+		if credentials.ApiKey == "" {
+			diags.AddError("Provider API key missing.", fmt.Sprintf("Set provider.meshstack.apikey or use %s environment variable.", login.EnvKeyApiKey))
 		}
-		if apiSecret == "" {
-			diags.AddError("Provider API secret missing.", "Set provider.meshstack.apisecret or use MESHSTACK_API_SECRET environment variable.")
+		if credentials.ApiSecret == "" {
+			diags.AddError("Provider API secret missing.", fmt.Sprintf("Set provider.meshstack.apisecret or use %s environment variable.", login.EnvKeyApiSecret))
 		}
 		if diags.HasError() {
 			return
 		}
-		auth = client.NewApiKeyAuthorization(apiKey, apiSecret)
-	} else {
-		auth = client.NewApiTokenAuthorization(apiToken)
+	}
+	auth, err := credentials.Authorization()
+	if err != nil {
+		diags.AddError("Failed to build meshStack authorization.", err.Error())
+		return
 	}
 
 	userAgent := fmt.Sprintf("terraform-provider-meshstack/%s", providerVersion)

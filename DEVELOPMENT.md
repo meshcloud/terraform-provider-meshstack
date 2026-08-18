@@ -103,7 +103,8 @@ Adding or reworking a resource or data source — the implementation, example `.
 refs, DTOs, `Id`/`Uuid` naming, receivers, preview API, computed-only outputs). In short:
 
 1. `internal/provider/<name>_resource.go` — CRUD + `Schema`.
-2. `client/` — typed API client methods.
+2. `github.com/meshcloud/meshstack-cli/client` — typed API client methods, in the
+   [meshstack-cli](https://github.com/meshcloud/meshstack-cli) repository.
 3. `provider.go` — register it.
 4. `examples/resources/meshstack_<name>/` — example `.tf`.
 5. `internal/provider/acctest/testconfig/build_<name>.go` — a builder.
