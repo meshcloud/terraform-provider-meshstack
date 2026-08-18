@@ -16,7 +16,7 @@ var platformTypeCategories = []string{
 	"OPENSTACK", "CLOUDFOUNDRY", "SERVICEREGISTRY", "AWS",
 	"OPENSHIFT", "KUBERNETES", "AZURE", "GCP",
 	"AZURE_KUBERNETES_SERVICE", "AZURE_RESOURCE_GROUP",
-	"CUSTOM", "GITHUB",
+	"CUSTOM",
 }
 
 func NewPlatformTypesDataSource() datasource.DataSource {
