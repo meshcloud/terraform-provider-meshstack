@@ -20,9 +20,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/meshcloud/meshstack-cli/client"
+	"github.com/meshcloud/meshstack-cli/pkg/login"
 	"github.com/stretchr/testify/require"
 
-	"github.com/meshcloud/terraform-provider-meshstack/client"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/clientmock"
 )
 
@@ -177,11 +178,11 @@ func ApplyAndTest(t *testing.T, testCase resource.TestCase, opts ...ApplyAndTest
 
 func DefaultTestPreCheck(t *testing.T) {
 	t.Helper()
-	endpoint := os.Getenv(envKeyMeshstackEndpoint)
+	endpoint := os.Getenv(login.EnvKeyEndpoint)
 	require.Truef(t, strings.HasPrefix(endpoint, "http://localhost"),
-		"Env %s='%s' does not start with http://localhost, only locally running meshStacks should be used for tests", envKeyMeshstackEndpoint, endpoint)
-	require.NotEmptyf(t, os.Getenv(envKeyMeshstackApiKey), "Env %s empty, please set before running", envKeyMeshstackApiKey)
-	require.NotEmptyf(t, os.Getenv(envKeyMeshstackApiSecret), "Env %s empty, please set before running", envKeyMeshstackApiSecret)
+		"Env %s='%s' does not start with http://localhost, only locally running meshStacks should be used for tests", login.EnvKeyEndpoint, endpoint)
+	require.NotEmptyf(t, os.Getenv(login.EnvKeyApiKey), "Env %s empty, please set before running", login.EnvKeyApiKey)
+	require.NotEmptyf(t, os.Getenv(login.EnvKeyApiSecret), "Env %s empty, please set before running", login.EnvKeyApiSecret)
 }
 
 // dumpStepConfigs writes each test step's HCL config to

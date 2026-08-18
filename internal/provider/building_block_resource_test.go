@@ -17,9 +17,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
+	"github.com/meshcloud/meshstack-cli/client"
+	"github.com/meshcloud/meshstack-cli/pkg/login"
 	"github.com/stretchr/testify/require"
 
-	"github.com/meshcloud/terraform-provider-meshstack/client"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/xknownvalue"
 )
@@ -48,9 +49,9 @@ func terraformTestdataRepoURL(t *testing.T) string {
 // Only valid in acceptance mode (TF_ACC set); callers must guard with IsMockClientTest.
 func acceptanceClient(t *testing.T) client.Client {
 	t.Helper()
-	rootUrl, err := url.Parse(os.Getenv(envKeyMeshstackEndpoint))
+	rootUrl, err := url.Parse(os.Getenv(login.EnvKeyEndpoint))
 	require.NoError(t, err)
-	auth := client.NewApiKeyAuthorization(os.Getenv(envKeyMeshstackApiKey), os.Getenv(envKeyMeshstackApiSecret))
+	auth := client.NewApiKeyAuthorization(os.Getenv(login.EnvKeyApiKey), os.Getenv(login.EnvKeyApiSecret))
 	c, err := client.New(context.Background(), rootUrl, "acctest", auth)
 	require.NoError(t, err)
 	return c

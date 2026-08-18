@@ -6,7 +6,7 @@ import (
 	"slices"
 	"time"
 
-	"github.com/meshcloud/terraform-provider-meshstack/client"
+	"github.com/meshcloud/meshstack-cli/client"
 )
 
 type MeshWorkspaceClient struct {
