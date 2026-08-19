@@ -905,25 +905,16 @@ func (r *buildingBlockResource) ModifyPlan(ctx context.Context, req resource.Mod
 		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("all_inputs"), types.MapUnknown(allInputs.ElementType(ctx)))...)
 	}
 
-	// Check for unknown rerun-relevant fields BEFORE converting spec.
-	// If version uuid or content_hash is unknown (wired to another resource being replaced),
-	// conservatively trigger run and return — do NOT try to convert-and-error.
-	var planVersionUuid types.String
-	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec").AtName("building_block_definition_version_ref").AtName("uuid"), &planVersionUuid)...)
-	if resp.Diagnostics.HasError() {
+	// Check for unknowns BEFORE converting spec. Any unknown under spec means an attribute is wired
+	// to a resource this plan creates or replaces — a definition version ref, a target_ref.uuid, a
+	// parent building block ref. The converter cannot represent an unknown, so trigger the run
+	// conservatively instead of converting and erroring.
+	planSpecUnknown, err := generic.AttributeHasUnknown(req.Plan.Raw, "spec")
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to inspect the planned building block spec", err.Error())
 		return
 	}
-	if planVersionUuid.IsUnknown() {
-		triggerRun()
-		return
-	}
-
-	var planContentHash types.String
-	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec").AtName("building_block_definition_version_ref").AtName("content_hash"), &planContentHash)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	if planContentHash.IsUnknown() {
+	if planSpecUnknown {
 		triggerRun()
 		return
 	}

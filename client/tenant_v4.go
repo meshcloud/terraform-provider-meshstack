@@ -2,7 +2,9 @@ package client
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client/internal"
 	"github.com/meshcloud/terraform-provider-meshstack/client/types/enum"
@@ -28,6 +30,57 @@ type MeshTenantV4Spec struct {
 	PlatformTenantId      *string            `json:"platformTenantId" tfsdk:"platform_tenant_id"`
 	LandingZoneIdentifier *string            `json:"landingZoneIdentifier" tfsdk:"landing_zone_identifier"`
 	Quotas                *[]MeshTenantQuota `json:"quotas" tfsdk:"quotas"`
+}
+
+// UnmarshalJSON fills the identifier-shaped spec from a ref-shaped meshTenant v4 payload.
+//
+// meshStack replaced spec.platformIdentifier and spec.landingZoneIdentifier with platformRef and
+// landingZoneRef, which this deprecated identifier-based resource has no attribute for. Both fields
+// would otherwise read back empty, and because both force replacement, a refresh makes Terraform
+// plan the destruction and recreation of a live tenant. meshstack_tenant is the ref-based
+// replacement; this keeps meshstack_tenant_v4 readable until a configuration has migrated.
+//
+// The landing zone comes straight off landingZoneRef.name. The platform identifier is not on the
+// wire at all, so it is recovered from status.tenantName, which meshStack composes as
+// "<workspace>.<project>.<platformIdentifier>".
+func (t *MeshTenantV4) UnmarshalJSON(data []byte) error {
+	type wire MeshTenantV4
+	var target wire
+	if err := json.Unmarshal(data, &target); err != nil {
+		return err
+	}
+	*t = MeshTenantV4(target)
+
+	var refs struct {
+		Spec struct {
+			PlatformRef    *UuidRef  `json:"platformRef"`
+			LandingZoneRef *NamedRef `json:"landingZoneRef"`
+		} `json:"spec"`
+	}
+	if err := json.Unmarshal(data, &refs); err != nil {
+		return err
+	}
+
+	if t.Spec.LandingZoneIdentifier == nil && refs.Spec.LandingZoneRef != nil {
+		t.Spec.LandingZoneIdentifier = &refs.Spec.LandingZoneRef.Name
+	}
+	if t.Spec.PlatformIdentifier == "" {
+		t.Spec.PlatformIdentifier = platformIdentifierFromTenantName(
+			t.Status.TenantName, t.Metadata.OwnedByWorkspace, t.Metadata.OwnedByProject)
+	}
+
+	return nil
+}
+
+// platformIdentifierFromTenantName strips the "<workspace>.<project>." prefix off a tenant name.
+// It returns "" when the name does not carry that prefix, which leaves the caller with the same
+// empty value it would have had without this recovery rather than a wrong platform identifier.
+func platformIdentifierFromTenantName(tenantName, workspace, project string) string {
+	prefix := workspace + "." + project + "."
+	if !strings.HasPrefix(tenantName, prefix) {
+		return ""
+	}
+	return strings.TrimPrefix(tenantName, prefix)
 }
 
 type MeshTenantV4Status struct {

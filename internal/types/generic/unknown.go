@@ -1,6 +1,40 @@
 package generic
 
-import "reflect"
+import (
+	"fmt"
+	"reflect"
+
+	"github.com/hashicorp/terraform-plugin-go/tftypes"
+)
+
+// AttributeHasUnknown reports whether the named top-level attribute of raw holds an unknown value at
+// any depth. Terraform marks an attribute unknown when it is wired to a resource the plan creates or
+// replaces, and [ValueTo] cannot represent that, so a caller that would otherwise convert a planned
+// value uses this to bail out first. It walks the raw value because an unknown can sit arbitrarily
+// deep: an object is known while one of its nested attributes is not.
+func AttributeHasUnknown(raw tftypes.Value, attributeName string) (bool, error) {
+	found, _, err := tftypes.WalkAttributePath(raw, tftypes.NewAttributePath().WithAttributeName(attributeName))
+	if err != nil {
+		return false, fmt.Errorf("cannot resolve attribute %q: %w", attributeName, err)
+	}
+
+	value, ok := found.(tftypes.Value)
+	if !ok {
+		return false, fmt.Errorf("expected a value at attribute %q, got %T", attributeName, found)
+	}
+
+	unknown := false
+	if err := tftypes.Walk(value, func(_ *tftypes.AttributePath, nested tftypes.Value) (bool, error) {
+		if !nested.IsKnown() {
+			unknown = true
+		}
+		return !unknown, nil
+	}); err != nil {
+		return false, fmt.Errorf("cannot walk attribute %q: %w", attributeName, err)
+	}
+
+	return unknown, nil
+}
 
 // NullIsUnknown wraps a non-nil known value or if nil,
 // the value will become unknown during ValueFrom conversion.

@@ -1,3 +1,9 @@
+# v0.24.5
+
+FIXES:
+- `meshstack_building_block`: a plan no longer fails with *"Converting to generic type client.MeshBuildingBlockV2Spec failed, got from tfsdk.Plan … unmarshaling unknown values is not supported"* when any attribute under `spec` is still unknown. Terraform marks an attribute unknown while it is wired to a resource the same plan creates or replaces — `spec.target_ref.uuid` taken from a tenant being replaced is the case that surfaced this — and the plan-time spec conversion rejected it. `ModifyPlan` now detects an unknown anywhere under `spec` and conservatively schedules a run, the same thing it already did for an unknown `spec.building_block_definition_version_ref`. Nothing changes for a plan whose spec is fully known.
+- `meshstack_tenant_v4` (deprecated): `spec.platform_identifier` and `spec.landing_zone_identifier` are read back correctly from a meshStack that serves the meshTenant v4 API in its ref shape (`spec.platformRef` and `spec.landingZoneRef`, without the flat identifiers). Both attributes previously refreshed to empty, and because both force replacement, a refresh planned the destruction and recreation of a live tenant. The landing zone identifier comes from `spec.landingZoneRef.name`, and the platform identifier is recovered from `status.tenantName`, which meshStack composes as `<workspace>.<project>.<platformIdentifier>`. A backend that still sends the flat identifiers keeps taking precedence, so this works against either. `meshstack_tenant` is the ref-based replacement and is unaffected — migrate to it with a `moved` block, because `meshstack_tenant_v4` is removed in v0.25.0.
+
 # v0.24.4
 
 BREAKING CHANGES:
