@@ -14,14 +14,12 @@ import (
 	"github.com/meshcloud/terraform-provider-meshstack/client"
 )
 
-// parentRefsFromFlatParents drops the parent's definition uuid, because meshStack derives it from
-// the referenced building block.
-func parentRefsFromFlatParents(parents []client.MeshBuildingBlockParent) []client.UuidRef {
-	refs := make([]client.UuidRef, 0, len(parents))
-	for _, parent := range parents {
-		refs = append(refs, client.UuidRef{Kind: client.MeshObjectKind.BuildingBlock, Uuid: parent.BuildingBlockUuid})
-	}
-	return refs
+// buildingBlockV0Parent is the flat parent element that pre-v1 state carries. The upgrader declares
+// it instead of reusing a client DTO, because the state shape outlives the v1 API whose DTO once
+// matched it.
+type buildingBlockV0Parent struct {
+	BuildingBlockUuid string `tfsdk:"buildingblock_uuid"`
+	DefinitionUuid    string `tfsdk:"definition_uuid"`
 }
 
 // buildingBlockSchemaV0Once derives the prior schema from the current one. That is safe because v0
@@ -53,6 +51,7 @@ var buildingBlockSchemaV0Once = sync.OnceValue(func() schema.Schema {
 
 	s.Attributes = maps.Clone(s.Attributes)
 	s.Attributes["spec"] = spec
+	// `ref` did not exist at v0; declaring it would decode as null instead of being recomputed.
 	delete(s.Attributes, "ref")
 
 	return s
@@ -65,15 +64,17 @@ func (r *buildingBlockResource) UpgradeState(_ context.Context) map[int64]resour
 	}
 }
 
-// upgradeParentsToRefs copies the prior state attribute by attribute instead of round-tripping it
-// through the resource model, because reading the model back needs the plan/config-aware secret
-// converters that an upgrader has no access to.
+// upgradeParentsToRefs rewrites v0 state onto the v1 schema: the flat parent pair becomes a set of
+// refs and the new computed `ref` is derived from metadata.uuid. Everything else carries over
+// untouched, so the raw prior value is copied attribute by attribute rather than round-tripped
+// through the resource model — the model's inputs need the plan/config-aware secret converters,
+// which an upgrader has no access to.
 //
 // Without this upgrader, spec.parent_building_block_refs stays null after the upgrade. Under
 // -refresh=false that looks like a parent change on an unchanged version, and
 // requiresReplaceParentsWhenVersionUnchanged then destroys and recreates a live building block.
 func (r *buildingBlockResource) upgradeParentsToRefs(ctx context.Context, req resource.UpgradeStateRequest, resp *resource.UpgradeStateResponse) {
-	var flatParents []client.MeshBuildingBlockParent
+	var flatParents []buildingBlockV0Parent
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("spec").AtName("parent_building_blocks"), &flatParents)...)
 
 	var uuid string
@@ -108,11 +109,12 @@ func (r *buildingBlockResource) upgradeParentsToRefs(ctx context.Context, req re
 		return
 	}
 
+	// The parent's definition uuid is dropped: meshStack derives it from the referenced block.
 	refs := make([]tftypes.Value, 0, len(flatParents))
-	for _, ref := range parentRefsFromFlatParents(flatParents) {
+	for _, parent := range flatParents {
 		refs = append(refs, tftypes.NewValue(refsType.ElementType, map[string]tftypes.Value{
-			"kind": tftypes.NewValue(tftypes.String, ref.Kind),
-			"uuid": tftypes.NewValue(tftypes.String, ref.Uuid),
+			"kind": tftypes.NewValue(tftypes.String, client.MeshObjectKind.BuildingBlock),
+			"uuid": tftypes.NewValue(tftypes.String, parent.BuildingBlockUuid),
 		}))
 	}
 

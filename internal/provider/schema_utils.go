@@ -277,11 +277,3 @@ func previewDisclaimer() string {
 		"Please ensure you are running the latest version of the provider and report any bugs via [GitHub issues](https://github.com/meshcloud/terraform-provider-meshstack/issues) " +
 		"or via support@meshcloud.io."
 }
-
-// deprecatedDisclaimer returns a MarkdownDescription admonition for a deprecated resource or data
-// source, so the deprecation is visible in the generated docs and not only at plan time via the
-// schema's DeprecationMessage. Append it to the MarkdownDescription and keep the guidance in sync
-// with DeprecationMessage.
-func deprecatedDisclaimer(message string) string {
-	return "\n\n~> **Deprecated:** " + message
-}

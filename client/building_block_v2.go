@@ -55,118 +55,6 @@ type MeshBuildingBlockV2Spec struct {
 	// Inputs as pointer MeshBuildingBlockInput to support mocking secret responses.
 	Inputs                  map[string]*MeshBuildingBlockInput `json:"inputs" tfsdk:"inputs"`
 	ParentBuildingBlockRefs types.Set[UuidRef]                 `json:"parentBuildingBlockRefs" tfsdk:"parent_building_block_refs"`
-
-	// ParentBuildingBlocks holds the deprecated parentBuildingBlocks field. MarshalJSON and
-	// UnmarshalJSON put it on the wire and take it off again, and the deprecated
-	// meshstack_building_block_v2 surfaces read it for the definition uuid they report.
-	ParentBuildingBlocks types.Set[MeshBuildingBlockV2Parent] `json:"-" tfsdk:"-"`
-}
-
-// MeshBuildingBlockV2Parent is an entry of the deprecated parentBuildingBlocks field.
-type MeshBuildingBlockV2Parent struct {
-	UuidRef
-
-	// BuildingBlockUuid identifies the parent and always holds the same value as Uuid.
-	BuildingBlockUuid string `json:"buildingBlockUuid"`
-	// DefinitionUuid is the parent's building block definition. The backend derives it from the
-	// referenced block, so every response carries it and a request never does.
-	DefinitionUuid string `json:"definitionUuid,omitempty"`
-}
-
-// UnmarshalJSON fills Uuid from the deprecated buildingBlockUuid, which is where a response carries
-// the parent's identity.
-func (p *MeshBuildingBlockV2Parent) UnmarshalJSON(data []byte) error {
-	type wire MeshBuildingBlockV2Parent
-	var target wire
-	if err := json.Unmarshal(data, &target); err != nil {
-		return err
-	}
-
-	*p = MeshBuildingBlockV2Parent(target)
-	if p.Uuid == "" {
-		p.Uuid = p.BuildingBlockUuid
-	}
-	p.BuildingBlockUuid = p.Uuid
-	if p.Kind == "" {
-		p.Kind = MeshObjectKind.BuildingBlock
-	}
-
-	return nil
-}
-
-// MarshalJSON sends the parents under both field names: parentBuildingBlockRefs, and the deprecated
-// parentBuildingBlocks for a backend that does not know the new field yet. A newer backend accepts
-// both as long as they name the same building blocks, and an older one ignores the field it does not
-// know, because the meshObject API does not reject unknown properties.
-//
-// Together with UnmarshalJSON this is the whole compatibility window. Once every backend still in use
-// knows parentBuildingBlockRefs, both methods can go.
-func (s MeshBuildingBlockV2Spec) MarshalJSON() ([]byte, error) {
-	type wire MeshBuildingBlockV2Spec
-	if len(s.ParentBuildingBlockRefs) == 0 {
-		s.ParentBuildingBlockRefs = parentRefsFromDeprecated(s.ParentBuildingBlocks)
-	}
-
-	encoded, err := json.Marshal(wire(s))
-	if err != nil {
-		return nil, err
-	}
-
-	var fields map[string]json.RawMessage
-	if err := json.Unmarshal(encoded, &fields); err != nil {
-		return nil, err
-	}
-
-	// The deprecated entry sends only buildingBlockUuid: every backend in the supported range reads
-	// the parent from it, and the definition uuid is always derived from the referenced block.
-	parents := make([]struct {
-		BuildingBlockUuid string `json:"buildingBlockUuid"`
-	}, 0, len(s.ParentBuildingBlockRefs))
-	for _, ref := range s.ParentBuildingBlockRefs {
-		parents = append(parents, struct {
-			BuildingBlockUuid string `json:"buildingBlockUuid"`
-		}{BuildingBlockUuid: ref.Uuid})
-	}
-	if fields["parentBuildingBlocks"], err = json.Marshal(parents); err != nil {
-		return nil, err
-	}
-
-	return json.Marshal(fields)
-}
-
-func parentRefsFromDeprecated(parents types.Set[MeshBuildingBlockV2Parent]) types.Set[UuidRef] {
-	refs := make(types.Set[UuidRef], 0, len(parents))
-	for _, parent := range parents {
-		refs = append(refs, UuidRef{Uuid: parent.Uuid, Kind: MeshObjectKind.BuildingBlock})
-	}
-	return refs
-}
-
-// UnmarshalJSON reads the parents from parentBuildingBlockRefs, or from the deprecated
-// parentBuildingBlocks when a backend does not serve the new field yet. Terraform then sees the same
-// elements against either backend and set hashing stays stable.
-func (s *MeshBuildingBlockV2Spec) UnmarshalJSON(data []byte) error {
-	type wire MeshBuildingBlockV2Spec
-	var target struct {
-		wire
-		ParentBuildingBlocks types.Set[MeshBuildingBlockV2Parent] `json:"parentBuildingBlocks"`
-	}
-	if err := json.Unmarshal(data, &target); err != nil {
-		return err
-	}
-
-	*s = MeshBuildingBlockV2Spec(target.wire)
-	s.ParentBuildingBlocks = target.ParentBuildingBlocks
-	if len(s.ParentBuildingBlockRefs) == 0 {
-		s.ParentBuildingBlockRefs = parentRefsFromDeprecated(s.ParentBuildingBlocks)
-	}
-	for i := range s.ParentBuildingBlockRefs {
-		if s.ParentBuildingBlockRefs[i].Kind == "" {
-			s.ParentBuildingBlockRefs[i].Kind = MeshObjectKind.BuildingBlock
-		}
-	}
-
-	return nil
 }
 
 type MeshBuildingBlockInput struct {
@@ -250,7 +138,7 @@ type MeshBuildingBlockOutput struct {
 }
 
 // MeshBuildingBlockV2ListFilter holds the optional query filters for listing building blocks
-// via the v2-preview list endpoint. All scalar fields are nil when unset (omitted from the
+// via the v2 list endpoint. All scalar fields are nil when unset (omitted from the
 // query). The backend returns only active building blocks; soft-deleted ones are not listed.
 // MeshBuildingBlockV2ListFilter holds the optional filters for the V2 building block list endpoint.
 // The json tags are the query param names and must match the backend fetchBuildingBlocksV2
@@ -293,7 +181,7 @@ type meshBuildingBlockV2Client struct {
 }
 
 func newBuildingBlockV2Client(ctx context.Context, httpClient internal.HttpClient) MeshBuildingBlockV2Client {
-	return meshBuildingBlockV2Client{internal.NewMeshObjectClient[MeshBuildingBlockV2](ctx, httpClient, "v2-preview")}
+	return meshBuildingBlockV2Client{internal.NewMeshObjectClient[MeshBuildingBlockV2](ctx, httpClient, "v2")}
 }
 
 func (c meshBuildingBlockV2Client) Read(ctx context.Context, uuid string) (*MeshBuildingBlockV2, error) {

@@ -70,7 +70,7 @@ func (d *buildingBlocksDataSource) Schema(_ context.Context, _ datasource.Schema
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "List building blocks, with optional filters. " +
 			"Each returned building block is read-only and mirrors the `meshstack_building_block` resource " +
-			"(`metadata`/`spec`/`status`/`all_inputs`)." + previewDisclaimer(),
+			"(`metadata`/`spec`/`status`/`all_inputs`).",
 		Attributes: map[string]schema.Attribute{
 			// ---- filters ----
 			"workspace_identifier": optionalString("Only return building blocks owned by or assigned to this workspace."),
