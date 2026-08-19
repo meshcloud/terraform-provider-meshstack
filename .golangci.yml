@@ -39,9 +39,16 @@ linters:
     - thelper
   settings:
     depguard:
+      # Every directory pattern is listed twice, as '**/dir/*.go' and
+      # '**/dir/**/*.go'. The second form matches files in subdirectories of dir
+      # only, never files directly inside it, so on its own it silently governs
+      # nothing in a flat package. A rule that matches no file reports no issue,
+      # which is indistinguishable from a rule that passes — check any new rule by
+      # compiling a file that violates it.
       rules:
         client:
           files:
+            - "**/client/*.go"
             - "**/client/**/*.go"
             - "!$test"
           list-mode: strict
@@ -50,6 +57,7 @@ linters:
             - github.com/meshcloud/terraform-provider-meshstack/client
         client-test:
           files:
+            - "**/client/*_test.go"
             - "**/client/**/*_test.go"
           list-mode: strict
           allow:
@@ -59,8 +67,11 @@ linters:
         provider:
           files:
             - "!$test"
+            - "!**/client/*.go"
             - "!**/client/**/*.go"
             - "!**/internal/clientmock/*.go"
+            - "!**/internal/clientmock/**/*.go"
+            - "!**/internal/provider/acctest/*.go"
             - "!**/internal/provider/acctest/**/*.go"
             - "!**/examples/*.go"
           list-mode: strict
@@ -86,9 +97,12 @@ linters:
         provider-test:
           files:
             - "$test"
+            - "**/internal/clientmock/*.go"
             - "**/internal/clientmock/**/*.go"
+            - "**/internal/provider/acctest/*.go"
             - "**/internal/provider/acctest/**/*.go"
             - "**/examples/*.go"
+            - "!**/internal/types/*.go"
             - "!**/internal/types/**/*.go"
             - "!**/client/*_test.go"
             - "!**/client/**/*_test.go"
@@ -105,8 +119,10 @@ linters:
             - github.com/hashicorp/hcl/v2 # hclwrite-based config manipulation in examples/
             - github.com/zclconf/go-cty/cty # hclwrite value types
             - github.com/stretchr/testify
+            - github.com/google/uuid # clientmock assigns UUIDs to the meshObjects it stores
         types:
           files:
+            - "**/internal/types/*.go"
             - "**/internal/types/**/*.go"
             - "!$test"
           list-mode: strict
@@ -122,6 +138,7 @@ linters:
             - github.com/hashicorp/terraform-plugin-go/tftypes
         types-test:
           files:
+            - "**/internal/types/*_test.go"
             - "**/internal/types/**/*_test.go"
           list-mode: strict
           deny:

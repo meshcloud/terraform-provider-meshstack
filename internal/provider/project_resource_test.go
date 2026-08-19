@@ -48,7 +48,7 @@ func TestAccProject(t *testing.T) {
 					},
 				},
 			},
-		})
+		}, TouchesExclusively(client.MeshObjectKind.Project))
 	})
 
 	config, resourceAddress, workspaceAddr := testconfig.ProjectAndWorkspace(t)

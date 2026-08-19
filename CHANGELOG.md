@@ -1,3 +1,15 @@
+# v0.25.0
+
+Requires meshStack 2026.32.0 or later (previously 2026.30.0).
+
+BREAKING CHANGES:
+- `meshstack_tenant` and `meshstack_tenants` now use the meshTenant v4 GA media type instead of the v4 preview media type. They require a meshStack backend that has promoted meshTenant v4 to GA; older backends that only serve the `-preview` media type return HTTP 415 (Unsupported Media Type).
+- The deprecated `meshstack_tenant_v4` resource and data source have been removed, along with the `moved` state mover that migrated from it (the source schema it was built from no longer exists). Migrate to `meshstack_tenant` / `meshstack_tenants` by adding a `moved` block on v0.24.x — which still ships both the mover and the deprecated type — and applying it before upgrading to v0.25.0.
+- `meshstack_platform_types`: the `category` filter no longer accepts `GITHUB`. meshStack retired the dedicated GitHub platform type, and the platforms that had it are now `CUSTOM`. Change any `category = "GITHUB"` filter to `category = "CUSTOM"`.
+
+FIXES:
+- `MESHSTACK_SKIP_VERSION_CHECK=true` now skips the `GET /mesh/info` version-check request itself, instead of only suppressing the resulting version mismatch. Previously the opt-out was evaluated after the request had succeeded, so an unavailable meshStack still failed provider configuration — after blocking for the client's full retry budget (~4 minutes), because `/mesh/info` is a retried GET.
+
 # v0.24.5
 
 FIXES:

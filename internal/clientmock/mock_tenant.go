@@ -45,7 +45,7 @@ func (m MeshTenantClient) Create(_ context.Context, tenant *client.MeshTenantCre
 	// The mock applies the requested quotas verbatim (it enforces no bounds or auto-approval threshold),
 	// but does overlay them on the landing zone's default quotas as the backend does, so
 	// status.appliedQuotas can legitimately carry keys the caller never requested.
-	appliedQuotas := effectiveQuotas(m.landingZoneDefaultQuotas(tenant.Spec.LandingZoneRef), tenant.Spec.RequestedQuotas, nil)
+	appliedQuotas := effectiveQuotas(m.landingZoneDefaultQuotas(tenant.Spec.LandingZoneRef), tenant.Spec.RequestedQuotas)
 
 	created := &client.MeshTenant{
 		Metadata: client.MeshTenantMetadata{
@@ -104,27 +104,17 @@ func (m MeshTenantClient) landingZoneDefaultQuotas(ref *client.NamedRef) map[str
 	return defaults
 }
 
-// effectiveQuotas resolves what a create request carried — the preferred key->value map or the
-// deprecated {key, value} list — into the single map the backend reports back as status.appliedQuotas,
-// overlaid on the assigned landing zone's defaults (a requested key wins over a default, mirroring the
-// backend's resolveEffectiveQuotas). Returns nil when neither side contributes a quota, so status
-// renders as null rather than an empty map.
-func effectiveQuotas(landingZoneDefaults map[string]int64, requested map[string]client.RequestQuotaValue, quotas []client.MeshTenantQuota) map[string]client.AppliedQuotaValue {
-	out := make(map[string]client.AppliedQuotaValue, len(landingZoneDefaults)+len(requested)+len(quotas))
+// effectiveQuotas overlays the requested quotas on the assigned landing zone's defaults, as the backend
+// does when it resolves status.appliedQuotas: a requested key wins over a default. Returns nil when
+// neither side contributes a quota, so status renders as null rather than an empty map.
+func effectiveQuotas(landingZoneDefaults map[string]int64, requested map[string]client.RequestQuotaValue) map[string]client.AppliedQuotaValue {
+	out := make(map[string]client.AppliedQuotaValue, len(landingZoneDefaults)+len(requested))
 	for k, v := range landingZoneDefaults {
 		out[k] = client.AppliedQuotaValue{Value: v}
 	}
 
-	// The two requested forms are mutually exclusive; the map form wins when both are somehow set.
-	switch {
-	case requested != nil:
-		for k, v := range requested {
-			out[k] = client.AppliedQuotaValue(v)
-		}
-	default:
-		for _, q := range quotas {
-			out[q.Key] = client.AppliedQuotaValue{Value: q.Value}
-		}
+	for k, v := range requested {
+		out[k] = client.AppliedQuotaValue(v)
 	}
 
 	if len(out) == 0 {

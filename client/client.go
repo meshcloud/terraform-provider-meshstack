@@ -11,7 +11,7 @@ import (
 	"github.com/meshcloud/terraform-provider-meshstack/client/version"
 )
 
-var MinMeshStackVersion = version.MustParse("2026.30.0")
+var MinMeshStackVersion = version.MustParse("2026.32.0")
 
 // HttpError represents an HTTP error response with status code.
 // This error is returned when an HTTP request fails with a non-2XX status code.
@@ -37,7 +37,6 @@ type Client struct {
 	ServiceInstance                MeshServiceInstanceClient
 	TagDefinition                  MeshTagDefinitionClient
 	Tenant                         MeshTenantClient
-	TenantV4                       MeshTenantV4Client
 	Workspace                      MeshWorkspaceClient
 	WorkspaceGroupBinding          MeshWorkspaceGroupBindingClient
 	WorkspaceUserBinding           MeshWorkspaceUserBindingClient
@@ -93,7 +92,6 @@ func New(ctx context.Context, rootUrl *url.URL, userAgent string, auth Authoriza
 		ServiceInstance:                newServiceInstanceClient(ctx, httpClient),
 		TagDefinition:                  newTagDefinitionClient(ctx, httpClient),
 		Tenant:                         newTenantClient(ctx, httpClient),
-		TenantV4:                       newTenantV4Client(ctx, httpClient),
 		Workspace:                      newWorkspaceClient(ctx, httpClient),
 		WorkspaceGroupBinding:          newWorkspaceGroupBindingClient(ctx, httpClient),
 		WorkspaceUserBinding:           newWorkspaceUserBindingClient(ctx, httpClient),
@@ -101,6 +99,13 @@ func New(ctx context.Context, rootUrl *url.URL, userAgent string, auth Authoriza
 }
 
 func checkMeshVersion(ctx context.Context, httpClient internal.HttpClient) error {
+	// Skip before the request, not just before the comparison: /mesh/info is a GET on the retrying
+	// client, so an unavailable backend blocks provider configuration for the whole retry budget
+	// (~4 minutes) and then fails it. Opting out of the check has to opt out of that too.
+	if os.Getenv("MESHSTACK_SKIP_VERSION_CHECK") == "true" {
+		return nil
+	}
+
 	type MeshInfo struct {
 		Version version.Version `json:"version"`
 	}
@@ -109,9 +114,6 @@ func checkMeshVersion(ctx context.Context, httpClient internal.HttpClient) error
 	if meshInfo, err := internal.DoRequest[MeshInfo](ctx, httpClient, "GET", meshInfoEndpoint); err != nil {
 		return fmt.Errorf("failed to retrieve meshStack version information from %s endpoint: %w", meshInfoEndpoint, err)
 	} else if meshInfo.Version.Less(MinMeshStackVersion) {
-		if os.Getenv("MESHSTACK_SKIP_VERSION_CHECK") == "true" {
-			return nil
-		}
 		return fmt.Errorf("unsupported meshStack version: meshStack is running version %s, but this client requires version %s or higher", meshInfo.Version, MinMeshStackVersion)
 	}
 	return nil
