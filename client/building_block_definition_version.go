@@ -97,6 +97,7 @@ type MeshBuildingBlockDefinitionInput struct {
 	Argument                    types.SecretOrAny `json:"argument" tfsdk:"argument"`
 	DefaultValue                types.SecretOrAny `json:"defaultValue" tfsdk:"default_value"`
 	UpdateableByConsumer        bool              `json:"updateableByConsumer" tfsdk:"updateable_by_consumer"`
+	IsOptional                  bool              `json:"isOptional,omitempty" tfsdk:"is_optional"`
 	SelectableValues            types.Set[string] `json:"selectableValues,omitempty" tfsdk:"selectable_values"`
 	Description                 *string           `json:"description,omitempty" tfsdk:"description"`
 	ValueValidationRegex        *string           `json:"valueValidationRegex,omitempty" tfsdk:"value_validation_regex"`

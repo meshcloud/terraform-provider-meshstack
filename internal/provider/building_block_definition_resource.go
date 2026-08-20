@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -13,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
+	"github.com/meshcloud/terraform-provider-meshstack/client/types/enum"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/types/generic"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/types/secret"
 )
@@ -188,6 +190,8 @@ func (r *buildingBlockDefinitionResource) ValidateConfig(ctx context.Context, re
 		return
 	}
 
+	validateOptionalInputs(manual, inputs, inputsPath, &resp.Diagnostics)
+
 	// Nothing declared -> nothing to validate (the outputs schema is optional+computed).
 	if outputs.IsNull() || outputs.IsUnknown() {
 		return
@@ -273,6 +277,65 @@ func (r *buildingBlockDefinitionResource) ValidateConfig(ctx context.Context, re
 				"manual building block output override has no effect",
 				fmt.Sprintf("Output %q does not override anything: set assignment_type to a value other than %s, or a display_name "+
 					"that differs from the matching input's. Overriding display_order alone is not supported.", key, none))
+		}
+	}
+}
+
+// validateOptionalInputs re-imposes the backend's rules for an optional input at plan time.
+func validateOptionalInputs(manual types.Object, inputs types.Map, inputsPath path.Path, diags *diag.Diagnostics) {
+	if inputs.IsNull() || inputs.IsUnknown() {
+		return
+	}
+	supportedAssignmentTypes := enum.Of(
+		client.MeshBuildingBlockInputAssignmentTypeUserInput,
+		client.MeshBuildingBlockInputAssignmentTypePlatformOperatorManualInput,
+	)
+	for key, elem := range inputs.Elements() {
+		obj, ok := elem.(types.Object)
+		if !ok || obj.IsNull() || obj.IsUnknown() {
+			continue
+		}
+		attrs := obj.Attributes()
+		if optional, ok := attrs["is_optional"].(types.Bool); !ok || optional.IsNull() || optional.IsUnknown() || !optional.ValueBool() {
+			continue
+		}
+		optionalPath := inputsPath.AtMapKey(key).AtName("is_optional")
+
+		if !manual.IsNull() && !manual.IsUnknown() {
+			diags.AddAttributeError(optionalPath,
+				"input cannot be optional on a manual building block definition",
+				fmt.Sprintf("Input %q is optional, but a manual building block has no implementation to fall back to when an "+
+					"input is left unset. Remove 'is_optional', or use an automated implementation.", key))
+		}
+
+		if assignment := outputStringAttr(attrs, "assignment_type"); !assignment.IsNull() && !assignment.IsUnknown() &&
+			!slices.Contains(supportedAssignmentTypes.Strings(), assignment.ValueString()) {
+			diags.AddAttributeError(optionalPath,
+				"input cannot be optional with this assignment_type",
+				fmt.Sprintf("Input %q is optional, which is only supported for assignment types %s. Its assignment_type is %q.",
+					key, strings.Join(supportedAssignmentTypes.Strings(), ", "), assignment.ValueString()))
+		}
+
+		if inputType := outputStringAttr(attrs, "type"); inputType.ValueString() == client.MeshBuildingBlockIOTypeBoolean.String() {
+			diags.AddAttributeError(optionalPath,
+				"input of type BOOLEAN cannot be optional",
+				fmt.Sprintf("Input %q is optional, but an unset %s is indistinguishable from false by the time it reaches the "+
+					"implementation, so optionality would mean nothing there.", key, client.MeshBuildingBlockIOTypeBoolean))
+		}
+
+		defaultValueSet := func(attrs map[string]attr.Value, name string) bool {
+			v := attrs[name]
+			return v != nil && !v.IsNull() && !v.IsUnknown()
+		}
+		hasDefault := defaultValueSet(attrs, "default_value")
+		if sensitive, ok := attrs["sensitive"].(types.Object); ok && !sensitive.IsNull() && !sensitive.IsUnknown() {
+			hasDefault = hasDefault || defaultValueSet(sensitive.Attributes(), "default_value")
+		}
+		if hasDefault {
+			diags.AddAttributeError(optionalPath,
+				"optional input must not have a default value",
+				fmt.Sprintf("Input %q is optional and also declares a default_value. An optional input that is left unset falls "+
+					"back to the default declared in the implementation's own code, so a meshStack default value would never apply.", key))
 		}
 	}
 }

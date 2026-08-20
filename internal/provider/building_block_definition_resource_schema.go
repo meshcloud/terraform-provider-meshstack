@@ -145,6 +145,21 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 					Computed:            true,
 					Default:             booldefault.StaticBool(false),
 				},
+				"is_optional": schema.BoolAttribute{
+					MarkdownDescription: "Whether the input may be left unset when a building block is filled in. " +
+						"meshStack then sends no value and your implementation falls back to the default declared in its own code, " +
+						"e.g. the Terraform variable's `default` or the GitHub workflow input's `default`. " +
+						"**Only supported** for `assignment_type` " + enum.Of(
+						client.MeshBuildingBlockInputAssignmentTypeUserInput,
+						client.MeshBuildingBlockInputAssignmentTypePlatformOperatorManualInput,
+					).Markdown() + ", and **not** for type " + client.MeshBuildingBlockIOTypeBoolean.Markdown() +
+						" or for the `manual` implementation. " +
+						"**Mutually exclusive** with `default_value` and `sensitive.default_value`, which would defeat the purpose. " +
+						"Requires meshStack 2026.XX.X or later.", // TODO pinpoint to exact version when released
+					Optional: true,
+					Computed: true,
+					Default:  booldefault.StaticBool(false),
+				},
 				"selectable_values": schema.SetAttribute{
 					MarkdownDescription: "Set of allowed values for the input. **Required** to be non-empty when `type` is " + client.MeshBuildingBlockIOTypeSingleSelect.Markdown() + " or " + client.MeshBuildingBlockIOTypeMultiSelect.Markdown() + ".",
 					ElementType:         types.StringType,
