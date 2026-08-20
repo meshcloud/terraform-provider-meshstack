@@ -1,3 +1,8 @@
+# v0.25.1
+
+FEATURES:
+- `meshstack_building_block_definition`: new `version_spec.inputs.*.is_optional` argument. An optional input may be left blank by whoever fills the building block in; meshStack then sends no value and the implementation falls back to the default declared in its own code — a Terraform variable's `default`, a GitHub workflow input's `default`. It defaults to `false`, so nothing changes for an input you do not declare optional. Marking an input optional needs meshStack 2026.35.0 or later; an older backend silently ignores the field, which surfaces as Terraform's *"Provider produced inconsistent result after apply"* on `is_optional`. The provider mirrors the backend's four rules at plan time instead of letting them fail during apply: an optional input is rejected on the `manual` implementation, for any `assignment_type` other than `USER_INPUT` or `PLATFORM_OPERATOR_MANUAL_INPUT`, for type `BOOLEAN`, and together with a `default_value`. Existing versions keep their `content_hash`, so adding the attribute does not re-run any already-released building block.
+
 # v0.25.0
 
 Requires meshStack 2026.34.0 or later (previously 2026.30.0).

@@ -63,6 +63,7 @@ resource "meshstack_building_block_definition" "example_01_terraform" {
         type              = "SINGLE_SELECT"
         assignment_type   = "USER_INPUT"
         selectable_values = ["dev", "prod", "staging"] # Optional, must be non-empty
+        is_optional       = true                       # Optional: defaults to false
         display_order     = 1
       }
       resource_name = {
@@ -600,6 +601,7 @@ Optional:
 - `description` (String) Description explaining the purpose and usage of the input.
 - `display_order` (Number) Numeric value controlling in which order the inputs are displayed in the UI. Cannot be changed on a released version. When omitted, uses the existing value from state, if any. Otherwise the backend assigns one (`0` for a newly declared input).
 - `is_environment` (Boolean) Whether this input is exposed as an environment variable (when `true`) or as a regular variable (when `false`).
+- `is_optional` (Boolean) Whether the input may be left unset when a building block is filled in. meshStack then sends no value and your implementation falls back to the default declared in its own code, e.g. the Terraform variable's `default` or the GitHub workflow input's `default`. **Only supported** for `assignment_type` `USER_INPUT`, `PLATFORM_OPERATOR_MANUAL_INPUT`, and **not** for type `BOOLEAN` or for the `manual` implementation. **Mutually exclusive** with `default_value` and `sensitive.default_value`, which would defeat the purpose. Requires meshStack 2026.XX.X or later.
 - `selectable_values` (Set of String) Set of allowed values for the input. **Required** to be non-empty when `type` is `SINGLE_SELECT` or `MULTI_SELECT`.
 - `sensitive` (Attributes) Configuration for sensitive input values. **Mutually exclusive** with the non-sensitive `argument` and `default_value` attributes. When an input is marked as sensitive, use the nested `sensitive.argument` or `sensitive.default_value` instead of the top-level attributes. You can provide an empty attribute `sensitive = {}` to mark this input as sensitive without providing values. Sensitive inputs are **only supported** for `assignment_type` of `USER_INPUT`, `PLATFORM_OPERATOR_MANUAL_INPUT`, `STATIC`. (see [below for nested schema](#nestedatt--version_spec--inputs--sensitive))
 - `updateable_by_consumer` (Boolean) Whether the input value can be updated by consumers without admin or platform operator permissions.
