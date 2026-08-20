@@ -154,10 +154,12 @@ Use these instead of raw `knownvalue` functions
 ## Worked TestAcc test (create → update → import)
 
 A good test is multi-step, uses the builder, and asserts with `plancheck` (the planned action) +
-`statecheck`/`xknownvalue` (resulting state):
+`statecheck`/`xknownvalue` (resulting state). The builder-based snippet below is the shape of every
+not-yet-migrated test (live example: `workspace_resource_test.go`); for the per-step example-file
+shape that replaces it, see SKILL.md → Migration off `testconfig` and `project_resource_test.go`:
 
 ```go
-func TestAccProject(t *testing.T) {
+func TestAccProjectWithTestconfig(t *testing.T) {
     config, resourceAddress, workspaceAddr := testconfig.ProjectAndWorkspace(t)
     updateConfig := config.WithFirstBlock(
         testconfig.Descend("spec", "display_name")(testconfig.SetString("Updated Display Name")),
