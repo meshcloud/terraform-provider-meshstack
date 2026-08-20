@@ -1,5 +1,7 @@
 # v0.25.2
 
+Requires meshStack 2026.36.0 or later (previously 2026.35.0).
+
 FIXES:
 - `meshstack_workspace_user_binding` and `meshstack_workspace_group_binding`: creating a binding that omits `expiry_date` no longer fails with *"Value Conversion Error … Received unknown value, however the target type cannot handle unknown values. Path: expiry_date"* (#267, #293). `expiry_date` is optional and computed, so Terraform plans it as unknown whenever the configuration leaves it out, and the provider read that plan into a type that cannot hold an unknown — which broke the documented default of a binding that never expires. Omitting the attribute now works as documented, and an explicit date keeps behaving as before. The only workaround was to set a date, so no migration is needed.
 
@@ -21,6 +23,7 @@ FEATURES:
   approval (`version_upgrade`, `user_input_changes`, `manual_triggers`, `building_block_creation`, `any_input_changes`),
   and `spec.schedule` sets the drift schedule (`mode` of `DISABLED`, `DRIFT_DETECTION` or `DRIFT_RECONCILIATION`, plus
   `frequency` and `automatic_approval`).
+- `meshstack_building_block_definition`: new `version_spec.inputs.*.is_optional` argument. An optional input may be left blank by whoever fills the building block in; meshStack then sends no value and the implementation falls back to the default declared in its own code — a Terraform variable's `default`, a GitHub workflow input's `default`. It defaults to `false`, so nothing changes for an input you do not declare optional. Marking an input optional needs meshStack 2026.36.0 or later; an older backend silently ignores the field, which surfaces as Terraform's *"Provider produced inconsistent result after apply"* on `is_optional`. The provider mirrors the backend's four rules at plan time instead of letting them fail during apply: an optional input is rejected on the `manual` implementation, for any `assignment_type` other than `USER_INPUT` or `PLATFORM_OPERATOR_MANUAL_INPUT`, for type `BOOLEAN`, and together with a `default_value`. Existing versions keep their `content_hash`, so adding the attribute does not re-run any already-released building block.
 
 # v0.25.1
 
