@@ -1296,6 +1296,7 @@ func checksForImplementation(exampleSuffix string) (checkInputs, checkImplementa
 					"assignment_type":        knownvalue.StringExact("USER_INPUT"),
 					"is_environment":         knownvalue.Bool(false),
 					"updateable_by_consumer": knownvalue.Bool(false),
+					"is_optional":            knownvalue.Bool(true),
 					"description":            knownvalue.StringExact("The target environment"),
 					"selectable_values": knownvalue.ListExact([]knownvalue.Check{
 						knownvalue.StringExact("dev"),
@@ -1315,6 +1316,7 @@ func checksForImplementation(exampleSuffix string) (checkInputs, checkImplementa
 					"assignment_type":                knownvalue.StringExact("USER_INPUT"),
 					"is_environment":                 knownvalue.Bool(false),
 					"updateable_by_consumer":         knownvalue.Bool(true),
+					"is_optional":                    knownvalue.Bool(false),
 					"description":                    knownvalue.StringExact("Name of the resource to create"),
 					"argument":                       knownvalue.Null(),
 					"default_value":                  knownvalue.StringExact(`"some-resource-name"`),
@@ -1330,6 +1332,7 @@ func checksForImplementation(exampleSuffix string) (checkInputs, checkImplementa
 					"assignment_type":        knownvalue.StringExact("STATIC"),
 					"is_environment":         knownvalue.Bool(true),
 					"updateable_by_consumer": knownvalue.Bool(false),
+					"is_optional":            knownvalue.Bool(false),
 					"description":            knownvalue.StringExact("Really secret"),
 					"sensitive": xknownvalue.MapExact(map[string]knownvalue.Check{
 						"argument": xknownvalue.MapExact(map[string]knownvalue.Check{
@@ -1368,6 +1371,7 @@ func checksForImplementation(exampleSuffix string) (checkInputs, checkImplementa
 					"assignment_type":                knownvalue.StringExact("STATIC"),
 					"is_environment":                 knownvalue.Bool(false),
 					"updateable_by_consumer":         knownvalue.Bool(false),
+					"is_optional":                    knownvalue.Bool(false),
 					"description":                    knownvalue.Null(),
 					"argument":                       xknownvalue.NotEmptyString(),
 					"default_value":                  knownvalue.Null(),
@@ -1406,6 +1410,7 @@ func checksForImplementation(exampleSuffix string) (checkInputs, checkImplementa
 					"assignment_type":                knownvalue.StringExact("USER_INPUT"),
 					"is_environment":                 knownvalue.Bool(false),
 					"updateable_by_consumer":         knownvalue.Bool(false),
+					"is_optional":                    knownvalue.Bool(false),
 					"description":                    knownvalue.Null(),
 					"selectable_values":              knownvalue.Null(),
 					"value_validation_regex":         knownvalue.Null(),
@@ -1439,6 +1444,7 @@ func checksForImplementation(exampleSuffix string) (checkInputs, checkImplementa
 					"assignment_type":                knownvalue.StringExact("PLATFORM_OPERATOR_MANUAL_INPUT"),
 					"is_environment":                 knownvalue.Bool(false),
 					"updateable_by_consumer":         knownvalue.Bool(false),
+					"is_optional":                    knownvalue.Bool(false),
 					"description":                    knownvalue.Null(),
 					"selectable_values":              knownvalue.Null(),
 					"value_validation_regex":         knownvalue.Null(),
@@ -1454,6 +1460,7 @@ func checksForImplementation(exampleSuffix string) (checkInputs, checkImplementa
 					"assignment_type":                knownvalue.StringExact("USER_INPUT"),
 					"is_environment":                 knownvalue.Bool(false),
 					"updateable_by_consumer":         knownvalue.Bool(false),
+					"is_optional":                    knownvalue.Bool(false),
 					"description":                    knownvalue.Null(),
 					"selectable_values":              knownvalue.Null(),
 					"value_validation_regex":         knownvalue.Null(),
@@ -1490,6 +1497,7 @@ func checksForImplementation(exampleSuffix string) (checkInputs, checkImplementa
 					"assignment_type":                knownvalue.StringExact("USER_INPUT"),
 					"is_environment":                 knownvalue.Bool(false),
 					"updateable_by_consumer":         knownvalue.Bool(false),
+					"is_optional":                    knownvalue.Bool(false),
 					"description":                    knownvalue.Null(),
 					"selectable_values":              knownvalue.Null(),
 					"value_validation_regex":         knownvalue.Null(),
@@ -1523,6 +1531,7 @@ func checksForImplementation(exampleSuffix string) (checkInputs, checkImplementa
 					"assignment_type":                knownvalue.StringExact("USER_INPUT"),
 					"is_environment":                 knownvalue.Bool(false),
 					"updateable_by_consumer":         knownvalue.Bool(false),
+					"is_optional":                    knownvalue.Bool(false),
 					"description":                    knownvalue.Null(),
 					"selectable_values":              knownvalue.Null(),
 					"value_validation_regex":         knownvalue.Null(),
@@ -1918,6 +1927,100 @@ resource "meshstack_building_block_definition" "test" {
 			step := resource.TestStep{
 				Config: symbolConfig(tt.symbol),
 			}
+			if tt.expectError != nil {
+				step.ExpectError = tt.expectError
+			}
+			ApplyAndTest(t, resource.TestCase{
+				Steps: []resource.TestStep{step},
+			})
+		})
+	}
+}
+
+func TestAccBuildingBlockDefinitionOptionalInputValidation(t *testing.T) {
+	// The rules an optional input has to satisfy are mirrored client-side, so they surface at plan time
+	// instead of as a backend 400 during apply.
+	if !IsMockClientTest() {
+		t.Skip("optional input validation is tested with mock client only")
+	}
+
+	t.Parallel()
+
+	const terraformImplementation = `{ terraform = { terraform_version = "1.9.0", repository_url = "https://github.com/example/bb.git" } }`
+	const manualImplementation = `{ manual = {} }`
+
+	config := func(implementation, input string) string {
+		return fmt.Sprintf(`
+resource "meshstack_building_block_definition" "test" {
+  metadata = { owned_by_workspace = "my-workspace" }
+  spec     = { display_name = "Test", description = "Test" }
+  version_spec = {
+    draft          = true
+    inputs         = { candidate = %s }
+    implementation = %s
+  }
+}`, input, implementation)
+	}
+
+	tests := []struct {
+		name           string
+		implementation string
+		input          string
+		expectError    *regexp.Regexp
+	}{
+		{
+			// A manual building block is carried out by a person, so there is no code to fall back to.
+			name:           "optional input rejected on manual implementation",
+			implementation: manualImplementation,
+			input:          `{ display_name = "Candidate", type = "STRING", assignment_type = "USER_INPUT", is_optional = true }`,
+			expectError:    regexp.MustCompile(`cannot be optional on a manual building block`),
+		},
+		{
+			// Optionality is a decision of whoever fills the input in, so only their assignment types qualify.
+			name:           "optional input rejected for a non-user assignment type",
+			implementation: terraformImplementation,
+			input:          `{ display_name = "Candidate", type = "STRING", assignment_type = "STATIC", argument = jsonencode("c"), is_optional = true }`,
+			expectError:    regexp.MustCompile(`cannot be optional with this assignment_type`),
+		},
+		{
+			name:           "optional BOOLEAN input rejected",
+			implementation: terraformImplementation,
+			input:          `{ display_name = "Candidate", type = "BOOLEAN", assignment_type = "USER_INPUT", is_optional = true }`,
+			expectError:    regexp.MustCompile(`type BOOLEAN cannot be optional`),
+		},
+		{
+			name:           "optional input with default_value rejected",
+			implementation: terraformImplementation,
+			input:          `{ display_name = "Candidate", type = "STRING", assignment_type = "USER_INPUT", is_optional = true, default_value = jsonencode("c") }`,
+			expectError:    regexp.MustCompile(`must not have a default value`),
+		},
+		{
+			name:           "optional input with sensitive default_value rejected",
+			implementation: terraformImplementation,
+			input:          `{ display_name = "Candidate", type = "STRING", assignment_type = "USER_INPUT", is_optional = true, sensitive = { default_value = { secret_value = "c" } } }`,
+			expectError:    regexp.MustCompile(`must not have a default value`),
+		},
+		{
+			name:           "optional USER_INPUT accepted",
+			implementation: terraformImplementation,
+			input:          `{ display_name = "Candidate", type = "STRING", assignment_type = "USER_INPUT", is_optional = true }`,
+		},
+		{
+			name:           "optional PLATFORM_OPERATOR_MANUAL_INPUT accepted",
+			implementation: terraformImplementation,
+			input:          `{ display_name = "Candidate", type = "STRING", assignment_type = "PLATFORM_OPERATOR_MANUAL_INPUT", is_optional = true }`,
+		},
+		{
+			// None of the rules applies to an input that is not optional.
+			name:           "non-optional BOOLEAN with default_value accepted",
+			implementation: terraformImplementation,
+			input:          `{ display_name = "Candidate", type = "BOOLEAN", assignment_type = "USER_INPUT", default_value = jsonencode(true) }`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			step := resource.TestStep{Config: config(tt.implementation, tt.input)}
 			if tt.expectError != nil {
 				step.ExpectError = tt.expectError
 			}

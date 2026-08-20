@@ -62,6 +62,7 @@ resource "meshstack_building_block_definition" "example_01_terraform" {
         type              = "SINGLE_SELECT"
         assignment_type   = "USER_INPUT"
         selectable_values = ["dev", "prod", "staging"] # Optional, must be non-empty
+        is_optional       = true                       # Optional: defaults to false
         display_order     = 1
       }
       resource_name = {

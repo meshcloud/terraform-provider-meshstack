@@ -32,6 +32,10 @@ var (
 	versionSpecNullOutputsChangeJson []byte
 	//go:embed testdata/bbd/version-spec-empty-outputs.json
 	versionSpecEmptyOutputsJson []byte
+	//go:embed testdata/bbd/version-spec-with-isOptional-false.json
+	versionSpecIsOptionalFalseJson []byte
+	//go:embed testdata/bbd/version-spec-with-isOptional.json
+	versionSpecIsOptionalJson []byte
 )
 
 // Test_versionContentHash pins the raw digest (hashValue) each fixture produces under the *current* hashing
@@ -52,6 +56,7 @@ func Test_versionContentHash(t *testing.T) {
 		digestRelevant     = "6ddbadbe5eb3baa76e7a2488f22ce62bd0e94eb380cbfbd55724231f704264dc"
 		digestNullOutputs  = "1a24f70de617e64fc258ceca4a4b7159ecebd9a95acd4ea40851e443c080038e"
 		digestDisplayOrder = "a7cba4239e3d448387d188d1457bd3e00aa66694244dd6e26e8d7a055c9c4075"
+		digestIsOptional   = "8543e0869e73f8a72779e4cb5a80a0363ecf763d53da46878b41234d7efe18d8"
 	)
 	require.NotEqual(t, digestExample, digestRelevant)
 
@@ -67,6 +72,8 @@ func Test_versionContentHash(t *testing.T) {
 		{"null outputs", versionSpecNullOutputsChangeJson, digestNullOutputs},
 		{"empty outputs hash the same as null outputs", versionSpecEmptyOutputsJson, digestNullOutputs},
 		{"display_order affects the hash", versionSpecWithDisplayOrderJson, digestDisplayOrder},
+		{"isOptional false hashes the same as example", versionSpecIsOptionalFalseJson, digestExample},
+		{"isOptional affects the hash", versionSpecIsOptionalJson, digestIsOptional},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
