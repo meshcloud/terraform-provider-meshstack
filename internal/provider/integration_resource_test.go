@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"regexp"
 	"strings"
 	"testing"
 
@@ -28,6 +29,17 @@ func updateIntegrationDisplayName(t *testing.T, config testconfig.Config, origin
 	updatedName := strings.Replace(originalName, "Integration", "Updated Integration", 1)
 	return config.WithFirstBlock(
 		testconfig.Descend("spec", "display_name")(testconfig.SetString(updatedName))).String()
+}
+
+// A factory for the same reason as azureDevopsPatPath.
+func entraIdClientSecretPath() tfjsonpath.Path {
+	return tfjsonpath.New("spec").AtMapKey("config").AtMapKey("entraid").AtMapKey("client_secret")
+}
+
+func adoptIdentityProvider(t *testing.T, config testconfig.Config, idpAlias string) string {
+	t.Helper()
+	return config.WithFirstBlock(
+		testconfig.Descend("spec", "config", "entraid", "idp_alias")(testconfig.SetString(idpAlias))).String()
 }
 
 func TestAccIntegrationResource(t *testing.T) {
@@ -203,6 +215,10 @@ func TestAccIntegrationResource(t *testing.T) {
 		// the pre-seeded AdminWorkspaceIdentifier instead of a freshly created test workspace.
 		config, resourceAddress := testconfig.IntegrationForWorkspace(t, "_04_entra_id", AdminWorkspaceIdentifier)
 		var resourceUuid string
+		rotatedSecretConfig := config.WithFirstBlock(
+			testconfig.Descend("spec", "config", "entraid", "client_secret")(
+				testconfig.SetRawExpr(`provider::meshstack::non_ephemeral_secret("updated-plaintext-secret")`),
+			)).String()
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
@@ -232,13 +248,42 @@ func TestAccIntegrationResource(t *testing.T) {
 						xknownvalue.Ref(resourceAddress, "meshIntegration", &resourceUuid),
 					},
 				},
+				// Applying this would delete the identity provider the integration points at, so the plan
+				// has to fail rather than destroy and recreate.
+				{
+					Config:      adoptIdentityProvider(t, config, "adopted-idp-alias"),
+					ExpectError: regexp.MustCompile(`identity provider alias of an Entra ID integration cannot be changed`),
+				},
+				// A different value gives a different secret_version hash, which rotates secret_value.
+				{
+					Config: rotatedSecretConfig,
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PreApply: []plancheck.PlanCheck{
+							plancheck.ExpectResourceAction(resourceAddress.String(), plancheck.ResourceActionUpdate),
+							plancheck.ExpectKnownValue(resourceAddress.String(), entraIdClientSecretPath().AtMapKey("secret_version"), knownvalue.StringExact("b889814ec3c1da42df5abf57be4e989de7411b326ba30050fea6366185c0e206")),
+						},
+					},
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("spec"), checkIntegrationSpec("04_entra_id", "Entra ID Integration")),
+						xknownvalue.Ref(resourceAddress, "meshIntegration", &resourceUuid),
+					},
+				},
+				// On import the config wants secret_version as the value's sha256, but the backend returns
+				// its own hash, so the first plan sends the secret again. Same as 02_azure_devops.
 				{
 					ImportState:     true,
 					ImportStateKind: resource.ImportBlockWithID,
 					ImportStateIdFunc: func(state *terraform.State) (string, error) {
 						return resourceUuid, nil
 					},
-					ResourceName: resourceAddress.String(),
+					ResourceName:       resourceAddress.String(),
+					ExpectNonEmptyPlan: true,
+					ImportPlanChecks: resource.ImportPlanChecks{
+						PreApply: []plancheck.PlanCheck{
+							plancheck.ExpectResourceAction(resourceAddress.String(), plancheck.ResourceActionUpdate),
+							plancheck.ExpectUnknownValue(resourceAddress.String(), entraIdClientSecretPath().AtMapKey("secret_hash")),
+						},
+					},
 				},
 			},
 		})
