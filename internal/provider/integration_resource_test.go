@@ -326,6 +326,7 @@ func checkIntegrationConfig(exampleSuffix string) knownvalue.Check {
 					"secret_hash":    xknownvalue.NotEmptyString(),
 					"secret_version": xknownvalue.NotEmptyString(),
 				}),
+				"idp_alias":    xknownvalue.NotEmptyString(),
 				"redirect_url": xknownvalue.NotEmptyString(),
 			}),
 		})

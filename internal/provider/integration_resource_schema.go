@@ -182,6 +182,17 @@ func (r *integrationResource) Schema(_ context.Context, _ resource.SchemaRequest
 										MarkdownDescription: "Client secret for the Entra ID application.",
 										Optional:            false,
 									}),
+									"idp_alias": schema.StringAttribute{
+										MarkdownDescription: "Alias of the identity provider backing this integration. Set it to adopt an " +
+											"identity provider that already exists in your meshStack; leave it out and meshStack generates an alias. " +
+											"It cannot be changed afterwards.",
+										Optional: true,
+										Computed: true,
+										PlanModifiers: []planmodifier.String{
+											idpAliasImmutable(),
+											stringplanmodifier.UseStateForUnknown(),
+										},
+									},
 									"redirect_url": schema.StringAttribute{
 										MarkdownDescription: "OAuth2 redirect URL. Computed by meshStack.",
 										Optional:            true,
