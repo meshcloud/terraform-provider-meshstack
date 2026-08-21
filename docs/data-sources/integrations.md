@@ -142,14 +142,12 @@ Read-Only:
 <a id="nestedatt--integrations--spec--config--entraid"></a>
 ### Nested Schema for `integrations.spec.config.entraid`
 
-Optional:
-
-- `redirect_url` (String) OAuth2 redirect URL. Computed by meshStack.
-
 Read-Only:
 
 - `client_id` (String) Entra ID application (client) ID.
 - `client_secret` (Attributes) (see [below for nested schema](#nestedatt--integrations--spec--config--entraid--client_secret))
+- `idp_alias` (String) Alias of the identity provider backing this integration.
+- `redirect_url` (String) OAuth2 redirect URL. Computed by meshStack from `idp_alias`.
 - `tenant_id` (String) Entra ID tenant ID.
 
 <a id="nestedatt--integrations--spec--config--entraid--client_secret"></a>

@@ -186,7 +186,11 @@ Required:
 
 Optional:
 
-- `redirect_url` (String) OAuth2 redirect URL. Computed by meshStack.
+- `idp_alias` (String) Alias of the identity provider backing this integration. Set it to adopt an identity provider that already exists in your meshStack; leave it out and meshStack generates an alias. It cannot be changed afterwards.
+
+Read-Only:
+
+- `redirect_url` (String) OAuth2 redirect URL. Computed by meshStack from `idp_alias`.
 
 <a id="nestedatt--spec--config--entraid--client_secret"></a>
 ### Nested Schema for `spec.config.entraid.client_secret`

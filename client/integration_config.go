@@ -43,6 +43,7 @@ type MeshIntegrationEntraIdConfig struct {
 	TenantId     string       `json:"tenantId" tfsdk:"tenant_id"`
 	ClientId     string       `json:"clientId" tfsdk:"client_id"`
 	ClientSecret types.Secret `json:"clientSecret" tfsdk:"client_secret"`
+	IdpAlias     *string      `json:"idpAlias,omitempty" tfsdk:"idp_alias"`
 	RedirectUrl  *string      `json:"redirectUrl,omitempty" tfsdk:"redirect_url"`
 }
 

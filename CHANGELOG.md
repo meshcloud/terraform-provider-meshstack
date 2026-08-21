@@ -1,3 +1,11 @@
+# v0.25.1
+
+FEATURES:
+- `meshstack_integration`: new `spec.config.entraid.idp_alias` argument. Set it to adopt an identity provider that already exists in your meshStack instead of having meshStack create one; leave it out and meshStack generates an alias and reports it back. The alias cannot be changed afterwards, because deleting the integration would delete the identity provider your users sign in through — a plan that changes it fails with an error instead. `meshstack_integrations` exposes the alias too. Against a meshStack that does not know the field, leave it unset; setting it fails the apply with `.spec.config.entraid.idp_alias: was cty.StringVal("..."), but now null`.
+
+FIXES:
+- `meshstack_integration`: `spec.config.entraid.redirect_url` is computed only. It was also marked optional, but meshStack derives it from `idp_alias` and ignores a supplied value, so a configuration that set it failed the apply with `Provider produced inconsistent result after apply` — after the integration had already been created. Setting it is now a configuration error the plan reports. It also holds its value from state instead of showing `(known after apply)` in every update plan.
+
 # v0.25.0
 
 Requires meshStack 2026.34.0 or later (previously 2026.30.0).

@@ -184,10 +184,13 @@ func (d *integrationsDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 													Computed:            true,
 												},
 												"client_secret": secret.DatasourceSchema(secret.DatasourceSchemaOptions{}),
-												"redirect_url": schema.StringAttribute{
-													MarkdownDescription: "OAuth2 redirect URL. Computed by meshStack.",
+												"idp_alias": schema.StringAttribute{
+													MarkdownDescription: "Alias of the identity provider backing this integration.",
 													Computed:            true,
-													Optional:            true,
+												},
+												"redirect_url": schema.StringAttribute{
+													MarkdownDescription: "OAuth2 redirect URL. Computed by meshStack from `idp_alias`.",
+													Computed:            true,
 												},
 											},
 										},
