@@ -194,9 +194,13 @@ func (r *integrationResource) Schema(_ context.Context, _ resource.SchemaRequest
 										},
 									},
 									"redirect_url": schema.StringAttribute{
-										MarkdownDescription: "OAuth2 redirect URL. Computed by meshStack.",
-										Optional:            true,
+										// Not Optional: meshStack derives it from idp_alias and ignores a supplied value,
+										// so a configuration that sets it fails the apply with an inconsistent result.
+										MarkdownDescription: "OAuth2 redirect URL. Computed by meshStack from `idp_alias`.",
 										Computed:            true,
+										PlanModifiers: []planmodifier.String{
+											stringplanmodifier.UseStateForUnknown(),
+										},
 									},
 								},
 							},

@@ -189,9 +189,8 @@ func (d *integrationsDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 													Computed:            true,
 												},
 												"redirect_url": schema.StringAttribute{
-													MarkdownDescription: "OAuth2 redirect URL. Computed by meshStack.",
+													MarkdownDescription: "OAuth2 redirect URL. Computed by meshStack from `idp_alias`.",
 													Computed:            true,
-													Optional:            true,
 												},
 											},
 										},
