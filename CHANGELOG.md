@@ -1,3 +1,10 @@
+# v0.25.1
+
+Requires meshStack 2026.35.0 or later (previously 2026.34.0).
+
+FEATURES:
+- `meshstack_integration`: new `spec.config.entraid.idp_alias` argument adopts an identity provider that already exists in your meshStack, instead of having meshStack create one. Leave it out and meshStack generates an alias. The alias cannot be changed afterwards, and a plan that changes it fails. `meshstack_integrations` exposes it too.
+
 # v0.25.0
 
 Requires meshStack 2026.34.0 or later (previously 2026.30.0).

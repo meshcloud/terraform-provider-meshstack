@@ -150,6 +150,7 @@ Read-Only:
 
 - `client_id` (String) Entra ID application (client) ID.
 - `client_secret` (Attributes) (see [below for nested schema](#nestedatt--integrations--spec--config--entraid--client_secret))
+- `idp_alias` (String) Alias of the identity provider backing this integration.
 - `tenant_id` (String) Entra ID tenant ID.
 
 <a id="nestedatt--integrations--spec--config--entraid--client_secret"></a>
