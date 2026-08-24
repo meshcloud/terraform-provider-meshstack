@@ -76,6 +76,16 @@ fields. Only refs mixing name *and* uuid (`MeshBuildingBlockV2TargetRef`) stay b
 
 Cross-cutting rules for the schema and its backing client, beyond the ref/DTO shape above:
 
+- **A computed value never sits inside a container configuration writes.** `metadata` and `spec` hold
+  inputs only; system-managed values belong top-level or in a fully computed container (`status`,
+  `ref`, `version_latest`). The reason is testability, not tidiness: OpenTofu's mock value generator
+  copies a config-written container verbatim and never descends into it, so a computed leaf under
+  `metadata`/`spec` is null under `mock_provider` and cannot be given a value by `override_*` either
+  — which makes any module wiring that reads it impossible to unit test. Depth is irrelevant; the
+  config-written ancestor is the only thing that disqualifies the subtree, and `Optional`+`Computed`
+  does not rescue it. When the API returns such a value inside `spec`, keep the client field
+  (`tfsdk:"-"`) and expose it from `status` via a local model struct — see the computed-only output
+  field pattern in `REFERENCE.md`. Tracked in #272.
 - **Naming — `Id`/`Uuid`, never `ID`/`UUID`.** For any acronym of 2+ letters only the first letter
   is uppercase (`TenantId`, `ProjectUuid`) — it keeps mixed identifiers like `apiKeyId` readable.
 - **Value receivers for client structs.** All client implementation and mock structs use value
@@ -149,6 +159,9 @@ fields plus the derived field — do **not** modify client types or call `SetAtt
 
 ## Conventions worth flagging in review
 
+- **Any new `Computed` attribute: is an ancestor written by configuration?** If yes, it belongs in
+  `status` (or another fully computed container) instead — see the schema conventions above. This is
+  answerable from the schema diff alone, so it is worth checking on every review.
 - **Response-only pointer fields are never nil in responses.** Client DTO structs are reused for
   both requests and responses, so system-managed, response-only fields (e.g. a `Status *...`) are
   pointers *only* so they can be omitted from request payloads. On a GET the backend always
