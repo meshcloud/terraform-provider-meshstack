@@ -23,6 +23,14 @@ func NewIntegrationsDataSource() datasource.DataSource {
 	return &integrationsDataSource{}
 }
 
+// integrationsDataSourceItem shares integrationStatus with the resource, so the relocated redirect URL
+// has one derivation for both.
+type integrationsDataSourceItem struct {
+	Metadata client.MeshIntegrationMetadata `tfsdk:"metadata"`
+	Spec     client.MeshIntegrationSpec     `tfsdk:"spec"`
+	Status   *integrationStatus             `tfsdk:"status"`
+}
+
 // integrationsDataSource is the data source implementation.
 type integrationsDataSource struct {
 	meshIntegrationClient client.MeshIntegrationClient
@@ -188,11 +196,6 @@ func (d *integrationsDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 													MarkdownDescription: "Alias of the identity provider backing this integration.",
 													Computed:            true,
 												},
-												"redirect_url": schema.StringAttribute{
-													MarkdownDescription: "OAuth2 redirect URL. Computed by meshStack.",
-													Computed:            true,
-													Optional:            true,
-												},
 											},
 										},
 									},
@@ -204,6 +207,16 @@ func (d *integrationsDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 							Computed:            true,
 							Optional:            true,
 							Attributes: map[string]schema.Attribute{
+								"entraid": schema.SingleNestedAttribute{
+									MarkdownDescription: "Derived state of an Entra ID integration.",
+									Computed:            true,
+									Attributes: map[string]schema.Attribute{
+										"redirect_url": schema.StringAttribute{
+											MarkdownDescription: "OAuth2 redirect URL, which meshStack derives from `idp_alias`.",
+											Computed:            true,
+										},
+									},
+								},
 								"is_built_in": schema.BoolAttribute{
 									MarkdownDescription: "Indicates whether this is a built-in integration (replicator or metering).",
 									Computed:            true,
@@ -244,7 +257,15 @@ func (d *integrationsDataSource) Read(ctx context.Context, req datasource.ReadRe
 			}
 		}
 	}
-	integrations, err := generic.ValueFrom(integrationDtos, secret.WithDatasourceConverter())
+	items := make([]integrationsDataSourceItem, 0, len(integrationDtos))
+	for i := range integrationDtos {
+		items = append(items, integrationsDataSourceItem{
+			Metadata: integrationDtos[i].Metadata,
+			Spec:     integrationDtos[i].Spec,
+			Status:   integrationStatusFromDto(&integrationDtos[i]),
+		})
+	}
+	integrations, err := generic.ValueFrom(items, secret.WithDatasourceConverter())
 	if err != nil {
 		resp.Diagnostics.AddError("Value conversion error", err.Error())
 		return

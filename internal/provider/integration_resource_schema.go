@@ -194,11 +194,6 @@ func (r *integrationResource) Schema(_ context.Context, _ resource.SchemaRequest
 											stringplanmodifier.UseNonNullStateForUnknown(),
 										},
 									},
-									"redirect_url": schema.StringAttribute{
-										MarkdownDescription: "OAuth2 redirect URL. Computed by meshStack.",
-										Optional:            true,
-										Computed:            true,
-									},
 								},
 							},
 						},
@@ -209,6 +204,17 @@ func (r *integrationResource) Schema(_ context.Context, _ resource.SchemaRequest
 				MarkdownDescription: "Status information of the integration. System-managed state computed by meshStack.",
 				Computed:            true,
 				Attributes: map[string]schema.Attribute{
+					"entraid": schema.SingleNestedAttribute{
+						MarkdownDescription: "Derived state of an Entra ID integration. Null for other integration types.",
+						Computed:            true,
+						Attributes: map[string]schema.Attribute{
+							"redirect_url": schema.StringAttribute{
+								MarkdownDescription: "OAuth2 redirect URL, which meshStack derives from `idp_alias`. " +
+									"Register it in your Entra ID app registration.",
+								Computed: true,
+							},
+						},
+					},
 					"is_built_in": schema.BoolAttribute{
 						MarkdownDescription: "For integrations created by this resource, this flag is always `false`",
 						Computed:            true,

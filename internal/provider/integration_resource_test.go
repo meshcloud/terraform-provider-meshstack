@@ -61,7 +61,7 @@ func TestAccIntegrationResource(t *testing.T) {
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("metadata"), checkIntegrationMetadata()),
 						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("spec"), checkIntegrationSpec("01_github", "GitHub Integration")),
-						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("status"), checkIntegrationStatus()),
+						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("status"), checkIntegrationStatus(knownvalue.Null())),
 						xknownvalue.Ref(resourceAddress, "meshIntegration", &resourceUuid),
 					},
 				},
@@ -105,7 +105,7 @@ func TestAccIntegrationResource(t *testing.T) {
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("metadata"), checkIntegrationMetadata()),
 						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("spec"), checkIntegrationSpec("02_azure_devops", "Azure DevOps Integration")),
-						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("status"), checkIntegrationStatus()),
+						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("status"), checkIntegrationStatus(knownvalue.Null())),
 						xknownvalue.Ref(resourceAddress, "meshIntegration", &resourceUuid),
 					},
 				},
@@ -139,7 +139,7 @@ func TestAccIntegrationResource(t *testing.T) {
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("metadata"), checkIntegrationMetadata()),
 						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("spec"), checkIntegrationSpec("02_azure_devops", "Azure DevOps Integration")),
-						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("status"), checkIntegrationStatus()),
+						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("status"), checkIntegrationStatus(knownvalue.Null())),
 						xknownvalue.Ref(resourceAddress, "meshIntegration", &resourceUuid),
 					},
 				},
@@ -182,7 +182,7 @@ func TestAccIntegrationResource(t *testing.T) {
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("metadata"), checkIntegrationMetadata()),
 						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("spec"), checkIntegrationSpec("03_gitlab", "GitLab Integration")),
-						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("status"), checkIntegrationStatus()),
+						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("status"), checkIntegrationStatus(knownvalue.Null())),
 						xknownvalue.Ref(resourceAddress, "meshIntegration", &resourceUuid),
 					},
 				},
@@ -232,7 +232,9 @@ func TestAccIntegrationResource(t *testing.T) {
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("metadata"), checkIntegrationMetadata()),
 						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("spec"), checkIntegrationSpec("04_entra_id", "Entra ID Integration")),
-						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("status"), checkIntegrationStatus()),
+						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("status"), checkIntegrationStatus(xknownvalue.MapExact(map[string]knownvalue.Check{
+							"redirect_url": xknownvalue.NotEmptyString(),
+						}))),
 						xknownvalue.Ref(resourceAddress, "meshIntegration", &resourceUuid),
 					},
 				},
@@ -402,8 +404,7 @@ func checkIntegrationConfig(exampleSuffix string) knownvalue.Check {
 					"secret_hash":    xknownvalue.NotEmptyString(),
 					"secret_version": xknownvalue.NotEmptyString(),
 				}),
-				"idp_alias":    xknownvalue.NotEmptyString(),
-				"redirect_url": xknownvalue.NotEmptyString(),
+				"idp_alias": xknownvalue.NotEmptyString(),
 			}),
 		})
 	default:
@@ -411,8 +412,9 @@ func checkIntegrationConfig(exampleSuffix string) knownvalue.Check {
 	}
 }
 
-func checkIntegrationStatus() knownvalue.Check {
+func checkIntegrationStatus(entraId knownvalue.Check) knownvalue.Check {
 	return xknownvalue.MapExact(map[string]knownvalue.Check{
+		"entraid":                      entraId,
 		"is_built_in":                  knownvalue.Bool(false),
 		"workload_identity_federation": knownvalue.Null(),
 	})
