@@ -2,6 +2,9 @@
 
 Requires meshStack 2026.35.0 or later (previously 2026.34.0).
 
+BREAKING CHANGES:
+- `meshstack_integration` and `meshstack_integrations`: the Entra ID redirect URL moved from `spec.config.entraid.redirect_url` to `status.entraid.redirect_url`. meshStack derives it, so it belongs in the computed `status` container rather than in `spec`, which configuration writes (#272). Setting it never worked anyway — meshStack ignored the value and the apply failed on the inconsistency.
+
 FEATURES:
 - `meshstack_integration`: new `spec.config.entraid.idp_alias` argument adopts an identity provider that already exists in your meshStack, instead of having meshStack create one. Leave it out and meshStack generates an alias. The alias cannot be changed afterwards, and a plan that changes it fails. `meshstack_integrations` exposes it too.
 

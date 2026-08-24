@@ -43,8 +43,17 @@ Read-Only:
 
 Read-Only:
 
+- `entraid` (Attributes) Derived state of an Entra ID integration. (see [below for nested schema](#nestedatt--integrations--status--entraid))
 - `is_built_in` (Boolean) Indicates whether this is a built-in integration (replicator or metering).
 - `workload_identity_federation` (Attributes) (see [below for nested schema](#nestedatt--integrations--status--workload_identity_federation))
+
+<a id="nestedatt--integrations--status--entraid"></a>
+### Nested Schema for `integrations.status.entraid`
+
+Read-Only:
+
+- `redirect_url` (String) OAuth2 redirect URL, which meshStack derives from `idp_alias`.
+
 
 <a id="nestedatt--integrations--status--workload_identity_federation"></a>
 ### Nested Schema for `integrations.status.workload_identity_federation`
@@ -141,10 +150,6 @@ Read-Only:
 
 <a id="nestedatt--integrations--spec--config--entraid"></a>
 ### Nested Schema for `integrations.spec.config.entraid`
-
-Optional:
-
-- `redirect_url` (String) OAuth2 redirect URL. Computed by meshStack.
 
 Read-Only:
 

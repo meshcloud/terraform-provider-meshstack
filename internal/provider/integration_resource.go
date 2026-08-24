@@ -38,9 +38,37 @@ func (r *integrationResource) Configure(_ context.Context, req resource.Configur
 	})...)
 }
 
+// integrationStatus mirrors client.MeshIntegrationStatus and adds the Entra ID redirect URL, which
+// meshStack returns inside spec. A computed value under configuration-written spec cannot be reached or
+// set in provider mocks (issue #272), so Terraform exposes it from the computed status container instead.
+type integrationStatus struct {
+	EntraId                    *integrationStatusEntraId              `tfsdk:"entraid"`
+	IsBuiltIn                  bool                                   `tfsdk:"is_built_in"`
+	WorkloadIdentityFederation *client.MeshWorkloadIdentityFederation `tfsdk:"workload_identity_federation"`
+}
+
+// Nested per integration type, the way status.workload_identity_federation nests per cloud, so further
+// derived Entra ID values have somewhere to go.
+type integrationStatusEntraId struct {
+	RedirectUrl *string `tfsdk:"redirect_url"`
+}
+
+func integrationStatusFromDto(dto *client.MeshIntegration) *integrationStatus {
+	status := integrationStatus{
+		IsBuiltIn:                  dto.Status.IsBuiltIn,
+		WorkloadIdentityFederation: dto.Status.WorkloadIdentityFederation,
+	}
+	if dto.Spec.Config.EntraId != nil {
+		status.EntraId = &integrationStatusEntraId{RedirectUrl: dto.Spec.Config.EntraId.RedirectUrl}
+	}
+	return &status
+}
+
 type integrationModel struct {
-	client.MeshIntegration
-	Ref struct {
+	Metadata client.MeshIntegrationMetadata `tfsdk:"metadata"`
+	Spec     client.MeshIntegrationSpec     `tfsdk:"spec"`
+	Status   *integrationStatus             `tfsdk:"status"`
+	Ref      struct {
 		Kind string `tfsdk:"kind"`
 		Uuid string `tfsdk:"uuid"`
 	} `tfsdk:"ref"`
@@ -63,11 +91,13 @@ func (model integrationModel) ToClientDto() client.MeshIntegration {
 	case client.MeshIntegrationConfigTypeAzureDevops:
 		setRunnerRefIfNil(&model.Spec.Config.AzureDevops.RunnerRef)
 	}
-	return model.MeshIntegration
+	return client.MeshIntegration{Metadata: model.Metadata, Spec: model.Spec}
 }
 
 func (model *integrationModel) SetFromClientDto(dto *client.MeshIntegration) {
-	model.MeshIntegration = *dto
+	model.Metadata = dto.Metadata
+	model.Spec = dto.Spec
+	model.Status = integrationStatusFromDto(dto)
 	model.Ref.Kind = client.MeshObjectKind.Integration
 	model.Ref.Uuid = *dto.Metadata.Uuid
 }
@@ -126,7 +156,7 @@ func (r *integrationResource) Update(ctx context.Context, req resource.UpdateReq
 		resp.Diagnostics.AddError("Error updating meshIntegration", fmt.Sprintf("Updating integration '%s' failed: %s", *plan.Metadata.Uuid, err.Error()))
 		return
 	}
-	plan.MeshIntegration = *updatedDto
+	plan.SetFromClientDto(updatedDto)
 	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, plan, secret.WithConverterSupport(ctx, req.Config, req.Plan, nil)...)...)
 }
 

@@ -187,7 +187,6 @@ Required:
 Optional:
 
 - `idp_alias` (String) Alias of the identity provider backing this integration. Set it to adopt an identity provider that already exists in your meshStack; leave it out and meshStack generates an alias. It cannot be changed afterwards.
-- `redirect_url` (String) OAuth2 redirect URL. Computed by meshStack.
 
 <a id="nestedatt--spec--config--entraid--client_secret"></a>
 ### Nested Schema for `spec.config.entraid.client_secret`
@@ -283,8 +282,17 @@ Read-Only:
 
 Read-Only:
 
+- `entraid` (Attributes) Derived state of an Entra ID integration. Null for other integration types. (see [below for nested schema](#nestedatt--status--entraid))
 - `is_built_in` (Boolean) For integrations created by this resource, this flag is always `false`
 - `workload_identity_federation` (Attributes) Workload identity federation configuration for the integration. (see [below for nested schema](#nestedatt--status--workload_identity_federation))
+
+<a id="nestedatt--status--entraid"></a>
+### Nested Schema for `status.entraid`
+
+Read-Only:
+
+- `redirect_url` (String) OAuth2 redirect URL, which meshStack derives from `idp_alias`. Register it in your Entra ID app registration.
+
 
 <a id="nestedatt--status--workload_identity_federation"></a>
 ### Nested Schema for `status.workload_identity_federation`
