@@ -266,6 +266,18 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 						MarkdownDescription: "Display name of the building block definition as shown in meshPanel.",
 						Required:            true,
 					},
+					"display_name_template": schema.StringAttribute{
+						MarkdownDescription: "Mustache-like template that names every new building block of this definition after " +
+							"the values it was ordered with, for example `Project {{projectName}}`. A placeholder must name an " +
+							"input of the definition and nothing else; if any placeholder cannot be resolved, the building block " +
+							"is named after the unrendered template instead. Without this attribute, a new building block is " +
+							"named after `display_name`. Needs a meshStack that serves the field: an older one leaves it out of " +
+							"its response, so an apply that sets it fails Terraform's consistency check.",
+						Optional: true,
+						Validators: []validator.String{
+							stringvalidator.LengthAtMost(255),
+						},
+					},
 					"symbol": schema.StringAttribute{
 						MarkdownDescription: "Symbol/icon of the building block definition as shown in meshPanel. " +
 							"This can either be an URL starting with `http[s]://` or a base64 encoded data blob. " +

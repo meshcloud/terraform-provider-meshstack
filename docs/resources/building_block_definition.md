@@ -28,6 +28,7 @@ resource "meshstack_building_block_definition" "example_01_terraform" {
 
   spec = {
     display_name              = "Example Building Block"
+    display_name_template     = "Example Building Block {{ resource_name }}"                         # Optional: names each ordered building block after its inputs
     symbol                    = provider::meshstack::load_image_file("${path.module}/bb-symbol.png") # Optional
     description               = "An example building block definition"
     readme                    = "# Example Building Block\n\nThis is a comprehensive example showcasing all available attributes." # Optional
@@ -376,6 +377,7 @@ Required:
 
 Optional:
 
+- `display_name_template` (String) Mustache-like template that names every new building block of this definition after the values it was ordered with, for example `Project {{projectName}}`. A placeholder must name an input of the definition and nothing else; if any placeholder cannot be resolved, the building block is named after the unrendered template instead. Without this attribute, a new building block is named after `display_name`. Needs a meshStack that serves the field: an older one leaves it out of its response, so an apply that sets it fails Terraform's consistency check.
 - `documentation_url` (String) URL pointing to documentation for the building block definition.
 - `notification_subscribers` (Set of String) List of subscribers to notify about events related to this building block. Prefix usernames with `user:` and emails with `email:`.
 - `readme` (String) Detailed readme/documentation in markdown format.
