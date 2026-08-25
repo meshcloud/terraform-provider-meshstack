@@ -7,6 +7,7 @@ BREAKING CHANGES:
 
 FEATURES:
 - `meshstack_integration`: new `spec.config.entraid.idp_alias` argument adopts an identity provider that already exists in your meshStack, instead of having meshStack create one. Leave it out and meshStack generates an alias. The alias cannot be changed afterwards, and a plan that changes it fails. `meshstack_integrations` exposes it too.
+- `meshstack_building_block_definition`: new optional `spec.display_name_template` argument, a mustache-like template that names every new building block of the definition after the values it was ordered with, for example `Project {{projectName}}`. Without the argument, a new building block is named after `display_name`. This needs a meshStack that serves the field; an older one leaves it out of its response, so an apply that sets it fails Terraform's consistency check.
 
 # v0.25.0
 

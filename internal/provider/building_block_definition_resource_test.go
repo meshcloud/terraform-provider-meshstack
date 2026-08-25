@@ -709,6 +709,65 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 		})
 	})
 
+	// A template can be set, changed, emptied, and dropped again. Both an empty string and a missing
+	// attribute mean the same thing to meshStack - name the building block after the definition - but
+	// Terraform tells them apart, so each has to survive a refresh without leaving a diff behind.
+	t.Run("15_display_name_template_lifecycle", func(t *testing.T) {
+		config, addr := testconfig.BBDManual(t)
+		withNameTemplate := func(template string) testconfig.Config {
+			return config.WithFirstBlock(
+				testconfig.Descend("spec", "display_name_template")(testconfig.SetString(template)),
+			)
+		}
+		nameTemplatePath := tfjsonpath.New("spec").AtMapKey("display_name_template")
+
+		ApplyAndTest(t, resource.TestCase{
+			Steps: []resource.TestStep{
+				{
+					Config: withNameTemplate("Block for {{ region }}").String(),
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(addr.String(), nameTemplatePath, knownvalue.StringExact("Block for {{ region }}")),
+					},
+				},
+				{
+					Config: withNameTemplate("Block for {{ region }} v2").String(),
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PreApply: []plancheck.PlanCheck{
+							plancheck.ExpectResourceAction(addr.String(), plancheck.ResourceActionUpdate),
+						},
+					},
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(addr.String(), nameTemplatePath, knownvalue.StringExact("Block for {{ region }} v2")),
+					},
+				},
+				{
+					Config: withNameTemplate("").String(),
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PostApplyPostRefresh: []plancheck.PlanCheck{
+							plancheck.ExpectEmptyPlan(),
+						},
+					},
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(addr.String(), nameTemplatePath, knownvalue.StringExact("")),
+					},
+				},
+				{
+					// Dropping the attribute removes the template, and the refresh has to agree: a state that
+					// still held the old value would leave the same diff on every later plan.
+					Config: config.String(),
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PostApplyPostRefresh: []plancheck.PlanCheck{
+							plancheck.ExpectEmptyPlan(),
+						},
+					},
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(addr.String(), nameTemplatePath, knownvalue.Null()),
+					},
+				},
+			},
+		})
+	})
+
 	// Regression test for issue #196: rotating a sensitive input's secret on a released (immutable)
 	// version previously failed with an opaque "Failed to determine content hash ... [plaintext]"
 	// error, because the planned DTO carries the rotated secret's plaintext and the content hash
@@ -983,11 +1042,12 @@ func checkBBDSpecFull(expectedDescription string) knownvalue.Check {
 			}
 			return nil
 		}),
-		"description":       knownvalue.StringExact(expectedDescription),
-		"readme":            xknownvalue.NotEmptyString(),
-		"support_url":       knownvalue.StringExact("https://support.example.com/building-blocks"),
-		"documentation_url": knownvalue.StringExact("https://docs.example.com/building-blocks"),
-		"target_type":       knownvalue.StringExact("TENANT_LEVEL"),
+		"display_name_template": knownvalue.StringExact("Example Building Block {{ resource_name }}"),
+		"description":           knownvalue.StringExact(expectedDescription),
+		"readme":                xknownvalue.NotEmptyString(),
+		"support_url":           knownvalue.StringExact("https://support.example.com/building-blocks"),
+		"documentation_url":     knownvalue.StringExact("https://docs.example.com/building-blocks"),
+		"target_type":           knownvalue.StringExact("TENANT_LEVEL"),
 		"supported_platforms": knownvalue.SetExact([]knownvalue.Check{
 			xknownvalue.MapExact(map[string]knownvalue.Check{
 				"kind": knownvalue.StringExact("meshPlatformType"),
@@ -1016,6 +1076,7 @@ func checkBBDSpecMinimal(expectedDescription string) knownvalue.Check {
 			return nil
 		}),
 		"symbol":                    xknownvalue.NotEmptyString(),
+		"display_name_template":     knownvalue.Null(),
 		"description":               knownvalue.StringExact(expectedDescription),
 		"readme":                    knownvalue.Null(),
 		"support_url":               knownvalue.Null(),

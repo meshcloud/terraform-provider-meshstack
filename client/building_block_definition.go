@@ -24,6 +24,7 @@ type MeshBuildingBlockDefinitionMetadata struct {
 
 type MeshBuildingBlockDefinitionSpec struct {
 	DisplayName           string                `json:"displayName" tfsdk:"display_name"`
+	DisplayNameTemplate   *string               `json:"displayNameTemplate,omitempty" tfsdk:"display_name_template"`
 	TargetType            MeshBuildingBlockType `json:"targetType" tfsdk:"target_type"`
 	Description           string                `json:"description" tfsdk:"description"`
 	Readme                *string               `json:"readme,omitempty" tfsdk:"readme"`
