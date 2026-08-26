@@ -12,6 +12,13 @@ updates:
         patterns:
           - "*"
 
+  # Only infra/github, which is real Terraform we deploy. The .tf files under examples/ document
+  # this provider's own usage, and a bump there would rewrite the very versions the docs show.
+  - package-ecosystem: "terraform"
+    directory: "/infra/github"
+    schedule:
+      interval: "weekly"
+
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
