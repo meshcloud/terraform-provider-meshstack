@@ -69,7 +69,7 @@ func (m meshBuildingBlockDefinitionVersionClient) Update(_ context.Context, uuid
 
 // applyManualOutputBehavior mirrors the real backend's ManualBuildingBlockCreationModule /
 // ManualDefinitionVersionService: for manual building blocks the outputs are derived from the inputs (one
-// output per input, with SINGLE_SELECT/MULTI_SELECT/LIST input types translated to output-compatible types).
+// output per input, with SINGLE_SELECT/MULTI_SELECT/LIST/JSON_SCHEMA input types translated to output-compatible types).
 // output_key and type are locked to the input; the caller's putOutputs may override display_name and
 // assignment_type on the matching input's derived output. A supplied output whose key does not match an
 // input is rejected with an error, matching the backend's 400.
@@ -127,13 +127,15 @@ func applyManualOutputBehavior(versionSpec *client.MeshBuildingBlockDefinitionVe
 	return nil
 }
 
-// translateManualInputTypeToOutput mirrors backend ManualIOTypeTranslation: SINGLE_SELECT, MULTI_SELECT
-// and LIST cannot be output types and are translated; all other types are kept as-is.
+// translateManualInputTypeToOutput mirrors backend ManualIOTypeTranslation: SINGLE_SELECT, MULTI_SELECT,
+// LIST and JSON_SCHEMA cannot be output types and are translated; all other types are kept as-is.
 func translateManualInputTypeToOutput(inputType client.MeshBuildingBlockIOType) client.MeshBuildingBlockIOType {
 	switch inputType {
 	case client.MeshBuildingBlockIOTypeSingleSelect.Unwrap():
 		return client.MeshBuildingBlockIOTypeString.Unwrap()
-	case client.MeshBuildingBlockIOTypeMultiSelect.Unwrap(), client.MeshBuildingBlockIOTypeList.Unwrap():
+	case client.MeshBuildingBlockIOTypeMultiSelect.Unwrap(),
+		client.MeshBuildingBlockIOTypeList.Unwrap(),
+		client.MeshBuildingBlockIOTypeJsonSchema.Unwrap():
 		return client.MeshBuildingBlockIOTypeCode.Unwrap()
 	default:
 		return inputType

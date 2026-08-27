@@ -194,6 +194,21 @@ resource "meshstack_building_block_definition" "example_02_github_workflows" {
         type            = "STRING"
         assignment_type = "USER_INPUT"
       }
+      deploy_settings = {
+        display_name    = "Deploy Settings"
+        type            = "JSON_SCHEMA"
+        assignment_type = "USER_INPUT"
+        # Rendered as a form in meshPanel; the value reaches the block as JSON, like a CODE input.
+        json_schema = jsonencode({
+          type     = "object"
+          required = ["region"]
+          properties = {
+            region   = { type = "string", enum = ["eu-central-1", "us-east-1"] }
+            replicas = { type = "integer", minimum = 1 }
+          }
+        })
+        display_order = 1
+      }
     }
 
     deletion_mode = "PURGE"
@@ -644,7 +659,7 @@ Required:
 
 - `assignment_type` (String) How the input value is assigned. One of `AUTHOR`, `USER_INPUT`, `PLATFORM_OPERATOR_MANUAL_INPUT`, `BUILDING_BLOCK_OUTPUT`, `PLATFORM_TENANT_ID`, `MESHSTACK_TENANT_UUID`, `WORKSPACE_IDENTIFIER`, `PROJECT_IDENTIFIER`, `FULL_PLATFORM_IDENTIFIER`, `TENANT_BUILDING_BLOCK_UUID`, `STATIC`, `USER_PERMISSIONS`, `TAG`. Determines which additional attributes are required or allowed.
 - `display_name` (String) Human-readable display name for the input.
-- `type` (String) Data type of the input. One of `STRING`, `CODE`, `INTEGER`, `BOOLEAN`, `FILE`, `LIST`, `SINGLE_SELECT`, `MULTI_SELECT`. `LIST` is deprecated, use `CODE` instead. For type `FILE`, the value must be a MIME-typed base64 data blob. Use `provider::meshstack::load_file` or `provider::meshstack::encode_file` to produce such a data blob. When providing this value via `argument` or `default_value`, wrap the blob in `jsonencode(...)`, for example `argument = jsonencode(provider::meshstack::load_file(...))`.<br>Must be `CODE` when `assignment_type` is `TAG`, because a meshStack tag value is a list of strings.
+- `type` (String) Data type of the input. One of `STRING`, `CODE`, `INTEGER`, `BOOLEAN`, `FILE`, `LIST`, `SINGLE_SELECT`, `MULTI_SELECT`, `JSON_SCHEMA`. `LIST` is deprecated, use `CODE` instead. For type `FILE`, the value must be a MIME-typed base64 data blob. Use `provider::meshstack::load_file` or `provider::meshstack::encode_file` to produce such a data blob. When providing this value via `argument` or `default_value`, wrap the blob in `jsonencode(...)`, for example `argument = jsonencode(provider::meshstack::load_file(...))`.<br>Must be `CODE` when `assignment_type` is `TAG`, because a meshStack tag value is a list of strings.
 
 Optional:
 
@@ -654,6 +669,7 @@ Optional:
 - `display_order` (Number) Numeric value controlling in which order the inputs are displayed in the UI. Cannot be changed on a released version. When omitted, uses the existing value from state, if any. Otherwise the backend assigns one (`0` for a newly declared input).
 - `is_environment` (Boolean) Whether this input is exposed as an environment variable (when `true`) or as a regular variable (when `false`).
 - `is_optional` (Boolean) Whether the input may be left unset when a building block is filled in. meshStack then sends no value and your implementation falls back to the default declared in its own code, e.g. the Terraform variable's `default` or the GitHub workflow input's `default`. **Only supported** for `assignment_type` `USER_INPUT`, `PLATFORM_OPERATOR_MANUAL_INPUT`, and **not** for type `BOOLEAN` or for the `manual` implementation. **Mutually exclusive** with `default_value` and `sensitive.default_value`, which would defeat the purpose. Requires meshStack 2026.36.0 or later.
+- `json_schema` (String) JSON Schema describing the value, as a `jsonencode`'d string. **Required** when `type` is `JSON_SCHEMA`, and **must not be provided** for any other type.<br>meshPanel renders a form from it, and the value the consumer fills in reaches the Building Block as JSON text, exactly like a `CODE` input. Only the schema itself is validated; values are not checked against it by the API.
 - `selectable_values` (Set of String) Set of allowed values for the input. **Required** to be non-empty when `type` is `SINGLE_SELECT` or `MULTI_SELECT`.
 - `sensitive` (Attributes) Configuration for sensitive input values. **Mutually exclusive** with the non-sensitive `argument` and `default_value` attributes. When an input is marked as sensitive, use the nested `sensitive.argument` or `sensitive.default_value` instead of the top-level attributes. You can provide an empty attribute `sensitive = {}` to mark this input as sensitive without providing values. Sensitive inputs are **only supported** for `assignment_type` of `USER_INPUT`, `PLATFORM_OPERATOR_MANUAL_INPUT`, `STATIC`. (see [below for nested schema](#nestedatt--version_spec--inputs--sensitive))
 - `updateable_by_consumer` (Boolean) Whether the input value can be updated by consumers without admin or platform operator permissions.

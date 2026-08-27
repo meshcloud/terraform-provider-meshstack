@@ -76,7 +76,7 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 					Optional:            true,
 				},
 				"type": schema.StringAttribute{
-					MarkdownDescription: "Data type of the input. One of " + client.MeshBuildingBlockIOTypes.Markdown() + ". " +
+					MarkdownDescription: "Data type of the input. One of " + client.MeshBuildingBlockDefinitionInputTypes.Markdown() + ". " +
 						client.MeshBuildingBlockIOTypeList.Markdown() + " is deprecated, use " + client.MeshBuildingBlockIOTypeCode.Markdown() + " instead. " +
 						"For type " + client.MeshBuildingBlockIOTypeFile.Markdown() + ", the value must be a MIME-typed base64 data blob. " +
 						"Use `provider::meshstack::load_file` or `provider::meshstack::encode_file` to produce such a data blob. " +
@@ -85,7 +85,7 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 						", because a meshStack tag value is a list of strings.",
 					Required: true,
 					Validators: []validator.String{
-						stringvalidator.OneOf(client.MeshBuildingBlockIOTypes.Strings()...),
+						stringvalidator.OneOf(client.MeshBuildingBlockDefinitionInputTypes.Strings()...),
 					},
 				},
 				"assignment_type": schema.StringAttribute{
@@ -192,6 +192,16 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 				"validation_regex_error_message": schema.StringAttribute{
 					MarkdownDescription: "Error message to display when regex validation fails.",
 					Optional:            true,
+				},
+				"json_schema": schema.StringAttribute{
+					CustomType: jsontypes.NormalizedType{},
+					MarkdownDescription: "JSON Schema describing the value, as a `jsonencode`'d string. " +
+						"**Required** when `type` is " + client.MeshBuildingBlockIOTypeJsonSchema.Markdown() + ", " +
+						"and **must not be provided** for any other type.<br>" +
+						"meshPanel renders a form from it, and the value the consumer fills in reaches the Building Block " +
+						"as JSON text, exactly like a " + client.MeshBuildingBlockIOTypeCode.Markdown() + " input. " +
+						"Only the schema itself is validated; values are not checked against it by the API.",
+					Optional: true,
 				},
 				"display_order": schema.Int64Attribute{
 					MarkdownDescription: "Numeric value controlling in which order the inputs are displayed in the UI. " +
