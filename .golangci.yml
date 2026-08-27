@@ -63,13 +63,26 @@ linters:
               desc: Always use 'hclog' or SDK logging
             - pkg: github.com/meshcloud/terraform-provider-meshstack/internal/clientmock
               desc: clientmock package must only be used in tests
+            # The browser login lives in its own package so that this line can exist. A
+            # terraform plan must never open a browser, and a lint rule is a better guarantee
+            # than a promise.
+            - pkg: github.com/meshcloud/meshstack-cli/pkg/oidc/browser
+              desc: the provider must never open a browser; a login is created by `meshstack login`
           allow:
             - $gostd
+            # log/slog is a longer prefix than the 'log' deny above, so it outranks it.
+            # Everything under meshstack-cli's pkg/ logs through the slog default logger, and
+            # internal/util/logging installs the handler that forwards those records to tflog.
+            - log/slog
             # explicitly specifying the 'internal' suffix prevents the 'examples'
             # package from being included in non-test files
             - github.com/meshcloud/terraform-provider-meshstack/internal
             - github.com/meshcloud/meshstack-cli/client
-            - github.com/meshcloud/meshstack-cli/pkg/login
+            # pkg/auth resolves credentials and mints tokens for the provider and the meshStack
+            # CLI alike; the other three are the leaf types its API is written in.
+            - github.com/meshcloud/meshstack-cli/pkg/auth
+            - github.com/meshcloud/meshstack-cli/pkg/diags
+            - github.com/meshcloud/meshstack-cli/pkg/workspace
             - github.com/hashicorp/terraform-plugin-framework/
             - github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry
             - github.com/hashicorp/terraform-plugin-framework-jsontypes/jsontypes # for 'any' value support
@@ -98,6 +111,10 @@ linters:
             - github.com/meshcloud/meshstack-cli
             - github.com/hashicorp/terraform-plugin-testing
             - github.com/hashicorp/terraform-plugin-framework/diag
+            # A provider model is built from framework types, so a test that exercises one
+            # cannot avoid them. It stays a narrow allowance: the framework's resource and
+            # provider schema packages are still out of reach here.
+            - github.com/hashicorp/terraform-plugin-framework/types
             - github.com/hashicorp/hcl/v2 # hclwrite-based config manipulation in examples/
             - github.com/zclconf/go-cty/cty # hclwrite value types
             - github.com/stretchr/testify

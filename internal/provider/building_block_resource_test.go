@@ -3,8 +3,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"net/url"
-	"os"
 	"regexp"
 	"testing"
 	"time"
@@ -18,7 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 	"github.com/meshcloud/meshstack-cli/client"
-	"github.com/meshcloud/meshstack-cli/pkg/login"
+	"github.com/meshcloud/meshstack-cli/pkg/auth"
 	"github.com/stretchr/testify/require"
 
 	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
@@ -49,10 +47,12 @@ func terraformTestdataRepoURL(t *testing.T) string {
 // Only valid in acceptance mode (TF_ACC set); callers must guard with IsMockClientTest.
 func acceptanceClient(t *testing.T) client.Client {
 	t.Helper()
-	rootUrl, err := url.Parse(os.Getenv(login.EnvKeyEndpoint))
+	// Resolved the same way a real provider run resolves: an empty provider block, so the
+	// MESHSTACK_* environment variables supply the whole credential and nothing is read from
+	// or written to a profile.
+	session, err := auth.Resolve(context.Background(), &providerInput{})
 	require.NoError(t, err)
-	auth := client.NewApiKeyAuthorization(os.Getenv(login.EnvKeyApiKey), os.Getenv(login.EnvKeyApiSecret))
-	c, err := client.New(context.Background(), rootUrl, "acctest", auth)
+	c, err := session.Client(context.Background(), "acctest")
 	require.NoError(t, err)
 	return c
 }

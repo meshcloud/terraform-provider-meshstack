@@ -59,6 +59,18 @@ today:
 - **meshcloud-internal — local dev stack**: the `.env` for a local backend is reconstructible from
   the `meshfed-release` dev seed; the **`acceptance-testing`** skill documents the exact values.
 
+Resolution goes through `github.com/meshcloud/meshstack-cli/pkg/auth`, which the provider and the
+meshStack CLI share, so both apply the same order: the `provider` block, then the environment, then
+a **meshStack CLI profile**. The acceptance suite deliberately uses the environment — its
+`providerInput` is built from an empty provider block, so a run touches no profile and writes no
+file.
+
+A profile is the other way to run a scratch config: `meshstack auth login` writes one, and a block
+holding `profile = "..."` then needs no secret in the file at all. A `login` profile also needs a
+`workspace`, because meshStack binds a user access token to exactly one workspace. Both tools take
+the same lock while renewing, which is why the provider writes a rotated refresh token back rather
+than leaving a stale one behind.
+
 > Acceptance tests are **state-independent by design**: each run creates its own resources
 > (workspaces and the like) with random-suffixed names, so concurrent runs and pre-existing data
 > never collide or interfere. A test-harness guard (`provider_test.go`, `DefaultTestPreCheck`)

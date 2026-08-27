@@ -54,6 +54,12 @@ The provider needs three env vars — `MESHSTACK_ENDPOINT`, `MESHSTACK_API_KEY`,
 git-ignored `.env` convention, the *meshcloud-internal* dev-seed shortcut, and the never-target-prod
 warning) lives once in [`DEVELOPMENT.md`](DEVELOPMENT.md) → Backends & authentication.
 
+Credential resolution itself is **not in this repository**. It lives in
+`github.com/meshcloud/meshstack-cli/pkg/auth`, shared with the meshStack CLI, so both front ends
+apply one precedence order and renew through one file lock. This repo holds only its half of the
+`auth.Input` interface: `internal/provider/auth_input.go`, which never prompts and never opens a
+browser.
+
 ## Always-on rules
 
 <rules id="always-on">

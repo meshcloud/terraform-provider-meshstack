@@ -25,6 +25,18 @@ func copyTags(tags map[string][]string) map[string][]string {
 	return cp
 }
 
+func (m MeshWorkspaceClient) List(_ context.Context) ([]client.MeshWorkspace, error) {
+	var result []client.MeshWorkspace
+	for _, workspace := range m.Store.Values() {
+		cp := *workspace
+		if workspace.Metadata.Tags != nil {
+			cp.Metadata.Tags = copyTags(workspace.Metadata.Tags)
+		}
+		result = append(result, cp)
+	}
+	return result, nil
+}
+
 func (m MeshWorkspaceClient) Read(_ context.Context, name string) (*client.MeshWorkspace, error) {
 	v, _ := m.Store.Get(name)
 	if v == nil {
