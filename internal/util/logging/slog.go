@@ -20,8 +20,8 @@ import (
 // It exists for debugging output. Anything a practitioner must see travels as a diagnostic
 // through auth.Input.Warn, not as a log record.
 type SlogHandler struct {
-	// MessagePrefix says which side of the process a record came from, the way
-	// TerraformClientLogger's does.
+	// MessagePrefix says which process the record came from, so that the meshStack CLI's
+	// records are distinguishable from the provider's own in one terraform log.
 	MessagePrefix string
 	// fields holds the attributes WithAttrs collected, already qualified by whatever groups
 	// were open when they arrived. Qualifying on the way in is what keeps an attribute added

@@ -79,9 +79,9 @@ func (p *MeshStackProvider) Schema(_ context.Context, _ provider.SchemaRequest, 
 }
 
 func (p *MeshStackProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
-	client.SetLogger(logging.TerraformClientLogger{MessagePrefix: "client: "})
-	// Everything under the meshStack CLI's pkg/ logs through the slog default logger, so
-	// without this bridge its records land on stderr in a format terraform does not expect.
+	// The meshStack CLI logs through the slog default logger throughout — its pkg/ packages and
+	// the API client alike — so without this bridge its records land on stderr in a format
+	// terraform does not expect. It is the only logging seam the CLI has.
 	slog.SetDefault(slog.New(logging.SlogHandler{MessagePrefix: "meshstack: "}))
 	var data MeshStackProviderModel
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
