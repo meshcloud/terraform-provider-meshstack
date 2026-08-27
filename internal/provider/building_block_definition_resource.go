@@ -188,6 +188,8 @@ func (r *buildingBlockDefinitionResource) ValidateConfig(ctx context.Context, re
 		return
 	}
 
+	validateInputJsonSchemas(inputs, inputsPath, resp)
+
 	// Nothing declared -> nothing to validate (the outputs schema is optional+computed).
 	if outputs.IsNull() || outputs.IsUnknown() {
 		return
@@ -711,4 +713,45 @@ func (r *buildingBlockDefinitionResource) Delete(ctx context.Context, req resour
 
 func (r *buildingBlockDefinitionResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughID(ctx, path.Root("metadata").AtName("uuid"), req, resp)
+}
+
+// validateInputJsonSchemas re-imposes the pairing the framework cannot express: json_schema belongs to a
+// JSON_SCHEMA input and to no other type. Catching it here turns a 400 from the backend into a plan-time error.
+func validateInputJsonSchemas(inputs types.Map, inputsPath path.Path, resp *resource.ValidateConfigResponse) {
+	if inputs.IsNull() || inputs.IsUnknown() {
+		return
+	}
+
+	jsonSchemaType := client.MeshBuildingBlockIOTypeJsonSchema.String()
+
+	for key, elem := range inputs.Elements() {
+		obj, ok := elem.(types.Object)
+		if !ok || obj.IsNull() || obj.IsUnknown() {
+			continue
+		}
+		attrs := obj.Attributes()
+
+		inputType, ok := attrs["type"].(types.String)
+		if !ok || inputType.IsNull() || inputType.IsUnknown() {
+			continue
+		}
+
+		schemaAttr := attrs["json_schema"]
+		hasSchema := schemaAttr != nil && !schemaAttr.IsNull()
+
+		switch {
+		case inputType.ValueString() == jsonSchemaType && !hasSchema && !isUnknown(schemaAttr):
+			resp.Diagnostics.AddAttributeError(inputsPath.AtMapKey(key).AtName("json_schema"),
+				"json_schema is required",
+				"An input of type "+jsonSchemaType+" must declare the JSON Schema its value follows.")
+		case inputType.ValueString() != jsonSchemaType && hasSchema:
+			resp.Diagnostics.AddAttributeError(inputsPath.AtMapKey(key).AtName("json_schema"),
+				"json_schema must not be set",
+				"Only an input of type "+jsonSchemaType+" is described by a JSON Schema. Remove 'json_schema' from this input.")
+		}
+	}
+}
+
+func isUnknown(value attr.Value) bool {
+	return value != nil && value.IsUnknown()
 }

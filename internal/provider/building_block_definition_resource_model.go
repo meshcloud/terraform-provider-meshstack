@@ -96,14 +96,16 @@ func (model buildingBlockDefinitionVersionSpec) ToClientDto(buildingBlockDefinit
 }
 
 // translateManualInputTypeToOutput mirrors the backend's ManualIOTypeTranslation: SINGLE_SELECT,
-// MULTI_SELECT and LIST cannot be output types and are translated; every other type is kept as-is. The
-// provider derives and sends the output type itself because the backend rejects an empty or mismatching
-// output type with a 400 (it never derives one for a caller-supplied output).
+// MULTI_SELECT, LIST and JSON_SCHEMA cannot be output types and are translated; every other type is kept
+// as-is. The provider derives and sends the output type itself because the backend rejects an empty or
+// mismatching output type with a 400 (it never derives one for a caller-supplied output).
 func translateManualInputTypeToOutput(inputType client.MeshBuildingBlockIOType) client.MeshBuildingBlockIOType {
 	switch inputType {
 	case client.MeshBuildingBlockIOTypeSingleSelect.Unwrap():
 		return client.MeshBuildingBlockIOTypeString.Unwrap()
-	case client.MeshBuildingBlockIOTypeMultiSelect.Unwrap(), client.MeshBuildingBlockIOTypeList.Unwrap():
+	case client.MeshBuildingBlockIOTypeMultiSelect.Unwrap(),
+		client.MeshBuildingBlockIOTypeList.Unwrap(),
+		client.MeshBuildingBlockIOTypeJsonSchema.Unwrap():
 		return client.MeshBuildingBlockIOTypeCode.Unwrap()
 	default:
 		return inputType
