@@ -18,6 +18,21 @@ resource "meshstack_building_block_definition" "example_02_github_workflows" {
         type            = "STRING"
         assignment_type = "USER_INPUT"
       }
+      deploy_settings = {
+        display_name    = "Deploy Settings"
+        type            = "JSON_SCHEMA"
+        assignment_type = "USER_INPUT"
+        # Rendered as a form in meshPanel; the value reaches the block as JSON, like a CODE input.
+        json_schema = jsonencode({
+          type     = "object"
+          required = ["region"]
+          properties = {
+            region   = { type = "string", enum = ["eu-central-1", "us-east-1"] }
+            replicas = { type = "integer", minimum = 1 }
+          }
+        })
+        display_order = 1
+      }
     }
 
     deletion_mode = "PURGE"
