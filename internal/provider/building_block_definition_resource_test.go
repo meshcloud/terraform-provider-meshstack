@@ -1229,22 +1229,6 @@ func checksForImplementation(exampleSuffix string) (checkInputs, checkImplementa
 			})
 	case "02_github_workflows":
 		return xknownvalue.MapExact(map[string]knownvalue.Check{
-				"deploy_settings": xknownvalue.MapExact(map[string]knownvalue.Check{
-					"display_name":                   knownvalue.StringExact("Deploy Settings"),
-					"type":                           knownvalue.StringExact("JSON_SCHEMA"),
-					"assignment_type":                knownvalue.StringExact("USER_INPUT"),
-					"is_environment":                 knownvalue.Bool(false),
-					"updateable_by_consumer":         knownvalue.Bool(false),
-					"description":                    knownvalue.Null(),
-					"selectable_values":              knownvalue.Null(),
-					"value_validation_regex":         knownvalue.Null(),
-					"validation_regex_error_message": knownvalue.Null(),
-					"json_schema":                    xknownvalue.NotEmptyString(),
-					"argument":                       knownvalue.Null(),
-					"default_value":                  knownvalue.Null(),
-					"sensitive":                      knownvalue.Null(),
-					"display_order":                  knownvalue.Int64Exact(1),
-				}),
 				"workflow_ref": xknownvalue.MapExact(map[string]knownvalue.Check{
 					"display_name":                   knownvalue.StringExact("Workflow Reference"),
 					"type":                           knownvalue.StringExact("STRING"),
