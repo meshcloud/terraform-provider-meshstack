@@ -34,6 +34,12 @@ var _ slog.Handler = SlogHandler{}
 
 // Enabled passes everything through, because tflog owns the level: TF_LOG decides what
 // terraform keeps, and a level filter here would hide records the practitioner asked for.
+//
+// The cost is that every record is handled, including the ones TF_LOG then drops, so nothing here
+// may render an attribute. put keeps that promise; the sink is what renders, and only for a record
+// it writes. It is also why the meshStack CLI logs an expensive attribute as a fmt.Stringer and an
+// encoding.TextMarshaler rather than a slog.LogValuer — a LogValuer would resolve below, for
+// records nobody reads.
 func (h SlogHandler) Enabled(context.Context, slog.Level) bool { return true }
 
 func (h SlogHandler) Handle(ctx context.Context, record slog.Record) error {
