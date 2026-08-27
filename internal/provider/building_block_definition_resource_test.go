@@ -2042,6 +2042,70 @@ resource "meshstack_building_block_definition" "test" {
 	}
 }
 
+func TestAccBuildingBlockDefinitionJsonSchemaValidation(t *testing.T) {
+	// The json_schema/type pairing is a ValidateConfig rule, so it never reaches the API. Running this
+	// against a deployed meshStack would also need one that already knows the JSON_SCHEMA input type.
+	if !IsMockClientTest() {
+		t.Skip("json_schema pairing is validated client-side only")
+	}
+
+	t.Parallel()
+
+	inputConfig := func(input string) string {
+		return fmt.Sprintf(`
+resource "meshstack_building_block_definition" "test" {
+  metadata = { owned_by_workspace = "my-workspace" }
+  spec     = { display_name = "Test", description = "Test" }
+  version_spec = {
+    draft = true
+    inputs = {
+      settings = { display_name = "Settings", %s }
+    }
+    implementation = { manual = {} }
+  }
+}`, input)
+	}
+
+	schema := `json_schema = jsonencode({ type = "object", properties = { region = { type = "string" } } })`
+
+	tests := []struct {
+		name        string
+		input       string
+		expectError *regexp.Regexp
+	}{
+		{
+			name:  "JSON_SCHEMA input with a schema accepted",
+			input: `type = "JSON_SCHEMA", assignment_type = "USER_INPUT", ` + schema,
+		},
+		{
+			name:        "JSON_SCHEMA input without a schema rejected",
+			input:       `type = "JSON_SCHEMA", assignment_type = "USER_INPUT"`,
+			expectError: regexp.MustCompile(`json_schema is required`),
+		},
+		{
+			name:        "schema on an input of another type rejected",
+			input:       `type = "STRING", assignment_type = "USER_INPUT", ` + schema,
+			expectError: regexp.MustCompile(`json_schema must not be set`),
+		},
+		{
+			name:  "input of another type without a schema accepted",
+			input: `type = "STRING", assignment_type = "USER_INPUT"`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			step := resource.TestStep{Config: inputConfig(tt.input)}
+			if tt.expectError != nil {
+				step.ExpectError = tt.expectError
+			}
+			ApplyAndTest(t, resource.TestCase{
+				Steps: []resource.TestStep{step},
+			})
+		})
+	}
+}
+
 func TestAccBuildingBlockDefinitionManualOutputsValidation(t *testing.T) {
 	// Output configuration rules for manual building blocks are validated client-side only.
 	if !IsMockClientTest() {
