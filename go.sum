@@ -170,8 +170,8 @@ github.com/mattn/go-isatty v0.0.20 h1:xfD0iDuEKnDkl03q4limB+vH+GxLEtL/jb4xVJSWWE
 github.com/mattn/go-isatty v0.0.20/go.mod h1:W+V8PltTTMOvKvAeJH7IuucS94S2C6jfK/D7dTCTo3Y=
 github.com/mattn/go-runewidth v0.0.16 h1:E5ScNMtiwvlvB5paMFdw9p4kSQzbXFikJ5SQO6TULQc=
 github.com/mattn/go-runewidth v0.0.16/go.mod h1:Jdepj2loyihRzMpdS35Xk/zdY8IAYHsh153qUoGf23w=
-github.com/meshcloud/meshstack-cli v0.0.0-20260827142931-1cf9eeaaeca1 h1:jf8VgxTLKhdjIEwOMJ/5LFpP8NcJbCmuQyQxZ9gTTYs=
-github.com/meshcloud/meshstack-cli v0.0.0-20260827142931-1cf9eeaaeca1/go.mod h1:ml5yh8VCWLqyO4RPz3l68grdAehmHSoY8iqZjcfY/MQ=
+github.com/meshcloud/meshstack-cli v0.0.0-20260828035453-16afafa15f70 h1:4BSeKcKtTv1c/5D7dyJVh86svZZwNu0ovuQZHv8ckr4=
+github.com/meshcloud/meshstack-cli v0.0.0-20260828035453-16afafa15f70/go.mod h1:ml5yh8VCWLqyO4RPz3l68grdAehmHSoY8iqZjcfY/MQ=
 github.com/mitchellh/copystructure v1.0.0/go.mod h1:SNtv71yrdKgLRyLFxmLdkAbkKEFWgYaq1OVrnRcwhnw=
 github.com/mitchellh/copystructure v1.2.0 h1:vpKXTN4ewci03Vljg/q9QvCGUDttBOGBIa15WveJJGw=
 github.com/mitchellh/copystructure v1.2.0/go.mod h1:qLl+cE2AmVv+CoeAwDPye/v+N2HKCj9FbZEVFJRxO9s=
