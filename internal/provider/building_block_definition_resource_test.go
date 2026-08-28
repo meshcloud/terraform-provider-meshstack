@@ -1328,6 +1328,24 @@ func checksForImplementation(exampleSuffix string) (checkInputs, checkImplementa
 					"sensitive":                      knownvalue.Null(),
 					"display_order":                  knownvalue.Int64Exact(2),
 				}),
+				// The backend stores the schema verbatim, so state carries exactly what jsonencode produced.
+				"deploy_settings": xknownvalue.MapExact(map[string]knownvalue.Check{
+					"display_name":                   knownvalue.StringExact("Deploy Settings"),
+					"type":                           knownvalue.StringExact("JSON_SCHEMA"),
+					"assignment_type":                knownvalue.StringExact("USER_INPUT"),
+					"is_environment":                 knownvalue.Bool(false),
+					"updateable_by_consumer":         knownvalue.Bool(false),
+					"is_optional":                    knownvalue.Bool(false),
+					"description":                    knownvalue.Null(),
+					"json_schema":                    knownvalue.StringExact(`{"properties":{"region":{"enum":["eu-central-1","us-east-1"],"type":"string"},"replicas":{"minimum":1,"type":"integer"}},"required":["region"],"type":"object"}`),
+					"selectable_values":              knownvalue.Null(),
+					"value_validation_regex":         knownvalue.Null(),
+					"validation_regex_error_message": knownvalue.Null(),
+					"argument":                       knownvalue.Null(),
+					"default_value":                  knownvalue.Null(),
+					"sensitive":                      knownvalue.Null(),
+					"display_order":                  knownvalue.Int64Exact(3),
+				}),
 				"SOMETHING_VERY_SECRET": xknownvalue.MapExact(map[string]knownvalue.Check{
 					"display_name":           knownvalue.StringExact("Top Secret"),
 					"type":                   knownvalue.StringExact("STRING"),
@@ -1368,7 +1386,7 @@ func checksForImplementation(exampleSuffix string) (checkInputs, checkImplementa
 					"json_schema":                    knownvalue.Null(),
 					"selectable_values":              knownvalue.Null(),
 					"sensitive":                      knownvalue.Null(),
-					"display_order":                  knownvalue.Int64Exact(3),
+					"display_order":                  knownvalue.Int64Exact(4),
 				}),
 				"some-file.yaml": xknownvalue.MapExact(map[string]knownvalue.Check{
 					"display_name":                   knownvalue.StringExact("Some input file"),

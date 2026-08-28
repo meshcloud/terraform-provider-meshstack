@@ -76,6 +76,21 @@ resource "meshstack_building_block_definition" "example_01_terraform" {
         validation_regex_error_message = "Resource name must contain only lowercase letters, numbers, and hyphens" # Optional
         display_order                  = 2                                                                         # Optional: arranges inputs in meshPanel; part of the content hash, so it cannot change on a released version
       }
+      deploy_settings = {
+        display_name    = "Deploy Settings"
+        type            = "JSON_SCHEMA"
+        assignment_type = "USER_INPUT"
+        # meshPanel renders a form from this schema; the value reaches the building block as JSON text.
+        json_schema = jsonencode({
+          type     = "object"
+          required = ["region"]
+          properties = {
+            region   = { type = "string", enum = ["eu-central-1", "us-east-1"] }
+            replicas = { type = "integer", minimum = 1 }
+          }
+        })
+        display_order = 3
+      }
       SOMETHING_VERY_SECRET = {
         display_name    = "Top Secret"
         description     = "Really secret" # Optional
@@ -96,7 +111,7 @@ resource "meshstack_building_block_definition" "example_01_terraform" {
         # Names the tag to read as "<target>.<tagKey>". A TENANT_LEVEL building block can read WORKSPACE,
         # PROJECT, PAYMENT_METHOD and LANDING_ZONE tags; a WORKSPACE_LEVEL one only WORKSPACE tags.
         argument      = jsonencode("WORKSPACE.${meshstack_tag_definition.workspace_business_unit.spec.key}")
-        display_order = 3
+        display_order = 4
       }
       "some-file.yaml" = {
         display_name    = "Some input file"
