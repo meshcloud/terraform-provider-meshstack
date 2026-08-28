@@ -22,8 +22,9 @@
       devShells = forEachSupportedSystem ({ pkgs }: {
         default = pkgs.mkShell {
           packages = with pkgs; [
-            # go 1.26 (pinned)
-            go_1_26
+            # go 1.27 (pinned, in lock-step with go.mod — and with the meshStack CLI,
+            # whose client package this provider consumes; that module needs 1.27)
+            go_1_27
             
             # goimports, godoc, etc.
             gotools
@@ -46,7 +47,7 @@
 
           shellHook = ''
             # Explicitly set GOROOT to Nix-installed Go
-            export GOROOT="${pkgs.go_1_26}/share/go"
+            export GOROOT="${pkgs.go_1_27}/share/go"
             
             # Isolate Go environment from system
             export GOPATH="$PWD/.nix-go"

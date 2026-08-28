@@ -42,6 +42,9 @@ type Client struct {
 
 func (c *Client) AsClient() client.Client {
 	return client.Client{
+		// The mock client factory (see ApplyAndTest) never sees the provider's actual configured
+		// endpoint, since it bypasses newProviderClient entirely.
+		Endpoint:                       "http://localhost:8080",
 		ApiKey:                         c.ApiKey,
 		BuildingBlock:                  c.BuildingBlock,
 		BuildingBlockRun:               c.BuildingBlockRun,

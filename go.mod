@@ -1,6 +1,6 @@
 module github.com/meshcloud/terraform-provider-meshstack
 
-go 1.26 // keep flake.nix's pinned Go (go_1_26 + GOROOT) in lock-step when bumping
+go 1.27 // keep flake.nix's pinned Go (go_1_27 + GOROOT) in lock-step when bumping
 
 tool (
 	github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs
@@ -19,7 +19,7 @@ require (
 	github.com/hashicorp/terraform-plugin-log v0.10.0
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.40.1
 	github.com/hashicorp/terraform-plugin-testing v1.16.0
-	github.com/meshcloud/meshstack-cli v0.0.0-20260828035453-16afafa15f70
+	github.com/meshcloud/meshstack-cli v0.0.0-20260828193144-3d151e2eff73
 	github.com/stretchr/testify v1.12.1
 	github.com/zclconf/go-cty v1.19.0
 )
@@ -42,6 +42,7 @@ require (
 	github.com/dnephin/pflag v1.0.7 // indirect
 	github.com/fatih/color v1.18.0 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
+	github.com/goccy/go-yaml v1.19.2 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
