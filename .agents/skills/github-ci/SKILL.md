@@ -1,6 +1,6 @@
 ---
 name: github-ci
-description: Conventions for this repo's GitHub Actions workflows — pinning actions to full SHAs, updating action versions, the build/lint/generate/test/acceptance jobs, the companion meshfed-release merge order, and gotestsum coverage reporting. Use when editing .github/workflows/*.yml, bumping an action version, or debugging a CI job.
+description: Conventions for this repo's GitHub Actions workflows — pinning actions to full SHAs, updating action versions, the build/lint/generate/test/acceptance jobs, the same-branch-name pairing with meshfed-release and meshstack-cli and its merge order, and gotestsum coverage reporting. Use when editing .github/workflows/*.yml, bumping an action version, or debugging a CI job.
 ---
 
 # GitHub Actions CI conventions
@@ -48,32 +48,54 @@ All gated on `build` succeeding first.
 | `golangci` | `golangci-lint-action` with `only-new-issues: true` (annotates only changed code on PRs). On failure it prints the `golangci-lint run --fix` hint. |
 | `generate` | `go generate` then fails on any diff — regenerate docs (`task generate`) and commit. |
 | `test` | Unit/mock tests via gotestsum; posts coverage. Pins `TF_ACC_TERRAFORM_PATH` to a pre-installed tofu (`setup-opentofu`) — the mock tests still drive a real CLI, and auto-install races parallel exec against the download ("text file busy"). |
-| `acceptance` | `TestAcc` suite on self-hosted `mesh-runners` against the full backend (meshfed `:latest` service containers). **Gates merge** (PRs and push to main). tofu comes from the nix-ci image; a truncation guard reds an incomplete run as UNKNOWN (re-run). |
+| `acceptance` | `TestAcc` suite on self-hosted `mesh-runners` against the full backend (meshfed `:latest` service containers). **Gates merge** (PRs and push to main). tofu comes from the nix-ci image; a truncation guard reds an incomplete run as UNKNOWN (re-run). Also builds against a same-named `meshstack-cli` branch when one exists (below). |
 
 `permissions` are minimal per job (`contents: read`; `test`/`acceptance` add `pull-requests: write`
 for the coverage/PR comment, `golangci` adds `pull-requests: read` for `only-new-issues`).
 
-## Companion meshfed-release changes
+## Companion changes in meshfed-release and meshstack-cli
+
+Three repos pair **by exact branch name** — this provider, `meshfed-release` (the backend) and
+`meshstack-cli` (the shared API client). A branch called `feature/BD-1234-thing` in any of them is
+picked up by the others' CI, so a change spanning two or three repos is validated as a set before
+any side merges. Name the branches identically from the start; the name must be **`feature/`-prefixed**
+(meshfed-release's branch rules require it, and a non-`feature/` branch simply won't pair there).
+
+> Known gap: `meshstack-cli`'s current PR branch is `feat/scaffold-cli-and-move-client`, which is not
+> `feature/`-prefixed and therefore cannot pair today. Renaming a branch with an open PR closes that
+> PR, so this is a fact to live with until that branch merges, not something to fix.
+
+### meshfed-release (the backend)
 
 The `acceptance` job runs against the **last merged** meshfed-release backend — the `:latest`
 service-container images, which rebuild from develop on merge. So a provider change that needs a
 backend change fails acc here until the backend lands. That is the correct merge order, not a
 workaround:
 
-1. Open the companion PR in `meshfed-release` on a branch with the **exact same name**. The pairing
-   is *by branch name*: meshfed-release's `terraform-provider-acceptance` job checks out the provider
-   branch matching its own, builds the backend from source, and runs this repo's acceptance suite
-   against backend + provider changes **combined**. Identical branch names are precisely what let
-   that CI pick up your provider PR and validate the pair before either side merges — so name the two
-   branches identically from the start. The name must be **`feature/`-prefixed** (e.g.
-   `feature/BD-1234-thing`): meshfed-release's branch rules require it, so a non-`feature/` branch
-   won't pair.
+1. Open the companion PR in `meshfed-release` on a branch with the **exact same name**.
+   meshfed-release's `terraform-provider-acceptance` job checks out the provider branch matching its
+   own, builds the backend from source, and runs this repo's acceptance suite against backend +
+   provider changes **combined**.
 2. Merge that PR → `:latest` rebuilds.
 3. Re-run this provider PR's acceptance job → it now runs against the rebuilt backend → green → merge.
 
 Never bypass a red acceptance check to merge provider-first: that ships a provider broken against the
 released backend. On failure the PR comment links a branch-filtered meshfed-release PR search (it
 404s for anyone without access to that private repo).
+
+### meshstack-cli (the shared client)
+
+`go.mod` pins meshstack-cli to a released (today: pseudo-) version, so a provider change needing a new
+client method would otherwise wait for a merge and a re-pin. Instead the `acceptance` job resolves a
+same-named meshstack-cli branch (`git ls-remote --exit-code --heads`), checks it out into
+`./meshstack-cli`, and writes a `go.work` pointing at it — `go.mod`/`go.sum` are never modified, so the
+`build` job's `go mod tidy` diff guard keeps its meaning. **With no matching branch it changes
+nothing** and the pinned version stands; there is deliberately no fallback to the CLI's default branch
+(unlike the meshfed-release rule above) because falling back would mask a stale pin — and `main` in
+meshstack-cli is currently an empty initial commit that would not even compile.
+
+Merge order is the same shape: merge the CLI PR, re-pin `go.mod` to the new version, then merge here.
+`task cli:link` / `task cli:unlink` are the local equivalent against `../meshstack-cli`.
 
 ## Standard actions
 

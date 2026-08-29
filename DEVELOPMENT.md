@@ -107,6 +107,23 @@ task testacc -- -run=BuildingBlock # filter by name
 - Reproducing a bug or a single failing test as a standalone config — or scaffolding a demo /
   working starting point — is the **`scratch-config`** skill.
 
+### Testing against a local meshstack-cli checkout
+
+The API client comes from `github.com/meshcloud/meshstack-cli`, pinned in `go.mod`. When you are
+changing the client and the provider *together*, pushing the CLI and re-pinning on every iteration is
+too slow — link the sibling checkout instead:
+
+```bash
+task cli:link     # build/test against ../meshstack-cli
+task cli:unlink   # back to the version pinned in go.mod
+```
+
+`cli:link` writes a git-ignored `go.work`; `cli:unlink` deletes it. `go.mod` and `go.sum` are never
+modified, so there is nothing to accidentally commit and no need to undo anything else. Re-pin `go.mod`
+once the CLI change is merged. CI does the same thing on its side: the acceptance job builds against a
+meshstack-cli branch whose name matches the provider branch, when one exists — see the **`github-ci`**
+skill.
+
 ### Adding a resource / data source (and its tests)
 
 Adding or reworking a resource or data source — the implementation, example `.tf` files, the
@@ -145,7 +162,8 @@ For the occasional go1.26 `go fix` modernizer sweep, see the **`modern-go`** ski
 - **Commits** follow Conventional Commits (`feat:`, `fix:`, `docs:`, `chore:`, `feat!:` for
   breaking).
 - **CI/CD**: GitHub Actions pin every action to a full SHA; the acceptance job gates merge and runs
-  against the last-merged `meshfed-release` backend. See the **`github-ci`** skill.
+  against the last-merged `meshfed-release` backend, plus a same-named `meshstack-cli` branch when one
+  exists. See the **`github-ci`** skill.
 
 ## Skills index
 

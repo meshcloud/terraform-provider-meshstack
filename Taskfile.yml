@@ -41,6 +41,21 @@ tasks:
     cmds:
       - go generate {{.CLI_ARGS}}
 
+  cli:link:
+    desc: Build and test against the sibling ../meshstack-cli checkout instead of the version pinned in go.mod
+    # A git-ignored go.work, never an in-tree `go mod edit -replace`: go.mod and go.sum stay
+    # byte-for-byte unchanged, so the redirect cannot be committed by accident, CI's `go mod tidy` diff
+    # check keeps its meaning, and a dependency the CLI checkout adds needs no go.sum entry here. The
+    # acceptance job in .github/workflows/test.yml does the same against its own CLI checkout.
+    cmds:
+      - go work init . ../meshstack-cli
+      - echo "Linked ../meshstack-cli. Run 'task cli:unlink' to go back to the pinned version."
+
+  cli:unlink:
+    desc: Stop using ../meshstack-cli and go back to the version pinned in go.mod
+    cmds:
+      - rm -f go.work go.work.sum
+
   clean:
     desc: Clean build artifacts
     cmds:

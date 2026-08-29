@@ -278,6 +278,54 @@ jobs:
           go-version-file: 'go.mod'
           cache: true
 
+      # Pair with a same-named meshstack-cli branch, mirroring the convention meshfed-release already
+      # applies to this repo: a provider change that needs an unreleased client change is built and
+      # acceptance-tested against that branch instead of go.mod's pinned pseudo-version. See the
+      # github-ci skill, "Companion changes in meshfed-release and meshstack-cli".
+      - name: Resolve meshstack-cli branch
+        id: cli-branch
+        shell: bash
+        env:
+          # Through the environment, and not interpolated into the script below: a branch name is text an
+          # outsider chooses, and ${{ }} is substituted before bash parses the line.
+          #
+          # github.head_ref is empty on `push`, so ref_name is the one that pairs on a push to main.
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+        run: |
+          # Query the meshstack-cli repo anonymously: this step runs in the provider checkout, which
+          # actions/checkout configured with an http.extraheader carrying this repo's repo-scoped
+          # GITHUB_TOKEN. Presenting that token to a *different* repo's git endpoint is rejected with no
+          # anonymous fallback, so the inherited header is overridden to empty. Stderr stays visible.
+          if [ -n "$BRANCH" ] && git -c http.https://github.com/.extraheader= ls-remote --exit-code --heads \
+              https://github.com/meshcloud/meshstack-cli.git "$BRANCH" > /dev/null; then
+            echo "Using matching meshstack-cli branch: $BRANCH"
+            echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+          else
+            # Deliberately NOT a fallback to the CLI's default branch, unlike meshfed-release's
+            # otherwise identical step: with no matching branch the pinned pseudo-version in go.mod is
+            # exactly what should be under test — redirecting anywhere else would hide a stale pin. The
+            # steps below are skipped on an empty output.
+            echo "No matching meshstack-cli branch found, using the version pinned in go.mod"
+          fi
+
+      - name: Checkout meshstack-cli
+        if: ${{ steps.cli-branch.outputs.branch != '' }}
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          repository: meshcloud/meshstack-cli
+          path: meshstack-cli
+          ref: ${{ steps.cli-branch.outputs.branch }}
+
+      # A go.work redirects the module without touching go.mod or go.sum at all — so the `build` job's
+      # `go mod tidy` + `git diff --exit-code` guard keeps its meaning, nothing can leak into a later
+      # step, and a dependency the CLI branch added needs no go.sum entry here. It applies to every `go`
+      # invocation in this checkout, so the acceptance step below needs no extra flag.
+      # `task cli:link` is the local twin, against ../meshstack-cli.
+      - name: Point the build at the paired meshstack-cli checkout
+        if: ${{ steps.cli-branch.outputs.branch != '' }}
+        shell: bash
+        run: go work init . ./meshstack-cli
+
       # Unit coverage data from the `test` job (a different runner). `continue-on-error` so a missing
       # artifact (e.g. the unit job produced none) does not fail acceptance — the report step then
       # falls back to acceptance-only coverage.
