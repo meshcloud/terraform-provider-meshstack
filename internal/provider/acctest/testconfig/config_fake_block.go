@@ -12,7 +12,7 @@ import (
 )
 
 // fakeBlock wraps an attributeExpression to implement the parent interface, enabling
-// [hclwrite.Body] operations (Attributes, SetAttributeRaw, RenameAttribute) on object constructor
+// [hclwrite.Body] operations (Attributes, SetAttributeRaw, RenameAttribute, RemoveAttribute) on object constructor
 // expressions like `{ key = "value" }`.
 //
 // This is necessary because [hclwrite] distinguishes between top-level block bodies and inline
@@ -45,6 +45,14 @@ func (f fakeBlock) Attributes() (result map[string]*hclwrite.Attribute) {
 func (f fakeBlock) SetAttributeRaw(name string, tokens hclwrite.Tokens) (result *hclwrite.Attribute) {
 	f.withBody(func(body *hclwrite.Body, names quotedNameMap) (modified bool) {
 		result = body.SetAttributeRaw(names.Sanitize(name), tokens)
+		return true
+	})
+	return
+}
+
+func (f fakeBlock) RemoveAttribute(name string) (result *hclwrite.Attribute) {
+	f.withBody(func(body *hclwrite.Body, names quotedNameMap) (modified bool) {
+		result = body.RemoveAttribute(names.Sanitize(name))
 		return true
 	})
 	return

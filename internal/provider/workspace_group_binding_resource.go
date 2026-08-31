@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 
 	"github.com/meshcloud/terraform-provider-meshstack/client"
+	"github.com/meshcloud/terraform-provider-meshstack/internal/types/generic"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -117,15 +118,15 @@ func (r *workspaceGroupBindingResource) Schema(_ context.Context, _ resource.Sch
 
 // Create creates the resource and sets the initial Terraform state.
 func (r *workspaceGroupBindingResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var plan client.MeshWorkspaceGroupBinding
-
-	diags := req.Plan.Get(ctx, &plan)
-	resp.Diagnostics.Append(diags...)
+	// expiry_date is Optional+Computed, so a configuration that omits it leaves the planned value
+	// unknown, which the DTO's *string cannot hold. WithSetUnknownValueToZero turns it into nil,
+	// and the binding is then created without an expiry date.
+	plan := generic.Get[*client.MeshWorkspaceGroupBinding](ctx, req.Plan, &resp.Diagnostics, generic.WithSetUnknownValueToZero())
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	binding, err := r.meshWorkspaceGroupBindingClient.Create(ctx, &plan)
+	binding, err := r.meshWorkspaceGroupBindingClient.Create(ctx, plan)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating workspace group binding",
@@ -134,8 +135,7 @@ func (r *workspaceGroupBindingResource) Create(ctx context.Context, req resource
 		return
 	}
 
-	diags = resp.State.Set(ctx, binding)
-	resp.Diagnostics.Append(diags...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, binding)...)
 }
 
 // Read refreshes the Terraform state with the latest data.

@@ -1,3 +1,8 @@
+# v0.25.2
+
+FIXES:
+- `meshstack_workspace_user_binding` and `meshstack_workspace_group_binding`: creating a binding that omits `expiry_date` no longer fails with *"Value Conversion Error … Received unknown value, however the target type cannot handle unknown values. Path: expiry_date"* (#267, #293). `expiry_date` is optional and computed, so Terraform plans it as unknown whenever the configuration leaves it out, and the provider read that plan into a type that cannot hold an unknown — which broke the documented default of a binding that never expires. Omitting the attribute now works as documented, and an explicit date keeps behaving as before. The only workaround was to set a date, so no migration is needed.
+
 # v0.25.1
 
 Requires meshStack 2026.35.0 or later (previously 2026.34.0).

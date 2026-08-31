@@ -65,6 +65,23 @@ func RenameKey(newName string) ExpressionConsumer {
 	}
 }
 
+// RemoveKey returns an ExpressionConsumer that deletes the traversed attribute from its parent.
+// Use it to cover the omitted case of an optional attribute: the example .tf sets it because the
+// registry docs should show it, while a test step that drops it exercises the unset path.
+func RemoveKey() ExpressionConsumer {
+	return func(t *testing.T, e Expression) {
+		t.Helper()
+		removable, ok := e.(keyRemovable)
+		require.True(t, ok, "RemoveKey requires an attribute expression, got %T — reach the attribute through Descend", e)
+		removable.RemoveKey()
+	}
+}
+
+// keyRemovable is implemented by attributeExpression only; a Block has no key of its own to remove.
+type keyRemovable interface {
+	RemoveKey()
+}
+
 // ExtractAddress returns an ExpressionConsumer that extracts the Terraform resource address
 // from a resource or data block into the target Traversal.
 func ExtractAddress(target *Traversal) ExpressionConsumer {
@@ -112,6 +129,7 @@ type parent interface {
 	Attributes() map[string]*hclwrite.Attribute
 	SetAttributeRaw(name string, tokens hclwrite.Tokens) *hclwrite.Attribute
 	RenameAttribute(fromName, toName string) bool
+	RemoveAttribute(name string) *hclwrite.Attribute
 }
 
 func (a attributeExpression) Get() hclwrite.Tokens {
@@ -129,6 +147,10 @@ func (a attributeExpression) Set(tokens hclwrite.Tokens) {
 
 func (a attributeExpression) RenameKey(newName string) {
 	a.Parent.RenameAttribute(a.Name, newName)
+}
+
+func (a attributeExpression) RemoveKey() {
+	a.Parent.RemoveAttribute(a.Name)
 }
 
 func (a attributeExpression) traverse(key string) Expression {

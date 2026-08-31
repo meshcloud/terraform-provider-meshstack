@@ -367,3 +367,23 @@ func TestDescendUpsertsNewAttribute(t *testing.T) {
 	c = c.WithFirstBlock(Descend("spec", "new_attr")(SetString("hello")))
 	assert.Contains(t, c.String(), `new_attr = "hello"`)
 }
+
+func TestDescendRemoveKey(t *testing.T) {
+	c := newConfig(t, []byte(`resource "test" "ex" {
+  expiry_date = "2026-12-31"
+
+  spec = {
+    name    = "test"
+    comment = "drop me"
+  }
+}
+`))
+	c = c.WithFirstBlock(
+		Descend("expiry_date")(RemoveKey()),
+		Descend("spec", "comment")(RemoveKey()),
+	)
+
+	assert.NotContains(t, c.String(), `expiry_date`)
+	assert.NotContains(t, c.String(), `comment`)
+	assert.Contains(t, c.String(), `name = "test"`)
+}
