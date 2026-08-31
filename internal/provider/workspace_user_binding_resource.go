@@ -70,8 +70,9 @@ func (r *workspaceUserBindingResource) Schema(_ context.Context, _ resource.Sche
 				Required:            true,
 				Attributes: map[string]schema.Attribute{
 					"name": schema.StringAttribute{
-						Required:      true,
-						PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
+						MarkdownDescription: "Name of the workspace role to assign, for example `Workspace Owner`, `Workspace Manager` or `Workspace Member`. meshStack looks the role up by this name and rejects one it does not know.",
+						Required:            true,
+						PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 					},
 				},
 			},
@@ -176,7 +177,7 @@ func (r *workspaceUserBindingResource) Delete(ctx context.Context, req resource.
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error deleting workspace user binding",
-			"Could not delete workspace, unexpected error: "+err.Error(),
+			"Could not delete workspace user binding, unexpected error: "+err.Error(),
 		)
 		return
 	}

@@ -61,4 +61,4 @@ Read-Only:
 Read-Only:
 
 - `display_name` (String) Display name of the workspace.
-- `platform_builder_access_enabled` (Boolean) Whether platform builder access is enabled for the workspace.
+- `platform_builder_access_enabled` (Boolean) When enabled, you can open the platform builder in meshPanel while visiting this workspace.

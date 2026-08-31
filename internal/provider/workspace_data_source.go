@@ -64,7 +64,7 @@ func (d *workspaceDataSource) Schema(_ context.Context, _ datasource.SchemaReque
 						Computed:            true,
 					},
 					"platform_builder_access_enabled": schema.BoolAttribute{
-						MarkdownDescription: "Whether platform builder access is enabled for the workspace.",
+						MarkdownDescription: "When enabled, you can open the platform builder in meshPanel while visiting this workspace.",
 						Computed:            true,
 					},
 				},

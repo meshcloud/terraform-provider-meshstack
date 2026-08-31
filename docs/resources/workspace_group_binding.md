@@ -63,7 +63,7 @@ Required:
 
 Required:
 
-- `name` (String)
+- `name` (String) Name of the workspace role to assign, for example `Workspace Manager` or `Workspace Member`. meshStack looks the role up by this name and rejects one it does not know. `Workspace Owner` can only be assigned to a user, not to a group.
 
 
 <a id="nestedatt--subject"></a>
@@ -71,7 +71,7 @@ Required:
 
 Required:
 
-- `name` (String) Groupname.
+- `name` (String) Identifier of the workspace user group.
 
 
 <a id="nestedatt--target_ref"></a>
