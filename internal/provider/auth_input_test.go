@@ -6,7 +6,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/meshcloud/meshstack-cli/pkg/auth"
-	"github.com/meshcloud/meshstack-cli/pkg/auth/method"
+	"github.com/meshcloud/meshstack-cli/pkg/credential"
 	"github.com/meshcloud/meshstack-cli/pkg/diags"
 	"github.com/meshcloud/meshstack-cli/pkg/workspace"
 	"github.com/stretchr/testify/assert"
@@ -20,13 +20,13 @@ func TestProviderInputNamesTheMethodItsAttributesImply(t *testing.T) {
 	tests := []struct {
 		name string
 		data MeshStackProviderModel
-		want method.Method
+		want credential.Method
 	}{
 		{name: "nothing set leaves the method to pkg/auth", data: MeshStackProviderModel{}},
 		{
 			name: "an api token is the manual method",
 			data: MeshStackProviderModel{ApiToken: types.StringValue("a-token")},
-			want: method.Manual,
+			want: credential.MethodManual,
 		},
 		{
 			name: "a key without its secret is not a complete credential",
@@ -35,7 +35,7 @@ func TestProviderInputNamesTheMethodItsAttributesImply(t *testing.T) {
 		{
 			name: "a key with its secret is the apiKey method",
 			data: MeshStackProviderModel{ApiKey: types.StringValue("an-id"), ApiSecret: types.StringValue("a-secret")},
-			want: method.ApiKey,
+			want: credential.MethodApiKey,
 		},
 		{
 			name: "an api token wins over a key, because pkg/auth ranks it first too",
@@ -44,7 +44,7 @@ func TestProviderInputNamesTheMethodItsAttributesImply(t *testing.T) {
 				ApiSecret: types.StringValue("a-secret"),
 				ApiToken:  types.StringValue("a-token"),
 			},
-			want: method.Manual,
+			want: credential.MethodManual,
 		},
 	}
 	for _, testCase := range tests {

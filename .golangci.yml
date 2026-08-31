@@ -79,8 +79,11 @@ linters:
             - github.com/meshcloud/terraform-provider-meshstack/internal
             - github.com/meshcloud/meshstack-cli/client
             # pkg/auth resolves credentials and mints tokens for the provider and the meshStack
-            # CLI alike; the other three are the leaf types its API is written in.
+            # CLI alike; the others are the leaf types its API is written in. pkg/credential was
+            # reachable as pkg/auth/method before it moved to the top level, so this line is the
+            # move rather than a widening.
             - github.com/meshcloud/meshstack-cli/pkg/auth
+            - github.com/meshcloud/meshstack-cli/pkg/credential
             - github.com/meshcloud/meshstack-cli/pkg/diags
             - github.com/meshcloud/meshstack-cli/pkg/workspace
             - github.com/hashicorp/terraform-plugin-framework/

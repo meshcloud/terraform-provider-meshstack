@@ -6,7 +6,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/meshcloud/meshstack-cli/pkg/auth"
-	"github.com/meshcloud/meshstack-cli/pkg/auth/method"
+	"github.com/meshcloud/meshstack-cli/pkg/credential"
 	"github.com/meshcloud/meshstack-cli/pkg/diags"
 	"github.com/meshcloud/meshstack-cli/pkg/workspace"
 )
@@ -32,9 +32,9 @@ func (i *providerInput) Explicit() auth.Values {
 	// it through the accessors below only when it actually needs to mint.
 	switch {
 	case i.data.ApiToken.ValueString() != "":
-		values.Method = method.Manual
+		values.Method = credential.MethodManual
 	case values.ApiKey != "" && i.data.ApiSecret.ValueString() != "":
-		values.Method = method.ApiKey
+		values.Method = credential.MethodApiKey
 	}
 	return values
 }
