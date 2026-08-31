@@ -107,13 +107,10 @@ func TestTheProviderHasNoBrowser(t *testing.T) {
 	assert.Nil(t, (&providerInput{}).Browser())
 }
 
-func TestProblemBecomesADiagnosticOfTheRightSeverity(t *testing.T) {
-	input := &providerInput{}
-	input.Warn(diags.Warnf("picked a profile by endpoint", "profile %q is the only one for %s.", "dev", "https://api.example.com"))
-	require.Len(t, input.collected, 1)
-	assert.Equal(t, diag.SeverityWarning, input.collected[0].Severity())
-	assert.Equal(t, "picked a profile by endpoint", input.collected[0].Summary())
-
+// TestProblemKeepsItsOwnSummary pins the reason problemDiagnostics inspects the error at all: a
+// diags.Problem has already split the failure into a summary and an actionable paragraph, and
+// flattening it into the caller's summary would put the paragraph where nobody reads it.
+func TestProblemKeepsItsOwnSummary(t *testing.T) {
 	fatal := problemDiagnostics("ignored", diags.Errorf("no workspace", "name one with the workspace attribute."))
 	require.Len(t, fatal, 1)
 	assert.Equal(t, diag.SeverityError, fatal[0].Severity())

@@ -16,10 +16,6 @@ import (
 // terraform run can never block on a terminal that is not there, and it never opens a browser.
 type providerInput struct {
 	data MeshStackProviderModel
-	// collected gathers the warnings pkg/auth reports, which Configure turns into
-	// diagnostics. A warning cannot travel as an error, because some outcomes succeed and
-	// warn — picking a profile by endpoint is the case that forced it.
-	collected diag.Diagnostics
 }
 
 var _ auth.Input = (*providerInput)(nil)
@@ -64,10 +60,6 @@ func (i *providerInput) ApiToken(context.Context) (string, error) {
 	return token, nil
 }
 
-func (i *providerInput) Warn(p diags.Problem) {
-	i.collected.Append(problemDiagnostic(p))
-}
-
 // Browser is nil here, and pkg/auth then fails a dead login method by naming `meshstack
 // login` rather than waiting for a browser nobody will see. The provider imports neither
 // pkg/oidc/browser nor anything that does, so there is no browser flow in this binary to
@@ -82,9 +74,6 @@ func (i *providerInput) Browser() auth.Browser { return nil }
 // database — against its two-dependency policy. This adapter is the whole cost of keeping it
 // out.
 func problemDiagnostic(p diags.Problem) diag.Diagnostic {
-	if p.IsWarning() {
-		return diag.NewWarningDiagnostic(p.Summary(), p.Detail())
-	}
 	return diag.NewErrorDiagnostic(p.Summary(), p.Detail())
 }
 

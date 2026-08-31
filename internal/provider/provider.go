@@ -114,9 +114,7 @@ func newProviderClient(ctx context.Context, data MeshStackProviderModel, provide
 	// share rather than to copy: keycloak rotates a refresh token on every refresh and ends
 	// the whole session when one is reused, so a `terraform apply` racing a `meshstack`
 	// command would otherwise destroy the user's login.
-	input := &providerInput{data: data}
-	session, err := auth.Resolve(ctx, input)
-	diagnostics.Append(input.collected...)
+	session, err := auth.Resolve(ctx, &providerInput{data: data})
 	if err != nil {
 		diagnostics.Append(problemDiagnostics("Failed to resolve meshStack credentials.", err)...)
 		return

@@ -17,8 +17,11 @@ import (
 // reach slog's built-in handler and land on stderr in a format terraform does not expect, or
 // vanish.
 //
-// It exists for debugging output. Anything a practitioner must see travels as a diagnostic
-// through auth.Input.Warn, not as a log record.
+// It carries more than debugging output, because pkg/ reports to a front end in exactly two
+// ways — an error return, or an slog record — and has no third channel for a non-fatal remark.
+// A pkg/auth warning therefore reaches a practitioner as a TF_LOG=WARN log line and never as a
+// warning diagnostic in plan output. That is the price of the two-way rule, and it is paid
+// here.
 type SlogHandler struct {
 	// MessagePrefix says which process the record came from, so that the meshStack CLI's
 	// records are distinguishable from the provider's own in one terraform log.
