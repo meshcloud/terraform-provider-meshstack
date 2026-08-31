@@ -8,7 +8,6 @@ import (
 	"github.com/meshcloud/meshstack-cli/pkg/auth"
 	"github.com/meshcloud/meshstack-cli/pkg/credential"
 	"github.com/meshcloud/meshstack-cli/pkg/diags"
-	"github.com/meshcloud/meshstack-cli/pkg/workspace"
 )
 
 // providerInput implements auth.Input over the provider block. It differs from the meshStack
@@ -24,7 +23,7 @@ func (i *providerInput) Explicit() auth.Values {
 	values := auth.Values{
 		Profile:   i.data.Profile.ValueString(),
 		Endpoint:  i.data.Endpoint.ValueString(),
-		Workspace: workspace.Name(i.data.Workspace.ValueString()),
+		Workspace: i.data.Workspace.ValueString(),
 		ApiKey:    i.data.ApiKey.ValueString(),
 	}
 	// The block names the method by which attributes it sets, because a secret never travels

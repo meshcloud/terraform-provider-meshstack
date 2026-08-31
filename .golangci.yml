@@ -85,7 +85,7 @@ linters:
             - github.com/meshcloud/meshstack-cli/pkg/auth
             - github.com/meshcloud/meshstack-cli/pkg/credential
             - github.com/meshcloud/meshstack-cli/pkg/diags
-            - github.com/meshcloud/meshstack-cli/pkg/workspace
+            - github.com/meshcloud/meshstack-cli/pkg/meshstack
             - github.com/hashicorp/terraform-plugin-framework/
             - github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry
             - github.com/hashicorp/terraform-plugin-framework-jsontypes/jsontypes # for 'any' value support

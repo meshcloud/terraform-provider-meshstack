@@ -8,7 +8,6 @@ import (
 	"github.com/meshcloud/meshstack-cli/pkg/auth"
 	"github.com/meshcloud/meshstack-cli/pkg/credential"
 	"github.com/meshcloud/meshstack-cli/pkg/diags"
-	"github.com/meshcloud/meshstack-cli/pkg/workspace"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -65,7 +64,7 @@ func TestProviderInputCarriesTheBlockThroughToValues(t *testing.T) {
 	assert.Equal(t, auth.Values{
 		Profile:   "dev",
 		Endpoint:  "https://api.example.com",
-		Workspace: workspace.Name("my-workspace"),
+		Workspace: "my-workspace",
 		ApiKey:    "an-id",
 	}, input.Explicit())
 }
