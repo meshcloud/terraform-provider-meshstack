@@ -129,6 +129,16 @@ func newProviderClient(ctx context.Context, data MeshStackProviderModel, provide
 		return
 	}
 
+	// Mint here rather than at the first request. A plan that only creates resources reads
+	// nothing, so an expired login would otherwise pass the plan and fail the apply — the
+	// point at which terraform has already told the user what it is about to do. This is the
+	// provider's call and not pkg/auth's, because the meshStack CLI must stay lazy: `meshstack
+	// profile view` and `meshstack auth logout` have to work when the credential is dead.
+	if _, err := session.BearerToken(ctx); err != nil {
+		diagnostics.Append(problemDiagnostics("Failed to authenticate against meshStack.", err)...)
+		return
+	}
+
 	userAgent := fmt.Sprintf("terraform-provider-meshstack/%s", providerVersion)
 	providerClient, err = session.Client(ctx, userAgent)
 	if err != nil {
