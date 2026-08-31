@@ -25,7 +25,7 @@ var (
 // meshObject.
 const workspaceTagCaveats = "!> **Not recommended for general use.** Prefer managing tags inline via `metadata.tags` on " +
 	"`meshstack_workspace`. Only reach for this resource when the workspace itself is not managed by your Terraform " +
-	"configuration (for example it was created in the meshStack panel or by another team) and you understand the " +
+	"configuration (for example it was created in meshPanel or by another team) and you understand the " +
 	"trade-offs below. All of them follow from the same limitation: the meshObject API has no endpoint for individual " +
 	"tags, so every create, update and delete here reads the entire `meshWorkspace` object and writes it back with the " +
 	"tags replaced.\n\n" +
@@ -38,7 +38,7 @@ const workspaceTagCaveats = "!> **Not recommended for general use.** Prefer mana
 	"~> **Tags you do not manage are written back verbatim.** Preserving a workspace's other tags is what lets " +
 	"several `meshstack_workspace_tag` resources coexist, but the object read back can carry entries nobody " +
 	"declared here — notably the defaults meshStack injects for restricted tag definitions on a workspace " +
-	"registered through the panel — and every write sends all of them back. So this resource writes tag entries " +
+	"created in meshPanel — and every write sends all of them back. So this resource writes tag entries " +
 	"you never configured, and if your meshStack rejects writing a restricted tag's value, the update fails and no " +
 	"tag on that workspace can be managed with this resource — use inline `metadata.tags` on `meshstack_workspace` " +
 	"instead. `meshstack_workspace_tags` is unaffected: it sends exactly the tags you configure.\n\n" +

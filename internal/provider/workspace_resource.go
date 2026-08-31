@@ -51,7 +51,7 @@ func (r *workspaceResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 		MarkdownDescription: "Represents a meshStack workspace.\n\n" +
 			"~> **Note:** Managing workspaces requires an API key with sufficient admin permissions.\n\n" +
 			"~> **Tag Management:** Manage a workspace's tags inline via `metadata.tags` here. This is the recommended " +
-			"approach and the only one that can set tags meshStack requires at workspace creation. The dedicated " +
+			"approach and the only one that can set tags that are mandatory at workspace creation. The dedicated " +
 			"`meshstack_workspace_tags` / `meshstack_workspace_tag` resources exist for workspaces this configuration " +
 			"does not create, and carry caveats (full-workspace rewrites, races, provisional schema) documented on those " +
 			"resources — reach for them only when necessary. Whichever approach you choose, use exactly one per " +
@@ -99,7 +99,7 @@ func (r *workspaceResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 						Required:            true,
 					},
 					"platform_builder_access_enabled": schema.BoolAttribute{
-						MarkdownDescription: "Whether platform builder access is enabled for the workspace.",
+						MarkdownDescription: "When enabled, you can open the platform builder in meshPanel while visiting this workspace.",
 						Optional:            true,
 						Computed:            true,
 						Default:             booldefault.StaticBool(false),

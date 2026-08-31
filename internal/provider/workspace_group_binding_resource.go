@@ -70,8 +70,9 @@ func (r *workspaceGroupBindingResource) Schema(_ context.Context, _ resource.Sch
 				Required:            true,
 				Attributes: map[string]schema.Attribute{
 					"name": schema.StringAttribute{
-						Required:      true,
-						PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
+						MarkdownDescription: "Name of the workspace role to assign, for example `Workspace Manager` or `Workspace Member`. meshStack looks the role up by this name and rejects one it does not know. `Workspace Owner` can only be assigned to a user, not to a group.",
+						Required:            true,
+						PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 					},
 				},
 			},
@@ -93,7 +94,7 @@ func (r *workspaceGroupBindingResource) Schema(_ context.Context, _ resource.Sch
 				Required:            true,
 				Attributes: map[string]schema.Attribute{
 					"name": schema.StringAttribute{
-						MarkdownDescription: "Groupname.",
+						MarkdownDescription: "Identifier of the workspace user group.",
 						Required:            true,
 						PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 					},

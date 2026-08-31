@@ -59,7 +59,7 @@ func (r *workspaceTagsResource) Schema(_ context.Context, _ resource.SchemaReque
 			"workspace with the ones configured here, and destroying it removes them all. It is not authoritative on " +
 			"read — refresh only tracks the keys you configure, so a tag added under another key outside Terraform is " +
 			"not reported as drift, and is removed by the next apply that writes this resource. This is deliberate: " +
-			"a workspace registered through the meshStack panel carries the defaults meshStack injects for " +
+			"a workspace created in meshPanel carries the defaults meshStack injects for " +
 			"restricted tag definitions, and adopting those would produce a plan that never converges. Note also that a " +
 			"tag declared with an empty value list is kept in state, because the API returns no entry for it at all. Do " +
 			"not mix `meshstack_workspace_tags` with inline `tags` on " +
@@ -156,7 +156,7 @@ func (r *workspaceTagsResource) Read(ctx context.Context, req resource.ReadReque
 		return
 	}
 
-	// Track only the keys this resource declares. A workspace registered through the meshStack panel
+	// Track only the keys this resource declares. A workspace created in meshPanel
 	// carries the defaults meshStack injects for restricted tag definitions, and adopting one would
 	// produce a plan that wants to delete a tag the backend keeps re-applying, forever. The trade-off: a
 	// tag added under an untracked key outside Terraform is not reported as drift; the next apply removes
