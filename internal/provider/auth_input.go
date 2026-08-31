@@ -10,9 +10,8 @@ import (
 	"github.com/meshcloud/meshstack-cli/pkg/diags"
 )
 
-// providerInput implements auth.Input over the provider block. It differs from the meshStack
-// CLI's implementation in what it can do rather than in what it knows: it never prompts, so a
-// terraform run can never block on a terminal that is not there, and it never opens a browser.
+// providerInput implements auth.Input over the provider block. It never prompts, because a
+// terraform run must not block on a terminal that is not there.
 type providerInput struct {
 	data MeshStackProviderModel
 }
@@ -58,12 +57,6 @@ func (i *providerInput) ApiToken(context.Context) (string, error) {
 	token, _ := auth.TokenFromEnv()
 	return token, nil
 }
-
-// Browser is nil here, and pkg/auth then fails a dead login method by naming `meshstack
-// login` rather than waiting for a browser nobody will see. The provider imports neither
-// pkg/oidc/browser nor anything that does, so there is no browser flow in this binary to
-// disable.
-func (i *providerInput) Browser() auth.Browser { return nil }
 
 // problemDiagnostic adapts a diags.Problem to a terraform diagnostic.
 //

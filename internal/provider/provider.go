@@ -119,9 +119,8 @@ func newProviderClient(ctx context.Context, data MeshStackProviderModel, provide
 		diagnostics.Append(problemDiagnostics("Failed to resolve meshStack credentials.", err)...)
 		return
 	}
-	// A browser login cannot be created here — Input.Browser() is nil — but one that already
-	// exists is refreshed and its rotated refresh token written back. Failing before the first
-	// request is what turns "403 Access denied" into a message naming the workspace.
+	// Failing before the first request is what turns "403 Access denied" into a message naming
+	// the workspace.
 	if err := session.RequireWorkspace(); err != nil {
 		diagnostics.Append(problemDiagnostics("meshStack workspace missing.", err)...)
 		return

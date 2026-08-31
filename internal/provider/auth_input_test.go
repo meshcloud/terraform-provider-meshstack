@@ -100,12 +100,6 @@ func TestApiKeySecretFallsBackToTheEnvironment(t *testing.T) {
 	})
 }
 
-// TestTheProviderHasNoBrowser is the guarantee the whole pkg/oidc split exists for, expressed as a
-// test as well as a depguard rule: a terraform plan must never open one.
-func TestTheProviderHasNoBrowser(t *testing.T) {
-	assert.Nil(t, (&providerInput{}).Browser())
-}
-
 // TestProblemKeepsItsOwnSummary pins the reason problemDiagnostics inspects the error at all: a
 // diags.Problem has already split the failure into a summary and an actionable paragraph, and
 // flattening it into the caller's summary would put the paragraph where nobody reads it.
