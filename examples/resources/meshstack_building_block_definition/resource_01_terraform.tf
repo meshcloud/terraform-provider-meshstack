@@ -21,6 +21,22 @@ resource "meshstack_building_block_definition" "example_01_terraform" {
     run_transparency          = true                                            # Optional: defaults to false
     use_in_landing_zones_only = true                                            # Optional: defaults to false
     notification_subscribers  = ["user:some-username", "email:ops@example.com"] # Optional, note user: and email: prefix
+
+    # Optional: which run triggers need an operator's approval before the run is applied.
+    # Defaults to no approval gate at all. Only the terraform implementation supports approval policies, because an
+    # approver reviews the planned changes of a dry run. Flags left out default to false.
+    approval_policies = {
+      version_upgrade = true
+      manual_triggers = true
+    }
+
+    # Optional: drift detection / reconciliation schedule. Defaults to mode = "DISABLED".
+    # DRIFT_DETECTION only reports drift and needs the terraform implementation; DRIFT_RECONCILIATION
+    # also fixes it and works with every implementation except manual.
+    schedule = {
+      mode      = "DRIFT_DETECTION"
+      frequency = "DAILY"
+    }
   }
 
   version_spec = {

@@ -3,6 +3,14 @@
 FIXES:
 - `meshstack_workspace_user_binding` and `meshstack_workspace_group_binding`: creating a binding that omits `expiry_date` no longer fails with *"Value Conversion Error … Received unknown value, however the target type cannot handle unknown values. Path: expiry_date"* (#267, #293). `expiry_date` is optional and computed, so Terraform plans it as unknown whenever the configuration leaves it out, and the provider read that plan into a type that cannot hold an unknown — which broke the documented default of a binding that never expires. Omitting the attribute now works as documented, and an explicit date keeps behaving as before. The only workaround was to set a date, so no migration is needed.
 
+FEATURES:
+
+- `meshstack_building_block_definition`: the meshPanel *Policies* tab is now configurable through two new arguments,
+  `spec.approval_policies` and `spec.schedule`. `spec.approval_policies` names the run triggers that need an operator's
+  approval (`version_upgrade`, `user_input_changes`, `manual_triggers`, `building_block_creation`, `any_input_changes`),
+  and `spec.schedule` sets the drift schedule (`mode` of `DISABLED`, `DRIFT_DETECTION` or `DRIFT_RECONCILIATION`, plus
+  `frequency` and `automatic_approval`).
+
 # v0.25.1
 
 Requires meshStack 2026.35.0 or later (previously 2026.34.0).
