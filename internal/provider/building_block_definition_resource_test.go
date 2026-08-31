@@ -37,6 +37,15 @@ func releaseBBDVersion(t *testing.T, config testconfig.Config) testconfig.Config
 	)
 }
 
+// setBBDPolicies overrides spec.approval_policies and spec.schedule on the resource under test.
+func setBBDPolicies(t *testing.T, config testconfig.Config, approvalPolicies, schedule string) testconfig.Config {
+	t.Helper()
+	return config.WithFirstBlock(testconfig.Descend("spec")(
+		testconfig.Descend("approval_policies")(testconfig.SetRawExpr("%s", approvalPolicies)),
+		testconfig.Descend("schedule")(testconfig.SetRawExpr("%s", schedule)),
+	))
+}
+
 func TestAccBuildingBlockDefinition(t *testing.T) {
 	t.Parallel()
 
@@ -1007,6 +1016,120 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 			},
 		}, TouchesExclusively(client.MeshObjectKind.BuildingBlockDefinition))
 	})
+
+	// spec.approval_policies / spec.schedule change together with the version's implementation type in
+	// one apply. meshStack validates both policies against the implementation type of the definition's
+	// latest version, and rejects an implementation change while the stored policies are incompatible
+	// with the new type. Neither direction can be applied with a single definition write, so this asserts
+	// the resource orders the writes: it passes through neutral policies, writes the version, then writes
+	// the planned policies. The mock client echoes any spec back, so only an acceptance run against
+	// meshStack rejects a wrong order.
+	t.Run("16_policies_across_implementation_change", func(t *testing.T) {
+		// github_workflows has no dry run, so it supports drift reconciliation only with automatic
+		// approval, and no approval gate at all. terraform supports every policy.
+		config, addr := testconfig.BBDWithIntegration(t, "02_github_workflows")
+		githubWorkflowsConfig := setBBDPolicies(t, config,
+			`{}`,
+			`{ mode = "DRIFT_RECONCILIATION", frequency = "DAILY", automatic_approval = true }`,
+		)
+		terraformConfig := setBBDPolicies(t, githubWorkflowsConfig,
+			`{ manual_triggers = true, version_upgrade = true }`,
+			`{ mode = "DRIFT_DETECTION", frequency = "DAILY" }`,
+		).WithFirstBlock(
+			testconfig.Descend("version_spec", "implementation")(testconfig.SetRawExpr(
+				`{ terraform = { terraform_version = "1.9.0", repository_url = "https://github.com/example/building-block.git" } }`,
+			)),
+		)
+
+		checkPolicies := func(approvalPolicies map[string]bool, mode enum.Entry[client.MeshBuildingBlockScheduleMode], automaticApproval bool) []statecheck.StateCheck {
+			return []statecheck.StateCheck{
+				statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("spec").AtMapKey("approval_policies"), checkBBDApprovalPolicies(approvalPolicies)),
+				statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("spec").AtMapKey("schedule"),
+					checkBBDSchedule(mode, client.MeshBuildingBlockScheduleFrequencyDaily, automaticApproval)),
+			}
+		}
+
+		ApplyAndTest(t, resource.TestCase{
+			Steps: []resource.TestStep{
+				// Create with a schedule enabled: the definition is created with neutral policies, and the
+				// schedule follows once the initial version carries the github_workflows implementation.
+				{
+					Config: githubWorkflowsConfig.String(),
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PreApply: []plancheck.PlanCheck{
+							plancheck.ExpectResourceAction(addr.String(), plancheck.ResourceActionCreate),
+						},
+					},
+					ConfigStateChecks: checkPolicies(nil, client.MeshBuildingBlockScheduleModeDriftReconciliation, true),
+				},
+				// Tighten across an implementation change: approval gates and drift detection need terraform,
+				// so the policies can only be written after the version switched to it.
+				{
+					Config: terraformConfig.String(),
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PreApply: []plancheck.PlanCheck{
+							plancheck.ExpectResourceAction(addr.String(), plancheck.ResourceActionUpdate),
+						},
+					},
+					ConfigStateChecks: checkPolicies(
+						map[string]bool{"manual_triggers": true, "version_upgrade": true},
+						client.MeshBuildingBlockScheduleModeDriftDetection, false),
+				},
+				// Relax across an implementation change: github_workflows supports neither the approval gates
+				// nor drift detection, so they have to be gone before the version switches back to it.
+				{
+					Config: githubWorkflowsConfig.String(),
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PreApply: []plancheck.PlanCheck{
+							plancheck.ExpectResourceAction(addr.String(), plancheck.ResourceActionUpdate),
+						},
+					},
+					ConfigStateChecks: checkPolicies(nil, client.MeshBuildingBlockScheduleModeDriftReconciliation, true),
+				},
+			},
+		})
+	})
+
+	// A version_spec change on a released version must be rejected before the definition is written. The
+	// last step passes the plan-time policy validators, because those read the implementation type the
+	// configuration asks for, while meshStack validates the policies against the implementation type of
+	// the stored version - which a released version never changes. Writing the definition first would
+	// therefore report meshStack's policy rejection rather than the immutability error, and would store
+	// an approval gate for a version that stays as it is.
+	t.Run("17_released_version_rejected_before_policy_write", func(t *testing.T) {
+		config, _ := testconfig.BBDManual(t)
+		released := releaseBBDVersion(t, config)
+		releasedWithTerraformAndApprovalPolicies := setBBDPolicies(t, released,
+			`{ manual_triggers = true }`,
+			`{}`,
+		).WithFirstBlock(
+			testconfig.Descend("version_spec", "implementation")(testconfig.SetRawExpr(
+				`{ terraform = { terraform_version = "1.9.0", repository_url = "https://github.com/example/building-block.git" } }`,
+			)),
+			// outputs on the manual example are its manual-only sparse overrides, which terraform has no use for.
+			testconfig.Descend("version_spec", "outputs")(testconfig.SetRawExpr(`{}`)),
+		)
+
+		ApplyAndTest(t, resource.TestCase{
+			Steps: []resource.TestStep{
+				// Create draft v1 on manual, which accepts no policy at all.
+				{Config: config.String()},
+				// Release v1, which makes its version_spec immutable.
+				{Config: released.String()},
+				// Switch the implementation to terraform and enable an approval gate on the released version.
+				// terraform supports the gate, so the plan-time validators pass and this reaches Update, where
+				// the immutable version_spec is what must be reported.
+				{
+					Config:      releasedWithTerraformAndApprovalPolicies.String(),
+					ExpectError: regexp.MustCompile(`Updating a version_spec in non-draft \(released\) state is not allowed`),
+				},
+				// The rejected apply must not have written the approval gate. Re-planning the configuration
+				// that was last applied refreshes from meshStack, so a stored policy change shows up here as a
+				// non-empty plan.
+				{Config: released.String(), PlanOnly: true},
+			},
+		})
+	})
 }
 
 // checkBBDMetadataFull checks metadata for the 01_terraform example (tags with 2 entries).
@@ -1063,6 +1186,35 @@ func checkBBDSpecFull(expectedDescription string) knownvalue.Check {
 		"notification_subscribers": knownvalue.ListExact([]knownvalue.Check{
 			knownvalue.StringExact("email:ops@example.com"),
 		}),
+		"approval_policies": checkBBDApprovalPolicies(map[string]bool{
+			"version_upgrade": true,
+			"manual_triggers": true,
+		}),
+		"schedule": checkBBDSchedule(
+			client.MeshBuildingBlockScheduleModeDriftDetection,
+			client.MeshBuildingBlockScheduleFrequencyDaily,
+			false,
+		),
+	})
+}
+
+func checkBBDApprovalPolicies(enabled map[string]bool) knownvalue.Check {
+	checks := make(map[string]knownvalue.Check, 5)
+	for _, gate := range []string{"version_upgrade", "user_input_changes", "manual_triggers", "building_block_creation", "any_input_changes"} {
+		checks[gate] = knownvalue.Bool(enabled[gate])
+	}
+	return xknownvalue.MapExact(checks)
+}
+
+func checkBBDSchedule(
+	mode enum.Entry[client.MeshBuildingBlockScheduleMode],
+	frequency enum.Entry[client.MeshBuildingBlockScheduleFrequency],
+	automaticApproval bool,
+) knownvalue.Check {
+	return xknownvalue.MapExact(map[string]knownvalue.Check{
+		"mode":               knownvalue.StringExact(mode.String()),
+		"frequency":          knownvalue.StringExact(frequency.String()),
+		"automatic_approval": knownvalue.Bool(automaticApproval),
 	})
 }
 
@@ -1086,6 +1238,13 @@ func checkBBDSpecMinimal(expectedDescription string) knownvalue.Check {
 		"run_transparency":          knownvalue.Bool(false),
 		"use_in_landing_zones_only": knownvalue.Bool(false),
 		"notification_subscribers":  knownvalue.SetSizeExact(0),
+		// Omitted in the example, so both fall back to the neutral default.
+		"approval_policies": checkBBDApprovalPolicies(nil),
+		"schedule": checkBBDSchedule(
+			client.MeshBuildingBlockScheduleModeDisabled,
+			client.MeshBuildingBlockScheduleFrequencyNone,
+			false,
+		),
 	})
 }
 
@@ -1446,6 +1605,105 @@ func checkAzureDevopsPipelineImplementation() knownvalue.Check {
 			"kind": knownvalue.StringExact("meshIntegration"),
 		}),
 	})
+}
+
+func TestAccBuildingBlockDefinitionPolicyValidation(t *testing.T) {
+	// The policy validators are client-side only, so the mock client is enough and a real backend adds
+	// nothing - it would only reject the same configurations later, with its own wording.
+	if !IsMockClientTest() {
+		t.Skip("policy validation is tested with mock client only")
+	}
+
+	t.Parallel()
+
+	policyConfig := func(implementation, approvalPolicies, schedule string) string {
+		return fmt.Sprintf(`
+resource "meshstack_building_block_definition" "test" {
+  metadata = { owned_by_workspace = "my-workspace" }
+  spec = {
+    display_name    = "Test"
+    description     = "Test"
+    approval_policies = %s
+    schedule          = %s
+  }
+  version_spec = {
+    draft = true
+    implementation = %s
+  }
+}`, approvalPolicies, schedule, implementation)
+	}
+
+	const (
+		manualImpl    = `{ manual = {} }`
+		terraformImpl = `{ terraform = { terraform_version = "1.9.0", repository_url = "https://example.com/bb.git" } }`
+	)
+
+	tests := []struct {
+		name             string
+		implementation   string
+		approvalPolicies string
+		schedule         string
+		expectError      *regexp.Regexp
+	}{
+		{
+			name:             "approval policies and drift detection on terraform",
+			implementation:   terraformImpl,
+			approvalPolicies: `{ manual_triggers = true }`,
+			schedule:         `{ mode = "DRIFT_DETECTION", frequency = "WEEKLY" }`,
+		},
+		{
+			name:             "no policy at all on manual",
+			implementation:   manualImpl,
+			approvalPolicies: `{}`,
+			schedule:         `{}`,
+		},
+		{
+			name:             "approval gate on manual is rejected",
+			implementation:   manualImpl,
+			approvalPolicies: `{ manual_triggers = true }`,
+			schedule:         `{}`,
+			expectError:      regexp.MustCompile(`Approvals require a dry run`),
+		},
+		{
+			name:             "drift detection on manual is rejected",
+			implementation:   manualImpl,
+			approvalPolicies: `{}`,
+			schedule:         `{ mode = "DRIFT_DETECTION", frequency = "DAILY" }`,
+			expectError:      regexp.MustCompile(`Scheduling is not supported for manual building blocks`),
+		},
+		{
+			name:             "frequency without a schedule is rejected",
+			implementation:   terraformImpl,
+			approvalPolicies: `{}`,
+			schedule:         `{ mode = "DISABLED", frequency = "DAILY" }`,
+			expectError:      regexp.MustCompile(`Schedule frequency without a schedule`),
+		},
+		{
+			name:             "schedule without a frequency is rejected",
+			implementation:   terraformImpl,
+			approvalPolicies: `{}`,
+			schedule:         `{ mode = "DRIFT_DETECTION" }`,
+			expectError:      regexp.MustCompile(`Schedule frequency required`),
+		},
+		{
+			name:             "automatic approval without reconciliation is rejected",
+			implementation:   terraformImpl,
+			approvalPolicies: `{}`,
+			schedule:         `{ mode = "DRIFT_DETECTION", frequency = "DAILY", automatic_approval = true }`,
+			expectError:      regexp.MustCompile(`Automatic approval without drift reconciliation`),
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ApplyAndTest(t, resource.TestCase{
+				Steps: []resource.TestStep{{
+					Config:      policyConfig(test.implementation, test.approvalPolicies, test.schedule),
+					ExpectError: test.expectError,
+				}},
+			})
+		})
+	}
 }
 
 func TestAccBuildingBlockDefinitionSymbolValidation(t *testing.T) {

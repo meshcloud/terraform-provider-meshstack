@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -27,6 +28,32 @@ func nestedObjectToObjectType(nested schema.NestedAttributeObject) types.ObjectT
 		attrTypes[name] = attribute.GetType()
 	}
 	return types.ObjectType{AttrTypes: attrTypes}
+}
+
+// attributeDefaultsObject builds an object whose every attribute holds that attribute's own schema
+// default. Use it for the Default of an Optional+Computed SingleNestedAttribute, so the container's
+// default cannot drift from its leaves': omitting the whole block then yields exactly what declaring
+// it as an empty block does. It panics on an attribute kind it cannot read a default from, or on one
+// without a default - both are provider bugs that surface on every provider start.
+func attributeDefaultsObject(ctx context.Context, attributes map[string]schema.Attribute) types.Object {
+	attributeTypes := make(map[string]attr.Type, len(attributes))
+	attributeValues := make(map[string]attr.Value, len(attributes))
+	for name, attribute := range attributes {
+		attributeTypes[name] = attribute.GetType()
+		switch typed := attribute.(type) {
+		case schema.BoolAttribute:
+			response := defaults.BoolResponse{}
+			typed.Default.DefaultBool(ctx, defaults.BoolRequest{}, &response)
+			attributeValues[name] = response.PlanValue
+		case schema.StringAttribute:
+			response := defaults.StringResponse{}
+			typed.Default.DefaultString(ctx, defaults.StringRequest{}, &response)
+			attributeValues[name] = response.PlanValue
+		default:
+			panic(fmt.Sprintf("attributeDefaultsObject does not know how to read the default of attribute %q of type %T", name, attribute))
+		}
+	}
+	return types.ObjectValueMust(attributeTypes, attributeValues)
 }
 
 // emptySetDefault returns an empty set whose element type is derived from the given

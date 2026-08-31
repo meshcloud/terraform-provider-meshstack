@@ -16,6 +16,24 @@ var (
 	MeshBuildingBlockTypeWorkspaceLevel = MeshBuildingBlockTypes.Entry("WORKSPACE_LEVEL")
 )
 
+type MeshBuildingBlockScheduleMode string
+
+var (
+	MeshBuildingBlockScheduleModes                   = enum.Enum[MeshBuildingBlockScheduleMode]{}
+	MeshBuildingBlockScheduleModeDisabled            = MeshBuildingBlockScheduleModes.Entry("DISABLED")
+	MeshBuildingBlockScheduleModeDriftDetection      = MeshBuildingBlockScheduleModes.Entry("DRIFT_DETECTION")
+	MeshBuildingBlockScheduleModeDriftReconciliation = MeshBuildingBlockScheduleModes.Entry("DRIFT_RECONCILIATION")
+)
+
+type MeshBuildingBlockScheduleFrequency string
+
+var (
+	MeshBuildingBlockScheduleFrequencies     = enum.Enum[MeshBuildingBlockScheduleFrequency]{}
+	MeshBuildingBlockScheduleFrequencyNone   = MeshBuildingBlockScheduleFrequencies.Entry("NONE")
+	MeshBuildingBlockScheduleFrequencyDaily  = MeshBuildingBlockScheduleFrequencies.Entry("DAILY")
+	MeshBuildingBlockScheduleFrequencyWeekly = MeshBuildingBlockScheduleFrequencies.Entry("WEEKLY")
+)
+
 type MeshBuildingBlockDefinitionMetadata struct {
 	Uuid             *string             `json:"uuid,omitempty" tfsdk:"uuid"`
 	OwnedByWorkspace string              `json:"ownedByWorkspace" tfsdk:"owned_by_workspace"`
@@ -23,19 +41,64 @@ type MeshBuildingBlockDefinitionMetadata struct {
 }
 
 type MeshBuildingBlockDefinitionSpec struct {
-	DisplayName           string                `json:"displayName" tfsdk:"display_name"`
-	DisplayNameTemplate   *string               `json:"displayNameTemplate,omitempty" tfsdk:"display_name_template"`
-	TargetType            MeshBuildingBlockType `json:"targetType" tfsdk:"target_type"`
-	Description           string                `json:"description" tfsdk:"description"`
-	Readme                *string               `json:"readme,omitempty" tfsdk:"readme"`
-	RunTransparency       bool                  `json:"runTransparency" tfsdk:"run_transparency"`
-	UseInLandingZonesOnly bool                  `json:"useInLandingZonesOnly" tfsdk:"use_in_landing_zones_only"`
-	SupportURL            *string               `json:"supportUrl,omitempty" tfsdk:"support_url"`
-	DocumentationURL      *string               `json:"documentationUrl,omitempty" tfsdk:"documentation_url"`
+	DisplayName           string                                      `json:"displayName" tfsdk:"display_name"`
+	DisplayNameTemplate   *string                                     `json:"displayNameTemplate,omitempty" tfsdk:"display_name_template"`
+	TargetType            MeshBuildingBlockType                       `json:"targetType" tfsdk:"target_type"`
+	Description           string                                      `json:"description" tfsdk:"description"`
+	Readme                *string                                     `json:"readme,omitempty" tfsdk:"readme"`
+	RunTransparency       bool                                        `json:"runTransparency" tfsdk:"run_transparency"`
+	ApprovalPolicies      MeshBuildingBlockDefinitionApprovalPolicies `json:"approvalPolicies" tfsdk:"approval_policies"`
+	Schedule              MeshBuildingBlockDefinitionSchedule         `json:"schedule" tfsdk:"schedule"`
+	UseInLandingZonesOnly bool                                        `json:"useInLandingZonesOnly" tfsdk:"use_in_landing_zones_only"`
+	SupportURL            *string                                     `json:"supportUrl,omitempty" tfsdk:"support_url"`
+	DocumentationURL      *string                                     `json:"documentationUrl,omitempty" tfsdk:"documentation_url"`
 	// NotificationSubscribers can also specify emails with prefix 'email:', so it's not only usernames (as the JSON field name suggests)!
 	NotificationSubscribers types.Set[string]   `json:"notificationSubscriberUsernames,omitempty" tfsdk:"notification_subscribers"`
 	Symbol                  *string             `json:"symbol,omitempty" tfsdk:"symbol"`
 	SupportedPlatforms      types.Set[NamedRef] `json:"supportedPlatforms" tfsdk:"supported_platforms"`
+}
+
+type MeshBuildingBlockDefinitionApprovalPolicies struct {
+	VersionUpgrade        bool `json:"versionUpgrade" tfsdk:"version_upgrade"`
+	UserInputChanges      bool `json:"userInputChanges" tfsdk:"user_input_changes"`
+	ManualTriggers        bool `json:"manualTriggers" tfsdk:"manual_triggers"`
+	BuildingBlockCreation bool `json:"buildingBlockCreation" tfsdk:"building_block_creation"`
+	AnyInputChanges       bool `json:"anyInputChanges" tfsdk:"any_input_changes"`
+}
+
+// NothingRequiresApproval reports whether no approval gate is enabled.
+func (a MeshBuildingBlockDefinitionApprovalPolicies) NothingRequiresApproval() bool {
+	return a == MeshBuildingBlockDefinitionApprovalPolicies{}
+}
+
+type MeshBuildingBlockDefinitionSchedule struct {
+	Mode              MeshBuildingBlockScheduleMode      `json:"mode" tfsdk:"mode"`
+	Frequency         MeshBuildingBlockScheduleFrequency `json:"frequency" tfsdk:"frequency"`
+	AutomaticApproval bool                               `json:"automaticApproval" tfsdk:"automatic_approval"`
+}
+
+// DisabledSchedule is the only schedule meshStack accepts for every implementation.
+func DisabledSchedule() MeshBuildingBlockDefinitionSchedule {
+	return MeshBuildingBlockDefinitionSchedule{
+		Mode:      MeshBuildingBlockScheduleModeDisabled.Unwrap(),
+		Frequency: MeshBuildingBlockScheduleFrequencyNone.Unwrap(),
+	}
+}
+
+func (s MeshBuildingBlockDefinitionSchedule) IsDisabled() bool {
+	return s == DisabledSchedule()
+}
+
+// HasNeutralPolicies reports whether the spec asks for no approval gate and no schedule.
+func (s MeshBuildingBlockDefinitionSpec) HasNeutralPolicies() bool {
+	return s.ApprovalPolicies.NothingRequiresApproval() && s.Schedule.IsDisabled()
+}
+
+// WithNeutralPolicies returns a copy of the spec without any required approvals and without a schedule.
+func (s MeshBuildingBlockDefinitionSpec) WithNeutralPolicies() MeshBuildingBlockDefinitionSpec {
+	s.ApprovalPolicies = MeshBuildingBlockDefinitionApprovalPolicies{}
+	s.Schedule = DisabledSchedule()
+	return s
 }
 
 type MeshBuildingBlockDefinitionStatusVersion struct {

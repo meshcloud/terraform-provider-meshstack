@@ -52,9 +52,13 @@ func (r *buildingBlockDefinitionResource) Create(ctx context.Context, req resour
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	// meshStack rejects an enabled approval policy or drift schedule on the first creation: the definition is
+	// created with a placeholder version of implementation type "manual", which does not support approval policies.
+	// The policies follow once the version has the configured implementation.
+	plannedSpec := plan.Spec
 	createdDto, err := r.buildingBlockDefinitionClient.Create(ctx, client.MeshBuildingBlockDefinition{
 		Metadata: plan.Metadata,
-		Spec:     plan.Spec,
+		Spec:     plannedSpec.WithNeutralPolicies(),
 	})
 	if err != nil {
 		resp.Diagnostics.AddError("Error creating MeshBuildingBlockDefinition", err.Error())
@@ -112,7 +116,47 @@ func (r *buildingBlockDefinitionResource) Create(ctx context.Context, req resour
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	if policyDto := r.writePolicies(ctx, bbdUuid, plan.Metadata, plannedSpec, &resp.Diagnostics); policyDto != nil {
+		plan.SetFromClientDto(policyDto, &resp.Diagnostics)
+		plan.Metadata.Tags = plannedTags
+	}
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, plan, converterOptions...)...)
+}
+
+// writePolicies applies plannedSpec's approval policies and drift schedule to a definition that was just
+// written without approvals and drift schedule. meshStack validates both against the implementation type
+// of the definition's latest version, so they can only be written once that version has the configured
+// implementation.
+func (r *buildingBlockDefinitionResource) writePolicies(
+	ctx context.Context,
+	bbdUuid string,
+	metadata client.MeshBuildingBlockDefinitionMetadata,
+	plannedSpec client.MeshBuildingBlockDefinitionSpec,
+	diags *diag.Diagnostics,
+) *client.MeshBuildingBlockDefinition {
+	if plannedSpec.HasNeutralPolicies() {
+		// if no approval gates and no schedule is desired, there's nothing to do here. We've already created a BBD without
+		// approval gates and without a schedule in a previous step.
+		return nil
+	}
+	updatedDto, err := r.buildingBlockDefinitionClient.Update(ctx, bbdUuid, client.MeshBuildingBlockDefinition{
+		Metadata: metadata,
+		Spec:     plannedSpec,
+	})
+	if err != nil {
+		diags.AddError("Error writing MeshBuildingBlockDefinition policies", fmt.Sprintf(
+			"Building block definition %s and its version were written, but applying spec.approval_policies and spec.schedule failed. "+
+				"meshStack validates both against the implementation type of the definition's latest version, so the configured "+
+				"implementation most likely does not support them.\nError: %s",
+			bbdUuid, err.Error(),
+		))
+		return nil
+	}
+	return updatedDto
 }
 
 func (r *buildingBlockDefinitionResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -288,6 +332,52 @@ func versionSpecDtoFromPlan(ctx context.Context, plan buildingBlockDefinition, b
 		dto.Outputs = manualConfiguredOutputs(ctx, config, dto.Inputs, diags)
 	}
 	return dto
+}
+
+func rejectVersionSpecChangeOnReleasedVersion(
+	state buildingBlockDefinition,
+	versionSpecDto client.MeshBuildingBlockDefinitionVersionSpec,
+	bbdUuid string,
+	diags *diag.Diagnostics,
+) {
+	// state (and plan) are in draft=false (aka released), so one should not change version_spec at all
+	// this makes released or in-review versions immutable. A secret rotation on a released version is
+	// already rejected at plan time in ModifyPlan with a clear message (issue #196), so it never reaches
+	// here; any remaining version_spec change is caught by the content-hash comparison below.
+	versionSpecDtoContentHash := calculateBuildingBlockDefinitionVersionContentHash(versionSpecDto, diags)
+	if diags.HasError() {
+		return
+	}
+
+	cmp := versionSpecDtoContentHash.compareToStored(state.VersionLatest.ContentHash.Get())
+	if cmp == hashIncomparable {
+		// The stored hash was produced by a different/legacy algorithm version (state written by an
+		// older provider and never refreshed, imported, or planned with -refresh=false), so its value
+		// cannot be compared against the current-version hash. Recompute the released version's hash
+		// from the authoritative spec in state AT THE CURRENT version so we compare.
+		// We build the DTO straight from state.VersionSpec.
+		stateSpecDto := state.VersionSpec.ToClientDto(bbdUuid)
+		authoritative := calculateBuildingBlockDefinitionVersionContentHash(stateSpecDto, diags)
+		if diags.HasError() {
+			return
+		}
+		cmp = versionSpecDtoContentHash.compareToStored(authoritative.toBase64())
+	}
+
+	switch cmp {
+	case hashSame:
+		// no indication of change in version_spec, so the immutable version stays as it is
+		return
+	default: // hashDifferent, or still-incomparable -> fail safe by rejecting a change to an immutable version
+		diags.AddError("Error updating version_spec", fmt.Sprintf(
+			"Updating a version_spec in non-draft (released) state is not allowed — released versions are immutable.\n\n"+
+				"To publish your changes as a new version, first set draft = true and apply to create a draft. "+
+				"Once you are happy with the draft, set draft = false and apply again to release it.\n\n"+
+				"(The content hash would change from %s to %s.)",
+			state.VersionLatest.ContentHash.Get(), versionSpecDtoContentHash.toBase64(),
+		))
+		return
+	}
 }
 
 // manualOutputOverride reads a configured manual output with nullable fields, so an omitted attribute (nil)
@@ -573,6 +663,33 @@ func (r *buildingBlockDefinitionResource) Update(ctx context.Context, req resour
 		return
 	}
 
+	versionSpecDto := versionSpecDtoFromPlan(ctx, plan, bbdUuid, req.Config, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if !state.VersionSpec.Draft && !plan.VersionSpec.Draft {
+		rejectVersionSpecChangeOnReleasedVersion(state, versionSpecDto, bbdUuid, &resp.Diagnostics)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
+	// meshStack validates the approvals and the drift schedule against the implementation type of the
+	// definition's latest version, and it rejects a version implementation-type change while the stored
+	// policies are incompatible with the new type. So a policy the current type doesn't support has to be
+	// written after version_spec, and one the new type doesn't support has to be gone before it. "Neutral"
+	// policies (= no approvals required, no schedule configured) on the other hand satisfy every implementation
+	// type, so when the implementation type changes we pass through neutral in between.
+	plannedSpec := plan.Spec
+	versionIsWritten := state.VersionSpec.Draft || plan.VersionSpec.Draft
+	implementationTypeChanges := plan.VersionSpec.Implementation.InferTypeFromNonNilField() !=
+		state.VersionSpec.Implementation.InferTypeFromNonNilField()
+	policiesDeferred := versionIsWritten && implementationTypeChanges
+	if policiesDeferred {
+		plan.Spec = plannedSpec.WithNeutralPolicies()
+	}
+
 	updatedDto, err := r.buildingBlockDefinitionClient.Update(ctx, bbdUuid, client.MeshBuildingBlockDefinition{
 		Metadata: plan.Metadata,
 		Spec:     plan.Spec,
@@ -594,11 +711,6 @@ func (r *buildingBlockDefinitionResource) Update(ctx context.Context, req resour
 
 	// Handle version_spec update logic
 
-	versionSpecDto := versionSpecDtoFromPlan(ctx, plan, bbdUuid, req.Config, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
 	var updatedVersionDto *client.MeshBuildingBlockDefinitionVersion
 	switch {
 	case !state.VersionSpec.Draft && plan.VersionSpec.Draft:
@@ -613,45 +725,9 @@ func (r *buildingBlockDefinitionResource) Update(ctx context.Context, req resour
 			return
 		}
 	case !state.VersionSpec.Draft:
-		// state (and plan) are in draft=false (aka released), so one should not change version_spec at all
-		// this makes released or in-review versions immutable. A secret rotation on a released version is
-		// already rejected at plan time in ModifyPlan with a clear message (issue #196), so it never reaches
-		// here; any remaining version_spec change is caught by the content-hash comparison below.
-		versionSpecDtoContentHash := calculateBuildingBlockDefinitionVersionContentHash(versionSpecDto, &resp.Diagnostics)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-
-		cmp := versionSpecDtoContentHash.compareToStored(state.VersionLatest.ContentHash.Get())
-		if cmp == hashIncomparable {
-			// The stored hash was produced by a different/legacy algorithm version (state written by an
-			// older provider and never refreshed, imported, or planned with -refresh=false), so its value
-			// cannot be compared against the current-version hash. Recompute the released version's hash
-			// from the authoritative spec in state AT THE CURRENT version so we compare.
-			// We build the DTO straight from state.VersionSpec.
-			stateSpecDto := state.VersionSpec.ToClientDto(bbdUuid)
-			authoritative := calculateBuildingBlockDefinitionVersionContentHash(stateSpecDto, &resp.Diagnostics)
-			if resp.Diagnostics.HasError() {
-				return
-			}
-			cmp = versionSpecDtoContentHash.compareToStored(authoritative.toBase64())
-		}
-
-		switch cmp {
-		case hashSame:
-			// state is in draft=false (aka released), and there's no indication of change in version_specs,
-			// so all is good, and we don't need to do anything with the backend
-			return
-		default: // hashDifferent, or still-incomparable -> fail safe by rejecting a change to an immutable version
-			resp.Diagnostics.AddError("Error updating version_spec", fmt.Sprintf(
-				"Updating a version_spec in non-draft (released) state is not allowed — released versions are immutable.\n\n"+
-					"To publish your changes as a new version, first set draft = true and apply to create a draft. "+
-					"Once you are happy with the draft, set draft = false and apply again to release it.\n\n"+
-					"(The content hash would change from %s to %s.)",
-				state.VersionLatest.ContentHash.Get(), versionSpecDtoContentHash.toBase64(),
-			))
-			return
-		}
+		// state (and plan) are in draft=false (aka released), so the version_spec is immutable and a change
+		// to it was already rejected above. Nothing is left to write for the version itself.
+		return
 	default:
 		// State is in draft=true, so we update the version_spec (even if content hashes are equal)
 		latestVersionUuid := *state.VersionLatest.Uuid.Value
@@ -676,6 +752,19 @@ func (r *buildingBlockDefinitionResource) Update(ctx context.Context, req resour
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	if policiesDeferred {
+		// The first PUT passed through neutral policies for the implementation-type change above; the
+		// version now includes the configured implementation, so the planned policies can be written.
+		if policyDto := r.writePolicies(ctx, bbdUuid, plan.Metadata, plannedSpec, &resp.Diagnostics); policyDto != nil {
+			plan.SetFromClientDto(policyDto, &resp.Diagnostics)
+			plan.Metadata.Tags = plannedTags
+		}
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
 	if updatedVersionDto != nil {
 		updatedVersionSpecContentHash := calculateBuildingBlockDefinitionVersionContentHash(updatedVersionDto.Spec, &resp.Diagnostics)
 		if resp.Diagnostics.HasError() {

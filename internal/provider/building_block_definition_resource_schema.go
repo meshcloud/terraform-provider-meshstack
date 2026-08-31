@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
@@ -27,7 +28,10 @@ import (
 	"github.com/meshcloud/terraform-provider-meshstack/internal/validators"
 )
 
-func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+	// The policy descriptions below all hinge on dry-run support, which only the terraform implementation has.
+	implementationTerraform := client.MeshBuildingBlockImplementationTypeTerraform
+
 	versionAttributes := map[string]schema.Attribute{
 		"uuid": schema.StringAttribute{
 			MarkdownDescription: "UUID of the version.",
@@ -223,6 +227,111 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 	},
 	}
 
+	approvalPoliciesAttributes := map[string]schema.Attribute{
+		"version_upgrade": schema.BoolAttribute{
+			MarkdownDescription: "Whether upgrading a building block to a newer definition version requires approval.",
+			Optional:            true,
+			Computed:            true,
+			Default:             booldefault.StaticBool(false),
+		},
+		"user_input_changes": schema.BoolAttribute{
+			MarkdownDescription: "Whether changes to user-provided inputs require approval.",
+			Optional:            true,
+			Computed:            true,
+			Default:             booldefault.StaticBool(false),
+		},
+		"manual_triggers": schema.BoolAttribute{
+			MarkdownDescription: "Whether a manually triggered run requires approval.",
+			Optional:            true,
+			Computed:            true,
+			Default:             booldefault.StaticBool(false),
+		},
+		"building_block_creation": schema.BoolAttribute{
+			MarkdownDescription: "Whether creating a new building block from this definition requires approval.",
+			Optional:            true,
+			Computed:            true,
+			Default:             booldefault.StaticBool(false),
+		},
+		"any_input_changes": schema.BoolAttribute{
+			MarkdownDescription: "Whether any input change - user-provided or system-generated - requires approval.",
+			Optional:            true,
+			Computed:            true,
+			Default:             booldefault.StaticBool(false),
+		},
+	}
+	approvalPoliciesAttribute := schema.SingleNestedAttribute{
+		MarkdownDescription: "Which run triggers require an operator's approval before the run is applied. " +
+			"An approver reviews the planned changes of a dry run, so enabling any approval gate requires the " +
+			implementationTerraform.Markdown() + " implementation. Every other implementation has no dry run, and such a " +
+			"configuration is rejected at plan time. Defaults to no approval gate at all.",
+		Optional:   true,
+		Computed:   true,
+		Default:    objectdefault.StaticValue(attributeDefaultsObject(ctx, approvalPoliciesAttributes)),
+		Attributes: approvalPoliciesAttributes,
+		Validators: []validator.Object{
+			validators.BuildingBlockDefinitionApprovals{},
+		},
+	}
+
+	scheduleAttributes := map[string]schema.Attribute{
+		"mode": schema.StringAttribute{
+			MarkdownDescription: fmt.Sprintf(
+				"What runs on the schedule. One of %s. %s only reports drift, %s also fixes it. "+
+					"%s requires the %s implementation; %s works with every implementation except %s.",
+				client.MeshBuildingBlockScheduleModes.Markdown(),
+				client.MeshBuildingBlockScheduleModeDriftDetection.Markdown(),
+				client.MeshBuildingBlockScheduleModeDriftReconciliation.Markdown(),
+				client.MeshBuildingBlockScheduleModeDriftDetection.Markdown(),
+				implementationTerraform.Markdown(),
+				client.MeshBuildingBlockScheduleModeDriftReconciliation.Markdown(),
+				client.MeshBuildingBlockImplementationTypeManual.Markdown(),
+			),
+			Optional: true,
+			Computed: true,
+			Default:  stringdefault.StaticString(client.MeshBuildingBlockScheduleModeDisabled.String()),
+			Validators: []validator.String{
+				stringvalidator.OneOf(client.MeshBuildingBlockScheduleModes.Strings()...),
+			},
+		},
+		"frequency": schema.StringAttribute{
+			MarkdownDescription: fmt.Sprintf(
+				"How often the schedule runs. One of %s. Must be %s when `mode` is %s, and must not be %s otherwise.",
+				client.MeshBuildingBlockScheduleFrequencies.Markdown(),
+				client.MeshBuildingBlockScheduleFrequencyNone.Markdown(),
+				client.MeshBuildingBlockScheduleModeDisabled.Markdown(),
+				client.MeshBuildingBlockScheduleFrequencyNone.Markdown(),
+			),
+			Optional: true,
+			Computed: true,
+			Default:  stringdefault.StaticString(client.MeshBuildingBlockScheduleFrequencyNone.String()),
+			Validators: []validator.String{
+				stringvalidator.OneOf(client.MeshBuildingBlockScheduleFrequencies.Strings()...),
+			},
+		},
+		"automatic_approval": schema.BoolAttribute{
+			MarkdownDescription: fmt.Sprintf(
+				"Whether meshStack fixes drift without an operator's approval. Can only be `true` when `mode` is %s, "+
+					"and is required there for every implementation except %s, which is the only one that can produce the dry run an approver reviews.",
+				client.MeshBuildingBlockScheduleModeDriftReconciliation.Markdown(),
+				implementationTerraform.Markdown(),
+			),
+			Optional: true,
+			Computed: true,
+			Default:  booldefault.StaticBool(false),
+		},
+	}
+	scheduleAttribute := schema.SingleNestedAttribute{
+		MarkdownDescription: "Drift detection and drift reconciliation schedule for the building blocks of this definition. " +
+			"Defaults to no schedule.",
+		Optional:   true,
+		Computed:   true,
+		Default:    objectdefault.StaticValue(attributeDefaultsObject(ctx, scheduleAttributes)),
+		Attributes: scheduleAttributes,
+		Validators: []validator.Object{
+			validators.BuildingBlockDefinitionSchedule{},
+		},
+	}
+
 	dependencyRef := meshRefByUuid(meshRefOptions{Kind: client.MeshObjectKind.BuildingBlockDefinition, InSet: true})
 	dependencyRefs := schema.NestedAttributeObject{
 		Attributes: dependencyRef.Attributes,
@@ -340,6 +449,8 @@ func (r *buildingBlockDefinitionResource) Schema(_ context.Context, _ resource.S
 						Computed:            true,
 						Default:             booldefault.StaticBool(false),
 					},
+					"approval_policies": approvalPoliciesAttribute,
+					"schedule":          scheduleAttribute,
 					"use_in_landing_zones_only": schema.BoolAttribute{
 						MarkdownDescription: "Whether this building block can only be used in landing zones.",
 						Optional:            true,

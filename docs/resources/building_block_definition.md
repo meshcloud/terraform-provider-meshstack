@@ -39,6 +39,22 @@ resource "meshstack_building_block_definition" "example_01_terraform" {
     run_transparency          = true                                            # Optional: defaults to false
     use_in_landing_zones_only = true                                            # Optional: defaults to false
     notification_subscribers  = ["user:some-username", "email:ops@example.com"] # Optional, note user: and email: prefix
+
+    # Optional: which run triggers need an operator's approval before the run is applied.
+    # Defaults to no approval gate at all. Only the terraform implementation supports approval policies, because an
+    # approver reviews the planned changes of a dry run. Flags left out default to false.
+    approval_policies = {
+      version_upgrade = true
+      manual_triggers = true
+    }
+
+    # Optional: drift detection / reconciliation schedule. Defaults to mode = "DISABLED".
+    # DRIFT_DETECTION only reports drift and needs the terraform implementation; DRIFT_RECONCILIATION
+    # also fixes it and works with every implementation except manual.
+    schedule = {
+      mode      = "DRIFT_DETECTION"
+      frequency = "DAILY"
+    }
   }
 
   version_spec = {
@@ -377,16 +393,40 @@ Required:
 
 Optional:
 
+- `approval_policies` (Attributes) Which run triggers require an operator's approval before the run is applied. An approver reviews the planned changes of a dry run, so enabling any approval gate requires the `terraform` implementation. Every other implementation has no dry run, and such a configuration is rejected at plan time. Defaults to no approval gate at all. (see [below for nested schema](#nestedatt--spec--approval_policies))
 - `display_name_template` (String) Mustache-like template that names every new building block of this definition after the values it was ordered with, for example `Project {{projectName}}`. A placeholder must name an input of the definition and nothing else; if any placeholder cannot be resolved, the building block is named after the unrendered template instead. Without this attribute, a new building block is named after `display_name`. Needs a meshStack that serves the field: an older one leaves it out of its response, so an apply that sets it fails Terraform's consistency check.
 - `documentation_url` (String) URL pointing to documentation for the building block definition.
 - `notification_subscribers` (Set of String) List of subscribers to notify about events related to this building block. Prefix usernames with `user:` and emails with `email:`.
 - `readme` (String) Detailed readme/documentation in markdown format.
 - `run_transparency` (Boolean) Specifies the building block run control. When set to `true`, both platform teams and workspace users can view detailed run logs and re-run building blocks. When set to `false` (default), only platform teams have this access.
+- `schedule` (Attributes) Drift detection and drift reconciliation schedule for the building blocks of this definition. Defaults to no schedule. (see [below for nested schema](#nestedatt--spec--schedule))
 - `support_url` (String) URL pointing to support resources for the building block definition.
 - `supported_platforms` (Attributes Set) Set of platforms that this building block supports. Required and must be non-empty if target_type is `TENANT_LEVEL` (see [below for nested schema](#nestedatt--spec--supported_platforms))
 - `symbol` (String) Symbol/icon of the building block definition as shown in meshPanel. This can either be an URL starting with `http[s]://` or a base64 encoded data blob. The function `provider::meshstack::load_image_file(<filepath>)` produces such a data blob from a local file.
 - `target_type` (String) Type of building block definition. Determines where building blocks can be attached. Cannot be changed after initial creation. One of `TENANT_LEVEL`, `WORKSPACE_LEVEL`.
 - `use_in_landing_zones_only` (Boolean) Whether this building block can only be used in landing zones.
+
+<a id="nestedatt--spec--approval_policies"></a>
+### Nested Schema for `spec.approval_policies`
+
+Optional:
+
+- `any_input_changes` (Boolean) Whether any input change - user-provided or system-generated - requires approval.
+- `building_block_creation` (Boolean) Whether creating a new building block from this definition requires approval.
+- `manual_triggers` (Boolean) Whether a manually triggered run requires approval.
+- `user_input_changes` (Boolean) Whether changes to user-provided inputs require approval.
+- `version_upgrade` (Boolean) Whether upgrading a building block to a newer definition version requires approval.
+
+
+<a id="nestedatt--spec--schedule"></a>
+### Nested Schema for `spec.schedule`
+
+Optional:
+
+- `automatic_approval` (Boolean) Whether meshStack fixes drift without an operator's approval. Can only be `true` when `mode` is `DRIFT_RECONCILIATION`, and is required there for every implementation except `terraform`, which is the only one that can produce the dry run an approver reviews.
+- `frequency` (String) How often the schedule runs. One of `NONE`, `DAILY`, `WEEKLY`. Must be `NONE` when `mode` is `DISABLED`, and must not be `NONE` otherwise.
+- `mode` (String) What runs on the schedule. One of `DISABLED`, `DRIFT_DETECTION`, `DRIFT_RECONCILIATION`. `DRIFT_DETECTION` only reports drift, `DRIFT_RECONCILIATION` also fixes it. `DRIFT_DETECTION` requires the `terraform` implementation; `DRIFT_RECONCILIATION` works with every implementation except `manual`.
+
 
 <a id="nestedatt--spec--supported_platforms"></a>
 ### Nested Schema for `spec.supported_platforms`
