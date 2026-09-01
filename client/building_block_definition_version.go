@@ -66,7 +66,34 @@ var (
 	MeshBuildingBlockInputAssignmentTypeTenantBuildingBlockUuid     = MeshBuildingBlockInputAssignmentTypes.Entry("TENANT_BUILDING_BLOCK_UUID")
 	MeshBuildingBlockInputAssignmentTypeStatic                      = MeshBuildingBlockInputAssignmentTypes.Entry("STATIC")
 	MeshBuildingBlockInputAssignmentTypeUserPermissions             = MeshBuildingBlockInputAssignmentTypes.Entry("USER_PERMISSIONS")
+	MeshBuildingBlockInputAssignmentTypeTag                         = MeshBuildingBlockInputAssignmentTypes.Entry("TAG")
 )
+
+// MeshBuildingBlockTagInputTarget names the meshObject a tag input reads its tag from. It is the first
+// half of the input's argument, `<target>.<tag key>`.
+type MeshBuildingBlockTagInputTarget string
+
+var (
+	MeshBuildingBlockTagInputTargets             = enum.Enum[MeshBuildingBlockTagInputTarget]{}
+	MeshBuildingBlockTagInputTargetWorkspace     = MeshBuildingBlockTagInputTargets.Entry("WORKSPACE")
+	MeshBuildingBlockTagInputTargetProject       = MeshBuildingBlockTagInputTargets.Entry("PROJECT")
+	MeshBuildingBlockTagInputTargetPaymentMethod = MeshBuildingBlockTagInputTargets.Entry("PAYMENT_METHOD")
+	MeshBuildingBlockTagInputTargetLandingZone   = MeshBuildingBlockTagInputTargets.Entry("LANDING_ZONE")
+)
+
+// TagInputTargetSeparator splits the target from the tag key. Only the first one separates them,
+// because a tag key may contain a dot itself.
+const TagInputTargetSeparator = "."
+
+// TagInputTargetsFor answers which tags a building block of this target type can read. A workspace
+// building block only ever runs in the context of a workspace; a tenant building block additionally
+// sees its project, and that project's payment method and landing zone.
+func TagInputTargetsFor(targetType MeshBuildingBlockType) enum.Enum[MeshBuildingBlockTagInputTarget] {
+	if targetType == MeshBuildingBlockTypeWorkspaceLevel.Unwrap() {
+		return enum.Of(MeshBuildingBlockTagInputTargetWorkspace)
+	}
+	return MeshBuildingBlockTagInputTargets
+}
 
 type MeshBuildingBlockDefinitionOutputAssignmentType string
 

@@ -1346,6 +1346,22 @@ func checksForImplementation(exampleSuffix string) (checkInputs, checkImplementa
 					"default_value":                  knownvalue.Null(),
 					"display_order":                  knownvalue.Int64Exact(0),
 				}),
+				"business_unit": xknownvalue.MapExact(map[string]knownvalue.Check{
+					"display_name":           knownvalue.StringExact("Business Unit"),
+					"type":                   knownvalue.StringExact("CODE"),
+					"assignment_type":        knownvalue.StringExact("TAG"),
+					"is_environment":         knownvalue.Bool(false),
+					"updateable_by_consumer": knownvalue.Bool(false),
+					"description":            knownvalue.StringExact("The business unit tag of the workspace this building block belongs to"),
+					// The argument is the `<target>.<tagKey>` reference; the key carries a per-run random suffix.
+					"argument":                       xknownvalue.NotEmptyString(),
+					"default_value":                  knownvalue.Null(),
+					"value_validation_regex":         knownvalue.Null(),
+					"validation_regex_error_message": knownvalue.Null(),
+					"selectable_values":              knownvalue.Null(),
+					"sensitive":                      knownvalue.Null(),
+					"display_order":                  knownvalue.Int64Exact(3),
+				}),
 				"some-file.yaml": xknownvalue.MapExact(map[string]knownvalue.Check{
 					"display_name":                   knownvalue.StringExact("Some input file"),
 					"type":                           knownvalue.StringExact("FILE"),

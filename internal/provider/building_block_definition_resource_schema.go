@@ -77,7 +77,9 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 						client.MeshBuildingBlockIOTypeList.Markdown() + " is deprecated, use " + client.MeshBuildingBlockIOTypeCode.Markdown() + " instead. " +
 						"For type " + client.MeshBuildingBlockIOTypeFile.Markdown() + ", the value must be a MIME-typed base64 data blob. " +
 						"Use `provider::meshstack::load_file` or `provider::meshstack::encode_file` to produce such a data blob. " +
-						"When providing this value via `argument` or `default_value`, wrap the blob in `jsonencode(...)`, for example `argument = jsonencode(provider::meshstack::load_file(...))`.",
+						"When providing this value via `argument` or `default_value`, wrap the blob in `jsonencode(...)`, for example `argument = jsonencode(provider::meshstack::load_file(...))`.<br>" +
+						"Must be " + client.MeshBuildingBlockIOTypeCode.Markdown() + " when `assignment_type` is " + client.MeshBuildingBlockInputAssignmentTypeTag.Markdown() +
+						", because a meshStack tag value is a list of strings.",
 					Required: true,
 					Validators: []validator.String{
 						stringvalidator.OneOf(client.MeshBuildingBlockIOTypes.Strings()...),
@@ -97,9 +99,16 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 						"**Required** if `assignment_type` is " + enum.Of(
 						client.MeshBuildingBlockInputAssignmentTypeStatic,
 						client.MeshBuildingBlockInputAssignmentTypeBuildingBlockOutput,
+						client.MeshBuildingBlockInputAssignmentTypeTag,
 					).Markdown() + ". " +
 						"**Must not be provided** for other assignment types.<br>" +
 						"For assignment type " + client.MeshBuildingBlockInputAssignmentTypeBuildingBlockOutput.Markdown() + ", the value must have the format `jsonencode(\"<BuildingBlockDefinitionUuid>.<outputName>\")`.<br>" +
+						"For assignment type " + client.MeshBuildingBlockInputAssignmentTypeTag.Markdown() + ", the value names the tag to read and must have the format " +
+						"`jsonencode(\"<target>.<tagKey>\")`, for example `jsonencode(\"WORKSPACE.costCenter\")`. The target is one of " +
+						client.MeshBuildingBlockTagInputTargets.Markdown() + "; a `" + client.MeshBuildingBlockTypeWorkspaceLevel.String() + "` building block can only read " +
+						client.MeshBuildingBlockTagInputTargetWorkspace.Markdown() + " tags. The tag must already exist in your tag schema; " +
+						"prefer referencing a `meshstack_tag_definition` resource's `spec.key` over a literal key. " +
+						"meshStack resolves the tag value per building block and passes it to the run as a JSON array of strings, or `null` when the tag holds no value.<br>" +
 						"The value must be passed through `jsonencode()` to support dynamic typing as defined by the `type` attribute.<br>" +
 						"For type " + client.MeshBuildingBlockIOTypeCode.Markdown() + ", the value must be an `jsonencode`'d string, e.g. `jsonencode(\"some code\")` and the interpretation of the `\"some code\"` string is implementation-specific.<br>" +
 						"For the `terraform` implementation, the " + client.MeshBuildingBlockIOTypeCode.Markdown() + " input value should be `jsonencode`'d again, as any JSON is a valid HCL expression, which is properly passed to a variable input by the TF runner.<br>" +

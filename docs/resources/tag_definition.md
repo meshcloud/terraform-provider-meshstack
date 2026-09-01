@@ -3,12 +3,12 @@
 page_title: "meshstack_tag_definition Resource - terraform-provider-meshstack"
 subcategory: ""
 description: |-
-  Manage tag definitions
+  Manage tag definitions. Destroying a tag definition also removes the tag values of every meshObject of its target_kind. meshStack refuses the delete with 409 Conflict while a building block reads the tag as a TAG input, and names the building block definitions that declare it - remove the input there first.
 ---
 
 # meshstack_tag_definition (Resource)
 
-Manage tag definitions
+Manage tag definitions. Destroying a tag definition also removes the tag values of every meshObject of its `target_kind`. meshStack refuses the delete with `409 Conflict` while a building block reads the tag as a `TAG` input, and names the building block definitions that declare it - remove the input there first.
 
 ## Example Usage
 

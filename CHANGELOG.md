@@ -5,6 +5,17 @@ FIXES:
 
 FEATURES:
 
+- `meshstack_building_block_definition`: a version input can now read a meshStack tag. Set an input's
+  `assignment_type` to `TAG`, its `type` to `CODE` and its `argument` to `jsonencode("<target>.<tagKey>")` — for
+  example `jsonencode("WORKSPACE.${meshstack_tag_definition.cost_center.spec.key}")` — and meshStack fills in that
+  tag's value for every building block of the definition, instead of asking users to re-type metadata meshStack
+  already governs. A `TENANT_LEVEL` definition can read `WORKSPACE`, `PROJECT`, `PAYMENT_METHOD` and `LANDING_ZONE`
+  tags; a `WORKSPACE_LEVEL` one only `WORKSPACE` tags. The value reaches the run as a JSON array of strings, so
+  declare the OpenTofu variable as `list(string)` and make it nullable — a tag that holds no value resolves to
+  `null`. This needs meshStack 2026.36.0 or later; an older one rejects the input, and nothing else changes for a
+  definition that uses no tag input. A tag definition cannot be destroyed while a building block reads it, so
+  destroy order matters: reference the `meshstack_tag_definition` resource's `spec.key` from the argument and
+  Terraform gets it right on its own.
 - `meshstack_building_block_definition`: the meshPanel *Policies* tab is now configurable through two new arguments,
   `spec.approval_policies` and `spec.schedule`. `spec.approval_policies` names the run triggers that need an operator's
   approval (`version_upgrade`, `user_input_changes`, `manual_triggers`, `building_block_creation`, `any_input_changes`),

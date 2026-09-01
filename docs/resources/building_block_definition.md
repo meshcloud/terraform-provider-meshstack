@@ -105,6 +105,16 @@ resource "meshstack_building_block_definition" "example_01_terraform" {
           }
         }
       }
+      business_unit = {
+        display_name    = "Business Unit"
+        description     = "The business unit tag of the workspace this building block belongs to" # Optional
+        type            = "CODE"                                                                  # Tag inputs are always CODE: a tag value is a list of strings
+        assignment_type = "TAG"
+        # Names the tag to read as "<target>.<tagKey>". A TENANT_LEVEL building block can read WORKSPACE,
+        # PROJECT, PAYMENT_METHOD and LANDING_ZONE tags; a WORKSPACE_LEVEL one only WORKSPACE tags.
+        argument      = jsonencode("WORKSPACE.${meshstack_tag_definition.workspace_business_unit.spec.key}")
+        display_order = 3
+      }
       "some-file.yaml" = {
         display_name    = "Some input file"
         type            = "FILE"
@@ -631,13 +641,13 @@ Optional:
 
 Required:
 
-- `assignment_type` (String) How the input value is assigned. One of `AUTHOR`, `USER_INPUT`, `PLATFORM_OPERATOR_MANUAL_INPUT`, `BUILDING_BLOCK_OUTPUT`, `PLATFORM_TENANT_ID`, `MESHSTACK_TENANT_UUID`, `WORKSPACE_IDENTIFIER`, `PROJECT_IDENTIFIER`, `FULL_PLATFORM_IDENTIFIER`, `TENANT_BUILDING_BLOCK_UUID`, `STATIC`, `USER_PERMISSIONS`. Determines which additional attributes are required or allowed.
+- `assignment_type` (String) How the input value is assigned. One of `AUTHOR`, `USER_INPUT`, `PLATFORM_OPERATOR_MANUAL_INPUT`, `BUILDING_BLOCK_OUTPUT`, `PLATFORM_TENANT_ID`, `MESHSTACK_TENANT_UUID`, `WORKSPACE_IDENTIFIER`, `PROJECT_IDENTIFIER`, `FULL_PLATFORM_IDENTIFIER`, `TENANT_BUILDING_BLOCK_UUID`, `STATIC`, `USER_PERMISSIONS`, `TAG`. Determines which additional attributes are required or allowed.
 - `display_name` (String) Human-readable display name for the input.
-- `type` (String) Data type of the input. One of `STRING`, `CODE`, `INTEGER`, `BOOLEAN`, `FILE`, `LIST`, `SINGLE_SELECT`, `MULTI_SELECT`. `LIST` is deprecated, use `CODE` instead. For type `FILE`, the value must be a MIME-typed base64 data blob. Use `provider::meshstack::load_file` or `provider::meshstack::encode_file` to produce such a data blob. When providing this value via `argument` or `default_value`, wrap the blob in `jsonencode(...)`, for example `argument = jsonencode(provider::meshstack::load_file(...))`.
+- `type` (String) Data type of the input. One of `STRING`, `CODE`, `INTEGER`, `BOOLEAN`, `FILE`, `LIST`, `SINGLE_SELECT`, `MULTI_SELECT`. `LIST` is deprecated, use `CODE` instead. For type `FILE`, the value must be a MIME-typed base64 data blob. Use `provider::meshstack::load_file` or `provider::meshstack::encode_file` to produce such a data blob. When providing this value via `argument` or `default_value`, wrap the blob in `jsonencode(...)`, for example `argument = jsonencode(provider::meshstack::load_file(...))`.<br>Must be `CODE` when `assignment_type` is `TAG`, because a meshStack tag value is a list of strings.
 
 Optional:
 
-- `argument` (String) Argument value for the input, depending on the assignment type. **Required** if `assignment_type` is `STATIC`, `BUILDING_BLOCK_OUTPUT`. **Must not be provided** for other assignment types.<br>For assignment type `BUILDING_BLOCK_OUTPUT`, the value must have the format `jsonencode("<BuildingBlockDefinitionUuid>.<outputName>")`.<br>The value must be passed through `jsonencode()` to support dynamic typing as defined by the `type` attribute.<br>For type `CODE`, the value must be an `jsonencode`'d string, e.g. `jsonencode("some code")` and the interpretation of the `"some code"` string is implementation-specific.<br>For the `terraform` implementation, the `CODE` input value should be `jsonencode`'d again, as any JSON is a valid HCL expression, which is properly passed to a variable input by the TF runner.<br>For example, if the variable input specifies `type = map(string)`, then a type-matching value input is `jsonencode(jsonencode({some-key: "some-value"}))`.
+- `argument` (String) Argument value for the input, depending on the assignment type. **Required** if `assignment_type` is `STATIC`, `BUILDING_BLOCK_OUTPUT`, `TAG`. **Must not be provided** for other assignment types.<br>For assignment type `BUILDING_BLOCK_OUTPUT`, the value must have the format `jsonencode("<BuildingBlockDefinitionUuid>.<outputName>")`.<br>For assignment type `TAG`, the value names the tag to read and must have the format `jsonencode("<target>.<tagKey>")`, for example `jsonencode("WORKSPACE.costCenter")`. The target is one of `WORKSPACE`, `PROJECT`, `PAYMENT_METHOD`, `LANDING_ZONE`; a `WORKSPACE_LEVEL` building block can only read `WORKSPACE` tags. The tag must already exist in your tag schema; prefer referencing a `meshstack_tag_definition` resource's `spec.key` over a literal key. meshStack resolves the tag value per building block and passes it to the run as a JSON array of strings, or `null` when the tag holds no value.<br>The value must be passed through `jsonencode()` to support dynamic typing as defined by the `type` attribute.<br>For type `CODE`, the value must be an `jsonencode`'d string, e.g. `jsonencode("some code")` and the interpretation of the `"some code"` string is implementation-specific.<br>For the `terraform` implementation, the `CODE` input value should be `jsonencode`'d again, as any JSON is a valid HCL expression, which is properly passed to a variable input by the TF runner.<br>For example, if the variable input specifies `type = map(string)`, then a type-matching value input is `jsonencode(jsonencode({some-key: "some-value"}))`.
 - `default_value` (String) Default value for the input. **Can only be provided** if `assignment_type` is `USER_INPUT`, `PLATFORM_OPERATOR_MANUAL_INPUT`. Must be passed through `jsonencode()` to match the `type` attribute.
 - `description` (String) Description explaining the purpose and usage of the input.
 - `display_order` (Number) Numeric value controlling in which order the inputs are displayed in the UI. Cannot be changed on a released version. When omitted, uses the existing value from state, if any. Otherwise the backend assigns one (`0` for a newly declared input).

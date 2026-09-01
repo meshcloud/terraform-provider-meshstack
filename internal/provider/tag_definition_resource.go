@@ -145,7 +145,10 @@ func (r *tagDefinitionResource) ValidateConfig(ctx context.Context, req resource
 // Schema defines the schema for the resource.
 func (r *tagDefinitionResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Manage tag definitions",
+		MarkdownDescription: "Manage tag definitions. " +
+			"Destroying a tag definition also removes the tag values of every meshObject of its `target_kind`. " +
+			"meshStack refuses the delete with `409 Conflict` while a building block reads the tag as a `TAG` " +
+			"input, and names the building block definitions that declare it - remove the input there first.",
 
 		Attributes: map[string]schema.Attribute{
 			"metadata": schema.SingleNestedAttribute{
