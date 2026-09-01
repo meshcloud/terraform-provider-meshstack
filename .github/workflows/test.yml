@@ -50,11 +50,21 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version: stable
+          # The repository's pinned Go, because it is what builds the linter below.
+          go-version-file: 'go.mod'
+      # Built here rather than by the action below, because golangci-lint's formatters use the
+      # go/format compiled into the binary: the formatting they enforce comes from the Go release
+      # that BUILT the linter, not from the toolchain on PATH. The tool directive in go.mod is the
+      # single pin, so no version is repeated here, and `go install` puts it where the action
+      # will find it.
+      - name: build the pinned golangci-lint
+        run: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint
       - name: golangci-lint
         uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
         with:
-          version: latest
+          # The step above already installed it; the action is here for the annotations it puts
+          # on the pull request diff, which a bare `run:` does not produce.
+          install-mode: none
           only-new-issues: true  # Show only issues in changed code on PRs
       - name: Suggest fix command on failure
         if: failure()

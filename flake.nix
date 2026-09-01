@@ -29,8 +29,8 @@
             # goimports, godoc, etc.
             gotools
 
-            # https://github.com/golangci/golangci-lint
-            golangci-lint
+            # No golangci-lint here: it is a tool directive in go.mod, so `task lint` builds it
+            # with the pinned Go rather than taking whatever nixpkgs built it with.
 
             # https://www.shellcheck.net — lints .github/scripts (task lint:shell)
             shellcheck
