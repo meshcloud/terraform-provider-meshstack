@@ -114,13 +114,11 @@ func newProviderClient(ctx context.Context, data MeshStackProviderModel, provide
 	// share rather than to copy: keycloak rotates a refresh token on every refresh and ends
 	// the whole session when one is reused, so a `terraform apply` racing a `meshstack`
 	// command would otherwise destroy the user's login.
-	session, err := auth.Resolve(ctx, &providerInput{data: data})
+	session, err := auth.ResolveSession(ctx, auth.ResolveSessionOptions{Settings: blockSource{data: data}})
 	if err != nil {
 		diagnostics.Append(problemDiagnostics("Failed to resolve meshStack credentials.", err)...)
 		return
 	}
-	// Failing before the first request is what turns "403 Access denied" into a message naming
-	// the workspace.
 	if err := session.RequireWorkspace(); err != nil {
 		diagnostics.Append(problemDiagnostics("meshStack workspace missing.", err)...)
 		return

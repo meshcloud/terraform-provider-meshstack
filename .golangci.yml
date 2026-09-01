@@ -86,6 +86,11 @@ linters:
             - github.com/meshcloud/meshstack-cli/pkg/credential
             - github.com/meshcloud/meshstack-cli/pkg/diags
             - github.com/meshcloud/meshstack-cli/pkg/meshstack
+            # The provider block is a settings source, so internal/provider/auth_input.go
+            # implements pkg/setting's interface and answers each attribute by the EnvKey the
+            # declaration carries. pkg/profile is on this list for profile.Name's key alone.
+            - github.com/meshcloud/meshstack-cli/pkg/setting
+            - github.com/meshcloud/meshstack-cli/pkg/profile
             - github.com/hashicorp/terraform-plugin-framework/
             - github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry
             - github.com/hashicorp/terraform-plugin-framework-jsontypes/jsontypes # for 'any' value support
