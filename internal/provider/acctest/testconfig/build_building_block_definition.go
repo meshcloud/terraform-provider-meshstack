@@ -14,7 +14,7 @@ func BBDTerraform(t *testing.T) (config Config, buildingBlockDefinitionAddr Trav
 	workspaceConfig, workspaceAddr := Workspace(t)
 	exampleResource := Resource{Name: "building_block_definition", Suffix: "_01_terraform"}
 
-	var environmentTagAddr, costCenterTagAddr, dependencyBBDAddr Traversal
+	var environmentTagAddr, costCenterTagAddr, businessUnitTagAddr, dependencyBBDAddr Traversal
 
 	tagSuffix := acctest.RandString(8)
 	envTagConfig := exampleResource.TestSupportConfig(t, "_tag-environment").WithFirstBlock(
@@ -24,6 +24,12 @@ func BBDTerraform(t *testing.T) (config Config, buildingBlockDefinitionAddr Trav
 	costTagConfig := exampleResource.TestSupportConfig(t, "_tag-cost-center").WithFirstBlock(
 		ExtractAddress(&costCenterTagAddr),
 		Descend("spec", "key")(SetString("cost-center-"+tagSuffix)),
+	)
+	// The tag the definition's TAG input reads. The example interpolates this key into the input's
+	// argument, so overriding it here is enough to keep the reference pointing at this run's tag.
+	businessUnitTagConfig := exampleResource.TestSupportConfig(t, "_tag-workspace-business-unit").WithFirstBlock(
+		ExtractAddress(&businessUnitTagAddr),
+		Descend("spec", "key")(SetString("business-unit-"+tagSuffix)),
 	)
 
 	depBBDConfig := exampleResource.TestSupportConfig(t, "_dependency-bbd").WithFirstBlock(
@@ -48,7 +54,7 @@ func BBDTerraform(t *testing.T) (config Config, buildingBlockDefinitionAddr Trav
 				Descend("inputs", "some-file.yaml", "argument")(SetRawExpr(`jsonencode(provider::meshstack::encode_file("some-content"))`)),
 				Descend("dependency_refs")(SetRawExpr("[%s.ref]", dependencyBBDAddr)),
 			),
-		).Join(workspaceConfig, envTagConfig, costTagConfig, depBBDConfig),
+		).Join(workspaceConfig, envTagConfig, costTagConfig, businessUnitTagConfig, depBBDConfig),
 		buildingBlockDefinitionAddr
 }
 
