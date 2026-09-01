@@ -62,6 +62,9 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 		MarkdownDescription: "Map of input definitions for the building block. Keys are input names, values are input configuration objects. " +
 			"Inputs define parameters that building blocks can receive.",
 		Optional: true,
+		Validators: []validator.Map{
+			validators.BuildingBlockDefinitionTagInputs{},
+		},
 		NestedObject: schema.NestedAttributeObject{
 			Attributes: map[string]schema.Attribute{
 				"display_name": schema.StringAttribute{

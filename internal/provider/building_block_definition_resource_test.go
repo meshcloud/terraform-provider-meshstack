@@ -1722,6 +1722,125 @@ resource "meshstack_building_block_definition" "test" {
 	}
 }
 
+func TestAccBuildingBlockDefinitionTagInputValidation(t *testing.T) {
+	// The tag input validator is client-side only, so the mock client is enough and a real backend adds
+	// nothing - it would only reject the same configurations later, with its own wording.
+	if !IsMockClientTest() {
+		t.Skip("tag input validation is tested with mock client only")
+	}
+
+	t.Parallel()
+
+	// tagInputConfig wraps the spec attributes that decide which tags are readable, plus the attributes of
+	// a single tag input, into a minimal valid BBD config.
+	tagInputConfig := func(specAttributes, inputAttributes string) string {
+		return fmt.Sprintf(`
+resource "meshstack_building_block_definition" "test" {
+  metadata = { owned_by_workspace = "my-workspace" }
+  spec = {
+    display_name = "Test"
+    description  = "Test"
+    %s
+  }
+  version_spec = {
+    draft          = true
+    implementation = { terraform = { terraform_version = "1.9.0", repository_url = "https://example.com/bb.git" } }
+    inputs = {
+      cost_center = {
+        display_name    = "Cost Center"
+        assignment_type = "TAG"
+        %s
+      }
+    }
+  }
+}`, specAttributes, inputAttributes)
+	}
+
+	const (
+		workspaceLevel = `target_type = "WORKSPACE_LEVEL"`
+		tenantLevel    = `target_type         = "TENANT_LEVEL"
+    supported_platforms = [{ name = "AZURE" }]`
+		codeType = `type = "CODE"`
+	)
+
+	tests := []struct {
+		name            string
+		specAttributes  string
+		inputAttributes string
+		expectError     *regexp.Regexp
+	}{
+		{
+			name:            "a workspace tag on a workspace building block",
+			specAttributes:  workspaceLevel,
+			inputAttributes: codeType + "\n        argument = jsonencode(\"WORKSPACE.costCenter\")",
+		},
+		{
+			name:            "a project tag on a tenant building block",
+			specAttributes:  tenantLevel,
+			inputAttributes: codeType + "\n        argument = jsonencode(\"PROJECT.costCenter\")",
+		},
+		{
+			// Only the first separator splits the reference, so a tag key may contain a dot itself.
+			name:            "a tag key containing a dot",
+			specAttributes:  workspaceLevel,
+			inputAttributes: codeType + "\n        argument = jsonencode(\"WORKSPACE.cost.center\")",
+		},
+		{
+			name:            "a project tag on a workspace building block is rejected",
+			specAttributes:  workspaceLevel,
+			inputAttributes: codeType + "\n        argument = jsonencode(\"PROJECT.costCenter\")",
+			expectError:     regexp.MustCompile(`A tag input cannot read this target`),
+		},
+		{
+			name:            "a non-code input type is rejected",
+			specAttributes:  workspaceLevel,
+			inputAttributes: "type = \"STRING\"\n        argument = jsonencode(\"WORKSPACE.costCenter\")",
+			expectError:     regexp.MustCompile(`A tag input must be a code input`),
+		},
+		{
+			name:            "a sensitive tag input is rejected",
+			specAttributes:  workspaceLevel,
+			inputAttributes: codeType + "\n        sensitive = { argument = { secret_value = \"WORKSPACE.costCenter\" } }",
+			expectError:     regexp.MustCompile(`A tag input cannot be sensitive`),
+		},
+		{
+			name:            "a missing argument is rejected",
+			specAttributes:  workspaceLevel,
+			inputAttributes: codeType,
+			expectError:     regexp.MustCompile(`A tag input requires an argument naming the tag to read`),
+		},
+		{
+			name:            "an argument without a tag key is rejected",
+			specAttributes:  workspaceLevel,
+			inputAttributes: codeType + "\n        argument = jsonencode(\"WORKSPACE\")",
+			expectError:     regexp.MustCompile(`A tag input argument must name a target and a tag key`),
+		},
+		{
+			name:            "an unknown target is rejected",
+			specAttributes:  workspaceLevel,
+			inputAttributes: codeType + "\n        argument = jsonencode(\"TENANT.costCenter\")",
+			expectError:     regexp.MustCompile(`A tag input argument must name a known target`),
+		},
+		{
+			name:            "an argument that is not a string is rejected",
+			specAttributes:  workspaceLevel,
+			inputAttributes: codeType + "\n        argument = jsonencode([\"WORKSPACE.costCenter\"])",
+			expectError:     regexp.MustCompile(`A tag input argument must be an encoded string`),
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ApplyAndTest(t, resource.TestCase{
+				Steps: []resource.TestStep{{
+					Config:      tagInputConfig(test.specAttributes, test.inputAttributes),
+					ExpectError: test.expectError,
+				}},
+			})
+		})
+	}
+}
+
 func TestAccBuildingBlockDefinitionSymbolValidation(t *testing.T) {
 	// Symbol validation is client-side only; success cases need a real workspace in acceptance mode.
 	if !IsMockClientTest() {
