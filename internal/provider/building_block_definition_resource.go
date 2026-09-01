@@ -894,11 +894,11 @@ func validateInputJsonSchemas(inputs types.Map, inputsPath path.Path, resp *reso
 		case inputType.ValueString() == jsonSchemaType && !hasSchema && !isUnknown(schemaAttr):
 			resp.Diagnostics.AddAttributeError(inputsPath.AtMapKey(key).AtName("json_schema"),
 				"json_schema is required",
-				"An input of type "+jsonSchemaType+" must declare the JSON Schema its value follows.")
+				"An input of type "+jsonSchemaType+" must declare the JSON Schema of the form it is filled in through.")
 		case inputType.ValueString() != jsonSchemaType && hasSchema:
 			resp.Diagnostics.AddAttributeError(inputsPath.AtMapKey(key).AtName("json_schema"),
 				"json_schema must not be set",
-				"Only an input of type "+jsonSchemaType+" is described by a JSON Schema. Remove 'json_schema' from this input.")
+				"Only an input of type "+jsonSchemaType+" is filled in through a form. Remove 'json_schema' from this input.")
 		}
 	}
 }

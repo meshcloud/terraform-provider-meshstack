@@ -42,8 +42,10 @@ var (
 	MeshBuildingBlockIOTypeSingleSelect = MeshBuildingBlockIOTypes.Entry("SINGLE_SELECT")
 	MeshBuildingBlockIOTypeMultiSelect  = MeshBuildingBlockIOTypes.Entry("MULTI_SELECT")
 
-	// Declaration only, so deliberately not an entry of MeshBuildingBlockIOTypes: a building block's own
-	// inputs report the type of the value, and a JSON_SCHEMA value is the JSON text a CODE value is.
+	// A definition input declaring this type describes a form of its own, through the accompanying
+	// JsonSchema. That makes it a declaration-side type only, so deliberately not an entry of
+	// MeshBuildingBlockIOTypes: what the form produces is JSON text, which a building block's own inputs
+	// report as CODE.
 	MeshBuildingBlockIOTypeJsonSchema = enum.Entry[MeshBuildingBlockIOType]("JSON_SCHEMA")
 )
 
@@ -136,7 +138,7 @@ type MeshBuildingBlockDefinitionInput struct {
 	Description                 *string           `json:"description,omitempty" tfsdk:"description"`
 	ValueValidationRegex        *string           `json:"valueValidationRegex,omitempty" tfsdk:"value_validation_regex"`
 	ValidationRegexErrorMessage *string           `json:"validationRegexErrorMessage,omitempty" tfsdk:"validation_regex_error_message"`
-	// JSON Schema describing the value, as a JSON string. Only for MeshBuildingBlockIOTypeJsonSchema.
+	// The form this input is filled in through, as a JSON Schema string. Only for MeshBuildingBlockIOTypeJsonSchema.
 	JsonSchema *string `json:"jsonSchema,omitempty" tfsdk:"json_schema"`
 	// No omitempty: a 0 (the schema default, and what an unknown plan value collapses to) must be sent so
 	// the backend stores it verbatim. With omitempty the 0 would be dropped and the backend would assign

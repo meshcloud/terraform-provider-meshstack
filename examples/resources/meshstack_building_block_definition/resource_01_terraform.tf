@@ -80,7 +80,8 @@ resource "meshstack_building_block_definition" "example_01_terraform" {
         display_name    = "Deploy Settings"
         type            = "JSON_SCHEMA"
         assignment_type = "USER_INPUT"
-        # meshPanel renders a form from this schema; the value reaches the building block as JSON text.
+        # This input gets a form of its own: meshPanel renders it from the schema, and what it produces
+        # reaches the building block as JSON text.
         json_schema = jsonencode({
           type     = "object"
           required = ["region"]
