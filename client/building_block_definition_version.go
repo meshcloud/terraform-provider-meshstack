@@ -48,17 +48,7 @@ var (
 )
 
 // The types a definition input may declare.
-var MeshBuildingBlockDefinitionInputTypes = enum.Of(
-	MeshBuildingBlockIOTypeString,
-	MeshBuildingBlockIOTypeCode,
-	MeshBuildingBlockIOTypeInteger,
-	MeshBuildingBlockIOTypeBoolean,
-	MeshBuildingBlockIOTypeFile,
-	MeshBuildingBlockIOTypeList,
-	MeshBuildingBlockIOTypeSingleSelect,
-	MeshBuildingBlockIOTypeMultiSelect,
-	MeshBuildingBlockIOTypeJsonSchema,
-)
+var MeshBuildingBlockDefinitionInputTypes = MeshBuildingBlockIOTypes.With(MeshBuildingBlockIOTypeJsonSchema)
 
 var MeshBuildingBlockOutputIOTypes = enum.Of(
 	MeshBuildingBlockIOTypeString,
