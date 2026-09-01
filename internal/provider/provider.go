@@ -14,6 +14,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/meshcloud/meshstack-cli/client"
 	"github.com/meshcloud/meshstack-cli/pkg/auth"
+	"github.com/meshcloud/meshstack-cli/pkg/credential"
+	"github.com/meshcloud/meshstack-cli/pkg/meshstack"
+	"github.com/meshcloud/meshstack-cli/pkg/profile"
 
 	"github.com/meshcloud/terraform-provider-meshstack/internal/util/logging"
 )
@@ -48,31 +51,39 @@ func (p *MeshStackProvider) Metadata(_ context.Context, _ provider.MetadataReque
 func (p *MeshStackProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
+			// Each description is the setting's own Help() — the text the meshStack CLI prints for
+			// the same setting — plus, where there is one, a sentence that is true of Terraform
+			// alone. A fact about the setting belongs in the declaration, so that the two front
+			// ends cannot describe it differently.
 			"endpoint": schema.StringAttribute{
-				MarkdownDescription: "URL of the meshStack API, e.g. `https://api.my.meshstack.io`. A profile supplies it too, so a block naming only a profile is complete.",
+				MarkdownDescription: meshstack.Endpoint.Help(),
 				Optional:            true,
 			},
 			"profile": schema.StringAttribute{
-				MarkdownDescription: "meshStack CLI profile to authenticate with. A profile is a named bundle of endpoint, credential and default workspace, written by `meshstack auth login`. A block holding only `profile` is a complete configuration.",
-				Optional:            true,
+				MarkdownDescription: profile.Name.Help() +
+					"\n\nA block holding only `profile` is a complete configuration.",
+				Optional: true,
 			},
 			"workspace": schema.StringAttribute{
-				MarkdownDescription: "Workspace this provider acts in. It is required for a profile holding a browser login, because a meshStack user access token is bound to one workspace; an API key carries its own.",
+				MarkdownDescription: meshstack.Workspace.Help(),
 				Optional:            true,
 			},
 			"apikey": schema.StringAttribute{
-				MarkdownDescription: "API Key to authenticate against the meshStack API",
-				Optional:            true,
+				MarkdownDescription: credential.ApiKeyId.Help() +
+					"\n\nSetting this here with the secret in `MESHSTACK_API_SECRET` keeps the secret out of the configuration and out of state.",
+				Optional: true,
 			},
 			"apisecret": schema.StringAttribute{
-				MarkdownDescription: "API Secret to authenticate against the meshStack API",
-				Optional:            true,
-				Sensitive:           true,
+				MarkdownDescription: credential.ApiSecret.Help() +
+					"\n\nA value set here is written to Terraform state. The warning about a stored secret winning is a log record, which `TF_LOG=WARN` shows.",
+				Optional:  true,
+				Sensitive: true,
 			},
 			"apitoken": schema.StringAttribute{
-				MarkdownDescription: "API Token to authenticate against the meshStack API",
-				Optional:            true,
-				Sensitive:           true,
+				MarkdownDescription: credential.ApiToken.Help() +
+					"\n\nA value set here is written to Terraform state.",
+				Optional:  true,
+				Sensitive: true,
 			},
 		},
 	}
