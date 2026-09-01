@@ -27,3 +27,9 @@ dist/
 bin/
 
 scratch/
+
+# `task cli:link` and the acceptance job's meshstack-cli redirect: the workspace file and the CI-side
+# checkout it points at.
+go.work
+go.work.sum
+/meshstack-cli/

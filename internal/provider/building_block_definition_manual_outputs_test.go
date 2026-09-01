@@ -4,9 +4,8 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/meshcloud/meshstack-cli/client"
 	"github.com/stretchr/testify/assert"
-
-	"github.com/meshcloud/terraform-provider-meshstack/client"
 )
 
 // Test_manualTrackedOutputs pins the diff rule the read-back prune relies on: an output is a tracked override

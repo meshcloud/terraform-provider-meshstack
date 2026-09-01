@@ -5,8 +5,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/meshcloud/terraform-provider-meshstack/client"
-	"github.com/meshcloud/terraform-provider-meshstack/client/version"
+	"github.com/meshcloud/meshstack-cli/client"
+	"github.com/meshcloud/meshstack-cli/client/version"
 )
 
 const (

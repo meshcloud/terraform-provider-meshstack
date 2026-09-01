@@ -8,8 +8,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/meshcloud/terraform-provider-meshstack/client"
-	clientTypes "github.com/meshcloud/terraform-provider-meshstack/client/types"
+	"github.com/meshcloud/meshstack-cli/client"
+	clientTypes "github.com/meshcloud/meshstack-cli/client/types"
+
 	reflectwalk "github.com/meshcloud/terraform-provider-meshstack/internal/util/reflect"
 )
 
@@ -41,6 +42,9 @@ type Client struct {
 
 func (c *Client) AsClient() client.Client {
 	return client.Client{
+		// The mock client factory (see ApplyAndTest) never sees the provider's actual configured
+		// endpoint, since it bypasses newProviderClient entirely.
+		Endpoint:                       "http://localhost:8080",
 		ApiKey:                         c.ApiKey,
 		BuildingBlock:                  c.BuildingBlock,
 		BuildingBlockRun:               c.BuildingBlockRun,

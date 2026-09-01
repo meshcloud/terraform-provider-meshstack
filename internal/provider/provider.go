@@ -3,8 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
-	"net/url"
-	"os"
+	"log/slog"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -13,8 +12,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/meshcloud/meshstack-cli/client"
+	"github.com/meshcloud/meshstack-cli/pkg/auth"
+	"github.com/meshcloud/meshstack-cli/pkg/credential"
+	"github.com/meshcloud/meshstack-cli/pkg/meshstack"
+	"github.com/meshcloud/meshstack-cli/pkg/profile"
 
-	"github.com/meshcloud/terraform-provider-meshstack/client"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/util/logging"
 )
 
@@ -33,6 +36,8 @@ type MeshStackProvider struct {
 
 type MeshStackProviderModel struct {
 	Endpoint  types.String `tfsdk:"endpoint"`
+	Profile   types.String `tfsdk:"profile"`
+	Workspace types.String `tfsdk:"workspace"`
 	ApiKey    types.String `tfsdk:"apikey"`
 	ApiSecret types.String `tfsdk:"apisecret"`
 	ApiToken  types.String `tfsdk:"apitoken"`
@@ -46,37 +51,49 @@ func (p *MeshStackProvider) Metadata(_ context.Context, _ provider.MetadataReque
 func (p *MeshStackProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
+			// Each description is the setting's own Help() — the text the meshStack CLI prints for
+			// the same setting — plus, where there is one, a sentence that is true of Terraform
+			// alone. A fact about the setting belongs in the declaration, so that the two front
+			// ends cannot describe it differently.
 			"endpoint": schema.StringAttribute{
-				MarkdownDescription: "URl of meshStack API, e.g. `https://api.my.meshstack.io`",
+				MarkdownDescription: meshstack.Endpoint.Help(),
+				Optional:            true,
+			},
+			"profile": schema.StringAttribute{
+				MarkdownDescription: profile.Name.Help() +
+					"\n\nA block holding only `profile` is a complete configuration.",
+				Optional: true,
+			},
+			"workspace": schema.StringAttribute{
+				MarkdownDescription: meshstack.Workspace.Help(),
 				Optional:            true,
 			},
 			"apikey": schema.StringAttribute{
-				MarkdownDescription: "API Key to authenticate against the meshStack API",
-				Optional:            true,
+				MarkdownDescription: credential.ApiKeyId.Help() +
+					"\n\nSetting this here with the secret in `MESHSTACK_API_SECRET` keeps the secret out of the configuration and out of state.",
+				Optional: true,
 			},
 			"apisecret": schema.StringAttribute{
-				MarkdownDescription: "API Secret to authenticate against the meshStack API",
-				Optional:            true,
-				Sensitive:           true,
+				MarkdownDescription: credential.ApiSecret.Help() +
+					"\n\nA value set here is written to Terraform state. The warning about a stored secret winning is a log record, which `TF_LOG=WARN` shows.",
+				Optional:  true,
+				Sensitive: true,
 			},
 			"apitoken": schema.StringAttribute{
-				MarkdownDescription: "API Token to authenticate against the meshStack API",
-				Optional:            true,
-				Sensitive:           true,
+				MarkdownDescription: credential.ApiToken.Help() +
+					"\n\nA value set here is written to Terraform state.",
+				Optional:  true,
+				Sensitive: true,
 			},
 		},
 	}
 }
 
-const (
-	envKeyMeshstackEndpoint  = "MESHSTACK_ENDPOINT"
-	envKeyMeshstackApiKey    = "MESHSTACK_API_KEY"
-	envKeyMeshstackApiSecret = "MESHSTACK_API_SECRET"
-	envKeyMeshstackApiToken  = "MESHSTACK_API_TOKEN"
-)
-
 func (p *MeshStackProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
-	client.SetLogger(logging.TerraformClientLogger{MessagePrefix: "client: "})
+	// The meshStack CLI logs through the slog default logger throughout — its pkg/ packages and
+	// the API client alike — so without this bridge its records land on stderr in a format
+	// terraform does not expect. It is the only logging seam the CLI has.
+	slog.SetDefault(slog.New(logging.SlogHandler{MessagePrefix: "meshstack: "}))
 	var data MeshStackProviderModel
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
 	providerClient, diags := p.clientFactory(ctx, data, p.version)
@@ -101,67 +118,37 @@ func configureProviderClient(providerData any, consumer func(client client.Clien
 	return
 }
 
-func newProviderClient(ctx context.Context, data MeshStackProviderModel, providerVersion string) (providerClient client.Client, diags diag.Diagnostics) {
-	var endpoint string
-	if !data.Endpoint.IsNull() && !data.Endpoint.IsUnknown() {
-		endpoint = data.Endpoint.ValueString()
-	} else {
-		var ok bool
-		endpoint, ok = os.LookupEnv(envKeyMeshstackEndpoint)
-		if !ok {
-			diags.AddError("Provider endpoint missing.", "Set provider.meshstack.endpoint or use MESHSTACK_ENDPOINT environment variable.")
-			return
-		}
-	}
-
-	parsedEndpoint, err := url.Parse(endpoint)
+func newProviderClient(ctx context.Context, data MeshStackProviderModel, providerVersion string) (providerClient client.Client, diagnostics diag.Diagnostics) {
+	// One package answers "who am I, against what, in which workspace" for both the provider
+	// and the meshStack CLI, so both apply the same precedence — block, then environment,
+	// then profile — and both renew through the same file lock. That lock is the reason to
+	// share rather than to copy: keycloak rotates a refresh token on every refresh and ends
+	// the whole session when one is reused, so a `terraform apply` racing a `meshstack`
+	// command would otherwise destroy the user's login.
+	session, err := auth.ResolveSession(ctx, auth.ResolveSessionOptions{Settings: blockSource{data: data}})
 	if err != nil {
-		diags.AddError("Provider endpoint not valid.", "The value provided as the providers endpoint is not a valid URL.")
+		diagnostics.Append(problemDiagnostics("Failed to resolve meshStack credentials.", err)...)
+		return
+	}
+	if err := session.RequireWorkspace(); err != nil {
+		diagnostics.Append(problemDiagnostics("meshStack workspace missing.", err)...)
 		return
 	}
 
-	var apiToken string
-	if !data.ApiToken.IsNull() && !data.ApiToken.IsUnknown() {
-		apiToken = data.ApiToken.ValueString()
-	} else {
-		apiToken = os.Getenv(envKeyMeshstackApiToken)
-	}
-
-	var apiKey string
-	if !data.ApiKey.IsNull() && !data.ApiKey.IsUnknown() {
-		apiKey = data.ApiKey.ValueString()
-	} else {
-		apiKey = os.Getenv(envKeyMeshstackApiKey)
-	}
-
-	var apiSecret string
-	if !data.ApiSecret.IsNull() && !data.ApiSecret.IsUnknown() {
-		apiSecret = data.ApiSecret.ValueString()
-	} else {
-		apiSecret = os.Getenv(envKeyMeshstackApiSecret)
-	}
-
-	// Either apiToken or apiKey/apiSecret must be set for authorization against backend.
-	var auth client.Authorization
-	if apiToken == "" {
-		if apiKey == "" {
-			diags.AddError("Provider API key missing.", "Set provider.meshstack.apikey or use MESHSTACK_API_KEY environment variable.")
-		}
-		if apiSecret == "" {
-			diags.AddError("Provider API secret missing.", "Set provider.meshstack.apisecret or use MESHSTACK_API_SECRET environment variable.")
-		}
-		if diags.HasError() {
-			return
-		}
-		auth = client.NewApiKeyAuthorization(apiKey, apiSecret)
-	} else {
-		auth = client.NewApiTokenAuthorization(apiToken)
+	// Mint here rather than at the first request. A plan that only creates resources reads
+	// nothing, so an expired login would otherwise pass the plan and fail the apply — the
+	// point at which terraform has already told the user what it is about to do. This is the
+	// provider's call and not pkg/auth's, because the meshStack CLI must stay lazy: `meshstack
+	// profile view` and `meshstack auth logout` have to work when the credential is dead.
+	if _, err := session.BearerToken(ctx); err != nil {
+		diagnostics.Append(problemDiagnostics("Failed to authenticate against meshStack.", err)...)
+		return
 	}
 
 	userAgent := fmt.Sprintf("terraform-provider-meshstack/%s", providerVersion)
-	providerClient, err = client.New(ctx, parsedEndpoint, userAgent, auth)
+	providerClient, err = session.Client(ctx, userAgent)
 	if err != nil {
-		diags.AddError("Failed to create meshStack client.", err.Error())
+		diagnostics.Append(problemDiagnostics("Failed to create meshStack client.", err)...)
 		return
 	}
 	return

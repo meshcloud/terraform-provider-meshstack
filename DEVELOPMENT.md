@@ -59,6 +59,18 @@ today:
 - **meshcloud-internal — local dev stack**: the `.env` for a local backend is reconstructible from
   the `meshfed-release` dev seed; the **`acceptance-testing`** skill documents the exact values.
 
+Resolution goes through `github.com/meshcloud/meshstack-cli/pkg/auth`, which the provider and the
+meshStack CLI share, so both apply the same order: the `provider` block, then the environment, then
+a **meshStack CLI profile**. The acceptance suite deliberately uses the environment — its
+`providerInput` is built from an empty provider block, so a run touches no profile and writes no
+file.
+
+A profile is the other way to run a scratch config: `meshstack auth login` writes one, and a block
+holding `profile = "..."` then needs no secret in the file at all. A `login` profile also needs a
+`workspace`, because meshStack binds a user access token to exactly one workspace. Both tools take
+the same lock while renewing, which is why the provider writes a rotated refresh token back rather
+than leaving a stale one behind.
+
 > Acceptance tests are **state-independent by design**: each run creates its own resources
 > (workspaces and the like) with random-suffixed names, so concurrent runs and pre-existing data
 > never collide or interfere. A test-harness guard (`provider_test.go`, `DefaultTestPreCheck`)
@@ -95,6 +107,23 @@ task testacc -- -run=BuildingBlock # filter by name
 - Reproducing a bug or a single failing test as a standalone config — or scaffolding a demo /
   working starting point — is the **`scratch-config`** skill.
 
+### Testing against a local meshstack-cli checkout
+
+The API client comes from `github.com/meshcloud/meshstack-cli`, pinned in `go.mod`. When you are
+changing the client and the provider *together*, pushing the CLI and re-pinning on every iteration is
+too slow — link the sibling checkout instead:
+
+```bash
+task cli:link     # build/test against ../meshstack-cli
+task cli:unlink   # back to the version pinned in go.mod
+```
+
+`cli:link` writes a git-ignored `go.work`; `cli:unlink` deletes it. `go.mod` and `go.sum` are never
+modified, so there is nothing to accidentally commit and no need to undo anything else. Re-pin `go.mod`
+once the CLI change is merged. CI does the same thing on its side: the acceptance job builds against a
+meshstack-cli branch whose name matches the provider branch, when one exists — see the **`github-ci`**
+skill.
+
 ### Adding a resource / data source (and its tests)
 
 Adding or reworking a resource or data source — the implementation, example `.tf` files, the
@@ -103,7 +132,8 @@ Adding or reworking a resource or data source — the implementation, example `.
 refs, DTOs, `Id`/`Uuid` naming, receivers, preview API, computed-only outputs). In short:
 
 1. `internal/provider/<name>_resource.go` — CRUD + `Schema`.
-2. `client/` — typed API client methods.
+2. `github.com/meshcloud/meshstack-cli/client` — typed API client methods, in the
+   [meshstack-cli](https://github.com/meshcloud/meshstack-cli) repository.
 3. `provider.go` — register it.
 4. `examples/resources/meshstack_<name>/` — example `.tf`.
 5. `internal/provider/acctest/testconfig/build_<name>.go` — a builder.
@@ -132,7 +162,8 @@ For the occasional go1.26 `go fix` modernizer sweep, see the **`modern-go`** ski
 - **Commits** follow Conventional Commits (`feat:`, `fix:`, `docs:`, `chore:`, `feat!:` for
   breaking).
 - **CI/CD**: GitHub Actions pin every action to a full SHA; the acceptance job gates merge and runs
-  against the last-merged `meshfed-release` backend. See the **`github-ci`** skill.
+  against the last-merged `meshfed-release` backend, plus a same-named `meshstack-cli` branch when one
+  exists. See the **`github-ci`** skill.
 
 ## Skills index
 

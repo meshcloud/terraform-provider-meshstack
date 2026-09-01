@@ -46,29 +46,12 @@ linters:
       # which is indistinguishable from a rule that passes — check any new rule by
       # compiling a file that violates it.
       rules:
-        client:
-          files:
-            - "**/client/*.go"
-            - "**/client/**/*.go"
-            - "!$test"
-          list-mode: strict
-          allow:
-            - $gostd
-            - github.com/meshcloud/terraform-provider-meshstack/client
-        client-test:
-          files:
-            - "**/client/*_test.go"
-            - "**/client/**/*_test.go"
-          list-mode: strict
-          allow:
-            - $gostd
-            - github.com/meshcloud/terraform-provider-meshstack/client
-            - github.com/stretchr/testify
+        # The 'client' and 'client-test' rules moved to meshstack-cli together with the
+        # client package. That repository keeps the client free of external
+        # dependencies, which is what keeps them out of this provider's dependency tree.
         provider:
           files:
             - "!$test"
-            - "!**/client/*.go"
-            - "!**/client/**/*.go"
             - "!**/internal/clientmock/*.go"
             - "!**/internal/clientmock/**/*.go"
             - "!**/internal/provider/acctest/*.go"
@@ -80,12 +63,34 @@ linters:
               desc: Always use 'hclog' or SDK logging
             - pkg: github.com/meshcloud/terraform-provider-meshstack/internal/clientmock
               desc: clientmock package must only be used in tests
+            # The browser login lives in its own package so that this line can exist. A
+            # terraform plan must never open a browser, and a lint rule is a better guarantee
+            # than a promise.
+            - pkg: github.com/meshcloud/meshstack-cli/pkg/oidc/browser
+              desc: the provider must never open a browser; a login is created by `meshstack login`
           allow:
             - $gostd
-            # explicitly specifying 'client' and 'internal' suffixes
-            # prevents 'examples' package to be included in non-test files
-            - github.com/meshcloud/terraform-provider-meshstack/client
+            # log/slog is a longer prefix than the 'log' deny above, so it outranks it.
+            # Everything under meshstack-cli's pkg/ logs through the slog default logger, and
+            # internal/util/logging installs the handler that forwards those records to tflog.
+            - log/slog
+            # explicitly specifying the 'internal' suffix prevents the 'examples'
+            # package from being included in non-test files
             - github.com/meshcloud/terraform-provider-meshstack/internal
+            - github.com/meshcloud/meshstack-cli/client
+            # pkg/auth resolves credentials and mints tokens for the provider and the meshStack
+            # CLI alike; the others are the leaf types its API is written in. pkg/credential was
+            # reachable as pkg/auth/method before it moved to the top level, so this line is the
+            # move rather than a widening.
+            - github.com/meshcloud/meshstack-cli/pkg/auth
+            - github.com/meshcloud/meshstack-cli/pkg/credential
+            - github.com/meshcloud/meshstack-cli/pkg/diags
+            - github.com/meshcloud/meshstack-cli/pkg/meshstack
+            # The provider block is a settings source, so internal/provider/auth_input.go
+            # implements pkg/setting's interface and answers each attribute by the EnvKey the
+            # declaration carries. pkg/profile is on this list for profile.Name's key alone.
+            - github.com/meshcloud/meshstack-cli/pkg/setting
+            - github.com/meshcloud/meshstack-cli/pkg/profile
             - github.com/hashicorp/terraform-plugin-framework/
             - github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry
             - github.com/hashicorp/terraform-plugin-framework-jsontypes/jsontypes # for 'any' value support
@@ -104,18 +109,20 @@ linters:
             - "**/examples/*.go"
             - "!**/internal/types/*.go"
             - "!**/internal/types/**/*.go"
-            - "!**/client/*_test.go"
-            - "!**/client/**/*_test.go"
             - "!**/internal/provider/provider_test.go" # contains common adapters for all tests, using non-testing deps.
           list-mode: strict
-          deny:
-            - pkg: github.com/meshcloud/terraform-provider-meshstack/client/internal
-              desc: Do not use client/internal in provider tests
+          # The former deny on client/internal is gone: it now lives in another module,
+          # where Go's internal rule makes it unreachable from here outright.
           allow:
             - $gostd
             - github.com/meshcloud/terraform-provider-meshstack # any packages are included in tests
+            - github.com/meshcloud/meshstack-cli
             - github.com/hashicorp/terraform-plugin-testing
             - github.com/hashicorp/terraform-plugin-framework/diag
+            # A provider model is built from framework types, so a test that exercises one
+            # cannot avoid them. It stays a narrow allowance: the framework's resource and
+            # provider schema packages are still out of reach here.
+            - github.com/hashicorp/terraform-plugin-framework/types
             - github.com/hashicorp/hcl/v2 # hclwrite-based config manipulation in examples/
             - github.com/zclconf/go-cty/cty # hclwrite value types
             - github.com/stretchr/testify
@@ -131,7 +138,7 @@ linters:
               desc: Always use 'hclog' or SDK logging
           allow:
             - $gostd
-            - github.com/meshcloud/terraform-provider-meshstack/client/types # only types should be used from client, if at all!
+            - github.com/meshcloud/meshstack-cli/client/types # only types should be used from client, if at all!
             - github.com/meshcloud/terraform-provider-meshstack/internal/util/
             - github.com/meshcloud/terraform-provider-meshstack/internal/types/
             - github.com/hashicorp/terraform-plugin-framework/
