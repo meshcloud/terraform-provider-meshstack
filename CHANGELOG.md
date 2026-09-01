@@ -1,7 +1,7 @@
 # v0.25.3
 
 FEATURES:
-- `meshstack_building_block_definition`: a `version_spec.inputs` entry can now declare `type = "JSON_SCHEMA"` together with the new `json_schema` argument, the JSON Schema its value follows. meshPanel renders a form from that schema instead of a code editor, and the value reaches the building block as JSON text, exactly like a `CODE` input — an OpenTofu module needs nothing beyond a matching variable type. `json_schema` is required for that type and rejected for every other, which the provider checks at plan time. This needs meshStack 2026.36.0 or later; an older meshStack does not know the type and rejects the apply.
+- `meshstack_building_block_definition`: a `version_spec.inputs` entry can now declare `type = "JSON_SCHEMA"` together with the new `json_schema` argument. Such an input is not a single value — it gets a form of its own, declared by that JSON Schema, which meshPanel renders in place of one field. What the form produces reaches the building block as JSON text, exactly like a `CODE` input, so a Terraform module needs nothing beyond a matching variable type. `json_schema` is required for that type and rejected for every other, which the provider checks at plan time. This needs meshStack 2026.36.0 or later; an older meshStack does not know the type and rejects the apply.
 
 OTHER:
 - The provider is built with Go 1.27 (previously 1.26). Nothing changes for users of a released binary; anyone
