@@ -2,6 +2,7 @@ package enum
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -10,6 +11,11 @@ func Of[T ~string](entries ...Entry[T]) Enum[T] {
 }
 
 type Enum[T ~string] []Entry[T]
+
+// With returns a copy of the enum extended by entries, leaving the receiver untouched.
+func (e Enum[T]) With(entries ...Entry[T]) Enum[T] {
+	return slices.Concat(e, entries)
+}
 
 func (e *Enum[T]) Entry(v string) (ee Entry[T]) {
 	ee = Entry[T](v)
