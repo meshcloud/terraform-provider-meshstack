@@ -1354,6 +1354,7 @@ func checksForImplementation(exampleSuffix string) (checkInputs, checkImplementa
 					"type":                   knownvalue.StringExact("CODE"),
 					"assignment_type":        knownvalue.StringExact("TAG"),
 					"is_environment":         knownvalue.Bool(false),
+					"is_optional":            knownvalue.Bool(false),
 					"updateable_by_consumer": knownvalue.Bool(false),
 					"description":            knownvalue.StringExact("The business unit tag of the workspace this building block belongs to"),
 					// The argument is the `<target>.<tagKey>` reference; the key carries a per-run random suffix.
