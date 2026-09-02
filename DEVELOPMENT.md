@@ -6,14 +6,15 @@ End users consuming the released provider want the [`README.md`](README.md) inst
 
 ## Prerequisites
 
-- **Go 1.26+** (`go.mod` targets `go 1.26`).
+- **Go 1.27+** (`go.mod` targets `go 1.27`).
 - **[Task](https://taskfile.dev)** — the task runner for every workflow below (`Taskfile.yml`).
 - A meshStack with **API credentials** for anything that talks to a backend (tests, manual runs) —
   see [Backends & authentication](#backends--authentication).
 
 Or skip installing these: `flake.nix` provides a complete dev shell with every tool pinned (Go,
-Task, golangci-lint, …). Run `nix develop` to enter it, or `nix develop --command task testacc` for
-a one-off.
+Task, Terraform, …). Run `nix develop` to enter it, or `nix develop --command task testacc` for
+a one-off. golangci-lint is not in that list on purpose — it is a `tool` directive in `go.mod`, so
+`task lint` builds it from source with the pinned Go and needs no dev shell at all.
 
 ## Build & install
 
@@ -121,7 +122,12 @@ task lint            # golangci-lint (includes format check)
 task lint -- --fix   # auto-fix formatting and fixable lint issues
 ```
 
-For the occasional go1.26 `go fix` modernizer sweep, see the **`modern-go`** skill.
+`task lint` runs `go tool golangci-lint`, so the version is the one pinned in `go.mod` and nothing
+has to be installed first. Do not call a `golangci-lint` on your PATH instead: its formatters use
+the `go/format` compiled into the binary, so a linter built by a different Go release enforces
+different formatting than CI does, and one built by an older Go refuses to run at all.
+
+For the occasional `go fix` modernizer sweep, see the **`modern-go`** skill.
 
 ## Docs, changelog & CI
 

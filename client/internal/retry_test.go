@@ -43,10 +43,10 @@ func TestRetryAfterBackoff(t *testing.T) {
 		want   time.Duration
 	}{
 		{"delay-seconds", "30", 30 * time.Second},
-		{"zero seconds", "0", 0},                                        // RFC: retry immediately
-		{"capped at 5 minutes", "600", 5 * time.Minute},                 // capped
-		{"empty header", "", 1 * time.Second},                           // falls back
-		{"unparseable header", "not-a-number-or-date", 1 * time.Second}, // falls back
+		{"zero seconds", "0", 0},                                                                               // RFC: retry immediately
+		{"capped at 5 minutes", "600", 5 * time.Minute},                                                        // capped
+		{"empty header", "", 1 * time.Second},                                                                  // falls back
+		{"unparseable header", "not-a-number-or-date", 1 * time.Second},                                        // falls back
 		{"HTTP-date in the past", bubbleStart.Add(-10 * time.Second).Format(http.TimeFormat), 1 * time.Second}, // falls back
 		{"HTTP-date in the future", bubbleStart.Add(45 * time.Second).Format(http.TimeFormat), 45 * time.Second},
 	}

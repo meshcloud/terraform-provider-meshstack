@@ -1,17 +1,24 @@
 ---
 name: modern-go
-description: Modern Go idioms used in this repo (Go 1.26) — the new(expression) builtin for inline pointers, the generics patterns the codebase relies on (typed clients, mock stores, variant unions, the generic TF value-conversion layer, map/iter helpers), and the go1.26 `go fix` modernizer pass. Use when writing or reviewing Go that creates pointers, defines type-parameterized helpers, touches generic.Set/Get, or running a modernization sweep.
+description: Modern Go idioms used in this repo (Go 1.27) — the new(expression) builtin for inline pointers, the generics patterns the codebase relies on (typed clients, mock stores, variant unions, the generic TF value-conversion layer, map/iter helpers), and the `go fix` modernizer pass. Use when writing or reviewing Go that creates pointers, defines type-parameterized helpers, touches generic.Set/Get, or running a modernization sweep.
 ---
 
 # Modern Go in this repo
 
-`go.mod` declares **`go 1.26`**. Two idioms matter most here: `new(expression)` for pointers, and
-the codebase's generics. To keep the tree on those idioms, run the go1.26 [`go fix`](#go-fix--the-go126-modernizer-pass)
+`go.mod` declares **`go 1.27`**. Two idioms matter most here: `new(expression)` for pointers, and
+the codebase's generics. To keep the tree on those idioms, run the [`go fix`](#go-fix--the-modernizer-pass)
 modernizer pass occasionally.
 
-Bumping the Go version is a **two-file** change: `flake.nix` pins the toolchain (`go_1_26` and the
+Bumping the Go version is a **two-file** change: `flake.nix` pins the toolchain (`go_1_27` and the
 `GOROOT` derived from it), so a `go.mod` bump must update the flake's pin in lock-step — otherwise
-`nix develop` builds against a different Go than `go.mod` targets.
+`nix develop` builds against a different Go than `go.mod` targets. Add `nix flake update` when the
+locked nixpkgs is too old to carry the new attribute, which fails as
+`undefined variable 'go_1_NN'`.
+
+The bump also changes what `task lint` enforces, because golangci-lint is a `tool` directive in
+`go.mod` and is therefore rebuilt with the new Go: its formatters use the `go/format` compiled into
+the binary, so a new Go release can reformat code the old one accepted. Run `task lint -- --fix`
+right after the bump and commit the result with it.
 
 ## `new(expression)` for pointers
 
@@ -47,7 +54,7 @@ request body — pairing them on a truly-optional field is what makes round-trip
 
 `,omitempty` on a **value-typed struct** (`types.List`, `types.Set`, a `Variant`) is *dead* —
 `encoding/json` never omits struct types — so it must not be added there; a struct with a custom
-marshaler emits its zero value (e.g. `null`) regardless. The [`go fix` `omitzero`](#go-fix--the-go126-modernizer-pass)
+marshaler emits its zero value (e.g. `null`) regardless. The [`go fix` `omitzero`](#go-fix--the-modernizer-pass)
 analyzer strips exactly these dead tags.
 
 ## Generics
@@ -101,7 +108,7 @@ iter.PickFirst / iter.Map / iter.MapAndSortBy     // internal/util/iter/iter.go
 Prefer `comparable` / a small method interface over `any` when the function actually requires it —
 it pushes misuse to compile time.
 
-## `go fix` — the go1.26 modernizer pass
+## `go fix` — the modernizer pass
 
 Go 1.26 reworked `go fix` into an analyzer-driven modernizer: each analyzer reports an
 *opportunity for improvement* and carries a fix that is **safe to apply** (unlike `go vet`, which

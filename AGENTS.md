@@ -88,7 +88,7 @@ require them.
 | Skill | Use for |
 |---|---|
 | `resource-development` | Add/rework a resource or data source + tests; schema/client design conventions |
-| `modern-go` | Go 1.26 idioms (`new(expr)`, generics), the pointer/`omitempty` rule, the `go fix` sweep |
+| `modern-go` | Modern Go idioms (`new(expr)`, generics), the pointer/`omitempty` rule, the `go fix` sweep |
 | `acceptance-testing` | Local backend bring-up; run & debug the acceptance suite |
 | `scratch-config` | Standalone repro/debug/prototype against any meshStack you own |
 | `changelog-management` | Pick the next version, maintain `CHANGELOG.md` |
