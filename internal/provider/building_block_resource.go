@@ -653,7 +653,8 @@ func addWaitingForInputWarning(diags *diag.Diagnostics, bb *client.MeshBuildingB
 	}
 	diags.AddWarning(
 		"Building block run is waiting for input or approval",
-		fmt.Sprintf("Building block %s is in status %s. Resolve the pending input or approval in meshPanel to complete the run; outputs are not yet available.", uuid, bb.Status.Status),
+		fmt.Sprintf("Building block %s is in status %s, so its outputs are not available yet. Resolve the pending input "+
+			"or approval in meshPanel to complete the run; Terraform does not run it again on its own while it waits.", uuid, bb.Status.Status),
 	)
 }
 
@@ -666,6 +667,11 @@ func addWaitingForInputWarning(diags *diag.Diagnostics, bb *client.MeshBuildingB
 // SUCCEEDED/FAILED/ABORTED are terminal, and a WAITING_FOR_*_INPUT status means the block is parked and
 // cannot proceed from this apply (a runnable block would be PENDING) — surfaced as a non-fatal warning
 // rather than polling to the timeout.
+//
+// A terminal status that is not SUCCEEDED is always a warning, never an error, on a create and on an
+// update alike. Whether it fails the apply is the configuration's decision, taken with a postcondition
+// on status.status — see the resource example. Erroring on a create would also taint the building block
+// and have the next apply destroy and recreate it (#277), which is what this reporting exists to avoid.
 func (r *buildingBlockResource) awaitRun(
 	ctx context.Context,
 	diags *diag.Diagnostics,
@@ -682,9 +688,17 @@ func (r *buildingBlockResource) awaitRun(
 			// polling with a clear error instead of dereferencing a nil block in the checks below.
 			return false, fmt.Errorf("building block disappeared while waiting for its run to complete")
 		}
-		if bb.Status != nil && bb.IsWaitingForInput() {
-			// Parked waiting for input this apply cannot supply — terminal-but-non-fatal (warned below).
-			return true, nil
+		// A block the backend returns without a status yet falls through to CreateSuccessful, which keeps
+		// polling for one.
+		if bb.Status != nil {
+			if bb.IsWaitingForInput() {
+				// Parked waiting for input this apply cannot supply — terminal-but-non-fatal (warned below).
+				return true, nil
+			}
+			if bb.Status.Status == client.BuildingBlockStatusFailed || bb.Status.Status == client.BuildingBlockStatusAborted {
+				// Terminal, and reported below — the poll stops without an error of its own.
+				return true, nil
+			}
 		}
 		return bb.CreateSuccessful()
 	}
@@ -692,9 +706,18 @@ func (r *buildingBlockResource) awaitRun(
 	err := poll.AtMostFor(timeout, r.BuildingBlockClient.ReadFunc(uuid),
 		poll.WithLastResultTo(&final)).
 		Until(ctx, predicate)
-	if err != nil {
-		r.addRunFailureDiagnostics(ctx, diags, diag.SeverityError, "Building block run failed", err.Error(), final)
-	} else if final != nil && final.IsWaitingForInput() {
+	switch {
+	case err != nil:
+		// A timeout, an unknown status or a vanished block is not a run status a postcondition could
+		// decide on, so it stays an error.
+		r.addRunFailureDiagnostics(ctx, diags, diag.SeverityError, "Building block run could not be awaited", err.Error(), final)
+	case final.Status.Status == client.BuildingBlockStatusFailed || final.Status.Status == client.BuildingBlockStatusAborted:
+		r.addRunFailureDiagnostics(ctx, diags, diag.SeverityWarning, "Building block run did not succeed",
+			fmt.Sprintf("The run of building block %s ended in status %s, so the building block is not in the state its "+
+				"configuration describes. Inspect the run in meshPanel and fix the cause; the next plan shows an in-place "+
+				"update that runs it again. Add a postcondition on self.status.status to fail the apply on this.",
+				uuid, final.Status.Status), final)
+	case final.IsWaitingForInput():
 		addWaitingForInputWarning(diags, final)
 	}
 	return final
@@ -954,7 +977,16 @@ func (r *buildingBlockResource) ModifyPlan(ctx context.Context, req resource.Mod
 		}
 	}
 
-	if rerunNeeded(planSpec, stateSpec) || secretRotated {
+	// A run that ended FAILED or ABORTED leaves the building block off its configuration, and running it
+	// again is the repair — an in-place update, never a replacement. Update evaluates the same statuses,
+	// so the plan and the apply agree on whether a run follows.
+	stateRunStatus := generic.GetAttribute[enum.Entry[client.BuildingBlockStatus]](ctx, req.State, path.Root("status").AtName("status"), &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	repairNeeded := stateRunStatus == client.BuildingBlockStatusFailed || stateRunStatus == client.BuildingBlockStatusAborted
+
+	if rerunNeeded(planSpec, stateSpec) || secretRotated || repairNeeded {
 		triggerRun()
 	}
 }
@@ -993,7 +1025,11 @@ func (r *buildingBlockResource) Update(ctx context.Context, req resource.UpdateR
 		// mutate the backend on an unresolved/invalid secret state (and lose the rotation signal).
 		return
 	}
-	needsRun := rerunNeeded(plan.Spec, state.Spec) || secretRotated
+	// A building block whose run ended FAILED or ABORTED is repaired by running it again, and that repair
+	// is the in-place update the plan showed. Same statuses as ModifyPlan, so plan and apply agree.
+	repairNeeded := state.Status != nil &&
+		(state.Status.Status == client.BuildingBlockStatusFailed || state.Status.Status == client.BuildingBlockStatusAborted)
+	needsRun := rerunNeeded(plan.Spec, state.Spec) || secretRotated || repairNeeded
 
 	// A version-change PUT is only accepted by the backend when the block is in a completed state
 	// (SUCCEEDED, FAILED, ABORTED); otherwise the backend 409s. Pre-check and fail fast with a clear message
@@ -1041,6 +1077,20 @@ func (r *buildingBlockResource) Update(ctx context.Context, req resource.UpdateR
 		secretRotated
 	if needsRun && !backendWillRun {
 		if err := r.BuildingBlockClient.TriggerRun(ctx, *updated.Metadata.Uuid); err != nil {
+			// A repair is the one run the provider starts without the user changing anything, so this 403
+			// would fail every apply identically. Say what blocks it instead of repeating a bare HTTP error.
+			if httpErr, ok := errors.AsType[client.HttpError](err); ok && httpErr.IsForbidden() && repairNeeded {
+				resp.Diagnostics.AddError(
+					"Building block run did not succeed and meshStack refused to run it again",
+					fmt.Sprintf("The last run of building block %s ended in status %s, so this apply tried to run it again, "+
+						"and meshStack rejected that with a 403. A workspace-scoped API key may only trigger runs on a "+
+						"building block definition that has run transparency enabled. Ask the platform team owning the "+
+						"definition to enable run transparency, use an API key with admin or platform operator permissions, "+
+						"or run the building block in meshPanel. Underlying error: %s",
+						*updated.Metadata.Uuid, state.Status.Status, err.Error()),
+				)
+				return
+			}
 			resp.Diagnostics.AddError("Error triggering building block run", err.Error())
 			return
 		}

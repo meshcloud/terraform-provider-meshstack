@@ -1142,11 +1142,25 @@ func TestAccBuildingBlock(t *testing.T) {
 
 		// runCase walks an unprivileged, workspace-scoped API key (BUILDINGBLOCK_* only — no MANAGED_/ADM_
 		// authority) through creating a cross-workspace building block from a terraform BBD pinned to the
-		// `broken` ref, whose `tofu apply` fails on a deliberately-false precondition. The run fails either
-		// way; whether the failing step's log is surfaced in the apply error is gated solely by the BBD's
-		// run_transparency. Each case is fully isolated (its own workspaces, BBD, key) so the two opposite
-		// outcomes cannot interfere.
-		runCase := func(t *testing.T, runTransparency bool, expectErr *regexp.Regexp) {
+		// `broken` ref, whose `tofu apply` fails on a deliberately-false precondition. Each case is fully
+		// isolated (its own workspaces, BBD, key) so the two opposite outcomes cannot interfere.
+		//
+		// A run that does not succeed never errors on its own (#277), so what fails these applies is the
+		// postcondition the test-support file carries — the recipe the resource documentation recommends,
+		// exercised end to end. Each step's plan check is the other half of the assertion: a postcondition
+		// is evaluated after the building block is written to state and after every taint call site, so the
+		// block must still plan as an in-place update after an apply it failed. A replace there would mean
+		// the next apply destroys everything the runs created, which is the whole point of #277.
+		//
+		// What run_transparency gates for a workspace-scoped key is whether the repair may be triggered at
+		// all: with it ON the re-run starts and fails on the broken ref again, with it OFF meshStack
+		// refuses the trigger-run and that refusal is the error instead.
+		//
+		// Two things this case deliberately does not assert. That an unsuccessful run is a warning rather
+		// than an error is TestAwaitRun's job. So is the failing step's log reaching the diagnostics: it is
+		// a warning now, Terraform prints warnings to stdout, and the framework matches ExpectError against
+		// stderr.
+		runCase := func(t *testing.T, runTransparency bool, expectRepairErr *regexp.Regexp) {
 			t.Helper()
 			// Workspace W owns the BBD; workspace O consumes it across the workspace boundary.
 			workspaceConfig, workspaceAddr := testconfig.Workspace(t)
@@ -1197,48 +1211,94 @@ func TestAccBuildingBlock(t *testing.T) {
 				// Keep the key alive until after the BB is destroyed: the other provider needs it for teardown.
 				testconfig.Descend("depends_on")(testconfig.SetRawExpr("[%s]", apiKeyAddr)),
 			)
-			step2Config := bbConfig.Join(step1Config, otherProviderConfig)
+			consumerConfig := bbConfig.Join(step1Config, otherProviderConfig)
 
 			var apiKeyClientId, apiKeyClientSecret lazyVariable
-			ApplyAndTest(t, resource.TestCase{
-				Steps: []resource.TestStep{
-					{
-						// Admin mints the infra + the workspace-scoped key; capture its credentials.
-						Config: step1Config.String(),
-						ConfigStateChecks: []statecheck.StateCheck{
-							statecheck.ExpectKnownValue(apiKeyAddr.String(), tfjsonpath.New("status").AtMapKey("client_id"), xknownvalue.NotEmptyString(func(clientId string) error {
-								apiKeyClientId = lazyVariable(clientId)
-								return nil
-							})),
-							statecheck.ExpectKnownValue(apiKeyAddr.String(), tfjsonpath.New("status").AtMapKey("client_secret"), xknownvalue.NotEmptyString(func(clientSecret string) error {
-								apiKeyClientSecret = lazyVariable(clientSecret)
-								return nil
-							})),
-						},
-					},
-					{
-						// The consumer creates the BB; its run fails on the broken ref. wait_for_completion is
-						// set in the example, so the apply errors on the failed run.
-						Config: step2Config.String(),
-						ConfigVariables: tfconfig.Variables{
-							"apikey_client_id":     &apiKeyClientId,
-							"apikey_client_secret": &apiKeyClientSecret,
-						},
-						ExpectError: expectErr,
+			consumerVariables := tfconfig.Variables{
+				"apikey_client_id":     &apiKeyClientId,
+				"apikey_client_secret": &apiKeyClientSecret,
+			}
+			// The support file's postcondition rejects the FAILED status the broken ref produces. With run
+			// transparency ON the repair runs and fails on the broken ref again, so the postcondition fails
+			// that apply too; with it OFF meshStack refuses the trigger-run and that refusal is the error.
+			postconditionFailed := regexp.MustCompile("not SUCCEEDED")
+			repairApplyErr := postconditionFailed
+			if expectRepairErr != nil {
+				repairApplyErr = expectRepairErr
+			}
+
+			steps := []resource.TestStep{
+				{
+					// Admin mints the infra + the workspace-scoped key; capture its credentials.
+					Config: step1Config.String(),
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(apiKeyAddr.String(), tfjsonpath.New("status").AtMapKey("client_id"), xknownvalue.NotEmptyString(func(clientId string) error {
+							apiKeyClientId = lazyVariable(clientId)
+							return nil
+						})),
+						statecheck.ExpectKnownValue(apiKeyAddr.String(), tfjsonpath.New("status").AtMapKey("client_secret"), xknownvalue.NotEmptyString(func(clientSecret string) error {
+							apiKeyClientSecret = lazyVariable(clientSecret)
+							return nil
+						})),
 					},
 				},
-			})
+				{
+					// The consumer creates the BB; its run fails on the broken ref. wait_for_completion is
+					// set in the support file, so the create waits for that run, keeps the building block
+					// with a warning, and the postcondition is what turns that into a failed apply.
+					Config:          consumerConfig.String(),
+					ConfigVariables: consumerVariables,
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PreApply: []plancheck.PlanCheck{
+							plancheck.ExpectResourceAction(buildingBlockAddr.String(), plancheck.ResourceActionCreate),
+						},
+					},
+					ExpectError: postconditionFailed,
+				},
+				{
+					// Re-applying the unchanged config is the repair. The plan check is the assertion this
+					// issue is about: the create failed its apply, and the building block is still an
+					// in-place update rather than a replace, so nothing it created is about to be destroyed.
+					Config:          consumerConfig.String(),
+					ConfigVariables: consumerVariables,
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PreApply: []plancheck.PlanCheck{
+							plancheck.ExpectResourceAction(buildingBlockAddr.String(), plancheck.ResourceActionUpdate),
+						},
+					},
+					ExpectError: repairApplyErr,
+				},
+			}
+
+			if expectRepairErr == nil {
+				steps = append(steps, resource.TestStep{
+					// The repair's apply failed on the postcondition as well, and the block must still plan
+					// as an in-place update. A PlanOnly step skips the pre-apply plan, so the check has to
+					// be a post-refresh one, and the pending repair is why the plan is not empty.
+					Config:          consumerConfig.String(),
+					ConfigVariables: consumerVariables,
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PostApplyPostRefresh: []plancheck.PlanCheck{
+							plancheck.ExpectResourceAction(buildingBlockAddr.String(), plancheck.ResourceActionUpdate),
+						},
+					},
+					PlanOnly:           true,
+					ExpectNonEmptyPlan: true,
+				})
+			}
+
+			ApplyAndTest(t, resource.TestCase{Steps: steps})
 		}
 
-		// Run transparency ON: the unprivileged workspace key may read the failed run, so the broken
-		// module's precondition message is surfaced as part of the apply error.
-		t.Run("transparency_on_surfaces_log", func(t *testing.T) {
-			runCase(t, true, regexp.MustCompile("intentionally broken BBD version"))
+		// Run transparency ON: the workspace-scoped key may trigger the repair, so the re-run happens,
+		// fails on the broken ref again, and the block keeps planning as an in-place repair.
+		t.Run("transparency_on_repairs_in_place", func(t *testing.T) {
+			runCase(t, true, nil)
 		})
-		// Run transparency OFF: the failed run is opaque to the workspace key (null run uuid), so the apply
-		// errors with only the generic run failure — the step log is not leaked.
-		t.Run("transparency_off_hides_log", func(t *testing.T) {
-			runCase(t, false, regexp.MustCompile("Building block run failed"))
+		// Run transparency OFF: meshStack refuses a workspace-scoped key's trigger-run on an opaque
+		// definition, so the repair cannot start at all and the apply says so.
+		t.Run("transparency_off_refuses_the_repair", func(t *testing.T) {
+			runCase(t, false, regexp.MustCompile("meshStack refused to run it again"))
 		})
 	})
 

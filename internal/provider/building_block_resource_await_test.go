@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"strings"
 	"testing"
 	"time"
 
@@ -61,136 +60,141 @@ func bbWithStatus(status enum.Entry[client.BuildingBlockStatus]) *client.MeshBui
 	}
 }
 
-// TestAwaitRunPollsPendingToSuccess: a triggered run surfaces immediately as PENDING (the backend
-// eager-sets it when a run will follow), then progresses through IN_PROGRESS to SUCCEEDED. awaitRun polls
-// the status to completion — no run-uuid comparison, no grace window — without surfacing a warning.
-func TestAwaitRunPollsPendingToSuccess(t *testing.T) {
+// TestAwaitRun pins how awaitRun reports each terminal building block status. A run triggered by the
+// preceding create/update surfaces immediately as PENDING, so awaiting keys off the status alone.
+//
+// Every terminal status that is not SUCCEEDED is a warning: failing the apply is the configuration's
+// decision, taken with a postcondition. Only a run whose outcome could not be established at all — a
+// timeout, an unknown status, a block that vanished — is an error.
+func TestAwaitRun(t *testing.T) {
 	t.Parallel()
 
-	stub := &sequencedBBClient{states: []*client.MeshBuildingBlockV2{
-		bbWithRun(client.BuildingBlockStatusPending, "run-new"),
-		bbWithRun(client.BuildingBlockStatusInProgress, "run-new"),
-		bbWithRun(client.BuildingBlockStatusSucceeded, "run-new"),
-	}}
-	r := &buildingBlockResource{BuildingBlockClient: stub}
-
-	var diags diag.Diagnostics
-	final := r.awaitRun(context.Background(), &diags, "bb-uuid", true, 30*time.Second)
-
-	require.False(t, diags.HasError(), "unexpected error diagnostics: %v", diags.Errors())
-	require.Empty(t, diags.Warnings(), "a completed run must not surface a waiting-for-input warning")
-	require.GreaterOrEqual(t, stub.reads, 3, "must poll through PENDING/IN_PROGRESS to the terminal state")
-	require.NotNil(t, final)
-	require.Equal(t, client.BuildingBlockStatusSucceeded, final.Status.Status)
-}
-
-// TestAwaitRunAwaitsWithoutRunUuid: awaiting keys off the status alone, so a run whose uuids are null
-// (low run transparency / insufficient permissions) is still awaited to completion.
-func TestAwaitRunAwaitsWithoutRunUuid(t *testing.T) {
-	t.Parallel()
-
-	stub := &sequencedBBClient{states: []*client.MeshBuildingBlockV2{
-		bbWithStatus(client.BuildingBlockStatusPending),
-		bbWithStatus(client.BuildingBlockStatusSucceeded),
-	}}
-	r := &buildingBlockResource{BuildingBlockClient: stub}
-
-	var diags diag.Diagnostics
-	final := r.awaitRun(context.Background(), &diags, "bb-uuid", true, 30*time.Second)
-
-	require.False(t, diags.HasError(), "unexpected error diagnostics: %v", diags.Errors())
-	require.Empty(t, diags.Warnings())
-	require.GreaterOrEqual(t, stub.reads, 2, "must poll to the terminal state even without a run uuid")
-	require.NotNil(t, final)
-	require.Equal(t, client.BuildingBlockStatusSucceeded, final.Status.Status)
-}
-
-// TestAwaitRunErrorsWhenBlockDisappears: if the block 404s mid-poll (purged, or its definition deleted
-// out-of-band), ReadFunc -> Get returns (nil, nil). awaitRun must surface a clear error rather than
-// panicking on a nil-block dereference in the poll predicate.
-func TestAwaitRunErrorsWhenBlockDisappears(t *testing.T) {
-	t.Parallel()
-
-	stub := &sequencedBBClient{states: []*client.MeshBuildingBlockV2{
-		bbWithStatus(client.BuildingBlockStatusInProgress),
-		nil, // the block 404'd mid-run
-	}}
-	r := &buildingBlockResource{BuildingBlockClient: stub}
-
-	var diags diag.Diagnostics
-	final := r.awaitRun(context.Background(), &diags, "bb-uuid", true, 30*time.Second)
-
-	require.True(t, diags.HasError(), "a block disappearing mid-run must surface an error diagnostic, not panic")
-	require.Nil(t, final)
-}
-
-// TestAwaitRunSurfacesFailedStepLogAsError: when a run fails and its logs are readable (run transparency
-// on / sufficient permissions), awaitRun surfaces the failing step's message as an error diagnostic — the
-// actionable detail behind the run failure the apply already reports — rather than a separate warning.
-func TestAwaitRunSurfacesFailedStepLogAsError(t *testing.T) {
-	t.Parallel()
-
-	stub := &sequencedBBClient{states: []*client.MeshBuildingBlockV2{
-		bbWithRun(client.BuildingBlockStatusInProgress, "run-broken"),
-		bbWithRun(client.BuildingBlockStatusFailed, "run-broken"),
-	}}
-	runClient := stubRunLogsClient{logs: client.MeshBuildingBlockRunLogs{Steps: []client.MeshBuildingBlockRunStepLog{
+	failedStep := client.MeshBuildingBlockRunLogs{Steps: []client.MeshBuildingBlockRunStepLog{
 		{DisplayName: "apply", Status: string(client.BuildingBlockStatusFailed), UserMessage: new("intentionally broken BBD version")},
-	}}}
-	r := &buildingBlockResource{BuildingBlockClient: stub, BuildingBlockRunClient: runClient}
+	}}
 
-	var diags diag.Diagnostics
-	final := r.awaitRun(context.Background(), &diags, "bb-uuid", true, 30*time.Second)
+	tests := map[string]struct {
+		states       []*client.MeshBuildingBlockV2
+		logs         *stubRunLogsClient
+		wantErrors   []string // one substring per expected error diagnostic, in order
+		wantWarnings []string // one substring per expected warning diagnostic, in order
+		wantStatus   enum.Entry[client.BuildingBlockStatus]
+		wantNoBlock  bool
+		wantReads    int
+	}{
+		"a run is polled through PENDING and IN_PROGRESS to SUCCEEDED": {
+			states: []*client.MeshBuildingBlockV2{
+				bbWithRun(client.BuildingBlockStatusPending, "run-new"),
+				bbWithRun(client.BuildingBlockStatusInProgress, "run-new"),
+				bbWithRun(client.BuildingBlockStatusSucceeded, "run-new"),
+			},
+			wantStatus: client.BuildingBlockStatusSucceeded,
+			wantReads:  3,
+		},
+		"a block returned without a status yet is polled on": {
+			states: []*client.MeshBuildingBlockV2{
+				{}, // the backend has not attached a status yet
+				bbWithStatus(client.BuildingBlockStatusSucceeded),
+			},
+			wantStatus: client.BuildingBlockStatusSucceeded,
+			wantReads:  2,
+		},
+		"a run without a run uuid is awaited all the same": {
+			states: []*client.MeshBuildingBlockV2{
+				bbWithStatus(client.BuildingBlockStatusPending),
+				bbWithStatus(client.BuildingBlockStatusSucceeded),
+			},
+			wantStatus: client.BuildingBlockStatusSucceeded,
+			wantReads:  2,
+		},
+		"a failed run and its failing step are warned about": {
+			states: []*client.MeshBuildingBlockV2{
+				bbWithRun(client.BuildingBlockStatusInProgress, "run-broken"),
+				bbWithRun(client.BuildingBlockStatusFailed, "run-broken"),
+			},
+			logs:         &stubRunLogsClient{logs: failedStep},
+			wantWarnings: []string{"ended in status FAILED", "intentionally broken BBD version"},
+			wantStatus:   client.BuildingBlockStatusFailed,
+		},
+		"a failed run whose logs are not exposed reports the failure alone": {
+			states: []*client.MeshBuildingBlockV2{
+				bbWithStatus(client.BuildingBlockStatusInProgress),
+				bbWithStatus(client.BuildingBlockStatusFailed), // no run uuid: logs not exposed
+			},
+			wantWarnings: []string{"ended in status FAILED"},
+			wantStatus:   client.BuildingBlockStatusFailed,
+		},
+		"a failed run whose logs cannot be read warns about the logs": {
+			states: []*client.MeshBuildingBlockV2{
+				bbWithRun(client.BuildingBlockStatusFailed, "run-broken"),
+			},
+			logs:         &stubRunLogsClient{err: context.DeadlineExceeded},
+			wantWarnings: []string{"ended in status FAILED", "Could not fetch run logs"},
+			wantStatus:   client.BuildingBlockStatusFailed,
+		},
+		// An aborted run is reported exactly like a failed one: the building block is off its
+		// configuration either way, and the next plan runs it again either way.
+		"an aborted run is warned about like a failed one": {
+			states: []*client.MeshBuildingBlockV2{
+				bbWithRun(client.BuildingBlockStatusInProgress, "run-stopped"),
+				bbWithRun(client.BuildingBlockStatusAborted, "run-stopped"),
+			},
+			logs:         &stubRunLogsClient{}, // an aborted run has no failed step to report
+			wantWarnings: []string{"ended in status ABORTED"},
+			wantStatus:   client.BuildingBlockStatusAborted,
+		},
+		"a block parked for input warns instead of polling to the timeout": {
+			states:       []*client.MeshBuildingBlockV2{bbWithStatus(client.BuildingBlockStatusWaitingForOperatorInput)},
+			wantWarnings: []string{"waiting for input or approval"},
+			wantStatus:   client.BuildingBlockStatusWaitingForOperatorInput,
+		},
+		"a status this provider does not know errors instead of polling to the timeout": {
+			states:     []*client.MeshBuildingBlockV2{bbWithStatus("SOMETHING_NEW")},
+			wantErrors: []string{"unknown building block status"},
+			wantStatus: "SOMETHING_NEW",
+		},
+		// A block that vanished left no status for a postcondition to decide on, so it stays an error.
+		"a block that disappears mid-run errors": {
+			states: []*client.MeshBuildingBlockV2{
+				bbWithStatus(client.BuildingBlockStatusInProgress),
+				nil, // the block 404'd mid-run
+			},
+			wantErrors:  []string{"disappeared while waiting"},
+			wantNoBlock: true,
+		},
+	}
 
-	require.True(t, diags.HasError(), "a failed run must surface error diagnostics")
-	require.Empty(t, diags.Warnings(), "readable failed-step logs must be errors, not warnings")
-	var foundStepError bool
-	for _, e := range diags.Errors() {
-		if strings.Contains(e.Detail(), "intentionally broken BBD version") {
-			foundStepError = true
+	requireDiagnostics := func(t *testing.T, got diag.Diagnostics, want []string, kind string) {
+		t.Helper()
+		require.Len(t, got, len(want), "unexpected %s diagnostics: %v", kind, got)
+		for i, substring := range want {
+			require.Contains(t, got[i].Summary()+"\n"+got[i].Detail(), substring)
 		}
 	}
-	require.True(t, foundStepError, "the failing step's log message must appear in an error diagnostic")
-	require.NotNil(t, final)
-	require.Equal(t, client.BuildingBlockStatusFailed, final.Status.Status)
-}
 
-// TestAwaitRunWarnsWhenFailedRunLogsUnreadable: when a run fails but its logs cannot be read (run
-// transparency off / insufficient permissions surface a null run uuid), awaitRun reports the run failure
-// as an error and does not attempt to fetch logs, so no step-log error is added.
-func TestAwaitRunWarnsWhenFailedRunLogsUnreadable(t *testing.T) {
-	t.Parallel()
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 
-	stub := &sequencedBBClient{states: []*client.MeshBuildingBlockV2{
-		bbWithStatus(client.BuildingBlockStatusInProgress),
-		bbWithStatus(client.BuildingBlockStatusFailed), // no run uuid: logs not exposed
-	}}
-	r := &buildingBlockResource{BuildingBlockClient: stub}
+			stub := &sequencedBBClient{states: tt.states}
+			r := &buildingBlockResource{BuildingBlockClient: stub}
+			if tt.logs != nil {
+				r.BuildingBlockRunClient = *tt.logs
+			}
+			var diags diag.Diagnostics
+			final := r.awaitRun(context.Background(), &diags, "bb-uuid", true, 30*time.Second)
 
-	var diags diag.Diagnostics
-	final := r.awaitRun(context.Background(), &diags, "bb-uuid", true, 30*time.Second)
-
-	require.True(t, diags.HasError(), "a failed run must surface an error diagnostic")
-	require.NotNil(t, final)
-	require.Equal(t, client.BuildingBlockStatusFailed, final.Status.Status)
-}
-
-// TestAwaitRunWarnsOnParkedWaiting: a block parked in WAITING_FOR_*_INPUT cannot proceed from this apply
-// (a runnable block would already be PENDING). awaitRun returns it as terminal-but-non-fatal with a
-// waiting-for-input warning, rather than polling to the timeout.
-func TestAwaitRunWarnsOnParkedWaiting(t *testing.T) {
-	t.Parallel()
-
-	stub := &sequencedBBClient{states: []*client.MeshBuildingBlockV2{
-		bbWithStatus(client.BuildingBlockStatusWaitingForOperatorInput),
-	}}
-	r := &buildingBlockResource{BuildingBlockClient: stub}
-
-	var diags diag.Diagnostics
-	final := r.awaitRun(context.Background(), &diags, "bb-uuid", true, 30*time.Second)
-
-	require.False(t, diags.HasError(), "unexpected error diagnostics: %v", diags.Errors())
-	require.NotEmpty(t, diags.Warnings(), "a parked WAITING block must surface a waiting-for-input warning")
-	require.NotNil(t, final)
-	require.Equal(t, client.BuildingBlockStatusWaitingForOperatorInput, final.Status.Status)
+			requireDiagnostics(t, diags.Errors(), tt.wantErrors, "error")
+			requireDiagnostics(t, diags.Warnings(), tt.wantWarnings, "warning")
+			if tt.wantNoBlock {
+				require.Nil(t, final)
+				return
+			}
+			require.NotNil(t, final)
+			require.Equal(t, tt.wantStatus, final.Status.Status)
+			if tt.wantReads > 0 {
+				require.GreaterOrEqual(t, stub.reads, tt.wantReads, "must poll to the terminal state")
+			}
+		})
+	}
 }
