@@ -1,0 +1,72 @@
+# Ask the private meshStack mono repo to run this provider's acceptance suite and report the result
+# back as a check run. The suite needs a whole meshStack backend, so it cannot run here; this
+# workflow only asks for it.
+name: Request Integration Tests
+
+# The push trigger is not decoration: running on the main push, and not only on pull requests, is
+# what surfaces a provider/backend regression before a release tag.
+on:
+  pull_request_target:
+    types: [ opened, synchronize, reopened ]
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  dispatch:
+    name: Request Acceptance Tests
+    runs-on: ubuntu-latest
+    env:
+      SATELLITE_REF: ${{ github.event_name == 'pull_request_target' && github.event.pull_request.head.ref || 'main' }}
+
+    # This workflow MUST NOT check out the pull request, and has no `actions/checkout` for that
+    # reason. `pull_request_target` runs in the base repo's context with its secrets, so checking out
+    # contributor code here would be the classic "pwn request" hole. Reading `github.event` and
+    # calling an API is passive use of that context and safe.
+    steps:
+      # A head branch inside this repository means its author has write access here, which is the
+      # whole trust model: the code under test is then always code we already trust.
+      - name: Skip a fork pull request
+        id: guard
+        env:
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          BASE_REPO: ${{ github.repository }}
+        run: |
+          if [ -n "$HEAD_REPO" ] && [ "$HEAD_REPO" != "$BASE_REPO" ]; then
+            echo "dispatch=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Acceptance tests are not dispatched for a fork pull request. A maintainer has to adopt the branch into $BASE_REPO before the suite can run against it."
+          else
+            echo "dispatch=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Downscoped to `actions: write` at mint time even though the installation carries nothing
+      # else, so a later widening of the app cannot leak into this workflow.
+      - name: Mint a token for the dispatch
+        id: token
+        if: steps.guard.outputs.dispatch == 'true'
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ secrets.SATELLITE_GH_APP_ID }}
+          private-key: ${{ secrets.SATELLITE_GH_APP_PRIVATE_KEY }}
+          owner: meshcloud
+          repositories: meshfed-release
+          permission-actions: write
+
+      # `--ref develop` deliberately, never a feature ref: the orchestration logic should be the
+      # trusted default-branch version even when the code under test sits on a feature branch. The
+      # branch name travels in the environment rather than interpolated into this script, because a
+      # branch name is shell source.
+      - name: Request the acceptance run
+        if: steps.guard.outputs.dispatch == 'true'
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+        run: |
+          gh workflow run ci-satellite.yml \
+            --repo meshcloud/meshfed-release \
+            --ref develop \
+            -f repo=terraform-provider-meshstack \
+            -f ref="$SATELLITE_REF"
+          echo "::notice::Requested an acceptance run for $SATELLITE_REF. The result arrives as the \"Acceptance Tests (meshStack backend)\" check."
