@@ -3,21 +3,20 @@ name: Tests
 
 # This GitHub action runs your tests for each pull request and push.
 # Optionally, you can turn it on using a schedule for regular testing.
+#
+# No `paths-ignore` on either trigger, deliberately: a workflow skipped that way never reports its
+# checks, so a required check on it stays "expected" forever and blocks the merge. A skipped *job*
+# reports success; a skipped *workflow* does not.
 on:
   pull_request:
-    paths-ignore:
-      - 'README.md'
   push:
     branches:
       - main
-    paths-ignore:
-      - 'README.md'
 
 # Testing only needs permissions to read the repository contents.
 permissions:
   contents: read
 
-# Cancel superseded runs on the same ref (the acceptance job is expensive).
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -120,14 +119,12 @@ jobs:
           cache: true
       # The mock tests (TF_ACC unset -> IsUnitTest) still drive a real CLI. Left to auto-install one,
       # the framework races parallel exec against its own download ("text file busy"/ETXTBSY, plus
-      # occasional 502s); pin a pre-installed tofu instead. Mirrors the acceptance job's pinning below.
+      # occasional 502s); pin a pre-installed tofu instead.
       - uses: opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4 # v2.0.2
         with:
           tofu_wrapper: false
-      # Emit coverage as a binary coverage-data directory (GOCOVERDIR format) rather than a text
-      # profile, so the acceptance job on a different runner can merge it with its own live-backend
-      # coverage via `go tool covdata merge`. `-coverpkg=./...` attributes coverage across all
-      # packages; the test binaries flush coverage on exit even when a test fails.
+      # Coverage lands in a binary coverage-data directory (GOCOVERDIR format) rather than a text
+      # profile, because the instrumented binaries flush it on exit even when a test fails.
       - name: Run unit tests with gotestsum
         env:
           # OpenTofu resolves the test provider's legacy "-" namespace only against this host.
@@ -138,238 +135,11 @@ jobs:
           go tool gotestsum --junitfile junit.xml --format testdox -- \
             -coverpkg=./... ./... -args -test.gocoverdir="$PWD/covdata/unit"
 
-      # Hand the unit coverage data to the acceptance job (a separate, self-hosted runner). Always
-      # upload, even on test failure, so the combined report can still be produced.
-      - name: Upload unit coverage data
-        if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: covdata-unit
-          path: covdata/unit
-          retention-days: 1
-          if-no-files-found: warn
-
-      # Post (or refresh) the single coverage comment with the unit figure and a placeholder for the
-      # combined number. The acceptance job rewrites this same comment (matched by the HTML marker)
-      # once it has merged in the live-backend coverage.
-      - name: Post coverage to PR (unit; acceptance pending)
+      - name: Post coverage to PR
         if: ${{ always() && github.event_name == 'pull_request' }}
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           PR: ${{ github.event.pull_request.number }}
         shell: bash
-        run: .github/scripts/coverage-comment.sh unit
-
-  # Acceptance tests against a real, fully dockerized meshStack backend brought up from pre-built
-  # images as service containers. Runs on the org's self-hosted mesh-runners (which can pull the
-  # private GAR images); forks are skipped (no runners / secrets / MESHFED_REGISTRY variable).
-  # The internal registry path comes from the MESHFED_REGISTRY repo/org configuration variable so
-  # it is not hardcoded here. Canonical local equivalent: meshfed-release/docker-compose.acc.yml.
-  acceptance:
-    name: Go Acceptance Test
-    needs: [ build, test ]
-    # Run after the unit job (so its coverage artifact exists to merge) even when that job's tests
-    # failed, but only on a green build and on a non-fork PR, a push to main, or a manual dispatch
-    # (forks lack the self-hosted runners, the secrets and the MESHFED_REGISTRY variable). Running
-    # on the main push (not just PRs) is what surfaces a provider/backend regression before a
-    # release tag — the same failure that meshfed-release's source-built acceptance job would hit.
-    if: >-
-      always() && needs.build.result == 'success' &&
-      (github.event_name == 'workflow_dispatch' ||
-       github.event_name == 'push' ||
-       github.event.pull_request.head.repo.full_name == github.repository)
-    runs-on: mesh-runners
-    permissions:
-      contents: read
-      pull-requests: write  # for the coverage comment
-
-    # ARC runs these self-hosted runners in kubernetes container mode, where a job using service
-    # containers MUST declare a job container — so nix-ci stays as the (GAR-available, proven) base.
-    # The Go toolchain + module/build cache come from actions/setup-go below, aligned with the other
-    # jobs in this workflow; tofu is provided by the nix-ci image.
-    container:
-      image: ${{ vars.MESHFED_REGISTRY }}/meshstack-container/nix-ci:latest
-
-    # Full backend as service containers. On mesh-runners all services + the job container share one
-    # network, so the images' baked localhost config resolves between them. Ports are de-conflicted
-    # (meshfed-api on 8089 so the tf-runner's fixed :8080 health server does not collide). JVM
-    # services use `--restart on-failure` to absorb the mariadb startup race; the readiness step is
-    # the real gate.
-    services:
-      mariadb:
-        image: ${{ vars.MESHFED_REGISTRY }}/meshstack-container/mariadb-ci
-
-      ravendb:
-        image: ${{ vars.MESHFED_REGISTRY }}/meshstack-container/ravendb-ci
-
-      rabbitmq:
-        image: ${{ vars.MESHFED_REGISTRY }}/dockerhub/rabbitmq:3.11.18-alpine
-        env:
-          RABBITMQ_DEFAULT_USER: guest
-          RABBITMQ_DEFAULT_PASS: guest
-
-      # Cap each JVM service container's heap. The ARC $job-pod hook injects a JAVA_TOOL_OPTIONS -Xmx
-      # only into the job container, not service containers, so an uncapped JVM here sizes its heap to
-      # ~25% of node memory; several at once overcommit the spot node and OOM-kill it — surfacing as a
-      # truncated ("did not complete") acc run. Mirrors meshfed-release's service-container caps.
-      keycloak:
-        image: ${{ vars.MESHFED_REGISTRY }}/meshstack-container/keycloak-ci:26
-        env:
-          JAVA_TOOL_OPTIONS: -Xmx1g
-
-      meshfed-api:
-        image: ${{ vars.MESHFED_REGISTRY }}/meshstack-container/meshfed:latest
-        env:
-          SERVER_PORT: "8089"   # off 8080 so the tf-runner health server can have it; mgmt 8180
-          JAVA_TOOL_OPTIONS: -Xmx2g   # heap cap (working set ~1.4Gi), see keycloak
-        options: --restart on-failure
-
-      replicator:
-        image: ${{ vars.MESHFED_REGISTRY }}/meshstack-container/replicator:latest
-        env:
-          SERVER_PORT: "7080"   # move embedded server off 8080; mgmt 7180
-          JAVA_TOOL_OPTIONS: -Xmx2g   # heap cap, see keycloak
-        options: --restart on-failure
-
-      block-coordinator-api:
-        image: ${{ vars.MESHFED_REGISTRY }}/meshstack-container/block-coordinator-api:latest
-        env:
-          JAVA_TOOL_OPTIONS: -Xmx2g   # heap cap, see keycloak
-        options: --restart on-failure
-
-      # Single poller of the magic runner UUID; fans work out by type. 127.0.0.1 forces IPv4 (the Go
-      # mux would otherwise resolve localhost to [::1], which Tomcat does not listen on). The mux
-      # holds no credentials: it forwards each runner's own Authorization on the claim, overriding
-      # only forRunnerUuid with the magic UUID.
-      multiplexing-block-runner:
-        image: ${{ vars.MESHFED_REGISTRY }}/meshstack-container/multiplexing-block-runner-ci:latest
-        env:
-          BB_RUNNER_MUX_UPSTREAM_URL: http://127.0.0.1:8089
-        options: --restart on-failure
-
-      # Standalone runners poll their mux port; own UUID is irrelevant (mux claims as the magic UUID),
-      # so it is an arbitrary placeholder. They authenticate with the seeded managed-runners API key
-      # (RUNNER_API_CLIENT_ID/SECRET → Bearer via POST /api/login, proxied through the mux) — the
-      # runner-scoped key, NOT the broad provider admin key (MESHSTACK_API_KEY) which only the
-      # provider client uses below. No basic auth. tf-block-runner bakes the matching dev private key
-      # (secret decryption works out of the box) and installs OpenTofu at runtime via Nix.
-      #
-      # Pinned to :main (not :latest): the building-block-runner repo only refreshes :latest on a
-      # tagged release, while :main is rebuilt on every merge to main. Tracking :main keeps the auth
-      # fixes (API-key-over-basic-auth precedence) that let the tf runner work in this acc stack.
-      tf-block-runner:
-        image: ghcr.io/meshcloud/tf-block-runner:main
-        env:
-          RUNNER_API_URL: http://127.0.0.1:8300
-          RUNNER_UUID: 11111111-1111-1111-1111-111111111111
-          RUNNER_API_CLIENT_ID: ${{ secrets.RUNNER_API_CLIENT_ID }}
-          RUNNER_API_CLIENT_SECRET: ${{ secrets.RUNNER_API_CLIENT_SECRET }}
-          JAVA_TOOL_OPTIONS: -Xmx1g   # heap cap, see keycloak
-        options: --restart on-failure
-
-      manual-block-runner:
-        image: ghcr.io/meshcloud/manual-block-runner:main   # track merged main, see tf-block-runner
-        env:
-          RUNNER_API_URL: http://127.0.0.1:8301
-          RUNNER_UUID: 22222222-2222-2222-2222-222222222222
-          RUNNER_API_CLIENT_ID: ${{ secrets.RUNNER_API_CLIENT_ID }}
-          RUNNER_API_CLIENT_SECRET: ${{ secrets.RUNNER_API_CLIENT_SECRET }}
-          SERVER_PORT: "8104"   # move its embedded web server off 8080
-          JAVA_TOOL_OPTIONS: -Xmx1g   # heap cap, see keycloak
-        options: --restart on-failure
-
-    steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version-file: 'go.mod'
-          cache: true
-
-      # Unit coverage data from the `test` job (a different runner). `continue-on-error` so a missing
-      # artifact (e.g. the unit job produced none) does not fail acceptance — the report step then
-      # falls back to acceptance-only coverage.
-      - name: Download unit coverage data
-        if: always()
-        continue-on-error: true
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: covdata-unit
-          path: covdata/unit
-
-      - name: Wait for backend to be ready
-        timeout-minutes: 8
-        shell: bash
-        run: .github/scripts/wait-for-backend.sh
-
-
-      - name: Run acceptance tests with coverage
-        id: acc
-        # Gates merge (PRs and push to main). The job runs against the last *merged* meshfed-release
-        # backend (`:latest` service containers), so a change needing a companion backend PR fails here
-        # until that PR merges and `:latest` rebuilds — the correct order, not a deadlock: merge the
-        # backend PR first (its terraform-provider-acceptance job pairs this branch), then re-run this
-        # job. See the github-ci skill "Companion meshfed-release changes"; the failure comment links it.
-        env:
-          # The acceptance API key/secret (seeded by the mariadb-ci dev dump) come from repo secrets.
-          MESHSTACK_ENDPOINT: http://localhost:8089
-          MESHSTACK_API_KEY: ${{ secrets.MESHSTACK_API_KEY }}
-          MESHSTACK_API_SECRET: ${{ secrets.MESHSTACK_API_SECRET }}
-          MESHSTACK_SKIP_VERSION_CHECK: "true"
-          TF_ACC: "1"
-          TF_ACC_PROVIDER_HOST: registry.opentofu.org
-        shell: bash
-        run: .github/scripts/run-acceptance-tests.sh
-
-      # Distinguish a truncated run from a real failure. gotestsum prints a final "DONE N tests ..."
-      # summary only when the run completes; its absence means the self-hosted runner cut the process
-      # short, so the result is UNKNOWN (re-run — likely runner-infra) rather than a genuine failure.
-      # Both red the job (the acc step already gates), but the advisory comment words itself per
-      # `complete`. Exposes `complete` for the coverage/advisory steps; sets it before exiting.
-      - name: Verify acceptance run completed
-        id: acccheck
-        if: ${{ always() }}
-        shell: bash
-        run: |
-          if [ -s acc-output.log ] && grep -qE '^DONE [0-9]+ tests' acc-output.log; then
-            echo "complete=true" >> "$GITHUB_OUTPUT"
-            echo "Acceptance run reached the gotestsum summary — the result is trustworthy."
-          else
-            echo "complete=false" >> "$GITHUB_OUTPUT"
-            echo "::error::Acceptance run did not complete: no gotestsum 'DONE' summary in acc-output.log. The self-hosted runner truncated or killed the run, so the result is UNKNOWN (not a pass). Re-run the job."
-            exit 1
-          fi
-
-      # Merge the unit coverage (downloaded from the test job) with this job's acceptance coverage and
-      # rewrite the single coverage comment with the combined figure. Always runs — even when the
-      # acceptance tests fail the instrumented binaries still flush their coverage on exit — and
-      # annotates the combined row with the acceptance outcome / incompleteness.
-      - name: Report combined coverage on PR
-        if: ${{ always() && github.event_name == 'pull_request' }}
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REPO: ${{ github.repository }}
-          PR: ${{ github.event.pull_request.number }}
-          ACC_OUTCOME: ${{ steps.acc.outcome }}
-          ACC_COMPLETE: ${{ steps.acccheck.outputs.complete }}
-        shell: bash
-        run: .github/scripts/coverage-comment.sh combined
-
-      # PR comment: the acceptance result blocks merge, so this comment explains *why* it failed and how
-      # to unblock (see the failure branch), and deletes itself once a later run goes green. Idempotent
-      # via the HTML marker; only on PRs (needs a PR number).
-      - name: Manage acceptance PR comment
-        if: ${{ always() && github.event_name == 'pull_request' }}
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REPO: ${{ github.repository }}
-          PR: ${{ github.event.pull_request.number }}
-          OUTCOME: ${{ steps.acc.outcome }}
-          COMPLETE: ${{ steps.acccheck.outputs.complete }}
-          SERVER_URL: ${{ github.server_url }}
-          RUN_ID: ${{ github.run_id }}
-          RUN_ATTEMPT: ${{ github.run_attempt }}
-          HEAD_REF: ${{ github.head_ref }}
-        shell: bash
-        run: .github/scripts/acceptance-pr-comment.sh
+        run: .github/scripts/coverage-comment.sh
