@@ -1104,8 +1104,22 @@ func (r *buildingBlockResource) Update(ctx context.Context, req resource.UpdateR
 			return
 		}
 		final := r.awaitRun(ctx, &resp.Diagnostics, *updated.Metadata.Uuid, plan.WaitForCompletion, timeout)
-		if final != nil {
+		switch {
+		case final != nil:
 			effective = final
+		case !plan.WaitForCompletion:
+			// Nothing was awaited, so `updated` still carries the pre-run status — for a repair, the FAILED or
+			// ABORTED one this apply just triggered a run for. Writing that back would make the next plan
+			// trigger a second run on a block that is already running.
+			if reread, err := r.BuildingBlockClient.Read(ctx, *updated.Metadata.Uuid); err != nil {
+				resp.Diagnostics.AddWarning(
+					"Could not read the building block after triggering its run",
+					fmt.Sprintf("The run was triggered, but reading building block %s to record its new status failed, so "+
+						"state keeps the status from before the run. Underlying error: %s", *updated.Metadata.Uuid, err.Error()),
+				)
+			} else if reread != nil {
+				effective = reread
+			}
 		}
 	}
 
