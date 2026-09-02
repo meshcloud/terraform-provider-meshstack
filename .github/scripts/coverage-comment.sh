@@ -19,12 +19,9 @@ MARKER='<!-- coverage-report -->'
 # True when a coverage-data dir actually contains data.
 have_data() { ls "$1"/covmeta.* >/dev/null 2>&1; }
 
-# total_percent <text-profile> -> total coverage percentage (e.g. "56.3%").
-total_percent() { go tool cover -func="$1" | tail -1 | awk '{print $NF}'; }
-
-# Up to 10 zero-coverage functions from a text profile. awk caps the output itself (instead of
-# `| head -10`) so it never receives SIGPIPE from an early-closing reader — under `set -o pipefail`
-# that would otherwise fail the step with exit 141.
+# Up to 10 zero-coverage functions from a `go tool cover -func` summary. awk caps the output itself
+# (instead of `| head -10`) so it never receives SIGPIPE from an early-closing reader — under
+# `set -o pipefail` that would otherwise fail the step with exit 141.
 top_uncovered() { awk '$3 == "0.0%" { print; if (++n == 10) exit }' "$1"; }
 
 # The backticks in the cell below are a markdown code span, not a shell expansion.
@@ -33,8 +30,9 @@ UNIT_CELL='`n/a (no coverage produced)`'
 UNCOVERED=""
 if have_data covdata/unit; then
   go tool covdata textfmt -i=covdata/unit -o=unit.txt
-  UNIT_CELL="\`$(total_percent unit.txt)\`"
-  UNCOVERED=$(top_uncovered unit.txt)
+  go tool cover -func=unit.txt > unit-summary.txt
+  UNIT_CELL="\`$(tail -1 unit-summary.txt | awk '{print $NF}')\`"
+  UNCOVERED=$(top_uncovered unit-summary.txt)
 fi
 
 [ -n "$UNCOVERED" ] || UNCOVERED="(none — every function has some coverage)"
