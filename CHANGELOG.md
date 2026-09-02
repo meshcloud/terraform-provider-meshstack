@@ -2,6 +2,10 @@
 
 Requires meshStack 2026.36.0 or later (previously 2026.35.0).
 
+BREAKING CHANGES:
+- `meshstack_building_block`: a run that does not succeed no longer fails the apply (#277). Previously terraform would mark a building block whose creating run failed as tainted, which causes a destroy and re-create on the next apply. The provider now reports every terminal status that is not `SUCCEEDED` as a warning: a `FAILED` or `ABORTED` block is kept and the next apply runs it again with an in-place update, and a block parked in one of the `WAITING_FOR_*` statuses waits for someone to supply the input or the approval in meshPanel. We recommend adding a `postcondition` on `status.status` to fail the apply run as before, but without tainting the resource. The `meshstack_building_block` example now carries one: it rejects `FAILED` and `ABORTED`, and points at the stricter `self.status.status == "SUCCEEDED"` for a caller that must also go red while a block waits for an input or an approval.
+- `meshstack_building_block`: a repair meshStack refuses to run now says what blocks it — a workspace-scoped API key may only trigger runs on a definition with run transparency enabled — instead of surfacing a bare 403.
+
 FIXES:
 - `meshstack_workspace_user_binding` and `meshstack_workspace_group_binding`: creating a binding that omits `expiry_date` no longer fails with *"Value Conversion Error … Received unknown value, however the target type cannot handle unknown values. Path: expiry_date"* (#267, #293). `expiry_date` is optional and computed, so Terraform plans it as unknown whenever the configuration leaves it out, and the provider read that plan into a type that cannot hold an unknown — which broke the documented default of a binding that never expires. Omitting the attribute now works as documented, and an explicit date keeps behaving as before. The only workaround was to set a date, so no migration is needed.
 

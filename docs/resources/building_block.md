@@ -54,6 +54,22 @@ resource "meshstack_building_block" "example_workspace" {
     update = "2m"
     delete = "2m"
   }
+
+  # The provider only reports a run that does not succeed: FAILED and ABORTED are warnings and the next
+  # plan runs the building block again, a WAITING_FOR_* one stays parked until someone acts in meshPanel.
+  # This postcondition is what fails the apply instead. It is checked after the building block is written
+  # to state, so it does not taint the block and the next apply still runs it again.
+  #
+  # FAILED and ABORTED mean the run broke. The WAITING_FOR_* statuses do not: the block is waiting for an
+  # input or an approval, which is why they are not listed here. Use
+  # `self.status.status == "SUCCEEDED"` instead where the apply must go red until the block is finished —
+  # a starterkit ordering blocks for a tenant, for example.
+  lifecycle {
+    postcondition {
+      condition     = !contains(["FAILED", "ABORTED"], self.status.status)
+      error_message = "Building block ${self.metadata.uuid} is ${self.status.status}. See its run in meshPanel."
+    }
+  }
 }
 ```
 
