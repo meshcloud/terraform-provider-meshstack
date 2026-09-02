@@ -1,3 +1,9 @@
+# v0.25.3
+
+OTHER:
+- The provider is built with Go 1.27 (previously 1.26). Nothing changes for users of a released binary; anyone
+  building from source needs Go 1.27 or later.
+
 # v0.25.2
 
 Requires meshStack 2026.36.0 or later (previously 2026.35.0).

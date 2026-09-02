@@ -45,7 +45,7 @@ All gated on `build` succeeding first.
 | Job | What it does |
 |---|---|
 | `build` | `go mod tidy` then `go build`; fails if `go mod tidy` produces a diff (commit the tidy). |
-| `golangci` | `golangci-lint-action` with `only-new-issues: true` (annotates only changed code on PRs). On failure it prints the `golangci-lint run --fix` hint. |
+| `golangci` | Builds the `go.mod`-pinned golangci-lint with `go install`, then runs `golangci-lint-action` with `install-mode: none` and `only-new-issues: true` (annotates only changed code on PRs). On failure it prints the `task lint -- --fix` hint. |
 | `generate` | `go generate` then fails on any diff — regenerate docs (`task generate`) and commit. |
 | `test` | Unit/mock tests via gotestsum; posts coverage. Pins `TF_ACC_TERRAFORM_PATH` to a pre-installed tofu (`setup-opentofu`) — the mock tests still drive a real CLI, and auto-install races parallel exec against the download ("text file busy"). |
 | `acceptance` | `TestAcc` suite on self-hosted `mesh-runners` against the full backend (meshfed `:latest` service containers). **Gates merge** (PRs and push to main). tofu comes from the nix-ci image; a truncation guard reds an incomplete run as UNKNOWN (re-run). |
@@ -80,8 +80,8 @@ released backend. On failure the PR comment links a branch-filtered meshfed-rele
 | Action | Purpose |
 |--------|---------|
 | `actions/checkout` | Clone repo (the `test` job uses `fetch-depth: 0` for base-branch coverage comparison) |
-| `actions/setup-go` | Install Go (`go-version-file: go.mod`, or `stable` for the lint job) |
-| `golangci/golangci-lint-action` | Lint + format check with inline annotations |
+| `actions/setup-go` | Install Go — always `go-version-file: go.mod`, the lint job included, because that Go builds the linter |
+| `golangci/golangci-lint-action` | Lint + format check with inline annotations; `install-mode: none`, so it runs the golangci-lint the step before it built |
 | `hashicorp/setup-terraform` | Install Terraform CLI for the `generate` job only (`terraform_wrapper: false`) |
 | `opentofu/setup-opentofu` | Install OpenTofu for the `test` job; `TF_ACC_TERRAFORM_PATH` pins it (`tofu_wrapper: false`) |
 | `goreleaser/goreleaser-action` | Build + release binaries (release.yml) |
