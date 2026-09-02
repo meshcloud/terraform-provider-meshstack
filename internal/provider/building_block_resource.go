@@ -578,15 +578,22 @@ func resolveTimeout(ctx context.Context, getter generic.AttributeGetter, op stri
 	return timeout
 }
 
+// severity separates a run the provider only reports on — a status a postcondition can decide about,
+// always a warning — from one it could not even establish, such as a deletion that never finished.
 func (r *buildingBlockResource) addRunFailureDiagnostics(
 	ctx context.Context,
 	diags *diag.Diagnostics,
+	severity diag.Severity,
 	summary string,
-	pollErr error,
+	detail string,
 	bb *client.MeshBuildingBlockV2,
 ) {
-	if pollErr != nil {
-		diags.AddError(summary, pollErr.Error())
+	add := diags.AddError
+	if severity == diag.SeverityWarning {
+		add = diags.AddWarning
+	}
+	if detail != "" {
+		add(summary, detail)
 	}
 	if bb == nil || bb.Status == nil || bb.Status.LatestRunUuid == nil {
 		return
@@ -595,10 +602,10 @@ func (r *buildingBlockResource) addRunFailureDiagnostics(
 	if err != nil {
 		// Fetching run logs can legitimately fail: the building block definition may have run
 		// transparency disabled, or the caller's permissions may not allow reading them. Surface it
-		// as a warning so the run failure itself (the error added above) still stands on its own.
+		// as a warning so the run failure reported above still stands on its own.
 		diags.AddWarning(
 			"Could not fetch run logs",
-			"The building block run failed but its logs could not be retrieved. This can happen when the "+
+			"The building block run did not succeed but its logs could not be retrieved. This can happen when the "+
 				"building block definition has run transparency disabled or your permissions do not allow "+
 				"reading run logs. Inspect the run in meshPanel for details. Underlying error: "+err.Error(),
 		)
@@ -619,24 +626,20 @@ func (r *buildingBlockResource) addRunFailureDiagnostics(
 	}
 
 	// Report only the first failed step: subsequent steps usually fail as a cascade of the first, so
-	// listing them all just adds noise. Include both the user and system messages so the error
-	// carries everything the API returned for that step. This is surfaced as an error (not a warning)
-	// because we only reach here when the run failed and the apply is already erroring: the step log
-	// is the actionable detail behind that failure, so it belongs with the error rather than alongside
-	// it. It only appears when the run logs are readable (run transparency on / sufficient permissions);
-	// otherwise the unreadable-logs warning above stands and the run-failure error carries on its own.
+	// listing them all just adds noise. It shares the caller's severity because it is the actionable
+	// detail behind the run failure reported above.
 	for _, step := range logs.Steps {
 		if step.Status != string(client.BuildingBlockStatusFailed) {
 			continue
 		}
-		detail := fmt.Sprintf("Step %q is in status %s.", step.DisplayName, step.Status)
+		stepDetail := fmt.Sprintf("Step %q is in status %s.", step.DisplayName, step.Status)
 		if step.UserMessage != nil {
-			detail += "\nMessage: " + truncate(*step.UserMessage, 2000)
+			stepDetail += "\nMessage: " + truncate(*step.UserMessage, 2000)
 		}
 		if step.SystemMessage != nil {
-			detail += "\nSystem message: " + truncate(*step.SystemMessage, 2000)
+			stepDetail += "\nSystem message: " + truncate(*step.SystemMessage, 2000)
 		}
-		diags.AddError("Run step failed: "+step.DisplayName, detail)
+		add("Run step failed: "+step.DisplayName, stepDetail)
 		break
 	}
 }
@@ -690,7 +693,7 @@ func (r *buildingBlockResource) awaitRun(
 		poll.WithLastResultTo(&final)).
 		Until(ctx, predicate)
 	if err != nil {
-		r.addRunFailureDiagnostics(ctx, diags, "Building block run failed", err, final)
+		r.addRunFailureDiagnostics(ctx, diags, diag.SeverityError, "Building block run failed", err.Error(), final)
 	} else if final != nil && final.IsWaitingForInput() {
 		addWaitingForInputWarning(diags, final)
 	}
@@ -1090,7 +1093,7 @@ func (r *buildingBlockResource) Delete(ctx context.Context, req resource.DeleteR
 		poll.WithLastResultTo(&final)).
 		Until(ctx, (*client.MeshBuildingBlockV2).DeletionSuccessful)
 	if err != nil {
-		r.addRunFailureDiagnostics(ctx, &resp.Diagnostics, "Building block deletion failed", err, final)
+		r.addRunFailureDiagnostics(ctx, &resp.Diagnostics, diag.SeverityError, "Building block deletion failed", err.Error(), final)
 		return // keep resource in state on failure
 	}
 }
