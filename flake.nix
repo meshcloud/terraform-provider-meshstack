@@ -22,14 +22,13 @@
       devShells = forEachSupportedSystem ({ pkgs }: {
         default = pkgs.mkShell {
           packages = with pkgs; [
-            # go 1.26 (pinned)
-            go_1_26
-            
+            # go 1.27 (pinned, in lock-step with go.mod)
+            go_1_27
+
             # goimports, godoc, etc.
             gotools
 
-            # https://github.com/golangci/golangci-lint
-            golangci-lint
+            # No golangci-lint here: it is a tool directive in go.mod, built by `task lint`.
 
             # https://www.shellcheck.net — lints .github/scripts (task lint:shell)
             shellcheck
@@ -46,7 +45,7 @@
 
           shellHook = ''
             # Explicitly set GOROOT to Nix-installed Go
-            export GOROOT="${pkgs.go_1_26}/share/go"
+            export GOROOT="${pkgs.go_1_27}/share/go"
             
             # Isolate Go environment from system
             export GOPATH="$PWD/.nix-go"
