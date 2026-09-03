@@ -6,7 +6,13 @@ description: Run and debug the meshStack provider acceptance tests (TF_ACC=1) ag
 # Running & investigating acceptance tests
 
 These tests run against a real local meshStack backend. Bring it up first (next section), then run
-all commands here from the `terraform-provider-meshstack/` directory.
+all commands here from this repository's root.
+
+**In CI the suite runs in `meshfed-release`, not here.** A pull request asks for that run through
+`.github/workflows/ci-request-integration.yml` and gets the answer back as a check named
+`Acceptance Tests (meshStack backend)`; the **`github-ci`** skill has the mechanism. Nothing in this
+file changes because of it — the local procedure below is what you run to reproduce a CI failure, and
+the only way to iterate on one.
 
 ## Why local-only, and why that's safe
 

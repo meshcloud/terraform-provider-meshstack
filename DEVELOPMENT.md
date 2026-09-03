@@ -96,6 +96,26 @@ task testacc -- -run=BuildingBlock # filter by name
 - Reproducing a bug or a single failing test as a standalone config — or scaffolding a demo /
   working starting point — is the **`scratch-config`** skill.
 
+### Building against sibling meshcloud modules (*meshcloud-internal*)
+
+By default this repo builds against the versions its `go.mod` pins, and that is what its own CI
+tests. To build against another meshcloud Go module's working tree instead, put the checkouts side
+by side — the flat layout the `meshfed-release` build and the `acceptance-testing` skill both
+assume — and run `./gradlew goWork` in the meshfed checkout:
+
+```text
+<parent>/
+  go.work                        # written by meshfed's ./gradlew goWork
+  meshfed-release/
+  terraform-provider-meshstack/  # this repository
+  meshstack-cli/
+```
+
+That writes one `go.work` in the **parent** directory, with a `use ./<repo>` line per repository it
+finds; nothing lands inside this one. Go searches upwards for a `go.work`, so `task test`,
+`task build` and a plain `go test` here then resolve `github.com/meshcloud/…` imports to the sibling
+sources. Prefix a command with `GOWORK=off` to get the pinned versions back for that one run.
+
 ### Adding a resource / data source (and its tests)
 
 Adding or reworking a resource or data source — the implementation, example `.tf` files, the
@@ -137,8 +157,15 @@ For the occasional `go fix` modernizer sweep, see the **`modern-go`** skill.
   See the **`changelog-management`** skill.
 - **Commits** follow Conventional Commits (`feat:`, `fix:`, `docs:`, `chore:`, `feat!:` for
   breaking).
-- **CI/CD**: GitHub Actions pin every action to a full SHA; the acceptance job gates merge and runs
-  against the last-merged `meshfed-release` backend. See the **`github-ci`** skill.
+- **CI/CD**: GitHub Actions pin every action to a full SHA. Everything that runs in this repo — build,
+  lint, shellcheck, docs generation, unit tests — needs no backend and no credentials. The acceptance
+  suite runs against a real backend in the *meshcloud-internal* `meshfed-release` instead, and
+  reports back as the `Acceptance Tests (meshStack backend)` check, which gates merge. That run is
+  `./gradlew :terraform-provider-meshstack:acceptanceTest` in a `meshfed-release` checkout that has
+  this one as its sibling, and `meshstack-satellite.gradle` in this repo's root is what it reads: the
+  `TestAcc` filter and the environment the suite needs. Every repository in that run is at head, so
+  a `feature/`-named branch here, in `meshfed-release` and in another satellite is verified as one
+  set. See the **`github-ci`** skill.
 
 ## Skills index
 

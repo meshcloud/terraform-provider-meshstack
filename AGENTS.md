@@ -36,7 +36,11 @@ Iterating on the provider means driving real Terraform against a real meshStack:
    are **state-independent** (each creates its own resources with random-suffixed names — no
    collisions or interference), but a guard pins them to `http://localhost` so a failed cleanup is
    fixed by rebuilding the local backend DB, never by touching a shared meshStack. See
-   [`DEVELOPMENT.md`](DEVELOPMENT.md) and the **`acceptance-testing`** skill.
+   [`DEVELOPMENT.md`](DEVELOPMENT.md) and the **`acceptance-testing`** skill. In CI the suite runs
+   against a backend in the *meshcloud-internal* `meshfed-release`, which reports back as the
+   `Acceptance Tests (meshStack backend)` check — so a pull request gets that coverage without this
+   public repo holding any backend credential. Running it yourself is unchanged, and needs a local
+   backend either way.
 
 <rules id="iterative-coding">
 For any non-trivial change, **stress-test the plan before writing code**: have the design grilled —
@@ -83,6 +87,10 @@ require them.
 
 - [`DEVELOPMENT.md`](DEVELOPMENT.md) — the contributor how-to: build, `dev_overrides`, auth, unit +
   acceptance testing, lint, docs, CI.
+- `meshstack-satellite.gradle` — what the *meshcloud-internal* `meshfed-release` build reads to run
+  this repo's acceptance suite in CI: the `TestAcc` filter and the environment it needs. A repo that
+  build lists as a satellite must ship this file. The **`github-ci`** skill explains the rest of that
+  lane, and [`DEVELOPMENT.md`](DEVELOPMENT.md) the sibling checkout layout it needs.
 - `.agents/skills/` — on-demand procedures loaded by name:
 
 | Skill | Use for |
