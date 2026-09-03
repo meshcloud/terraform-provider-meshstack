@@ -4,30 +4,42 @@
 locals {
   github_repository_name = "terraform-provider-meshstack"
 
-  # Every job of the "Tests" workflow (.github/workflows/test.yml). A check that runs on a pull
-  # request but is not listed here cannot block a merge, which is how a pull request stayed
-  # mergeable while the acceptance test was still running. The contexts are the job names, without
-  # the workflow prefix GitHub shows in its UI, and they are pinned to the GitHub Actions app so no
-  # other integration can report them.
+  # Every check that gates a merge, mapped to the app allowed to report it. A check that runs on a
+  # pull request but is not listed here cannot block a merge, which is how a pull request stayed
+  # mergeable while the acceptance test was still running. Pinning the app means no other
+  # integration can report a check under the same name.
   #
-  # The acceptance job is skipped on a pull request from a fork, because forks have neither the
-  # self-hosted runners nor the registry variable it needs. GitHub counts a job skipped by an `if`
-  # condition as successful, so requiring it does not block such a pull request - it only means the
-  # gate passes there without the tests having run.
-  required_checks = [
-    "Go Build",
-    "Go Lint and Format Check",
-    "Shell Lint (CI scripts)",
-    "Generate Terraform Provider Docs",
-    "Go Test",
-    "Go Acceptance Test",
-  ]
+  # The first five are jobs of the "Tests" workflow (.github/workflows/test.yml), so their contexts
+  # are the job names without the workflow prefix GitHub shows in its UI.
+  #
+  # The acceptance check is the exception, and it comes from a different app. That suite needs a
+  # whole meshStack backend, so meshfed-release runs it and posts the result back here; see
+  # .github/workflows/ci-request-integration.yml and the github-ci skill.
+  #
+  # APPLY ORDER, because this module is deployed by hand. "Go Acceptance Test" no longer exists once
+  # the workflow change merges, and "Acceptance Tests (meshStack backend)" is not reported until
+  # ci-request-integration.yml sits on the default branch. So apply this immediately before merging
+  # that change, and merge right after: in the window between the two, an open pull request based on
+  # the old default branch requires a check that nothing reports.
+  #
+  # A fork pull request gets no acceptance check at all - the dispatcher refuses to spend a dispatch
+  # on code it does not trust - so requiring it blocks a fork pull request outright. A fork
+  # contribution now needs a maintainer to adopt the branch into this repository.
+  required_checks = {
+    "Go Build"                             = local.github_actions_app_id
+    "Go Lint and Format Check"             = local.github_actions_app_id
+    "Shell Lint (CI scripts)"              = local.github_actions_app_id
+    "Generate Terraform Provider Docs"     = local.github_actions_app_id
+    "Go Test"                              = local.github_actions_app_id
+    "Acceptance Tests (meshStack backend)" = local.satellite_app_id
+  }
 
-  # GitHub App id of the GitHub Actions app, which reports every check above. The provider cannot
-  # resolve an app slug to an id, so it is pinned by hand. Retrieve via:
-  #   gh api repos/meshcloud/terraform-provider-meshstack/rulesets/11629786 \
-  #     --jq '.rules[] | select(.type == "required_status_checks")'
-  github_actions_app_id = 15368
+  # GitHub App ids of the two apps that report the checks above. The provider cannot resolve an app
+  # slug to an id, so both are pinned by hand. Retrieve either from a commit that carries the check:
+  #   gh api /repos/meshcloud/terraform-provider-meshstack/commits/<sha>/check-runs \
+  #     --jq '.check_runs[] | {name, app_id: .app.id, app: .app.slug}'
+  github_actions_app_id = 15368  # github-actions
+  satellite_app_id      = 781479 # meshcloud-gh-actions, which meshfed-release reports with
 }
 
 # The ruleset was created by hand in the GitHub UI before this module existed.
@@ -89,10 +101,10 @@ resource "github_repository_ruleset" "protect_default_branch" {
       strict_required_status_checks_policy = true
 
       dynamic "required_check" {
-        for_each = toset(local.required_checks)
+        for_each = local.required_checks
         content {
-          context        = required_check.value
-          integration_id = local.github_actions_app_id
+          context        = required_check.key
+          integration_id = required_check.value
         }
       }
     }
