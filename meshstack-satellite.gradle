@@ -1,0 +1,14 @@
+plugins {
+  id 'io.meshcloud.meshstack.go-satellite'
+}
+
+satellite {
+  acceptance {
+    run = 'TestAcc'
+    // Without TF_ACC, terraform-plugin-testing calls t.Skip() in every one of these tests.
+    // tofu accepts the framework's legacy "-" test provider namespace only from registry.opentofu.org.
+    environment TF_ACC: '1',
+                TF_ACC_PROVIDER_HOST: 'registry.opentofu.org',
+                TF_ACC_TERRAFORM_PATH: onPath('tofu')
+  }
+}
