@@ -1,0 +1,16 @@
+plugins {
+  id 'io.meshcloud.meshstack.go-satellite'
+}
+
+satellite {
+  acceptance {
+    run = 'TestAcc'
+    // Served over HTTP, not imported, so no //go:embed covers it and go list never reports it.
+    files 'internal/provider/testdata/tf-building-block/**'
+    // Without TF_ACC, ApplyAndTest swaps in the mock client and the suite passes without a backend.
+    // tofu accepts the framework's legacy "-" test provider namespace only from registry.opentofu.org.
+    environment TF_ACC: '1',
+                TF_ACC_PROVIDER_HOST: 'registry.opentofu.org',
+                TF_ACC_TERRAFORM_PATH: onPath('tofu')
+  }
+}
