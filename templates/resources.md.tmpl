@@ -12,10 +12,14 @@ description: |-
 
 {{ if .HasExamples -}}
 ## Example Usage
-
+{{- /* tfplugindocs globs resource*.tf, which also matches the resource-test-<index>.tf variants the
+       acceptance tests apply. Those are not documentation, so skip them. We use split+len because
+       tfplugindocs does not expose a "contains" template function (see the secret markers below). */ -}}
 {{- range .ExampleFiles }}
+{{- if eq (len (split . "-test-")) 1 }}
 
 {{ tffile . }}
+{{- end }}
 {{- end }}
 {{- end }}
 
