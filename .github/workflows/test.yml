@@ -114,7 +114,8 @@ jobs:
           # OpenTofu resolves the test provider's legacy "-" namespace only against this host.
           TF_ACC_PROVIDER_HOST: registry.opentofu.org
         run: |
-          export TF_ACC_TERRAFORM_PATH="$(command -v tofu)"
+          TF_ACC_TERRAFORM_PATH="$(command -v tofu)"
+          export TF_ACC_TERRAFORM_PATH
           mkdir -p covdata/unit
           go tool gotestsum --junitfile junit.xml --format testdox -- \
             -coverpkg=./... ./... -args -test.gocoverdir="$PWD/covdata/unit"
