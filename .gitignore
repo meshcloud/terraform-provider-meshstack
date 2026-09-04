@@ -27,3 +27,8 @@ dist/
 bin/
 
 scratch/
+
+# What the CI test command leaves behind when you reproduce it locally.
+covdata/
+junit.xml
+unit.txt
