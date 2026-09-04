@@ -4,30 +4,27 @@
 locals {
   github_repository_name = "terraform-provider-meshstack"
 
-  # Every job of the "Tests" workflow (.github/workflows/test.yml). A check that runs on a pull
-  # request but is not listed here cannot block a merge, which is how a pull request stayed
-  # mergeable while the acceptance test was still running. The contexts are the job names, without
-  # the workflow prefix GitHub shows in its UI, and they are pinned to the GitHub Actions app so no
-  # other integration can report them.
+  # Every check that gates a merge, mapped to the app allowed to report it: a check that is not
+  # listed here cannot block a merge, and pinning the app stops anything else reporting under the
+  # same name. The first four are job names in .github/workflows/test.yml. The acceptance check is
+  # posted by meshfed-release, which runs that suite - see the acceptance-testing skill and
+  # .github/workflows/ci-request-acceptance.yml.
   #
-  # The acceptance job is skipped on a pull request from a fork, because forks have neither the
-  # self-hosted runners nor the registry variable it needs. GitHub counts a job skipped by an `if`
-  # condition as successful, so requiring it does not block such a pull request - it only means the
-  # gate passes there without the tests having run.
-  required_checks = [
-    "Go Build",
-    "Go Lint and Format Check",
-    "Shell Lint (CI scripts)",
-    "Generate Terraform Provider Docs",
-    "Go Test",
-    "Go Acceptance Test",
-  ]
+  # Apply this immediately before merging the workflow change, and merge right after: in between, a
+  # pull request off the old default branch requires a check that nothing reports.
+  required_checks = {
+    "Go Build"                             = local.github_actions_app_id
+    "Go Lint and Format Check"             = local.github_actions_app_id
+    "Generate Terraform Provider Docs"     = local.github_actions_app_id
+    "Go Test"                              = local.github_actions_app_id
+    "Acceptance Tests (meshStack backend)" = local.satellite_app_id
+  }
 
-  # GitHub App id of the GitHub Actions app, which reports every check above. The provider cannot
-  # resolve an app slug to an id, so it is pinned by hand. Retrieve via:
-  #   gh api repos/meshcloud/terraform-provider-meshstack/rulesets/11629786 \
-  #     --jq '.rules[] | select(.type == "required_status_checks")'
-  github_actions_app_id = 15368
+  # The provider cannot resolve an app slug to an id. Read one off a commit that carries the check:
+  #   gh api /repos/meshcloud/terraform-provider-meshstack/commits/<sha>/check-runs \
+  #     --jq '.check_runs[] | {name, app_id: .app.id, app: .app.slug}'
+  github_actions_app_id = 15368  # github-actions
+  satellite_app_id      = 781479 # meshcloud-gh-actions, which meshfed-release reports with
 }
 
 # The ruleset was created by hand in the GitHub UI before this module existed.
@@ -89,10 +86,10 @@ resource "github_repository_ruleset" "protect_default_branch" {
       strict_required_status_checks_policy = true
 
       dynamic "required_check" {
-        for_each = toset(local.required_checks)
+        for_each = local.required_checks
         content {
-          context        = required_check.value
-          integration_id = local.github_actions_app_id
+          context        = required_check.key
+          integration_id = required_check.value
         }
       }
     }
