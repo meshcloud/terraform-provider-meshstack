@@ -6,7 +6,26 @@ description: Run and debug the meshStack provider acceptance tests (TF_ACC=1) ag
 # Running & investigating acceptance tests
 
 These tests run against a real local meshStack backend. Bring it up first (next section), then run
-all commands here from the `terraform-provider-meshstack/` directory.
+all commands here from this repository's root.
+
+## In CI, the suite runs in `meshfed-release`
+
+A pull request here does not run these tests itself: the backend, the private images and the seeded
+database live in the *meshcloud-internal* mono repo. `.github/workflows/ci-request-acceptance.yml`
+asks `meshfed-release` for the run, and the answer comes back as a required check named
+`Acceptance Tests (meshStack backend)`, against the pull request's merge state rather than its head
+alone. `meshstack-satellite.gradle` in this repo's root is all that run reads from here — the
+`TestAcc` filter and the environment the suite needs — so changing what CI runs means changing that
+file.
+
+A fork pull request gets no run, on purpose: only a branch inside this repository is code we already
+trust, so a fork contribution needs a maintainer to adopt its branch here before it can merge.
+
+The rest of that lane belongs to `meshfed-release` and changes without us: read it there, in its
+`AGENTS.md` → "Satellite Acceptance Tests", rather than trusting a copy here.
+
+Nothing below changes because of it — the local procedure is how you reproduce a CI failure, and the
+only way to iterate on one.
 
 ## Why local-only, and why that's safe
 

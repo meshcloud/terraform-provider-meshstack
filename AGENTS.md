@@ -35,8 +35,9 @@ Iterating on the provider means driving real Terraform against a real meshStack:
 4. **Test** in both modes — unit (in-memory mock) and acceptance (real backend). Acceptance tests
    are **state-independent** (each creates its own resources with random-suffixed names — no
    collisions or interference), but a guard pins them to `http://localhost` so a failed cleanup is
-   fixed by rebuilding the local backend DB, never by touching a shared meshStack. See
-   [`DEVELOPMENT.md`](DEVELOPMENT.md) and the **`acceptance-testing`** skill.
+   fixed by rebuilding the local backend DB, never by touching a shared meshStack. CI runs the suite
+   elsewhere; running it yourself needs a local backend. See [`DEVELOPMENT.md`](DEVELOPMENT.md) and
+   the **`acceptance-testing`** skill.
 
 <rules id="iterative-coding">
 For any non-trivial change, **stress-test the plan before writing code**: have the design grilled —
@@ -83,6 +84,8 @@ require them.
 
 - [`DEVELOPMENT.md`](DEVELOPMENT.md) — the contributor how-to: build, `dev_overrides`, auth, unit +
   acceptance testing, lint, docs, CI.
+- `meshstack-satellite.gradle` — how CI runs this repo's acceptance suite; the
+  **`acceptance-testing`** skill explains it.
 - `.agents/skills/` — on-demand procedures loaded by name:
 
 | Skill | Use for |
@@ -92,7 +95,6 @@ require them.
 | `acceptance-testing` | Local backend bring-up; run & debug the acceptance suite |
 | `scratch-config` | Standalone repro/debug/prototype against any meshStack you own |
 | `changelog-management` | Pick the next version, maintain `CHANGELOG.md` |
-| `github-ci` | GitHub Actions conventions, action SHA-pinning |
 
 ## Key directories
 
