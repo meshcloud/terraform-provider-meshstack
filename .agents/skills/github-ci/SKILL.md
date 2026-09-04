@@ -56,14 +56,21 @@ for the coverage/PR comment, `golangci` adds `pull-requests: read` for `only-new
 ## Companion changes in meshfed-release and meshstack-cli
 
 Three repos pair **by exact branch name** — this provider, `meshfed-release` (the backend) and
-`meshstack-cli` (the shared API client). A branch called `feature/BD-1234-thing` in any of them is
-picked up by the others' CI, so a change spanning two or three repos is validated as a set before
-any side merges. Name the branches identically from the start; the name must be **`feature/`-prefixed**
-(meshfed-release's branch rules require it, and a non-`feature/` branch simply won't pair there).
+`meshstack-cli` (the shared API client). A branch called `BD-1234-thing` in any of them is picked up
+by the others' CI, so a change spanning two or three repos is validated as a set before any side
+merges. Name the branches identically from the start: no repo puts a rule on the name, and the names
+only have to match, character for character.
 
-> Known gap: `meshstack-cli`'s current PR branch is `feat/scaffold-cli-and-move-client`, which is not
-> `feature/`-prefixed and therefore cannot pair today. Renaming a branch with an open PR closes that
-> PR, so this is a fact to live with until that branch merges, not something to fix.
+A few names in `meshfed-release` are already taken. `master` and `develop` are the shared bases,
+`finish-patch-release.yml` reads the release version out of a `patch/*` name, and the owners of
+`dependabot/*` and `gh-readonly-queue/*` force-push and delete under those prefixes. Pick anything
+else.
+
+> Known gap: this provider's branch is `feature/scaffold-cli` and the companion `meshstack-cli`
+> branch is `feat/scaffold-cli-and-move-client`. The two names differ, so the `acceptance` job finds
+> no matching CLI branch and builds against the version `go.mod` pins instead. Renaming a branch
+> with an open PR closes that PR, so this is a fact to live with until that branch merges, not
+> something to fix.
 
 ### meshfed-release (the backend)
 

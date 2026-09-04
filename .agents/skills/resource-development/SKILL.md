@@ -186,7 +186,6 @@ backend (`task testacc -- -run TestAcc<Name>`). For the local backend bring-up +
 the **`acceptance-testing`** skill.
 
 If the change also needs a **`meshfed-release` backend change**, open the provider PR and the
-backend PR on branches with the **identical, `feature/`-prefixed name** (meshfed-release's branch
-rules require the prefix) — meshfed-release CI pairs them by branch name and runs this repo's
-acceptance suite against both combined. Full merge order in **`github-ci`** → "Companion
-meshfed-release changes".
+backend PR on branches with the **identical name** — meshfed-release CI pairs them by branch name
+and runs this repo's acceptance suite against both combined. Full merge order in **`github-ci`** →
+"Companion meshfed-release changes".
