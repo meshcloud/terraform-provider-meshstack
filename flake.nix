@@ -30,9 +30,6 @@
 
             # No golangci-lint here: it is a tool directive in go.mod, built by `task lint`.
 
-            # https://www.shellcheck.net — lints .github/scripts (task lint:shell)
-            shellcheck
-
             # https://github.com/hashicorp/terraform-plugin-docs
             terraform-plugin-docs
 
