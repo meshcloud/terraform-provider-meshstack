@@ -96,6 +96,16 @@ task testacc -- -run=BuildingBlock # filter by name
 - Reproducing a bug or a single failing test as a standalone config — or scaffolding a demo /
   working starting point — is the **`scratch-config`** skill.
 
+### Building against sibling meshcloud modules (*meshcloud-internal*)
+
+This repo builds against the versions its `go.mod` pins, and that is what its own CI tests. To build
+against another meshcloud Go module's working tree instead, put the checkouts side by side under one
+parent and run `./gradlew goWork` in the `meshfed-release` checkout. That writes a single `go.work`
+in the **parent** directory, with a `use ./<repo>` line per repository it finds; nothing lands inside
+this one. Go searches upwards for it, so `task test`, `task build` and a plain `go test` here then
+resolve `github.com/meshcloud/…` imports to the sibling sources. `GOWORK=off` in front of a command
+gets the pinned versions back for that one run.
+
 ### Adding a resource / data source (and its tests)
 
 Adding or reworking a resource or data source — the implementation, example `.tf` files, the
@@ -137,8 +147,16 @@ For the occasional `go fix` modernizer sweep, see the **`modern-go`** skill.
   See the **`changelog-management`** skill.
 - **Commits** follow Conventional Commits (`feat:`, `fix:`, `docs:`, `chore:`, `feat!:` for
   breaking).
-- **CI/CD**: GitHub Actions pin every action to a full SHA; the acceptance job gates merge and runs
-  against the last-merged `meshfed-release` backend. See the **`github-ci`** skill.
+- **CI/CD**: GitHub Actions, every action pinned to a full 40-char SHA — for a new action resolve the
+  latest release (`gh api repos/<o>/<r>/releases/latest --jq .tag_name`, then
+  `gh api repos/<o>/<r>/git/refs/tags/<tag> --jq .object.sha`) rather than copying a SHA out of an
+  example. Everything that runs here — build, lint, docs generation, unit tests — needs no backend
+  and no credentials; the acceptance suite runs in the *meshcloud-internal* `meshfed-release` and
+  reports back as the merge-gating `Acceptance Tests (meshStack backend)` check. See the
+  **`acceptance-testing`** skill.
+- **Coverage**: the unit half is published here as the `covdata-unit` artifact, and that same
+  `meshfed-release` run merges it with the acceptance half into one pull request comment. A pull
+  request with no acceptance run gets only the unit figure, in the `Go Test` job's run summary.
 
 ## Skills index
 
