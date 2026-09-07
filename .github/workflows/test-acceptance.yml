@@ -1,0 +1,91 @@
+# Ask the private meshStack mono repo to run this provider's acceptance suite and report the result
+# back as a check run. The suite needs a whole meshStack backend, so it cannot run here; this
+# workflow only asks for it.
+name: Acceptance Tests
+
+# The push trigger is not decoration: running on the main push, and not only on pull requests, is
+# what surfaces a provider/backend regression before a release tag.
+on:
+  pull_request_target:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  # Reads "Acceptance Tests / request" in the checks list. No `name:`, unlike test.yml's four jobs: a
+  # name pins a stable string for a check that gates a merge, and nothing gates on this one. The
+  # gating check is "Acceptance Tests (meshStack backend)", which meshfed-release posts.
+  request:
+    runs-on: ubuntu-latest
+    env:
+      SATELLITE_REF: ${{ github.event_name == 'pull_request_target' && github.event.pull_request.head.ref || github.ref_name }}
+
+      # Two things have to hold, and naming them once here keeps the steps below to one condition each.
+      # The run has to be in our own repository, because a fork of it holds neither the app secrets nor
+      # a branch anyone gates on. And on a pull request the head branch has to live in this repository,
+      # which means its author has write access here: the code under test is then code we already trust.
+      DISPATCH: ${{ github.repository_owner == 'meshcloud' && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) }}
+
+    # This workflow MUST NOT check out the pull request, and has no `actions/checkout` for that
+    # reason. `pull_request_target` runs in the base repo's context with its secrets, so checking out
+    # contributor code here would be the classic "pwn request" hole. Reading `github.event` and
+    # calling an API is passive use of that context and safe.
+    steps:
+      # Without this the contributor sees a required check that never reports and no reason for it.
+      - name: Explain a skipped fork pull request
+        if: env.DISPATCH != 'true' && github.event_name == 'pull_request_target'
+        env:
+          BASE_REPO: ${{ github.repository }}
+        run: echo "::notice::Acceptance tests are not dispatched for a fork pull request. A maintainer has to adopt the branch into $BASE_REPO before the suite can run against it."
+
+      # Downscoped to `actions: write` at mint time even though the installation carries nothing
+      # else, so a later widening of the app cannot leak into this workflow.
+      - name: Mint a token for the dispatch
+        id: token
+        if: env.DISPATCH == 'true'
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          # The secret holds the numeric app id, not a client id, and that is fine: the action reads
+          # `client-id` or the deprecated `app-id` into one value, and GitHub takes either as the JWT
+          # issuer. The name stays because it is an organization secret every satellite reads.
+          client-id: ${{ secrets.SATELLITE_GH_APP_ID }}
+          private-key: ${{ secrets.SATELLITE_GH_APP_PRIVATE_KEY }}
+          owner: meshcloud
+          repositories: meshfed-release
+          permission-actions: write
+
+      # meshfed-release pairs a satellite branch with a same-named branch of its own, and the dispatch
+      # names that branch rather than always `develop`. A `workflow_dispatch` reads both the workflow
+      # file and the checkout it makes from the ref it is given, so dispatching to `develop` would run
+      # the orchestration that is already merged and never the change to it that a paired branch
+      # carries. This token may dispatch workflows in meshfed-release and read nothing there, so a
+      # rejected dispatch is the only branch lookup available here. It also answers the better
+      # question: not whether the branch exists, but whether it carries a workflow this can dispatch.
+      #
+      # `$SATELLITE_REF` reaches the script through the environment, and never as a `${{ }}` expression
+      # that GitHub would substitute into the script text before bash reads it. A branch named `$(id)`
+      # would otherwise run as a command.
+      - name: Request the acceptance run
+        if: env.DISPATCH == 'true'
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+        run: |
+          set -euo pipefail
+          request() {
+            gh workflow run ci-satellite.yml \
+              --repo meshcloud/meshfed-release \
+              --ref "$1" \
+              -f repo=terraform-provider-meshstack \
+              -f branch_name="$SATELLITE_REF"
+          }
+          if request "$SATELLITE_REF"; then
+            orchestrated_from="$SATELLITE_REF"
+          else
+            echo "::notice::meshfed-release has no branch $SATELLITE_REF to dispatch, so develop orchestrates this run."
+            request develop
+            orchestrated_from=develop
+          fi
+          echo "::notice::Requested an acceptance run for $SATELLITE_REF, orchestrated from meshfed-release $orchestrated_from. The result arrives as the \"Acceptance Tests (meshStack backend)\" check."
