@@ -235,6 +235,7 @@ func (r *buildingBlockDefinitionResource) ValidateConfig(ctx context.Context, re
 	}
 
 	validateOptionalInputs(manual, inputs, inputsPath, &resp.Diagnostics)
+	validateInputConditions(manual, inputs, inputsPath, &resp.Diagnostics)
 	validateInputJsonSchemas(inputs, inputsPath, resp)
 
 	// Nothing declared -> nothing to validate (the outputs schema is optional+computed).
@@ -381,6 +382,45 @@ func validateOptionalInputs(manual types.Object, inputs types.Map, inputsPath pa
 				"optional input must not have a default value",
 				fmt.Sprintf("Input %q is optional and also declares a default_value. An optional input that is left unset falls "+
 					"back to the default declared in the implementation's own code, so a meshStack default value would never apply.", key))
+		}
+	}
+}
+
+// validateInputConditions re-imposes the backend's rules for which input may carry a condition. What the
+// condition may read is left to the backend, which compiles the expression.
+func validateInputConditions(manual types.Object, inputs types.Map, inputsPath path.Path, diags *diag.Diagnostics) {
+	if inputs.IsNull() || inputs.IsUnknown() {
+		return
+	}
+	carrierAssignmentTypes := enum.Of(
+		client.MeshBuildingBlockInputAssignmentTypeUserInput,
+		client.MeshBuildingBlockInputAssignmentTypePlatformOperatorManualInput,
+	)
+	for key, elem := range inputs.Elements() {
+		obj, ok := elem.(types.Object)
+		if !ok || obj.IsNull() || obj.IsUnknown() {
+			continue
+		}
+		attrs := obj.Attributes()
+		if condition := attrs["condition"]; condition == nil || condition.IsNull() || condition.IsUnknown() {
+			continue
+		}
+		conditionPath := inputsPath.AtMapKey(key).AtName("condition")
+
+		if !manual.IsNull() && !manual.IsUnknown() {
+			diags.AddAttributeError(conditionPath,
+				"input cannot have a condition on a manual building block definition",
+				fmt.Sprintf("Input %q has a condition, but a manual building block has no implementation to fall back to when an "+
+					"input does not apply. Remove 'condition', or use an automated implementation.", key))
+		}
+
+		if assignment := outputStringAttr(attrs, "assignment_type"); !assignment.IsNull() && !assignment.IsUnknown() &&
+			!slices.Contains(carrierAssignmentTypes.Strings(), assignment.ValueString()) {
+			diags.AddAttributeError(conditionPath,
+				"input cannot have a condition with this assignment_type",
+				fmt.Sprintf("Input %q has a condition, which is only supported for assignment types %s: only an input a person "+
+					"fills in can be hidden from one. Its assignment_type is %q.",
+					key, strings.Join(carrierAssignmentTypes.Strings(), ", "), assignment.ValueString()))
 		}
 	}
 }
