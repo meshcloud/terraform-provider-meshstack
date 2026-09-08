@@ -46,11 +46,11 @@ var (
 	// JsonSchema. That makes it a declaration-side type only, so deliberately not an entry of
 	// MeshBuildingBlockIOTypes: what the form produces is JSON text, which a building block's own inputs
 	// report as CODE.
-	MeshBuildingBlockIOTypeJsonSchema = enum.Entry[MeshBuildingBlockIOType]("JSON_SCHEMA")
+	MeshBuildingBlockIOTypeJson = enum.Entry[MeshBuildingBlockIOType]("JSON")
 )
 
 // The types a definition input may declare.
-var MeshBuildingBlockDefinitionInputTypes = MeshBuildingBlockIOTypes.With(MeshBuildingBlockIOTypeJsonSchema)
+var MeshBuildingBlockDefinitionInputTypes = MeshBuildingBlockIOTypes.With(MeshBuildingBlockIOTypeJson)
 
 var MeshBuildingBlockOutputIOTypes = enum.Of(
 	MeshBuildingBlockIOTypeString,
@@ -138,7 +138,7 @@ type MeshBuildingBlockDefinitionInput struct {
 	Description                 *string           `json:"description,omitempty" tfsdk:"description"`
 	ValueValidationRegex        *string           `json:"valueValidationRegex,omitempty" tfsdk:"value_validation_regex"`
 	ValidationRegexErrorMessage *string           `json:"validationRegexErrorMessage,omitempty" tfsdk:"validation_regex_error_message"`
-	// The form this input is filled in through, as a JSON Schema string. Only for MeshBuildingBlockIOTypeJsonSchema.
+	// The form this input is filled in through, as a JSON Schema string. Only for MeshBuildingBlockIOTypeJson.
 	JsonSchema *string `json:"jsonSchema,omitempty" tfsdk:"json_schema"`
 	Condition  *string `json:"condition,omitempty" tfsdk:"condition"`
 	// No omitempty: a 0 (the schema default, and what an unknown plan value collapses to) must be sent so

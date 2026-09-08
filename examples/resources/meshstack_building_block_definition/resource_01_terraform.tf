@@ -78,7 +78,7 @@ resource "meshstack_building_block_definition" "example_01_terraform" {
       }
       deploy_settings = {
         display_name    = "Deploy Settings"
-        type            = "JSON_SCHEMA"
+        type            = "JSON"
         assignment_type = "USER_INPUT"
         condition       = "input.environment == 'prod'"
         # This input gets a form of its own: meshPanel renders it from the schema, and what it produces
