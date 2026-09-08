@@ -1306,6 +1306,7 @@ func checksForImplementation(exampleSuffix string) (checkInputs, checkImplementa
 					"value_validation_regex":         knownvalue.Null(),
 					"validation_regex_error_message": knownvalue.Null(),
 					"json_schema":                    knownvalue.Null(),
+					"condition":                      knownvalue.Null(),
 					"argument":                       knownvalue.Null(),
 					"default_value":                  knownvalue.Null(),
 					"sensitive":                      knownvalue.Null(),
@@ -1324,6 +1325,7 @@ func checksForImplementation(exampleSuffix string) (checkInputs, checkImplementa
 					"value_validation_regex":         knownvalue.StringExact("^[a-z0-9-]+$"),
 					"validation_regex_error_message": knownvalue.StringExact("Resource name must contain only lowercase letters, numbers, and hyphens"),
 					"json_schema":                    knownvalue.Null(),
+					"condition":                      knownvalue.Null(),
 					"selectable_values":              knownvalue.Null(),
 					"sensitive":                      knownvalue.Null(),
 					"display_order":                  knownvalue.Int64Exact(2),
@@ -1338,6 +1340,7 @@ func checksForImplementation(exampleSuffix string) (checkInputs, checkImplementa
 					"is_optional":                    knownvalue.Bool(false),
 					"description":                    knownvalue.Null(),
 					"json_schema":                    knownvalue.StringExact(`{"properties":{"region":{"enum":["eu-central-1","us-east-1"],"type":"string"},"replicas":{"minimum":1,"type":"integer"}},"required":["region"],"type":"object"}`),
+					"condition":                      knownvalue.StringExact(`input.environment == "prod"`),
 					"selectable_values":              knownvalue.Null(),
 					"value_validation_regex":         knownvalue.Null(),
 					"validation_regex_error_message": knownvalue.Null(),
@@ -1365,6 +1368,7 @@ func checksForImplementation(exampleSuffix string) (checkInputs, checkImplementa
 					"value_validation_regex":         knownvalue.Null(),
 					"validation_regex_error_message": knownvalue.Null(),
 					"json_schema":                    knownvalue.Null(),
+					"condition":                      knownvalue.Null(),
 					"selectable_values":              knownvalue.Null(),
 					"argument":                       knownvalue.Null(),
 					"default_value":                  knownvalue.Null(),
@@ -1384,6 +1388,7 @@ func checksForImplementation(exampleSuffix string) (checkInputs, checkImplementa
 					"value_validation_regex":         knownvalue.Null(),
 					"validation_regex_error_message": knownvalue.Null(),
 					"json_schema":                    knownvalue.Null(),
+					"condition":                      knownvalue.Null(),
 					"selectable_values":              knownvalue.Null(),
 					"sensitive":                      knownvalue.Null(),
 					"display_order":                  knownvalue.Int64Exact(4),
@@ -1401,6 +1406,7 @@ func checksForImplementation(exampleSuffix string) (checkInputs, checkImplementa
 					"value_validation_regex":         knownvalue.Null(),
 					"validation_regex_error_message": knownvalue.Null(),
 					"json_schema":                    knownvalue.Null(),
+					"condition":                      knownvalue.Null(),
 					"selectable_values":              knownvalue.Null(),
 					"sensitive":                      knownvalue.Null(),
 					"display_order":                  knownvalue.Int64Exact(0),
@@ -1440,6 +1446,7 @@ func checksForImplementation(exampleSuffix string) (checkInputs, checkImplementa
 					"value_validation_regex":         knownvalue.Null(),
 					"validation_regex_error_message": knownvalue.Null(),
 					"json_schema":                    knownvalue.Null(),
+					"condition":                      knownvalue.Null(),
 					"argument":                       knownvalue.Null(),
 					"default_value":                  knownvalue.Null(),
 					"sensitive":                      knownvalue.Null(),
@@ -1475,6 +1482,7 @@ func checksForImplementation(exampleSuffix string) (checkInputs, checkImplementa
 					"value_validation_regex":         knownvalue.Null(),
 					"validation_regex_error_message": knownvalue.Null(),
 					"json_schema":                    knownvalue.Null(),
+					"condition":                      knownvalue.Null(),
 					"argument":                       knownvalue.Null(),
 					"default_value":                  knownvalue.Null(),
 					"sensitive":                      knownvalue.Null(),
@@ -1492,6 +1500,7 @@ func checksForImplementation(exampleSuffix string) (checkInputs, checkImplementa
 					"value_validation_regex":         knownvalue.Null(),
 					"validation_regex_error_message": knownvalue.Null(),
 					"json_schema":                    knownvalue.Null(),
+					"condition":                      knownvalue.Null(),
 					"argument":                       knownvalue.Null(),
 					"default_value":                  knownvalue.Null(),
 					"sensitive":                      knownvalue.Null(),
@@ -1530,6 +1539,7 @@ func checksForImplementation(exampleSuffix string) (checkInputs, checkImplementa
 					"value_validation_regex":         knownvalue.Null(),
 					"validation_regex_error_message": knownvalue.Null(),
 					"json_schema":                    knownvalue.Null(),
+					"condition":                      knownvalue.Null(),
 					"argument":                       knownvalue.Null(),
 					"default_value":                  knownvalue.Null(),
 					"sensitive":                      knownvalue.Null(),
@@ -1565,6 +1575,7 @@ func checksForImplementation(exampleSuffix string) (checkInputs, checkImplementa
 					"value_validation_regex":         knownvalue.Null(),
 					"validation_regex_error_message": knownvalue.Null(),
 					"json_schema":                    knownvalue.Null(),
+					"condition":                      knownvalue.Null(),
 					"argument":                       knownvalue.Null(),
 					"default_value":                  knownvalue.Null(),
 					"sensitive":                      knownvalue.Null(),
@@ -2114,6 +2125,89 @@ resource "meshstack_building_block_definition" "test" {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			step := resource.TestStep{Config: inputConfig(tt.input)}
+			if tt.expectError != nil {
+				step.ExpectError = tt.expectError
+			}
+			ApplyAndTest(t, resource.TestCase{
+				Steps: []resource.TestStep{step},
+			})
+		})
+	}
+}
+
+func TestAccBuildingBlockDefinitionConditionValidation(t *testing.T) {
+	// Which input may carry a condition is mirrored client-side, so it surfaces at plan time instead of as a
+	// backend 400 during apply. What a condition may read stays with the backend, which compiles the expression.
+	if !IsMockClientTest() {
+		t.Skip("condition carrier validation is tested with mock client only")
+	}
+
+	t.Parallel()
+
+	const terraformImplementation = `{ terraform = { terraform_version = "1.9.0", repository_url = "https://github.com/example/bb.git" } }`
+	const manualImplementation = `{ manual = {} }`
+
+	config := func(implementation, input string) string {
+		return fmt.Sprintf(`
+resource "meshstack_building_block_definition" "test" {
+  metadata = { owned_by_workspace = "my-workspace" }
+  spec     = { display_name = "Test", description = "Test" }
+  version_spec = {
+    draft          = true
+    inputs         = {
+      cloud_provider = { display_name = "Cloud", type = "STRING", assignment_type = "USER_INPUT" }
+      candidate      = %s
+    }
+    implementation = %s
+  }
+}`, input, implementation)
+	}
+
+	tests := []struct {
+		name           string
+		implementation string
+		input          string
+		expectError    *regexp.Regexp
+	}{
+		{
+			name:           "condition rejected on manual implementation",
+			implementation: manualImplementation,
+			input:          `{ display_name = "Candidate", type = "STRING", assignment_type = "USER_INPUT", condition = "input.cloud_provider == \"aws\"" }`,
+			expectError:    regexp.MustCompile(`cannot have a condition on a manual building block`),
+		},
+		{
+			name:           "condition rejected for a non-user assignment type",
+			implementation: terraformImplementation,
+			input:          `{ display_name = "Candidate", type = "STRING", assignment_type = "STATIC", argument = jsonencode("c"), condition = "input.cloud_provider == \"aws\"" }`,
+			expectError:    regexp.MustCompile(`cannot have a condition with this assignment_type`),
+		},
+		{
+			name:           "blank condition rejected",
+			implementation: terraformImplementation,
+			input:          `{ display_name = "Candidate", type = "STRING", assignment_type = "USER_INPUT", condition = "  " }`,
+			expectError:    regexp.MustCompile(`must not be blank`),
+		},
+		{
+			name:           "overlong condition rejected",
+			implementation: terraformImplementation,
+			input:          `{ display_name = "Candidate", type = "STRING", assignment_type = "USER_INPUT", condition = "input.cloud_provider == \"` + strings.Repeat("x", 600) + `\"" }`,
+			expectError:    regexp.MustCompile(`string length must be at\s+most 512`),
+		},
+		{
+			name:           "conditional USER_INPUT accepted",
+			implementation: terraformImplementation,
+			input:          `{ display_name = "Candidate", type = "STRING", assignment_type = "USER_INPUT", condition = "input.cloud_provider == \"aws\"" }`,
+		},
+		{
+			name:           "conditional PLATFORM_OPERATOR_MANUAL_INPUT accepted",
+			implementation: terraformImplementation,
+			input:          `{ display_name = "Candidate", type = "STRING", assignment_type = "PLATFORM_OPERATOR_MANUAL_INPUT", condition = "input.cloud_provider == \"aws\"" }`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			step := resource.TestStep{Config: config(tt.implementation, tt.input)}
 			if tt.expectError != nil {
 				step.ExpectError = tt.expectError
 			}
