@@ -78,7 +78,7 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 				"type": schema.StringAttribute{
 					MarkdownDescription: "Data type of the input. One of " + client.MeshBuildingBlockDefinitionInputTypes.Markdown() + ". " +
 						client.MeshBuildingBlockIOTypeList.Markdown() + " is deprecated, use " + client.MeshBuildingBlockIOTypeCode.Markdown() + " instead. " +
-						"Type " + client.MeshBuildingBlockIOTypeJsonSchema.Markdown() + " does not describe a single value: it gives the input a form of its own, " +
+						"Type " + client.MeshBuildingBlockIOTypeJson.Markdown() + " does not describe a single value: it gives the input a form of its own, " +
 						"declared by `json_schema`, which meshPanel renders in place of one field. " +
 						"For type " + client.MeshBuildingBlockIOTypeFile.Markdown() + ", the value must be a MIME-typed base64 data blob. " +
 						"Use `provider::meshstack::load_file` or `provider::meshstack::encode_file` to produce such a data blob. " +
@@ -198,7 +198,7 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 				"json_schema": schema.StringAttribute{
 					CustomType: jsontypes.NormalizedType{},
 					MarkdownDescription: "The form this input is filled in through, as a `jsonencode`'d JSON Schema. " +
-						"**Required** when `type` is " + client.MeshBuildingBlockIOTypeJsonSchema.Markdown() + ", " +
+						"**Required** when `type` is " + client.MeshBuildingBlockIOTypeJson.Markdown() + ", " +
 						"and **must not be provided** for any other type.<br>" +
 						"meshPanel renders the form from it, so a consumer fills in its fields rather than a single value. " +
 						"What the form produces reaches the building block as JSON text, exactly like a " +

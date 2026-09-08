@@ -1333,7 +1333,7 @@ func checksForImplementation(exampleSuffix string) (checkInputs, checkImplementa
 				// The backend stores the schema verbatim, so state carries exactly what jsonencode produced.
 				"deploy_settings": xknownvalue.MapExact(map[string]knownvalue.Check{
 					"display_name":                   knownvalue.StringExact("Deploy Settings"),
-					"type":                           knownvalue.StringExact("JSON_SCHEMA"),
+					"type":                           knownvalue.StringExact("JSON"),
 					"assignment_type":                knownvalue.StringExact("USER_INPUT"),
 					"is_environment":                 knownvalue.Bool(false),
 					"updateable_by_consumer":         knownvalue.Bool(false),
@@ -2073,7 +2073,7 @@ resource "meshstack_building_block_definition" "test" {
 
 func TestAccBuildingBlockDefinitionJsonSchemaValidation(t *testing.T) {
 	// The json_schema/type pairing is a ValidateConfig rule, so it never reaches the API. Running this
-	// against a deployed meshStack would also need one that already knows the JSON_SCHEMA input type.
+	// against a deployed meshStack would also need one that already knows the JSON input type.
 	if !IsMockClientTest() {
 		t.Skip("json_schema pairing is validated client-side only")
 	}
@@ -2103,12 +2103,12 @@ resource "meshstack_building_block_definition" "test" {
 		expectError *regexp.Regexp
 	}{
 		{
-			name:  "JSON_SCHEMA input with a schema accepted",
-			input: `type = "JSON_SCHEMA", assignment_type = "USER_INPUT", ` + schema,
+			name:  "JSON input with a schema accepted",
+			input: `type = "JSON", assignment_type = "USER_INPUT", ` + schema,
 		},
 		{
-			name:        "JSON_SCHEMA input without a schema rejected",
-			input:       `type = "JSON_SCHEMA", assignment_type = "USER_INPUT"`,
+			name:        "JSON input without a schema rejected",
+			input:       `type = "JSON", assignment_type = "USER_INPUT"`,
 			expectError: regexp.MustCompile(`json_schema is required`),
 		},
 		{

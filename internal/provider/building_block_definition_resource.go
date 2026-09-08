@@ -907,13 +907,13 @@ func (r *buildingBlockDefinitionResource) ImportState(ctx context.Context, req r
 }
 
 // validateInputJsonSchemas re-imposes the pairing the framework cannot express: json_schema belongs to a
-// JSON_SCHEMA input and to no other type. Catching it here turns a 400 from the backend into a plan-time error.
+// JSON input and to no other type. Catching it here turns a 400 from the backend into a plan-time error.
 func validateInputJsonSchemas(inputs types.Map, inputsPath path.Path, resp *resource.ValidateConfigResponse) {
 	if inputs.IsNull() || inputs.IsUnknown() {
 		return
 	}
 
-	jsonSchemaType := client.MeshBuildingBlockIOTypeJsonSchema.String()
+	jsonType := client.MeshBuildingBlockIOTypeJson.String()
 
 	for key, elem := range inputs.Elements() {
 		obj, ok := elem.(types.Object)
@@ -931,14 +931,14 @@ func validateInputJsonSchemas(inputs types.Map, inputsPath path.Path, resp *reso
 		hasSchema := schemaAttr != nil && !schemaAttr.IsNull()
 
 		switch {
-		case inputType.ValueString() == jsonSchemaType && !hasSchema && !isUnknown(schemaAttr):
+		case inputType.ValueString() == jsonType && !hasSchema && !isUnknown(schemaAttr):
 			resp.Diagnostics.AddAttributeError(inputsPath.AtMapKey(key).AtName("json_schema"),
 				"json_schema is required",
-				"An input of type "+jsonSchemaType+" must declare the JSON Schema of the form it is filled in through.")
-		case inputType.ValueString() != jsonSchemaType && hasSchema:
+				"An input of type "+jsonType+" must declare the JSON Schema of the form it is filled in through.")
+		case inputType.ValueString() != jsonType && hasSchema:
 			resp.Diagnostics.AddAttributeError(inputsPath.AtMapKey(key).AtName("json_schema"),
 				"json_schema must not be set",
-				"Only an input of type "+jsonSchemaType+" is filled in through a form. Remove 'json_schema' from this input.")
+				"Only an input of type "+jsonType+" is filled in through a form. Remove 'json_schema' from this input.")
 		}
 	}
 }
