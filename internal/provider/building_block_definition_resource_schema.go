@@ -208,20 +208,20 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 				},
 				"condition": schema.StringAttribute{
 					MarkdownDescription: "[CEL](https://cel.dev) expression deciding whether this input applies, for example `input.cloud_provider == \"aws\"`. " +
-						"Other inputs of the same version are read with an `input.` prefix. While the condition does not hold, meshPanel hides the input and " +
-						"meshStack sends no value for it, so your implementation falls back to the default declared in its own code, exactly as for `is_optional`.<br>" +
+						"Other inputs of the same version are read with an `input.` prefix. " +
+						"While the condition does not hold, meshPanel hides the input and meshStack sends no value for it, " +
+						"so your implementation falls back to the default declared in its own code, exactly as for `is_optional`.<br>" +
 						"**Only supported** for `assignment_type` " + enum.Of(
 						client.MeshBuildingBlockInputAssignmentTypeUserInput,
 						client.MeshBuildingBlockInputAssignmentTypePlatformOperatorManualInput,
 					).Markdown() + ", and **not** for the `manual` implementation. " +
-						"The condition of a " + client.MeshBuildingBlockInputAssignmentTypeUserInput.Markdown() + " may read other " +
-						client.MeshBuildingBlockInputAssignmentTypeUserInput.Markdown() + " inputs; the condition of a " +
-						client.MeshBuildingBlockInputAssignmentTypePlatformOperatorManualInput.Markdown() + " may read both, because the operator fills theirs in " +
-						"once the user's answers are already there. A referenced input must not be sensitive or of type " + client.MeshBuildingBlockIOTypeList.Markdown() +
-						", and its key must contain no `-`. Conditions must not read each other in a loop. " +
+						"The condition of a " + client.MeshBuildingBlockInputAssignmentTypeUserInput.Markdown() + " may read other " + client.MeshBuildingBlockInputAssignmentTypeUserInput.Markdown() + " inputs. " +
+						"The condition of a " + client.MeshBuildingBlockInputAssignmentTypePlatformOperatorManualInput.Markdown() + " may read both, because the operator fills theirs in once the user's answers are already there. " +
+						"A referenced input must not be sensitive or of type " + client.MeshBuildingBlockIOTypeList.Markdown() + ", and its key must contain no `-`. " +
+						"Conditions must not read each other in a cycle. " +
 						"Only a subset of CEL is accepted (comparisons, `&&`/`||`/`!`, `in`, `startsWith`/`endsWith`/`contains`/`size`, whole-number arithmetic); " +
-						"see the meshStack documentation on conditional inputs. At most 512 characters. " +
-						"Requires meshStack 2026.37.0 or later.",
+						"see the meshStack documentation on conditional inputs. " +
+						"At most 512 characters. Requires meshStack 2026.37.0 or later.",
 					Optional: true,
 					Validators: []validator.String{
 						stringvalidator.LengthAtMost(512),

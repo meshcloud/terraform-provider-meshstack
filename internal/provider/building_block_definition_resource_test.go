@@ -1340,7 +1340,7 @@ func checksForImplementation(exampleSuffix string) (checkInputs, checkImplementa
 					"is_optional":                    knownvalue.Bool(false),
 					"description":                    knownvalue.Null(),
 					"json_schema":                    knownvalue.StringExact(`{"properties":{"region":{"enum":["eu-central-1","us-east-1"],"type":"string"},"replicas":{"minimum":1,"type":"integer"}},"required":["region"],"type":"object"}`),
-					"condition":                      knownvalue.StringExact(`input.environment == "prod"`),
+					"condition":                      knownvalue.StringExact("input.environment == 'prod'"),
 					"selectable_values":              knownvalue.Null(),
 					"value_validation_regex":         knownvalue.Null(),
 					"validation_regex_error_message": knownvalue.Null(),
