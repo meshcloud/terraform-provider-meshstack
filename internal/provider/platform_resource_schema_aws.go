@@ -121,11 +121,11 @@ func awsReplicationConfigSchema() schema.Attribute {
 		Attributes: map[string]schema.Attribute{
 			"access_config": awsAccessConfigSchema(),
 			"wait_for_external_avm": schema.BoolAttribute{
-				MarkdownDescription: "Flag to wait for external AVM. Please use this setting with care! It is currently very specific to certain tags being present on the account! In general, we recommend not to activate this functionality! In a meshLandingZone an AVM can be triggered via an AWS StackSet or via a Lambda Function. If meshStack shall wait for the AVM to complete when creating a new platform tenant, this flag must be checked. meshStack will identify completion of the AVM by checking the presence of the following tags on the AWS account: 'ProductName' is set to workspace identifier and 'Stage' is set to project identifier.",
+				MarkdownDescription: "Flag to wait for external AVM. Please use this setting with care! It is currently very specific to certain tags being present on the account! In general, we recommend not to activate this functionality! In a meshLandingZone an AVM can be triggered via a Lambda Function. If meshStack shall wait for the AVM to complete when creating a new platform tenant, this flag must be checked. meshStack will identify completion of the AVM by checking the presence of the following tags on the AWS account: 'ProductName' is set to workspace identifier and 'Stage' is set to project identifier.",
 				Required:            true,
 			},
 			"automation_account_role": schema.StringAttribute{
-				MarkdownDescription: "ARN of the Automation Account Role. The Automation Account contains all AWS StackSets and Lambda Functions that shall be executed via meshLandingZones. E.g. `arn:aws:iam::123456789:role/MeshfedAutomationRole`.",
+				MarkdownDescription: "ARN of the Automation Account Role. The Automation Account contains all Lambda Functions that shall be executed via meshLandingZones. E.g. `arn:aws:iam::123456789:role/MeshfedAutomationRole`.",
 				Required:            true,
 			},
 			"automation_account_external_id": schema.StringAttribute{
