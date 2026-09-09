@@ -46,7 +46,8 @@ description of the resolution order.
 
 A profile ranks below the environment and is never an override, because a `terraform plan` whose
 result depends on what is in the operator's home directory is not reproducible. Where a profile is
-picked by matching its endpoint rather than being named, the provider says so in a warning.
+picked by matching its endpoint rather than being named, the provider says so in a log record, which
+`TF_LOG=WARN` shows.
 
 The provider never opens a browser. It refreshes a profile's existing browser login and writes the
 rotated refresh token back — it has to, because losing it ends the session the meshStack CLI shares

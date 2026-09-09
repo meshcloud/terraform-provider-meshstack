@@ -14,10 +14,6 @@ import (
 // terraform run must not block on a terminal that is not there.
 type providerInput struct {
 	data MeshStackProviderModel
-	// collected gathers the warnings pkg/auth reports, which Configure turns into
-	// diagnostics. A warning cannot travel as an error, because some outcomes succeed and
-	// warn — picking a profile by endpoint is the case that forced it.
-	collected diag.Diagnostics
 }
 
 var _ auth.Input = (*providerInput)(nil)
@@ -62,10 +58,6 @@ func (i *providerInput) ApiToken(context.Context) (string, error) {
 	return token, nil
 }
 
-func (i *providerInput) Warn(p diags.Problem) {
-	i.collected.Append(problemDiagnostic(p))
-}
-
 // problemDiagnostic adapts a diags.Problem to a terraform diagnostic.
 //
 // Problem deliberately does not implement diag.Diagnostic itself: that interface's Severity()
@@ -74,9 +66,6 @@ func (i *providerInput) Warn(p diags.Problem) {
 // database — against its two-dependency policy. This adapter is the whole cost of keeping it
 // out.
 func problemDiagnostic(p diags.Problem) diag.Diagnostic {
-	if p.IsWarning() {
-		return diag.NewWarningDiagnostic(p.Summary(), p.Detail())
-	}
 	return diag.NewErrorDiagnostic(p.Summary(), p.Detail())
 }
 

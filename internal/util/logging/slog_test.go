@@ -28,6 +28,28 @@ func TestSlogHandlerFlattensGroupsAndAttrs(t *testing.T) {
 	assert.Equal(t, map[string]any{"profile": "dev", "token.expiresIn": int64(300)}, fields)
 }
 
+// TestSlogHandlerLeavesRenderingToTheSink pins the other half of passing every level through: a
+// record TF_LOG drops still reaches this handler, so an attribute must arrive at tflog unrendered
+// and be formatted by the sink, or every terraform run pays for debug output nobody reads. The
+// meshStack CLI logs its request and response bodies this way.
+func TestSlogHandlerLeavesRenderingToTheSink(t *testing.T) {
+	rendered := 0
+	handler := SlogHandler{}
+
+	fields := map[string]any{}
+	handler.put(fields, slog.Any("body", countingBody{&rendered}))
+
+	assert.Zero(t, rendered)
+	assert.IsType(t, countingBody{}, fields["body"])
+}
+
+type countingBody struct{ rendered *int }
+
+func (c countingBody) String() string {
+	*c.rendered++
+	return "rendered"
+}
+
 // TestSlogHandlerPassesEveryLevel pins that the level filter is tflog's, not this handler's:
 // TF_LOG decides what terraform keeps, and filtering here would hide records a practitioner asked
 // for.
