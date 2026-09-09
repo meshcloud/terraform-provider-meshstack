@@ -1,7 +1,21 @@
 # v0.26.0
 
+FEATURES:
+- New `profile` argument, with `MESHSTACK_PROFILE`. A profile is a named bundle of endpoint, credential and default workspace written by `meshstack auth login`, so a provider block holding only `profile = "meshstack-dev"` is a complete configuration. The provider reads profiles the way the AWS provider reads `~/.aws`, and it can refresh a profile's browser login — it cannot create one, because a `terraform plan` must never open a browser. A profile ranks *below* the environment and is never an override: a plan whose result depends on the operator's home directory is not reproducible.
+- New `workspace` argument, with `MESHSTACK_WORKSPACE`. It is required for a profile holding a browser login, because meshStack binds a user access token to exactly one workspace; an API key or an API token carries its own. On the meshObject API it is also the request parameter that decides what an administrator's credential reads.
+- A profile is picked by matching its endpoint when none is named and no API key was supplied, and the provider emits a warning diagnostic saying which one it chose.
+
+FIXES:
+- Setting `MESHSTACK_ENDPOINT` to an empty value now reports the same "endpoint is not configured" error as leaving it unset. Previously an empty value was accepted, and the provider built a client against an empty URL, which failed later with a less helpful message.
+- An access token is now minted once per provider run and renewed shortly before it expires, instead of being re-minted on every provider configuration. A 401 on a token the provider believed valid forces exactly one re-mint before the error surfaces, which turns a container with a badly wrong clock from a confusing failure into a retry.
+- A missing or expired credential now fails when the provider is configured, rather than at the first request it makes. A `terraform plan` that only creates resources reads nothing, so an expired login used to survive the plan and fail the apply — after terraform had already printed what it was about to do.
+- Authentication failures now carry an actionable second paragraph instead of a bare HTTP error: a 403 says which workspace the token was scoped to, and an expired login names `meshstack login`.
+
 NOTES:
-- The meshStack API client moved out of this repository into [meshstack-cli](https://github.com/meshcloud/meshstack-cli), so the provider and the meshStack CLI share one client instead of each carrying its own. The provider imports it as `github.com/meshcloud/meshstack-cli/client`. Contributors who worked in `client/` are affected; nothing about existing provider configurations is.
+- The meshStack API client moved out of this repository into [meshstack-cli](https://github.com/meshcloud/meshstack-cli), so the provider and the meshStack CLI share one client instead of each carrying its own. The provider imports it as `github.com/meshcloud/meshstack-cli/client`, and authenticates through `github.com/meshcloud/meshstack-cli/pkg/auth`. Contributors who worked in `client/` are affected; nothing about existing provider configurations is.
+- `terraform apply` may now read from and write to the meshStack CLI's configuration directory (`$XDG_CONFIG_HOME/meshstack`, or the platform equivalent), and only when a profile supplies the credential. It has to write: a browser login's refresh token rotates on every refresh, and keeping the old one would end the session the meshStack CLI shares. Both tools take the same file lock for that reason. A credential that arrived through the provider block or an environment variable touches no file at all, which is what a building block run and a CI job get.
+- `meshstack_instance` deliberately does not expose the `issuer` and `cliClientId` fields `/mesh/info` also returns. They describe the OpenID Connect client the meshStack CLI logs in with, and a `terraform apply` never logs a user in, so neither has a consumer here. The reasoning sits on the struct in the shared client, where the decision would have to be undone.
+- `apikey`, `apisecret` and `apitoken` keep their names and their behaviour. They do not follow Terraform's snake_case convention, which is a known wart to fix only if the provider ever takes a major version.
 
 # v0.25.3
 
