@@ -189,10 +189,20 @@ func (d *buildingBlockDefinitionsDataSource) Read(ctx context.Context, req datas
 			return
 		}
 
+		if definition.Status == nil {
+			resp.Diagnostics.AddError(
+				"Building block definition status missing",
+				"API returned a building block definition without status, which is required to build version references.",
+			)
+			return
+		}
+
 		versions, err := d.meshBuildingBlockDefinitionVersionClient.List(ctx, *definition.Metadata.Uuid)
 
-		// Check if the error is a 403 Forbidden - if so, fall back to status.Versions
-		if httpErr, ok := errors.AsType[client.HttpError](err); ok && httpErr.IsForbidden() {
+		httpErr, isHttpErr := errors.AsType[client.HttpError](err)
+		forbidden := isHttpErr && httpErr.IsForbidden()
+
+		if forbidden || definition.Status.RedactedForNonOwnerAccess {
 			// Fall back to status.Versions from the definition (no content_hash available)
 			defModel := buildVersionRefsFromStatus(&resp.Diagnostics, definition)
 			if resp.Diagnostics.HasError() {
