@@ -96,6 +96,23 @@ task testacc -- -run=BuildingBlock # filter by name
 - Reproducing a bug or a single failing test as a standalone config — or scaffolding a demo /
   working starting point — is the **`scratch-config`** skill.
 
+### Testing against a local meshstack-cli checkout
+
+The API client comes from `github.com/meshcloud/meshstack-cli`, pinned in `go.mod`. When you are
+changing the client and the provider *together*, pushing the CLI and re-pinning on every iteration is
+too slow — link the sibling checkout instead:
+
+```bash
+task cli:link     # build/test against ../meshstack-cli
+task cli:unlink   # back to the version pinned in go.mod
+```
+
+`cli:link` writes a git-ignored `go.work`; `cli:unlink` deletes it. `go.mod` and `go.sum` are never
+modified, so there is nothing to accidentally commit and no need to undo anything else. Re-pin
+`go.mod` once the CLI change is merged. The acceptance run does the same on its side: it checks out a
+`meshstack-cli` branch with the same name as the provider branch when one exists, so an unmerged
+client change is tested with the provider change that needs it.
+
 ### Building against sibling meshcloud modules (*meshcloud-internal*)
 
 This repo builds against the versions its `go.mod` pins, and that is what its own CI tests. To build
@@ -104,7 +121,8 @@ parent and run `./gradlew goWork` in the `meshfed-release` checkout. That writes
 in the **parent** directory, with a `use ./<repo>` line per repository it finds; nothing lands inside
 this one. Go searches upwards for it, so `task test`, `task build` and a plain `go test` here then
 resolve `github.com/meshcloud/…` imports to the sibling sources. `GOWORK=off` in front of a command
-gets the pinned versions back for that one run.
+gets the pinned versions back for that one run. It covers `meshstack-cli` too; `task cli:link` is the
+shortcut for that one module, and needs no `meshfed-release` checkout.
 
 ### Adding a resource / data source (and its tests)
 
@@ -114,7 +132,8 @@ Adding or reworking a resource or data source — the implementation, example `.
 refs, DTOs, `Id`/`Uuid` naming, receivers, preview API, computed-only outputs). In short:
 
 1. `internal/provider/<name>_resource.go` — CRUD + `Schema`.
-2. `client/` — typed API client methods.
+2. `github.com/meshcloud/meshstack-cli/client` — typed API client methods, in the
+   [meshstack-cli](https://github.com/meshcloud/meshstack-cli) repository.
 3. `provider.go` — register it.
 4. `examples/resources/meshstack_<name>/` — example `.tf`.
 5. `internal/provider/acctest/testconfig/build_<name>.go` — a builder.

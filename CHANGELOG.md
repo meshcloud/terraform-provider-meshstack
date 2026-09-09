@@ -1,3 +1,8 @@
+# v0.26.0
+
+NOTES:
+- The meshStack API client moved out of this repository into [meshstack-cli](https://github.com/meshcloud/meshstack-cli), so the provider and the meshStack CLI share one client instead of each carrying its own. The provider imports it as `github.com/meshcloud/meshstack-cli/client`. Contributors who worked in `client/` are affected; nothing about existing provider configurations is.
+
 # v0.25.3
 
 FEATURES:

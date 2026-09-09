@@ -6,8 +6,7 @@ import (
 	"slices"
 
 	"github.com/google/uuid"
-
-	"github.com/meshcloud/terraform-provider-meshstack/client"
+	"github.com/meshcloud/meshstack-cli/client"
 )
 
 type MeshPlatformClient struct {

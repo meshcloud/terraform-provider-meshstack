@@ -37,8 +37,6 @@ Real usage in this repo:
 ```go
 secret.Hash    = new(fmt.Sprintf("sha256:%s", *secret.Plaintext)) // internal/clientmock/mock_client.go
 dto.VersionNumber = new(int64(1))                                  // building_block_definition_resource_model.go
-requestBody    = new(bytes.Buffer)                                 // client/internal/http_client.go
-m[method]      = new(sync.Map)                                     // client/internal/retry.go
 ```
 
 - Use it for inline pointer creation in struct literals, args, and returns.
@@ -66,9 +64,9 @@ than writing `any`-typed or reflection-based variants.
 
 | Type / func | File | Role |
 |---|---|---|
-| `MeshObjectClient[M any]`, `NewMeshObjectClient[M]`, `InferKind[M]()` | `client/internal/mesh_object_client.go` | Typed CRUD client per meshObject type |
+| `MeshObjectClient[M any]`, `NewMeshObjectClient[M]`, `InferKind[M]()` | meshstack-cli `client/internal/mesh_object_client.go` | Typed CRUD client per meshObject type |
 | `Store[M any]` (`Get/Set/Delete/Values/SortedKeys`) | `internal/clientmock/mock_client.go` | Generic in-memory mock store; e.g. `NewStore[client.MeshBuildingBlockDefinitionVersion]()` |
-| `Variant[X, Y any]` (custom `MarshalJSON`/`UnmarshalJSON`) | `client/types/variant/variant.go` | Discriminated union for JSON fields that are one-of-two |
+| `Variant[X, Y any]` (custom `MarshalJSON`/`UnmarshalJSON`) | meshstack-cli `client/types/variant/variant.go` | Discriminated union for JSON fields that are one-of-two |
 | `Pollable[T any]`, `AtMostFor[T]`, `WithLastResultTo[T]` | `internal/util/poll/poll.go` | Timeout/retry polling abstraction |
 | `NullIsUnknown[T any]`, `KnownValue[T]` | `internal/types/generic/unknown.go` | Terraform null-vs-unknown handling |
 

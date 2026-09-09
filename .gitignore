@@ -32,3 +32,8 @@ scratch/
 covdata/
 junit.xml
 unit.txt
+
+# `task cli:link`: the workspace file and the sibling meshstack-cli checkout it points at.
+go.work
+go.work.sum
+/meshstack-cli/

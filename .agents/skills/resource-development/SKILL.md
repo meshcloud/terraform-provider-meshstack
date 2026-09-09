@@ -34,7 +34,10 @@ Mid-complexity, clean, and complete — prefer these over the large `building_bl
    `ResourceWithConfigure` (+ `ResourceWithImportState` for import). Standard schema shape:
    `metadata` (name `RequiresReplace`, computed `uuid` with `UseStateForUnknown`), `spec`,
    `status`. See `project_resource.go`.
-2. **`client/`** — add the API client methods (typed via `MeshObjectClient[M]`).
+2. **`github.com/meshcloud/meshstack-cli/client`** — add the API client methods (typed via
+   `MeshObjectClient[M]`). This package lives in the
+   [meshstack-cli](https://github.com/meshcloud/meshstack-cli) repository, which the provider
+   imports, so a new client method ships there before the provider can use it.
 3. **`provider.go`** — register the resource/data source in the provider's lists.
 4. **`examples/resources/meshstack_<name>/resource.tf`** — only the single resource block; put
    any dependencies (data sources, providers) in `test-support_*.tf`. Never hardcode
@@ -65,7 +68,8 @@ validation, `Description` the block docs); then set at most one behaviour flag:
 Only refs that carry extra fields (`target_ref`, `building_block_definition_version_ref`) stay
 bespoke.
 
-On the client side these refs deserialize into the two shared DTO structs in `client/refs.go` —
+On the client side these refs deserialize into the two shared DTO structs in meshstack-cli's
+`client/refs.go` —
 `NamedRef` (`{name, kind}`) and `UuidRef` (`{uuid, kind}`), the counterparts of `meshRefByName` /
 `meshRefByUuid`. Use one of them for any `{name|uuid, kind}` field rather than declaring a new
 named type; a ref that adds fields (e.g. `MeshBuildingBlockV2DefinitionVersionRef`'s `content_hash`)
