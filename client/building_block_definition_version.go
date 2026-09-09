@@ -209,8 +209,9 @@ type MeshBuildingBlockDefinitionVersionSpec struct {
 }
 
 type MeshBuildingBlockDefinitionVersionStatus struct {
-	State      MeshBuildingBlockDefinitionVersionState `json:"state" tfsdk:"state"`
-	UsageCount int64                                   `json:"usageCount" tfsdk:"usage_count"`
+	State                     MeshBuildingBlockDefinitionVersionState `json:"state" tfsdk:"state"`
+	UsageCount                int64                                   `json:"usageCount" tfsdk:"usage_count"`
+	RedactedForNonOwnerAccess bool                                    `json:"redactedForNonOwnerAccess" tfsdk:"-"`
 }
 
 type MeshBuildingBlockDefinitionVersion struct {

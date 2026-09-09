@@ -201,6 +201,17 @@ func (r *buildingBlockDefinitionResource) Read(ctx context.Context, req resource
 			definitionDto.Spec.DisplayName, bbdUuid,
 		))
 	}
+	if slices.ContainsFunc(versionDtos, func(versionDto client.MeshBuildingBlockDefinitionVersion) bool {
+		return versionDto.Status != nil && versionDto.Status.RedactedForNonOwnerAccess
+	}) {
+		resp.Diagnostics.AddError("Building block definition is not owned by your workspace", fmt.Sprintf(
+			"meshStack returned building block definition '%s', ID=%s without its implementation, which it does for a "+
+				"workspace that may order the definition but does not own it. Managing this definition requires the "+
+				"workspace that owns it.",
+			definitionDto.Spec.DisplayName, bbdUuid,
+		))
+		return
+	}
 	// Refresh reflects the actual latest-version state: derive draft from it (as the definitions data
 	// source does) so an external switch to DRAFT is noticed instead of a stale draft=false persisting.
 	state.SetFromVersionClientDtos(&resp.Diagnostics, deriveDraftFromLatestVersion(versionDtos), bbdUuid, versionDtos...)
