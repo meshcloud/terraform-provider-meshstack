@@ -11,14 +11,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
-	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/meshcloud/meshstack-cli/client"
 	"github.com/meshcloud/meshstack-cli/pkg/auth"
+	"github.com/meshcloud/meshstack-cli/pkg/setting"
 
 	"github.com/meshcloud/terraform-provider-meshstack/internal/util/logging"
 )
 
-// Ensure MeshStackProvider satisfies various provider interfaces.
 var _ provider.ProviderWithFunctions = &MeshStackProvider{}
 
 type MeshStackProvider struct {
@@ -31,50 +30,19 @@ type MeshStackProvider struct {
 	clientFactory func(ctx context.Context, data MeshStackProviderModel, providerVersion string) (client.Client, diag.Diagnostics)
 }
 
-type MeshStackProviderModel struct {
-	Endpoint  types.String `tfsdk:"endpoint"`
-	Profile   types.String `tfsdk:"profile"`
-	Workspace types.String `tfsdk:"workspace"`
-	ApiKey    types.String `tfsdk:"apikey"`
-	ApiSecret types.String `tfsdk:"apisecret"`
-	ApiToken  types.String `tfsdk:"apitoken"`
-}
-
 func (p *MeshStackProvider) Metadata(_ context.Context, _ provider.MetadataRequest, resp *provider.MetadataResponse) {
 	resp.TypeName = "meshstack"
 	resp.Version = p.version
 }
 
 func (p *MeshStackProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp *provider.SchemaResponse) {
-	resp.Schema = schema.Schema{
-		Attributes: map[string]schema.Attribute{
-			"endpoint": schema.StringAttribute{
-				MarkdownDescription: "URL of the meshStack API, e.g. `https://api.my.meshstack.io`. A profile supplies it too, so a block naming only a profile is complete.",
-				Optional:            true,
-			},
-			"profile": schema.StringAttribute{
-				MarkdownDescription: "meshStack CLI profile to authenticate with. A profile is a named bundle of endpoint, credential and default workspace, written by `meshstack auth login`. A block holding only `profile` is a complete configuration.",
-				Optional:            true,
-			},
-			"workspace": schema.StringAttribute{
-				MarkdownDescription: "Workspace this provider acts in. It is required for a profile holding a browser login, because a meshStack user access token is bound to one workspace; an API key carries its own.",
-				Optional:            true,
-			},
-			"apikey": schema.StringAttribute{
-				MarkdownDescription: "API Key to authenticate against the meshStack API",
-				Optional:            true,
-			},
-			"apisecret": schema.StringAttribute{
-				MarkdownDescription: "API Secret to authenticate against the meshStack API",
-				Optional:            true,
-				Sensitive:           true,
-			},
-			"apitoken": schema.StringAttribute{
-				MarkdownDescription: "API Token to authenticate against the meshStack API",
-				Optional:            true,
-				Sensitive:           true,
-			},
-		},
+	resp.Schema = schema.Schema{Attributes: map[string]schema.Attribute{}}
+	for key, attribute := range modelAttributes {
+		resp.Schema.Attributes[key] = schema.StringAttribute{
+			MarkdownDescription: attribute.MarkdownDescription(),
+			Optional:            true,
+			Sensitive:           attribute.Sensitive,
+		}
 	}
 }
 
@@ -108,38 +76,16 @@ func configureProviderClient(providerData any, consumer func(client client.Clien
 }
 
 func newProviderClient(ctx context.Context, data MeshStackProviderModel, providerVersion string) (providerClient client.Client, diagnostics diag.Diagnostics) {
-	// One package answers "who am I, against what, in which workspace" for both the provider
-	// and the meshStack CLI, so both apply the same precedence — block, then environment,
-	// then profile — and both renew through the same file lock. That lock is the reason to
-	// share rather than to copy: keycloak rotates a refresh token on every refresh and ends
-	// the whole session when one is reused, so a `terraform apply` racing a `meshstack`
-	// command would otherwise destroy the user's login.
-	session, err := auth.Resolve(ctx, &providerInput{data: data})
+	session, err := auth.ResolveSession(ctx, auth.ResolveSessionOptions{Settings: setting.Source{Source: data}})
 	if err != nil {
-		diagnostics.Append(problemDiagnostics("Failed to resolve meshStack credentials.", err)...)
-		return
-	}
-	// Failing before the first request is what turns "403 Access denied" into a message naming
-	// the workspace.
-	if err := session.RequireWorkspace(); err != nil {
-		diagnostics.Append(problemDiagnostics("meshStack workspace missing.", err)...)
-		return
-	}
-
-	// Mint here rather than at the first request. A plan that only creates resources reads
-	// nothing, so an expired login would otherwise pass the plan and fail the apply — the
-	// point at which terraform has already told the user what it is about to do. This is the
-	// provider's call and not pkg/auth's, because the meshStack CLI must stay lazy: `meshstack
-	// profile view` and `meshstack auth logout` have to work when the credential is dead.
-	if _, err := session.BearerToken(ctx); err != nil {
-		diagnostics.Append(problemDiagnostics("Failed to authenticate against meshStack.", err)...)
+		diagnostics.AddError("Failed to resolve meshStack auth session", err.Error())
 		return
 	}
 
 	userAgent := fmt.Sprintf("terraform-provider-meshstack/%s", providerVersion)
 	providerClient, err = session.Client(ctx, userAgent)
 	if err != nil {
-		diagnostics.Append(problemDiagnostics("Failed to create meshStack client.", err)...)
+		diagnostics.AddError("Failed to create meshStack client.", err.Error())
 		return
 	}
 	return

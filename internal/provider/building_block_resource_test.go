@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 	"github.com/meshcloud/meshstack-cli/client"
 	"github.com/meshcloud/meshstack-cli/pkg/auth"
+	"github.com/meshcloud/meshstack-cli/pkg/setting"
 	"github.com/stretchr/testify/require"
 
 	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
@@ -50,7 +51,7 @@ func acceptanceClient(t *testing.T) client.Client {
 	// Resolved the same way a real provider run resolves: an empty provider block, so the
 	// MESHSTACK_* environment variables supply the whole credential and nothing is read from
 	// or written to a profile.
-	session, err := auth.Resolve(context.Background(), &providerInput{})
+	session, err := auth.ResolveSession(context.Background(), auth.ResolveSessionOptions{Settings: setting.Source{Source: MeshStackProviderModel{}}})
 	require.NoError(t, err)
 	c, err := session.Client(context.Background(), "acctest")
 	require.NoError(t, err)
