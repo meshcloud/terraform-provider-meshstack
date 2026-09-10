@@ -493,7 +493,7 @@ func awsReplicationConfigDataSourceSchema() schema.Attribute {
 						Computed:            true,
 					},
 					"tag_mappers": schema.SetNestedAttribute{
-						MarkdownDescription: "List of tag mappers for tenant tags",
+						MarkdownDescription: "Set of tag mappers for tenant tags",
 						Computed:            true,
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
@@ -774,7 +774,7 @@ func azureReplicationConfigDataSourceSchema() schema.Attribute {
 						Computed:            true,
 					},
 					"tag_mappers": schema.SetNestedAttribute{
-						MarkdownDescription: "List of tag mappers for tenant tags",
+						MarkdownDescription: "Set of tag mappers for tenant tags",
 						Computed:            true,
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
@@ -884,7 +884,7 @@ func azureRgReplicationConfigDataSourceSchema() schema.Attribute {
 						Computed:            true,
 					},
 					"tag_mappers": schema.SetNestedAttribute{
-						MarkdownDescription: "List of tag mappers for tenant tags",
+						MarkdownDescription: "Set of tag mappers for tenant tags",
 						Computed:            true,
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
@@ -1001,7 +1001,7 @@ func gcpReplicationConfigDataSourceSchema() schema.Attribute {
 						Computed:            true,
 					},
 					"tag_mappers": schema.SetNestedAttribute{
-						MarkdownDescription: "List of tag mappers for generating tags.",
+						MarkdownDescription: "Set of tag mappers for generating tags.",
 						Computed:            true,
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
@@ -1118,7 +1118,7 @@ func openShiftReplicationConfigDataSourceSchema() schema.Attribute {
 						Computed:            true,
 					},
 					"tag_mappers": schema.SetNestedAttribute{
-						MarkdownDescription: "List of tag mappers for tenant tags",
+						MarkdownDescription: "Set of tag mappers for tenant tags",
 						Computed:            true,
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{

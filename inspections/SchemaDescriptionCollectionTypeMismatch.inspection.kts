@@ -3,15 +3,6 @@ import com.goide.psi.GoFile
 import org.intellij.lang.annotations.Language
 import java.util.regex.Pattern
 
-/**
- * A collection attribute whose MarkdownDescription names a different collection kind. The wording
- * lands verbatim in the registry docs next to the type tfplugindocs derives from the schema, so the
- * two contradict each other on the published page: "(Attributes Set) List of parent building blocks".
- *
- * This is what commit de88f74 fixed by hand across four files. It happens when an attribute's type
- * changes and the description keeps the old wording.
- */
-
 @Language("HTML")
 val htmlDescription =
     """
@@ -26,11 +17,6 @@ val htmlDescription =
     </html>
     """.trimIndent()
 
-// java.util.regex, not kotlin.text.Regex: the script runs under its own REPL classloader, and
-// touching a kotlin.text.MatchResult there throws a LinkageError, because the IDE's plugin
-// classloader has already defined that interface. The JDK regex classes come from the bootstrap
-// loader, so both sides agree on them. The failure is silent — the inspection compiles, registers,
-// and then reports nothing while the exception goes to idea.log.
 private val attributeType: Pattern = Pattern.compile("""schema\.(\w+?)(Nested)?(Attribute|Block)""")
 
 // "map of" is left out on purpose: a Map attribute is often legitimately described as

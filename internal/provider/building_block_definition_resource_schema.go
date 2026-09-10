@@ -532,7 +532,7 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 						},
 					},
 					"notification_subscribers": schema.SetAttribute{
-						MarkdownDescription: "List of subscribers to notify about events related to this building block. Prefix usernames with `user:` and emails with `email:`.",
+						MarkdownDescription: "Set of subscribers to notify about events related to this building block. Prefix usernames with `user:` and emails with `email:`.",
 						ElementType:         types.StringType,
 						Optional:            true,
 						Computed:            true,

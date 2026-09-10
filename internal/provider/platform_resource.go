@@ -145,7 +145,7 @@ func (r *platformResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					},
 					"location_ref": meshRefByName(meshRefOptions{Kind: client.MeshObjectKind.Location, Description: "Reference to the location where this platform is situated."}),
 					"contributing_workspaces": schema.SetAttribute{
-						MarkdownDescription: "A list of workspace identifiers that may contribute to this meshPlatform.",
+						MarkdownDescription: "A set of workspace identifiers that may contribute to this meshPlatform.",
 						ElementType:         types.StringType,
 						Optional:            true,
 						Computed:            true,
@@ -180,7 +180,7 @@ func (r *platformResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						},
 					},
 					"quota_definitions": schema.SetAttribute{
-						MarkdownDescription: "List of quota definitions for the platform.",
+						MarkdownDescription: "Set of quota definitions for the platform.",
 						Optional:            true,
 						Computed:            true,
 						Sensitive:           false,

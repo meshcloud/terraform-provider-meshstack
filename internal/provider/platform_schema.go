@@ -81,7 +81,7 @@ func platformSpecDataSourceSchema() schema.Attribute {
 			},
 			"location_ref": meshRefByName(meshRefOptions{Kind: client.MeshObjectKind.Location, Description: "Reference to the location where this platform is situated.", Output: true}),
 			"contributing_workspaces": schema.SetAttribute{
-				MarkdownDescription: "A list of workspace identifiers that contribute to this meshPlatform.",
+				MarkdownDescription: "A set of workspace identifiers that contribute to this meshPlatform.",
 				ElementType:         types.StringType,
 				Computed:            true,
 			},
@@ -105,7 +105,7 @@ func platformSpecDataSourceSchema() schema.Attribute {
 				},
 			},
 			"quota_definitions": schema.SetAttribute{
-				MarkdownDescription: "List of quota definitions for the platform.",
+				MarkdownDescription: "Set of quota definitions for the platform.",
 				Computed:            true,
 				Sensitive:           false,
 				ElementType: types.ObjectType{

@@ -198,14 +198,14 @@ func (r *landingZoneResource) Schema(_ context.Context, _ resource.SchemaRequest
 						NestedObject:        quotas,
 					},
 					"mandatory_building_block_refs": schema.SetNestedAttribute{
-						MarkdownDescription: "List of mandatory building block references for this landing zone.",
+						MarkdownDescription: "Set of mandatory building block references for this landing zone.",
 						Optional:            true,
 						Computed:            true,
 						Default:             emptySetDefault(buildingBlockRefs),
 						NestedObject:        buildingBlockRefs,
 					},
 					"recommended_building_block_refs": schema.SetNestedAttribute{
-						MarkdownDescription: "List of recommended building block references for this landing zone.",
+						MarkdownDescription: "Set of recommended building block references for this landing zone.",
 						Optional:            true,
 						Computed:            true,
 						Default:             emptySetDefault(buildingBlockRefs),
@@ -267,7 +267,7 @@ func awsPlatformConfigSchema() schema.Attribute {
 							Required:            true,
 						},
 						"policies": schema.SetAttribute{
-							MarkdownDescription: "List of policies associated with this role mapping",
+							MarkdownDescription: "Set of policies associated with this role mapping",
 							ElementType:         types.StringType,
 							Required:            true,
 						},
@@ -292,7 +292,7 @@ func aksPlatformConfigSchema() schema.Attribute {
 					Attributes: map[string]schema.Attribute{
 						"project_role_ref": meshRefByName(meshRefOptions{Kind: client.MeshObjectKind.ProjectRole, Description: "Reference to the meshProjectRole.", InSet: true}),
 						"platform_roles": schema.SetAttribute{
-							MarkdownDescription: "List of AKS platform roles to assign to the meshProject role.",
+							MarkdownDescription: "Set of AKS platform roles to assign to the meshProject role.",
 							ElementType:         types.StringType,
 							Required:            true,
 						},
@@ -314,7 +314,7 @@ func azurePlatformConfigSchema() schema.Attribute {
 				Required: true,
 			},
 			"azure_role_definitions": schema.SetNestedAttribute{
-				MarkdownDescription: "List of Azure role definitions",
+				MarkdownDescription: "Set of Azure role definitions",
 				Required:            true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
@@ -378,7 +378,7 @@ func gcpPlatformConfigSchema() schema.Attribute {
 					Attributes: map[string]schema.Attribute{
 						"project_role_ref": meshRefByName(meshRefOptions{Kind: client.MeshObjectKind.ProjectRole, Description: "Reference to the meshProjectRole.", InSet: true}),
 						"platform_roles": schema.SetAttribute{
-							MarkdownDescription: "Can be empty. List of GCP IAM roles to assign to the meshProject role.",
+							MarkdownDescription: "Can be empty. Set of GCP IAM roles to assign to the meshProject role.",
 							ElementType:         types.StringType,
 							Required:            true,
 						},
