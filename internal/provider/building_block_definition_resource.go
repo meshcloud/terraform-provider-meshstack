@@ -176,6 +176,16 @@ func (r *buildingBlockDefinitionResource) Read(ctx context.Context, req resource
 		resp.State.RemoveResource(ctx)
 		return
 	}
+
+	if definitionDto.Status != nil && definitionDto.Status.RedactedForNonOwnerAccess {
+		resp.Diagnostics.AddError("Building block definition is not owned by your workspace", fmt.Sprintf(
+			"meshStack returned building block definition '%s', ID=%s without its implementation, which it does for a "+
+				"workspace that may order the definition but does not own it. Managing this definition requires the "+
+				"workspace that owns it.",
+			definitionDto.Spec.DisplayName, bbdUuid,
+		))
+		return
+	}
 	state := buildingBlockDefinition{
 		Metadata: definitionDto.Metadata,
 		Spec:     definitionDto.Spec,
@@ -198,16 +208,6 @@ func (r *buildingBlockDefinitionResource) Read(ctx context.Context, req resource
 		// TODO maybe consider removing the inconsistent BBD resource again from the state?
 		resp.Diagnostics.AddError("No BBD versions found", fmt.Sprintf(
 			"Expected at least one version, but got none for building block '%s', ID=%s",
-			definitionDto.Spec.DisplayName, bbdUuid,
-		))
-	}
-	if slices.ContainsFunc(versionDtos, func(versionDto client.MeshBuildingBlockDefinitionVersion) bool {
-		return versionDto.Status != nil && versionDto.Status.RedactedForNonOwnerAccess
-	}) {
-		resp.Diagnostics.AddError("Building block definition is not owned by your workspace", fmt.Sprintf(
-			"meshStack returned building block definition '%s', ID=%s without its implementation, which it does for a "+
-				"workspace that may order the definition but does not own it. Managing this definition requires the "+
-				"workspace that owns it.",
 			definitionDto.Spec.DisplayName, bbdUuid,
 		))
 		return

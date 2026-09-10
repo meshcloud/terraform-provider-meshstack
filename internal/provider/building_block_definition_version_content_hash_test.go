@@ -289,3 +289,18 @@ func forTestCalculateContentHash(t *testing.T, raw []byte) BuildingBlockDefiniti
 
 	return h
 }
+
+// Test_versionContentHash_redactedImplementation covers the version a workspace receives for a definition it
+// may consume but does not own: meshStack omits the implementation. Hashing such a spec must report an error,
+// not crash the provider (the type inference used to panic).
+func Test_versionContentHash_redactedImplementation(t *testing.T) {
+	var versionSpec client.MeshBuildingBlockDefinitionVersionSpec
+	require.NoError(t, json.Unmarshal(versionSpecJson, &versionSpec))
+	versionSpec.Implementation = client.MeshBuildingBlockDefinitionImplementation{}
+	var diags diag.Diagnostics
+	require.NotPanics(t, func() {
+		calculateBuildingBlockDefinitionVersionContentHash(versionSpec, &diags)
+	})
+	require.Len(t, diags, 1)
+	assert.Contains(t, diags[0].Detail(), "cannot infer implementation type")
+}
