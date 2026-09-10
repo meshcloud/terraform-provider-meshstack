@@ -118,9 +118,9 @@ Required:
 Optional:
 
 - `info_link` (String) Link to additional information about the landing zone.
-- `mandatory_building_block_refs` (Attributes Set) List of mandatory building block references for this landing zone. (see [below for nested schema](#nestedatt--spec--mandatory_building_block_refs))
+- `mandatory_building_block_refs` (Attributes Set) Set of mandatory building block references for this landing zone. (see [below for nested schema](#nestedatt--spec--mandatory_building_block_refs))
 - `quotas` (Attributes Set) Quota definitions for this landing zone. (see [below for nested schema](#nestedatt--spec--quotas))
-- `recommended_building_block_refs` (Attributes Set) List of recommended building block references for this landing zone. (see [below for nested schema](#nestedatt--spec--recommended_building_block_refs))
+- `recommended_building_block_refs` (Attributes Set) Set of recommended building block references for this landing zone. (see [below for nested schema](#nestedatt--spec--recommended_building_block_refs))
 - `restricted` (Boolean) If true, only administrators and the workspace that owns this landing zone can see and assign it. Any other workspace cannot use it.
 
 <a id="nestedatt--spec--platform_properties"></a>
@@ -153,7 +153,7 @@ Required:
 
 Required:
 
-- `platform_roles` (Set of String) List of AKS platform roles to assign to the meshProject role.
+- `platform_roles` (Set of String) Set of AKS platform roles to assign to the meshProject role.
 - `project_role_ref` (Attributes) Reference to the meshProjectRole. (see [below for nested schema](#nestedatt--spec--platform_properties--aks--kubernetes_role_mappings--project_role_ref))
 
 <a id="nestedatt--spec--platform_properties--aks--kubernetes_role_mappings--project_role_ref"></a>
@@ -186,7 +186,7 @@ Optional:
 Required:
 
 - `platform_role` (String) The AWS platform role
-- `policies` (Set of String) List of policies associated with this role mapping
+- `policies` (Set of String) Set of policies associated with this role mapping
 - `project_role_ref` (Attributes) Reference to the meshProjectRole. (see [below for nested schema](#nestedatt--spec--platform_properties--aws--aws_role_mappings--project_role_ref))
 
 <a id="nestedatt--spec--platform_properties--aws--aws_role_mappings--project_role_ref"></a>
@@ -217,7 +217,7 @@ Optional:
 Required:
 
 - `azure_group_suffix` (String) The given role name will be injected into the group name via the group naming pattern configured on the platform instance.
-- `azure_role_definitions` (Attributes Set) List of Azure role definitions (see [below for nested schema](#nestedatt--spec--platform_properties--azure--azure_role_mappings--azure_role_definitions))
+- `azure_role_definitions` (Attributes Set) Set of Azure role definitions (see [below for nested schema](#nestedatt--spec--platform_properties--azure--azure_role_mappings--azure_role_definitions))
 - `project_role_ref` (Attributes) Reference to the meshProjectRole. (see [below for nested schema](#nestedatt--spec--platform_properties--azure--azure_role_mappings--project_role_ref))
 
 <a id="nestedatt--spec--platform_properties--azure--azure_role_mappings--azure_role_definitions"></a>
@@ -305,7 +305,7 @@ Optional:
 
 Required:
 
-- `platform_roles` (Set of String) Can be empty. List of GCP IAM roles to assign to the meshProject role.
+- `platform_roles` (Set of String) Can be empty. Set of GCP IAM roles to assign to the meshProject role.
 - `project_role_ref` (Attributes) Reference to the meshProjectRole. (see [below for nested schema](#nestedatt--spec--platform_properties--gcp--gcp_role_mappings--project_role_ref))
 
 <a id="nestedatt--spec--platform_properties--gcp--gcp_role_mappings--project_role_ref"></a>

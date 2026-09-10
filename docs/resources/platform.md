@@ -761,9 +761,9 @@ Required:
 Optional:
 
 - `access_information` (String) Free-text access information shown to users when accessing tenants on this platform. Supports markdown formatting.
-- `contributing_workspaces` (Set of String) A list of workspace identifiers that may contribute to this meshPlatform.
+- `contributing_workspaces` (Set of String) A set of workspace identifiers that may contribute to this meshPlatform.
 - `documentation_url` (String) URL for platform documentation.
-- `quota_definitions` (Set of Object) List of quota definitions for the platform. (see [below for nested schema](#nestedatt--spec--quota_definitions))
+- `quota_definitions` (Set of Object) Set of quota definitions for the platform. (see [below for nested schema](#nestedatt--spec--quota_definitions))
 - `support_url` (String) URL for platform support documentation.
 
 <a id="nestedatt--spec--availability"></a>

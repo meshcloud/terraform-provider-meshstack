@@ -133,7 +133,7 @@ Required:
 
 Required:
 
-- `platform_roles` (Set of String) List of AKS platform roles to assign to the meshProject role.
+- `platform_roles` (Set of String) Set of AKS platform roles to assign to the meshProject role.
 - `project_role_ref` (Attributes) Reference to the meshProjectRole. (see [below for nested schema](#nestedatt--landing_zones--spec--platform_properties--aks--kubernetes_role_mappings--project_role_ref))
 
 <a id="nestedatt--landing_zones--spec--platform_properties--aks--kubernetes_role_mappings--project_role_ref"></a>
@@ -166,7 +166,7 @@ Optional:
 Required:
 
 - `platform_role` (String) The AWS platform role
-- `policies` (Set of String) List of policies associated with this role mapping
+- `policies` (Set of String) Set of policies associated with this role mapping
 - `project_role_ref` (Attributes) Reference to the meshProjectRole. (see [below for nested schema](#nestedatt--landing_zones--spec--platform_properties--aws--aws_role_mappings--project_role_ref))
 
 <a id="nestedatt--landing_zones--spec--platform_properties--aws--aws_role_mappings--project_role_ref"></a>
@@ -197,7 +197,7 @@ Optional:
 Required:
 
 - `azure_group_suffix` (String) The given role name will be injected into the group name via the group naming pattern configured on the platform instance.
-- `azure_role_definitions` (Attributes Set) List of Azure role definitions (see [below for nested schema](#nestedatt--landing_zones--spec--platform_properties--azure--azure_role_mappings--azure_role_definitions))
+- `azure_role_definitions` (Attributes Set) Set of Azure role definitions (see [below for nested schema](#nestedatt--landing_zones--spec--platform_properties--azure--azure_role_mappings--azure_role_definitions))
 - `project_role_ref` (Attributes) Reference to the meshProjectRole. (see [below for nested schema](#nestedatt--landing_zones--spec--platform_properties--azure--azure_role_mappings--project_role_ref))
 
 <a id="nestedatt--landing_zones--spec--platform_properties--azure--azure_role_mappings--azure_role_definitions"></a>
@@ -285,7 +285,7 @@ Optional:
 
 Required:
 
-- `platform_roles` (Set of String) Can be empty. List of GCP IAM roles to assign to the meshProject role.
+- `platform_roles` (Set of String) Can be empty. Set of GCP IAM roles to assign to the meshProject role.
 - `project_role_ref` (Attributes) Reference to the meshProjectRole. (see [below for nested schema](#nestedatt--landing_zones--spec--platform_properties--gcp--gcp_role_mappings--project_role_ref))
 
 <a id="nestedatt--landing_zones--spec--platform_properties--gcp--gcp_role_mappings--project_role_ref"></a>

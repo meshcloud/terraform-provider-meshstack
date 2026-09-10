@@ -92,13 +92,13 @@ Read-Only:
 - `access_information` (String) Free-text access information shown to users when accessing tenants on this platform. Supports markdown formatting.
 - `availability` (Attributes) Availability configuration for the meshPlatform. (see [below for nested schema](#nestedatt--platforms--spec--availability))
 - `config` (Attributes) Platform-specific configuration options. Omitted (null) for a platform the caller only consumes cross-workspace; see the data source description. (see [below for nested schema](#nestedatt--platforms--spec--config))
-- `contributing_workspaces` (Set of String) A list of workspace identifiers that contribute to this meshPlatform.
+- `contributing_workspaces` (Set of String) A set of workspace identifiers that contribute to this meshPlatform.
 - `description` (String) Description of the meshPlatform.
 - `display_name` (String) The human-readable display name of the meshPlatform.
 - `documentation_url` (String) URL for platform documentation.
 - `endpoint` (String) The web console URL endpoint of the platform.
 - `location_ref` (Attributes) Reference to the location where this platform is situated. (see [below for nested schema](#nestedatt--platforms--spec--location_ref))
-- `quota_definitions` (Set of Object) List of quota definitions for the platform. (see [below for nested schema](#nestedatt--platforms--spec--quota_definitions))
+- `quota_definitions` (Set of Object) Set of quota definitions for the platform. (see [below for nested schema](#nestedatt--platforms--spec--quota_definitions))
 - `support_url` (String) URL for platform support documentation.
 
 <a id="nestedatt--platforms--spec--availability"></a>
@@ -452,7 +452,7 @@ Read-Only:
 Read-Only:
 
 - `namespace_prefix` (String) Namespace prefix for tenant tags
-- `tag_mappers` (Attributes Set) List of tag mappers for tenant tags (see [below for nested schema](#nestedatt--platforms--spec--config--aws--replication--tenant_tags--tag_mappers))
+- `tag_mappers` (Attributes Set) Set of tag mappers for tenant tags (see [below for nested schema](#nestedatt--platforms--spec--config--aws--replication--tenant_tags--tag_mappers))
 
 <a id="nestedatt--platforms--spec--config--aws--replication--tenant_tags--tag_mappers"></a>
 ### Nested Schema for `platforms.spec.config.aws.replication.tenant_tags.tag_mappers`
@@ -675,7 +675,7 @@ Read-Only:
 Read-Only:
 
 - `namespace_prefix` (String) This is the prefix for all labels created by meshStack. It helps to keep track of which labels are managed by meshStack. It is recommended to let this prefix end with a delimiter like an underscore.
-- `tag_mappers` (Attributes Set) List of tag mappers for tenant tags (see [below for nested schema](#nestedatt--platforms--spec--config--azure--replication--tenant_tags--tag_mappers))
+- `tag_mappers` (Attributes Set) Set of tag mappers for tenant tags (see [below for nested schema](#nestedatt--platforms--spec--config--azure--replication--tenant_tags--tag_mappers))
 
 <a id="nestedatt--platforms--spec--config--azure--replication--tenant_tags--tag_mappers"></a>
 ### Nested Schema for `platforms.spec.config.azure.replication.tenant_tags.tag_mappers`
@@ -754,7 +754,7 @@ Read-Only:
 Read-Only:
 
 - `namespace_prefix` (String) Prefix for tag namespaces.
-- `tag_mappers` (Attributes Set) List of tag mappers for tenant tags (see [below for nested schema](#nestedatt--platforms--spec--config--azurerg--replication--tenant_tags--tag_mappers))
+- `tag_mappers` (Attributes Set) Set of tag mappers for tenant tags (see [below for nested schema](#nestedatt--platforms--spec--config--azurerg--replication--tenant_tags--tag_mappers))
 
 <a id="nestedatt--platforms--spec--config--azurerg--replication--tenant_tags--tag_mappers"></a>
 ### Nested Schema for `platforms.spec.config.azurerg.replication.tenant_tags.tag_mappers`
@@ -931,7 +931,7 @@ Read-Only:
 Read-Only:
 
 - `namespace_prefix` (String) Prefix for tag namespaces.
-- `tag_mappers` (Attributes Set) List of tag mappers for generating tags. (see [below for nested schema](#nestedatt--platforms--spec--config--gcp--replication--tenant_tags--tag_mappers))
+- `tag_mappers` (Attributes Set) Set of tag mappers for generating tags. (see [below for nested schema](#nestedatt--platforms--spec--config--gcp--replication--tenant_tags--tag_mappers))
 
 <a id="nestedatt--platforms--spec--config--gcp--replication--tenant_tags--tag_mappers"></a>
 ### Nested Schema for `platforms.spec.config.gcp.replication.tenant_tags.tag_mappers`
@@ -1111,7 +1111,7 @@ Read-Only:
 Read-Only:
 
 - `namespace_prefix` (String) This is the prefix for all labels created by meshStack. It helps to keep track of which labels are managed by meshStack. It is recommended to let this prefix end with a delimiter like an underscore.
-- `tag_mappers` (Attributes Set) List of tag mappers for tenant tags (see [below for nested schema](#nestedatt--platforms--spec--config--openshift--replication--tenant_tags--tag_mappers))
+- `tag_mappers` (Attributes Set) Set of tag mappers for tenant tags (see [below for nested schema](#nestedatt--platforms--spec--config--openshift--replication--tenant_tags--tag_mappers))
 
 <a id="nestedatt--platforms--spec--config--openshift--replication--tenant_tags--tag_mappers"></a>
 ### Nested Schema for `platforms.spec.config.openshift.replication.tenant_tags.tag_mappers`
