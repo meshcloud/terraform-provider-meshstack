@@ -32,6 +32,10 @@ FIXES:
 - `status.latest_run_uuid` and `status.latest_dry_run_uuid` no longer document a permission
   condition that cannot happen: the only reason either is null is that no such run exists.
 
+FIXES:
+- `meshstack_building_block_definitions`: listing the definitions of another workspace no longer crashes the provider with *"panic: cannot infer implementation type"* against meshStack 2026.38.0 or later. Such a meshStack no longer answers the version list of a definition your workspace may consume but does not own with a 403. It returns the released versions without their implementation and marks them as redacted. The data source now recognises the mark and keeps the previous behaviour for these definitions: the version references come from the definition's status, and `content_hash` stays null. Against an older meshStack nothing changes.
+- `meshstack_building_block_definition`: refreshing a definition owned by another workspace against meshStack 2026.38.0 or later now fails with a clear error that names the owning workspace requirement, instead of a crash.
+
 # v0.25.4
 
 IMPROVEMENTS:
