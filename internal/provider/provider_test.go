@@ -89,7 +89,19 @@ var restrictedTagLocks = map[string]*sync.RWMutex{
 type ApplyAndTestOption func(*applyAndTestOptions)
 
 type applyAndTestOptions struct {
-	LockExclusiveKinds []string
+	LockExclusiveKinds  []string
+	ConfigureMockClient func(*clientmock.Client)
+}
+
+// WithMockClient hands the in-memory mock client to the test before its steps run, so the test can
+// seed it or change how it answers between steps (from a step's PreConfig). A real backend has no
+// counterpart for such a hook, so a test using it only runs in mock mode and is skipped otherwise —
+// which is warranted for a case a real backend cannot be talked into, such as a definition meshStack
+// answers redacted.
+func WithMockClient(configure func(*clientmock.Client)) ApplyAndTestOption {
+	return func(options *applyAndTestOptions) {
+		options.ConfigureMockClient = configure
+	}
 }
 
 // TouchesExclusively marks a test that creates a restricted tag definition with a default value for
@@ -154,8 +166,15 @@ func ApplyAndTest(t *testing.T, testCase resource.TestCase, opts ...ApplyAndTest
 		return
 	}
 
+	if options.ConfigureMockClient != nil && !IsMockClientTest() {
+		t.Skip("test configures the in-memory mock client, which has no counterpart on a real backend")
+	}
+
 	if IsMockClientTest() {
 		mockClient := clientmock.NewMock()
+		if options.ConfigureMockClient != nil {
+			options.ConfigureMockClient(&mockClient)
+		}
 		testCase.IsUnitTest = true
 		testCase.ProtoV6ProviderFactories = ProviderFactoriesForTest(func(provider *MeshStackProvider) {
 			provider.clientFactory = func(ctx context.Context, data MeshStackProviderModel, providerVersion string) (client.Client, diag.Diagnostics) {
