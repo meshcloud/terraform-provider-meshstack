@@ -189,9 +189,6 @@ func (d *buildingBlockDefinitionsDataSource) Read(ctx context.Context, req datas
 			return
 		}
 
-		// A workspace that may only consume the definition gets no version spec to hash: an older meshStack
-		// answers the version list with 403, a newer one flags the definition and returns the versions
-		// without their implementation. Both fall back to status.Versions; the flag saves the list call.
 		redacted := definition.Status != nil && definition.Status.RedactedForNonOwnerAccess
 
 		var versions []client.MeshBuildingBlockDefinitionVersion
