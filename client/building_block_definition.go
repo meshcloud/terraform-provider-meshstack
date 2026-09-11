@@ -114,6 +114,7 @@ type MeshBuildingBlockDefinitionStatus struct {
 	LatestVersionUuid         string                                     `json:"latestVersionUuid"`
 	LatestReleasedVersion     *int64                                     `json:"latestReleasedVersion"`
 	LatestReleasedVersionUuid *string                                    `json:"latestReleasedVersionUuid"`
+	RedactedForNonOwnerAccess bool                                       `json:"redactedForNonOwnerAccess"`
 }
 
 type MeshBuildingBlockDefinition struct {
