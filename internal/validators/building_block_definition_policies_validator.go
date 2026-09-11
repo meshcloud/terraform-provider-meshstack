@@ -12,8 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-
-	"github.com/meshcloud/terraform-provider-meshstack/client"
+	"github.com/meshcloud/meshstack-cli/client"
 )
 
 // meshStack validates a building block definition's approvals and drift schedule against the

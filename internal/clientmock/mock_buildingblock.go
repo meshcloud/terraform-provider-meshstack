@@ -6,10 +6,9 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-
-	"github.com/meshcloud/terraform-provider-meshstack/client"
-	clientTypes "github.com/meshcloud/terraform-provider-meshstack/client/types"
-	"github.com/meshcloud/terraform-provider-meshstack/client/types/enum"
+	"github.com/meshcloud/meshstack-cli/client"
+	clientTypes "github.com/meshcloud/meshstack-cli/client/types"
+	"github.com/meshcloud/meshstack-cli/client/types/enum"
 )
 
 // mockBuildingBlockCreatedOn is a fixed creation timestamp so the v1 building block's computed

@@ -20,9 +20,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/meshcloud/meshstack-cli/client"
 	"github.com/stretchr/testify/require"
 
-	"github.com/meshcloud/terraform-provider-meshstack/client"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/clientmock"
 )
 
@@ -175,13 +175,22 @@ func ApplyAndTest(t *testing.T, testCase resource.TestCase, opts ...ApplyAndTest
 	resource.Test(t, testCase)
 }
 
+// The MESHSTACK_* names are literals here on purpose. The meshStack CLI exports none of them —
+// every message that has to name one is produced in the package that consults it — so the
+// acceptance suite keeps its own copy of the three it guards on.
+const (
+	envKeyEndpoint  = "MESHSTACK_ENDPOINT"
+	envKeyApiKey    = "MESHSTACK_API_KEY"
+	envKeyApiSecret = "MESHSTACK_API_SECRET"
+)
+
 func DefaultTestPreCheck(t *testing.T) {
 	t.Helper()
-	endpoint := os.Getenv(envKeyMeshstackEndpoint)
+	endpoint := os.Getenv(envKeyEndpoint)
 	require.Truef(t, strings.HasPrefix(endpoint, "http://localhost"),
-		"Env %s='%s' does not start with http://localhost, only locally running meshStacks should be used for tests", envKeyMeshstackEndpoint, endpoint)
-	require.NotEmptyf(t, os.Getenv(envKeyMeshstackApiKey), "Env %s empty, please set before running", envKeyMeshstackApiKey)
-	require.NotEmptyf(t, os.Getenv(envKeyMeshstackApiSecret), "Env %s empty, please set before running", envKeyMeshstackApiSecret)
+		"Env %s='%s' does not start with http://localhost, only locally running meshStacks should be used for tests", envKeyEndpoint, endpoint)
+	require.NotEmptyf(t, os.Getenv(envKeyApiKey), "Env %s empty, please set before running", envKeyApiKey)
+	require.NotEmptyf(t, os.Getenv(envKeyApiSecret), "Env %s empty, please set before running", envKeyApiSecret)
 }
 
 // dumpStepConfigs writes each test step's HCL config to

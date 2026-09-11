@@ -2,8 +2,7 @@ package provider
 
 import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
-
-	"github.com/meshcloud/terraform-provider-meshstack/client"
+	"github.com/meshcloud/meshstack-cli/client"
 )
 
 // landingZoneMetadataDataSourceSchema builds the landing zone metadata block. When computed is false

@@ -6,8 +6,7 @@ import (
 	"os"
 
 	"github.com/hashicorp/terraform-plugin-framework/function"
-
-	"github.com/meshcloud/terraform-provider-meshstack/client"
+	"github.com/meshcloud/meshstack-cli/client"
 )
 
 type loadFileFunction struct{}
