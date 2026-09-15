@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 
+	"github.com/meshcloud/terraform-provider-meshstack/client"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/xknownvalue"
 )
@@ -351,7 +352,7 @@ func checkIntegrationConfig(exampleSuffix string) knownvalue.Check {
 					"secret_version": xknownvalue.NotEmptyString(),
 				}),
 				"runner_ref": xknownvalue.MapExact(map[string]knownvalue.Check{
-					"uuid": knownvalue.StringExact(SharedBuildingBlockRunnerUuid),
+					"uuid": knownvalue.StringExact(client.SharedBuildingBlockRunnerUuid),
 					"kind": knownvalue.StringExact("meshBuildingBlockRunner"),
 				}),
 			}),
@@ -371,7 +372,7 @@ func checkIntegrationConfig(exampleSuffix string) knownvalue.Check {
 					"secret_version": xknownvalue.NotEmptyString(),
 				}),
 				"runner_ref": xknownvalue.MapExact(map[string]knownvalue.Check{
-					"uuid": knownvalue.StringExact(SharedBuildingBlockRunnerUuid),
+					"uuid": knownvalue.StringExact(client.SharedBuildingBlockRunnerUuid),
 					"kind": knownvalue.StringExact("meshBuildingBlockRunner"),
 				}),
 			}),
@@ -385,7 +386,7 @@ func checkIntegrationConfig(exampleSuffix string) knownvalue.Check {
 			"gitlab": xknownvalue.MapExact(map[string]knownvalue.Check{
 				"base_url": knownvalue.StringExact("https://gitlab.com"),
 				"runner_ref": xknownvalue.MapExact(map[string]knownvalue.Check{
-					"uuid": knownvalue.StringExact(SharedBuildingBlockRunnerUuid),
+					"uuid": knownvalue.StringExact(client.SharedBuildingBlockRunnerUuid),
 					"kind": knownvalue.StringExact("meshBuildingBlockRunner"),
 				}),
 			}),

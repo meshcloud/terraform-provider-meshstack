@@ -107,13 +107,25 @@ type MeshBuildingBlockDefinitionStatusVersion struct {
 	State         MeshBuildingBlockDefinitionVersionState `json:"state"`
 }
 
+// MeshBuildingBlockDefinitionWorkloadIdentityFederation is the runner identity meshStack resolved for
+// this definition: the subject carries no placeholders any more. Null when the runner of the
+// definition's latest version declares no workload identity federation.
+type MeshBuildingBlockDefinitionWorkloadIdentityFederation struct {
+	Issuer  string                       `json:"issuer" tfsdk:"issuer"`
+	Subject string                       `json:"subject" tfsdk:"subject"`
+	Gcp     *MeshRunnerWifProviderConfig `json:"gcp,omitempty" tfsdk:"gcp"`
+	Aws     *MeshRunnerWifProviderConfig `json:"aws,omitempty" tfsdk:"aws"`
+	Azure   *MeshRunnerWifProviderConfig `json:"azure,omitempty" tfsdk:"azure"`
+}
+
 type MeshBuildingBlockDefinitionStatus struct {
-	UsageCount                *int64                                     `json:"usageCount"`
-	Versions                  []MeshBuildingBlockDefinitionStatusVersion `json:"versions"`
-	LatestVersion             int64                                      `json:"latestVersion"`
-	LatestVersionUuid         string                                     `json:"latestVersionUuid"`
-	LatestReleasedVersion     *int64                                     `json:"latestReleasedVersion"`
-	LatestReleasedVersionUuid *string                                    `json:"latestReleasedVersionUuid"`
+	WorkloadIdentityFederation *MeshBuildingBlockDefinitionWorkloadIdentityFederation `json:"workloadIdentityFederation"`
+	UsageCount                 *int64                                                 `json:"usageCount"`
+	Versions                   []MeshBuildingBlockDefinitionStatusVersion             `json:"versions"`
+	LatestVersion              int64                                                  `json:"latestVersion"`
+	LatestVersionUuid          string                                                 `json:"latestVersionUuid"`
+	LatestReleasedVersion      *int64                                                 `json:"latestReleasedVersion"`
+	LatestReleasedVersionUuid  *string                                                `json:"latestReleasedVersionUuid"`
 }
 
 type MeshBuildingBlockDefinition struct {

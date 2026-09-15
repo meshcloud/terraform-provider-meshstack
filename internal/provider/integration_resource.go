@@ -79,7 +79,7 @@ func (model integrationModel) ToClientDto() client.MeshIntegration {
 		if *runnerRef == nil {
 			*runnerRef = &client.UuidRef{
 				Kind: client.MeshObjectKind.BuildingBlockRunner,
-				Uuid: SharedBuildingBlockRunnerUuid,
+				Uuid: client.SharedBuildingBlockRunnerUuid,
 			}
 		}
 	}
