@@ -37,3 +37,23 @@ func BuildingBlockRunnerWifAndWorkspace(t *testing.T) (config Config, buildingBl
 	runnerConfig, buildingBlockRunnerAddress := BuildingBlockRunnerWif(t, workspaceAddress)
 	return runnerConfig.Join(workspaceConfig), buildingBlockRunnerAddress, workspaceAddress
 }
+
+// BuildingBlockRunnerDataSource reads the runner at the given address. FirstBlockOnly drops the
+// example's locals block, which illustrates the backplane wiring for the docs.
+func BuildingBlockRunnerDataSource(t *testing.T, buildingBlockRunnerAddress Traversal) (config Config, dataSourceAddress Traversal) {
+	t.Helper()
+	return DataSource{Name: "building_block_runner"}.Config(t).FirstBlockOnly().WithFirstBlock(
+		ExtractAddress(&dataSourceAddress),
+		Descend("metadata", "uuid")(SetAddr(buildingBlockRunnerAddress, "metadata", "uuid")),
+	), dataSourceAddress
+}
+
+// SharedBuildingBlockRunnerDataSource drops metadata to read the shared runner, the documented
+// default of an omitted metadata.uuid.
+func SharedBuildingBlockRunnerDataSource(t *testing.T) (config Config, dataSourceAddress Traversal) {
+	t.Helper()
+	return DataSource{Name: "building_block_runner"}.Config(t).FirstBlockOnly().WithFirstBlock(
+		ExtractAddress(&dataSourceAddress),
+		Descend("metadata")(RemoveKey()),
+	), dataSourceAddress
+}
