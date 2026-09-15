@@ -1,3 +1,13 @@
+# v0.26.0
+
+Requires meshStack 2026.38.0 or later (previously 2026.36.0).
+
+BREAKING CHANGES:
+- `meshstack_building_block_runner`: `spec.workload_identity_federation.subject` is renamed to `subject_template` and stays required. It declares the runner's identity scheme once, with the `{{ workspaceIdentifier }}` and `{{ buildingBlockDefinitionUuid }}` placeholders that meshStack fills in per building block definition, in place of the old `<bbd-workspace>` and `<bbd-uuid>` ones; a template without placeholders is a fixed subject, which is what a runner that mints one identity for all of its runs declares. There is no deprecation window: rename the attribute and convert its placeholders in the same change as the meshStack upgrade.
+
+FEATURES:
+- `meshstack_building_block_definition`: new computed `status.versions`, one entry per version with `uuid`, `number`, `runner_uuid` (null for the shared runner meshStack hosts) and `workload_identity_federation`, the latter with `issuer`, `subject` and the per-cloud `gcp`, `aws` and `azure` blocks (`audience`, `token_path`). meshStack resolves the subject template of the runner a version runs on, so `subject` is the concrete identity a building block run of that version presents to a cloud, with no placeholders left in it. A module that grants a definition access to a cloud reads the subjects from here instead of deriving them from the replicator entry of `meshstack_integrations`, which means trust and execution cannot drift apart: each entry follows the `version_spec.runner_ref` of its version on its own. Building blocks keep running on the version they were created with until they are upgraded, so trust every version blocks still run on, for example every entry at or above a chosen `number`. `workload_identity_federation` is null for a version whose runner declares no workload identity federation, and the list is read again whenever `version_spec.runner_ref` changes or a new version is created.
+
 # v0.25.4
 
 IMPROVEMENTS:
