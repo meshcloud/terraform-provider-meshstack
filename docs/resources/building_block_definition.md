@@ -417,18 +417,18 @@ Read-Only:
 Required:
 
 - `description` (String) Description of the building block definition as shown in meshPanel.
-- `display_name` (String) Display name of the building block definition as shown in meshPanel.
+- `display_name` (String) Display name of the building block definition as shown in meshPanel. At most 128 characters.
 
 Optional:
 
 - `approval_policies` (Attributes) Which run triggers require an operator's approval before the run is applied. An approver reviews the planned changes of a dry run, so enabling any approval gate requires the `terraform` implementation. Every other implementation has no dry run, and such a configuration is rejected at plan time. Defaults to no approval gate at all. (see [below for nested schema](#nestedatt--spec--approval_policies))
 - `display_name_template` (String) Mustache-like template that names every new building block of this definition after the values it was ordered with, for example `Project {{projectName}}`. A placeholder must name an input of the definition and nothing else; if any placeholder cannot be resolved, the building block is named after the unrendered template instead. Without this attribute, a new building block is named after `display_name`. Needs a meshStack that serves the field: an older one leaves it out of its response, so an apply that sets it fails Terraform's consistency check.
-- `documentation_url` (String) URL pointing to documentation for the building block definition.
+- `documentation_url` (String) URL pointing to documentation for the building block definition. At most 255 characters.
 - `notification_subscribers` (Set of String) Set of subscribers to notify about events related to this building block. Prefix usernames with `user:` and emails with `email:`.
 - `readme` (String) Detailed readme/documentation in markdown format.
 - `run_transparency` (Boolean) Specifies the building block run control. When set to `true`, both platform teams and workspace users can view detailed run logs and re-run building blocks. When set to `false` (default), only platform teams have this access.
 - `schedule` (Attributes) Drift detection and drift reconciliation schedule for the building blocks of this definition. Defaults to no schedule. (see [below for nested schema](#nestedatt--spec--schedule))
-- `support_url` (String) URL pointing to support resources for the building block definition.
+- `support_url` (String) URL pointing to support resources for the building block definition. At most 255 characters.
 - `supported_platforms` (Attributes Set) Set of platforms that this building block supports. Required and must be non-empty if target_type is `TENANT_LEVEL` (see [below for nested schema](#nestedatt--spec--supported_platforms))
 - `symbol` (String) Symbol/icon of the building block definition as shown in meshPanel. This can either be an URL starting with `http[s]://` or a base64 encoded data blob. The function `provider::meshstack::load_image_file(<filepath>)` produces such a data blob from a local file.
 - `target_type` (String) Type of building block definition. Determines where building blocks can be attached. Cannot be changed after initial creation. One of `TENANT_LEVEL`, `WORKSPACE_LEVEL`.
