@@ -54,13 +54,16 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 		versionStateReleased = client.MeshBuildingBlockDefinitionVersionStateReleased
 	)
 
+	// The hosted runner registers its identity through the run-controller, which the CI meshStack does not
+	// run, so the block is null there and set elsewhere.
 	expectedVersion := func(number int64, state enum.Entry[client.MeshBuildingBlockDefinitionVersionState]) knownvalue.Check {
 		return xknownvalue.MapExact(map[string]knownvalue.Check{
-			"uuid":         xknownvalue.NotEmptyString(),
-			"number":       knownvalue.Int64Exact(number),
-			"state":        knownvalue.StringExact(state.String()),
-			"content_hash": xknownvalue.NotEmptyString(),
-			"kind":         knownvalue.StringExact(client.MeshObjectKind.BuildingBlockDefinitionVersion),
+			"uuid":                         xknownvalue.NotEmptyString(),
+			"number":                       knownvalue.Int64Exact(number),
+			"state":                        knownvalue.StringExact(state.String()),
+			"content_hash":                 xknownvalue.NotEmptyString(),
+			"kind":                         knownvalue.StringExact(client.MeshObjectKind.BuildingBlockDefinitionVersion),
+			"workload_identity_federation": xknownvalue.Any(),
 		})
 	}
 

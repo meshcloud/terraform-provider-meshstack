@@ -31,12 +31,29 @@ type buildingBlockDefinition struct {
 	Ref buildingBlockDefinitionRef `tfsdk:"ref"`
 }
 
+// workloadIdentitiesByVersion indexes the identities meshStack reports on the definition's status by version uuid.
+func workloadIdentitiesByVersion(status *client.MeshBuildingBlockDefinitionStatus, bbdUuid string, diags *diag.Diagnostics) map[string]*client.MeshBuildingBlockDefinitionWif {
+	if status == nil {
+		diags.AddError("Building block definition has no status", fmt.Sprintf(
+			"meshStack returned no status for the definition '%s'. The provider reads the resolved workload identity from it, which requires meshStack 2026.40.0 or later.", bbdUuid))
+		return nil
+	}
+	identities := make(map[string]*client.MeshBuildingBlockDefinitionWif, len(status.Versions))
+	for _, version := range status.Versions {
+		identities[version.VersionUuid] = version.WorkloadIdentityFederation
+	}
+	return identities
+}
+
 type buildingBlockDefinitionVersionRef struct {
 	Uuid        generic.NullIsUnknown[string]                                         `tfsdk:"uuid"`
 	Number      generic.NullIsUnknown[int64]                                          `tfsdk:"number"`
 	State       generic.NullIsUnknown[client.MeshBuildingBlockDefinitionVersionState] `tfsdk:"state"`
 	ContentHash generic.NullIsUnknown[string]                                         `tfsdk:"content_hash"`
 	Kind        generic.NullIsUnknown[string]                                         `tfsdk:"kind"`
+	// WorkloadIdentityFederation is null for a version on a runner without one, and unknown while the
+	// version is planned, because meshStack resolves it against the runner the version is written with.
+	WorkloadIdentityFederation generic.NullIsUnknown[*client.MeshBuildingBlockDefinitionWif] `tfsdk:"workload_identity_federation"`
 }
 
 type buildingBlockDefinitionRef struct {
@@ -271,7 +288,7 @@ func (model *buildingBlockDefinition) SetFromClientDto(dto *client.MeshBuildingB
 	model.Spec = dto.Spec
 }
 
-func (model *buildingBlockDefinition) SetFromVersionClientDtos(diags *diag.Diagnostics, isDraft generic.NullIsUnknown[bool], bbdUuid string, versionDtos ...client.MeshBuildingBlockDefinitionVersion) {
+func (model *buildingBlockDefinition) SetFromVersionClientDtos(diags *diag.Diagnostics, isDraft generic.NullIsUnknown[bool], bbdUuid string, identities map[string]*client.MeshBuildingBlockDefinitionWif, versionDtos ...client.MeshBuildingBlockDefinitionVersion) {
 	if len(versionDtos) == 0 {
 		diags.AddError("Building Block Definition without versions found",
 			"This should never happen for a properly created building block definition. "+
@@ -292,6 +309,8 @@ func (model *buildingBlockDefinition) SetFromVersionClientDtos(diags *diag.Diagn
 			State:       generic.KnownValue(*versionDto.Spec.State),
 			ContentHash: generic.KnownValue(calculateBuildingBlockDefinitionVersionContentHash(versionDto.Spec, diags).toBase64()),
 			Kind:        generic.KnownValue(client.MeshObjectKind.BuildingBlockDefinitionVersion),
+
+			WorkloadIdentityFederation: generic.KnownValue(identities[versionDto.Metadata.Uuid]),
 		}
 	}
 	if diags.HasError() {

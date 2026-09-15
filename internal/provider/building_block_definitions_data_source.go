@@ -211,7 +211,8 @@ func (d *buildingBlockDefinitionsDataSource) Read(ctx context.Context, req datas
 		}
 
 		var versionModel buildingBlockDefinition
-		versionModel.SetFromVersionClientDtos(&resp.Diagnostics, deriveDraftFromLatestVersion(versions), *definition.Metadata.Uuid, versions...)
+		// The data source does not expose the resolved workload identities yet, so none are looked up.
+		versionModel.SetFromVersionClientDtos(&resp.Diagnostics, deriveDraftFromLatestVersion(versions), *definition.Metadata.Uuid, nil, versions...)
 		if resp.Diagnostics.HasError() {
 			return
 		}

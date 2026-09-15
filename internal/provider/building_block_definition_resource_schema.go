@@ -71,6 +71,12 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 			PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			Validators:          []validator.String{stringvalidator.OneOf(client.MeshObjectKind.BuildingBlockDefinitionVersion)},
 		},
+		"workload_identity_federation": versionWifAttribute(
+			"The identity a run of this version presents to a cloud: the `subject_template` of the runner in `version_spec.runner_ref`, " +
+				"filled in by meshStack for this definition. Grant cloud access to `subject`. Null when the runner declares no workload identity federation. " +
+				"`issuer` and the per-cloud `audience` belong to the runner, so a backplane created before any definition takes them as input. " +
+				"A changed `subject_template` on the runner shows up on the next plan.",
+		),
 	}
 
 	inputsAttribute := schema.MapNestedAttribute{
