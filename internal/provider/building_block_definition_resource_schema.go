@@ -6,6 +6,7 @@ import (
 	"regexp"
 
 	"github.com/hashicorp/terraform-plugin-framework-jsontypes/jsontypes"
+	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -64,6 +65,7 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 		Optional: true,
 		Validators: []validator.Map{
 			validators.BuildingBlockDefinitionTagInputs{},
+			mapvalidator.KeysAre(stringvalidator.LengthAtMost(255)),
 		},
 		NestedObject: schema.NestedAttributeObject{
 			Attributes: map[string]schema.Attribute{
@@ -450,8 +452,11 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 				Required:            true,
 				Attributes: map[string]schema.Attribute{
 					"display_name": schema.StringAttribute{
-						MarkdownDescription: "Display name of the building block definition as shown in meshPanel.",
+						MarkdownDescription: "Display name of the building block definition as shown in meshPanel. At most 128 characters.",
 						Required:            true,
+						Validators: []validator.String{
+							stringvalidator.LengthAtMost(128),
+						},
 					},
 					"display_name_template": schema.StringAttribute{
 						MarkdownDescription: "Mustache-like template that names every new building block of this definition after " +
@@ -490,12 +495,18 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 						Optional:            true,
 					},
 					"support_url": schema.StringAttribute{
-						MarkdownDescription: "URL pointing to support resources for the building block definition.",
+						MarkdownDescription: "URL pointing to support resources for the building block definition. At most 255 characters.",
 						Optional:            true,
+						Validators: []validator.String{
+							stringvalidator.LengthAtMost(255),
+						},
 					},
 					"documentation_url": schema.StringAttribute{
-						MarkdownDescription: "URL pointing to documentation for the building block definition.",
+						MarkdownDescription: "URL pointing to documentation for the building block definition. At most 255 characters.",
 						Optional:            true,
+						Validators: []validator.String{
+							stringvalidator.LengthAtMost(255),
+						},
 					},
 					"supported_platforms": schema.SetNestedAttribute{
 						MarkdownDescription: fmt.Sprintf("Set of platforms that this building block supports. Required and must be non-empty if target_type is `%s`", client.MeshBuildingBlockTypeTenantLevel),
@@ -642,6 +653,9 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 						Optional:     true,
 						Computed:     true,
 						NestedObject: outputs,
+						Validators: []validator.Map{
+							mapvalidator.KeysAre(stringvalidator.LengthAtMost(255)),
+						},
 						PlanModifiers: []planmodifier.Map{
 							mapplanmodifier.UseStateForUnknown(),
 						},

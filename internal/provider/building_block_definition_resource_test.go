@@ -2227,18 +2227,18 @@ func TestAccBuildingBlockDefinitionTextLengthValidation(t *testing.T) {
 
 	t.Parallel()
 
-	config := func(input, output string) string {
+	config := func(inputKey, input, output string) string {
 		return fmt.Sprintf(`
 resource "meshstack_building_block_definition" "test" {
   metadata = { owned_by_workspace = "my-workspace" }
   spec     = { display_name = "Test", description = "Test" }
   version_spec = {
     draft          = true
-    inputs         = { candidate = %s }
+    inputs         = { %s = %s }
     outputs        = { result = %s }
     implementation = { terraform = { terraform_version = "1.9.0", repository_url = "https://github.com/example/bb.git" } }
   }
-}`, input, output)
+}`, inputKey, input, output)
 	}
 
 	const acceptedOutput = `{ display_name = "Result", type = "STRING" }`
@@ -2247,6 +2247,7 @@ resource "meshstack_building_block_definition" "test" {
 		name        string
 		input       string
 		output      string
+		inputKey    string
 		expectError *regexp.Regexp
 	}{
 		{
@@ -2258,37 +2259,108 @@ resource "meshstack_building_block_definition" "test" {
 			name:        "overlong description rejected",
 			input:       `{ display_name = "Candidate", type = "STRING", assignment_type = "USER_INPUT", description = "` + strings.Repeat("d", 256) + `" }`,
 			output:      acceptedOutput,
-			expectError: regexp.MustCompile(`length must be\s+at\s+most 255`),
+			expectError: regexp.MustCompile(`inputs\["candidate"\]\.description\s+string\s+length must be\s+at\s+most 255`),
 		},
 		{
 			name:        "overlong input display name rejected",
 			input:       `{ display_name = "` + strings.Repeat("n", 256) + `", type = "STRING", assignment_type = "USER_INPUT" }`,
 			output:      acceptedOutput,
-			expectError: regexp.MustCompile(`length must be\s+at\s+most 255`),
+			expectError: regexp.MustCompile(`inputs\["candidate"\]\.display_name\s+string\s+length must be\s+at\s+most 255`),
 		},
 		{
 			name:        "overlong value validation regex rejected",
 			input:       `{ display_name = "Candidate", type = "STRING", assignment_type = "USER_INPUT", value_validation_regex = "` + strings.Repeat("r", 1001) + `" }`,
 			output:      acceptedOutput,
-			expectError: regexp.MustCompile(`length must be\s+at\s+most 1000`),
+			expectError: regexp.MustCompile(`inputs\["candidate"\]\.value_validation_regex\s+string\s+length must be\s+at\s+most 1000`),
 		},
 		{
 			name:        "overlong validation regex error message rejected",
 			input:       `{ display_name = "Candidate", type = "STRING", assignment_type = "USER_INPUT", validation_regex_error_message = "` + strings.Repeat("m", 256) + `" }`,
 			output:      acceptedOutput,
-			expectError: regexp.MustCompile(`length must be\s+at\s+most 255`),
+			expectError: regexp.MustCompile(`inputs\["candidate"\]\.validation_regex_error_message\s+string\s+length must be\s+at\s+most 255`),
+		},
+		{
+			name:        "overlong input key rejected",
+			input:       `{ display_name = "Candidate", type = "STRING", assignment_type = "USER_INPUT" }`,
+			output:      acceptedOutput,
+			inputKey:    strings.Repeat("k", 256),
+			expectError: regexp.MustCompile(`Invalid Attribute Value Length`),
 		},
 		{
 			name:        "overlong output display name rejected",
 			input:       `{ display_name = "Candidate", type = "STRING", assignment_type = "USER_INPUT" }`,
 			output:      `{ display_name = "` + strings.Repeat("o", 256) + `", type = "STRING" }`,
-			expectError: regexp.MustCompile(`length must be\s+at\s+most 255`),
+			expectError: regexp.MustCompile(`outputs\["result"\]\.display_name\s+string\s+length must be\s+at\s+most 255`),
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			step := resource.TestStep{Config: config(tt.input, tt.output)}
+			inputKey := tt.inputKey
+			if inputKey == "" {
+				inputKey = "candidate"
+			}
+			step := resource.TestStep{Config: config(inputKey, tt.input, tt.output)}
+			if tt.expectError != nil {
+				step.ExpectError = tt.expectError
+			}
+			ApplyAndTest(t, resource.TestCase{
+				Steps: []resource.TestStep{step},
+			})
+		})
+	}
+}
+
+func TestAccBuildingBlockDefinitionSpecTextLengthValidation(t *testing.T) {
+	// The widths meshStack stores these fields in are mirrored client-side, so an over-long value surfaces at
+	// plan time naming the field, rather than as a backend error during apply.
+	if !IsMockClientTest() {
+		t.Skip("text length validation is tested with mock client only")
+	}
+
+	t.Parallel()
+
+	config := func(spec string) string {
+		return fmt.Sprintf(`
+resource "meshstack_building_block_definition" "test" {
+  metadata = { owned_by_workspace = "my-workspace" }
+  spec     = %s
+  version_spec = {
+    draft          = true
+    implementation = { terraform = { terraform_version = "1.9.0", repository_url = "https://github.com/example/bb.git" } }
+  }
+}`, spec)
+	}
+
+	tests := []struct {
+		name        string
+		spec        string
+		expectError *regexp.Regexp
+	}{
+		{
+			name: "display name of exactly 128 characters accepted",
+			spec: `{ display_name = "` + strings.Repeat("d", 128) + `", description = "Test" }`,
+		},
+		{
+			name:        "overlong display name rejected",
+			spec:        `{ display_name = "` + strings.Repeat("d", 129) + `", description = "Test" }`,
+			expectError: regexp.MustCompile(`spec\.display_name\s+string\s+length must be\s+at\s+most 128`),
+		},
+		{
+			name:        "overlong support url rejected",
+			spec:        `{ display_name = "Test", description = "Test", support_url = "` + strings.Repeat("u", 256) + `" }`,
+			expectError: regexp.MustCompile(`spec\.support_url\s+string\s+length must be\s+at\s+most 255`),
+		},
+		{
+			name:        "overlong documentation url rejected",
+			spec:        `{ display_name = "Test", description = "Test", documentation_url = "` + strings.Repeat("u", 256) + `" }`,
+			expectError: regexp.MustCompile(`spec\.documentation_url\s+string\s+length must be\s+at\s+most 255`),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			step := resource.TestStep{Config: config(tt.spec)}
 			if tt.expectError != nil {
 				step.ExpectError = tt.expectError
 			}

@@ -1,7 +1,7 @@
 # v0.25.4
 
 FIXES:
-- `meshstack_building_block_definition`: the provider now rejects a `version_spec.inputs` `display_name`, `description` or `validation_regex_error_message` over 255 characters, a `value_validation_regex` over 1000, and a `version_spec.outputs` `display_name` over 255, at plan time (#138). meshStack stores each of these in a column of that width, so an over-long value previously reached the backend and came back as an opaque `http error 500 … "errorCode":"InternalError"` that named neither the field nor the limit. A meshStack from 2026.38.0 on answers such a value with a 400 naming both; the plan-time check catches it before the apply either way.
+- `meshstack_building_block_definition`: the provider now rejects text longer than meshStack stores, at plan time, naming the attribute and the limit (#138). `spec.display_name` is capped at 128 characters, `spec.support_url` and `spec.documentation_url` at 255, a `version_spec.inputs` entry's `display_name`, `description` and `validation_regex_error_message` at 255 and its `value_validation_regex` at 1000, a `version_spec.outputs` entry's `display_name` at 255, and the key of either map at 255. Each of these is stored in a column of that width, so an over-long value previously reached the backend and came back as an opaque `http error 500 … "errorCode":"InternalError"` that named neither the field nor the limit. A meshStack from 2026.38.0 on answers such a value with a 400 naming both; the plan-time check catches it against any meshStack.
 
 # v0.25.3
 
