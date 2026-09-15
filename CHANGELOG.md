@@ -1,3 +1,13 @@
+# v0.26.2
+
+Requires meshStack 2026.40.0 or later (previously 2026.36.0).
+
+BREAKING CHANGES:
+- `meshstack_building_block_runner`: `spec.workload_identity_federation.subject` is renamed to `subject_template`. It takes the placeholders `{{ workspaceIdentifier }}` and `{{ buildingBlockDefinitionUuid }}` in place of `<bbd-workspace>` and `<bbd-uuid>`; a template without placeholders is a fixed subject. Rename the attribute and convert the placeholders together with the meshStack upgrade.
+
+FEATURES:
+- `meshstack_building_block_definition`: every version entry (`versions`, `version_latest`, `version_latest_release`) carries a computed `workload_identity_federation` with `issuer`, `subject` and the per-cloud `gcp`, `aws` and `azure` blocks (`audience`, `token_path`): the identity a run of that version presents, with the runner's template filled in for this definition. Grant cloud access to `subject`. Null when the runner declares no workload identity federation; unknown in a plan that creates a version or changes its runner.
+
 # v0.26.1
 
 FIXES:
