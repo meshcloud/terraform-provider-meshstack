@@ -53,6 +53,15 @@ func (m meshBuildingBlockDefinitionVersionClient) Create(_ context.Context, owne
 
 func (m meshBuildingBlockDefinitionVersionClient) Update(_ context.Context, uuid string, ownedByWorkspace string, versionSpec client.MeshBuildingBlockDefinitionVersionSpec) (*client.MeshBuildingBlockDefinitionVersion, error) {
 	if existing, ok := m.Store.Get(uuid); ok {
+		// meshStack stores a version's secrets encrypted for its runner, so a version that moves to another
+		// runner - or to another implementation type - cannot keep them and has to re-supply each one as
+		// plaintext (MeshBuildingBlockDefinitionVersionMapper). Rejecting the hash here keeps the mock in
+		// lock-step with the 400 an acceptance run gets.
+		if versionSecretsNeedPlaintext(existing.Spec, versionSpec) {
+			if err := rejectSecretHashes(&versionSpec); err != nil {
+				return nil, err
+			}
+		}
 		// Compute hashes for all secrets in the spec
 		backendSecretBehavior(false, &versionSpec, &existing.Spec)
 		if err := applyManualOutputBehavior(&versionSpec); err != nil {
@@ -65,6 +74,21 @@ func (m meshBuildingBlockDefinitionVersionClient) Update(_ context.Context, uuid
 		return existing, nil
 	}
 	return nil, fmt.Errorf("building block definition version not found: %s", uuid)
+}
+
+// versionSecretsNeedPlaintext reports whether an update moves the version to another runner or another
+// implementation type, the two cases in which meshStack refuses a secret that carries only a hash. A nil
+// runner ref means "whichever runner meshStack picks", which the mock cannot resolve, so it compares the
+// uuids as they are.
+func versionSecretsNeedPlaintext(existing, updated client.MeshBuildingBlockDefinitionVersionSpec) bool {
+	runnerUuid := func(ref *client.UuidRef) string {
+		if ref == nil {
+			return ""
+		}
+		return ref.Uuid
+	}
+	return runnerUuid(existing.RunnerRef) != runnerUuid(updated.RunnerRef) ||
+		existing.Implementation.InferTypeFromNonNilField() != updated.Implementation.InferTypeFromNonNilField()
 }
 
 // applyManualOutputBehavior mirrors the real backend's ManualBuildingBlockCreationModule /
