@@ -1,9 +1,11 @@
 package clientmock
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"regexp"
+	"slices"
 
 	"github.com/google/uuid"
 
@@ -19,22 +21,35 @@ type meshBuildingBlockDefinitionClient struct {
 // wifPlaceholder matches the placeholder syntax of a runner's subject template.
 var wifPlaceholder = regexp.MustCompile(`\{\{\s*(\w+)\s*\}\}`)
 
-// setStatus mirrors the backend's status section as far as the provider reads it: the workload identity
-// federation meshStack resolves from the runner of the definition's latest version.
+// setStatus mirrors the backend's status section as far as the provider reads it: one entry per version,
+// each with the workload identity meshStack resolves from the runner of that version.
 func (m meshBuildingBlockDefinitionClient) setStatus(definition *client.MeshBuildingBlockDefinition) *client.MeshBuildingBlockDefinition {
 	if definition.Status == nil {
 		definition.Status = &client.MeshBuildingBlockDefinitionStatus{}
 	}
-	definition.Status.WorkloadIdentityFederation = m.resolveWif(definition)
+	versions := m.versions(*definition.Metadata.Uuid)
+	definition.Status.Versions = make([]client.MeshBuildingBlockDefinitionStatusVersion, len(versions))
+	for i, version := range versions {
+		definition.Status.Versions[i] = client.MeshBuildingBlockDefinitionStatusVersion{
+			VersionUuid:                version.Metadata.Uuid,
+			VersionNumber:              *version.Spec.VersionNumber,
+			State:                      *version.Spec.State,
+			RunnerRef:                  version.Spec.RunnerRef,
+			WorkloadIdentityFederation: m.resolveWif(definition, version),
+		}
+	}
+	if latest := len(versions) - 1; latest >= 0 {
+		definition.Status.LatestVersion = *versions[latest].Spec.VersionNumber
+		definition.Status.LatestVersionUuid = versions[latest].Metadata.Uuid
+	}
 	return definition
 }
 
-func (m meshBuildingBlockDefinitionClient) resolveWif(definition *client.MeshBuildingBlockDefinition) *client.MeshBuildingBlockDefinitionWorkloadIdentityFederation {
-	latest := m.latestVersion(*definition.Metadata.Uuid)
-	if latest == nil || latest.Spec.RunnerRef == nil {
+func (m meshBuildingBlockDefinitionClient) resolveWif(definition *client.MeshBuildingBlockDefinition, version *client.MeshBuildingBlockDefinitionVersion) *client.MeshBuildingBlockDefinitionWorkloadIdentityFederation {
+	if version.Spec.RunnerRef == nil {
 		return nil
 	}
-	runner, ok := m.StoreRunner.Get(latest.Spec.RunnerRef.Uuid)
+	runner, ok := m.StoreRunner.Get(version.Spec.RunnerRef.Uuid)
 	if !ok || runner.Spec.WorkloadIdentityFederation == nil {
 		return nil
 	}
@@ -67,15 +82,16 @@ func (m meshBuildingBlockDefinitionClient) resolveWif(definition *client.MeshBui
 	}
 }
 
-func (m meshBuildingBlockDefinitionClient) latestVersion(definitionUuid string) (latest *client.MeshBuildingBlockDefinitionVersion) {
+// versions returns the definition's versions in ascending version number order.
+func (m meshBuildingBlockDefinitionClient) versions(definitionUuid string) (versions []*client.MeshBuildingBlockDefinitionVersion) {
 	for _, version := range m.StoreVersion.Values() {
-		if version.Spec.BuildingBlockDefinitionRef == nil || version.Spec.BuildingBlockDefinitionRef.Uuid != definitionUuid {
-			continue
-		}
-		if latest == nil || *version.Spec.VersionNumber > *latest.Spec.VersionNumber {
-			latest = version
+		if version.Spec.BuildingBlockDefinitionRef != nil && version.Spec.BuildingBlockDefinitionRef.Uuid == definitionUuid {
+			versions = append(versions, version)
 		}
 	}
+	slices.SortFunc(versions, func(a, b *client.MeshBuildingBlockDefinitionVersion) int {
+		return cmp.Compare(*a.Spec.VersionNumber, *b.Spec.VersionNumber)
+	})
 	return
 }
 

@@ -102,14 +102,16 @@ func (s MeshBuildingBlockDefinitionSpec) WithNeutralPolicies() MeshBuildingBlock
 }
 
 type MeshBuildingBlockDefinitionStatusVersion struct {
-	VersionUuid   string                                  `json:"versionUuid"`
-	VersionNumber int64                                   `json:"versionNumber"`
-	State         MeshBuildingBlockDefinitionVersionState `json:"state"`
+	VersionUuid                string                                                 `json:"versionUuid"`
+	VersionNumber              int64                                                  `json:"versionNumber"`
+	State                      MeshBuildingBlockDefinitionVersionState                `json:"state"`
+	RunnerRef                  *UuidRef                                               `json:"runnerRef"`
+	WorkloadIdentityFederation *MeshBuildingBlockDefinitionWorkloadIdentityFederation `json:"workloadIdentityFederation"`
 }
 
-// MeshBuildingBlockDefinitionWorkloadIdentityFederation is the runner identity meshStack resolved for
-// this definition: the subject carries no placeholders any more. Null when the runner of the
-// definition's latest version declares no workload identity federation.
+// MeshBuildingBlockDefinitionWorkloadIdentityFederation is the identity meshStack resolved for one version
+// of a definition from the runner that version runs on: the subject carries no placeholders any more.
+// Null when that runner declares no workload identity federation.
 type MeshBuildingBlockDefinitionWorkloadIdentityFederation struct {
 	Issuer  string                       `json:"issuer" tfsdk:"issuer"`
 	Subject string                       `json:"subject" tfsdk:"subject"`
@@ -119,13 +121,12 @@ type MeshBuildingBlockDefinitionWorkloadIdentityFederation struct {
 }
 
 type MeshBuildingBlockDefinitionStatus struct {
-	WorkloadIdentityFederation *MeshBuildingBlockDefinitionWorkloadIdentityFederation `json:"workloadIdentityFederation"`
-	UsageCount                 *int64                                                 `json:"usageCount"`
-	Versions                   []MeshBuildingBlockDefinitionStatusVersion             `json:"versions"`
-	LatestVersion              int64                                                  `json:"latestVersion"`
-	LatestVersionUuid          string                                                 `json:"latestVersionUuid"`
-	LatestReleasedVersion      *int64                                                 `json:"latestReleasedVersion"`
-	LatestReleasedVersionUuid  *string                                                `json:"latestReleasedVersionUuid"`
+	UsageCount                *int64                                     `json:"usageCount"`
+	Versions                  []MeshBuildingBlockDefinitionStatusVersion `json:"versions"`
+	LatestVersion             int64                                      `json:"latestVersion"`
+	LatestVersionUuid         string                                     `json:"latestVersionUuid"`
+	LatestReleasedVersion     *int64                                     `json:"latestReleasedVersion"`
+	LatestReleasedVersionUuid *string                                    `json:"latestReleasedVersionUuid"`
 }
 
 type MeshBuildingBlockDefinition struct {

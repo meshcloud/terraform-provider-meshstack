@@ -28,7 +28,51 @@ type buildingBlockDefinition struct {
 	VersionLatest        buildingBlockDefinitionVersionRef   `tfsdk:"version_latest"`
 	VersionLatestRelease *buildingBlockDefinitionVersionRef  `tfsdk:"version_latest_release"`
 
+	Status buildingBlockDefinitionStatus `tfsdk:"status"`
+
 	Ref buildingBlockDefinitionRef `tfsdk:"ref"`
+}
+
+// buildingBlockDefinitionStatus is the resource's fully computed container. The client's status DTO
+// carries no tfsdk tags because the rest of it is already exposed as versions/version_latest.
+type buildingBlockDefinitionStatus struct {
+	Versions []buildingBlockDefinitionStatusVersion `tfsdk:"versions"`
+}
+
+// buildingBlockDefinitionStatusVersion leaves the version state out on purpose: a release is planned
+// unknown because it may wait for approval, and status is carried over from state in that plan.
+type buildingBlockDefinitionStatusVersion struct {
+	Uuid                       string                                                        `tfsdk:"uuid"`
+	Number                     int64                                                         `tfsdk:"number"`
+	RunnerUuid                 *string                                                       `tfsdk:"runner_uuid"`
+	WorkloadIdentityFederation *client.MeshBuildingBlockDefinitionWorkloadIdentityFederation `tfsdk:"workload_identity_federation"`
+}
+
+// ownRunnerUuid is the uuid of a runner a workspace named itself; the shared runner meshStack hosts is null.
+func ownRunnerUuid(runnerRef *client.UuidRef) *string {
+	if runnerRef == nil || runnerRef.Uuid == client.SharedBuildingBlockRunnerUuid {
+		return nil
+	}
+	return new(runnerRef.Uuid)
+}
+
+func newBuildingBlockDefinitionStatus(dto *client.MeshBuildingBlockDefinitionStatus) (status buildingBlockDefinitionStatus) {
+	if dto == nil {
+		return
+	}
+	status.Versions = make([]buildingBlockDefinitionStatusVersion, len(dto.Versions))
+	for i, version := range dto.Versions {
+		status.Versions[i] = buildingBlockDefinitionStatusVersion{
+			Uuid:                       version.VersionUuid,
+			Number:                     version.VersionNumber,
+			RunnerUuid:                 ownRunnerUuid(version.RunnerRef),
+			WorkloadIdentityFederation: version.WorkloadIdentityFederation,
+		}
+	}
+	slices.SortFunc(status.Versions, func(a, b buildingBlockDefinitionStatusVersion) int {
+		return cmp.Compare(a.Number, b.Number)
+	})
+	return
 }
 
 type buildingBlockDefinitionVersionRef struct {
@@ -72,7 +116,7 @@ func (model buildingBlockDefinitionVersionSpec) ToClientDto(buildingBlockDefinit
 	if dto.RunnerRef == nil {
 		dto.RunnerRef = &client.UuidRef{
 			Kind: client.MeshObjectKind.BuildingBlockRunner,
-			Uuid: SharedBuildingBlockRunnerUuid,
+			Uuid: client.SharedBuildingBlockRunnerUuid,
 		}
 	}
 	if model.Draft {

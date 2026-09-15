@@ -86,6 +86,10 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest_release"), knownvalue.Null()),
 						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest"), expectedVersion(1, versionStateDraft)),
 						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("versions"), knownvalue.ListExact([]knownvalue.Check{expectedVersion(1, versionStateDraft)})),
+						// The shared runner is not a runner of the workspace, so runner_uuid is null for it.
+						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("status").AtMapKey("versions"), knownvalue.ListExact([]knownvalue.Check{
+							knownvalue.ObjectPartial(map[string]knownvalue.Check{"number": knownvalue.Int64Exact(1), "runner_uuid": knownvalue.Null()}),
+						})),
 						xknownvalue.Ref(addr, "meshBuildingBlockDefinition", &resourceUuid),
 					},
 				},
@@ -1262,7 +1266,7 @@ func checkBuildingBlockVersionSpec(exampleSuffix string, expectedState enum.Entr
 		"deletion_mode":              knownvalue.StringExact(expectedDeletionMode),
 		"runner_ref": xknownvalue.MapExact(map[string]knownvalue.Check{
 			"kind": knownvalue.StringExact("meshBuildingBlockRunner"),
-			"uuid": knownvalue.StringExact(SharedBuildingBlockRunnerUuid),
+			"uuid": knownvalue.StringExact(client.SharedBuildingBlockRunnerUuid),
 		}),
 		"dependency_refs": knownvalue.SetSizeExact(0),
 		"inputs":          checkInputs,

@@ -852,6 +852,60 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 				},
 			},
 
+			"status": schema.SingleNestedAttribute{
+				MarkdownDescription: "System-managed state of this building block definition.",
+				Computed:            true,
+				// On the container: Terraform plans a computed object as unknown, and the framework does
+				// not descend into one, so a modifier on a nested attribute would never run.
+				PlanModifiers: []planmodifier.Object{useStateUnlessStatusChanges{}},
+				Attributes: map[string]schema.Attribute{
+					"versions": schema.ListNestedAttribute{
+						MarkdownDescription: "Every version of this definition, sorted ascending by `number`, with the workload identity meshStack resolved for it. " +
+							"Building blocks keep running on the version they were created with until they are upgraded, so a cloud trust has to cover every version " +
+							"blocks still run on, for example every entry at or above a chosen `number`. Never empty.",
+						Computed: true,
+						NestedObject: schema.NestedAttributeObject{
+							Attributes: map[string]schema.Attribute{
+								"uuid": schema.StringAttribute{
+									MarkdownDescription: "UUID of the version, the same as in `versions`.",
+									Computed:            true,
+								},
+								"number": schema.Int64Attribute{
+									MarkdownDescription: "Version number.",
+									Computed:            true,
+								},
+								"runner_uuid": schema.StringAttribute{
+									MarkdownDescription: "UUID of the runner this version runs on, null for the shared runner meshStack hosts. " +
+										"Together with `workload_identity_federation.subject` it lets a module key a cloud trust by runner.",
+									Computed: true,
+								},
+								"workload_identity_federation": schema.SingleNestedAttribute{
+									MarkdownDescription: "The identity a building block run of this version presents to a cloud, resolved by meshStack from the runner the version runs on. " +
+										"Null when that runner declares no workload identity federation. " +
+										"Configure the trust of your cloud backplane from here: `subject` is the runner's subject template with every placeholder filled in for this definition. " +
+										"`issuer` and the per-cloud `audience` are properties of the runner, so a backplane that has to exist before any definition can read them from the " +
+										"`meshstack_building_block_runner` data source instead.",
+									Computed: true,
+									Attributes: map[string]schema.Attribute{
+										"issuer": schema.StringAttribute{
+											MarkdownDescription: "OIDC issuer URL of the identity provider that issues tokens for runs of this version.",
+											Computed:            true,
+										},
+										"subject": schema.StringAttribute{
+											MarkdownDescription: "The subject claim of those tokens: the identity a run of this version presents. It contains no placeholders.",
+											Computed:            true,
+										},
+										"gcp":   wifProviderStatusAttribute("GCP"),
+										"aws":   wifProviderStatusAttribute("AWS"),
+										"azure": wifProviderStatusAttribute("Azure"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+
 			"ref": meshRefByUuid(meshRefOptions{Kind: client.MeshObjectKind.BuildingBlockDefinition, Description: "Reference to this building block definition. Reuse in `version_spec.dependency_refs` of other building block definitions.", Output: true}),
 		},
 	}

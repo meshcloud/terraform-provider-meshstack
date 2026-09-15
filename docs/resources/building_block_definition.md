@@ -392,6 +392,7 @@ resource "meshstack_building_block_definition" "example_05_gitlab_pipeline" {
 ### Read-Only
 
 - `ref` (Attributes) Reference to this building block definition. Reuse in `version_spec.dependency_refs` of other building block definitions. (see [below for nested schema](#nestedatt--ref))
+- `status` (Attributes) System-managed state of this building block definition. (see [below for nested schema](#nestedatt--status))
 - `version_latest` (Attributes) Latest version (including drafts). Useful for wiring `meshstack_building_block_v2.spec.building_block_definition_version_ref`. (see [below for nested schema](#nestedatt--version_latest))
 - `versions` (Attributes List) List of all available versions of this building block definition. Never empty. (see [below for nested schema](#nestedatt--versions))
 
@@ -761,6 +762,64 @@ Read-Only:
 
 - `kind` (String) meshObject type, always `meshBuildingBlockDefinition`.
 - `uuid` (String) UUID (`metadata.uuid`) of `meshBuildingBlockDefinition`.
+
+
+<a id="nestedatt--status"></a>
+### Nested Schema for `status`
+
+Read-Only:
+
+- `versions` (Attributes List) Every version of this definition, sorted ascending by `number`, with the workload identity meshStack resolved for it. Building blocks keep running on the version they were created with until they are upgraded, so a cloud trust has to cover every version blocks still run on, for example every entry at or above a chosen `number`. Never empty. (see [below for nested schema](#nestedatt--status--versions))
+
+<a id="nestedatt--status--versions"></a>
+### Nested Schema for `status.versions`
+
+Read-Only:
+
+- `number` (Number) Version number.
+- `runner_uuid` (String) UUID of the runner this version runs on, null for the shared runner meshStack hosts. Together with `workload_identity_federation.subject` it lets a module key a cloud trust by runner.
+- `uuid` (String) UUID of the version, the same as in `versions`.
+- `workload_identity_federation` (Attributes) The identity a building block run of this version presents to a cloud, resolved by meshStack from the runner the version runs on. Null when that runner declares no workload identity federation. Configure the trust of your cloud backplane from here: `subject` is the runner's subject template with every placeholder filled in for this definition. `issuer` and the per-cloud `audience` are properties of the runner, so a backplane that has to exist before any definition can read them from the `meshstack_building_block_runner` data source instead. (see [below for nested schema](#nestedatt--status--versions--workload_identity_federation))
+
+<a id="nestedatt--status--versions--workload_identity_federation"></a>
+### Nested Schema for `status.versions.workload_identity_federation`
+
+Read-Only:
+
+- `aws` (Attributes) Workload identity federation values for AWS. Null when the runner does not federate with AWS. (see [below for nested schema](#nestedatt--status--versions--workload_identity_federation--aws))
+- `azure` (Attributes) Workload identity federation values for Azure. Null when the runner does not federate with Azure. (see [below for nested schema](#nestedatt--status--versions--workload_identity_federation--azure))
+- `gcp` (Attributes) Workload identity federation values for GCP. Null when the runner does not federate with GCP. (see [below for nested schema](#nestedatt--status--versions--workload_identity_federation--gcp))
+- `issuer` (String) OIDC issuer URL of the identity provider that issues tokens for runs of this version.
+- `subject` (String) The subject claim of those tokens: the identity a run of this version presents. It contains no placeholders.
+
+<a id="nestedatt--status--versions--workload_identity_federation--aws"></a>
+### Nested Schema for `status.versions.workload_identity_federation.aws`
+
+Read-Only:
+
+- `audience` (String) Audience the federated identity token is issued for.
+- `token_path` (String) Path the runner writes that token to.
+
+
+<a id="nestedatt--status--versions--workload_identity_federation--azure"></a>
+### Nested Schema for `status.versions.workload_identity_federation.azure`
+
+Read-Only:
+
+- `audience` (String) Audience the federated identity token is issued for.
+- `token_path` (String) Path the runner writes that token to.
+
+
+<a id="nestedatt--status--versions--workload_identity_federation--gcp"></a>
+### Nested Schema for `status.versions.workload_identity_federation.gcp`
+
+Read-Only:
+
+- `audience` (String) Audience the federated identity token is issued for.
+- `token_path` (String) Path the runner writes that token to.
+
+
+
 
 
 <a id="nestedatt--version_latest"></a>
