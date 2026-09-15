@@ -2218,6 +2218,87 @@ resource "meshstack_building_block_definition" "test" {
 	}
 }
 
+func TestAccBuildingBlockDefinitionTextLengthValidation(t *testing.T) {
+	// The widths meshStack stores these fields in are mirrored client-side, so an over-long value surfaces at
+	// plan time naming the field, rather than as a backend error during apply.
+	if !IsMockClientTest() {
+		t.Skip("text length validation is tested with mock client only")
+	}
+
+	t.Parallel()
+
+	config := func(input, output string) string {
+		return fmt.Sprintf(`
+resource "meshstack_building_block_definition" "test" {
+  metadata = { owned_by_workspace = "my-workspace" }
+  spec     = { display_name = "Test", description = "Test" }
+  version_spec = {
+    draft          = true
+    inputs         = { candidate = %s }
+    outputs        = { result = %s }
+    implementation = { terraform = { terraform_version = "1.9.0", repository_url = "https://github.com/example/bb.git" } }
+  }
+}`, input, output)
+	}
+
+	const acceptedOutput = `{ display_name = "Result", type = "STRING" }`
+
+	tests := []struct {
+		name        string
+		input       string
+		output      string
+		expectError *regexp.Regexp
+	}{
+		{
+			name:   "description of exactly 255 characters accepted",
+			input:  `{ display_name = "Candidate", type = "STRING", assignment_type = "USER_INPUT", description = "` + strings.Repeat("d", 255) + `" }`,
+			output: acceptedOutput,
+		},
+		{
+			name:        "overlong description rejected",
+			input:       `{ display_name = "Candidate", type = "STRING", assignment_type = "USER_INPUT", description = "` + strings.Repeat("d", 256) + `" }`,
+			output:      acceptedOutput,
+			expectError: regexp.MustCompile(`length must be\s+at\s+most 255`),
+		},
+		{
+			name:        "overlong input display name rejected",
+			input:       `{ display_name = "` + strings.Repeat("n", 256) + `", type = "STRING", assignment_type = "USER_INPUT" }`,
+			output:      acceptedOutput,
+			expectError: regexp.MustCompile(`length must be\s+at\s+most 255`),
+		},
+		{
+			name:        "overlong value validation regex rejected",
+			input:       `{ display_name = "Candidate", type = "STRING", assignment_type = "USER_INPUT", value_validation_regex = "` + strings.Repeat("r", 1001) + `" }`,
+			output:      acceptedOutput,
+			expectError: regexp.MustCompile(`length must be\s+at\s+most 1000`),
+		},
+		{
+			name:        "overlong validation regex error message rejected",
+			input:       `{ display_name = "Candidate", type = "STRING", assignment_type = "USER_INPUT", validation_regex_error_message = "` + strings.Repeat("m", 256) + `" }`,
+			output:      acceptedOutput,
+			expectError: regexp.MustCompile(`length must be\s+at\s+most 255`),
+		},
+		{
+			name:        "overlong output display name rejected",
+			input:       `{ display_name = "Candidate", type = "STRING", assignment_type = "USER_INPUT" }`,
+			output:      `{ display_name = "` + strings.Repeat("o", 256) + `", type = "STRING" }`,
+			expectError: regexp.MustCompile(`length must be\s+at\s+most 255`),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			step := resource.TestStep{Config: config(tt.input, tt.output)}
+			if tt.expectError != nil {
+				step.ExpectError = tt.expectError
+			}
+			ApplyAndTest(t, resource.TestCase{
+				Steps: []resource.TestStep{step},
+			})
+		})
+	}
+}
+
 func TestAccBuildingBlockDefinitionManualOutputsValidation(t *testing.T) {
 	// Output configuration rules for manual building blocks are validated client-side only.
 	if !IsMockClientTest() {
