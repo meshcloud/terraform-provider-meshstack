@@ -68,12 +68,18 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 		NestedObject: schema.NestedAttributeObject{
 			Attributes: map[string]schema.Attribute{
 				"display_name": schema.StringAttribute{
-					MarkdownDescription: "Human-readable display name for the input.",
+					MarkdownDescription: "Human-readable display name for the input. At most 255 characters.",
 					Required:            true,
+					Validators: []validator.String{
+						stringvalidator.LengthAtMost(255),
+					},
 				},
 				"description": schema.StringAttribute{
-					MarkdownDescription: "Description explaining the purpose and usage of the input.",
+					MarkdownDescription: "Description explaining the purpose and usage of the input. At most 255 characters.",
 					Optional:            true,
+					Validators: []validator.String{
+						stringvalidator.LengthAtMost(255),
+					},
 				},
 				"type": schema.StringAttribute{
 					MarkdownDescription: "Data type of the input. One of " + client.MeshBuildingBlockDefinitionInputTypes.Markdown() + ". " +
@@ -188,12 +194,18 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 					},
 				},
 				"value_validation_regex": schema.StringAttribute{
-					MarkdownDescription: "Regular expression pattern to validate input values.",
+					MarkdownDescription: "Regular expression pattern to validate input values. At most 1000 characters.",
 					Optional:            true,
+					Validators: []validator.String{
+						stringvalidator.LengthAtMost(1000),
+					},
 				},
 				"validation_regex_error_message": schema.StringAttribute{
-					MarkdownDescription: "Error message to display when regex validation fails.",
+					MarkdownDescription: "Error message to display when regex validation fails. At most 255 characters.",
 					Optional:            true,
+					Validators: []validator.String{
+						stringvalidator.LengthAtMost(255),
+					},
 				},
 				"json_schema": schema.StringAttribute{
 					CustomType: jsontypes.NormalizedType{},
@@ -245,11 +257,15 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 	outputs := schema.NestedAttributeObject{Attributes: map[string]schema.Attribute{
 		"display_name": schema.StringAttribute{
 			MarkdownDescription: "Human-readable display name for the output. " +
-				"For manual building blocks this is optional; when omitted it is derived from the matching input's display name.",
+				"For manual building blocks this is optional; when omitted it is derived from the matching input's display name. " +
+				"At most 255 characters.",
 			Optional: true,
 			Computed: true,
 			PlanModifiers: []planmodifier.String{
 				stringplanmodifier.UseNonNullStateForUnknown(),
+			},
+			Validators: []validator.String{
+				stringvalidator.LengthAtMost(255),
 			},
 		},
 		"assignment_type": schema.StringAttribute{
