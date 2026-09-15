@@ -43,8 +43,10 @@ resource "meshstack_building_block_runner" "example_with_wif" {
     restriction         = "PRIVATE"
 
     workload_identity_federation = {
-      subject = "system:serviceaccount:namespace:my-runner"
-      issuer  = "https://oidc.example.com"
+      # meshStack fills the placeholders in per building block definition and reports the result as
+      # that definition's status.workload_identity_federation.subject.
+      subject_template = "system:serviceaccount:namespace:workspace.{{ workspaceIdentifier }}.buildingblockdefinition.{{ buildingBlockDefinitionUuid }}"
+      issuer           = "https://oidc.example.com"
 
       gcp = {
         audience   = "gcp-workload-identity-provider:namespace"
@@ -105,7 +107,7 @@ Read-Only:
 Required:
 
 - `issuer` (String) The OIDC issuer URL of the identity provider that issues tokens for this runner. This is used to configure trust with the target cloud provider.
-- `subject` (String) The subject claim of the OIDC token issued to this runner, e.g., `system:serviceaccount:namespace:my-runner`.
+- `subject_template` (String) The template meshStack resolves into the subject claim of the OIDC token issued to a building block run on this runner, for example `system:serviceaccount:my-namespace:workspace.{{ workspaceIdentifier }}.buildingblockdefinition.{{ buildingBlockDefinitionUuid }}`. Two placeholders are available: `{{ workspaceIdentifier }}` (the identifier of the workspace owning the building block definition) and `{{ buildingBlockDefinitionUuid }}` (`metadata.uuid` of that definition). A template without placeholders is a fixed subject, which is what a runner minting one identity for all its runs declares. meshStack resolves the template per building block definition and reports the result as `meshstack_building_block_definition.<name>.status.workload_identity_federation.subject`.
 
 Optional:
 
