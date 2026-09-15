@@ -852,6 +852,47 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 				},
 			},
 
+			"status": schema.SingleNestedAttribute{
+				MarkdownDescription: "System-managed state of this building block definition.",
+				Computed:            true,
+				// On the container: Terraform plans a computed object as unknown, and the framework does
+				// not descend into one, so a modifier on a nested attribute would never run.
+				PlanModifiers: []planmodifier.Object{useStateUnlessStatusChanges{}},
+				Attributes: map[string]schema.Attribute{
+					"workload_identity_federation": wifStatusAttribute(
+						"The identity a building block run of the version this resource manages presents to a cloud. " +
+							"This resource always creates the newest version, so it is the `workload_identity_federation` of the entry of `versions` with the highest `number`, " +
+							"resolved by meshStack from the runner in `version_spec.runner_ref`. A module grants cloud access to this `subject`. " +
+							"Null when that runner declares no workload identity federation. " +
+							"A building block keeps running on the version it was created with until it is upgraded, so `versions` carries the identity of every older version as well. " +
+							"`issuer` and the per-cloud `audience` are properties of the runner, so a backplane that has to exist before any definition can read them from the " +
+							"`meshstack_building_block_runner` data source instead.",
+					),
+					"versions": schema.ListNestedAttribute{
+						MarkdownDescription: "Every version of this definition, sorted ascending by `number`, with the workload identity meshStack resolved for it. " +
+							"Building blocks keep running on the version they were created with until they are upgraded, so a cloud trust has to cover every version " +
+							"blocks still run on, for example every entry at or above a chosen `number`. Never empty.",
+						Computed: true,
+						NestedObject: schema.NestedAttributeObject{
+							Attributes: map[string]schema.Attribute{
+								"uuid": schema.StringAttribute{
+									MarkdownDescription: "UUID of the version, the same as in `versions`.",
+									Computed:            true,
+								},
+								"number": schema.Int64Attribute{
+									MarkdownDescription: "Version number.",
+									Computed:            true,
+								},
+								"workload_identity_federation": wifStatusAttribute(
+									"The identity a building block run of this version presents to a cloud, resolved by meshStack from the runner the version runs on. " +
+										"Null when that runner declares no workload identity federation.",
+								),
+							},
+						},
+					},
+				},
+			},
+
 			"ref": meshRefByUuid(meshRefOptions{Kind: client.MeshObjectKind.BuildingBlockDefinition, Description: "Reference to this building block definition. Reuse in `version_spec.dependency_refs` of other building block definitions.", Output: true}),
 		},
 	}
