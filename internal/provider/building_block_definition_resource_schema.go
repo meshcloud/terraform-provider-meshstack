@@ -524,7 +524,7 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 						},
 					},
 					"supported_platforms": schema.SetNestedAttribute{
-						MarkdownDescription: fmt.Sprintf("Set of platforms that this building block supports. Required and must be non-empty if target_type is `%s`", client.MeshBuildingBlockTypeTenantLevel),
+						MarkdownDescription: fmt.Sprintf("Set of platforms that this building block supports, each of them either a whole platform type or one individual platform. Required and must be non-empty if target_type is `%s`.", client.MeshBuildingBlockTypeTenantLevel),
 						Optional:            true,
 						Validators: []validator.Set{
 							validators.SupportedPlatforms{},
@@ -532,16 +532,16 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
 								"kind": schema.StringAttribute{
-									MarkdownDescription: "Kind of the platform ref. Always `meshPlatformType` for now.",
+									MarkdownDescription: "Kind of the platform ref: `" + client.MeshObjectKind.PlatformType + "` for a whole platform type, `" + client.MeshObjectKind.Platform + "` for one individual platform. A definition that names a platform type supports every platform of that type, so narrow it by naming an individual platform instead of the type rather than next to it. Requires meshStack 2026.39.0 or later.",
 									Optional:            true,
 									Computed:            true,
 									Default:             stringdefault.StaticString(client.MeshObjectKind.PlatformType),
 									Validators: []validator.String{
-										stringvalidator.OneOf(`meshPlatformType`),
+										stringvalidator.OneOf(client.MeshObjectKind.PlatformType, client.MeshObjectKind.Platform),
 									},
 								},
 								"name": schema.StringAttribute{
-									MarkdownDescription: "Name for `meshPlatformType` kind.",
+									MarkdownDescription: "Identifier of the platform type for kind `" + client.MeshObjectKind.PlatformType + "`, for example `AZURE`. For kind `" + client.MeshObjectKind.Platform + "` it is the platform's full identifier, for example `my-azure.eu-de`, taken from the platform's own `identifier`.",
 									Optional:            true,
 								},
 							},

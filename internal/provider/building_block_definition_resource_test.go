@@ -1977,6 +1977,110 @@ resource "meshstack_building_block_definition" "test" {
 	}
 }
 
+func TestAccBuildingBlockDefinitionSupportedPlatformKinds(t *testing.T) {
+	if !IsMockClientTest() {
+		t.Skip("meshStack rejects kind meshPlatform until the release that supports individual platforms, so these kinds can only be proven against the mock client")
+	}
+
+	t.Parallel()
+
+	supportedPlatformsConfig := func(supportedPlatforms string) string {
+		return fmt.Sprintf(`
+resource "meshstack_building_block_definition" "test" {
+  metadata = { owned_by_workspace = "my-workspace" }
+  spec = {
+    display_name        = "Test"
+    description         = "Test"
+    target_type         = "TENANT_LEVEL"
+    supported_platforms = %s
+  }
+  version_spec = {
+    draft = true
+    implementation = { manual = {} }
+  }
+}`, supportedPlatforms)
+	}
+
+	platformRef := func(kind, name string) knownvalue.Check {
+		return xknownvalue.MapExact(map[string]knownvalue.Check{
+			"kind": knownvalue.StringExact(kind),
+			"name": knownvalue.StringExact(name),
+		})
+	}
+
+	type platformStep struct {
+		supportedPlatforms string
+		expectStored       []knownvalue.Check
+	}
+
+	tests := []struct {
+		name        string
+		steps       []platformStep
+		expectError *regexp.Regexp
+	}{
+		{
+			name: "an individual platform, named by its full identifier",
+			steps: []platformStep{{
+				supportedPlatforms: `[{ kind = "meshPlatform", name = "my-platform.my-location" }]`,
+				expectStored:       []knownvalue.Check{platformRef(client.MeshObjectKind.Platform, "my-platform.my-location")},
+			}},
+		},
+		{
+			name: "a platform type next to a platform of another type",
+			steps: []platformStep{{
+				supportedPlatforms: `[{ name = "AZURE" }, { kind = "meshPlatform", name = "my-aws.my-location" }]`,
+				expectStored: []knownvalue.Check{
+					platformRef(client.MeshObjectKind.PlatformType, "AZURE"),
+					platformRef(client.MeshObjectKind.Platform, "my-aws.my-location"),
+				},
+			}},
+		},
+		{
+			name: "narrowing a platform type down to one of its platforms",
+			steps: []platformStep{
+				{
+					supportedPlatforms: `[{ name = "AZURE" }]`,
+					expectStored:       []knownvalue.Check{platformRef(client.MeshObjectKind.PlatformType, "AZURE")},
+				},
+				{
+					supportedPlatforms: `[{ kind = "meshPlatform", name = "my-azure.my-location" }]`,
+					expectStored:       []knownvalue.Check{platformRef(client.MeshObjectKind.Platform, "my-azure.my-location")},
+				},
+			},
+		},
+		{
+			name: "an unknown kind is rejected",
+			steps: []platformStep{{
+				supportedPlatforms: `[{ kind = "meshPlatformInstance", name = "my-platform.my-location" }]`,
+			}},
+			expectError: regexp.MustCompile(`value must be one of: \["meshPlatformType" "meshPlatform"\]`),
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			steps := make([]resource.TestStep, 0, len(test.steps))
+			for _, configured := range test.steps {
+				step := resource.TestStep{Config: supportedPlatformsConfig(configured.supportedPlatforms)}
+				if test.expectError != nil {
+					step.ExpectError = test.expectError
+				} else {
+					step.ConfigStateChecks = []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(
+							"meshstack_building_block_definition.test",
+							tfjsonpath.New("spec").AtMapKey("supported_platforms"),
+							knownvalue.SetExact(configured.expectStored),
+						),
+					}
+				}
+				steps = append(steps, step)
+			}
+
+			ApplyAndTest(t, resource.TestCase{Steps: steps})
+		})
+	}
+}
+
 func TestAccBuildingBlockDefinitionOptionalInputValidation(t *testing.T) {
 	// The rules an optional input has to satisfy are mirrored client-side, so they surface at plan time
 	// instead of as a backend 400 during apply.

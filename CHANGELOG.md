@@ -1,3 +1,8 @@
+# v0.25.5
+
+FEATURES:
+- `meshstack_building_block_definition`: `spec.supported_platforms` now accepts individual platforms next to whole platform types. Set an entry's `kind` to `meshPlatform` and its `name` to the platform's full identifier, taken from `meshstack_platform`'s own `identifier` — `supported_platforms = [{ kind = "meshPlatform", name = "my-azure.eu-de" }]` — and the definition is offered on that one platform instead of on every platform of its type. A definition may name whole platform types and individual platforms at the same time. Naming a platform type still means every platform of that type, so narrow a definition by replacing the type with the platform you want rather than adding that platform next to it. `kind` keeps defaulting to `meshPlatformType`, so an entry that names only a platform type behaves exactly as before and no existing configuration needs changing. This needs meshStack 2026.39.0 or later; an older meshStack rejects `kind = "meshPlatform"` with a 400. Upgrade the provider before that meshStack, because an older provider cannot express the new kind in configuration: it reads such an entry into state, but the only change it can plan for it is removal, and it can never put it back.
+
 # v0.25.4
 
 IMPROVEMENTS:
