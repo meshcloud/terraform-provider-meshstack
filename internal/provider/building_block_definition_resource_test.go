@@ -2227,7 +2227,7 @@ func TestAccBuildingBlockDefinitionTextLengthValidation(t *testing.T) {
 
 	t.Parallel()
 
-	config := func(inputKey, input, output string) string {
+	config := func(inputKey, input, outputKey, output string) string {
 		return fmt.Sprintf(`
 resource "meshstack_building_block_definition" "test" {
   metadata = { owned_by_workspace = "my-workspace" }
@@ -2235,10 +2235,10 @@ resource "meshstack_building_block_definition" "test" {
   version_spec = {
     draft          = true
     inputs         = { %s = %s }
-    outputs        = { result = %s }
+    outputs        = { %s = %s }
     implementation = { terraform = { terraform_version = "1.9.0", repository_url = "https://github.com/example/bb.git" } }
   }
-}`, inputKey, input, output)
+}`, inputKey, input, outputKey, output)
 	}
 
 	const acceptedOutput = `{ display_name = "Result", type = "STRING" }`
@@ -2248,6 +2248,7 @@ resource "meshstack_building_block_definition" "test" {
 		input       string
 		output      string
 		inputKey    string
+		outputKey   string
 		expectError *regexp.Regexp
 	}{
 		{
@@ -2292,6 +2293,13 @@ resource "meshstack_building_block_definition" "test" {
 			output:      `{ display_name = "` + strings.Repeat("o", 256) + `", type = "STRING" }`,
 			expectError: regexp.MustCompile(`outputs\["result"\]\.display_name\s+string\s+length must be\s+at\s+most 255`),
 		},
+		{
+			name:        "overlong output key rejected",
+			input:       `{ display_name = "Candidate", type = "STRING", assignment_type = "USER_INPUT" }`,
+			output:      acceptedOutput,
+			outputKey:   strings.Repeat("k", 256),
+			expectError: regexp.MustCompile(`Invalid Attribute Value Length`),
+		},
 	}
 
 	for _, tt := range tests {
@@ -2300,7 +2308,11 @@ resource "meshstack_building_block_definition" "test" {
 			if inputKey == "" {
 				inputKey = "candidate"
 			}
-			step := resource.TestStep{Config: config(inputKey, tt.input, tt.output)}
+			outputKey := tt.outputKey
+			if outputKey == "" {
+				outputKey = "result"
+			}
+			step := resource.TestStep{Config: config(inputKey, tt.input, outputKey, tt.output)}
 			if tt.expectError != nil {
 				step.ExpectError = tt.expectError
 			}
@@ -2345,6 +2357,11 @@ resource "meshstack_building_block_definition" "test" {
 			name:        "overlong display name rejected",
 			spec:        `{ display_name = "` + strings.Repeat("d", 129) + `", description = "Test" }`,
 			expectError: regexp.MustCompile(`spec\.display_name\s+string\s+length must be\s+at\s+most 128`),
+		},
+		{
+			name:        "overlong description rejected",
+			spec:        `{ display_name = "Test", description = "` + strings.Repeat("d", 256) + `" }`,
+			expectError: regexp.MustCompile(`spec\.description\s+string\s+length must be\s+at\s+most 255`),
 		},
 		{
 			name:        "overlong support url rejected",
