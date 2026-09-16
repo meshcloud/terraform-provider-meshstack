@@ -1,7 +1,8 @@
 # v0.25.4
 
-FIXES:
-- `meshstack_building_block_definition`: the provider now rejects text longer than meshStack stores at plan time, naming the attribute and its limit (#138). This covers `spec.display_name`, `spec.description`, `spec.support_url` and `spec.documentation_url`, a `version_spec.inputs` entry's `display_name`, `description`, `value_validation_regex` and `validation_regex_error_message`, a `version_spec.outputs` entry's `display_name`, and the keys of both maps. Each limit is documented on the attribute it applies to.
+IMPROVEMENTS:
+- `meshstack_building_block_definition`: text longer than meshStack stores is now rejected at plan time, naming the
+  attribute and its limit, rather than failing the apply (#138). Every capped attribute documents its limit.
 
 # v0.25.3
 
