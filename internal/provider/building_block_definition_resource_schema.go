@@ -29,6 +29,20 @@ import (
 	"github.com/meshcloud/terraform-provider-meshstack/internal/validators"
 )
 
+// The widths meshStack stores these texts in.
+const (
+	maxLengthDefinitionDisplayName = 128
+	maxLengthText                  = 255
+	maxLengthCondition             = 512
+	maxLengthValidationRegex       = 1000
+)
+
+// An attribute states its limit through this, so what a user reads cannot drift away from what the
+// validator on the same attribute enforces.
+func maxLengthNote(maxLength int) string {
+	return fmt.Sprintf("At most %d characters.", maxLength)
+}
+
 func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	// The policy descriptions below all hinge on dry-run support, which only the terraform implementation has.
 	implementationTerraform := client.MeshBuildingBlockImplementationTypeTerraform
@@ -60,27 +74,27 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 	}
 
 	inputsAttribute := schema.MapNestedAttribute{
-		MarkdownDescription: "Map of input definitions for the building block. Keys are input names of at most 255 characters, " +
-			"values are input configuration objects. Inputs define parameters that building blocks can receive.",
+		MarkdownDescription: fmt.Sprintf("Map of input definitions for the building block. Keys are input names of at most %d characters, "+
+			"values are input configuration objects. Inputs define parameters that building blocks can receive.", maxLengthText),
 		Optional: true,
 		Validators: []validator.Map{
 			validators.BuildingBlockDefinitionTagInputs{},
-			mapvalidator.KeysAre(stringvalidator.LengthAtMost(255)),
+			mapvalidator.KeysAre(stringvalidator.LengthAtMost(maxLengthText)),
 		},
 		NestedObject: schema.NestedAttributeObject{
 			Attributes: map[string]schema.Attribute{
 				"display_name": schema.StringAttribute{
-					MarkdownDescription: "Human-readable display name for the input. At most 255 characters.",
+					MarkdownDescription: "Human-readable display name for the input. " + maxLengthNote(maxLengthText),
 					Required:            true,
 					Validators: []validator.String{
-						stringvalidator.LengthAtMost(255),
+						stringvalidator.LengthAtMost(maxLengthText),
 					},
 				},
 				"description": schema.StringAttribute{
-					MarkdownDescription: "Description explaining the purpose and usage of the input. At most 255 characters.",
+					MarkdownDescription: "Description explaining the purpose and usage of the input. " + maxLengthNote(maxLengthText),
 					Optional:            true,
 					Validators: []validator.String{
-						stringvalidator.LengthAtMost(255),
+						stringvalidator.LengthAtMost(maxLengthText),
 					},
 				},
 				"type": schema.StringAttribute{
@@ -196,17 +210,17 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 					},
 				},
 				"value_validation_regex": schema.StringAttribute{
-					MarkdownDescription: "Regular expression pattern to validate input values. At most 1000 characters.",
+					MarkdownDescription: "Regular expression pattern to validate input values. " + maxLengthNote(maxLengthValidationRegex),
 					Optional:            true,
 					Validators: []validator.String{
-						stringvalidator.LengthAtMost(1000),
+						stringvalidator.LengthAtMost(maxLengthValidationRegex),
 					},
 				},
 				"validation_regex_error_message": schema.StringAttribute{
-					MarkdownDescription: "Error message to display when regex validation fails. At most 255 characters.",
+					MarkdownDescription: "Error message to display when regex validation fails. " + maxLengthNote(maxLengthText),
 					Optional:            true,
 					Validators: []validator.String{
-						stringvalidator.LengthAtMost(255),
+						stringvalidator.LengthAtMost(maxLengthText),
 					},
 				},
 				"json_schema": schema.StringAttribute{
@@ -235,10 +249,10 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 						"Conditions must not read each other in a cycle. " +
 						"Only a subset of CEL is accepted (comparisons, `&&`/`||`/`!`, `in`, `startsWith`/`endsWith`/`contains`/`size`, whole-number arithmetic); " +
 						"see the meshStack documentation on conditional inputs. " +
-						"At most 512 characters. Requires meshStack 2026.37.0 or later.",
+						maxLengthNote(maxLengthCondition) + " Requires meshStack 2026.37.0 or later.",
 					Optional: true,
 					Validators: []validator.String{
-						stringvalidator.LengthAtMost(512),
+						stringvalidator.LengthAtMost(maxLengthCondition),
 						stringvalidator.RegexMatches(regexp.MustCompile(`\S`), "must not be blank"),
 					},
 				},
@@ -260,14 +274,14 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 		"display_name": schema.StringAttribute{
 			MarkdownDescription: "Human-readable display name for the output. " +
 				"For manual building blocks this is optional; when omitted it is derived from the matching input's display name. " +
-				"At most 255 characters.",
+				maxLengthNote(maxLengthText),
 			Optional: true,
 			Computed: true,
 			PlanModifiers: []planmodifier.String{
 				stringplanmodifier.UseNonNullStateForUnknown(),
 			},
 			Validators: []validator.String{
-				stringvalidator.LengthAtMost(255),
+				stringvalidator.LengthAtMost(maxLengthText),
 			},
 		},
 		"assignment_type": schema.StringAttribute{
@@ -452,10 +466,10 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 				Required:            true,
 				Attributes: map[string]schema.Attribute{
 					"display_name": schema.StringAttribute{
-						MarkdownDescription: "Display name of the building block definition as shown in meshPanel. At most 128 characters.",
+						MarkdownDescription: "Display name of the building block definition as shown in meshPanel. " + maxLengthNote(maxLengthDefinitionDisplayName),
 						Required:            true,
 						Validators: []validator.String{
-							stringvalidator.LengthAtMost(128),
+							stringvalidator.LengthAtMost(maxLengthDefinitionDisplayName),
 						},
 					},
 					"display_name_template": schema.StringAttribute{
@@ -464,10 +478,11 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 							"input of the definition and nothing else; if any placeholder cannot be resolved, the building block " +
 							"is named after the unrendered template instead. Without this attribute, a new building block is " +
 							"named after `display_name`. Needs a meshStack that serves the field: an older one leaves it out of " +
-							"its response, so an apply that sets it fails Terraform's consistency check.",
+							"its response, so an apply that sets it fails Terraform's consistency check. " +
+							maxLengthNote(maxLengthText),
 						Optional: true,
 						Validators: []validator.String{
-							stringvalidator.LengthAtMost(255),
+							stringvalidator.LengthAtMost(maxLengthText),
 						},
 					},
 					"symbol": schema.StringAttribute{
@@ -484,10 +499,10 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 						},
 					},
 					"description": schema.StringAttribute{
-						MarkdownDescription: "Description of the building block definition as shown in meshPanel. At most 255 characters.",
+						MarkdownDescription: "Description of the building block definition as shown in meshPanel. " + maxLengthNote(maxLengthText),
 						Required:            true,
 						Validators: []validator.String{
-							stringvalidator.LengthAtMost(255),
+							stringvalidator.LengthAtMost(maxLengthText),
 						},
 					},
 					"readme": schema.StringAttribute{
@@ -495,17 +510,17 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 						Optional:            true,
 					},
 					"support_url": schema.StringAttribute{
-						MarkdownDescription: "URL pointing to support resources for the building block definition. At most 255 characters.",
+						MarkdownDescription: "URL pointing to support resources for the building block definition. " + maxLengthNote(maxLengthText),
 						Optional:            true,
 						Validators: []validator.String{
-							stringvalidator.LengthAtMost(255),
+							stringvalidator.LengthAtMost(maxLengthText),
 						},
 					},
 					"documentation_url": schema.StringAttribute{
-						MarkdownDescription: "URL pointing to documentation for the building block definition. At most 255 characters.",
+						MarkdownDescription: "URL pointing to documentation for the building block definition. " + maxLengthNote(maxLengthText),
 						Optional:            true,
 						Validators: []validator.String{
-							stringvalidator.LengthAtMost(255),
+							stringvalidator.LengthAtMost(maxLengthText),
 						},
 					},
 					"supported_platforms": schema.SetNestedAttribute{
@@ -642,7 +657,7 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 					},
 					"inputs": inputsAttribute,
 					"outputs": schema.MapNestedAttribute{
-						MarkdownDescription: "Map of output definitions for the building block. Keys are output names of at most 255 characters, " +
+						MarkdownDescription: fmt.Sprintf("Map of output definitions for the building block. Keys are output names of at most %d characters, ", maxLengthText) +
 							"values are output configuration objects. " +
 							"Outputs define values that building blocks produce and can be consumed by other building blocks. " +
 							"If implementation type is " + client.MeshBuildingBlockImplementationTypeManual.Markdown() +
@@ -655,7 +670,7 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 						Computed:     true,
 						NestedObject: outputs,
 						Validators: []validator.Map{
-							mapvalidator.KeysAre(stringvalidator.LengthAtMost(255)),
+							mapvalidator.KeysAre(stringvalidator.LengthAtMost(maxLengthText)),
 						},
 						PlanModifiers: []planmodifier.Map{
 							mapplanmodifier.UseStateForUnknown(),
