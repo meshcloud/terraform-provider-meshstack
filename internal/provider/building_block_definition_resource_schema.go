@@ -60,8 +60,8 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 	}
 
 	inputsAttribute := schema.MapNestedAttribute{
-		MarkdownDescription: "Map of input definitions for the building block. Keys are input names, values are input configuration objects. " +
-			"Inputs define parameters that building blocks can receive.",
+		MarkdownDescription: "Map of input definitions for the building block. Keys are input names of at most 255 characters, " +
+			"values are input configuration objects. Inputs define parameters that building blocks can receive.",
 		Optional: true,
 		Validators: []validator.Map{
 			validators.BuildingBlockDefinitionTagInputs{},
@@ -484,7 +484,7 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 						},
 					},
 					"description": schema.StringAttribute{
-						MarkdownDescription: "Description of the building block definition as shown in meshPanel.",
+						MarkdownDescription: "Description of the building block definition as shown in meshPanel. At most 255 characters.",
 						Required:            true,
 						Validators: []validator.String{
 							stringvalidator.LengthAtMost(255),
@@ -642,7 +642,8 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 					},
 					"inputs": inputsAttribute,
 					"outputs": schema.MapNestedAttribute{
-						MarkdownDescription: "Map of output definitions for the building block. Keys are output names, values are output configuration objects. " +
+						MarkdownDescription: "Map of output definitions for the building block. Keys are output names of at most 255 characters, " +
+							"values are output configuration objects. " +
 							"Outputs define values that building blocks produce and can be consumed by other building blocks. " +
 							"If implementation type is " + client.MeshBuildingBlockImplementationTypeManual.Markdown() +
 							", outputs are derived from the inputs by the backend (one output per input) and this attribute is a " +

@@ -416,7 +416,7 @@ Read-Only:
 
 Required:
 
-- `description` (String) Description of the building block definition as shown in meshPanel.
+- `description` (String) Description of the building block definition as shown in meshPanel. At most 255 characters.
 - `display_name` (String) Display name of the building block definition as shown in meshPanel. At most 128 characters.
 
 Optional:
@@ -478,9 +478,9 @@ Optional:
 
 - `deletion_mode` (String) Deletion behavior. One of `DELETE`, `PURGE`.
 - `dependency_refs` (Attributes Set) Set of refs to building block definitions this definition depends on. Prefer reusable refs from `meshstack_building_block_definition.<name>.ref` or `one(data.meshstack_building_block_definitions.<name>.building_block_definitions).ref`. (see [below for nested schema](#nestedatt--version_spec--dependency_refs))
-- `inputs` (Attributes Map) Map of input definitions for the building block. Keys are input names, values are input configuration objects. Inputs define parameters that building blocks can receive. (see [below for nested schema](#nestedatt--version_spec--inputs))
+- `inputs` (Attributes Map) Map of input definitions for the building block. Keys are input names of at most 255 characters, values are input configuration objects. Inputs define parameters that building blocks can receive. (see [below for nested schema](#nestedatt--version_spec--inputs))
 - `only_apply_once_per_tenant` (Boolean) Whether this building block can only be applied once per tenant.
-- `outputs` (Attributes Map) Map of output definitions for the building block. Keys are output names, values are output configuration objects. Outputs define values that building blocks produce and can be consumed by other building blocks. If implementation type is `manual`, outputs are derived from the inputs by the backend (one output per input) and this attribute is a **sparse override**: declare only the outputs you want to customize (keyed by the matching input); the rest are derived. An empty map or omitting it entirely means "no overrides". A declared output's `display_name`, `display_order`, and `assignment_type` (any of `NONE`, `PLATFORM_TENANT_ID`, `SIGN_IN_URL`, `RESOURCE_URL`, `SUMMARY`) are honored; its `type` is always derived from the input's translated output type (`SINGLE_SELECT` becomes `STRING`, `MULTI_SELECT`/`LIST` become `CODE`) and must not be set. (see [below for nested schema](#nestedatt--version_spec--outputs))
+- `outputs` (Attributes Map) Map of output definitions for the building block. Keys are output names of at most 255 characters, values are output configuration objects. Outputs define values that building blocks produce and can be consumed by other building blocks. If implementation type is `manual`, outputs are derived from the inputs by the backend (one output per input) and this attribute is a **sparse override**: declare only the outputs you want to customize (keyed by the matching input); the rest are derived. An empty map or omitting it entirely means "no overrides". A declared output's `display_name`, `display_order`, and `assignment_type` (any of `NONE`, `PLATFORM_TENANT_ID`, `SIGN_IN_URL`, `RESOURCE_URL`, `SUMMARY`) are honored; its `type` is always derived from the input's translated output type (`SINGLE_SELECT` becomes `STRING`, `MULTI_SELECT`/`LIST` become `CODE`) and must not be set. (see [below for nested schema](#nestedatt--version_spec--outputs))
 - `permissions` (Set of String) Set of API permissions required by this building block. Will provide building block runs with an ephemeral API token with the specified workspace permissions. See [Workspace Permissions](https://docs.meshcloud.io/api/authentication/api-permissions/) for available values and [documentation on ephemeral API keys](https://docs.dev.meshcloud.io/concepts/building-block/#ephemeral-api-keys).
 - `runner_ref` (Attributes) Reference to the runner to run the implementation. If omitted, the pre-defined shared runner is used suitable for the given `implementation` choice (see [below for nested schema](#nestedatt--version_spec--runner_ref))
 
