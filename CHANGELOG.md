@@ -1,7 +1,7 @@
 # v0.25.4
 
 FIXES:
-- `meshstack_building_block_definition`: the provider now rejects text longer than meshStack stores at plan time, naming the attribute and the limit (#138). Previously such a value reached the backend and came back as an opaque `http error 500` that named neither. The limits are documented on each attribute: `spec.display_name` is capped at 128 characters, `spec.description`, `spec.support_url` and `spec.documentation_url` at 255, a `version_spec.inputs` entry's `display_name`, `description` and `validation_regex_error_message` at 255 and its `value_validation_regex` at 1000, a `version_spec.outputs` entry's `display_name` at 255, and the key of either map at 255.
+- `meshstack_building_block_definition`: the provider now rejects text longer than meshStack stores at plan time, naming the attribute and its limit (#138). This covers `spec.display_name`, `spec.description`, `spec.support_url` and `spec.documentation_url`, a `version_spec.inputs` entry's `display_name`, `description`, `value_validation_regex` and `validation_regex_error_message`, a `version_spec.outputs` entry's `display_name`, and the keys of both maps. Each limit is documented on the attribute it applies to.
 
 # v0.25.3
 
