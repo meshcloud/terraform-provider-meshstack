@@ -126,7 +126,30 @@ func (r *buildingBlockDefinitionResource) Create(ctx context.Context, req resour
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	r.setStatus(ctx, &plan, bbdUuid, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, plan, converterOptions...)...)
+}
+
+// setStatus fills status from a fresh read. meshStack resolves a version's workload identity against
+// the runner of that version, so status is only final once the version is written - which is after
+// the create/update response the caller already holds.
+func (r *buildingBlockDefinitionResource) setStatus(ctx context.Context, model *buildingBlockDefinition, bbdUuid string, diags *diag.Diagnostics) {
+	definitionDto, err := r.buildingBlockDefinitionClient.Read(ctx, bbdUuid)
+	if err != nil {
+		diags.AddError("Error reading building block definition status", fmt.Sprintf(
+			"The definition '%s' and its version were written, but reading back its resolved status failed: %s", bbdUuid, err.Error()))
+		return
+	}
+	if definitionDto == nil {
+		diags.AddError("Building block definition not found", fmt.Sprintf(
+			"The definition '%s' was written, but reading it back returned nothing.", bbdUuid))
+		return
+	}
+	model.Status = newBuildingBlockDefinitionStatus(definitionDto.Status)
 }
 
 // writePolicies applies plannedSpec's approval policies and drift schedule to a definition that was just
@@ -179,6 +202,7 @@ func (r *buildingBlockDefinitionResource) Read(ctx context.Context, req resource
 	state := buildingBlockDefinition{
 		Metadata: definitionDto.Metadata,
 		Spec:     definitionDto.Spec,
+		Status:   newBuildingBlockDefinitionStatus(definitionDto.Status),
 	}
 
 	// Keep only the tags we already track. The API returns a superset (every schema property plus
@@ -882,6 +906,11 @@ func (r *buildingBlockDefinitionResource) Update(ctx context.Context, req resour
 			))
 			return
 		}
+	}
+
+	r.setStatus(ctx, &plan, bbdUuid, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
 	// Finally, the plan is aligned with the backend, and we can set it as the new state!

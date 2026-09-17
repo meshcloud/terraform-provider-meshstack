@@ -65,6 +65,8 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 	}
 
 	const bbdDescription = "An example building block definition"
+	statusVersionsPath := tfjsonpath.New("status").AtMapKey("versions")
+	statusWifPath := tfjsonpath.New("status").AtMapKey("workload_identity_federation")
 
 	t.Run("01_terraform", func(t *testing.T) {
 		config, addr := testconfig.BBDTerraform(t)
@@ -86,6 +88,11 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest_release"), knownvalue.Null()),
 						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest"), expectedVersion(1, versionStateDraft)),
 						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("versions"), knownvalue.ListExact([]knownvalue.Check{expectedVersion(1, versionStateDraft)})),
+						statecheck.ExpectKnownValue(addr.String(), statusVersionsPath, knownvalue.ListExact([]knownvalue.Check{
+							knownvalue.ObjectPartial(map[string]knownvalue.Check{"number": knownvalue.Int64Exact(1)}),
+						})),
+						// The shared runner's identity differs per meshStack, so only compare the block with its version.
+						statecheck.CompareValuePairs(addr.String(), statusWifPath, addr.String(), statusVersionsPath.AtSliceIndex(0).AtMapKey("workload_identity_federation"), compare.ValuesSame()),
 						xknownvalue.Ref(addr, "meshBuildingBlockDefinition", &resourceUuid),
 					},
 				},
@@ -1262,7 +1269,7 @@ func checkBuildingBlockVersionSpec(exampleSuffix string, expectedState enum.Entr
 		"deletion_mode":              knownvalue.StringExact(expectedDeletionMode),
 		"runner_ref": xknownvalue.MapExact(map[string]knownvalue.Check{
 			"kind": knownvalue.StringExact("meshBuildingBlockRunner"),
-			"uuid": knownvalue.StringExact(SharedBuildingBlockRunnerUuid),
+			"uuid": knownvalue.StringExact(client.SharedBuildingBlockRunnerUuid),
 		}),
 		"dependency_refs": knownvalue.SetSizeExact(0),
 		"inputs":          checkInputs,

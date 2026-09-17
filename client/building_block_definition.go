@@ -102,9 +102,21 @@ func (s MeshBuildingBlockDefinitionSpec) WithNeutralPolicies() MeshBuildingBlock
 }
 
 type MeshBuildingBlockDefinitionStatusVersion struct {
-	VersionUuid   string                                  `json:"versionUuid"`
-	VersionNumber int64                                   `json:"versionNumber"`
-	State         MeshBuildingBlockDefinitionVersionState `json:"state"`
+	VersionUuid                string                                                 `json:"versionUuid"`
+	VersionNumber              int64                                                  `json:"versionNumber"`
+	State                      MeshBuildingBlockDefinitionVersionState                `json:"state"`
+	WorkloadIdentityFederation *MeshBuildingBlockDefinitionWorkloadIdentityFederation `json:"workloadIdentityFederation"`
+}
+
+// MeshBuildingBlockDefinitionWorkloadIdentityFederation is the identity meshStack resolved for one version
+// of a definition from the runner that version runs on: the subject carries no placeholders any more.
+// Null when that runner declares no workload identity federation.
+type MeshBuildingBlockDefinitionWorkloadIdentityFederation struct {
+	Issuer  string                       `json:"issuer" tfsdk:"issuer"`
+	Subject string                       `json:"subject" tfsdk:"subject"`
+	Gcp     *MeshRunnerWifProviderConfig `json:"gcp,omitempty" tfsdk:"gcp"`
+	Aws     *MeshRunnerWifProviderConfig `json:"aws,omitempty" tfsdk:"aws"`
+	Azure   *MeshRunnerWifProviderConfig `json:"azure,omitempty" tfsdk:"azure"`
 }
 
 type MeshBuildingBlockDefinitionStatus struct {

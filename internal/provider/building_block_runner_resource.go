@@ -82,8 +82,8 @@ func (r *buildingBlockRunnerResource) Schema(_ context.Context, _ resource.Schem
 	}
 
 	wifAttributes := map[string]schema.Attribute{
-		"subject": schema.StringAttribute{
-			MarkdownDescription: "The subject claim of the OIDC token issued to this runner, e.g., `system:serviceaccount:namespace:my-runner`.",
+		"subject_template": schema.StringAttribute{
+			MarkdownDescription: subjectTemplateDescription("The template meshStack resolves into the subject claim of the OIDC token issued to a building block run on this runner"),
 			Required:            true,
 			Validators: []validator.String{
 				nonEmptyStringValidator,

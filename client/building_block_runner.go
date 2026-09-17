@@ -7,6 +7,10 @@ import (
 	"github.com/meshcloud/terraform-provider-meshstack/client/internal"
 )
 
+// SharedBuildingBlockRunnerUuid identifies the runner meshStack hosts for every workspace. It is the
+// runner a building block definition version uses when it names none.
+const SharedBuildingBlockRunnerUuid = "98520496-627d-43e6-82da-ce499179ff3f"
+
 type MeshBuildingBlockRunnerImplementationType string
 
 const (
@@ -49,11 +53,11 @@ type MeshBuildingBlockRunnerSpec struct {
 }
 
 type MeshRunnerWorkloadIdentityFed struct {
-	Subject *string                      `json:"subject,omitempty" tfsdk:"subject"`
-	Issuer  *string                      `json:"issuer,omitempty" tfsdk:"issuer"`
-	Gcp     *MeshRunnerWifProviderConfig `json:"gcp,omitempty" tfsdk:"gcp"`
-	Aws     *MeshRunnerWifProviderConfig `json:"aws,omitempty" tfsdk:"aws"`
-	Azure   *MeshRunnerWifProviderConfig `json:"azure,omitempty" tfsdk:"azure"`
+	SubjectTemplate *string                      `json:"subjectTemplate" tfsdk:"subject_template"`
+	Issuer          *string                      `json:"issuer,omitempty" tfsdk:"issuer"`
+	Gcp             *MeshRunnerWifProviderConfig `json:"gcp,omitempty" tfsdk:"gcp"`
+	Aws             *MeshRunnerWifProviderConfig `json:"aws,omitempty" tfsdk:"aws"`
+	Azure           *MeshRunnerWifProviderConfig `json:"azure,omitempty" tfsdk:"azure"`
 }
 
 type MeshRunnerWifProviderConfig struct {

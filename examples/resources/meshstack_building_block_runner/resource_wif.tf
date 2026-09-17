@@ -10,8 +10,10 @@ resource "meshstack_building_block_runner" "example_with_wif" {
     restriction         = "PRIVATE"
 
     workload_identity_federation = {
-      subject = "system:serviceaccount:namespace:my-runner"
-      issuer  = "https://oidc.example.com"
+      # meshStack fills the placeholders in per building block definition and reports the result as
+      # that definition's status.workload_identity_federation.subject.
+      subject_template = "system:serviceaccount:namespace:workspace.{{ workspaceIdentifier }}.buildingblockdefinition.{{ buildingBlockDefinitionUuid }}"
+      issuer           = "https://oidc.example.com"
 
       gcp = {
         audience   = "gcp-workload-identity-provider:namespace"
