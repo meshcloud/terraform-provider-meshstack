@@ -203,7 +203,7 @@ func buildingBlockReadStatusAttribute() schema.SingleNestedAttribute {
 			"status": computedString("Execution status. One of " + client.BuildingBlockStatuses.Markdown() + "."),
 			"force_purge": schema.BoolAttribute{MarkdownDescription: "True once a purge has been requested for this building block. " +
 				"A purge removes the block without a destroy run, leaving its cloud resources unmanaged (the lifecycle still reaches DELETED).", Computed: true},
-			"latest_run_uuid":     computedString("UUID of the latest modifying (apply/destroy) run. Null when none exists or when permissions are insufficient to read runs."),
+			"latest_run_uuid":     computedString("UUID of the latest modifying (apply/destroy) run. Null when none exists."),
 			"latest_dry_run_uuid": computedString("UUID of the latest dry (DETECT) run, but only when it is the newest run; null otherwise."),
 			"outputs": schema.MapNestedAttribute{
 				MarkdownDescription: "Outputs of the building block, available after a successful run.",
