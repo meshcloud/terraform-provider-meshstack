@@ -5,8 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/meshcloud/terraform-provider-meshstack/client"
-	"github.com/meshcloud/terraform-provider-meshstack/client/version"
+	"github.com/meshcloud/meshstack-cli/client"
 )
 
 const (
@@ -24,7 +23,7 @@ func main() {
 }
 
 // updateDocs reads the generated docs file, replaces the placeholder with the version, and writes it back.
-func updateDocs(version version.Version) error {
+func updateDocs(version client.Version) error {
 	fmt.Printf("Using MinMeshStackVersion: %s\n", version)
 
 	content, err := os.ReadFile(docsFilePath)

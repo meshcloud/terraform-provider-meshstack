@@ -7,8 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
-
-	"github.com/meshcloud/terraform-provider-meshstack/client"
+	"github.com/meshcloud/meshstack-cli/client"
 )
 
 var (
@@ -93,7 +92,7 @@ func (d *paymentMethodDataSource) Read(ctx context.Context, req datasource.ReadR
 		return
 	}
 
-	paymentMethod, err := d.meshPaymentMethodClient.Read(ctx, workspace, name)
+	paymentMethod, err := d.meshPaymentMethodClient.Read(ctx, name)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("Could not read payment method '%s' in workspace '%s'", name, workspace),

@@ -2,14 +2,21 @@ package clientmock
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/v2"
 	"fmt"
 	"reflect"
 
 	"github.com/google/uuid"
+	"github.com/meshcloud/meshstack-cli/client"
+	clientTypes "github.com/meshcloud/meshstack-cli/client/types"
+)
 
-	"github.com/meshcloud/terraform-provider-meshstack/client"
-	clientTypes "github.com/meshcloud/terraform-provider-meshstack/client/types"
+// wireCompatibility repeats what internal/provider marshals with, so that the round-trip below
+// keeps a nil collection nil instead of handing the test an empty one.
+var wireCompatibility = json.JoinOptions(
+	json.Deterministic(true),
+	json.FormatNilSliceAsNull(true),
+	json.FormatNilMapAsNull(true),
 )
 
 // deepCopyBB returns a deep copy of bb via JSON round-trip, isolating the store from caller mutations.
@@ -17,7 +24,7 @@ func deepCopyBB(bb *client.MeshBuildingBlockV2) *client.MeshBuildingBlockV2 {
 	if bb == nil {
 		return nil
 	}
-	data, err := json.Marshal(bb)
+	data, err := json.Marshal(bb, wireCompatibility)
 	if err != nil {
 		panic(fmt.Sprintf("deepCopyBB: marshal failed: %v", err))
 	}

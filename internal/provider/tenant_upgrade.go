@@ -7,9 +7,9 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/meshcloud/meshstack-cli/client"
+	clientTypes "github.com/meshcloud/meshstack-cli/client/types"
 
-	"github.com/meshcloud/terraform-provider-meshstack/client"
-	clientTypes "github.com/meshcloud/terraform-provider-meshstack/client/types"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/types/generic"
 )
 

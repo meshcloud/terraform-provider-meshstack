@@ -1,13 +1,13 @@
 package provider
 
 import (
-	"encoding/json"
+	"encoding/json/v2"
 	"reflect"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
+	clientTypes "github.com/meshcloud/meshstack-cli/client/types"
 
-	clientTypes "github.com/meshcloud/terraform-provider-meshstack/client/types"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/types/generic"
 )
 
@@ -26,7 +26,7 @@ func withValueFromConverterForClientTypeAny() generic.ConverterOption {
 		if in.Type() == clientTypeAny {
 			matched = true
 			var marshalled []byte
-			marshalled, err = json.Marshal(in.Interface())
+			marshalled, err = json.Marshal(in.Interface(), wireCompatibility)
 			if err != nil {
 				return
 			}

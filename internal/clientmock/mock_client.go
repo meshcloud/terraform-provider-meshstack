@@ -8,8 +8,10 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/meshcloud/terraform-provider-meshstack/client"
-	clientTypes "github.com/meshcloud/terraform-provider-meshstack/client/types"
+	"github.com/meshcloud/meshstack-cli/client"
+	clientTypes "github.com/meshcloud/meshstack-cli/client/types"
+	"github.com/meshcloud/meshstack-cli/client/types/xurl"
+
 	reflectwalk "github.com/meshcloud/terraform-provider-meshstack/internal/util/reflect"
 )
 
@@ -41,6 +43,7 @@ type Client struct {
 
 func (c *Client) AsClient() client.Client {
 	return client.Client{
+		Endpoint:                       xurl.MustParsef("http://localhost:8080"),
 		ApiKey:                         c.ApiKey,
 		BuildingBlock:                  c.BuildingBlock,
 		BuildingBlockRun:               c.BuildingBlockRun,

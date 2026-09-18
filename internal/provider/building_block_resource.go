@@ -2,7 +2,7 @@ package provider
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"maps"
@@ -27,10 +27,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
+	"github.com/meshcloud/meshstack-cli/client"
+	clientTypes "github.com/meshcloud/meshstack-cli/client/types"
+	"github.com/meshcloud/meshstack-cli/client/types/enum"
 
-	"github.com/meshcloud/terraform-provider-meshstack/client"
-	clientTypes "github.com/meshcloud/terraform-provider-meshstack/client/types"
-	"github.com/meshcloud/terraform-provider-meshstack/client/types/enum"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/types/generic"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/types/secret"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/util/poll"
@@ -470,7 +470,7 @@ func (m *buildingBlockModel) SetFromClientDto(dto *client.MeshBuildingBlockV2, i
 func marshalAnyIfPresent(in clientTypes.SecretOrAny) (*string, error) {
 	// JSON-encode so the value matches the jsontypes.Normalized attribute.
 	if in.HasY() {
-		marshalled, err := json.Marshal(in.Y)
+		marshalled, err := json.Marshal(in.Y, wireCompatibility)
 		if err != nil {
 			return nil, err
 		}
@@ -1219,7 +1219,7 @@ func userInputModelToJsonValue(input buildingBlockUserInputModel) (*string, erro
 	if raw == nil {
 		return nil, nil
 	}
-	marshalled, err := json.Marshal(raw)
+	marshalled, err := json.Marshal(raw, wireCompatibility)
 	if err != nil {
 		return nil, err
 	}
