@@ -2,7 +2,7 @@ package provider
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"maps"
@@ -27,10 +27,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
+	"github.com/meshcloud/meshstack-cli/client"
+	clientTypes "github.com/meshcloud/meshstack-cli/client/types"
+	"github.com/meshcloud/meshstack-cli/client/types/enum"
 
-	"github.com/meshcloud/terraform-provider-meshstack/client"
-	clientTypes "github.com/meshcloud/terraform-provider-meshstack/client/types"
-	"github.com/meshcloud/terraform-provider-meshstack/client/types/enum"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/types/generic"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/types/secret"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/util/poll"
@@ -49,6 +50,23 @@ var (
 // defaultBuildingBlockTimeout is the fallback time to wait for a building block run to complete when
 // the configuration does not set an explicit value in the `timeouts` block.
 const defaultBuildingBlockTimeout = 30 * time.Minute
+
+// runStartTimeout bounds the wait for the *start* of the run an update triggered, as opposed to the run
+// itself. It takes no `timeouts` knob of its own: scheduling a run is a backend write rather than the work
+// the run does, so a meshStack that has not done it within a minute cannot confirm anything about this apply.
+const runStartTimeout = time.Minute
+
+var errRunNotStarted = errors.New("meshStack did not start a run within " + runStartTimeout.String())
+
+var noPreviousRun *client.MeshBuildingBlockV2Status
+
+// latestRunUuidOf returns "" where no modifying run exists, which no run uuid can collide with.
+func latestRunUuidOf(status *client.MeshBuildingBlockV2Status) string {
+	if status == nil || status.LatestRunUuid == nil {
+		return ""
+	}
+	return *status.LatestRunUuid
+}
 
 func NewBuildingBlockResource() resource.Resource {
 	return &buildingBlockResource{}
@@ -262,13 +280,12 @@ func (r *buildingBlockResource) Schema(ctx context.Context, req resource.SchemaR
 					},
 					"latest_run_uuid": schema.StringAttribute{
 						MarkdownDescription: "UUID of the latest modifying (apply/destroy) run for this Building Block. " +
-							"Excludes dry runs (see `latest_dry_run_uuid`). Null when no modifying run exists, or when " +
-							"permissions are insufficient to read runs.",
+							"Excludes dry runs (see `latest_dry_run_uuid`). Null when no modifying run exists.",
 						Computed: true,
 					},
 					"latest_dry_run_uuid": schema.StringAttribute{
 						MarkdownDescription: "UUID of the latest dry (DETECT) run for this Building Block, but only when it is the " +
-							"newest run; null otherwise. Same permission gating as `latest_run_uuid`.",
+							"newest run; null otherwise.",
 						Computed: true,
 					},
 
@@ -470,7 +487,7 @@ func (m *buildingBlockModel) SetFromClientDto(dto *client.MeshBuildingBlockV2, i
 func marshalAnyIfPresent(in clientTypes.SecretOrAny) (*string, error) {
 	// JSON-encode so the value matches the jsontypes.Normalized attribute.
 	if in.HasY() {
-		marshalled, err := json.Marshal(in.Y)
+		marshalled, err := json.Marshal(in.Y, wireCompatibility)
 		if err != nil {
 			return nil, err
 		}
@@ -660,13 +677,19 @@ func addWaitingForInputWarning(diags *diag.Diagnostics, bb *client.MeshBuildingB
 
 // awaitRun polls until the building block reaches a terminal state (when waitForCompletion is set).
 //
-// A run triggered by the preceding create/update is reflected immediately as a PENDING status: the backend
-// eager-sets PENDING whenever a run will follow (a forced run, a version upgrade, or supplying the inputs
-// that make a parked block runnable), so the provider no longer has to disambiguate a stale previous-run
-// status from a freshly-triggered one. We simply poll the status: PENDING/IN_PROGRESS keep polling,
-// SUCCEEDED/FAILED/ABORTED are terminal, and a WAITING_FOR_*_INPUT status means the block is parked and
-// cannot proceed from this apply (a runnable block would be PENDING) — surfaced as a non-fatal warning
-// rather than polling to the timeout.
+// previousStatus is the status the block carried *before* the update this call awaits, and is noPreviousRun
+// on a create. meshStack eager-sets PENDING whenever a run will follow, but that write is not necessarily
+// visible by the time the first poll read lands: on a loaded meshStack the first read still returns the
+// previous run's SUCCEEDED, which would end the apply before the new run started and write a stale status
+// into Terraform state. So a read that still reports exactly that status *and* that run uuid is ignored,
+// bounded by runStartTimeout rather than by the run timeout.
+//
+// Both halves of the pair are needed, because meshStack has two ways of doing the work. An update that
+// changes inputs, parents or the definition version gets a new run, so the run uuid changes. Supplying the
+// operator input a parked block is waiting for resumes the run it already has, so only the status moves.
+//
+// A WAITING_FOR_*_INPUT status means the block is parked and cannot proceed from this apply, since a
+// runnable block would be PENDING. That is a warning rather than polling to the timeout.
 //
 // A terminal status that is not SUCCEEDED is always a warning, never an error, on a create and on an
 // update alike. Whether it fails the apply is the configuration's decision, taken with a postcondition
@@ -676,17 +699,30 @@ func (r *buildingBlockResource) awaitRun(
 	ctx context.Context,
 	diags *diag.Diagnostics,
 	uuid string,
+	previousStatus *client.MeshBuildingBlockV2Status,
 	waitForCompletion bool,
 	timeout time.Duration,
 ) *client.MeshBuildingBlockV2 {
 	if !waitForCompletion {
 		return nil
 	}
+	backendActed := previousStatus == nil
+	runStartDeadline := time.Now().Add(runStartTimeout)
 	predicate := func(bb *client.MeshBuildingBlockV2) (bool, error) {
 		if bb == nil {
 			// The block 404'd while we were waiting (purged, or its definition deleted out-of-band). Stop
 			// polling with a clear error instead of dereferencing a nil block in the checks below.
 			return false, fmt.Errorf("building block disappeared while waiting for its run to complete")
+		}
+		if !backendActed {
+			backendActed = bb.Status != nil &&
+				(bb.Status.Status != previousStatus.Status || latestRunUuidOf(bb.Status) != latestRunUuidOf(previousStatus))
+			if !backendActed {
+				if time.Now().After(runStartDeadline) {
+					return false, errRunNotStarted
+				}
+				return false, nil
+			}
 		}
 		// A block the backend returns without a status yet falls through to CreateSuccessful, which keeps
 		// polling for one.
@@ -707,6 +743,20 @@ func (r *buildingBlockResource) awaitRun(
 		poll.WithLastResultTo(&final)).
 		Until(ctx, predicate)
 	switch {
+	case errors.Is(err, errRunNotStarted):
+		unchanged := fmt.Sprintf("status %s", previousStatus.Status)
+		if run := latestRunUuidOf(previousStatus); run != "" {
+			unchanged += fmt.Sprintf(", from run %s", run)
+		}
+		diags.AddError(
+			"meshStack did not start a run for the updated building block",
+			fmt.Sprintf("meshStack accepted the update of building block %s but had not started a run for it %s later: the "+
+				"block still reports exactly what it reported before the update — %s. This apply fails here rather than "+
+				"recording the previous run's outcome as the result of this change. A meshStack under load can be slow to "+
+				"schedule a run, so inspect the building block in meshPanel and apply again once its run has finished. If no "+
+				"new run appears there at all, report this building block's uuid as a backend issue.",
+				uuid, runStartTimeout, unchanged),
+		)
 	case err != nil:
 		// A timeout, an unknown status or a vanished block is not a run status a postcondition could
 		// decide on, so it stays an error.
@@ -758,7 +808,7 @@ func (r *buildingBlockResource) Create(ctx context.Context, req resource.CreateR
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		final := r.awaitRun(ctx, &resp.Diagnostics, *created.Metadata.Uuid, true, timeout)
+		final := r.awaitRun(ctx, &resp.Diagnostics, *created.Metadata.Uuid, noPreviousRun, true, timeout)
 		if final != nil {
 			plan.SetFromClientDto(final, false, &resp.Diagnostics)
 			resp.Diagnostics.Append(generic.Set(ctx, &resp.State, plan, converterOptions...)...)
@@ -1103,7 +1153,7 @@ func (r *buildingBlockResource) Update(ctx context.Context, req resource.UpdateR
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		final := r.awaitRun(ctx, &resp.Diagnostics, *updated.Metadata.Uuid, plan.WaitForCompletion, timeout)
+		final := r.awaitRun(ctx, &resp.Diagnostics, *updated.Metadata.Uuid, state.Status, plan.WaitForCompletion, timeout)
 		switch {
 		case final != nil:
 			effective = final
@@ -1129,13 +1179,33 @@ func (r *buildingBlockResource) Update(ctx context.Context, req resource.UpdateR
 	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, plan, converterOptions...)...)
 }
 
+// requestDeletion waits out the conflict meshStack answers while the block's run has not reached a
+// final status. A run in flight at destroy is normal: `wait_for_completion = false` leaves one
+// behind, and meshStack starts runs no apply asked for.
+func (r *buildingBlockResource) requestDeletion(ctx context.Context, uuid string, purge bool, timeout time.Duration) error {
+	return retry.RetryContext(ctx, timeout, func() *retry.RetryError {
+		err := r.BuildingBlockClient.Delete(ctx, uuid, purge)
+		if httpErr, ok := errors.AsType[client.HttpError](err); ok && httpErr.IsConflict() {
+			return retry.RetryableError(err)
+		}
+		if err != nil {
+			return retry.NonRetryableError(err)
+		}
+		return nil
+	})
+}
+
 func (r *buildingBlockResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	uuid := generic.GetAttribute[string](ctx, req.State, path.Root("metadata").AtName("uuid"), &resp.Diagnostics)
 	purgeOnDelete := generic.GetAttribute[bool](ctx, req.State, path.Root("purge_on_delete"), &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	if err := r.BuildingBlockClient.Delete(ctx, uuid, purgeOnDelete); err != nil {
+	timeout := resolveTimeout(ctx, req.State, "delete", &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if err := r.requestDeletion(ctx, uuid, purgeOnDelete, timeout); err != nil {
 		resp.Diagnostics.AddError(
 			"Error deleting building block",
 			"Could not delete building block, unexpected error: "+err.Error(),
@@ -1148,10 +1218,6 @@ func (r *buildingBlockResource) Delete(ctx context.Context, req resource.DeleteR
 	// DELETED/404 essentially immediately. Returning early on the 202 would let the resource be dropped
 	// from state while teardown is still in flight, racing any dependent delete that follows — e.g.
 	// deleting the building block definition then fails 409 "existing BuildingBlocks referencing it".
-	timeout := resolveTimeout(ctx, req.State, "delete", &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
 	var final *client.MeshBuildingBlockV2
 	err := poll.AtMostFor(timeout, r.BuildingBlockClient.ReadFunc(uuid),
 		poll.WithLastResultTo(&final)).
@@ -1219,7 +1285,7 @@ func userInputModelToJsonValue(input buildingBlockUserInputModel) (*string, erro
 	if raw == nil {
 		return nil, nil
 	}
-	marshalled, err := json.Marshal(raw)
+	marshalled, err := json.Marshal(raw, wireCompatibility)
 	if err != nil {
 		return nil, err
 	}

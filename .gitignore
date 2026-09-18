@@ -32,3 +32,6 @@ scratch/
 covdata/
 junit.xml
 unit.txt
+
+go.work
+go.work.sum

@@ -60,6 +60,19 @@ today:
 - **meshcloud-internal — local dev stack**: the `.env` for a local backend is reconstructible from
   the `meshfed-release` dev seed; the **`acceptance-testing`** skill documents the exact values.
 
+Resolution goes through `github.com/meshcloud/meshstack-cli/pkg/auth`, which the provider and the
+meshStack CLI share, so both apply the same order: the `provider` block, then the environment, then
+a **meshStack CLI profile**. The acceptance suite deliberately uses the environment — it resolves
+from an empty provider block, so a run touches no profile and writes no file.
+
+A profile is the other way to run a scratch config: `meshstack auth login` writes one, and the
+`profile` argument or `MESHSTACK_PROFILE` names it, so the configuration needs no credential at
+all. A profile holding a browser login acts in exactly one workspace, because meshStack binds a
+user access token to one; the `workspace` argument or `MESHSTACK_WORKSPACE` names it, and without
+either the provider takes the only workspace the login reaches, else the profile's default. Both
+tools take the same lock while renewing, which is why the provider writes a rotated refresh token
+back rather than leaving a stale one behind.
+
 > Acceptance tests are **state-independent by design**: each run creates its own resources
 > (workspaces and the like) with random-suffixed names, so concurrent runs and pre-existing data
 > never collide or interfere. A test-harness guard (`provider_test.go`, `DefaultTestPreCheck`)
@@ -99,12 +112,14 @@ task testacc -- -run=BuildingBlock # filter by name
 ### Building against sibling meshcloud modules (*meshcloud-internal*)
 
 This repo builds against the versions its `go.mod` pins, and that is what its own CI tests. To build
-against another meshcloud Go module's working tree instead, put the checkouts side by side under one
-parent and run `./gradlew goWork` in the `meshfed-release` checkout. That writes a single `go.work`
-in the **parent** directory, with a `use ./<repo>` line per repository it finds; nothing lands inside
-this one. Go searches upwards for it, so `task test`, `task build` and a plain `go test` here then
-resolve `github.com/meshcloud/…` imports to the sibling sources. `GOWORK=off` in front of a command
-gets the pinned versions back for that one run.
+against another meshcloud Go module's working tree instead — `meshstack-cli`, whose `client` package
+this provider imports, above all — check the repositories out beside `meshfed-release` as `../<repo>`
+and run `./gradlew goWork` there. That writes a single `go.work` in the **parent** directory, with a
+`use ./<repo>` line per repository it finds; nothing lands inside this one. Go searches upwards for
+it, so `task test`, `task build` and a plain `go test` here then resolve `github.com/meshcloud/…`
+imports to the sibling sources. `GOWORK=off` in front of a command gets the pinned versions back for
+that one run. `meshfed-release` also runs this repo's acceptance suite against a backend it builds:
+`./gradlew :terraform-provider-meshstack:acceptanceTest`.
 
 ### Adding a resource / data source (and its tests)
 
@@ -114,7 +129,8 @@ Adding or reworking a resource or data source — the implementation, example `.
 refs, DTOs, `Id`/`Uuid` naming, receivers, preview API, computed-only outputs). In short:
 
 1. `internal/provider/<name>_resource.go` — CRUD + `Schema`.
-2. `client/` — typed API client methods.
+2. `github.com/meshcloud/meshstack-cli/client` — typed API client methods, in the
+   [meshstack-cli](https://github.com/meshcloud/meshstack-cli) repository.
 3. `provider.go` — register it.
 4. `examples/resources/meshstack_<name>/` — example `.tf`.
 5. `internal/provider/acctest/testconfig/build_<name>.go` — a builder.

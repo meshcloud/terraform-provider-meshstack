@@ -5,14 +5,14 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/meshcloud/terraform-provider-meshstack/client"
+	"github.com/meshcloud/meshstack-cli/client"
 )
 
 type MeshPaymentMethodClient struct {
 	Store *Store[client.MeshPaymentMethod]
 }
 
-func (m MeshPaymentMethodClient) Read(_ context.Context, workspace string, identifier string) (*client.MeshPaymentMethod, error) {
+func (m MeshPaymentMethodClient) Read(_ context.Context, identifier string) (*client.MeshPaymentMethod, error) {
 	v, _ := m.Store.Get(identifier)
 	return v, nil
 }

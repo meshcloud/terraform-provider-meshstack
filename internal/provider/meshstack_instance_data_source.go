@@ -6,8 +6,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-
-	"github.com/meshcloud/terraform-provider-meshstack/client"
+	"github.com/meshcloud/meshstack-cli/client"
+	"github.com/meshcloud/meshstack-cli/client/types/enum"
+	"github.com/meshcloud/meshstack-cli/client/types/xurl"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
@@ -22,6 +23,7 @@ func NewMeshStackInstanceDataSource() datasource.DataSource {
 
 type meshStackInstanceDataSource struct {
 	meshInfoClient client.MeshInfoClient
+	endpoint       xurl.URL
 }
 
 func (d *meshStackInstanceDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -42,9 +44,10 @@ func (d *meshStackInstanceDataSource) Schema(ctx context.Context, req datasource
 				Computed:            true,
 			},
 			"enabled_feature_flags": schema.SetAttribute{
-				MarkdownDescription: "Feature flags enabled on this meshStack instance. Currently the only possible entry is `four_eyes_role_approval` (the four-eyes principle / role approval).",
-				ElementType:         types.StringType,
-				Computed:            true,
+				MarkdownDescription: "Feature flags enabled on this meshStack instance. Currently the only possible entry is " +
+					client.MeshFeatureFlagFourEyesRoleApproval.Markdown() + " (the four-eyes principle / role approval).",
+				ElementType: types.StringType,
+				Computed:    true,
 			},
 			"metadata": schema.MapAttribute{
 				MarkdownDescription: "Git commit SHA of each meshStack subsystem making up this instance, keyed by subsystem name.",
@@ -62,6 +65,7 @@ func (d *meshStackInstanceDataSource) Schema(ctx context.Context, req datasource
 func (d *meshStackInstanceDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	resp.Diagnostics.Append(configureProviderClient(req.ProviderData, func(client client.Client) {
 		d.meshInfoClient = client.MeshInfo
+		d.endpoint = client.Endpoint
 	})...)
 }
 
@@ -71,6 +75,18 @@ func (d *meshStackInstanceDataSource) Read(ctx context.Context, req datasource.R
 		resp.Diagnostics.AddError("Unable to read meshStack instance information", err.Error())
 		return
 	}
-
-	resp.Diagnostics.Append(resp.State.Set(ctx, info)...)
+	model := struct {
+		client.MeshInfo
+		Endpoint string                               `tfsdk:"endpoint"`
+		Flags    []enum.Entry[client.MeshFeatureFlag] `tfsdk:"enabled_feature_flags"`
+	}{
+		MeshInfo: info,
+		Endpoint: d.endpoint.String(),
+		// An instance with no feature flag on reads as an empty set, not as null.
+		Flags: make([]enum.Entry[client.MeshFeatureFlag], 0),
+	}
+	if info.Is4EPEnabled {
+		model.Flags = append(model.Flags, client.MeshFeatureFlagFourEyesRoleApproval)
+	}
+	resp.Diagnostics.Append(resp.State.Set(ctx, model)...)
 }

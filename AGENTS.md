@@ -55,6 +55,13 @@ The provider needs three env vars — `MESHSTACK_ENDPOINT`, `MESHSTACK_API_KEY`,
 git-ignored `.env` convention, the *meshcloud-internal* dev-seed shortcut, and the never-target-prod
 warning) lives once in [`DEVELOPMENT.md`](DEVELOPMENT.md) → Backends & authentication.
 
+Credential resolution itself is **not in this repository**. It lives in
+`github.com/meshcloud/meshstack-cli/pkg/auth`, shared with the meshStack CLI, so both front ends
+apply one precedence order and renew through one file lock. This repo contributes the provider
+block as a `setting.Source` — `MeshStackProviderModel` in `internal/provider/provider_model.go` —
+and a fallback that names the workspace a browser login acts in. Neither prompts, and neither
+opens a browser.
+
 ## Always-on rules
 
 <rules id="always-on">
@@ -91,7 +98,7 @@ require them.
 | Skill | Use for |
 |---|---|
 | `resource-development` | Add/rework a resource or data source + tests; schema/client design conventions |
-| `modern-go` | Modern Go idioms (`new(expr)`, generics), the pointer/`omitempty` rule, the `go fix` sweep |
+| `modern-go` | Modern Go idioms (`new(expr)`, generics), the `encoding/json/v2` tag rules, the `go fix` sweep |
 | `acceptance-testing` | Local backend bring-up; run & debug the acceptance suite |
 | `scratch-config` | Standalone repro/debug/prototype against any meshStack you own |
 | `changelog-management` | Pick the next version, maintain `CHANGELOG.md` |
@@ -100,5 +107,7 @@ require them.
 
 - `internal/provider/` — provider implementation (`provider.go`, `*_resource.go`, `*_data_source.go`).
 - `internal/provider/acctest/` — test-only HCL builders (`testconfig/`) and state-check helpers (`xknownvalue/`).
-- `client/` — meshStack API client (JWT auth, RESTful CRUD; shared ref DTOs in `refs.go`).
+- `github.com/meshcloud/meshstack-cli/client` — the meshStack API client (JWT auth, RESTful CRUD;
+  shared ref DTOs in `refs.go`), shared with the meshStack CLI and maintained in
+  [meshstack-cli](https://github.com/meshcloud/meshstack-cli). A new client method ships there first.
 - `docs/` — generated registry docs (`task generate`); `examples/` — embedded `.tf` examples.

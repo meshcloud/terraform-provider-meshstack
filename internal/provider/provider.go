@@ -3,8 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
-	"net/url"
-	"os"
+	"log/slog"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -12,14 +11,17 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
-	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/meshcloud/meshstack-cli/client"
+	"github.com/meshcloud/meshstack-cli/pkg/auth"
+	"github.com/meshcloud/meshstack-cli/pkg/setting"
 
-	"github.com/meshcloud/terraform-provider-meshstack/client"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/util/logging"
 )
 
-// Ensure MeshStackProvider satisfies various provider interfaces.
 var _ provider.ProviderWithFunctions = &MeshStackProvider{}
+
+// gitHubRepo is where the release check looks for a newer provider release.
+const gitHubRepo = "meshcloud/terraform-provider-meshstack"
 
 type MeshStackProvider struct {
 	// version is set to the provider version on release, "dev" when the
@@ -28,14 +30,7 @@ type MeshStackProvider struct {
 	version string
 	// clientFactory is helpful when injecting mocked clients during testing,
 	// by default, newProviderClient is run.
-	clientFactory func(ctx context.Context, data MeshStackProviderModel, providerVersion string) (client.Client, diag.Diagnostics)
-}
-
-type MeshStackProviderModel struct {
-	Endpoint  types.String `tfsdk:"endpoint"`
-	ApiKey    types.String `tfsdk:"apikey"`
-	ApiSecret types.String `tfsdk:"apisecret"`
-	ApiToken  types.String `tfsdk:"apitoken"`
+	clientFactory func(ctx context.Context, data MeshStackProviderModel, providerVersion string, diags *diag.Diagnostics) client.Client
 }
 
 func (p *MeshStackProvider) Metadata(_ context.Context, _ provider.MetadataRequest, resp *provider.MetadataResponse) {
@@ -44,43 +39,24 @@ func (p *MeshStackProvider) Metadata(_ context.Context, _ provider.MetadataReque
 }
 
 func (p *MeshStackProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp *provider.SchemaResponse) {
-	resp.Schema = schema.Schema{
-		Attributes: map[string]schema.Attribute{
-			"endpoint": schema.StringAttribute{
-				MarkdownDescription: "URl of meshStack API, e.g. `https://api.my.meshstack.io`",
-				Optional:            true,
-			},
-			"apikey": schema.StringAttribute{
-				MarkdownDescription: "API Key to authenticate against the meshStack API",
-				Optional:            true,
-			},
-			"apisecret": schema.StringAttribute{
-				MarkdownDescription: "API Secret to authenticate against the meshStack API",
-				Optional:            true,
-				Sensitive:           true,
-			},
-			"apitoken": schema.StringAttribute{
-				MarkdownDescription: "API Token to authenticate against the meshStack API",
-				Optional:            true,
-				Sensitive:           true,
-			},
-		},
+	resp.Schema = schema.Schema{Attributes: map[string]schema.Attribute{}}
+	for key, attribute := range modelAttributes {
+		resp.Schema.Attributes[key] = schema.StringAttribute{
+			MarkdownDescription: attribute.MarkdownDescription(),
+			Optional:            true,
+			Sensitive:           attribute.Sensitive,
+		}
 	}
 }
 
-const (
-	envKeyMeshstackEndpoint  = "MESHSTACK_ENDPOINT"
-	envKeyMeshstackApiKey    = "MESHSTACK_API_KEY"
-	envKeyMeshstackApiSecret = "MESHSTACK_API_SECRET"
-	envKeyMeshstackApiToken  = "MESHSTACK_API_TOKEN"
-)
-
 func (p *MeshStackProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
-	client.SetLogger(logging.TerraformClientLogger{MessagePrefix: "client: "})
+	slog.SetDefault(slog.New(logging.SlogHandler{MessagePrefix: "meshstack: "}))
 	var data MeshStackProviderModel
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
-	providerClient, diags := p.clientFactory(ctx, data, p.version)
-	resp.Diagnostics.Append(diags...)
+	providerClient := p.clientFactory(ctx, data, p.version, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	resp.DataSourceData = providerClient
 	resp.ResourceData = providerClient
 }
@@ -101,70 +77,23 @@ func configureProviderClient(providerData any, consumer func(client client.Clien
 	return
 }
 
-func newProviderClient(ctx context.Context, data MeshStackProviderModel, providerVersion string) (providerClient client.Client, diags diag.Diagnostics) {
-	var endpoint string
-	if !data.Endpoint.IsNull() && !data.Endpoint.IsUnknown() {
-		endpoint = data.Endpoint.ValueString()
-	} else {
-		var ok bool
-		endpoint, ok = os.LookupEnv(envKeyMeshstackEndpoint)
-		if !ok {
-			diags.AddError("Provider endpoint missing.", "Set provider.meshstack.endpoint or use MESHSTACK_ENDPOINT environment variable.")
-			return
-		}
-	}
-
-	parsedEndpoint, err := url.Parse(endpoint)
+func newProviderClient(ctx context.Context, data MeshStackProviderModel, providerVersion string, diags *diag.Diagnostics) client.Client {
+	providerClient, err := auth.ResolveClient(ctx, auth.ResolveSessionOptions{
+		Version:        providerVersion,
+		GitHubRepo:     gitHubRepo,
+		SettingSources: providerSettingSources(data),
+	})
 	if err != nil {
-		diags.AddError("Provider endpoint not valid.", "The value provided as the providers endpoint is not a valid URL.")
-		return
+		diags.AddError("Failed to create meshStack client", err.Error())
 	}
+	return providerClient
+}
 
-	var apiToken string
-	if !data.ApiToken.IsNull() && !data.ApiToken.IsUnknown() {
-		apiToken = data.ApiToken.ValueString()
-	} else {
-		apiToken = os.Getenv(envKeyMeshstackApiToken)
-	}
-
-	var apiKey string
-	if !data.ApiKey.IsNull() && !data.ApiKey.IsUnknown() {
-		apiKey = data.ApiKey.ValueString()
-	} else {
-		apiKey = os.Getenv(envKeyMeshstackApiKey)
-	}
-
-	var apiSecret string
-	if !data.ApiSecret.IsNull() && !data.ApiSecret.IsUnknown() {
-		apiSecret = data.ApiSecret.ValueString()
-	} else {
-		apiSecret = os.Getenv(envKeyMeshstackApiSecret)
-	}
-
-	// Either apiToken or apiKey/apiSecret must be set for authorization against backend.
-	var auth client.Authorization
-	if apiToken == "" {
-		if apiKey == "" {
-			diags.AddError("Provider API key missing.", "Set provider.meshstack.apikey or use MESHSTACK_API_KEY environment variable.")
-		}
-		if apiSecret == "" {
-			diags.AddError("Provider API secret missing.", "Set provider.meshstack.apisecret or use MESHSTACK_API_SECRET environment variable.")
-		}
-		if diags.HasError() {
-			return
-		}
-		auth = client.NewApiKeyAuthorization(apiKey, apiSecret)
-	} else {
-		auth = client.NewApiTokenAuthorization(apiToken)
-	}
-
-	userAgent := fmt.Sprintf("terraform-provider-meshstack/%s", providerVersion)
-	providerClient, err = client.New(ctx, parsedEndpoint, userAgent, auth)
-	if err != nil {
-		diags.AddError("Failed to create meshStack client.", err.Error())
-		return
-	}
-	return
+// providerSettingSources is everything this repository contributes to the precedence: the block
+// outranks the environment, and the workspace of a profile's login ranks below it. Where the
+// environment and a profile rank relative to each other is the meshStack CLI's decision.
+func providerSettingSources(data MeshStackProviderModel) setting.Sources {
+	return append(setting.SingleSource(data), newWorkspaceSource())
 }
 
 func (p *MeshStackProvider) Resources(_ context.Context) []func() resource.Resource {

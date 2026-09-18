@@ -2,7 +2,7 @@ package provider
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/v2"
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -18,8 +18,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-
-	"github.com/meshcloud/terraform-provider-meshstack/client"
+	"github.com/meshcloud/meshstack-cli/client"
 )
 
 var (
@@ -350,7 +349,7 @@ func toResourceModel(io client.MeshBuildingBlockIO, diags *diag.Diagnostics) (re
 		}
 
 	case client.MESH_BUILDING_BLOCK_IO_TYPE_LIST:
-		value, err := json.Marshal(io.Value)
+		value, err := json.Marshal(io.Value, wireCompatibility)
 		if err != nil {
 			diags.AddError("Error processing input/output", fmt.Sprintf("Key %s: Cannot marshal value '%v' to json: %s", io.Key, io.Value, err.Error()))
 			return

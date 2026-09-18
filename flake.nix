@@ -22,7 +22,7 @@
       devShells = forEachSupportedSystem ({ pkgs }: {
         default = pkgs.mkShell {
           packages = with pkgs; [
-            # go 1.27 (pinned, in lock-step with go.mod)
+            # go 1.27 (pinned, in lock-step with go.mod and with meshstack-cli)
             go_1_27
 
             # goimports, godoc, etc.

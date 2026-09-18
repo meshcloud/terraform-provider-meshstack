@@ -1,17 +1,16 @@
 package provider
 
 import (
-	"bytes"
 	"encoding/base64"
-	"encoding/json"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/meshcloud/meshstack-cli/client"
 
-	"github.com/meshcloud/terraform-provider-meshstack/client"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/util/hash"
 )
 
@@ -67,15 +66,16 @@ func calculateBuildingBlockDefinitionVersionContentHash(versionSpecDto client.Me
 		versionSpecDto.State = nil
 		versionSpecDto.BuildingBlockDefinitionRef = nil
 
-		// Converting it first from/to JSON makes hashing more stable, as fields with 'omitempty' are ignored.
+		// Converting it first from/to JSON makes hashing more stable, as a field the client's tags drop
+		// ('omitzero' on a pointer, 'omitempty' on a string or a collection) is ignored.
 		// Additionally, all numbers are converted to float64, even integers (which also allows changing DTO model types later on).
 		// Also, the current Hasher implementation does not support structs for now, but map[string]any works!
-		var buffer bytes.Buffer
-		if err := json.NewEncoder(&buffer).Encode(versionSpecDto); err != nil {
+		encoded, err := json.Marshal(versionSpecDto, wireCompatibility)
+		if err != nil {
 			return "", err
 		}
 		var converted any
-		if err := json.NewDecoder(&buffer).Decode(&converted); err != nil {
+		if err := json.Unmarshal(encoded, &converted, wireCompatibility); err != nil {
 			return "", err
 		}
 

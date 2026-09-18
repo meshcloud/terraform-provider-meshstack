@@ -46,29 +46,17 @@ linters:
       # which is indistinguishable from a rule that passes — check any new rule by
       # compiling a file that violates it.
       rules:
-        client:
+        json-v1:
           files:
-            - "**/client/*.go"
-            - "**/client/**/*.go"
-            - "!$test"
-          list-mode: strict
-          allow:
-            - $gostd
-            - github.com/meshcloud/terraform-provider-meshstack/client
-        client-test:
-          files:
-            - "**/client/*_test.go"
-            - "**/client/**/*_test.go"
-          list-mode: strict
-          allow:
-            - $gostd
-            - github.com/meshcloud/terraform-provider-meshstack/client
-            - github.com/stretchr/testify
+            - "$all"
+          list-mode: lax
+          deny:
+            # '$' is depguard's exact match, so encoding/json/v2 and encoding/json/jsontext pass.
+            - pkg: encoding/json$
+              desc: Use encoding/json/v2
         provider:
           files:
             - "!$test"
-            - "!**/client/*.go"
-            - "!**/client/**/*.go"
             - "!**/internal/clientmock/*.go"
             - "!**/internal/clientmock/**/*.go"
             - "!**/internal/provider/acctest/*.go"
@@ -80,12 +68,17 @@ linters:
               desc: Always use 'hclog' or SDK logging
             - pkg: github.com/meshcloud/terraform-provider-meshstack/internal/clientmock
               desc: clientmock package must only be used in tests
+            - pkg: github.com/meshcloud/meshstack-cli/pkg/oidc/browser
+              desc: the provider must never open a browser; a login is created by `meshstack login`
           allow:
             - $gostd
-            # explicitly specifying 'client' and 'internal' suffixes
-            # prevents 'examples' package to be included in non-test files
-            - github.com/meshcloud/terraform-provider-meshstack/client
+            # longer prefix than the 'log' deny above, so it outranks it
+            - log/slog
+            # explicitly specifying the 'internal' suffix prevents the 'examples'
+            # package from being included in non-test files
             - github.com/meshcloud/terraform-provider-meshstack/internal
+            - github.com/meshcloud/meshstack-cli/client
+            - github.com/meshcloud/meshstack-cli/pkg
             - github.com/hashicorp/terraform-plugin-framework/
             - github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry
             - github.com/hashicorp/terraform-plugin-framework-jsontypes/jsontypes # for 'any' value support
@@ -104,18 +97,15 @@ linters:
             - "**/examples/*.go"
             - "!**/internal/types/*.go"
             - "!**/internal/types/**/*.go"
-            - "!**/client/*_test.go"
-            - "!**/client/**/*_test.go"
             - "!**/internal/provider/provider_test.go" # contains common adapters for all tests, using non-testing deps.
           list-mode: strict
-          deny:
-            - pkg: github.com/meshcloud/terraform-provider-meshstack/client/internal
-              desc: Do not use client/internal in provider tests
           allow:
             - $gostd
             - github.com/meshcloud/terraform-provider-meshstack # any packages are included in tests
+            - github.com/meshcloud/meshstack-cli
             - github.com/hashicorp/terraform-plugin-testing
             - github.com/hashicorp/terraform-plugin-framework/diag
+            - github.com/hashicorp/terraform-plugin-framework/types
             - github.com/hashicorp/hcl/v2 # hclwrite-based config manipulation in examples/
             - github.com/zclconf/go-cty/cty # hclwrite value types
             - github.com/stretchr/testify
@@ -131,7 +121,7 @@ linters:
               desc: Always use 'hclog' or SDK logging
           allow:
             - $gostd
-            - github.com/meshcloud/terraform-provider-meshstack/client/types # only types should be used from client, if at all!
+            - github.com/meshcloud/meshstack-cli/client/types # only types should be used from client, if at all!
             - github.com/meshcloud/terraform-provider-meshstack/internal/util/
             - github.com/meshcloud/terraform-provider-meshstack/internal/types/
             - github.com/hashicorp/terraform-plugin-framework/

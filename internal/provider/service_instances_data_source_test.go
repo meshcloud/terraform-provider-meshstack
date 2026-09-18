@@ -1,112 +1,51 @@
 package provider
 
 import (
-	"context"
 	_ "embed"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	clientTypes "github.com/meshcloud/meshstack-cli/client/types"
 
-	"github.com/meshcloud/terraform-provider-meshstack/client"
-	clientTypes "github.com/meshcloud/terraform-provider-meshstack/client/types"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/clientmock"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
 )
 
-// TestAccServiceInstancesDataSource tests the service instances data source.
-// Service instances are read-only (no TF resource), so unit tests must pre-populate the mock store.
-// We use resource.UnitTest directly instead of ApplyAndTest because pre-population requires
-// access to the mock client before the test runs.
+// See TestServiceInstanceDataSource for why both subtests seed the mock store and skip in
+// acceptance mode.
 func TestServiceInstancesDataSource(t *testing.T) {
 	t.Parallel()
 
-	t.Run("basic", func(t *testing.T) {
-		t.Parallel()
-
-		mockClient := clientmock.NewMock()
-		mockClient.ServiceInstance.Store.Set("instance-1", &client.MeshServiceInstance{
-			Metadata: client.MeshServiceInstanceMetadata{
-				InstanceId:            "instance-1",
-				OwnedByWorkspace:      "test-workspace",
-				OwnedByProject:        "test-project",
-				MarketplaceIdentifier: "test-marketplace",
-			},
-			Spec: client.MeshServiceInstanceSpec{
-				Creator:     "test-user",
-				DisplayName: "First Instance",
-				PlanId:      "test-plan",
-				ServiceId:   "test-service",
-				Parameters:  map[string]clientTypes.Any{},
-			},
-		})
-		mockClient.ServiceInstance.Store.Set("instance-2", &client.MeshServiceInstance{
-			Metadata: client.MeshServiceInstanceMetadata{
-				InstanceId:            "instance-2",
-				OwnedByWorkspace:      "test-workspace",
-				OwnedByProject:        "test-project",
-				MarketplaceIdentifier: "test-marketplace",
-			},
-			Spec: client.MeshServiceInstanceSpec{
-				Creator:     "test-user",
-				DisplayName: "Second Instance",
-				PlanId:      "test-plan",
-				ServiceId:   "test-service",
-				Parameters:  map[string]clientTypes.Any{},
-			},
-		})
+	t.Run("lists every marketplace instance", func(t *testing.T) {
+		if !IsMockClientTest() {
+			t.Skip("no Terraform resource creates a service instance, so a real meshStack has none to list")
+		}
 
 		config := testconfig.DataSource{Name: "service_instances"}.Config(t)
 
-		resource.UnitTest(t, resource.TestCase{
-			ProtoV6ProviderFactories: ProviderFactoriesForTest(func(provider *MeshStackProvider) {
-				provider.clientFactory = func(ctx context.Context, data MeshStackProviderModel, providerVersion string) (client.Client, diag.Diagnostics) {
-					return mockClient.AsClient(), nil
-				}
-			}),
+		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
 					Config: config.String(),
+					Check: resource.ComposeAggregateTestCheckFunc(
+						resource.TestCheckResourceAttr("data.meshstack_service_instances.all", "service_instances.#", "2"),
+					),
 				},
 			},
-		})
+		}, SeedingMock(func(mock clientmock.Client) {
+			mock.ServiceInstance.Store.Set("instance-1", serviceInstance("instance-1", "First Instance", nil))
+			mock.ServiceInstance.Store.Set("instance-2", serviceInstance("instance-2", "Second Instance", nil))
+		}))
 	})
 
-	t.Run("with_parameters", func(t *testing.T) {
-		t.Parallel()
-
-		mockClient := clientmock.NewMock()
-		mockClient.ServiceInstance.Store.Set("instance-1", &client.MeshServiceInstance{
-			Metadata: client.MeshServiceInstanceMetadata{
-				InstanceId:            "instance-1",
-				OwnedByWorkspace:      "test-workspace",
-				OwnedByProject:        "test-project",
-				MarketplaceIdentifier: "test-marketplace",
-			},
-			Spec: client.MeshServiceInstanceSpec{
-				Creator:     "test-user",
-				DisplayName: "Instance with Parameters",
-				PlanId:      "test-plan",
-				ServiceId:   "test-service",
-				Parameters: map[string]clientTypes.Any{
-					"string_param": "value",
-					"number_param": 42,
-					"bool_param":   true,
-					"object_param": map[string]any{
-						"key": "value",
-					},
-				},
-			},
-		})
+	t.Run("lists the parameters of each instance", func(t *testing.T) {
+		if !IsMockClientTest() {
+			t.Skip("no Terraform resource creates a service instance, so a real meshStack has none to list")
+		}
 
 		config := testconfig.DataSource{Name: "service_instances"}.Config(t)
 
-		resource.UnitTest(t, resource.TestCase{
-			ProtoV6ProviderFactories: ProviderFactoriesForTest(func(provider *MeshStackProvider) {
-				provider.clientFactory = func(ctx context.Context, data MeshStackProviderModel, providerVersion string) (client.Client, diag.Diagnostics) {
-					return mockClient.AsClient(), nil
-				}
-			}),
+		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
 					Config: config.String(),
@@ -121,6 +60,15 @@ func TestServiceInstancesDataSource(t *testing.T) {
 					),
 				},
 			},
-		})
+		}, SeedingMock(func(mock clientmock.Client) {
+			mock.ServiceInstance.Store.Set("instance-1", serviceInstance("instance-1", "Instance with Parameters", map[string]clientTypes.Any{
+				"string_param": "value",
+				"number_param": 42,
+				"bool_param":   true,
+				"object_param": map[string]any{
+					"key": "value",
+				},
+			}))
+		}))
 	})
 }
