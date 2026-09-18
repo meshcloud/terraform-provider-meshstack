@@ -38,10 +38,12 @@ meshstack_workspace
 
 ## Authentication
 
+~> **Preview:** the `profile` and `workspace` arguments are a preview and can change without prior notice, because the meshStack CLI they read is under heavy development.
+
 The provider reads its configuration from three places, highest first: the `provider` block, the
 `MESHSTACK_*` environment variables, and a **meshStack CLI profile** written by `meshstack auth
-login` and selected with `MESHSTACK_PROFILE`. Every argument in the schema below names the variable
-it also reads, and the meshStack CLI documentation describes the resolution order in full. A
+login` and selected with `profile`. Every argument in the schema below names the variable it also
+reads, and the meshStack CLI documentation describes the resolution order in full. A
 credential resolves as one unit: the first place that names an identity decides which credential is
 used, and its secret comes from that same place, or else from the highest place below it that names
 no identity of its own. So `apikey` in the provider block with the secret in `MESHSTACK_API_SECRET`
@@ -49,10 +51,12 @@ is the normal non-interactive setup, while a `MESHSTACK_API_KEY` left over from 
 that secret unusable and fails the run with an error naming both ids.
 
 The provider never opens a browser: it refreshes a profile's existing browser login and writes the
-rotated refresh token back, but creating one is `meshstack login`. Anything resolution has to report
-without stopping the run — a profile picked by matching its endpoint, or a `MESHSTACK_API_SECRET`
-ignored in favour of the secret a profile stores — is a log record, which terraform shows only under
-`TF_LOG=WARN`.
+rotated refresh token back, but creating one is `meshstack login`. Such a login acts in exactly one
+workspace, because meshStack binds a user access token to one, so set `workspace` where the login
+reaches several and its profile carries no default. An API key or an API token needs no workspace.
+Anything resolution has to report without stopping the run — a profile picked by matching its
+endpoint, or a `MESHSTACK_API_SECRET` ignored in favour of the secret a profile stores — is a log
+record, which terraform shows only under `TF_LOG=WARN`.
 
 {{ if .HasExamples -}}
 ## Example Usage

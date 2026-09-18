@@ -57,9 +57,10 @@ warning) lives once in [`DEVELOPMENT.md`](DEVELOPMENT.md) → Backends & authent
 
 Credential resolution itself is **not in this repository**. It lives in
 `github.com/meshcloud/meshstack-cli/pkg/auth`, shared with the meshStack CLI, so both front ends
-apply one precedence order and renew through one file lock. This repo contributes one
-`setting.Source` over the provider block — `MeshStackProviderModel` in
-`internal/provider/provider_model.go` — which never prompts and never opens a browser.
+apply one precedence order and renew through one file lock. This repo contributes the provider
+block as a `setting.Source` — `MeshStackProviderModel` in `internal/provider/provider_model.go` —
+and a fallback that names the workspace a browser login acts in. Neither prompts, and neither
+opens a browser.
 
 ## Always-on rules
 

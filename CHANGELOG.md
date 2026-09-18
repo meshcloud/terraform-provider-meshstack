@@ -1,28 +1,16 @@
 # v0.26.0
 
-The provider now shares its authentication and its meshStack API client with the
-[meshStack CLI](https://github.com/meshcloud/meshstack-cli). A `meshstack auth login` is therefore
-enough to configure it: name the profile in `MESHSTACK_PROFILE`, and its endpoint, credential and
-workspace are what the provider uses. A provider block or a `MESHSTACK_*` environment that already
-worked keeps working, and a building block run, which is handed `MESHSTACK_API_TOKEN`, reads no
-file at all.
-
-BREAKING CHANGES:
-- An exported credential variable now decides who the provider authenticates as, instead of being
-  ignored where something else also supplies an identity. A stale `MESHSTACK_API_KEY` in a shell or
-  a CI job therefore fails a `terraform plan` that used to run as somebody else. Unset it, or make
-  it the credential you meant.
-- Naming an API key and an API token in the same place — both in one provider block, or both in the
-  environment — is now an error naming both, rather than one of them being picked silently.
+This release switches the provider's meshStack API client and its credential handling to the
+packages the [meshStack CLI](https://github.com/meshcloud/meshstack-cli) publishes, and it prepares
+running the provider from a user login rather than from an API key. Nothing about an existing
+configuration changes: a provider block or a `MESHSTACK_*` environment that works today keeps
+working, and a building block run, which is handed `MESHSTACK_API_TOKEN`, reads no file at all.
 
 FEATURES:
-- The credential resolves as one unit: the first place that names an identity — the provider block,
-  then the environment, then a profile — decides which credential is used, and its secret comes
-  from that same place, or else from the highest place below it that names no identity of its own.
-  That makes `apikey` in the provider block with the secret in `MESHSTACK_API_SECRET` the supported
-  non-interactive setup. *Authentication* in the provider documentation has the details.
-- Every provider argument documents the `MESHSTACK_*` variable it also reads, in the words the
-  meshStack CLI uses for it.
+- The `provider` block takes two new arguments, `profile` and `workspace`. `profile` names the
+  meshStack CLI profile to authenticate from, and `workspace` the workspace to act in. Both are
+  optional. They are a **preview**: the meshStack CLI is under heavy development, so both arguments
+  can change without prior notice.
 
 FIXES:
 - The meshStack access token no longer appears in `TF_LOG` output. An earlier version redacted the
