@@ -1,3 +1,48 @@
+# v0.26.0
+
+The provider now shares its authentication and its meshStack API client with the
+[meshStack CLI](https://github.com/meshcloud/meshstack-cli). A `meshstack auth login` is therefore
+enough to configure it: name the profile in `MESHSTACK_PROFILE`, and its endpoint, credential and
+workspace are what the provider uses. A provider block or a `MESHSTACK_*` environment that already
+worked keeps working, and a building block run, which is handed `MESHSTACK_API_TOKEN`, reads no
+file at all.
+
+BREAKING CHANGES:
+- An exported credential variable now decides who the provider authenticates as, instead of being
+  ignored where something else also supplies an identity. A stale `MESHSTACK_API_KEY` in a shell or
+  a CI job therefore fails a `terraform plan` that used to run as somebody else. Unset it, or make
+  it the credential you meant.
+- Naming an API key and an API token in the same place — both in one provider block, or both in the
+  environment — is now an error naming both, rather than one of them being picked silently.
+
+FEATURES:
+- The credential resolves as one unit: the first place that names an identity — the provider block,
+  then the environment, then a profile — decides which credential is used, and its secret comes
+  from that same place, or else from the highest place below it that names no identity of its own.
+  That makes `apikey` in the provider block with the secret in `MESHSTACK_API_SECRET` the supported
+  non-interactive setup. *Authentication* in the provider documentation has the details.
+- Every provider argument documents the `MESHSTACK_*` variable it also reads, in the words the
+  meshStack CLI uses for it.
+
+FIXES:
+- The meshStack access token no longer appears in `TF_LOG` output. An earlier version redacted the
+  `Authorization` header only in a log line formatted as text, and terraform encodes a provider's
+  log fields as JSON, which wrote the header out in full. Treat a `TF_LOG=DEBUG` or `TF_LOG=TRACE`
+  log you shared from such a version as exposed.
+- A missing or expired credential now fails while the provider is configured, rather than at the
+  first request it makes. A plan that only creates resources reads nothing, so an expired login used
+  to survive the plan and fail the apply.
+- `meshstack_building_block`: an in-place update no longer reports success on a building block whose
+  run has not started. On a loaded meshStack the first poll could still read the previous run's
+  `SUCCEEDED` and write it into state as this change's result. The provider now ignores every read
+  that still reports the status and run the block had before the update, and fails naming the
+  building block if meshStack has not started a run within a minute.
+- `meshstack_building_block`: a destroy no longer fails on a building block whose run is still in
+  flight. meshStack refuses the delete with a conflict until the run reaches a final status, and the
+  provider waits that out within `timeouts.delete`.
+- `status.latest_run_uuid` and `status.latest_dry_run_uuid` no longer document a permission
+  condition that cannot happen: the only reason either is null is that no such run exists.
+
 # v0.25.5
 
 FEATURES:
