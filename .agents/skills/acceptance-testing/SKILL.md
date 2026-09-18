@@ -34,7 +34,7 @@ and other basics — with **random-suffixed names**, so runs never collide with 
 pre-existing data, and don't depend on any particular DB state. Preserve this when adding tests:
 never hardcode a name that a parallel run or a re-run could clash on.
 
-The `http://localhost` guard (`provider_test.go`, `DefaultTestPreCheck`) is therefore **not** because
+The `http://localhost` guard (`provider_test.go`, `requireLocalMeshStack`) is therefore **not** because
 the tests destroy other data — it's a *cleanup* safety net. If a test's teardown fails, a throwaway
 local backend can be wiped and brought up clean (see Backend bring-up), whereas a shared meshStack
 can't; so point the suite only at a local stack you can rebuild.

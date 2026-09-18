@@ -62,7 +62,7 @@ today:
 
 > Acceptance tests are **state-independent by design**: each run creates its own resources
 > (workspaces and the like) with random-suffixed names, so concurrent runs and pre-existing data
-> never collide or interfere. A test-harness guard (`provider_test.go`, `DefaultTestPreCheck`)
+> never collide or interfere. A test-harness guard (`provider_test.go`, `requireLocalMeshStack`)
 > nonetheless pins them to `http://localhost` — not because they harm other data, but as a *cleanup*
 > safety net: teardown can still fail, and a throwaway local backend can be wiped and rebuilt clean,
 > whereas a shared meshStack can't. Manual/scratch runs are not guarded and may target any
