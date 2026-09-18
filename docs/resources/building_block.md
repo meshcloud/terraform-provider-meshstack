@@ -260,8 +260,8 @@ Read-Only:
 Read-Only:
 
 - `force_purge` (Boolean) Read-only: true once a purge has been requested for this building block — via `purge_on_delete` here, or by an operator out-of-band. A purge removes the block without a destroy run, leaving its cloud resources unmanaged (the lifecycle still reaches DELETED).
-- `latest_dry_run_uuid` (String) UUID of the latest dry (DETECT) run for this Building Block, but only when it is the newest run; null otherwise. Same permission gating as `latest_run_uuid`.
-- `latest_run_uuid` (String) UUID of the latest modifying (apply/destroy) run for this Building Block. Excludes dry runs (see `latest_dry_run_uuid`). Null when no modifying run exists, or when permissions are insufficient to read runs.
+- `latest_dry_run_uuid` (String) UUID of the latest dry (DETECT) run for this Building Block, but only when it is the newest run; null otherwise.
+- `latest_run_uuid` (String) UUID of the latest modifying (apply/destroy) run for this Building Block. Excludes dry runs (see `latest_dry_run_uuid`). Null when no modifying run exists.
 - `outputs` (Attributes Map) Outputs of building block, available after a successful run. (see [below for nested schema](#nestedatt--status--outputs))
 - `status` (String) Execution status. One of `WAITING_FOR_DEPENDENT_INPUT`, `WAITING_FOR_OPERATOR_INPUT`, `WAITING_FOR_USER_INPUT`, `WAITING_FOR_APPROVAL`, `PENDING`, `IN_PROGRESS`, `SUCCEEDED`, `FAILED`, `ABORTED`.
 

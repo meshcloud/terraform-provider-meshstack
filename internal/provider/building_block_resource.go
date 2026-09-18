@@ -280,13 +280,12 @@ func (r *buildingBlockResource) Schema(ctx context.Context, req resource.SchemaR
 					},
 					"latest_run_uuid": schema.StringAttribute{
 						MarkdownDescription: "UUID of the latest modifying (apply/destroy) run for this Building Block. " +
-							"Excludes dry runs (see `latest_dry_run_uuid`). Null when no modifying run exists, or when " +
-							"permissions are insufficient to read runs.",
+							"Excludes dry runs (see `latest_dry_run_uuid`). Null when no modifying run exists.",
 						Computed: true,
 					},
 					"latest_dry_run_uuid": schema.StringAttribute{
 						MarkdownDescription: "UUID of the latest dry (DETECT) run for this Building Block, but only when it is the " +
-							"newest run; null otherwise. Same permission gating as `latest_run_uuid`.",
+							"newest run; null otherwise.",
 						Computed: true,
 					},
 
