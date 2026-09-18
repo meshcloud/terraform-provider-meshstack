@@ -27,6 +27,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/meshcloud/meshstack-cli/client"
 	clientTypes "github.com/meshcloud/meshstack-cli/client/types"
 	"github.com/meshcloud/meshstack-cli/client/types/enum"
@@ -1179,13 +1180,33 @@ func (r *buildingBlockResource) Update(ctx context.Context, req resource.UpdateR
 	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, plan, converterOptions...)...)
 }
 
+// requestDeletion waits out the conflict meshStack answers while the block's run has not reached a
+// final status. A run in flight at destroy is normal: `wait_for_completion = false` leaves one
+// behind, and meshStack starts runs no apply asked for.
+func (r *buildingBlockResource) requestDeletion(ctx context.Context, uuid string, purge bool, timeout time.Duration) error {
+	return retry.RetryContext(ctx, timeout, func() *retry.RetryError {
+		err := r.BuildingBlockClient.Delete(ctx, uuid, purge)
+		if httpErr, ok := errors.AsType[client.HttpError](err); ok && httpErr.IsConflict() {
+			return retry.RetryableError(err)
+		}
+		if err != nil {
+			return retry.NonRetryableError(err)
+		}
+		return nil
+	})
+}
+
 func (r *buildingBlockResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	uuid := generic.GetAttribute[string](ctx, req.State, path.Root("metadata").AtName("uuid"), &resp.Diagnostics)
 	purgeOnDelete := generic.GetAttribute[bool](ctx, req.State, path.Root("purge_on_delete"), &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	if err := r.BuildingBlockClient.Delete(ctx, uuid, purgeOnDelete); err != nil {
+	timeout := resolveTimeout(ctx, req.State, "delete", &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if err := r.requestDeletion(ctx, uuid, purgeOnDelete, timeout); err != nil {
 		resp.Diagnostics.AddError(
 			"Error deleting building block",
 			"Could not delete building block, unexpected error: "+err.Error(),
@@ -1198,10 +1219,6 @@ func (r *buildingBlockResource) Delete(ctx context.Context, req resource.DeleteR
 	// DELETED/404 essentially immediately. Returning early on the 202 would let the resource be dropped
 	// from state while teardown is still in flight, racing any dependent delete that follows — e.g.
 	// deleting the building block definition then fails 409 "existing BuildingBlocks referencing it".
-	timeout := resolveTimeout(ctx, req.State, "delete", &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
 	var final *client.MeshBuildingBlockV2
 	err := poll.AtMostFor(timeout, r.BuildingBlockClient.ReadFunc(uuid),
 		poll.WithLastResultTo(&final)).
