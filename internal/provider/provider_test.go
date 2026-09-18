@@ -20,9 +20,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/meshcloud/meshstack-cli/client"
 	"github.com/stretchr/testify/require"
 
-	"github.com/meshcloud/terraform-provider-meshstack/client"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/clientmock"
 )
 
@@ -90,6 +90,16 @@ type ApplyAndTestOption func(*applyAndTestOptions)
 
 type applyAndTestOptions struct {
 	LockExclusiveKinds []string
+	SeedMock           []func(mock clientmock.Client)
+}
+
+// SeedingMock fills the mock store before a mock run reads from it, for a data source whose object
+// no Terraform resource creates. It is an option here rather than a mock the test builds itself,
+// because ApplyAndTest is the one place besides New that decides where a provider gets its client.
+func SeedingMock(seed func(mock clientmock.Client)) ApplyAndTestOption {
+	return func(options *applyAndTestOptions) {
+		options.SeedMock = append(options.SeedMock, seed)
+	}
 }
 
 // TouchesExclusively marks a test that creates a restricted tag definition with a default value for
@@ -156,10 +166,13 @@ func ApplyAndTest(t *testing.T, testCase resource.TestCase, opts ...ApplyAndTest
 
 	if IsMockClientTest() {
 		mockClient := clientmock.NewMock()
+		for _, seed := range options.SeedMock {
+			seed(mockClient)
+		}
 		testCase.IsUnitTest = true
 		testCase.ProtoV6ProviderFactories = ProviderFactoriesForTest(func(provider *MeshStackProvider) {
-			provider.clientFactory = func(ctx context.Context, data MeshStackProviderModel, providerVersion string) (client.Client, diag.Diagnostics) {
-				return mockClient.AsClient(), nil
+			provider.clientFactory = func(_ context.Context, _ MeshStackProviderModel, _ string, _ *diag.Diagnostics) client.Client {
+				return mockClient.AsClient()
 			}
 		})
 	} else {
@@ -175,13 +188,21 @@ func ApplyAndTest(t *testing.T, testCase resource.TestCase, opts ...ApplyAndTest
 	resource.Test(t, testCase)
 }
 
+// Literals on purpose: the meshStack CLI exports none of these names, because every message that
+// has to name one is produced in the package that consults it.
+const (
+	envKeyEndpoint  = "MESHSTACK_ENDPOINT"
+	envKeyApiKey    = "MESHSTACK_API_KEY"
+	envKeyApiSecret = "MESHSTACK_API_SECRET"
+)
+
 func DefaultTestPreCheck(t *testing.T) {
 	t.Helper()
-	endpoint := os.Getenv(envKeyMeshstackEndpoint)
+	endpoint := os.Getenv(envKeyEndpoint)
 	require.Truef(t, strings.HasPrefix(endpoint, "http://localhost"),
-		"Env %s='%s' does not start with http://localhost, only locally running meshStacks should be used for tests", envKeyMeshstackEndpoint, endpoint)
-	require.NotEmptyf(t, os.Getenv(envKeyMeshstackApiKey), "Env %s empty, please set before running", envKeyMeshstackApiKey)
-	require.NotEmptyf(t, os.Getenv(envKeyMeshstackApiSecret), "Env %s empty, please set before running", envKeyMeshstackApiSecret)
+		"Env %s='%s' does not start with http://localhost, only locally running meshStacks should be used for tests", envKeyEndpoint, endpoint)
+	require.NotEmptyf(t, os.Getenv(envKeyApiKey), "Env %s empty, please set before running", envKeyApiKey)
+	require.NotEmptyf(t, os.Getenv(envKeyApiSecret), "Env %s empty, please set before running", envKeyApiSecret)
 }
 
 // dumpStepConfigs writes each test step's HCL config to

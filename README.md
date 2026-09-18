@@ -21,11 +21,13 @@ terraform {
 }
 
 provider "meshstack" {
-  endpoint  = "https://your.meshstack.example" # or MESHSTACK_ENDPOINT
-  apikey    = "..."                            # or MESHSTACK_API_KEY
-  apisecret = "..."                            # or MESHSTACK_API_SECRET
+  endpoint = "https://your.meshstack.example" # or MESHSTACK_ENDPOINT
+  apikey   = "..."                            # or MESHSTACK_API_KEY
 }
 ```
+
+Export the API key's secret as `MESHSTACK_API_SECRET`: an `apisecret` in the provider block is
+written to Terraform state.
 
 See the [registry documentation](https://registry.terraform.io/providers/meshcloud/meshstack/latest/docs)
 for the full list of resources, data sources, and example configurations.
