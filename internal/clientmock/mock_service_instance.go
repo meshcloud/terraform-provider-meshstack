@@ -3,7 +3,7 @@ package clientmock
 import (
 	"context"
 
-	"github.com/meshcloud/terraform-provider-meshstack/client"
+	"github.com/meshcloud/meshstack-cli/client"
 )
 
 type MeshServiceInstanceClient struct {

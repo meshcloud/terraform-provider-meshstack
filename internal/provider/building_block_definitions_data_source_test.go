@@ -1,7 +1,7 @@
 package provider
 
 import (
-	"encoding/json"
+	"encoding/json/v2"
 	"testing"
 
 	tfconfig "github.com/hashicorp/terraform-plugin-testing/config"
@@ -157,5 +157,5 @@ func TestAccBuildingBlockDefinitionsDataSource(t *testing.T) {
 type lazyVariable string
 
 func (l *lazyVariable) MarshalJSON() ([]byte, error) {
-	return json.Marshal(*l)
+	return json.Marshal(string(*l))
 }

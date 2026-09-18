@@ -2,7 +2,7 @@ package validators
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/v2"
 	"fmt"
 	"slices"
 	"strings"
@@ -12,8 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-
-	"github.com/meshcloud/terraform-provider-meshstack/client"
+	"github.com/meshcloud/meshstack-cli/client"
 )
 
 var _ validator.Map = BuildingBlockDefinitionTagInputs{}
