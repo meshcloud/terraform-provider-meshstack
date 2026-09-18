@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	nethttp "net/http"
 	"testing"
 	"time"
 
@@ -220,6 +221,63 @@ func TestAwaitRun(t *testing.T) {
 			if tt.wantReads > 0 {
 				require.GreaterOrEqual(t, stub.reads, tt.wantReads, "must poll to the terminal state")
 			}
+		})
+	}
+}
+
+// conflictingDeleteClient is a stub MeshBuildingBlockV2Client whose Delete answers with the 409 meshStack
+// returns for a block whose run has not finished, until the queued conflicts run out.
+type conflictingDeleteClient struct {
+	client.MeshBuildingBlockV2Client
+	conflicts int
+	deletes   int
+}
+
+func (c *conflictingDeleteClient) Delete(_ context.Context, _ string, _ bool) error {
+	c.deletes++
+	if c.deletes <= c.conflicts {
+		return client.HttpError{StatusCode: nethttp.StatusConflict, ResponseBody: []byte(`{"errorCode":"BuildingBlockConflict"}`)}
+	}
+	return nil
+}
+
+func TestRequestDeletion(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		conflicts   int
+		timeout     time.Duration
+		wantErr     string
+		wantDeletes int
+	}{
+		"a conflict is waited out": {
+			conflicts:   1,
+			timeout:     30 * time.Second,
+			wantDeletes: 2,
+		},
+		"a conflict that outlasts the timeout fails the destroy": {
+			conflicts:   100,
+			timeout:     time.Second,
+			wantErr:     "BuildingBlockConflict",
+			wantDeletes: 1,
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			stub := &conflictingDeleteClient{conflicts: tt.conflicts}
+			r := &buildingBlockResource{BuildingBlockClient: stub}
+
+			err := r.requestDeletion(context.Background(), "bb-uuid", false, tt.timeout)
+
+			if tt.wantErr == "" {
+				require.NoError(t, err)
+			} else {
+				require.ErrorContains(t, err, tt.wantErr)
+			}
+			require.GreaterOrEqual(t, stub.deletes, tt.wantDeletes)
 		})
 	}
 }
