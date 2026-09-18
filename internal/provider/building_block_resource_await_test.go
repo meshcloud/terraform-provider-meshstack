@@ -52,15 +52,15 @@ func bbWithRun(status enum.Entry[client.BuildingBlockStatus], runUuid string) *c
 }
 
 // bbWithStatus builds a building block carrying only a status and no run uuid — the backend leaves the run
-// uuids null when run transparency / permissions do not expose them, and awaitRun must still work.
+// uuids null while no modifying run exists, and awaitRun must still work.
 func bbWithStatus(status enum.Entry[client.BuildingBlockStatus]) *client.MeshBuildingBlockV2 {
 	return &client.MeshBuildingBlockV2{
 		Status: &client.MeshBuildingBlockV2Status{Status: status},
 	}
 }
 
-// TestAwaitRun pins how awaitRun reports each terminal building block status. A run triggered by the
-// preceding create/update surfaces immediately as PENDING, so awaiting keys off the status alone.
+// TestAwaitRun pins how awaitRun reports each terminal building block status. A case without a
+// previousStatus is the create path, which has no earlier run and keys off the status alone.
 //
 // Every terminal status that is not SUCCEEDED is a warning: failing the apply is the configuration's
 // decision, taken with a postcondition. Only a run whose outcome could not be established at all — a
@@ -73,14 +73,40 @@ func TestAwaitRun(t *testing.T) {
 	}}
 
 	tests := map[string]struct {
-		states       []*client.MeshBuildingBlockV2
-		logs         *stubRunLogsClient
-		wantErrors   []string // one substring per expected error diagnostic, in order
-		wantWarnings []string // one substring per expected warning diagnostic, in order
-		wantStatus   enum.Entry[client.BuildingBlockStatus]
-		wantNoBlock  bool
-		wantReads    int
+		previousStatus *client.MeshBuildingBlockV2Status // what the block reported before the update, nil on a create
+		states         []*client.MeshBuildingBlockV2
+		logs           *stubRunLogsClient
+		wantErrors     []string // one substring per expected error diagnostic, in order
+		wantWarnings   []string // one substring per expected warning diagnostic, in order
+		wantStatus     enum.Entry[client.BuildingBlockStatus]
+		wantNoBlock    bool
+		wantReads      int
 	}{
+		"an updated block still reporting the run it had before the update is polled on": {
+			previousStatus: &client.MeshBuildingBlockV2Status{
+				Status:        client.BuildingBlockStatusSucceeded,
+				LatestRunUuid: new("run-before"),
+			},
+			states: []*client.MeshBuildingBlockV2{
+				bbWithRun(client.BuildingBlockStatusSucceeded, "run-before"), // the update's run is not scheduled yet
+				bbWithRun(client.BuildingBlockStatusPending, "run-new"),
+				bbWithRun(client.BuildingBlockStatusSucceeded, "run-new"),
+			},
+			wantStatus: client.BuildingBlockStatusSucceeded,
+			wantReads:  3,
+		},
+		"a parked block resuming its own run counts as started once its status moves": {
+			previousStatus: &client.MeshBuildingBlockV2Status{
+				Status:        client.BuildingBlockStatusWaitingForOperatorInput,
+				LatestRunUuid: new("run-parked"),
+			},
+			states: []*client.MeshBuildingBlockV2{
+				bbWithRun(client.BuildingBlockStatusWaitingForOperatorInput, "run-parked"),
+				bbWithRun(client.BuildingBlockStatusSucceeded, "run-parked"),
+			},
+			wantStatus: client.BuildingBlockStatusSucceeded,
+			wantReads:  2,
+		},
 		"a run is polled through PENDING and IN_PROGRESS to SUCCEEDED": {
 			states: []*client.MeshBuildingBlockV2{
 				bbWithRun(client.BuildingBlockStatusPending, "run-new"),
@@ -181,7 +207,7 @@ func TestAwaitRun(t *testing.T) {
 				r.BuildingBlockRunClient = *tt.logs
 			}
 			var diags diag.Diagnostics
-			final := r.awaitRun(context.Background(), &diags, "bb-uuid", true, 30*time.Second)
+			final := r.awaitRun(context.Background(), &diags, "bb-uuid", tt.previousStatus, true, 30*time.Second)
 
 			requireDiagnostics(t, diags.Errors(), tt.wantErrors, "error")
 			requireDiagnostics(t, diags.Warnings(), tt.wantWarnings, "warning")
