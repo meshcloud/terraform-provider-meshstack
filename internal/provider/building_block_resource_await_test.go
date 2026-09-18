@@ -52,15 +52,16 @@ func bbWithRun(status enum.Entry[client.BuildingBlockStatus], runUuid string) *c
 }
 
 // bbWithStatus builds a building block carrying only a status and no run uuid — the backend leaves the run
-// uuids null when run transparency / permissions do not expose them, and awaitRun must still work.
+// uuids null while no modifying run exists, and awaitRun must still work.
 func bbWithStatus(status enum.Entry[client.BuildingBlockStatus]) *client.MeshBuildingBlockV2 {
 	return &client.MeshBuildingBlockV2{
 		Status: &client.MeshBuildingBlockV2Status{Status: status},
 	}
 }
 
-// TestAwaitRun pins how awaitRun reports each terminal building block status. A run triggered by the
-// preceding create/update surfaces immediately as PENDING, so awaiting keys off the status alone.
+// TestAwaitRun pins how awaitRun reports each terminal building block status. Every case is the
+// create path, which has no earlier run and keys off the status alone; waiting for the run an
+// update triggers is covered by TestAccBuildingBlock/05_operator_inputs against a real meshStack.
 //
 // Every terminal status that is not SUCCEEDED is a warning: failing the apply is the configuration's
 // decision, taken with a postcondition. Only a run whose outcome could not be established at all — a
@@ -181,7 +182,7 @@ func TestAwaitRun(t *testing.T) {
 				r.BuildingBlockRunClient = *tt.logs
 			}
 			var diags diag.Diagnostics
-			final := r.awaitRun(context.Background(), &diags, "bb-uuid", true, 30*time.Second)
+			final := r.awaitRun(context.Background(), &diags, "bb-uuid", noPreviousRun, true, 30*time.Second)
 
 			requireDiagnostics(t, diags.Errors(), tt.wantErrors, "error")
 			requireDiagnostics(t, diags.Warnings(), tt.wantWarnings, "warning")
