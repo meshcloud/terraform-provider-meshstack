@@ -2,7 +2,7 @@
 
 The provider now shares its authentication and its meshStack API client with the
 [meshStack CLI](https://github.com/meshcloud/meshstack-cli). A `meshstack auth login` is therefore
-enough to configure it: name the profile in `MESHSTACK_PROFILE`, and its endpoint, credential and
+enough to configure it: name the profile in `profile`, and its endpoint, credential and
 workspace are what the provider uses. A provider block or a `MESHSTACK_*` environment that already
 worked keeps working, and a building block run, which is handed `MESHSTACK_API_TOKEN`, reads no
 file at all.
@@ -16,6 +16,10 @@ BREAKING CHANGES:
   environment — is now an error naming both, rather than one of them being picked silently.
 
 FEATURES:
+- The `provider` block takes `profile` and `workspace`. `profile` names the meshStack CLI profile to
+  authenticate from, and `workspace` the workspace to act in, which a profile holding a browser
+  login needs and an API key or an API token does not. Both are optional, so a configuration that
+  works today needs no change.
 - The credential resolves as one unit: the first place that names an identity — the provider block,
   then the environment, then a profile — decides which credential is used, and its secret comes
   from that same place, or else from the highest place below it that names no identity of its own.

@@ -81,12 +81,19 @@ func newProviderClient(ctx context.Context, data MeshStackProviderModel, provide
 	providerClient, err := auth.ResolveClient(ctx, auth.ResolveSessionOptions{
 		Version:        providerVersion,
 		GitHubRepo:     gitHubRepo,
-		SettingSources: setting.SingleSource(data),
+		SettingSources: providerSettingSources(data),
 	})
 	if err != nil {
 		diags.AddError("Failed to create meshStack client", err.Error())
 	}
 	return providerClient
+}
+
+// providerSettingSources is everything this repository contributes to the precedence: the block
+// outranks the environment, and the workspace of a profile's login ranks below it. Where the
+// environment and a profile rank relative to each other is the meshStack CLI's decision.
+func providerSettingSources(data MeshStackProviderModel) setting.Sources {
+	return append(setting.SingleSource(data), newWorkspaceSource())
 }
 
 func (p *MeshStackProvider) Resources(_ context.Context) []func() resource.Resource {

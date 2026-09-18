@@ -65,12 +65,13 @@ meshStack CLI share, so both apply the same order: the `provider` block, then th
 a **meshStack CLI profile**. The acceptance suite deliberately uses the environment — it resolves
 from an empty provider block, so a run touches no profile and writes no file.
 
-A profile is the other way to run a scratch config: `meshstack auth login` writes one, and
-`MESHSTACK_PROFILE` names it, so the configuration needs no credential at all. A profile holding a
-browser login also needs `MESHSTACK_WORKSPACE`, because meshStack binds a user access token to
-exactly one workspace. Neither is a provider block argument, so the same configuration runs in CI
-and on a laptop. Both tools take the same lock while renewing, which is why the provider writes a
-rotated refresh token back rather than leaving a stale one behind.
+A profile is the other way to run a scratch config: `meshstack auth login` writes one, and the
+`profile` argument or `MESHSTACK_PROFILE` names it, so the configuration needs no credential at
+all. A profile holding a browser login acts in exactly one workspace, because meshStack binds a
+user access token to one; the `workspace` argument or `MESHSTACK_WORKSPACE` names it, and without
+either the provider takes the only workspace the login reaches, else the profile's default. Both
+tools take the same lock while renewing, which is why the provider writes a rotated refresh token
+back rather than leaving a stale one behind.
 
 > Acceptance tests are **state-independent by design**: each run creates its own resources
 > (workspaces and the like) with random-suffixed names, so concurrent runs and pre-existing data

@@ -12,6 +12,8 @@ import (
 
 type MeshStackProviderModel struct {
 	Endpoint  types.String `tfsdk:"endpoint"`
+	Profile   types.String `tfsdk:"profile"`
+	Workspace types.String `tfsdk:"workspace"`
 	ApiKey    types.String `tfsdk:"apikey"`
 	ApiSecret types.String `tfsdk:"apisecret"`
 	ApiToken  types.String `tfsdk:"apitoken"`
@@ -22,6 +24,8 @@ type MeshStackProviderModel struct {
 var modelAttributes = func() (result map[string]providerModelAttribute) {
 	result = map[string]providerModelAttribute{
 		"endpoint":  {Setting: setting.Endpoint},
+		"profile":   {Setting: setting.Profile},
+		"workspace": {Setting: setting.Workspace, ExtraDescription: "Leaving this empty takes the only workspace a profile's browser login reaches, else that profile's default workspace. The provider cannot ask, so a login reaching several workspaces without a default needs a value here."},
 		"apikey":    {Setting: setting.ApiKeyClientId, ExtraDescription: fmt.Sprintf("Setting this here with the secret in `%s` keeps the secret out of the configuration and out of state.", setting.ApiKeyClientSecret.EnvKey())},
 		"apisecret": {Setting: setting.ApiKeyClientSecret, Sensitive: true, ExtraDescription: "Always set this through the environment: a value set here is written to Terraform state. The warning about a stored secret winning is a log record, which `TF_LOG=WARN` shows."},
 		"apitoken":  {Setting: setting.ApiToken, Sensitive: true, ExtraDescription: "Always set this through the environment: a value set here is written to Terraform state."},

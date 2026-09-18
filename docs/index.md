@@ -40,8 +40,8 @@ meshstack_workspace
 
 The provider reads its configuration from three places, highest first: the `provider` block, the
 `MESHSTACK_*` environment variables, and a **meshStack CLI profile** written by `meshstack auth
-login` and selected with `MESHSTACK_PROFILE`. Every argument in the schema below names the variable
-it also reads, and the meshStack CLI documentation describes the resolution order in full. A
+login` and selected with `profile`. Every argument in the schema below names the variable it also
+reads, and the meshStack CLI documentation describes the resolution order in full. A
 credential resolves as one unit: the first place that names an identity decides which credential is
 used, and its secret comes from that same place, or else from the highest place below it that names
 no identity of its own. So `apikey` in the provider block with the secret in `MESHSTACK_API_SECRET`
@@ -49,10 +49,12 @@ is the normal non-interactive setup, while a `MESHSTACK_API_KEY` left over from 
 that secret unusable and fails the run with an error naming both ids.
 
 The provider never opens a browser: it refreshes a profile's existing browser login and writes the
-rotated refresh token back, but creating one is `meshstack login`. Anything resolution has to report
-without stopping the run — a profile picked by matching its endpoint, or a `MESHSTACK_API_SECRET`
-ignored in favour of the secret a profile stores — is a log record, which terraform shows only under
-`TF_LOG=WARN`.
+rotated refresh token back, but creating one is `meshstack login`. Such a login acts in exactly one
+workspace, because meshStack binds a user access token to one, so set `workspace` where the login
+reaches several and its profile carries no default. An API key or an API token needs no workspace.
+Anything resolution has to report without stopping the run — a profile picked by matching its
+endpoint, or a `MESHSTACK_API_SECRET` ignored in favour of the secret a profile stores — is a log
+record, which terraform shows only under `TF_LOG=WARN`.
 
 ## Example Usage
 
@@ -66,11 +68,11 @@ provider "meshstack" {
 ```
 
 ```terraform
-# An API token, which is what a building block run gets injected as MESHSTACK_API_TOKEN. Export it
-# rather than writing it here, so that it reaches neither the configuration nor terraform state.
+# A browser login, stored in a meshStack CLI profile by `meshstack auth login`. The profile carries
+# the endpoint and the credential, and the workspace says which one this configuration acts in.
 provider "meshstack" {
-  endpoint = "https://api.my.meshstack.io"
-  apitoken = "API_TOKEN"
+  profile   = "my-profile"
+  workspace = "my-workspace-ab12c"
 }
 ```
 
@@ -91,3 +93,11 @@ provider "meshstack" {
   
   Always set this through the environment: a value set here is written to Terraform state.
 - `endpoint` (String) The meshStack API to act against, such as `https://api.example.meshcloud.io`, also read from `MESHSTACK_ENDPOINT` and inferred from current profile if possible.
+- `profile` (String) The profile whose credentials and defaults this run uses, also read from `MESHSTACK_PROFILE`.
+  
+  A profile is a named bundle of endpoint and credential, written by `meshstack auth login` into the meshStack CLI's configuration directory. It supplies each of those only where nothing above it did, so it is never an override.
+  
+  With no name given, the profile is the one whose endpoint matches the endpoint in use, else the one the last `meshstack auth login` selected, else `default`.
+- `workspace` (String) The workspace to act in, identified as in meshPanel, such as my-workspace-ab12c. Also read from MESHSTACK_WORKSPACE.
+  
+  Leaving this empty takes the only workspace a profile's browser login reaches, else that profile's default workspace. The provider cannot ask, so a login reaching several workspaces without a default needs a value here.

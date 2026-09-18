@@ -13,6 +13,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
+	fwprovider "github.com/hashicorp/terraform-plugin-framework/provider"
+	fwproviderschema "github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	fwresource "github.com/hashicorp/terraform-plugin-framework/resource"
 	fwschema "github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -252,6 +254,18 @@ func moduleRoot(t *testing.T) string {
 		require.NotEqualf(t, parent, dir, "could not locate go.mod above %s", dir)
 		dir = parent
 	}
+}
+
+// ProviderSchemaForTest returns the provider's current schema, so tests can assert on its
+// attributes without importing the framework themselves.
+func ProviderSchemaForTest(t *testing.T) fwproviderschema.Schema {
+	t.Helper()
+
+	var resp fwprovider.SchemaResponse
+	(&MeshStackProvider{}).Schema(context.Background(), fwprovider.SchemaRequest{}, &resp)
+	require.Falsef(t, resp.Diagnostics.HasError(), "building schema: %s", resp.Diagnostics)
+
+	return resp.Schema
 }
 
 // ResourceSchemaForTest returns a resource's current schema, so tests can assert on its attributes
