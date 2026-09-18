@@ -34,7 +34,9 @@ Mid-complexity, clean, and complete — prefer these over the large `building_bl
    `ResourceWithConfigure` (+ `ResourceWithImportState` for import). Standard schema shape:
    `metadata` (name `RequiresReplace`, computed `uuid` with `UseStateForUnknown`), `spec`,
    `status`. See `project_resource.go`.
-2. **`client/`** — add the API client methods (typed via `MeshObjectClient[M]`).
+2. **`github.com/meshcloud/meshstack-cli/client`** — add the API client methods (typed via
+   `MeshObjectClient[M]`), in the [meshstack-cli](https://github.com/meshcloud/meshstack-cli)
+   repository, which ships them before the provider can use them.
 3. **`provider.go`** — register the resource/data source in the provider's lists.
 4. **`examples/resources/meshstack_<name>/resource.tf`** — only the single resource block; put
    any dependencies (data sources, providers) in `test-support_*.tf`. Never hardcode
@@ -65,8 +67,8 @@ validation, `Description` the block docs); then set at most one behaviour flag:
 Only refs that carry extra fields (`target_ref`, `building_block_definition_version_ref`) stay
 bespoke.
 
-On the client side these refs deserialize into the two shared DTO structs in `client/refs.go` —
-`NamedRef` (`{name, kind}`) and `UuidRef` (`{uuid, kind}`), the counterparts of `meshRefByName` /
+On the client side these refs deserialize into the two shared DTO structs in meshstack-cli's
+`client/refs.go` — `NamedRef` (`{name, kind}`) and `UuidRef` (`{uuid, kind}`), the counterparts of `meshRefByName` /
 `meshRefByUuid`. Use one of them for any `{name|uuid, kind}` field rather than declaring a new
 named type; a ref that adds fields (e.g. `MeshBuildingBlockV2DefinitionVersionRef`'s `content_hash`)
 **embeds** the matching struct by value — both `json` and `tfsdk` reflection promote the embedded
@@ -97,8 +99,8 @@ Cross-cutting rules for the schema and its backing client, beyond the ref/DTO sh
   (an implicit `omitempty` — no pointer or `,omitempty` needed; use a pointer only to send an
   explicit zero). Reach for a `map[string]string` only in the rare verbatim case where a zero value
   must still be transmitted (e.g. `page=0` in the paginator), which a struct would omit.
-- **Pointer + `,omitempty` = actually-nullable only.** The `modern-go` skill is the single home for
-  this rule — value-typed fields take neither.
+- **Pointer + `,omitzero` = actually-nullable only.** The `modern-go` skill is the single home for
+  this rule — value-typed fields take neither, and a pointer never takes `,omitempty`.
 - **Preview-API resources carry the shared disclaimer.** When a resource/data source's HTTP client
   uses an `apiVersion` ending in `-preview`, append `previewDisclaimer()` (`schema_utils.go`) to its
   `MarkdownDescription` — never inline a custom string. A **breaking** change to a `-preview`

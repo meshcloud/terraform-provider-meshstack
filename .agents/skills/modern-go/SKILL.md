@@ -1,6 +1,6 @@
 ---
 name: modern-go
-description: Modern Go idioms used in this repo (Go 1.27) — the new(expression) builtin for inline pointers, the generics patterns the codebase relies on (typed clients, mock stores, variant unions, the generic TF value-conversion layer, map/iter helpers), and the `go fix` modernizer pass. Use when writing or reviewing Go that creates pointers, defines type-parameterized helpers, touches generic.Set/Get, or running a modernization sweep.
+description: Modern Go idioms used in this repo (Go 1.27) — the new(expression) builtin for inline pointers, the encoding/json/v2 rules (pointer + `,omitzero` for a nullable field, the nil slice/map option bundle), the generics patterns the codebase relies on (typed clients, mock stores, variant unions, the generic TF value-conversion layer, map/iter helpers), and the `go fix` modernizer pass. Use when writing or reviewing Go that creates pointers, adds or changes a json struct tag, marshals a request body or a state attribute, defines type-parameterized helpers, touches generic.Set/Get, or running a modernization sweep.
 ---
 
 # Modern Go in this repo
@@ -37,25 +37,31 @@ Real usage in this repo:
 ```go
 secret.Hash    = new(fmt.Sprintf("sha256:%s", *secret.Plaintext)) // internal/clientmock/mock_client.go
 dto.VersionNumber = new(int64(1))                                  // building_block_definition_resource_model.go
-requestBody    = new(bytes.Buffer)                                 // client/internal/http_client.go
-m[method]      = new(sync.Map)                                     // client/internal/retry.go
 ```
 
 - Use it for inline pointer creation in struct literals, args, and returns.
 - Works with any expression: `new(a + b)`, `new(convertSecret(in.Argument.X, "argument"))`.
 - Chaining works: `new(new("v"))` → `**string`.
 
-### Nullability: pointer + `,omitempty` only when actually nullable
+## JSON: `encoding/json/v2`
 
-This skill is the repo's single home for the rule. Use a **pointer + `,omitempty`** for a field
-**only if it is genuinely nullable in the backend API**; a non-nullable field uses a value type
-with no `,omitempty`. Rationale: the pointer models "absent", and `,omitempty` drops it from the
-request body — pairing them on a truly-optional field is what makes round-trips clean.
+Everything here encodes and decodes with `encoding/json/v2`; depguard denies `encoding/json` in
+every file. meshstack-cli's `client` package is the reference for both rules below — it carries the
+DTOs and the marshalling this provider sends.
 
-`,omitempty` on a **value-typed struct** (`types.List`, `types.Set`, a `Variant`) is *dead* —
-`encoding/json` never omits struct types — so it must not be added there; a struct with a custom
-marshaler emits its zero value (e.g. `null`) regardless. The [`go fix` `omitzero`](#go-fix--the-modernizer-pass)
-analyzer strips exactly these dead tags.
+**Nullability: pointer + `,omitzero`, only when actually nullable.** A field that is genuinely
+nullable in the backend API takes a pointer and `,omitzero`; any other field takes a value type and
+no tag. Never pair a pointer with `,omitempty`: v2 omits whatever *encodes* as `null`, `""`, `{}` or
+`[]`, so a `*string` pointing at `""` is dropped — and the empty string is how a caller clears an
+optional field. For the same reason a value-typed struct whose marshaler emits `null`, such as a
+`Variant`, takes no tag either.
+
+**Nil slices and maps need the option bundle.** v2 writes a nil slice as `[]` and a nil map as `{}`,
+and the backend reads that differently from `null` — `supportedPlatforms` on a workspace-level
+building block definition rejects `[]` with a 400. So every marshal whose bytes reach the wire or
+Terraform state passes `wireCompatibility` (`internal/provider/json.go`), and the client holds
+itself to the same shape. Options do not travel with a value, so an intermediate marshal inside a
+round-trip needs the bundle too, and a type that defines its own `MarshalJSON` repeats it.
 
 ## Generics
 
@@ -66,9 +72,9 @@ than writing `any`-typed or reflection-based variants.
 
 | Type / func | File | Role |
 |---|---|---|
-| `MeshObjectClient[M any]`, `NewMeshObjectClient[M]`, `InferKind[M]()` | `client/internal/mesh_object_client.go` | Typed CRUD client per meshObject type |
+| `MeshObjectClient[M any]`, `NewMeshObjectClient[M]`, `InferKind[M]()` | meshstack-cli `client/internal/mesh_object_client.go` | Typed CRUD client per meshObject type |
 | `Store[M any]` (`Get/Set/Delete/Values/SortedKeys`) | `internal/clientmock/mock_client.go` | Generic in-memory mock store; e.g. `NewStore[client.MeshBuildingBlockDefinitionVersion]()` |
-| `Variant[X, Y any]` (custom `MarshalJSON`/`UnmarshalJSON`) | `client/types/variant/variant.go` | Discriminated union for JSON fields that are one-of-two |
+| `Variant[X, Y any]` (custom `MarshalJSON`/`UnmarshalJSON`) | meshstack-cli `client/types/variant/variant.go` | Discriminated union for JSON fields that are one-of-two |
 | `Pollable[T any]`, `AtMostFor[T]`, `WithLastResultTo[T]` | `internal/util/poll/poll.go` | Timeout/retry polling abstraction |
 | `NullIsUnknown[T any]`, `KnownValue[T]` | `internal/types/generic/unknown.go` | Terraform null-vs-unknown handling |
 
@@ -132,11 +138,9 @@ go1.26 go fix idioms`) is the worked example:
 - `rangeint` — `for i := 0; i < len(tokens); i++` → `for i := range tokens`. Pure syntax.
 - `omitzero` — the one needing judgement. It flagged `,omitempty` on struct-typed framework fields
   (`types.SecretOrAny`, `types.List`) and **stripped the tag** rather than take its own alternative
-  fix (`,omitempty` → `,omitzero`, flagged "behavior change" and ignored by default). Correct here:
-  `encoding/json` never omits *struct* types, so `,omitempty` on them was already dead — the field
-  always serialized (`Variant` marshals its zero value to `null`), so dropping the tag is a no-op.
-  This dovetails with the pointers rule above: `omitempty` earns its place only on genuinely
-  nullable fields (pointers, slices, maps), never on a value-typed struct.
+  fix (`,omitempty` → `,omitzero`, flagged "behavior change" and ignored by default). Stripping is
+  what the [JSON rules](#json-encodingjsonv2) ask for, but decide each field against them rather
+  than taking the analyzer's word: a "behavior change" note here is a question, not a verdict.
 
 The `newexpr` analyzer (→ `new(expression)`) and `minmax` are also registered, so a future sweep
 keeps the codebase aligned with the [`new(expression)`](#newexpression-for-pointers) idiom
