@@ -146,6 +146,8 @@ func acquireRestrictedTagLocks(t *testing.T, options applyAndTestOptions) func()
 	}
 }
 
+var testConfigDirOnce sync.Once
+
 // ApplyAndTest runs a TF test case. When TF_ACC is not set, it uses a mock
 // client (unit test mode). When TF_ACC is set, it runs against a real meshStack.
 // All tests using ApplyAndTest run in parallel, except that a test marked with
@@ -180,6 +182,13 @@ func ApplyAndTest(t *testing.T, testCase resource.TestCase, opts ...ApplyAndTest
 	} else {
 		// os.Setenv (not t.Setenv) because t.Setenv is incompatible with the t.Parallel() call below.
 		require.NoError(t, os.Setenv("MESHSTACK_SKIP_VERSION_CHECK", "true")) //nolint:usetesting // see comment above
+		testConfigDirOnce.Do(func() {
+			// The directory is empty, so a profile the developer logged in with cannot contradict
+			// MESHSTACK_ENDPOINT.
+			dir, err := os.MkdirTemp("", "meshstack-provider-testacc") //nolint:usetesting // t.TempDir() is removed when the first test ends
+			require.NoError(t, err)
+			require.NoError(t, os.Setenv("MESHSTACK_CONFIG_DIR", dir)) //nolint:usetesting // t.Setenv, as above
+		})
 		t.Parallel()
 		releaseRestrictedTagLocks := acquireRestrictedTagLocks(t, options)
 		defer releaseRestrictedTagLocks()
