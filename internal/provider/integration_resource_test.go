@@ -419,3 +419,15 @@ func checkIntegrationStatus(entraId knownvalue.Check) knownvalue.Check {
 		"workload_identity_federation": knownvalue.Null(),
 	})
 }
+
+// TestAccIntegrationResourceEmptyConfig covers a spec.config without any variant, which used to crash the
+// provider at apply time. The schema rejects it at plan time, so no backend is involved.
+func TestAccIntegrationResourceEmptyConfig(t *testing.T) {
+	config, _ := testconfig.Integration(t, "_01_github")
+	config = config.WithFirstBlock(testconfig.Descend("spec", "config")(testconfig.SetRawExpr("{}")))
+
+	ApplyAndTest(t, resource.TestCase{Steps: []resource.TestStep{{
+		Config:      config.String(),
+		ExpectError: regexp.MustCompile(`exactly one is\s+required`),
+	}}})
+}
