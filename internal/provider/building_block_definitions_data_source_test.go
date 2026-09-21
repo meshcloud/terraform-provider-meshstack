@@ -4,17 +4,17 @@ import (
 	"encoding/json/v2"
 	"testing"
 
-	"github.com/google/uuid"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	tfconfig "github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 	"github.com/meshcloud/meshstack-cli/client"
-	"github.com/meshcloud/meshstack-cli/client/types/enum"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/zclconf/go-cty/cty"
 
-	"github.com/meshcloud/terraform-provider-meshstack/internal/clientmock"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/xknownvalue"
 )
@@ -156,95 +156,62 @@ func TestAccBuildingBlockDefinitionsDataSource(t *testing.T) {
 			},
 		}})
 	})
-
-	t.Run("redacted for non-owner access", func(t *testing.T) {
-		// The definition and its versions are seeded directly, because the definitions a workspace may
-		// consume but does not own are exactly the ones it cannot create.
-		const workspaceIdentifier = "consumer-workspace"
-		definitionUuid, releasedVersionUuid, draftVersionUuid := uuid.NewString(), uuid.NewString(), uuid.NewString()
-
-		var dataSourceAddress testconfig.Traversal
-		config := testconfig.DataSource{Name: "building_block_definitions"}.Config(t).WithFirstBlock(
-			testconfig.ExtractAddress(&dataSourceAddress),
-			testconfig.Descend("workspace_identifier")(testconfig.SetString(workspaceIdentifier)),
-		)
-
-		versionRef := func(versionUuid string, number int64, state string) knownvalue.Check {
-			return xknownvalue.MapExact(map[string]knownvalue.Check{
-				"uuid":   knownvalue.StringExact(versionUuid),
-				"number": knownvalue.Int64Exact(number),
-				"state":  knownvalue.StringExact(state),
-				// The version spec the hash is computed over is what meshStack withholds.
-				"content_hash": knownvalue.Null(),
-			})
-		}
-
-		ApplyAndTest(t, resource.TestCase{Steps: []resource.TestStep{
-			{
-				Config: config.String(),
-				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("building_block_definitions"), knownvalue.ListExact([]knownvalue.Check{
-						xknownvalue.MapExact(map[string]knownvalue.Check{
-							"metadata": xknownvalue.MapExact(map[string]knownvalue.Check{
-								"uuid":               knownvalue.StringExact(definitionUuid),
-								"owned_by_workspace": knownvalue.StringExact(workspaceIdentifier),
-							}),
-							"spec": xknownvalue.MapExact(map[string]knownvalue.Check{
-								"display_name": knownvalue.StringExact("Consumable Building Block"),
-								"target_type":  knownvalue.StringExact("TENANT_LEVEL"),
-							}),
-							"versions": knownvalue.ListExact([]knownvalue.Check{
-								versionRef(releasedVersionUuid, 1, "RELEASED"),
-								versionRef(draftVersionUuid, 2, "DRAFT"),
-							}),
-							"version_latest":         versionRef(draftVersionUuid, 2, "DRAFT"),
-							"version_latest_release": versionRef(releasedVersionUuid, 1, "RELEASED"),
-							"ref": xknownvalue.MapExact(map[string]knownvalue.Check{
-								"kind": knownvalue.StringExact("meshBuildingBlockDefinition"),
-								"uuid": knownvalue.StringExact(definitionUuid),
-							}),
-						}),
-					})),
-				},
-			},
-		}}, WithMockClient(func(c *clientmock.Client) {
-			c.BuildingBlockDefinition.Store.Set(definitionUuid, &client.MeshBuildingBlockDefinition{
-				Metadata: client.MeshBuildingBlockDefinitionMetadata{
-					Uuid:             new(definitionUuid),
-					OwnedByWorkspace: workspaceIdentifier,
-				},
-				Spec: client.MeshBuildingBlockDefinitionSpec{
-					DisplayName: "Consumable Building Block",
-					TargetType:  client.MeshBuildingBlockTypeTenantLevel.Unwrap(),
-				},
-			})
-			for _, version := range []struct {
-				uuid   string
-				number int64
-				state  enum.Entry[client.MeshBuildingBlockDefinitionVersionState]
-			}{
-				{releasedVersionUuid, 1, client.MeshBuildingBlockDefinitionVersionStateReleased},
-				{draftVersionUuid, 2, client.MeshBuildingBlockDefinitionVersionStateDraft},
-			} {
-				c.BuildingBlockDefinitionVersion.Store.Set(version.uuid, &client.MeshBuildingBlockDefinitionVersion{
-					Metadata: client.MeshBuildingBlockDefinitionVersionMetadata{
-						Uuid:             version.uuid,
-						OwnedByWorkspace: workspaceIdentifier,
-					},
-					Spec: client.MeshBuildingBlockDefinitionVersionSpec{
-						BuildingBlockDefinitionRef: &client.UuidRef{Uuid: definitionUuid, Kind: client.MeshObjectKind.BuildingBlockDefinition},
-						VersionNumber:              new(version.number),
-						State:                      version.state.Ptr(),
-					},
-				})
-			}
-			c.BuildingBlockDefinition.RedactForNonOwnerAccess.Store(true)
-		}))
-	})
 }
 
 type lazyVariable string
 
 func (l *lazyVariable) MarshalJSON() ([]byte, error) {
 	return json.Marshal(string(*l))
+}
+
+// Test_buildVersionRefsFromStatus covers the fallback for a definition whose version specs meshStack withholds:
+// the version references have to come from the definition status alone.
+func Test_buildVersionRefsFromStatus(t *testing.T) {
+	const definitionUuid, releasedUuid, draftUuid = "definition-uuid", "released-uuid", "draft-uuid"
+	consumableDefinition := func(status *client.MeshBuildingBlockDefinitionStatus) client.MeshBuildingBlockDefinition {
+		return client.MeshBuildingBlockDefinition{
+			Metadata: client.MeshBuildingBlockDefinitionMetadata{Uuid: new(definitionUuid), OwnedByWorkspace: "consumer-workspace"},
+			Spec:     client.MeshBuildingBlockDefinitionSpec{DisplayName: "Consumable Building Block", TargetType: client.MeshBuildingBlockTypeTenantLevel.Unwrap()},
+			Status:   status,
+		}
+	}
+
+	t.Run("derives the version refs from the status", func(t *testing.T) {
+		released := client.MeshBuildingBlockDefinitionStatusVersion{VersionUuid: releasedUuid, VersionNumber: 1, State: client.MeshBuildingBlockDefinitionVersionStateReleased.Unwrap()}
+		draft := client.MeshBuildingBlockDefinitionStatusVersion{VersionUuid: draftUuid, VersionNumber: 2, State: client.MeshBuildingBlockDefinitionVersionStateDraft.Unwrap()}
+		definition := consumableDefinition(&client.MeshBuildingBlockDefinitionStatus{
+			// Out of order on purpose: the data source sorts by version number.
+			Versions:                  []client.MeshBuildingBlockDefinitionStatusVersion{draft, released},
+			LatestVersion:             2,
+			LatestVersionUuid:         draftUuid,
+			LatestReleasedVersion:     new(int64(1)),
+			LatestReleasedVersionUuid: new(releasedUuid),
+			RedactedForNonOwnerAccess: true,
+		})
+
+		var diags diag.Diagnostics
+		got := buildVersionRefsFromStatus(&diags, definition)
+
+		require.Empty(t, diags)
+		assert.Equal(t, buildingBlockDefinitionDataSourceModel{
+			Metadata: buildingBlockDefinitionDataSourceMetadataModel{Uuid: definitionUuid, OwnedByWorkspace: "consumer-workspace"},
+			Spec:     buildingBlockDefinitionDataSourceSpecModel{DisplayName: "Consumable Building Block", TargetType: client.MeshBuildingBlockTypeTenantLevel.Unwrap()},
+			// The content hash needs the version spec, which is exactly what is withheld.
+			Versions: []buildingBlockDefinitionDataSourceVersionRefModel{
+				{Uuid: releasedUuid, Number: 1, State: "RELEASED"},
+				{Uuid: draftUuid, Number: 2, State: "DRAFT"},
+			},
+			VersionLatest:        buildingBlockDefinitionDataSourceVersionRefModel{Uuid: draftUuid, Number: 2, State: "DRAFT"},
+			VersionLatestRelease: &buildingBlockDefinitionDataSourceVersionRefModel{Uuid: releasedUuid, Number: 1, State: "RELEASED"},
+			Ref:                  newBuildingBlockDefinitionRef(definitionUuid),
+		}, got)
+	})
+
+	t.Run("reports a missing status", func(t *testing.T) {
+		var diags diag.Diagnostics
+		buildVersionRefsFromStatus(&diags, consumableDefinition(nil))
+
+		require.Len(t, diags, 1)
+		assert.Equal(t, "Building block definition status missing", diags[0].Summary())
+	})
 }
