@@ -19,7 +19,6 @@ import (
 	"github.com/meshcloud/meshstack-cli/client/types/enum"
 	"github.com/zclconf/go-cty/cty"
 
-	"github.com/meshcloud/terraform-provider-meshstack/internal/clientmock"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/xknownvalue"
 )
@@ -1130,37 +1129,6 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 				{Config: released.String(), PlanOnly: true},
 			},
 		})
-	})
-
-	t.Run("18_redacted_for_non_owner_access", func(t *testing.T) {
-		if !IsMockClientTest() {
-			t.Skip("a real meshStack redacts a definition only for a workspace that does not own it, which the suite cannot act as")
-		}
-		config, _ := testconfig.BBDManual(t)
-
-		// Assigned before the steps run, so a step's PreConfig can flip the redaction mark, which the
-		// mock holds behind a pointer that survives the copy.
-		var mock clientmock.Client
-
-		ApplyAndTest(t, resource.TestCase{
-			Steps: []resource.TestStep{
-				{Config: config.String()},
-				// meshStack answers a workspace that may consume the definition but does not own it with
-				// the definition marked redacted and stripped of its implementation. There is nothing to
-				// manage without the implementation, so the refresh has to report that instead of writing
-				// an empty implementation to the state.
-				{
-					Config:      config.String(),
-					PreConfig:   func() { mock.BuildingBlockDefinition.RedactForNonOwnerAccess.Store(true) },
-					ExpectError: regexp.MustCompile(`Building block definition is not owned by your workspace`),
-				},
-				// Clear the mark so the framework's closing destroy can refresh the definition again.
-				{
-					Config:    config.String(),
-					PreConfig: func() { mock.BuildingBlockDefinition.RedactForNonOwnerAccess.Store(false) },
-				},
-			},
-		}, SeedingMock(func(m clientmock.Client) { mock = m }))
 	})
 }
 

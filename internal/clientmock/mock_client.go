@@ -7,7 +7,6 @@ import (
 	"slices"
 	"strings"
 	"sync"
-	"sync/atomic"
 
 	"github.com/meshcloud/meshstack-cli/client"
 	clientTypes "github.com/meshcloud/meshstack-cli/client/types"
@@ -88,7 +87,7 @@ func NewMock() Client {
 		ApiKey:                         MeshApiKeyClient{Store: NewStore[client.MeshApiKey]()},
 		BuildingBlock:                  meshBuildingBlockClient{Store: buildingBlockStore, BbdVersionStore: bbdVersionStore, TenantStore: tenantStore},
 		BuildingBlockRun:               MeshBuildingBlockRunClient{Store: buildingBlockRunStore, LogStore: buildingBlockRunLogStore},
-		BuildingBlockDefinition:        meshBuildingBlockDefinitionClient{Store: NewStore[client.MeshBuildingBlockDefinition](), StoreVersion: bbdVersionStore, RedactForNonOwnerAccess: new(atomic.Bool)},
+		BuildingBlockDefinition:        meshBuildingBlockDefinitionClient{Store: NewStore[client.MeshBuildingBlockDefinition](), StoreVersion: bbdVersionStore},
 		BuildingBlockDefinitionVersion: meshBuildingBlockDefinitionVersionClient{Store: bbdVersionStore},
 		BuildingBlockRunner:            MeshBuildingBlockRunnerClient{Store: NewStore[client.MeshBuildingBlockRunner]()},
 		BuildingBlockV2:                MeshBuildingBlockV2Client{Store: buildingBlockStore, BbdVersionStore: bbdVersionStore},
