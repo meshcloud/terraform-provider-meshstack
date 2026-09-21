@@ -74,7 +74,12 @@ type integrationModel struct {
 	} `tfsdk:"ref"`
 }
 
-func (model integrationModel) ToClientDto() client.MeshIntegration {
+func (model integrationModel) ToClientDto(diags *diag.Diagnostics) client.MeshIntegration {
+	configType, err := model.Spec.Config.InferType()
+	if err != nil {
+		diags.AddAttributeError(path.Root("spec").AtName("config"), "integration type cannot be determined", err.Error())
+		return client.MeshIntegration{}
+	}
 	setRunnerRefIfNil := func(runnerRef **client.UuidRef) {
 		if *runnerRef == nil {
 			*runnerRef = &client.UuidRef{
@@ -83,8 +88,6 @@ func (model integrationModel) ToClientDto() client.MeshIntegration {
 			}
 		}
 	}
-	// A config that sets no type matches no case below, and meshStack rejects it with its own error.
-	configType, _ := model.Spec.Config.InferType()
 	switch configType {
 	case client.MeshIntegrationConfigTypeGithub:
 		setRunnerRefIfNil(&model.Spec.Config.Github.RunnerRef)
@@ -110,7 +113,11 @@ func (r *integrationResource) Create(ctx context.Context, req resource.CreateReq
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	createdDto, err := r.integrationClient.Create(ctx, plan.ToClientDto())
+	dto := plan.ToClientDto(&resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	createdDto, err := r.integrationClient.Create(ctx, dto)
 	if err != nil {
 		resp.Diagnostics.AddError("Error creating meshIntegration", err.Error())
 		return
@@ -153,7 +160,11 @@ func (r *integrationResource) Update(ctx context.Context, req resource.UpdateReq
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	updatedDto, err := r.integrationClient.Update(ctx, plan.ToClientDto())
+	dto := plan.ToClientDto(&resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	updatedDto, err := r.integrationClient.Update(ctx, dto)
 	if err != nil {
 		resp.Diagnostics.AddError("Error updating meshIntegration", fmt.Sprintf("Updating integration '%s' failed: %s", *plan.Metadata.Uuid, err.Error()))
 		return
