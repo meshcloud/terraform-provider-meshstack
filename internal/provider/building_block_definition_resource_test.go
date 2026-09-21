@@ -1978,16 +1978,17 @@ resource "meshstack_building_block_definition" "test" {
 }
 
 func TestAccBuildingBlockDefinitionSupportedPlatformKinds(t *testing.T) {
-	if !IsMockClientTest() {
-		t.Skip("meshStack rejects kind meshPlatform until the release that supports individual platforms, so these kinds can only be proven against the mock client")
-	}
-
 	t.Parallel()
+
+	workspace, azurePlatform, otherPlatform := "my-workspace", "my-azure.my-location", "my-aws.my-location"
+	if !IsMockClientTest() {
+		workspace, azurePlatform, otherPlatform = AdminWorkspaceIdentifier, "azure.meshcloud-azure-dev", "okd-on-gcp.openshift"
+	}
 
 	supportedPlatformsConfig := func(supportedPlatforms string) string {
 		return fmt.Sprintf(`
 resource "meshstack_building_block_definition" "test" {
-  metadata = { owned_by_workspace = "my-workspace" }
+  metadata = { owned_by_workspace = %q }
   spec = {
     display_name        = "Test"
     description         = "Test"
@@ -1998,7 +1999,7 @@ resource "meshstack_building_block_definition" "test" {
     draft = true
     implementation = { manual = {} }
   }
-}`, supportedPlatforms)
+}`, workspace, supportedPlatforms)
 	}
 
 	platformRef := func(kind, name string) knownvalue.Check {
@@ -2021,17 +2022,17 @@ resource "meshstack_building_block_definition" "test" {
 		{
 			name: "an individual platform, named by its full identifier",
 			steps: []platformStep{{
-				supportedPlatforms: `[{ kind = "meshPlatform", name = "my-platform.my-location" }]`,
-				expectStored:       []knownvalue.Check{platformRef(client.MeshObjectKind.Platform, "my-platform.my-location")},
+				supportedPlatforms: fmt.Sprintf(`[{ kind = "meshPlatform", name = %q }]`, otherPlatform),
+				expectStored:       []knownvalue.Check{platformRef(client.MeshObjectKind.Platform, otherPlatform)},
 			}},
 		},
 		{
 			name: "a platform type next to a platform of another type",
 			steps: []platformStep{{
-				supportedPlatforms: `[{ name = "AZURE" }, { kind = "meshPlatform", name = "my-aws.my-location" }]`,
+				supportedPlatforms: fmt.Sprintf(`[{ name = "AZURE" }, { kind = "meshPlatform", name = %q }]`, otherPlatform),
 				expectStored: []knownvalue.Check{
 					platformRef(client.MeshObjectKind.PlatformType, "AZURE"),
-					platformRef(client.MeshObjectKind.Platform, "my-aws.my-location"),
+					platformRef(client.MeshObjectKind.Platform, otherPlatform),
 				},
 			}},
 		},
@@ -2043,15 +2044,15 @@ resource "meshstack_building_block_definition" "test" {
 					expectStored:       []knownvalue.Check{platformRef(client.MeshObjectKind.PlatformType, "AZURE")},
 				},
 				{
-					supportedPlatforms: `[{ kind = "meshPlatform", name = "my-azure.my-location" }]`,
-					expectStored:       []knownvalue.Check{platformRef(client.MeshObjectKind.Platform, "my-azure.my-location")},
+					supportedPlatforms: fmt.Sprintf(`[{ kind = "meshPlatform", name = %q }]`, azurePlatform),
+					expectStored:       []knownvalue.Check{platformRef(client.MeshObjectKind.Platform, azurePlatform)},
 				},
 			},
 		},
 		{
 			name: "an unknown kind is rejected",
 			steps: []platformStep{{
-				supportedPlatforms: `[{ kind = "meshPlatformInstance", name = "my-platform.my-location" }]`,
+				supportedPlatforms: fmt.Sprintf(`[{ kind = "meshPlatformInstance", name = %q }]`, otherPlatform),
 			}},
 			expectError: regexp.MustCompile(`value must be one of: \["meshPlatformType" "meshPlatform"\]`),
 		},
