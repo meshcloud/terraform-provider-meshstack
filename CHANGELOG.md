@@ -47,6 +47,8 @@ FIXES:
   `content_hash` stays null. Against an older meshStack nothing changes.
 - `meshstack_building_block_definition`: refreshing a definition owned by another workspace against meshStack 2026.39.0
   or later now fails with a clear error that names the owning workspace requirement, instead of a crash.
+- `meshstack_integration`: an empty `spec.config = {}` crashed the provider at apply time. It is now rejected at plan
+  time with a message naming the four alternatives, exactly one of which is required.
 
 # v0.25.4
 

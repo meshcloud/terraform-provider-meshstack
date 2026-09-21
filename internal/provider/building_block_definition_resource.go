@@ -161,6 +161,15 @@ func (r *buildingBlockDefinitionResource) writePolicies(
 	return updatedDto
 }
 
+func implementationType(implementation client.MeshBuildingBlockDefinitionImplementation, diags *diag.Diagnostics) client.MeshBuildingBlockImplementationType {
+	result, err := implementation.InferType()
+	if err != nil {
+		diags.AddAttributeError(path.Root("version_spec").AtName("implementation"), "implementation type cannot be determined", err.Error())
+		return ""
+	}
+	return result.Unwrap()
+}
+
 func (r *buildingBlockDefinitionResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	stateMetadata := generic.GetAttribute[client.MeshBuildingBlockDefinitionMetadata](ctx, req.State, path.Root("metadata"), &resp.Diagnostics, generic.WithSetUnknownValueToZero())
 	if resp.Diagnostics.HasError() {
@@ -798,8 +807,11 @@ func (r *buildingBlockDefinitionResource) Update(ctx context.Context, req resour
 	// type, so when the implementation type changes we pass through neutral in between.
 	plannedSpec := plan.Spec
 	versionIsWritten := state.VersionSpec.Draft || plan.VersionSpec.Draft
-	implementationTypeChanges := plan.VersionSpec.Implementation.InferTypeFromNonNilField() !=
-		state.VersionSpec.Implementation.InferTypeFromNonNilField()
+	implementationTypeChanges := implementationType(plan.VersionSpec.Implementation, &resp.Diagnostics) !=
+		implementationType(state.VersionSpec.Implementation, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	policiesDeferred := versionIsWritten && implementationTypeChanges
 	if policiesDeferred {
 		plan.Spec = plannedSpec.WithNeutralPolicies()
