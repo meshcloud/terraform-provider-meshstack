@@ -29,7 +29,10 @@ func (f nonEphemeralSecretFunction) Metadata(ctx context.Context, request functi
 func (f nonEphemeralSecretFunction) Definition(ctx context.Context, request function.DefinitionRequest, response *function.DefinitionResponse) {
 	response.Definition = function.Definition{
 		Parameters: []function.Parameter{function.StringParameter{
-			Name:                "secret_value",
+			Name: "secret_value",
+			// Terraform cannot descend into a wholly unknown result to null the write only
+			// secret_value, so take the call ourselves and return a known object instead.
+			AllowUnknownValues:  true,
 			MarkdownDescription: "The secret value, stored in Terraform config or state rather than supplied via an `ephemeral` resource.",
 		}},
 		Return:  function.ObjectReturn{AttributeTypes: nonEphemeralSecretReturnTypes},
@@ -55,16 +58,23 @@ func (f nonEphemeralSecretFunction) Definition(ctx context.Context, request func
 }
 
 func (f nonEphemeralSecretFunction) Run(ctx context.Context, request function.RunRequest, response *function.RunResponse) {
-	var value string
+	var value types.String
 	if err := request.Arguments.GetArgument(ctx, 0, &value); err != nil {
 		response.Error = err
 		return
 	}
 
-	secret, diags := types.ObjectValue(nonEphemeralSecretReturnTypes, map[string]attr.Value{
-		"secret_value":   types.StringValue(value),
-		"secret_version": types.StringValue(fmt.Sprintf("%x", sha256.Sum256([]byte(value)))),
-	})
+	attributes := map[string]attr.Value{
+		"secret_value":   types.StringUnknown(),
+		"secret_version": types.StringUnknown(),
+	}
+	if !value.IsUnknown() {
+		plaintext := value.ValueString()
+		attributes["secret_value"] = types.StringValue(plaintext)
+		attributes["secret_version"] = types.StringValue(fmt.Sprintf("%x", sha256.Sum256([]byte(plaintext))))
+	}
+
+	secret, diags := types.ObjectValue(nonEphemeralSecretReturnTypes, attributes)
 	if response.Error = function.FuncErrorFromDiags(ctx, diags); response.Error != nil {
 		return
 	}

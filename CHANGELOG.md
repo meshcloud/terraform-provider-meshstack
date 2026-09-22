@@ -1,3 +1,11 @@
+# v0.26.1
+
+FIXES:
+- `provider::meshstack::non_ephemeral_secret` no longer fails a plan with *"returned a value for the
+  write-only attribute … during planning"* when its argument is unknown, which it is whenever the
+  secret comes from another resource in the same apply. Spelling `secret_value` and `secret_version`
+  out by hand was the workaround and is no longer needed.
+
 # v0.26.0
 
 This release switches the provider's meshStack API client and its credential handling to the
