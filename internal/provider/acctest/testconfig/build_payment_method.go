@@ -15,6 +15,8 @@ func PaymentMethod(t *testing.T, workspaceAddr Traversal) (config Config, paymen
 		ExtractAddress(&paymentMethodAddr),
 		OwnedByWorkspace(workspaceAddr),
 		Descend("metadata", "name")(SetString(paymentMethodName)),
+		// The example's date has passed, and a building block may only pick an active Payment Method.
+		Descend("spec", "expiration_date")(SetString("2099-12-31")),
 		Descend("spec", "tags")(SetRawExpr(`{(%s) = ["0000"]}`, tagDefinitionAddr.Join("spec", "key"))),
 	).Join(tagConfig), paymentMethodAddr
 }
