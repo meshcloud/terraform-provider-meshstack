@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/compare"
 	tfconfig "github.com/hashicorp/terraform-plugin-testing/config"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
@@ -1444,6 +1445,108 @@ func TestAccBuildingBlock(t *testing.T) {
 					// configuration declares, or this plan is not empty.
 					Config:   config.String(),
 					PlanOnly: true,
+				},
+			},
+		})
+	})
+
+	// 14_payment_method_input orders a block with a Payment Method, switches it, and imports it. A
+	// Payment Method input cannot be optional, so it lives in this test's own definition instead of the
+	// shared one every other test orders from.
+	t.Run("14_payment_method_input", func(t *testing.T) {
+		if IsMockClientTest() {
+			t.Skip("which Payment Method a building block may pick is checked by meshStack only")
+		}
+
+		workspaceConfig, workspaceAddr := testconfig.Workspace(t)
+		var foreignWorkspaceAddr testconfig.Traversal
+		foreignWorkspaceConfig, _ := testconfig.Workspace(t)
+		foreignWorkspaceConfig = foreignWorkspaceConfig.WithFirstBlock(
+			testconfig.RenameKey("foreign"),
+			testconfig.ExtractAddress(&foreignWorkspaceAddr),
+		)
+
+		paymentMethod := func(label string, ownerAddr testconfig.Traversal) (config testconfig.Config, paymentMethodAddr testconfig.Traversal, name string) {
+			name = "test-pm-" + acctest.RandString(8)
+			config, _ = testconfig.PaymentMethod(t, ownerAddr)
+			config = config.WithFirstBlock(
+				testconfig.RenameKey(label),
+				testconfig.ExtractAddress(&paymentMethodAddr),
+				testconfig.Descend("metadata", "name")(testconfig.SetString(name)),
+			)
+			return config, paymentMethodAddr, name
+		}
+		firstConfig, firstAddr, firstName := paymentMethod("first", workspaceAddr)
+		secondConfig, secondAddr, secondName := paymentMethod("second", workspaceAddr)
+		foreignConfig, foreignAddr, _ := paymentMethod("foreign", foreignWorkspaceAddr)
+
+		var buildingBlockDefinitionAddr testconfig.Traversal
+		buildingBlockDefinitionConfig := testconfig.Resource{Name: "building_block", Suffix: "_01_workspace"}.TestSupportConfig(t, "").WithFirstBlock(
+			testconfig.ExtractAddress(&buildingBlockDefinitionAddr),
+			testconfig.OwnedByWorkspace(workspaceAddr),
+			testconfig.Descend("version_spec", "inputs", "payment_method")(testconfig.SetRawExpr(`{
+  display_name           = "Payment Method"
+  type                   = "CODE"
+  assignment_type        = "PAYMENT_METHOD"
+  updateable_by_consumer = true
+}`)),
+		)
+
+		var buildingBlockAddr testconfig.Traversal
+		buildingBlockWithPaymentMethod := func(paymentMethodAddr testconfig.Traversal) testconfig.Config {
+			return testconfig.Resource{Name: "building_block", Suffix: "_01_workspace"}.Config(t).WithFirstBlock(
+				testconfig.ExtractAddress(&buildingBlockAddr),
+				testconfig.Descend("spec", "building_block_definition_version_ref")(testconfig.SetRawExpr(`{ uuid = %s }`, buildingBlockDefinitionAddr.Join("version_latest", "uuid"))),
+				testconfig.Descend("spec", "target_ref")(testconfig.SetAddr(workspaceAddr, "ref")),
+				testconfig.Descend("spec", "inputs", "payment_method")(testconfig.SetRawExpr(`{ value = jsonencode(%s) }`, paymentMethodAddr.Join("metadata", "name"))),
+			).Join(workspaceConfig, buildingBlockDefinitionConfig, firstConfig, secondConfig, foreignWorkspaceConfig, foreignConfig)
+		}
+
+		paymentMethodInputChecks := func(paymentMethodName string) []statecheck.StateCheck {
+			encodedName := fmt.Sprintf("%q", paymentMethodName)
+			return []statecheck.StateCheck{
+				statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("spec").AtMapKey("inputs").AtMapKey("payment_method").AtMapKey("value"), knownvalue.StringExact(encodedName)),
+				statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("all_inputs").AtMapKey("payment_method").AtMapKey("assignment_type"),
+					knownvalue.StringExact(client.MeshBuildingBlockInputAssignmentTypePaymentMethod.String())),
+			}
+		}
+
+		ApplyAndTest(t, resource.TestCase{
+			Steps: []resource.TestStep{
+				{
+					Config:            buildingBlockWithPaymentMethod(firstAddr).String(),
+					ConfigStateChecks: paymentMethodInputChecks(firstName),
+				},
+				{
+					Config:   buildingBlockWithPaymentMethod(firstAddr).String(),
+					PlanOnly: true,
+				},
+				{
+					Config:      buildingBlockWithPaymentMethod(foreignAddr).String(),
+					ExpectError: regexp.MustCompile(`does not belong to workspace`),
+				},
+				{
+					Config: buildingBlockWithPaymentMethod(secondAddr).String(),
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PreApply: []plancheck.PlanCheck{
+							plancheck.ExpectResourceAction(buildingBlockAddr.String(), plancheck.ResourceActionUpdate),
+						},
+					},
+					ConfigStateChecks: paymentMethodInputChecks(secondName),
+				},
+				{
+					ImportState:                          true,
+					ImportStateVerify:                    true,
+					ImportStateVerifyIdentifierAttribute: "metadata.uuid",
+					ImportStateVerifyIgnore:              []string{"wait_for_completion", "purge_on_delete", "timeouts.create", "timeouts.update", "timeouts.delete"},
+					ImportStateIdFunc: func(s *terraform.State) (string, error) {
+						rs := s.RootModule().Resources[buildingBlockAddr.String()]
+						if rs == nil {
+							return "", fmt.Errorf("resource not found: %s", buildingBlockAddr.String())
+						}
+						return rs.Primary.Attributes["metadata.uuid"], nil
+					},
+					ResourceName: buildingBlockAddr.String(),
 				},
 			},
 		})
