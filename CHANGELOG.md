@@ -4,6 +4,10 @@ FEATURES:
 - `meshstack_api_key`: `permissions` accepts `(MANAGED_|ADM_)BUILDINGBLOCKRUNARTIFACT_(LIST|SAVE)`,
   `(MANAGED_|ADM_)TENANTDELETION_APPROVE`, `[ADM_]TENANTUSAGEREPORT_LIST` and `ADM_WORKSPACEUSERGROUP_(DELETE|SAVE)`.
   Its documentation lists the permissions per resource in this pattern notation.
+- `meshstack_building_block_definition`: an input can now take its value from a Payment Method with
+  `assignment_type = "PAYMENT_METHOD"`.
+  Only a `WORKSPACE_LEVEL` definition can declare such an input, and it must be of type `CODE`.
+  Needs meshStack 2026.41.0 or later.
 
 FIXES:
 - Update google.golang.org/grpc to v1.83.2, which fixes the vulnerabilities GO-2026-6061, GO-2026-6348 and
