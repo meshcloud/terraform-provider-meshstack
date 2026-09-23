@@ -5,10 +5,12 @@ import (
 	"encoding/json/v2"
 	"fmt"
 	"reflect"
+	"slices"
 
 	"github.com/google/uuid"
 	"github.com/meshcloud/meshstack-cli/client"
 	clientTypes "github.com/meshcloud/meshstack-cli/client/types"
+	"github.com/meshcloud/meshstack-cli/client/types/enum"
 )
 
 // wireCompatibility repeats what internal/provider marshals with, so that the round-trip below
@@ -35,7 +37,7 @@ func deepCopyBB(bb *client.MeshBuildingBlockV2) *client.MeshBuildingBlockV2 {
 	return &cp
 }
 
-// materializeNullRows adds null-valued USER_INPUT rows for every definition input that is not
+// materializeNullRows adds null-valued consumer input rows for every definition input that is not
 // already present in the building block's inputs. This mirrors the real meshStack backend
 // which returns a {assignmentType: USER_INPUT, value: null} entry for every definition input
 // the request didn't supply, so that provider tests see the same shape as the real backend.
@@ -51,14 +53,38 @@ func materializeNullRows(inputs map[string]*client.MeshBuildingBlockInput, bbdVe
 		if _, exists := inputs[key]; exists {
 			continue
 		}
-		if defInput.AssignmentType != client.MeshBuildingBlockInputAssignmentTypeUserInput.Unwrap() {
-			// Only materialize USER_INPUT rows; operator/static inputs are not echoed back as null
+		if !slices.Contains(consumerInputAssignmentTypes.Strings(), string(defInput.AssignmentType)) {
+			// Only materialize consumer rows; operator/static inputs are not echoed back as null
 			continue
 		}
-		// Insert a null-valued USER_INPUT row.
 		inputs[key] = &client.MeshBuildingBlockInput{
 			Value:          clientTypes.SecretOrAny{},
-			AssignmentType: client.MeshBuildingBlockInputAssignmentTypeUserInput,
+			AssignmentType: enum.Entry[client.MeshBuildingBlockInputAssignmentType](defInput.AssignmentType),
+		}
+	}
+}
+
+var consumerInputAssignmentTypes = enum.Of(
+	client.MeshBuildingBlockInputAssignmentTypeUserInput,
+	client.MeshBuildingBlockInputAssignmentTypePaymentMethod,
+)
+
+// assignDefinitionAssignmentTypes labels each sent input with the assignment type its definition input
+// declares, as the backend reports it. The provider never sends one.
+func assignDefinitionAssignmentTypes(inputs map[string]*client.MeshBuildingBlockInput, bbdVersionStore *Store[client.MeshBuildingBlockDefinitionVersion], versionRefUuid string) {
+	var definitionInputs map[string]*client.MeshBuildingBlockDefinitionInput
+	if bbdVersionStore != nil {
+		if version, ok := bbdVersionStore.Get(versionRefUuid); ok {
+			definitionInputs = version.Spec.Inputs
+		}
+	}
+	for key, input := range inputs {
+		if input.AssignmentType != "" {
+			continue
+		}
+		input.AssignmentType = client.MeshBuildingBlockInputAssignmentTypeUserInput
+		if definitionInput, ok := definitionInputs[key]; ok {
+			input.AssignmentType = enum.Entry[client.MeshBuildingBlockInputAssignmentType](definitionInput.AssignmentType)
 		}
 	}
 }
@@ -161,11 +187,7 @@ func (m MeshBuildingBlockV2Client) Create(_ context.Context, bb *client.MeshBuil
 	// Deep-copy the incoming DTO before any mutation so we never modify the caller's data.
 	stored := deepCopyBB(bb)
 
-	for _, input := range stored.Spec.Inputs {
-		if input.AssignmentType == "" {
-			input.AssignmentType = client.MeshBuildingBlockInputAssignmentTypeUserInput
-		}
-	}
+	assignDefinitionAssignmentTypes(stored.Spec.Inputs, m.BbdVersionStore, stored.Spec.BuildingBlockDefinitionVersionRef.Uuid)
 	// Inputs are pointer-valued so the shared backendSecretBehavior walker can reach (and mutate) the
 	// secret inside each addressable map value. On create there is no prior block to validate against.
 	backendSecretBehavior(true, stored, nil)
@@ -198,11 +220,7 @@ func (m MeshBuildingBlockV2Client) Update(_ context.Context, bb *client.MeshBuil
 
 	stored := deepCopyBB(bb) // deep-copy in (see Create)
 
-	for _, input := range stored.Spec.Inputs {
-		if input.AssignmentType == "" {
-			input.AssignmentType = client.MeshBuildingBlockInputAssignmentTypeUserInput
-		}
-	}
+	assignDefinitionAssignmentTypes(stored.Spec.Inputs, m.BbdVersionStore, stored.Spec.BuildingBlockDefinitionVersionRef.Uuid)
 
 	// Validate/hash secrets against the stored block: an unchanged secret is sent hash-only and must
 	// match the stored hash, while a rotated secret arrives as plaintext and is re-hashed. Pointer-valued
