@@ -1,5 +1,16 @@
 # v0.26.1
 
+FEATURES:
+- `meshstack_building_block_definition`: an input can now take its value from a Payment Method with
+  `assignment_type = "PAYMENT_METHOD"`. Whoever orders the building block picks one of their
+  workspace's Payment Methods, and `updateable_by_consumer` decides whether they may switch it later.
+  Only a `WORKSPACE_LEVEL` definition can declare such an input, and it must be of type `CODE`. The
+  provider rejects a tenant definition, a default value, a sensitive input, selectable values and a
+  validation regex at plan time.
+- `meshstack_building_block`: set a Payment Method input in `spec.inputs` like a user input, with
+  `value = jsonencode(meshstack_payment_method.example.metadata.name)`. meshStack accepts only an active
+  Payment Method of the target workspace. This needs meshStack 2026.40.0 or later.
+
 FIXES:
 - `provider::meshstack::non_ephemeral_secret` no longer fails a plan with *"returned a value for the
   write-only attribute … during planning"* when its argument is unknown, which it is whenever the
