@@ -91,6 +91,10 @@ func TestAccBuildingBlockRunnerResource(t *testing.T) {
 	})
 
 	t.Run("wif", func(t *testing.T) {
+		if !IsMockClientTest() {
+			// meshStack develop only accepts subject_template, which arrives with #317; a real backend rejects this body.
+			t.Skip("skipped until the subject_template rename in #317 lands")
+		}
 		config, runnerAddr, _ := testconfig.BuildingBlockRunnerAndWorkspace(t)
 		config = config.WithFirstBlock(testconfig.Descend("spec", "public_key")(testconfig.SetString(runnerPublicKey)))
 		var runnerUuid string
