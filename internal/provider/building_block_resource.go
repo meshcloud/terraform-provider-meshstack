@@ -214,7 +214,10 @@ func (r *buildingBlockResource) Schema(ctx context.Context, req resource.SchemaR
 							"Defined much like a BBD's inputs (which are richer, e.g. defaults).<br>" +
 							"Set either `value` (always `jsonencode(...)`'d, including strings) or `sensitive = { secret_value = ... }`. " +
 							"The `sensitive` block must be used if and only if the BBD declares the input as sensitive.<br>" +
-							"App teams normally set only `USER_INPUT` inputs. `PLATFORM_OPERATOR_MANUAL_INPUT` inputs require a " +
+							"App teams normally set only `USER_INPUT` and `PAYMENT_METHOD` inputs. A `PAYMENT_METHOD` value is the " +
+							"`metadata.name` of a Payment Method of the target workspace, e.g. `jsonencode(meshstack_payment_method.example.metadata.name)`, " +
+							"and setting it requires a key that may list that workspace's Payment Methods. " +
+							"`PLATFORM_OPERATOR_MANUAL_INPUT` inputs require a " +
 							"platform-operator key (admin, or `MANAGED_BUILDINGBLOCK_SAVE` for the definition's owning workspace): an " +
 							"operator sets them either on a block it creates from its own BBD (e.g. testing a draft), or by importing an " +
 							"app-team block created from its BBD to supply the operator inputs that block is awaiting. This shared " +
@@ -354,10 +357,8 @@ func (r *buildingBlockResource) Schema(ctx context.Context, req resource.SchemaR
 							Computed:            true,
 						},
 						"assignment_type": schema.StringAttribute{
-							MarkdownDescription: "How the input value is assigned. Either " + client.MeshBuildingBlockInputAssignmentTypeUserInput.Markdown() +
-								" or " +
-								client.MeshBuildingBlockInputAssignmentTypePlatformOperatorManualInput.Markdown() + ".",
-							Computed: true,
+							MarkdownDescription: "How the input value is assigned. One of " + client.MeshBuildingBlockInputAssignmentTypes.Markdown() + ".",
+							Computed:            true,
 						},
 					},
 				},
@@ -440,7 +441,7 @@ func (m *buildingBlockModel) SetFromClientDto(dto *client.MeshBuildingBlockV2, i
 
 	for key, input := range m.Spec.Inputs {
 		switch input.AssignmentType {
-		case client.MeshBuildingBlockInputAssignmentTypeUserInput:
+		case client.MeshBuildingBlockInputAssignmentTypeUserInput, client.MeshBuildingBlockInputAssignmentTypePaymentMethod:
 			isNullValue := !input.Value.HasX() && !input.Value.HasY() && !input.IsSensitive
 			if _, exists := specInputs[key]; !exists {
 				// This input is NOT declared by the current configuration. Surface it read-only in

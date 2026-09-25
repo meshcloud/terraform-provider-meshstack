@@ -1890,6 +1890,109 @@ resource "meshstack_building_block_definition" "test" {
 	}
 }
 
+func TestAccBuildingBlockDefinitionPaymentMethodInputValidation(t *testing.T) {
+	// Like the tag input validator, this one is client-side only, so the mock client is enough.
+	if !IsMockClientTest() {
+		t.Skip("payment method input validation is tested with mock client only")
+	}
+
+	t.Parallel()
+
+	paymentMethodInputConfig := func(specAttributes, inputAttributes string) string {
+		return fmt.Sprintf(`
+resource "meshstack_building_block_definition" "test" {
+  metadata = { owned_by_workspace = "my-workspace" }
+  spec = {
+    display_name = "Test"
+    description  = "Test"
+    %s
+  }
+  version_spec = {
+    draft          = true
+    implementation = { terraform = { terraform_version = "1.9.0", repository_url = "https://example.com/bb.git" } }
+    inputs = {
+      payment_method = {
+        display_name    = "Payment Method"
+        assignment_type = "PAYMENT_METHOD"
+        %s
+      }
+    }
+  }
+}`, specAttributes, inputAttributes)
+	}
+
+	const (
+		workspaceLevel = `target_type = "WORKSPACE_LEVEL"`
+		tenantLevel    = `target_type         = "TENANT_LEVEL"
+    supported_platforms = [{ name = "AZURE" }]`
+		codeType = `type = "CODE"`
+	)
+
+	tests := []struct {
+		name            string
+		specAttributes  string
+		inputAttributes string
+		expectError     *regexp.Regexp
+	}{
+		{
+			name:            "a code input on a workspace building block",
+			specAttributes:  workspaceLevel,
+			inputAttributes: codeType + "\n        updateable_by_consumer = true",
+		},
+		{
+			name:            "the default target type is a workspace building block",
+			inputAttributes: codeType,
+		},
+		{
+			name:            "a tenant building block is rejected",
+			specAttributes:  tenantLevel,
+			inputAttributes: codeType,
+			expectError:     regexp.MustCompile(`A Payment Method input needs a workspace building block`),
+		},
+		{
+			name:            "a non-code input type is rejected",
+			specAttributes:  workspaceLevel,
+			inputAttributes: `type = "STRING"`,
+			expectError:     regexp.MustCompile(`A Payment Method input must be a code input`),
+		},
+		{
+			name:            "a default value is rejected",
+			specAttributes:  workspaceLevel,
+			inputAttributes: codeType + "\n        default_value = jsonencode(\"my-payment-method\")",
+			expectError:     regexp.MustCompile(`A Payment Method input cannot set default_value`),
+		},
+		{
+			name:            "a sensitive input is rejected",
+			specAttributes:  workspaceLevel,
+			inputAttributes: codeType + "\n        sensitive = {}",
+			expectError:     regexp.MustCompile(`A Payment Method input cannot set sensitive`),
+		},
+		{
+			name:            "selectable values are rejected",
+			specAttributes:  workspaceLevel,
+			inputAttributes: codeType + "\n        selectable_values = [\"my-payment-method\"]",
+			expectError:     regexp.MustCompile(`A Payment Method input cannot set selectable_values`),
+		},
+		{
+			name:            "a validation regex is rejected",
+			specAttributes:  workspaceLevel,
+			inputAttributes: codeType + "\n        value_validation_regex = \".*\"",
+			expectError:     regexp.MustCompile(`A Payment Method input cannot set value_validation_regex`),
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ApplyAndTest(t, resource.TestCase{
+				Steps: []resource.TestStep{{
+					Config:      paymentMethodInputConfig(test.specAttributes, test.inputAttributes),
+					ExpectError: test.expectError,
+				}},
+			})
+		})
+	}
+}
+
 func TestAccBuildingBlockDefinitionSymbolValidation(t *testing.T) {
 	// Symbol validation is client-side only; success cases need a real workspace in acceptance mode.
 	if !IsMockClientTest() {

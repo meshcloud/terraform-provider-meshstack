@@ -79,6 +79,7 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 		Optional: true,
 		Validators: []validator.Map{
 			validators.BuildingBlockDefinitionTagInputs{},
+			validators.BuildingBlockDefinitionPaymentMethodInputs{},
 			mapvalidator.KeysAre(stringvalidator.LengthAtMost(maxLengthText)),
 		},
 		NestedObject: schema.NestedAttributeObject{
@@ -106,7 +107,8 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 						"Use `provider::meshstack::load_file` or `provider::meshstack::encode_file` to produce such a data blob. " +
 						"When providing this value via `argument` or `default_value`, wrap the blob in `jsonencode(...)`, for example `argument = jsonencode(provider::meshstack::load_file(...))`.<br>" +
 						"Must be " + client.MeshBuildingBlockIOTypeCode.Markdown() + " when `assignment_type` is " + client.MeshBuildingBlockInputAssignmentTypeTag.Markdown() +
-						", because a meshStack tag value is a list of strings.",
+						", because a meshStack tag value is a list of strings, and when it is " + client.MeshBuildingBlockInputAssignmentTypePaymentMethod.Markdown() +
+						", because the run receives the Payment Method as a JSON object.",
 					Required: true,
 					Validators: []validator.String{
 						stringvalidator.OneOf(client.MeshBuildingBlockDefinitionInputTypes.Strings()...),
@@ -114,7 +116,9 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 				},
 				"assignment_type": schema.StringAttribute{
 					MarkdownDescription: "How the input value is assigned. One of " + client.MeshBuildingBlockInputAssignmentTypes.Markdown() + ". " +
-						"Determines which additional attributes are required or allowed.",
+						"Determines which additional attributes are required or allowed.<br>" +
+						"With " + client.MeshBuildingBlockInputAssignmentTypePaymentMethod.Markdown() + ", whoever orders the building block picks one of their workspace's Payment Methods. " +
+						"Only a `" + client.MeshBuildingBlockTypeWorkspaceLevel.String() + "` building block can declare it. Requires meshStack 2026.40.0 or later.",
 					Required: true,
 					Validators: []validator.String{
 						stringvalidator.OneOf(client.MeshBuildingBlockInputAssignmentTypes.Strings()...),
@@ -180,10 +184,11 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 					Default:             booldefault.StaticBool(false),
 				},
 				"updateable_by_consumer": schema.BoolAttribute{
-					MarkdownDescription: "Whether the input value can be updated by consumers without admin or platform operator permissions.",
-					Optional:            true,
-					Computed:            true,
-					Default:             booldefault.StaticBool(false),
+					MarkdownDescription: "Whether the input value can be updated by consumers without admin or platform operator permissions. " +
+						"For assignment type " + client.MeshBuildingBlockInputAssignmentTypePaymentMethod.Markdown() + ", `false` makes the Payment Method picked when ordering the building block final.",
+					Optional: true,
+					Computed: true,
+					Default:  booldefault.StaticBool(false),
 				},
 				"is_optional": schema.BoolAttribute{
 					MarkdownDescription: "Whether the input may be left unset when a building block is filled in. " +
