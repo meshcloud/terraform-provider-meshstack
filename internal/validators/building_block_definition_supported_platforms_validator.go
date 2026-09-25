@@ -41,8 +41,13 @@ func (v SupportedPlatforms) ValidateSet(ctx context.Context, req validator.SetRe
 		return
 	}
 
+	// An unknown value is checked again once Terraform knows it, e.g. a list built from a variable
+	if req.ConfigValue.IsUnknown() {
+		return
+	}
+
 	// If target_type is TenantTargetType, supported_platforms must be non-null and non-empty
-	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
+	if req.ConfigValue.IsNull() {
 		resp.Diagnostics.Append(diag.NewAttributeErrorDiagnostic(
 			req.Path,
 			"Invalid Attribute Configuration",

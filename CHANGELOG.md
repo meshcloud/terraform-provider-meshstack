@@ -5,6 +5,10 @@ FIXES:
   write-only attribute … during planning"* when its argument is unknown, which it is whenever the
   secret comes from another resource in the same apply. Spelling `secret_value` and `secret_version`
   out by hand was the workaround and is no longer needed.
+- `meshstack_building_block_definition` no longer fails with *"Attribute spec.supported_platforms is
+  required when target_type is TENANT_LEVEL"* when `supported_platforms` is built from a variable,
+  for example with a `for` expression or `concat()`. Terraform validates the configuration before it
+  knows variable values, and the provider took that unknown list for a missing one.
 
 # v0.26.0
 
