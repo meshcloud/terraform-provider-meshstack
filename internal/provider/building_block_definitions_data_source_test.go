@@ -4,11 +4,15 @@ import (
 	"encoding/json/v2"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	tfconfig "github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
+	"github.com/meshcloud/meshstack-cli/client"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/zclconf/go-cty/cty"
 
 	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
@@ -158,4 +162,56 @@ type lazyVariable string
 
 func (l *lazyVariable) MarshalJSON() ([]byte, error) {
 	return json.Marshal(string(*l))
+}
+
+// Test_buildVersionRefsFromStatus covers the fallback for a definition whose version specs meshStack withholds:
+// the version references have to come from the definition status alone.
+func Test_buildVersionRefsFromStatus(t *testing.T) {
+	const definitionUuid, releasedUuid, draftUuid = "definition-uuid", "released-uuid", "draft-uuid"
+	consumableDefinition := func(status *client.MeshBuildingBlockDefinitionStatus) client.MeshBuildingBlockDefinition {
+		return client.MeshBuildingBlockDefinition{
+			Metadata: client.MeshBuildingBlockDefinitionMetadata{Uuid: new(definitionUuid), OwnedByWorkspace: "consumer-workspace"},
+			Spec:     client.MeshBuildingBlockDefinitionSpec{DisplayName: "Consumable Building Block", TargetType: client.MeshBuildingBlockTypeTenantLevel.Unwrap()},
+			Status:   status,
+		}
+	}
+
+	t.Run("derives the version refs from the status", func(t *testing.T) {
+		released := client.MeshBuildingBlockDefinitionStatusVersion{VersionUuid: releasedUuid, VersionNumber: 1, State: client.MeshBuildingBlockDefinitionVersionStateReleased.Unwrap()}
+		draft := client.MeshBuildingBlockDefinitionStatusVersion{VersionUuid: draftUuid, VersionNumber: 2, State: client.MeshBuildingBlockDefinitionVersionStateDraft.Unwrap()}
+		definition := consumableDefinition(&client.MeshBuildingBlockDefinitionStatus{
+			// Out of order on purpose: the data source sorts by version number.
+			Versions:                  []client.MeshBuildingBlockDefinitionStatusVersion{draft, released},
+			LatestVersion:             2,
+			LatestVersionUuid:         draftUuid,
+			LatestReleasedVersion:     new(int64(1)),
+			LatestReleasedVersionUuid: new(releasedUuid),
+			RedactedForNonOwnerAccess: true,
+		})
+
+		var diags diag.Diagnostics
+		got := buildVersionRefsFromStatus(&diags, definition)
+
+		require.Empty(t, diags)
+		assert.Equal(t, buildingBlockDefinitionDataSourceModel{
+			Metadata: buildingBlockDefinitionDataSourceMetadataModel{Uuid: definitionUuid, OwnedByWorkspace: "consumer-workspace"},
+			Spec:     buildingBlockDefinitionDataSourceSpecModel{DisplayName: "Consumable Building Block", TargetType: client.MeshBuildingBlockTypeTenantLevel.Unwrap()},
+			// The content hash needs the version spec, which is exactly what is withheld.
+			Versions: []buildingBlockDefinitionDataSourceVersionRefModel{
+				{Uuid: releasedUuid, Number: 1, State: "RELEASED"},
+				{Uuid: draftUuid, Number: 2, State: "DRAFT"},
+			},
+			VersionLatest:        buildingBlockDefinitionDataSourceVersionRefModel{Uuid: draftUuid, Number: 2, State: "DRAFT"},
+			VersionLatestRelease: &buildingBlockDefinitionDataSourceVersionRefModel{Uuid: releasedUuid, Number: 1, State: "RELEASED"},
+			Ref:                  newBuildingBlockDefinitionRef(definitionUuid),
+		}, got)
+	})
+
+	t.Run("reports a missing status", func(t *testing.T) {
+		var diags diag.Diagnostics
+		buildVersionRefsFromStatus(&diags, consumableDefinition(nil))
+
+		require.Len(t, diags, 1)
+		assert.Equal(t, "Building block definition status missing", diags[0].Summary())
+	})
 }

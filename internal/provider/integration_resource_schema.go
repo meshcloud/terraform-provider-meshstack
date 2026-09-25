@@ -3,8 +3,6 @@ package provider
 import (
 	"context"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -14,6 +12,7 @@ import (
 
 	"github.com/meshcloud/terraform-provider-meshstack/internal/modifiers/integrationmodifier"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/types/secret"
+	"github.com/meshcloud/terraform-provider-meshstack/internal/validators"
 )
 
 func (r *integrationResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
@@ -62,12 +61,6 @@ func (r *integrationResource) Schema(_ context.Context, _ resource.SchemaRequest
 		},
 	}
 
-	allowSingleImplementation := objectvalidator.ConflictsWith(
-		path.MatchRelative().AtParent().AtName("github"),
-		path.MatchRelative().AtParent().AtName("gitlab"),
-		path.MatchRelative().AtParent().AtName("azuredevops"),
-		path.MatchRelative().AtParent().AtName("entraid"),
-	)
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Manages a meshIntegration in meshStack. " +
 			"Integrations configure external CI/CD systems (GitHub, GitLab, Azure DevOps) for building block execution or for Entra ID SSO. " +
@@ -106,11 +99,13 @@ func (r *integrationResource) Schema(_ context.Context, _ resource.SchemaRequest
 					"config": schema.SingleNestedAttribute{
 						MarkdownDescription: "Configuration for the integration. Must specify exactly one of `github`, `gitlab`, `azuredevops`, or `entraid`. Note that your meshStack does not support Entra ID integrations by default and needs to be configured explicitly to do so.",
 						Required:            true,
+						Validators: []validator.Object{
+							validators.ExactlyOneAttributeValidator{},
+						},
 						Attributes: map[string]schema.Attribute{
 							"github": schema.SingleNestedAttribute{
 								MarkdownDescription: "GitHub integration configuration.",
 								Optional:            true,
-								Validators:          []validator.Object{allowSingleImplementation},
 								Attributes: map[string]schema.Attribute{
 									"owner": schema.StringAttribute{
 										MarkdownDescription: "GitHub organization or user that owns the repositories.",
@@ -135,7 +130,6 @@ func (r *integrationResource) Schema(_ context.Context, _ resource.SchemaRequest
 							"gitlab": schema.SingleNestedAttribute{
 								MarkdownDescription: "GitLab integration configuration.",
 								Optional:            true,
-								Validators:          []validator.Object{allowSingleImplementation},
 								Attributes: map[string]schema.Attribute{
 									"base_url": schema.StringAttribute{
 										MarkdownDescription: "Base URL of the GitLab instance (e.g., `https://gitlab.com` or your self-hosted GitLab URL).",
@@ -148,7 +142,6 @@ func (r *integrationResource) Schema(_ context.Context, _ resource.SchemaRequest
 							"azuredevops": schema.SingleNestedAttribute{
 								MarkdownDescription: "Azure DevOps integration configuration.",
 								Optional:            true,
-								Validators:          []validator.Object{allowSingleImplementation},
 								Attributes: map[string]schema.Attribute{
 									"base_url": schema.StringAttribute{
 										MarkdownDescription: "Base URL of the Azure DevOps instance (e.g., `https://dev.azure.com`).",
@@ -169,7 +162,6 @@ func (r *integrationResource) Schema(_ context.Context, _ resource.SchemaRequest
 							"entraid": schema.SingleNestedAttribute{
 								MarkdownDescription: "Entra ID SSO integration configuration. **Note**: Entra ID integrations can only be owned by the admin workspace.",
 								Optional:            true,
-								Validators:          []validator.Object{allowSingleImplementation},
 								Attributes: map[string]schema.Attribute{
 									"tenant_id": schema.StringAttribute{
 										MarkdownDescription: "Entra ID tenant ID.",

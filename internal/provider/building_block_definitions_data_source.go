@@ -189,11 +189,15 @@ func (d *buildingBlockDefinitionsDataSource) Read(ctx context.Context, req datas
 			return
 		}
 
-		versions, err := d.meshBuildingBlockDefinitionVersionClient.List(ctx, *definition.Metadata.Uuid)
+		redacted := definition.Status != nil && definition.Status.RedactedForNonOwnerAccess
 
-		// Check if the error is a 403 Forbidden - if so, fall back to status.Versions
-		if httpErr, ok := errors.AsType[client.HttpError](err); ok && httpErr.IsForbidden() {
-			// Fall back to status.Versions from the definition (no content_hash available)
+		var versions []client.MeshBuildingBlockDefinitionVersion
+		var err error
+		if !redacted {
+			versions, err = d.meshBuildingBlockDefinitionVersionClient.List(ctx, *definition.Metadata.Uuid)
+		}
+		httpErr, isHttpErr := errors.AsType[client.HttpError](err)
+		if redacted || (isHttpErr && httpErr.IsForbidden()) {
 			defModel := buildVersionRefsFromStatus(&resp.Diagnostics, definition)
 			if resp.Diagnostics.HasError() {
 				return
@@ -245,9 +249,9 @@ func (d *buildingBlockDefinitionsDataSource) Read(ctx context.Context, req datas
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-// buildVersionRefsFromStatus builds version refs from definition status when full version details are not accessible.
-// This is used as a fallback when the versions API returns 403 (cross-workspace access without permission).
-// Content hash will be empty since it requires full version spec which is not available in status.
+// buildVersionRefsFromStatus builds version refs from definition status when the full version spec is not
+// accessible, which is the case for a workspace that may consume a definition but does not own it.
+// Content hash will be empty since it requires the full version spec which is not available in status.
 func buildVersionRefsFromStatus(diags *diag.Diagnostics, definition client.MeshBuildingBlockDefinition) buildingBlockDefinitionDataSourceModel {
 	if definition.Status == nil {
 		diags.AddError(

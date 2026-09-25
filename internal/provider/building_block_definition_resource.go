@@ -161,6 +161,15 @@ func (r *buildingBlockDefinitionResource) writePolicies(
 	return updatedDto
 }
 
+func implementationType(implementation client.MeshBuildingBlockDefinitionImplementation, diags *diag.Diagnostics) client.MeshBuildingBlockImplementationType {
+	result, err := implementation.InferType()
+	if err != nil {
+		diags.AddAttributeError(path.Root("version_spec").AtName("implementation"), "implementation type cannot be determined", err.Error())
+		return ""
+	}
+	return result.Unwrap()
+}
+
 func (r *buildingBlockDefinitionResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	stateMetadata := generic.GetAttribute[client.MeshBuildingBlockDefinitionMetadata](ctx, req.State, path.Root("metadata"), &resp.Diagnostics, generic.WithSetUnknownValueToZero())
 	if resp.Diagnostics.HasError() {
@@ -174,6 +183,16 @@ func (r *buildingBlockDefinitionResource) Read(ctx context.Context, req resource
 		return
 	} else if definitionDto == nil {
 		resp.State.RemoveResource(ctx)
+		return
+	}
+
+	if definitionDto.Status != nil && definitionDto.Status.RedactedForNonOwnerAccess {
+		resp.Diagnostics.AddError("Building block definition is not owned by your workspace", fmt.Sprintf(
+			"meshStack returned building block definition '%s', ID=%s without its implementation, which it does for a "+
+				"workspace that may order the definition but does not own it. Managing this definition requires the "+
+				"workspace that owns it.",
+			definitionDto.Spec.DisplayName, bbdUuid,
+		))
 		return
 	}
 	state := buildingBlockDefinition{
@@ -200,6 +219,7 @@ func (r *buildingBlockDefinitionResource) Read(ctx context.Context, req resource
 			"Expected at least one version, but got none for building block '%s', ID=%s",
 			definitionDto.Spec.DisplayName, bbdUuid,
 		))
+		return
 	}
 	// Refresh reflects the actual latest-version state: derive draft from it (as the definitions data
 	// source does) so an external switch to DRAFT is noticed instead of a stale draft=false persisting.
@@ -787,8 +807,11 @@ func (r *buildingBlockDefinitionResource) Update(ctx context.Context, req resour
 	// type, so when the implementation type changes we pass through neutral in between.
 	plannedSpec := plan.Spec
 	versionIsWritten := state.VersionSpec.Draft || plan.VersionSpec.Draft
-	implementationTypeChanges := plan.VersionSpec.Implementation.InferTypeFromNonNilField() !=
-		state.VersionSpec.Implementation.InferTypeFromNonNilField()
+	implementationTypeChanges := implementationType(plan.VersionSpec.Implementation, &resp.Diagnostics) !=
+		implementationType(state.VersionSpec.Implementation, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	policiesDeferred := versionIsWritten && implementationTypeChanges
 	if policiesDeferred {
 		plan.Spec = plannedSpec.WithNeutralPolicies()
