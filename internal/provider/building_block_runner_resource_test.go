@@ -105,7 +105,7 @@ func TestAccBuildingBlockRunnerResource(t *testing.T) {
 					Config: config.WithFirstBlock(
 						testconfig.Descend("spec", "display_name")(testconfig.SetString("GCP WIF Runner")),
 						testconfig.Descend("spec", "workload_identity_federation")(testconfig.SetRawExpr(`{
-							subject = "system:serviceaccount:meshfed:my-runner"
+							subject_template = "system:serviceaccount:meshfed:my-runner"
 							issuer = "https://oidc.example.com"
 							gcp = {
 								audience = "//iam.googleapis.com/projects/123456/locations/global/workloadIdentityPools/meshstack/providers/meshfed"
@@ -121,8 +121,8 @@ func TestAccBuildingBlockRunnerResource(t *testing.T) {
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(runnerAddr.String(), tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("GCP WIF Runner")),
 						statecheck.ExpectKnownValue(runnerAddr.String(), tfjsonpath.New("spec").AtMapKey("workload_identity_federation"), xknownvalue.MapExact(map[string]knownvalue.Check{
-							"subject": knownvalue.StringExact("system:serviceaccount:meshfed:my-runner"),
-							"issuer":  knownvalue.StringExact("https://oidc.example.com"),
+							"subject_template": knownvalue.StringExact("system:serviceaccount:meshfed:my-runner"),
+							"issuer":           knownvalue.StringExact("https://oidc.example.com"),
 							"gcp": xknownvalue.MapExact(map[string]knownvalue.Check{
 								"audience":   knownvalue.StringExact("//iam.googleapis.com/projects/123456/locations/global/workloadIdentityPools/meshstack/providers/meshfed"),
 								"token_path": knownvalue.StringExact("/var/run/secrets/workload-identity/token"),
@@ -130,6 +130,54 @@ func TestAccBuildingBlockRunnerResource(t *testing.T) {
 							"aws":   knownvalue.Null(),
 							"azure": knownvalue.Null(),
 						})),
+						xknownvalue.Ref(runnerAddr, "meshBuildingBlockRunner", &runnerUuid),
+					},
+				},
+			},
+		})
+	})
+
+	t.Run("wif_subject_template", func(t *testing.T) {
+		config, runnerAddr, _ := testconfig.BuildingBlockRunnerWifAndWorkspace(t)
+		config = config.WithFirstBlock(testconfig.Descend("spec", "public_key")(testconfig.SetString(runnerPublicKey)))
+		exampleTemplate := "system:serviceaccount:namespace:workspace.{{ workspaceIdentifier }}.buildingblockdefinition.{{ buildingBlockDefinitionUuid }}"
+		updatedTemplate := "system:serviceaccount:namespace:bbd.{{ buildingBlockDefinitionUuid }}"
+		var runnerUuid string
+
+		ApplyAndTest(t, resource.TestCase{
+			Steps: []resource.TestStep{
+				{
+					Config: config.String(),
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PreApply: []plancheck.PlanCheck{
+							plancheck.ExpectResourceAction(runnerAddr.String(), plancheck.ResourceActionCreate),
+						},
+					},
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(runnerAddr.String(), tfjsonpath.New("spec").AtMapKey("workload_identity_federation"), xknownvalue.MapExact(map[string]knownvalue.Check{
+							"subject_template": knownvalue.StringExact(exampleTemplate),
+							"issuer":           knownvalue.StringExact("https://oidc.example.com"),
+							"gcp": xknownvalue.MapExact(map[string]knownvalue.Check{
+								"audience":   knownvalue.StringExact("gcp-workload-identity-provider:namespace"),
+								"token_path": knownvalue.StringExact("/var/run/secrets/workload-identity/token"),
+							}),
+							"aws":   knownvalue.Null(),
+							"azure": knownvalue.Null(),
+						})),
+						xknownvalue.Ref(runnerAddr, "meshBuildingBlockRunner", &runnerUuid),
+					},
+				},
+				{
+					Config: config.WithFirstBlock(
+						testconfig.Descend("spec", "workload_identity_federation", "subject_template")(testconfig.SetString(updatedTemplate)),
+					).String(),
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PreApply: []plancheck.PlanCheck{
+							plancheck.ExpectResourceAction(runnerAddr.String(), plancheck.ResourceActionUpdate),
+						},
+					},
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(runnerAddr.String(), tfjsonpath.New("spec").AtMapKey("workload_identity_federation").AtMapKey("subject_template"), knownvalue.StringExact(updatedTemplate)),
 						xknownvalue.Ref(runnerAddr, "meshBuildingBlockRunner", &runnerUuid),
 					},
 				},
@@ -145,7 +193,7 @@ func TestAccBuildingBlockRunnerResource(t *testing.T) {
 				{
 					Config: config.WithFirstBlock(
 						testconfig.Descend("spec", "workload_identity_federation")(testconfig.SetRawExpr(`{
-							subject = "system:serviceaccount:meshfed:my-runner"
+							subject_template = "system:serviceaccount:meshfed:my-runner"
 							issuer = "https://oidc.example.com"
 						}`)),
 					).String(),
@@ -161,12 +209,12 @@ func TestAccBuildingBlockRunnerResource(t *testing.T) {
 							}
 						}`)),
 					).String(),
-					ExpectError: regexp.MustCompile(`(?s)(Missing required argument.*\bsubject\b|\bsubject\b.*is required)`),
+					ExpectError: regexp.MustCompile(`(?s)attribute "subject_template" is required`),
 				},
 				{
 					Config: config.WithFirstBlock(
 						testconfig.Descend("spec", "workload_identity_federation")(testconfig.SetRawExpr(`{
-							subject = ""
+							subject_template = ""
 							issuer = "https://oidc.example.com"
 							gcp = {
 								audience = "//iam.googleapis.com/projects/123456/locations/global/workloadIdentityPools/meshstack/providers/meshfed"
@@ -174,7 +222,7 @@ func TestAccBuildingBlockRunnerResource(t *testing.T) {
 							}
 						}`)),
 					).String(),
-					ExpectError: regexp.MustCompile(`(?s)subject.*must not be empty\s+or whitespace`),
+					ExpectError: regexp.MustCompile(`(?s)subject_template.*must not\s+be empty\s+or whitespace`),
 				},
 			},
 		})

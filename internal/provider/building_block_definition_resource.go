@@ -114,7 +114,8 @@ func (r *buildingBlockDefinitionResource) Create(ctx context.Context, req resour
 		return
 	}
 
-	plan.SetFromVersionClientDtos(&resp.Diagnostics, generic.KnownValue(plan.VersionSpec.Draft), bbdUuid, *createdVersionDto)
+	identities := r.readWorkloadIdentities(ctx, bbdUuid, &resp.Diagnostics)
+	plan.SetFromVersionClientDtos(&resp.Diagnostics, generic.KnownValue(plan.VersionSpec.Draft), bbdUuid, identities, *createdVersionDto)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -127,6 +128,24 @@ func (r *buildingBlockDefinitionResource) Create(ctx context.Context, req resour
 		return
 	}
 	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, plan, converterOptions...)...)
+}
+
+// readWorkloadIdentities reads the definition again for the identities of its versions. meshStack
+// resolves a version's identity against the runner of that version, so they are only final once the
+// version is written, which is after the definition response the caller already holds.
+func (r *buildingBlockDefinitionResource) readWorkloadIdentities(ctx context.Context, bbdUuid string, diags *diag.Diagnostics) map[string]*client.MeshBuildingBlockDefinitionWif {
+	definitionDto, err := r.buildingBlockDefinitionClient.Read(ctx, bbdUuid)
+	if err != nil {
+		diags.AddError("Error reading building block definition status", fmt.Sprintf(
+			"The definition '%s' and its version were written, but reading back its resolved status failed: %s", bbdUuid, err.Error()))
+		return nil
+	}
+	if definitionDto == nil {
+		diags.AddError("Building block definition not found", fmt.Sprintf(
+			"The definition '%s' was written, but reading it back returned nothing.", bbdUuid))
+		return nil
+	}
+	return workloadIdentitiesByVersion(definitionDto.Status, bbdUuid, diags)
 }
 
 // writePolicies applies plannedSpec's approval policies and drift schedule to a definition that was just
@@ -180,6 +199,10 @@ func (r *buildingBlockDefinitionResource) Read(ctx context.Context, req resource
 		Metadata: definitionDto.Metadata,
 		Spec:     definitionDto.Spec,
 	}
+	identities := workloadIdentitiesByVersion(definitionDto.Status, bbdUuid, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	// Keep only the tags we already track. The API returns a superset (every schema property plus
 	// injected restricted-tag defaults) that the caller may be unable to manage, so mirroring it
@@ -203,7 +226,7 @@ func (r *buildingBlockDefinitionResource) Read(ctx context.Context, req resource
 	}
 	// Refresh reflects the actual latest-version state: derive draft from it (as the definitions data
 	// source does) so an external switch to DRAFT is noticed instead of a stale draft=false persisting.
-	state.SetFromVersionClientDtos(&resp.Diagnostics, deriveDraftFromLatestVersion(versionDtos), bbdUuid, versionDtos...)
+	state.SetFromVersionClientDtos(&resp.Diagnostics, deriveDraftFromLatestVersion(versionDtos), bbdUuid, identities, versionDtos...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -752,6 +775,15 @@ func (r *buildingBlockDefinitionResource) ModifyPlan(ctx context.Context, req re
 
 		latestVersionRef.State = plan.VersionSpec.State
 		latestVersionRef.ContentHash = versionSpecContentHash
+
+		// meshStack resolves the identity of a version against its runner, so a changed runner changes it.
+		runnerRefPath := path.Root("version_spec").AtName("runner_ref")
+		var plannedRunner, currentRunner types.Object
+		resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, runnerRefPath, &plannedRunner)...)
+		resp.Diagnostics.Append(req.State.GetAttribute(ctx, runnerRefPath, &currentRunner)...)
+		if !plannedRunner.Equal(currentRunner) {
+			latestVersionRef.WorkloadIdentityFederation = generic.NullIsUnknown[*client.MeshBuildingBlockDefinitionWif]{}
+		}
 	}
 }
 
@@ -852,7 +884,8 @@ func (r *buildingBlockDefinitionResource) Update(ctx context.Context, req resour
 		return
 	}
 
-	plan.SetFromVersionClientDtos(&resp.Diagnostics, generic.KnownValue(plan.VersionSpec.Draft), bbdUuid, allVersionDtos...)
+	identities := r.readWorkloadIdentities(ctx, bbdUuid, &resp.Diagnostics)
+	plan.SetFromVersionClientDtos(&resp.Diagnostics, generic.KnownValue(plan.VersionSpec.Draft), bbdUuid, identities, allVersionDtos...)
 	if resp.Diagnostics.HasError() {
 		return
 	}

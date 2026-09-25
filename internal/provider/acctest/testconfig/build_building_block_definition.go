@@ -12,6 +12,50 @@ import (
 func BBDTerraform(t *testing.T) (config Config, buildingBlockDefinitionAddr Traversal) {
 	t.Helper()
 	workspaceConfig, workspaceAddr := Workspace(t)
+	config, buildingBlockDefinitionAddr = BBDTerraformInWorkspace(t, workspaceAddr)
+	return config.Join(workspaceConfig), buildingBlockDefinitionAddr
+}
+
+// BBDTerraformWithWifRunners builds the same BBD running on a runner of its own workspace that declares
+// a subject template - the setup meshStack resolves a version's workload identity from - plus a
+// second such runner the test can move the definition to. The runners' example public key is a truncated
+// placeholder, so the caller passes a parsable one.
+func BBDTerraformWithWifRunners(t *testing.T, runnerPublicKey string) (config Config, buildingBlockDefinitionAddr, runnerAddress, otherRunnerAddress Traversal) {
+	t.Helper()
+	workspaceConfig, workspaceAddr := Workspace(t)
+	runnerConfig, runnerAddress := BuildingBlockRunnerWif(t, workspaceAddr)
+	runnerConfig = runnerConfig.WithFirstBlock(Descend("spec", "public_key")(SetString(runnerPublicKey)))
+
+	otherRunnerConfig, otherRunnerAddress := BuildingBlockRunnerWif(t, workspaceAddr)
+	otherRunnerConfig = otherRunnerConfig.WithFirstBlock(
+		RenameKey("example_with_other_wif"),
+		ExtractAddress(&otherRunnerAddress),
+		Descend("spec", "display_name")(SetString("My Other GCP WIF Runner")),
+		Descend("spec", "public_key")(SetString(runnerPublicKey)),
+		Descend("spec", "workload_identity_federation")(
+			Descend("issuer")(SetString(OtherWifRunnerIssuer)),
+			Descend("subject_template")(SetString(OtherWifRunnerSubjectTemplate)),
+		),
+	)
+
+	config, buildingBlockDefinitionAddr = BBDTerraformInWorkspace(t, workspaceAddr)
+	return config.WithFirstBlock(
+			Descend("version_spec", "runner_ref")(SetAddr(runnerAddress, "ref")),
+		).Join(runnerConfig, otherRunnerConfig, workspaceConfig),
+		buildingBlockDefinitionAddr, runnerAddress, otherRunnerAddress
+}
+
+// Identity of the second runner of BBDTerraformWithWifRunners, so a test can assert the subject
+// meshStack resolves once a definition moves to it.
+const (
+	OtherWifRunnerIssuer          = "https://oidc-other.example.com"
+	OtherWifRunnerSubjectTemplate = "system:serviceaccount:other-namespace:bbd.{{ buildingBlockDefinitionUuid }}"
+)
+
+// BBDTerraformInWorkspace is BBDTerraform without the workspace, for a test that owns other
+// resources in the same workspace. The returned config does not contain the workspace itself.
+func BBDTerraformInWorkspace(t *testing.T, workspaceAddr Traversal) (config Config, buildingBlockDefinitionAddr Traversal) {
+	t.Helper()
 	exampleResource := Resource{Name: "building_block_definition", Suffix: "_01_terraform"}
 
 	var environmentTagAddr, costCenterTagAddr, businessUnitTagAddr, dependencyBBDAddr Traversal
@@ -54,7 +98,7 @@ func BBDTerraform(t *testing.T) (config Config, buildingBlockDefinitionAddr Trav
 				Descend("inputs", "some-file.yaml", "argument")(SetRawExpr(`jsonencode(provider::meshstack::encode_file("some-content"))`)),
 				Descend("dependency_refs")(SetRawExpr("[%s.ref]", dependencyBBDAddr)),
 			),
-		).Join(workspaceConfig, envTagConfig, costTagConfig, businessUnitTagConfig, depBBDConfig),
+		).Join(envTagConfig, costTagConfig, businessUnitTagConfig, depBBDConfig),
 		buildingBlockDefinitionAddr
 }
 

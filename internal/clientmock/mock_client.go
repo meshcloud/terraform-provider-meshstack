@@ -83,13 +83,17 @@ func NewMock() Client {
 	tenantStore := NewStore[client.MeshTenant]()
 	// Shared with the tenant client so a tenant create can resolve its landing zone's default quotas.
 	landingZoneStore := NewStore[client.MeshLandingZone]()
+	// Shared with the runner client so a definition can resolve the workload identity federation of the
+	// runner its latest version references, as the backend does.
+	buildingBlockRunnerStore := NewStore[client.MeshBuildingBlockRunner]()
+	buildingBlockRunnerStore.Set(SharedBuildingBlockRunnerUuid, sharedBuildingBlockRunner())
 	return Client{
 		ApiKey:                         MeshApiKeyClient{Store: NewStore[client.MeshApiKey]()},
 		BuildingBlock:                  meshBuildingBlockClient{Store: buildingBlockStore, BbdVersionStore: bbdVersionStore, TenantStore: tenantStore},
 		BuildingBlockRun:               MeshBuildingBlockRunClient{Store: buildingBlockRunStore, LogStore: buildingBlockRunLogStore},
-		BuildingBlockDefinition:        meshBuildingBlockDefinitionClient{Store: NewStore[client.MeshBuildingBlockDefinition](), StoreVersion: bbdVersionStore},
+		BuildingBlockDefinition:        meshBuildingBlockDefinitionClient{Store: NewStore[client.MeshBuildingBlockDefinition](), StoreVersion: bbdVersionStore, StoreRunner: buildingBlockRunnerStore},
 		BuildingBlockDefinitionVersion: meshBuildingBlockDefinitionVersionClient{Store: bbdVersionStore},
-		BuildingBlockRunner:            MeshBuildingBlockRunnerClient{Store: NewStore[client.MeshBuildingBlockRunner]()},
+		BuildingBlockRunner:            MeshBuildingBlockRunnerClient{Store: buildingBlockRunnerStore},
 		BuildingBlockV2:                MeshBuildingBlockV2Client{Store: buildingBlockStore, BbdVersionStore: bbdVersionStore},
 		Integration:                    MeshIntegrationClient{Store: NewStore[client.MeshIntegration]()},
 		LandingZone:                    MeshLandingZoneClient{Store: landingZoneStore},
@@ -159,7 +163,7 @@ func (s *Store[M]) SortedKeys() []string {
 
 // backendSecretBehavior mocks backend behavior in the sense that it consumes the plaintext secret and returns a hash of the secret only.
 func backendSecretBehavior[T any](allowSecretHashOnlyOnCreate bool, dto, existingDto *T) {
-	handleSecret := func(secret, existingSecret *clientTypes.Secret) {
+	walkSecrets(dto, existingDto, func(_ reflectwalk.WalkPath, secret, existingSecret *clientTypes.Secret) {
 		if secret != nil && secret.Plaintext != nil && *secret.Plaintext != "" {
 			secret.Hash = new(fmt.Sprintf("sha256:%s", *secret.Plaintext))
 			secret.Plaintext = nil
@@ -177,8 +181,25 @@ func backendSecretBehavior[T any](allowSecretHashOnlyOnCreate bool, dto, existin
 		} else if !allowSecretHashOnlyOnCreate || secret == nil || secret.Hash == nil || *secret.Hash == "" {
 			panic("inconsistent create or update of secret in mock client (empty plaintext provided?)")
 		}
-	}
+	})
+}
 
+// rejectSecretHashes mirrors meshStack's MeshBuildingBlockDefinitionVersionMapper: a write that cannot
+// reuse the stored ciphertext has to carry every secret as plaintext, and one that carries a hash instead
+// is answered with a 400. Unlike backendSecretBehavior's panics - which flag an inconsistent mock - this is
+// a rejection the provider is expected to surface, so it returns the error rather than panicking.
+func rejectSecretHashes[T any](dto *T) (rejected error) {
+	walkSecrets[T](dto, nil, func(path reflectwalk.WalkPath, secret, _ *clientTypes.Secret) {
+		if rejected == nil && secret != nil && secret.Hash != nil {
+			rejected = fmt.Errorf("secret at %q must not contain a hash value", path)
+		}
+	})
+	return
+}
+
+// walkSecrets visits every secret in dto together with its counterpart in existingDto (nil where there is
+// none), so all of the mock's secret rules traverse a DTO the same way.
+func walkSecrets[T any](dto, existingDto *T, visit func(path reflectwalk.WalkPath, secret, existingSecret *clientTypes.Secret)) {
 	secretType := reflect.TypeFor[clientTypes.Secret]()
 	secretOrAnyType := reflect.TypeFor[clientTypes.SecretOrAny]()
 	if err := reflectwalk.Walk(reflect.ValueOf(dto), func(path reflectwalk.WalkPath, v reflect.Value) error {
@@ -193,7 +214,7 @@ func backendSecretBehavior[T any](allowSecretHashOnlyOnCreate bool, dto, existin
 					existingSecret, _ = vExisting.Addr().Interface().(*clientTypes.Secret)
 				}
 			}
-			handleSecret(secret, existingSecret)
+			visit(path, secret, existingSecret)
 			return path.Stop()
 		case v.Type().ConvertibleTo(secretOrAnyType):
 			secretOrAny, _ := v.Addr().Interface().(*clientTypes.SecretOrAny)
@@ -208,7 +229,7 @@ func backendSecretBehavior[T any](allowSecretHashOnlyOnCreate bool, dto, existin
 						}
 					}
 				}
-				handleSecret(secret, existingSecret)
+				visit(path, secret, existingSecret)
 			}
 			return path.Stop()
 		}

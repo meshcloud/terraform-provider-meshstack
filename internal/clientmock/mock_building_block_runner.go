@@ -12,6 +12,38 @@ type MeshBuildingBlockRunnerClient struct {
 	Store *Store[client.MeshBuildingBlockRunner]
 }
 
+// SharedBuildingBlockRunnerUuid is the uuid every meshStack serves its hosted runner under. The provider
+// package holds the same literal; the mock cannot import it without a cycle.
+const SharedBuildingBlockRunnerUuid = "98520496-627d-43e6-82da-ce499179ff3f"
+
+// sharedBuildingBlockRunner mirrors the hosted runner: readable by any workspace, and the runner a
+// building block definition version uses when it names none. Its workload identity federation values are made up -
+// a real meshStack learns them from the run-controller at startup - so assert their shape, not their
+// content, in a test that has to hold against both backends.
+func sharedBuildingBlockRunner() *client.MeshBuildingBlockRunner {
+	return &client.MeshBuildingBlockRunner{
+		Metadata: client.MeshBuildingBlockRunnerMetadata{
+			Uuid:             new(SharedBuildingBlockRunnerUuid),
+			OwnedByWorkspace: "meshcloud",
+			CreatedOn:        new("2026-01-01T00:00:00Z"),
+			LastSeen:         new("2026-01-01T00:00:00Z"),
+		},
+		Spec: client.MeshBuildingBlockRunnerSpec{
+			DisplayName:        "meshStack Hosted Runner",
+			ImplementationType: string(client.MeshBuildingBlockRunnerImplementationTypeAll),
+			Restriction:        new("PUBLIC"),
+			IsSelfHosted:       new(false),
+			WorkloadIdentityFederation: &client.MeshRunnerWorkloadIdentityFed{
+				Issuer:          new("https://oidc.mock.meshcloud.io"),
+				SubjectTemplate: new("system:serviceaccount:meshfed:workspace.{{ workspaceIdentifier }}.buildingblockdefinition.{{ buildingBlockDefinitionUuid }}"),
+				Gcp:             &client.MeshRunnerWifProviderConfig{Audience: "gcp-workload-identity-provider:meshfed", TokenPath: "/var/run/secrets/workload-identity/gcp/token"},
+				Aws:             &client.MeshRunnerWifProviderConfig{Audience: "aws-workload-identity-provider:meshfed", TokenPath: "/var/run/secrets/workload-identity/aws/token"},
+				Azure:           &client.MeshRunnerWifProviderConfig{Audience: "api://AzureADTokenExchange", TokenPath: "/var/run/secrets/workload-identity/azure/token"},
+			},
+		},
+	}
+}
+
 func (m MeshBuildingBlockRunnerClient) Create(_ context.Context, runner client.MeshBuildingBlockRunner) (*client.MeshBuildingBlockRunner, error) {
 	runnerUuid := uuid.NewString()
 	restriction := runner.Spec.Restriction

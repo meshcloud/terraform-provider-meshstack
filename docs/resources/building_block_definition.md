@@ -752,6 +752,46 @@ Read-Only:
 - `number` (Number) Version number.
 - `state` (String) State of the version. One of `DRAFT`, `RELEASED`.
 - `uuid` (String) UUID of the version.
+- `workload_identity_federation` (Attributes) The identity a run of this version presents to a cloud: the `subject_template` of the runner in `version_spec.runner_ref`, filled in by meshStack for this definition. Grant cloud access to `subject`. Null when the runner declares no workload identity federation. `issuer` and the per-cloud `audience` belong to the runner, so a backplane created before any definition takes them as input. A changed `subject_template` on the runner shows up on the next plan. (see [below for nested schema](#nestedatt--version_latest_release--workload_identity_federation))
+
+<a id="nestedatt--version_latest_release--workload_identity_federation"></a>
+### Nested Schema for `version_latest_release.workload_identity_federation`
+
+Read-Only:
+
+- `aws` (Attributes) Workload identity federation values for AWS. Null when the runner does not federate with AWS. (see [below for nested schema](#nestedatt--version_latest_release--workload_identity_federation--aws))
+- `azure` (Attributes) Workload identity federation values for Azure. Null when the runner does not federate with Azure. (see [below for nested schema](#nestedatt--version_latest_release--workload_identity_federation--azure))
+- `gcp` (Attributes) Workload identity federation values for GCP. Null when the runner does not federate with GCP. (see [below for nested schema](#nestedatt--version_latest_release--workload_identity_federation--gcp))
+- `issuer` (String) OIDC issuer URL of the identity provider that issues the tokens of a run.
+- `subject` (String) The subject claim of those tokens: the runner's subject template with every placeholder filled in for this definition. Grant cloud access to this identity.
+
+<a id="nestedatt--version_latest_release--workload_identity_federation--aws"></a>
+### Nested Schema for `version_latest_release.workload_identity_federation.aws`
+
+Read-Only:
+
+- `audience` (String) Audience the federated identity token is issued for.
+- `token_path` (String) Path the runner writes that token to.
+
+
+<a id="nestedatt--version_latest_release--workload_identity_federation--azure"></a>
+### Nested Schema for `version_latest_release.workload_identity_federation.azure`
+
+Read-Only:
+
+- `audience` (String) Audience the federated identity token is issued for.
+- `token_path` (String) Path the runner writes that token to.
+
+
+<a id="nestedatt--version_latest_release--workload_identity_federation--gcp"></a>
+### Nested Schema for `version_latest_release.workload_identity_federation.gcp`
+
+Read-Only:
+
+- `audience` (String) Audience the federated identity token is issued for.
+- `token_path` (String) Path the runner writes that token to.
+
+
 
 
 <a id="nestedatt--ref"></a>
@@ -773,6 +813,46 @@ Read-Only:
 - `number` (Number) Version number.
 - `state` (String) State of the version. One of `DRAFT`, `RELEASED`.
 - `uuid` (String) UUID of the version.
+- `workload_identity_federation` (Attributes) The identity a run of this version presents to a cloud: the `subject_template` of the runner in `version_spec.runner_ref`, filled in by meshStack for this definition. Grant cloud access to `subject`. Null when the runner declares no workload identity federation. `issuer` and the per-cloud `audience` belong to the runner, so a backplane created before any definition takes them as input. A changed `subject_template` on the runner shows up on the next plan. (see [below for nested schema](#nestedatt--version_latest--workload_identity_federation))
+
+<a id="nestedatt--version_latest--workload_identity_federation"></a>
+### Nested Schema for `version_latest.workload_identity_federation`
+
+Read-Only:
+
+- `aws` (Attributes) Workload identity federation values for AWS. Null when the runner does not federate with AWS. (see [below for nested schema](#nestedatt--version_latest--workload_identity_federation--aws))
+- `azure` (Attributes) Workload identity federation values for Azure. Null when the runner does not federate with Azure. (see [below for nested schema](#nestedatt--version_latest--workload_identity_federation--azure))
+- `gcp` (Attributes) Workload identity federation values for GCP. Null when the runner does not federate with GCP. (see [below for nested schema](#nestedatt--version_latest--workload_identity_federation--gcp))
+- `issuer` (String) OIDC issuer URL of the identity provider that issues the tokens of a run.
+- `subject` (String) The subject claim of those tokens: the runner's subject template with every placeholder filled in for this definition. Grant cloud access to this identity.
+
+<a id="nestedatt--version_latest--workload_identity_federation--aws"></a>
+### Nested Schema for `version_latest.workload_identity_federation.aws`
+
+Read-Only:
+
+- `audience` (String) Audience the federated identity token is issued for.
+- `token_path` (String) Path the runner writes that token to.
+
+
+<a id="nestedatt--version_latest--workload_identity_federation--azure"></a>
+### Nested Schema for `version_latest.workload_identity_federation.azure`
+
+Read-Only:
+
+- `audience` (String) Audience the federated identity token is issued for.
+- `token_path` (String) Path the runner writes that token to.
+
+
+<a id="nestedatt--version_latest--workload_identity_federation--gcp"></a>
+### Nested Schema for `version_latest.workload_identity_federation.gcp`
+
+Read-Only:
+
+- `audience` (String) Audience the federated identity token is issued for.
+- `token_path` (String) Path the runner writes that token to.
+
+
 
 
 <a id="nestedatt--versions"></a>
@@ -785,6 +865,44 @@ Read-Only:
 - `number` (Number) Version number.
 - `state` (String) State of the version. One of `DRAFT`, `RELEASED`.
 - `uuid` (String) UUID of the version.
+- `workload_identity_federation` (Attributes) The identity a run of this version presents to a cloud: the `subject_template` of the runner in `version_spec.runner_ref`, filled in by meshStack for this definition. Grant cloud access to `subject`. Null when the runner declares no workload identity federation. `issuer` and the per-cloud `audience` belong to the runner, so a backplane created before any definition takes them as input. A changed `subject_template` on the runner shows up on the next plan. (see [below for nested schema](#nestedatt--versions--workload_identity_federation))
+
+<a id="nestedatt--versions--workload_identity_federation"></a>
+### Nested Schema for `versions.workload_identity_federation`
+
+Read-Only:
+
+- `aws` (Attributes) Workload identity federation values for AWS. Null when the runner does not federate with AWS. (see [below for nested schema](#nestedatt--versions--workload_identity_federation--aws))
+- `azure` (Attributes) Workload identity federation values for Azure. Null when the runner does not federate with Azure. (see [below for nested schema](#nestedatt--versions--workload_identity_federation--azure))
+- `gcp` (Attributes) Workload identity federation values for GCP. Null when the runner does not federate with GCP. (see [below for nested schema](#nestedatt--versions--workload_identity_federation--gcp))
+- `issuer` (String) OIDC issuer URL of the identity provider that issues the tokens of a run.
+- `subject` (String) The subject claim of those tokens: the runner's subject template with every placeholder filled in for this definition. Grant cloud access to this identity.
+
+<a id="nestedatt--versions--workload_identity_federation--aws"></a>
+### Nested Schema for `versions.workload_identity_federation.aws`
+
+Read-Only:
+
+- `audience` (String) Audience the federated identity token is issued for.
+- `token_path` (String) Path the runner writes that token to.
+
+
+<a id="nestedatt--versions--workload_identity_federation--azure"></a>
+### Nested Schema for `versions.workload_identity_federation.azure`
+
+Read-Only:
+
+- `audience` (String) Audience the federated identity token is issued for.
+- `token_path` (String) Path the runner writes that token to.
+
+
+<a id="nestedatt--versions--workload_identity_federation--gcp"></a>
+### Nested Schema for `versions.workload_identity_federation.gcp`
+
+Read-Only:
+
+- `audience` (String) Audience the federated identity token is issued for.
+- `token_path` (String) Path the runner writes that token to.
 
 ## Import
 
