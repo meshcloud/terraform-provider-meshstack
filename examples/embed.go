@@ -70,10 +70,24 @@ func (e Example) Read(t *testing.T, name string, fileNameParts ...string) []byte
 func (e Example) TestStepConfig(t *testing.T, name string, index int, supportNames ...string) string {
 	t.Helper()
 	parts := []string{string(e.Read(t, name, fmt.Sprintf("-test-%d", index)))}
+	return strings.Join(append(parts, e.testSupport(t, name, supportNames)...), "\n")
+}
+
+// TestSupportConfigs assembles just the named test-support files of an example, for a step that
+// needs an example's prerequisites without the step file that normally carries them — because it
+// composes several of that example's step files, or none at all.
+func (e Example) TestSupportConfigs(t *testing.T, name string, supportNames ...string) string {
+	t.Helper()
+	return strings.Join(e.testSupport(t, name, supportNames), "\n")
+}
+
+func (e Example) testSupport(t *testing.T, name string, supportNames []string) []string {
+	t.Helper()
+	parts := make([]string, 0, len(supportNames))
 	for _, supportName := range supportNames {
 		parts = append(parts, string(e.Read(t, name, "test-support", "_"+supportName)))
 	}
-	return strings.Join(parts, "\n")
+	return parts
 }
 
 // JoinTestStepConfigs concatenates the step configs of several examples into the config for one test
