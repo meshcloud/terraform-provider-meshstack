@@ -1,5 +1,5 @@
-# The terraform definition carrying a single sensitive STATIC input. Its secret is a variable, so a
-# case can rotate it without a second step file — which is the whole point of the rotation tests.
+# resource-test-1.tf on a runner with workload identity federation, whose subject template meshStack
+# fills in for this definition and reports on each version.
 # This example uses the Terraform implementation and defines all optional attributes
 resource "meshstack_building_block_definition" "example_01_terraform" {
   metadata = {
@@ -48,10 +48,7 @@ resource "meshstack_building_block_definition" "example_01_terraform" {
     draft = var.draft
 
     # Optional: Specify runner if necessary (otherwise, shared runner is used)
-    runner_ref = {
-      kind = "meshBuildingBlockRunner"
-      uuid = "98520496-627d-43e6-82da-ce499179ff3f"
-    }
+    runner_ref = meshstack_building_block_runner.example_with_wif.ref
 
     only_apply_once_per_tenant = true     # Optional: defaults to false
     deletion_mode              = "DELETE" # Optional: defaults to "DELETE"
@@ -61,16 +58,70 @@ resource "meshstack_building_block_definition" "example_01_terraform" {
 
     # Optional: Inputs for the building block
     inputs = {
-      CONNECTOR_SECRET = {
-        display_name    = "Connector Secret"
+      environment = {
+        display_name      = "Environment"
+        description       = "The target environment" # Optional
+        type              = "SINGLE_SELECT"
+        assignment_type   = "USER_INPUT"
+        selectable_values = ["dev", "prod", "staging"] # Optional, must be non-empty
+        is_optional       = true                       # Optional: defaults to false
+        display_order     = 1
+      }
+      resource_name = {
+        display_name                   = "Resource Name"
+        description                    = "Name of the resource to create" # Optional
+        type                           = "STRING"
+        assignment_type                = "USER_INPUT"
+        default_value                  = jsonencode("some-resource-name")
+        updateable_by_consumer         = true                                                                      # Optional: defaults to false
+        value_validation_regex         = "^[a-z0-9-]+$"                                                            # Optional
+        validation_regex_error_message = "Resource name must contain only lowercase letters, numbers, and hyphens" # Optional
+        display_order                  = 2                                                                         # Optional: arranges inputs in meshPanel; part of the content hash, so it cannot change on a released version
+      }
+      deploy_settings = {
+        display_name    = "Deploy Settings"
+        type            = "JSON"
+        assignment_type = "USER_INPUT"
+        condition       = "input.environment == 'prod'"
+        # This input gets a form of its own: meshPanel renders it from the schema, and what it produces
+        # reaches the building block as JSON text.
+        json_schema = jsonencode({
+          type     = "object"
+          required = ["region"]
+          properties = {
+            region   = { type = "string", enum = ["eu-central-1", "us-east-1"] }
+            replicas = { type = "integer", minimum = 1 }
+          }
+        })
+        display_order = 3
+      }
+      SOMETHING_VERY_SECRET = {
+        display_name    = "Top Secret"
+        description     = "Really secret" # Optional
         type            = "STRING"
         assignment_type = "STATIC"
+        is_environment  = true # Optional: defaults to false
         sensitive = {
           argument = {
-            secret_value   = var.secret_value
-            secret_version = var.secret_version
+            secret_value = "write-only-plaintext-value-should-be-ephemeral"
           }
         }
+      }
+      business_unit = {
+        display_name    = "Business Unit"
+        description     = "The business unit tag of the workspace this building block belongs to" # Optional
+        type            = "CODE"                                                                  # Tag inputs are always CODE: a tag value is a list of strings
+        assignment_type = "TAG"
+        # Names the tag to read as "<target>.<tagKey>". A TENANT_LEVEL building block can read WORKSPACE,
+        # PROJECT, PAYMENT_METHOD and LANDING_ZONE tags; a WORKSPACE_LEVEL one only WORKSPACE tags.
+        argument      = jsonencode("WORKSPACE.${meshstack_tag_definition.workspace_business_unit.spec.key}")
+        display_order = 4
+      }
+      "some-file.yaml" = {
+        display_name    = "Some input file"
+        type            = "FILE"
+        assignment_type = "STATIC"
+        argument        = jsonencode(provider::meshstack::encode_file("some-content"))
       }
     }
 

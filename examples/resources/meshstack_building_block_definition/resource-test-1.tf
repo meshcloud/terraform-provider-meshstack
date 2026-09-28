@@ -9,18 +9,21 @@ resource "meshstack_building_block_definition" "example_01_terraform" {
   }
 
   spec = {
-    display_name              = "Example Building Block"
-    display_name_template     = var.display_name_template
-    symbol                    = provider::meshstack::load_image_file("${path.module}/bb-symbol.png") # Optional
+    display_name          = "Example Building Block"
+    display_name_template = "Example Building Block {{ resource_name }}"
+    # The test's own image: a generated config dir has no bb-symbol.png beside it, and the
+    # provider resolves the path from its own working directory.
+    symbol                    = provider::meshstack::load_image_file("testdata/images/image.png")
     description               = var.description
     readme                    = "# Example Building Block\n\nThis is a comprehensive example showcasing all available attributes." # Optional
     support_url               = "https://support.example.com/building-blocks"                                                      # Optional
     documentation_url         = "https://docs.example.com/building-blocks"                                                         # Optional
     target_type               = "TENANT_LEVEL"                                                                                     # Optional: defaults to "WORKSPACE"
     supported_platforms       = [{ name = "AZURE" }, { name = "AWS" }]
-    run_transparency          = true                                            # Optional: defaults to false
-    use_in_landing_zones_only = true                                            # Optional: defaults to false
-    notification_subscribers  = ["user:some-username", "email:ops@example.com"] # Optional, note user: and email: prefix
+    run_transparency          = true # Optional: defaults to false
+    use_in_landing_zones_only = true # Optional: defaults to false
+    # Only the email subscriber: a user: subscriber has to name a user that exists.
+    notification_subscribers = ["email:ops@example.com"]
 
     # Optional: which run triggers need an operator's approval before the run is applied.
     # Defaults to no approval gate at all. Only the terraform implementation supports approval policies, because an

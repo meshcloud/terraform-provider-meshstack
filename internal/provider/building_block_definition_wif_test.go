@@ -2,18 +2,34 @@ package provider
 
 import (
 	"fmt"
+	"maps"
 	"strings"
 	"testing"
 
+	tfconfig "github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 
-	testconfig "github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
+	"github.com/meshcloud/terraform-provider-meshstack/examples"
 	xknownvalue "github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/xknownvalue"
 )
+
+// otherWifRunnerIssuer is the issuer of the runner in
+// examples/resources/meshstack_building_block_runner/test-support_other-wif-runner.tf.
+const otherWifRunnerIssuer = "https://oidc-other.example.com"
+
+// bbdWifStepConfig is a terraform definition step running on one of two runners with workload identity
+// federation: resource-test-23.tf picks the first, resource-test-24.tf the other.
+func bbdWifStepConfig(t *testing.T, index int) string {
+	t.Helper()
+	return examples.JoinTestStepConfigs(
+		bbdStepConfig(t, index, terraformBbdSupports...),
+		examples.Resource.TestStepConfig(t, "building_block_runner", 9, "variables", "other-wif-runner"),
+	)
+}
 
 // resolvedSubject asserts that meshStack filled every placeholder of the runner's subject template in.
 func resolvedSubject(prefix string) knownvalue.Check {
@@ -54,7 +70,8 @@ func expectedVersions(wif knownvalue.Check, numbers ...int64) knownvalue.Check {
 }
 
 func TestAccBuildingBlockDefinitionWif(t *testing.T) {
-	config, bbdAddr, _, otherRunnerAddr := testconfig.BBDTerraformWithWifRunners(t, runnerPublicKey)
+	vars := newBbdVars().variables()
+	vars["runner_public_key"] = tfconfig.StringVariable(runnerPublicKey)
 	versionsPath := tfjsonpath.New("versions")
 	latestWifPath := tfjsonpath.New("version_latest").AtMapKey("workload_identity_federation")
 	latestSubjectPath := latestWifPath.AtMapKey("subject")
@@ -65,28 +82,16 @@ func TestAccBuildingBlockDefinitionWif(t *testing.T) {
 		"token_path": knownvalue.StringExact("/var/run/secrets/workload-identity/token"),
 	})
 	otherRunnerSubject := resolvedSubject("system:serviceaccount:other-namespace:bbd.")
-	otherRunnerWif := resolvedWif(testconfig.OtherWifRunnerIssuer, otherRunnerSubject, gcp)
+	otherRunnerWif := resolvedWif(otherWifRunnerIssuer, otherRunnerSubject, gcp)
 
-	// meshStack stores a version's secrets encrypted for its runner, so moving the definition to another
-	// one has to re-supply every secret as plaintext - a hash is a 400. Bumping secret_version is how the
-	// provider is asked for that, same as the rotation step of TestAccBuildingBlockDefinition.
-	const movedToOtherRunner = "moved-to-other-runner"
-	otherRunnerConfig := config.WithFirstBlock(
-		testconfig.Descend("version_spec", "runner_ref")(testconfig.SetAddr(otherRunnerAddr, "ref")),
-		testconfig.Descend("version_spec", "implementation", "terraform", "ssh_private_key", "secret_version")(
-			testconfig.SetString(movedToOtherRunner),
-		),
-		testconfig.Descend("version_spec", "inputs", "SOMETHING_VERY_SECRET", "sensitive", "argument", "secret_version")(
-			testconfig.SetString(movedToOtherRunner),
-		),
-	)
-	renamedConfig := otherRunnerConfig.WithFirstBlock(
-		testconfig.Descend("spec", "display_name")(testconfig.SetString("Example Building Block, renamed")),
-	)
-	redraftedConfig := updateBBDDescription(t, renamedConfig, "An updated building block definition")
-	replacedConfig := redraftedConfig.WithFirstBlock(
-		testconfig.Descend("version_spec", "only_apply_once_per_tenant")(testconfig.SetBool(false)),
-	)
+	renamedVars := maps.Clone(vars)
+	renamedVars["display_name"] = tfconfig.StringVariable("Example Building Block, renamed")
+	releasedVars := maps.Clone(renamedVars)
+	releasedVars["draft"] = tfconfig.BoolVariable(false)
+	redraftedVars := maps.Clone(renamedVars)
+	redraftedVars["description"] = tfconfig.StringVariable("An updated building block definition")
+	replacedVars := maps.Clone(redraftedVars)
+	replacedVars["only_apply_once_per_tenant"] = tfconfig.BoolVariable(false)
 
 	// The subject carries the definition's uuid, so the replacement has to present a different one.
 	var subjectBeforeReplacement string
@@ -104,92 +109,98 @@ func TestAccBuildingBlockDefinitionWif(t *testing.T) {
 	ApplyAndTest(t, resource.TestCase{
 		Steps: []resource.TestStep{
 			{
-				Config: config.String(),
+				Config:          bbdWifStepConfig(t, 23),
+				ConfigVariables: vars,
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectResourceAction(bbdAddr.String(), plancheck.ResourceActionCreate),
+						plancheck.ExpectResourceAction(terraformBbdAddr, plancheck.ResourceActionCreate),
 					},
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(bbdAddr.String(), latestWifPath,
+					statecheck.ExpectKnownValue(terraformBbdAddr, latestWifPath,
 						resolvedWif("https://oidc.example.com", resolvedSubject("system:serviceaccount:namespace:workspace."), gcp)),
-					statecheck.ExpectKnownValue(bbdAddr.String(), versionsPath,
+					statecheck.ExpectKnownValue(terraformBbdAddr, versionsPath,
 						expectedVersions(resolvedWif("https://oidc.example.com", resolvedSubject("system:serviceaccount:namespace:workspace."), gcp), 1)),
-					statecheck.ExpectKnownValue(bbdAddr.String(), tfjsonpath.New("version_latest_release"), knownvalue.Null()),
+					statecheck.ExpectKnownValue(terraformBbdAddr, tfjsonpath.New("version_latest_release"), knownvalue.Null()),
 				},
 			},
 			{
 				// A changed runner changes the identity of the version it is changed on, so it is read again.
-				Config: otherRunnerConfig.String(),
+				Config:          bbdWifStepConfig(t, 24),
+				ConfigVariables: vars,
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectResourceAction(bbdAddr.String(), plancheck.ResourceActionUpdate),
-						plancheck.ExpectUnknownValue(bbdAddr.String(), latestWifPath),
+						plancheck.ExpectResourceAction(terraformBbdAddr, plancheck.ResourceActionUpdate),
+						plancheck.ExpectUnknownValue(terraformBbdAddr, latestWifPath),
 					},
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(bbdAddr.String(), latestWifPath, otherRunnerWif),
-					statecheck.ExpectKnownValue(bbdAddr.String(), versionsPath, expectedVersions(otherRunnerWif, 1)),
+					statecheck.ExpectKnownValue(terraformBbdAddr, latestWifPath, otherRunnerWif),
+					statecheck.ExpectKnownValue(terraformBbdAddr, versionsPath, expectedVersions(otherRunnerWif, 1)),
 				},
 			},
 			{
 				// An unrelated change keeps it, instead of planning a pointless "known after apply".
-				Config: renamedConfig.String(),
+				Config:          bbdWifStepConfig(t, 24),
+				ConfigVariables: renamedVars,
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectResourceAction(bbdAddr.String(), plancheck.ResourceActionUpdate),
-						plancheck.ExpectKnownValue(bbdAddr.String(), latestSubjectPath, otherRunnerSubject),
+						plancheck.ExpectResourceAction(terraformBbdAddr, plancheck.ResourceActionUpdate),
+						plancheck.ExpectKnownValue(terraformBbdAddr, latestSubjectPath, otherRunnerSubject),
 					},
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(bbdAddr.String(), latestWifPath, otherRunnerWif),
+					statecheck.ExpectKnownValue(terraformBbdAddr, latestWifPath, otherRunnerWif),
 				},
 			},
 			{
 				// A release changes the version in place, so the identity of the version stays as it was and
 				// becomes the identity of the latest release.
-				Config: releaseBBDVersion(t, renamedConfig).String(),
+				Config:          bbdWifStepConfig(t, 24),
+				ConfigVariables: releasedVars,
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectResourceAction(bbdAddr.String(), plancheck.ResourceActionUpdate),
-						plancheck.ExpectKnownValue(bbdAddr.String(), latestSubjectPath, otherRunnerSubject),
+						plancheck.ExpectResourceAction(terraformBbdAddr, plancheck.ResourceActionUpdate),
+						plancheck.ExpectKnownValue(terraformBbdAddr, latestSubjectPath, otherRunnerSubject),
 					},
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(bbdAddr.String(), latestWifPath, otherRunnerWif),
-					statecheck.ExpectKnownValue(bbdAddr.String(), latestReleaseWifPath, otherRunnerWif),
+					statecheck.ExpectKnownValue(terraformBbdAddr, latestWifPath, otherRunnerWif),
+					statecheck.ExpectKnownValue(terraformBbdAddr, latestReleaseWifPath, otherRunnerWif),
 				},
 			},
 			{
 				// A new draft cut from the released version adds an entry whose identity is read after it is
 				// written, while the released version keeps its own.
-				Config: redraftedConfig.String(),
+				Config:          bbdWifStepConfig(t, 24),
+				ConfigVariables: redraftedVars,
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectResourceAction(bbdAddr.String(), plancheck.ResourceActionUpdate),
-						plancheck.ExpectUnknownValue(bbdAddr.String(), latestWifPath),
-						plancheck.ExpectKnownValue(bbdAddr.String(), latestReleaseWifPath, otherRunnerWif),
+						plancheck.ExpectResourceAction(terraformBbdAddr, plancheck.ResourceActionUpdate),
+						plancheck.ExpectUnknownValue(terraformBbdAddr, latestWifPath),
+						plancheck.ExpectKnownValue(terraformBbdAddr, latestReleaseWifPath, otherRunnerWif),
 					},
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(bbdAddr.String(), versionsPath, expectedVersions(otherRunnerWif, 1, 2)),
-					statecheck.ExpectKnownValue(bbdAddr.String(), latestReleaseWifPath, otherRunnerWif),
-					statecheck.ExpectKnownValue(bbdAddr.String(), latestSubjectPath, recordSubject),
+					statecheck.ExpectKnownValue(terraformBbdAddr, versionsPath, expectedVersions(otherRunnerWif, 1, 2)),
+					statecheck.ExpectKnownValue(terraformBbdAddr, latestReleaseWifPath, otherRunnerWif),
+					statecheck.ExpectKnownValue(terraformBbdAddr, latestSubjectPath, recordSubject),
 				},
 			},
 			{
 				// A replacement creates a new definition with a single version and its own subject. The create
 				// side of it plans every computed attribute unknown, the version entry included.
-				Config: replacedConfig.String(),
+				Config:          bbdWifStepConfig(t, 24),
+				ConfigVariables: replacedVars,
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectResourceAction(bbdAddr.String(), plancheck.ResourceActionReplace),
-						plancheck.ExpectUnknownValue(bbdAddr.String(), tfjsonpath.New("version_latest")),
+						plancheck.ExpectResourceAction(terraformBbdAddr, plancheck.ResourceActionReplace),
+						plancheck.ExpectUnknownValue(terraformBbdAddr, tfjsonpath.New("version_latest")),
 					},
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(bbdAddr.String(), versionsPath,
-						expectedVersions(resolvedWif(testconfig.OtherWifRunnerIssuer, replacementSubject, gcp), 1)),
+					statecheck.ExpectKnownValue(terraformBbdAddr, versionsPath,
+						expectedVersions(resolvedWif(otherWifRunnerIssuer, replacementSubject, gcp), 1)),
 				},
 			},
 		},

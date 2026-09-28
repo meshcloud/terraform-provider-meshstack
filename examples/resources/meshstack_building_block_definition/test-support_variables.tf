@@ -59,3 +59,15 @@ variable "schedule" {
   type    = any
   default = null
 }
+
+# The definition's display name and whether it applies once per tenant, which the workload identity
+# case changes after moving the definition to another runner.
+variable "display_name" {
+  type    = string
+  default = "Example Building Block"
+}
+
+variable "only_apply_once_per_tenant" {
+  type    = bool
+  default = true
+}
