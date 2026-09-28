@@ -1,0 +1,29 @@
+resource "meshstack_landingzone" "example" {
+  # depends_on forces the tag definition to exist before the landing zone (so the restricted
+  # default is actually injected on create) and to be torn down after it.
+  depends_on = [meshstack_tag_definition.injected_restricted_tag]
+
+  metadata = {
+    name               = "test-lz-${var.suffix}"
+    owned_by_workspace = meshstack_workspace.example.metadata.name
+    tags               = {}
+  }
+
+  spec = {
+    display_name                  = "My Custom Landing Zone"
+    description                   = "A custom landing zone"
+    automate_deletion_approval    = false
+    automate_deletion_replication = false
+    info_link                     = "https://example.com"
+
+    # The platform's computed `ref` (kind + uuid) is assigned inline — platform_ref accepts the full
+    # ref object, so no explicit uuid mapping is needed.
+    platform_ref                  = meshstack_platform.example_custom.ref
+    mandatory_building_block_refs = [meshstack_building_block_definition.mandatory_bbd.ref]
+
+    platform_properties = {
+      // Nothing to be specified for custom platforms, but the block must be present.
+      custom = {}
+    }
+  }
+}

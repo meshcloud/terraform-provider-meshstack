@@ -1,8 +1,10 @@
-# A mandatory building block definition that provides a platform tenant ID.
-# Used in landing zone tests to enable tenant replication on custom platforms.
+# A mandatory building block definition that provides a platform tenant ID, which is what enables
+# tenant replication on a custom platform. Wired to the platform type the landing zone's platform
+# uses, so the definition actually applies to it.
+
 resource "meshstack_building_block_definition" "mandatory_bbd" {
   metadata = {
-    owned_by_workspace = "my-workspace"
+    owned_by_workspace = meshstack_workspace.example.metadata.name
   }
 
   spec = {
@@ -10,7 +12,10 @@ resource "meshstack_building_block_definition" "mandatory_bbd" {
     description  = "Provides a platform tenant ID for custom platform tenants"
     target_type  = "TENANT_LEVEL"
 
-    supported_platforms = [{ name = "MY-PLATFORM-TYPE" }]
+    supported_platforms = [{
+      kind = "meshPlatformType"
+      name = meshstack_platform_type.example.metadata.name
+    }]
   }
 
   version_spec = {
