@@ -3,29 +3,32 @@ package provider
 import (
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 
-	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
+	"github.com/meshcloud/terraform-provider-meshstack/examples"
 )
 
-func TestAccTagDefinitionDataSource(t *testing.T) {
-	resourceConfig, _, tagKey := testconfig.TagDefinition(t, "meshProject")
+const tagDefinitionDataSourceAddr = "data.meshstack_tag_definition.example"
 
-	var dataSourceAddr testconfig.Traversal
-	config := testconfig.DataSource{Name: "tag_definition"}.Config(t).WithFirstBlock(
-		testconfig.ExtractAddress(&dataSourceAddr),
-		testconfig.Descend("name")(testconfig.SetString("meshProject."+tagKey)),
-	).Join(resourceConfig)
+func TestAccTagDefinitionDataSource(t *testing.T) {
+	suffix := acctest.RandString(8)
+
+	config := examples.JoinTestStepConfigs(
+		examples.DataSource.TestStepConfig(t, "tag_definition", 1),
+		examples.Resource.TestStepConfig(t, "tag_definition", 1, "variables"),
+	)
 
 	ApplyAndTest(t, resource.TestCase{
 		Steps: []resource.TestStep{
 			{
-				Config: config.String(),
+				Config:          config,
+				ConfigVariables: SuffixVariables(suffix),
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(dataSourceAddr.String(), tfjsonpath.New("name"), knownvalue.StringExact("meshProject."+tagKey)),
+					statecheck.ExpectKnownValue(tagDefinitionDataSourceAddr, tfjsonpath.New("name"), knownvalue.StringExact("meshProject."+projectTagKeyPrefix+suffix)),
 				},
 			},
 		},

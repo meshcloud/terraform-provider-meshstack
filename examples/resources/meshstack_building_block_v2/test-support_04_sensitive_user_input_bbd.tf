@@ -1,6 +1,6 @@
 resource "meshstack_building_block_definition" "sensitive_user_input" {
   metadata = {
-    owned_by_workspace = "my-workspace"
+    owned_by_workspace = meshstack_workspace.example.metadata.name
   }
 
   spec = {
@@ -29,7 +29,7 @@ resource "meshstack_building_block_definition" "sensitive_user_input" {
     implementation = {
       terraform = {
         terraform_version = "1.9.0"
-        repository_url    = "https://github.com/example/building-block.git"
+        repository_url    = var.terraform_repository_url
       }
     }
 

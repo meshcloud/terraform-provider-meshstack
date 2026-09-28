@@ -4,43 +4,66 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/compare"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 	"github.com/meshcloud/meshstack-cli/client"
 
-	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
+	"github.com/meshcloud/terraform-provider-meshstack/examples"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/xknownvalue"
 )
+
+// Addresses of the blocks in examples/{resources,data-sources}/meshstack_building_block/*-test-*.tf.
+const (
+	buildingBlockWorkspaceAddr  = "meshstack_building_block.example_workspace"
+	buildingBlockParentAddr     = "meshstack_building_block.parent"
+	buildingBlockChildAddr      = "meshstack_building_block.child"
+	buildingBlockTenantAddr     = "meshstack_building_block.example_tenant"
+	buildingBlockDataSourceAddr = "data.meshstack_building_block.example"
+)
+
+// buildingBlockWorkspaceStepConfig joins the named building block step files with the definition
+// they instantiate and the workspace they target.
+func buildingBlockWorkspaceStepConfig(t *testing.T, indexes ...int) string {
+	t.Helper()
+	parts := make([]string, 0, len(indexes)+2)
+	for _, index := range indexes {
+		parts = append(parts, examples.Resource.TestStepConfig(t, "building_block", index))
+	}
+	parts = append(parts,
+		examples.Resource.TestSupportConfigs(t, "building_block", "01_workspace"),
+		examples.Resource.TestStepConfig(t, "workspace", 1, "variables", "prerequisites"),
+	)
+	return examples.JoinTestStepConfigs(parts...)
+}
 
 func TestAccBuildingBlockDataSource(t *testing.T) {
 	t.Parallel()
 
-	dataSourceAddr := testconfig.Traversal{"data.meshstack_building_block", "example"}
-
 	t.Run("01_workspace", func(t *testing.T) {
-		buildingBlockConfig, buildingBlockAddr, _, _ := testconfig.BBWorkspace(t)
-
-		config := testconfig.DataSource{Name: "building_block"}.Config(t).WithFirstBlock(
-			testconfig.Descend("metadata", "uuid")(testconfig.SetAddr(buildingBlockAddr, "metadata", "uuid")),
-		).Join(buildingBlockConfig)
+		config := examples.JoinTestStepConfigs(
+			examples.DataSource.TestStepConfig(t, "building_block", 1),
+			buildingBlockWorkspaceStepConfig(t, 1),
+		)
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
-					Config: config.String(),
+					Config:          config,
+					ConfigVariables: SuffixVariables(acctest.RandString(8)),
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(dataSourceAddr.String(), tfjsonpath.New("metadata").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
-						statecheck.ExpectKnownValue(dataSourceAddr.String(), tfjsonpath.New("metadata").AtMapKey("owned_by_workspace"), xknownvalue.NotEmptyString()),
-						statecheck.ExpectKnownValue(dataSourceAddr.String(), tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("my-workspace-building-block")),
-						statecheck.ExpectKnownValue(dataSourceAddr.String(), tfjsonpath.New("status").AtMapKey("status"), xknownvalue.NotEmptyString()),
-						statecheck.ExpectKnownValue(dataSourceAddr.String(), tfjsonpath.New("all_inputs").AtMapKey("size").AtMapKey("value"), knownvalue.StringExact("16")),
-						statecheck.ExpectKnownValue(dataSourceAddr.String(), tfjsonpath.New("all_inputs").AtMapKey("environment").AtMapKey("value"), knownvalue.StringExact(`"dev"`)),
-						xknownvalue.Ref(dataSourceAddr.String(), client.MeshObjectKind.BuildingBlock, nil),
+						statecheck.ExpectKnownValue(buildingBlockDataSourceAddr, tfjsonpath.New("metadata").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
+						statecheck.ExpectKnownValue(buildingBlockDataSourceAddr, tfjsonpath.New("metadata").AtMapKey("owned_by_workspace"), xknownvalue.NotEmptyString()),
+						statecheck.ExpectKnownValue(buildingBlockDataSourceAddr, tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("my-workspace-building-block")),
+						statecheck.ExpectKnownValue(buildingBlockDataSourceAddr, tfjsonpath.New("status").AtMapKey("status"), xknownvalue.NotEmptyString()),
+						statecheck.ExpectKnownValue(buildingBlockDataSourceAddr, tfjsonpath.New("all_inputs").AtMapKey("size").AtMapKey("value"), knownvalue.StringExact("16")),
+						statecheck.ExpectKnownValue(buildingBlockDataSourceAddr, tfjsonpath.New("all_inputs").AtMapKey("environment").AtMapKey("value"), knownvalue.StringExact(`"dev"`)),
+						xknownvalue.Ref(buildingBlockDataSourceAddr, client.MeshObjectKind.BuildingBlock, nil),
 						statecheck.CompareValuePairs(
-							buildingBlockAddr.String(), tfjsonpath.New("ref"),
-							dataSourceAddr.String(), tfjsonpath.New("ref"),
+							buildingBlockWorkspaceAddr, tfjsonpath.New("ref"),
+							buildingBlockDataSourceAddr, tfjsonpath.New("ref"),
 							compare.ValuesSame(),
 						),
 					},
@@ -50,22 +73,23 @@ func TestAccBuildingBlockDataSource(t *testing.T) {
 	})
 
 	t.Run("02_parent_child", func(t *testing.T) {
-		buildingBlockConfig, parentAddr, childAddr := testconfig.BBWorkspaceParentChild(t)
-
-		config := testconfig.DataSource{Name: "building_block"}.Config(t).WithFirstBlock(
-			testconfig.Descend("metadata", "uuid")(testconfig.SetAddr(childAddr, "metadata", "uuid")),
-		).Join(buildingBlockConfig)
+		// Both blocks come from the same definition, so each one is its own step file.
+		config := examples.JoinTestStepConfigs(
+			examples.DataSource.TestStepConfig(t, "building_block", 2),
+			buildingBlockWorkspaceStepConfig(t, 2, 3),
+		)
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
-					Config: config.String(),
+					Config:          config,
+					ConfigVariables: SuffixVariables(acctest.RandString(8)),
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(dataSourceAddr.String(), tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("my-child-building-block")),
-						statecheck.ExpectKnownValue(dataSourceAddr.String(), tfjsonpath.New("spec").AtMapKey("parent_building_block_refs"), knownvalue.SetSizeExact(1)),
+						statecheck.ExpectKnownValue(buildingBlockDataSourceAddr, tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("my-child-building-block")),
+						statecheck.ExpectKnownValue(buildingBlockDataSourceAddr, tfjsonpath.New("spec").AtMapKey("parent_building_block_refs"), knownvalue.SetSizeExact(1)),
 						statecheck.CompareValuePairs(
-							parentAddr.String(), tfjsonpath.New("ref"),
-							dataSourceAddr.String(), tfjsonpath.New("spec").AtMapKey("parent_building_block_refs").AtSliceIndex(0),
+							buildingBlockParentAddr, tfjsonpath.New("ref"),
+							buildingBlockDataSourceAddr, tfjsonpath.New("spec").AtMapKey("parent_building_block_refs").AtSliceIndex(0),
 							compare.ValuesSame(),
 						),
 					},

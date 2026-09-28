@@ -1,6 +1,6 @@
 resource "meshstack_building_block_definition" "sensitive_user_input" {
   metadata = {
-    owned_by_workspace = "my-workspace"
+    owned_by_workspace = meshstack_workspace.example.metadata.name
   }
 
   spec = {

@@ -3,44 +3,44 @@ package provider
 import (
 	"testing"
 
+	tfconfig "github.com/hashicorp/terraform-plugin-testing/config"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 
-	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
+	"github.com/meshcloud/terraform-provider-meshstack/examples"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/xknownvalue"
 )
 
-// TestAccBuildingBlocksDataSource creates a real building block with the BBWorkspace builder and
-// lists it back through the data source. Like every other data source test in this package, it
-// reuses a testconfig builder to actually create the resources under test (rather than
-// pre-populating a mock), so it runs identically in mock mode and as a true acceptance test
-// (TF_ACC=1) against a local meshStack. Filtering by the freshly-created workspace yields exactly
-// the one block, so indexing building_blocks.0 is deterministic; referencing buildingBlockAddr in
-// the filter makes Terraform read the data source only after the block exists.
+const buildingBlocksDataSourceAddr = "data.meshstack_building_blocks.all"
+
+// TestAccBuildingBlocksDataSource creates a real building block and lists it back through the data
+// source. Like every other data source test in this package, it creates the resources under test
+// rather than pre-populating a mock, so it runs identically in mock mode and as a true acceptance
+// test (TF_ACC=1) against a local meshStack.
 func TestAccBuildingBlocksDataSource(t *testing.T) {
 	t.Parallel()
 
 	t.Run("01_workspace", func(t *testing.T) {
-		buildingBlockConfig, buildingBlockAddr, _, _ := testconfig.BBWorkspace(t)
-
-		dataSourceAddr := "data.meshstack_building_blocks.all"
-		config := testconfig.DataSource{Name: "building_blocks"}.Config(t).WithFirstBlock(
-			testconfig.Descend("workspace_identifier")(testconfig.SetAddr(buildingBlockAddr, "metadata", "owned_by_workspace")),
-		).Join(buildingBlockConfig)
+		config := examples.JoinTestStepConfigs(
+			examples.DataSource.TestStepConfig(t, "building_blocks", 1),
+			buildingBlockWorkspaceStepConfig(t, 1),
+		)
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
-					Config: config.String(),
+					Config:          config,
+					ConfigVariables: SuffixVariables(acctest.RandString(8)),
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(dataSourceAddr, tfjsonpath.New("building_blocks"), knownvalue.ListSizeExact(1)),
-						statecheck.ExpectKnownValue(dataSourceAddr, tfjsonpath.New("building_blocks").AtSliceIndex(0).AtMapKey("metadata").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
-						statecheck.ExpectKnownValue(dataSourceAddr, tfjsonpath.New("building_blocks").AtSliceIndex(0).AtMapKey("spec").AtMapKey("display_name"), knownvalue.StringExact("my-workspace-building-block")),
-						// all_inputs surfaces every backend input read-only (the _01_workspace BBD declares size + environment).
-						statecheck.ExpectKnownValue(dataSourceAddr, tfjsonpath.New("building_blocks").AtSliceIndex(0).AtMapKey("all_inputs").AtMapKey("size").AtMapKey("value"), knownvalue.StringExact("16")),
-						statecheck.ExpectKnownValue(dataSourceAddr, tfjsonpath.New("building_blocks").AtSliceIndex(0).AtMapKey("all_inputs").AtMapKey("environment").AtMapKey("value"), knownvalue.StringExact(`"dev"`)),
+						statecheck.ExpectKnownValue(buildingBlocksDataSourceAddr, tfjsonpath.New("building_blocks"), knownvalue.ListSizeExact(1)),
+						statecheck.ExpectKnownValue(buildingBlocksDataSourceAddr, tfjsonpath.New("building_blocks").AtSliceIndex(0).AtMapKey("metadata").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
+						statecheck.ExpectKnownValue(buildingBlocksDataSourceAddr, tfjsonpath.New("building_blocks").AtSliceIndex(0).AtMapKey("spec").AtMapKey("display_name"), knownvalue.StringExact("my-workspace-building-block")),
+						// all_inputs surfaces every backend input read-only (the 01_workspace BBD declares size + environment).
+						statecheck.ExpectKnownValue(buildingBlocksDataSourceAddr, tfjsonpath.New("building_blocks").AtSliceIndex(0).AtMapKey("all_inputs").AtMapKey("size").AtMapKey("value"), knownvalue.StringExact("16")),
+						statecheck.ExpectKnownValue(buildingBlocksDataSourceAddr, tfjsonpath.New("building_blocks").AtSliceIndex(0).AtMapKey("all_inputs").AtMapKey("environment").AtMapKey("value"), knownvalue.StringExact(`"dev"`)),
 					},
 				},
 			},
@@ -57,31 +57,36 @@ func TestAccBuildingBlocksDataSource(t *testing.T) {
 		if IsMockClientTest() {
 			t.Skip("version_number is filtered server-side; the mock store does not carry the BBD version number")
 		}
-		buildingBlockConfig, buildingBlockAddr, _, _ := testconfig.BBWorkspace(t)
-		dataSourceAddr := "data.meshstack_building_blocks.all"
 
-		base := func(versionNumber string) testconfig.Config {
-			return testconfig.DataSource{Name: "building_blocks"}.Config(t).WithFirstBlock(
-				testconfig.Descend("workspace_identifier")(testconfig.SetAddr(buildingBlockAddr, "metadata", "owned_by_workspace")),
-				testconfig.Descend("version_number")(testconfig.SetRawExpr(`%q`, versionNumber)),
-			).Join(buildingBlockConfig)
+		suffix := acctest.RandString(8)
+		config := examples.JoinTestStepConfigs(
+			examples.DataSource.TestStepConfig(t, "building_blocks", 2),
+			buildingBlockWorkspaceStepConfig(t, 1),
+		)
+
+		withVersion := func(versionNumber string) tfconfig.Variables {
+			vars := SuffixVariables(suffix)
+			vars["version_number"] = tfconfig.StringVariable(versionNumber)
+			return vars
 		}
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
 					// Lenient "v1" matches definition version 1.
-					Config: base("v1").String(),
+					Config:          config,
+					ConfigVariables: withVersion("v1"),
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(dataSourceAddr, tfjsonpath.New("building_blocks"), knownvalue.ListSizeExact(1)),
-						statecheck.ExpectKnownValue(dataSourceAddr, tfjsonpath.New("building_blocks").AtSliceIndex(0).AtMapKey("spec").AtMapKey("display_name"), knownvalue.StringExact("my-workspace-building-block")),
+						statecheck.ExpectKnownValue(buildingBlocksDataSourceAddr, tfjsonpath.New("building_blocks"), knownvalue.ListSizeExact(1)),
+						statecheck.ExpectKnownValue(buildingBlocksDataSourceAddr, tfjsonpath.New("building_blocks").AtSliceIndex(0).AtMapKey("spec").AtMapKey("display_name"), knownvalue.StringExact("my-workspace-building-block")),
 					},
 				},
 				{
 					// Version 2 does not exist for this block → empty result (proves the param is applied).
-					Config: base("v2").String(),
+					Config:          config,
+					ConfigVariables: withVersion("v2"),
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(dataSourceAddr, tfjsonpath.New("building_blocks"), knownvalue.ListSizeExact(0)),
+						statecheck.ExpectKnownValue(buildingBlocksDataSourceAddr, tfjsonpath.New("building_blocks"), knownvalue.ListSizeExact(0)),
 					},
 				},
 			},

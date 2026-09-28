@@ -5,15 +5,34 @@ import (
 	"strings"
 	"testing"
 
+	tfconfig "github.com/hashicorp/terraform-plugin-testing/config"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 
-	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
+	"github.com/meshcloud/terraform-provider-meshstack/examples"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/xknownvalue"
 )
+
+// Addresses of the blocks in examples/resources/meshstack_building_block_v2/resource-test-*.tf.
+const (
+	bbv2WorkspaceAddr          = "meshstack_building_block_v2.example_workspace"
+	bbv2TenantAddr             = "meshstack_building_block_v2.example_tenant"
+	bbv2SensitiveAddr          = "meshstack_building_block_v2.sensitive"
+	bbv2SensitiveUserInputAddr = "meshstack_building_block_v2.sensitive_user_input"
+)
+
+// bbv2Variables carries the run suffix plus the loopback repository URL the terraform-backed
+// definitions clone from.
+func bbv2Variables(t *testing.T) tfconfig.Variables {
+	t.Helper()
+	vars := SuffixVariables(acctest.RandString(8))
+	vars["terraform_repository_url"] = tfconfig.StringVariable(terraformTestdataRepoURL(t))
+	return vars
+}
 
 // assertIsHashNotPlaintext validates that a surfaced sensitive-input value is the backend's secret
 // hash and not the leaked plaintext. It guards against the toResourceModel fallback that stuffs a
@@ -38,40 +57,49 @@ func TestAccBuildingBlockV2(t *testing.T) {
 	t.Parallel()
 
 	t.Run("01_workspace", func(t *testing.T) {
-		config, buildingBlockAddr := testconfig.BBv2Workspace(t)
+		config := examples.JoinTestStepConfigs(
+			examples.Resource.TestStepConfig(t, "building_block_v2", 1, "01_workspace"),
+			examples.Resource.TestStepConfig(t, "workspace", 1, "variables", "prerequisites"),
+		)
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
-					Config: config.String(),
+					Config:          config,
+					ConfigVariables: SuffixVariables(acctest.RandString(8)),
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
-							plancheck.ExpectResourceAction(buildingBlockAddr.String(), plancheck.ResourceActionCreate),
+							plancheck.ExpectResourceAction(bbv2WorkspaceAddr, plancheck.ResourceActionCreate),
 						},
 					},
-					ConfigStateChecks: bbv2StateChecks(buildingBlockAddr, "my-workspace-building-block"),
+					ConfigStateChecks: bbv2StateChecks(bbv2WorkspaceAddr, "my-workspace-building-block"),
 				},
 			},
 		})
 	})
 
 	t.Run("02_tenant", func(t *testing.T) {
-		config, buildingBlockAddr := testconfig.BBv2Tenant(t)
+		config := examples.JoinTestStepConfigs(
+			examples.Resource.TestStepConfig(t, "building_block_v2", 2, "02_tenant"),
+			tenantStepConfig(t, 1, 8, 1),
+		)
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
-					Config: config.String(),
+					Config:          config,
+					ConfigVariables: SuffixVariables(acctest.RandString(8)),
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
-							plancheck.ExpectResourceAction(buildingBlockAddr.String(), plancheck.ResourceActionCreate),
+							plancheck.ExpectResourceAction(bbv2TenantAddr, plancheck.ResourceActionCreate),
 						},
 					},
-					ConfigStateChecks: bbv2StateChecks(buildingBlockAddr, "my-tenant-building-block"),
+					ConfigStateChecks: bbv2StateChecks(bbv2TenantAddr, "my-tenant-building-block"),
 				},
 			},
 		})
 	})
+
 	t.Run("03_sensitive_input", func(t *testing.T) {
 		if IsMockClientTest() {
 			// The in-memory mock does not resolve STATIC inputs from the BBD, so the
@@ -79,41 +107,25 @@ func TestAccBuildingBlockV2(t *testing.T) {
 			t.Skip("requires real meshStack to resolve static secret inputs")
 		}
 
-		workspaceConfig, workspaceAddr := testconfig.Workspace(t)
-		exampleResource := testconfig.Resource{Name: "building_block_v2", Suffix: "_03_sensitive_input"}
-
-		var buildingBlockDefinitionAddr testconfig.Traversal
-		buildingBlockDefinitionConfig := exampleResource.TestSupportConfig(t, "_bbd").WithFirstBlock(
-			testconfig.ExtractAddress(&buildingBlockDefinitionAddr),
-			testconfig.OwnedByWorkspace(workspaceAddr),
-			// Point at the committed bare repo served over loopback so the run actually completes and the
-			// block reaches a final state, letting the default wait_for_completion/purge_on_delete exercise
-			// the full lifecycle instead of leaving a stuck run behind.
-			testconfig.Descend("version_spec", "implementation", "terraform", "repository_url")(
-				testconfig.SetRawExpr("%q", terraformTestdataRepoURL(t)),
-			),
+		config := examples.JoinTestStepConfigs(
+			examples.Resource.TestStepConfig(t, "building_block_v2", 3, "03_sensitive_input_bbd", "variables"),
+			examples.Resource.TestStepConfig(t, "workspace", 1, "variables", "prerequisites"),
 		)
-
-		var buildingBlockAddr testconfig.Traversal
-		config := exampleResource.TestSupportConfig(t, "").WithFirstBlock(
-			testconfig.ExtractAddress(&buildingBlockAddr),
-			testconfig.Descend("spec", "building_block_definition_version_ref")(testconfig.SetAddr(buildingBlockDefinitionAddr, "version_latest")),
-			testconfig.Descend("spec", "target_ref")(testconfig.SetAddr(workspaceAddr, "ref")),
-		).Join(workspaceConfig, buildingBlockDefinitionConfig)
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
-					Config: config.String(),
+					Config:          config,
+					ConfigVariables: bbv2Variables(t),
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
-							plancheck.ExpectResourceAction(buildingBlockAddr.String(), plancheck.ResourceActionCreate),
+							plancheck.ExpectResourceAction(bbv2SensitiveAddr, plancheck.ResourceActionCreate),
 						},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("metadata").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
+						statecheck.ExpectKnownValue(bbv2SensitiveAddr, tfjsonpath.New("metadata").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
 						// The read fix surfaces the embedded-secret hash here; without it this is null.
-						statecheck.ExpectKnownValue(buildingBlockAddr.String(),
+						statecheck.ExpectKnownValue(bbv2SensitiveAddr,
 							tfjsonpath.New("spec").AtMapKey("combined_inputs").AtMapKey("static_secret").AtMapKey("value_string"),
 							xknownvalue.NotEmptyString()),
 					},
@@ -131,45 +143,29 @@ func TestAccBuildingBlockV2(t *testing.T) {
 		// value_* field the hash lands in. The assertions verify the surfaced value is a real hash, not
 		// the leaked plaintext (a prior bug demoted the secret to a plain value and stuffed its raw map
 		// representation into value_string via the toResourceModel fallback).
-		workspaceConfig, workspaceAddr := testconfig.Workspace(t)
-		exampleResource := testconfig.Resource{Name: "building_block_v2", Suffix: "_04_sensitive_user_input"}
-
-		var buildingBlockDefinitionAddr testconfig.Traversal
-		buildingBlockDefinitionConfig := exampleResource.TestSupportConfig(t, "_bbd").WithFirstBlock(
-			testconfig.ExtractAddress(&buildingBlockDefinitionAddr),
-			testconfig.OwnedByWorkspace(workspaceAddr),
-			// Point at the committed bare repo served over loopback so the run actually completes and the
-			// block reaches a final state, letting the default wait_for_completion/purge_on_delete exercise
-			// the full lifecycle instead of leaving a stuck run behind.
-			testconfig.Descend("version_spec", "implementation", "terraform", "repository_url")(
-				testconfig.SetRawExpr("%q", terraformTestdataRepoURL(t)),
-			),
+		config := examples.JoinTestStepConfigs(
+			examples.Resource.TestStepConfig(t, "building_block_v2", 4, "04_sensitive_user_input_bbd", "variables"),
+			examples.Resource.TestStepConfig(t, "workspace", 1, "variables", "prerequisites"),
 		)
-
-		var buildingBlockAddr testconfig.Traversal
-		config := exampleResource.TestSupportConfig(t, "").WithFirstBlock(
-			testconfig.ExtractAddress(&buildingBlockAddr),
-			testconfig.Descend("spec", "building_block_definition_version_ref")(testconfig.SetAddr(buildingBlockDefinitionAddr, "version_latest")),
-			testconfig.Descend("spec", "target_ref")(testconfig.SetAddr(workspaceAddr, "ref")),
-		).Join(workspaceConfig, buildingBlockDefinitionConfig)
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
-					Config: config.String(),
+					Config:          config,
+					ConfigVariables: bbv2Variables(t),
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
-							plancheck.ExpectResourceAction(buildingBlockAddr.String(), plancheck.ResourceActionCreate),
+							plancheck.ExpectResourceAction(bbv2SensitiveUserInputAddr, plancheck.ResourceActionCreate),
 						},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("metadata").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
+						statecheck.ExpectKnownValue(bbv2SensitiveUserInputAddr, tfjsonpath.New("metadata").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
 						// Sensitive user inputs are sent as {"plaintext":...}; the API returns the hash.
 						// The hash surfaces in combined_inputs (the STRING hash in value_string, the CODE hash in value_code).
-						statecheck.ExpectKnownValue(buildingBlockAddr.String(),
+						statecheck.ExpectKnownValue(bbv2SensitiveUserInputAddr,
 							tfjsonpath.New("spec").AtMapKey("combined_inputs").AtMapKey("secret_str").AtMapKey("value_string"),
 							xknownvalue.NotEmptyString(assertIsHashNotPlaintext("super-secret-string-value"))),
-						statecheck.ExpectKnownValue(buildingBlockAddr.String(),
+						statecheck.ExpectKnownValue(bbv2SensitiveUserInputAddr,
 							tfjsonpath.New("spec").AtMapKey("combined_inputs").AtMapKey("secret_code").AtMapKey("value_code"),
 							xknownvalue.NotEmptyString(assertIsHashNotPlaintext("super-secret-code-value"))),
 					},
@@ -179,13 +175,13 @@ func TestAccBuildingBlockV2(t *testing.T) {
 	})
 }
 
-func bbv2StateChecks(buildingBlockAddr testconfig.Traversal, displayName string) []statecheck.StateCheck {
+func bbv2StateChecks(buildingBlockAddr, displayName string) []statecheck.StateCheck {
 	return []statecheck.StateCheck{
-		statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("metadata").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
-		statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact(displayName)),
-		statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("spec").AtMapKey("inputs").AtMapKey("name").AtMapKey("value_string"), knownvalue.StringExact("my-name")),
-		statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("spec").AtMapKey("inputs").AtMapKey("size").AtMapKey("value_int"), knownvalue.Int64Exact(16)),
-		statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("spec").AtMapKey("inputs").AtMapKey("environment").AtMapKey("value_single_select"), knownvalue.StringExact("dev")),
-		statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("status").AtMapKey("status"), knownvalue.StringExact("SUCCEEDED")),
+		statecheck.ExpectKnownValue(buildingBlockAddr, tfjsonpath.New("metadata").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
+		statecheck.ExpectKnownValue(buildingBlockAddr, tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact(displayName)),
+		statecheck.ExpectKnownValue(buildingBlockAddr, tfjsonpath.New("spec").AtMapKey("inputs").AtMapKey("name").AtMapKey("value_string"), knownvalue.StringExact("my-name")),
+		statecheck.ExpectKnownValue(buildingBlockAddr, tfjsonpath.New("spec").AtMapKey("inputs").AtMapKey("size").AtMapKey("value_int"), knownvalue.Int64Exact(16)),
+		statecheck.ExpectKnownValue(buildingBlockAddr, tfjsonpath.New("spec").AtMapKey("inputs").AtMapKey("environment").AtMapKey("value_single_select"), knownvalue.StringExact("dev")),
+		statecheck.ExpectKnownValue(buildingBlockAddr, tfjsonpath.New("status").AtMapKey("status"), knownvalue.StringExact("SUCCEEDED")),
 	}
 }

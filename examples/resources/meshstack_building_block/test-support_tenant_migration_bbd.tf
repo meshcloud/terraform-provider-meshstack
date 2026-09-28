@@ -5,14 +5,14 @@
 # showcase in test-support_02_tenant.tf / resource_02_tenant.tf.
 resource "meshstack_building_block_definition" "example_tenant" {
   metadata = {
-    owned_by_workspace = "my-workspace"
+    owned_by_workspace = meshstack_workspace.example.metadata.name
   }
 
   spec = {
     display_name        = "Test BB v3 Tenant Migration Definition"
     description         = "A tenant-level building block definition for the BB v3 v1->v3 migration test"
     target_type         = "TENANT_LEVEL"
-    supported_platforms = [{ name = "my-platform-type" }]
+    supported_platforms = [{ name = meshstack_platform_type.example.metadata.name }]
   }
 
   version_spec = {
