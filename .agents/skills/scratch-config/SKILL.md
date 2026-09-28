@@ -13,9 +13,9 @@ locally-built provider against **any meshStack you hold API credentials for**. T
 - **Scaffold** — grow a working example from an acceptance test (or from scratch) into a demo or a
   starting point for real platform-engineering work.
 
-Complements the **acceptance-testing** skill (brings up a local backend and runs the suite). The
-`testconfig` builders make a dumped config self-contained: applied to an empty meshStack it creates
-its full dependency chain (workspace → dependent resources).
+Complements the **acceptance-testing** skill (brings up a local backend and runs the suite). A
+dumped config is self-contained because each step composes its prerequisites' step files: applied to
+an empty meshStack it creates its full dependency chain (workspace → dependent resources).
 
 `scratch/` is **git-ignored and ephemeral** — a playground, not a home. Once a config works and is
 worth keeping (a demo, a reusable example, a module you intend to apply for real), **move it out of

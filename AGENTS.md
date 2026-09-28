@@ -18,7 +18,7 @@ is the always-on source of truth for both AI agents and humans; detailed procedu
 meshStack resources exposed as Terraform **resources** and **data sources**. Every meshObject shares
 the same shape: `api_version`, `kind` (e.g. `meshProject`), `metadata` (name, uuid, timestamps),
 `spec` (user config), `status` (system-managed). Adding or reworking one — implementation, example
-`.tf`, `testconfig` builder, and a create→update→import acceptance test — is the
+`.tf`, its per-step test variants, and a create→update→import acceptance test — is the
 **`resource-development`** skill, which also owns the schema/client design conventions
 (meshObject refs, DTOs, `Id`/`Uuid` naming, receivers, preview API, computed-only outputs).
 
@@ -106,7 +106,8 @@ require them.
 ## Key directories
 
 - `internal/provider/` — provider implementation (`provider.go`, `*_resource.go`, `*_data_source.go`).
-- `internal/provider/acctest/` — test-only HCL builders (`testconfig/`) and state-check helpers (`xknownvalue/`).
+- `internal/provider/acctest/` — test-only state-check helpers (`xknownvalue/`). The HCL each step
+  applies is checked in under `examples/`, not built in Go; `examples/embed.go` composes it.
 - `github.com/meshcloud/meshstack-cli/client` — the meshStack API client (JWT auth, RESTful CRUD;
   shared ref DTOs in `refs.go`), shared with the meshStack CLI and maintained in
   [meshstack-cli](https://github.com/meshcloud/meshstack-cli). A new client method ships there first.

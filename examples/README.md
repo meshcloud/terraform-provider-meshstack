@@ -26,7 +26,8 @@ test applies:
   definitions, …) plus the `variable` declarations the test fills via `ConfigVariables`. A step
   config is its `resource-test-<index>.tf` followed by the support files the test names.
 
-`meshstack_project` is the reference for this layout.
+Every resource and data source uses this layout; `meshstack_project` is the simplest reference for
+it, `meshstack_building_block` the largest.
 
 A step file may also pull in another example's step config when its subject depends on those
 resources, via `examples.JoinTestStepConfigs`, rather than duplicating the prerequisites: the

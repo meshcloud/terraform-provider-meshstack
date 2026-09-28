@@ -131,8 +131,8 @@ request merges, repin before you merge here:
 
 ### Adding a resource / data source (and its tests)
 
-Adding or reworking a resource or data source — the implementation, example `.tf` files, the
-`testconfig` builder, and a good create→update→import `TestAcc` test — is the
+Adding or reworking a resource or data source — the implementation, example `.tf` files, the step
+files its test applies, and a good create→update→import `TestAcc` test — is the
 **`resource-development`** skill. It also owns the schema/client design conventions (meshObject
 refs, DTOs, `Id`/`Uuid` naming, receivers, preview API, computed-only outputs). In short:
 
@@ -140,10 +140,10 @@ refs, DTOs, `Id`/`Uuid` naming, receivers, preview API, computed-only outputs). 
 2. `github.com/meshcloud/meshstack-cli/client` — typed API client methods, in the
    [meshstack-cli](https://github.com/meshcloud/meshstack-cli) repository.
 3. `provider.go` — register it.
-4. `examples/resources/meshstack_<name>/` — example `.tf`.
-5. `internal/provider/acctest/testconfig/build_<name>.go` — a builder.
-6. `task generate` — regenerate `docs/`.
-7. Update `CHANGELOG.md`.
+4. `examples/resources/meshstack_<name>/` — the documented example `.tf`, plus a
+   `resource-test-<index>.tf` per test step and `test-support_<name>.tf` for its prerequisites.
+5. `task generate` — regenerate `docs/`.
+6. Update `CHANGELOG.md`.
 
 ## Lint & formatting
 

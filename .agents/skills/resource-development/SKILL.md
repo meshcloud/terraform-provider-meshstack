@@ -1,15 +1,15 @@
 ---
 name: resource-development
-description: How to develop meshStack Terraform resources and data sources — the implementation, example .tf files, the testconfig builder, a good create→update→import TestAcc test (plancheck/statecheck, xknownvalue), and the cross-cutting schema/client design conventions (meshObject refs, DTOs, Id/Uuid naming, value receivers, list-query structs, preview API, computed-only outputs). Use when adding or reworking a resource/data source, writing its acceptance test, or applying the provider's schema/client conventions. Cites the cleanest existing examples to copy from.
+description: How to develop meshStack Terraform resources and data sources — the implementation, example .tf files, the per-step test variants next to them, a good create→update→import TestAcc test (plancheck/statecheck, xknownvalue), and the cross-cutting schema/client design conventions (meshObject refs, DTOs, Id/Uuid naming, value receivers, list-query structs, preview API, computed-only outputs). Use when adding or reworking a resource/data source, writing its acceptance test, or applying the provider's schema/client conventions. Cites the cleanest existing examples to copy from.
 ---
 
 # Developing resources & data sources
 
 The end-to-end procedure for adding or reworking a meshStack resource or data source, plus the
 schema/client design conventions that apply to all of them. This file is the walkthrough; load the
-companion **`REFERENCE.md`** for the full `testconfig` `Config` API, builder rules, the
-builder-chain table, the `xknownvalue` state-check helpers, and complete worked code examples
-(builder, TestAcc test, data source test, computed-only field).
+companion **`REFERENCE.md`** for the step-file layout, the `examples` composition API, when a
+difference between steps is a variable rather than its own file, the `xknownvalue` state-check
+helpers, and complete worked code examples (TestAcc test, data source test, computed-only field).
 
 ## Golden-path exemplars (copy these)
 
@@ -22,11 +22,9 @@ Mid-complexity, clean, and complete — prefer these over the large `building_bl
 | Data source | `internal/provider/project_data_source.go` |
 | Example `.tf` (simple) | `examples/resources/meshstack_project/` (`resource.tf`, `import-by-string-id.tf`) |
 | Example `.tf` (complex, multi-file + `test-support_*`) | `examples/resources/meshstack_building_block_definition/` |
-| testconfig builder | `internal/provider/acctest/testconfig/build_project.go` |
-| Resource test, per-step example files (target state) | `internal/provider/project_resource_test.go` + `examples/resources/meshstack_project/resource-test-*.tf` |
-| Resource test, testconfig builder (still the majority) | `internal/provider/workspace_resource_test.go` |
-| Data source test, per-step example files (target state) | `internal/provider/project_data_source_test.go` + `examples/data-sources/meshstack_project/data-source-test-*.tf` |
-| Data source test, testconfig builder (still the majority) | `internal/provider/workspace_data_source_test.go` |
+| Resource test | `internal/provider/project_resource_test.go` + `examples/resources/meshstack_project/resource-test-*.tf` |
+| Data source test | `internal/provider/project_data_source_test.go` + `examples/data-sources/meshstack_project/data-source-test-*.tf` |
+| Step variables + a shared helper for a long flow | `internal/provider/building_block_resource_test.go` |
 | Named subtests for multiple examples | `internal/provider/integration_resource_test.go` |
 | State-check helpers | `internal/provider/acctest/xknownvalue/{not_empty_string,ref,map}.go` |
 
@@ -43,7 +41,7 @@ Mid-complexity, clean, and complete — prefer these over the large `building_bl
 4. **`examples/resources/meshstack_<name>/resource.tf`** — only the single resource block; put
    any dependencies (data sources, providers) in `test-support_*.tf`. Never hardcode
    identifiers — reference data sources / resources (see `REFERENCE.md` → Dependency-first).
-5. **`internal/provider/acctest/testconfig/build_<name>.go`** — a public builder (see below).
+5. **`examples/resources/meshstack_<name>/resource-test-<index>.tf`** — one per test step (see below).
 6. **`internal/provider/<name>_resource_test.go`** — a `TestAcc<Name>` test (see below).
 7. `task generate` (docs) and update `CHANGELOG.md`.
 
@@ -111,51 +109,42 @@ Cross-cutting rules for the schema and its backing client, beyond the ref/DTO sh
   minimum-provider-version entry, so meshStack can surface "needs provider ≥ vX.Y.Z" instead of a
   cryptic failure.
 
-## The builder
+## The step files
 
-A public function in `testconfig`, named without `Build`/`Config`, `t` first, named returns
-(`config` first), with the resource-under-test as the `.Join` receiver and dependencies as
-arguments. Modifier preference: `SetString`/`SetValue` → `SetAddr` → `SetRawExpr` (last resort).
-`Descend` nests only when a parent has multiple children — flatten single-child chains. Provide a
-`*AndWorkspace` wrapper when a single resource + its workspace is commonly needed. Full rules and
-a worked `build_project.go` are in `REFERENCE.md`.
+Nothing builds HCL in Go. Each test step applies a checked-in file next to the documented example,
+and the test only names which files to concatenate:
+
+- `examples/<kind>s/meshstack_<name>/<kind>-test-<index>.tf` — the example as step `<index>` applies
+  it (the data sources the documented example reads swapped for resources the test creates, names
+  built from `var.suffix`). The index is what links the file to the step.
+- `examples/<kind>s/meshstack_<name>/test-support_<name>.tf` — the prerequisites those step files
+  reference, plus the `variable` blocks the test fills.
+
+The test assembles a step with
+`examples.Resource.TestStepConfig(t, "<name>", <index>, "<support>"…)`, and one whose subject needs
+another example's resources composes that example's step with `examples.JoinTestStepConfigs`
+instead of duplicating it — `project_group_binding_data_source_test.go` stacks three. Resource
+addresses are plain string constants (`meshstack_project.example`).
+
+**A scalar the flow dials between steps is a `variable` with the example's value as its default; a
+structural difference is its own step file.** Full rules, the composition API and that split are in
+`REFERENCE.md`; `examples/README.md` has the file conventions, including the `-test-` filter that
+keeps the step files out of the generated docs.
 
 ## The TestAcc test
 
-A good test is multi-step (create → update → import), uses the builder, and asserts with
-`plancheck` (the planned action) + `statecheck`/`xknownvalue` (resulting state). Prefer the
-`xknownvalue` helpers (`NotEmptyString`, `Ref`, `MapExact`) over raw `knownvalue` where they fit.
-See `REFERENCE.md` for the full worked example.
-
-### Migration off `testconfig` (in progress)
-
-The `testconfig` builders are being retired: instead of mutating an example's HCL in Go, each test
-step gets its own checked-in config file next to the documented example. `meshstack_project` is
-migrated — resource, data source and both project bindings — and is the reference; every other
-resource/data source still uses `testconfig` and its builders stay until it is migrated too. The migrated shape:
-
-- `examples/<kind>/meshstack_<name>/<kind-singular>-test-<index>.tf` — the example as step `<index>`
-  applies it (data sources swapped for test-created resources, names built from `var.suffix`).
-- `examples/<kind>/meshstack_<name>/test-support_<name>.tf` — the prerequisites those step files
-  reference, plus the `variable` blocks the test fills.
-- The test assembles a step with `examples.Resource.TestStepConfig(t, "<name>", <index>, "<support>"…)`
-  and passes the random suffix via `ConfigVariables`; resource addresses are plain string constants
-  (`meshstack_project.example`) instead of extracted `Traversal`s.
-- A test whose subject needs another example's resources composes that example's step config with
-  `examples.JoinTestStepConfigs` instead of duplicating it. `project_group_binding_data_source_test.go`
-  stacks three: its own `data-source-test-1.tf`, the binding's `resource-test-1.tf`, and the project
-  example's step 1 with its prerequisites (which is what carries `variable "suffix"`).
-- An import step needs the same `ConfigVariables` as the step before it — the framework re-applies
-  that step's config to build the import plan, and a missing variable fails the whole case.
-
-See `examples/README.md` for the file conventions, including the `-test-` filter that keeps the step
-files out of the generated docs.
+A good test is multi-step (create → update → import) and asserts with `plancheck` (the planned
+action) + `statecheck`/`xknownvalue` (resulting state). Prefer the `xknownvalue` helpers
+(`NotEmptyString`, `Ref`, `MapExact`) over raw `knownvalue` where they fit. Pass the run's random
+suffix via `ConfigVariables` — **including on an import step**, which needs the same variables as
+the step before it, because the framework re-applies that step's config to build the import plan and
+a missing variable fails the whole case. See `REFERENCE.md` for the full worked example.
 
 ## Data source test
 
-Reference a **resource attribute** (so Terraform infers the dependency — never `depends_on`) and
-fluent-chain `.Config(t).WithFirstBlock(...).Join(...)` in one expression. Full example in
-`REFERENCE.md`.
+Reference a **resource attribute** (so Terraform infers the dependency — never `depends_on`), and
+compose the resource example's step config so the data source reads back what it created. Full
+example in `REFERENCE.md`.
 
 ## Multiple example files → named subtests
 
@@ -168,15 +157,24 @@ top-level function calls `t.Parallel()`; each `ApplyAndTest` also parallelizes. 
 func TestAccIntegrationResource(t *testing.T) {
     t.Parallel()
     t.Run("01_github", func(t *testing.T) {
-        config, addr := testconfig.Integration(t, "_01_github")
-        ApplyAndTest(t, resource.TestCase{...})
+        ApplyAndTest(t, resource.TestCase{Steps: []resource.TestStep{{
+            Config:          integrationStepConfig(t, 1),
+            ConfigVariables: SuffixVariables(acctest.RandString(8)),
+            // ... checks against githubIntegrationAddr
+        }}})
     })
     t.Run("02_azure_devops", func(t *testing.T) {
-        config, addr := testconfig.Integration(t, "_02_azure_devops")
-        ApplyAndTest(t, resource.TestCase{...})
+        ApplyAndTest(t, resource.TestCase{Steps: []resource.TestStep{{
+            Config:          integrationStepConfig(t, 2),
+            ConfigVariables: SuffixVariables(acctest.RandString(8)),
+        }}})
     })
 }
 ```
+
+A file with many steps sharing one dependency chain factors it into a small local helper
+(`integrationStepConfig` above, `tenantStepConfig`, `bbWorkspaceStepConfig`) rather than repeating
+the `JoinTestStepConfigs` call in every step.
 
 ## Computed-only output fields
 

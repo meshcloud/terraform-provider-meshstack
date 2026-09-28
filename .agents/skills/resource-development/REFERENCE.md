@@ -1,144 +1,70 @@
-# testconfig / builder / state-check reference
+# Step files / composition / state-check reference
 
 Detailed reference for the acceptance-test config layer. Load this alongside `SKILL.md` when
-writing or changing a `testconfig` builder, a TestAcc test, or a resource's example `.tf` files.
-`SKILL.md` is the end-to-end walkthrough; this file is the API surface plus full worked examples.
+writing or changing a resource's example `.tf` files, the per-step variants its test applies, or a
+TestAcc test. `SKILL.md` is the end-to-end walkthrough; this file is the API surface plus full
+worked examples.
 
-## Config builder pattern (`internal/provider/acctest/testconfig`)
+## Where a step's HCL comes from
 
-Each resource has a public builder in `internal/provider/acctest/testconfig/build_<resource>.go`
-that composes `Config` objects from embedded example HCL. `Config` wraps `*hclwrite.File` and is
-**immutable** — every method returns a new `Config`; `WithFirstBlock` clones internally (there
-is no `Clone()`).
+Nothing builds HCL in Go. Each step applies files checked in next to the documented example, and
+the test only names which ones to concatenate:
 
-Import alias: `import testconfig "github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"`.
+- `examples/<kind>s/meshstack_<name>/<kind>-test-<index>.tf` — the example as step `<index>` applies
+  it: the same block, with the data sources the documented example reads swapped for resources the
+  test creates, and every name built from `var.suffix`. Numbered from 1; the index is what links
+  the file to the step.
+- `examples/<kind>s/meshstack_<name>/test-support_<name>.tf` — the prerequisites those step files
+  reference (the owning workspace, tag definitions, a provider alias, …) plus the `variable` blocks
+  the test fills through `ConfigVariables`.
 
-Builder rules:
-- Named without `Build` prefix / `Config` suffix: `Workspace`, `Project`, `BBDTerraform`.
-- Take `t *testing.T` as the **first** param; pass `t` to all testconfig calls.
-- Use **named return values**; the first return is always `config testconfig.Config`.
-- Full variable names, no abbreviations (`workspaceConfig`, not `wsConfig`).
-- The **resource under test** is the **receiver** of `.Join()`; dependencies are arguments.
-  Call `config.Join(A, B)`, not chained `.Join(A).Join(B)`.
-- Declare all `Traversal` vars upfront with `var` before `WithFirstBlock` calls that populate them.
-- Return inline (`return expr.Join(...), addr`); consolidate all modifiers into a single `WithFirstBlock`.
-- Use explicit version suffixes in file names when multiple versions exist
-  (`build_building_block_v1.go`, `build_building_block_v2.go`); omit when only one version exists.
+`examples/README.md` holds the file conventions, including the `-test-` filter in
+`templates/{resources,data-sources}.md.tmpl` that keeps the step files out of the generated docs.
 
-Modifier preference order: `SetString`/`SetValue` (literals) → `SetAddr(addr, "metadata", "name")`
-(resource references) → `SetRawExpr(format, args...)` (complex HCL, last resort). For
-`SetRawExpr`, pass `Traversal` values directly as `%s` args (it calls `fmt.Sprintf` internally —
-do not wrap), and use raw backtick strings when the expression contains HCL quotes.
+## Composition API (`examples/embed.go`)
 
-Worked builder example:
+`import "github.com/meshcloud/terraform-provider-meshstack/examples"`
 
-```go
-// internal/provider/acctest/testconfig/build_project.go
-func Project(t *testing.T, workspaceAddr Traversal) (config Config, projectAddr Traversal) {
-    t.Helper()
-    projectName := "test-proj-" + acctest.RandString(8)
-    tagConfig, tagDefinitionAddr, _ := TagDefinition(t, "meshProject")
-    paymentMethodConfig, paymentMethodAddr := PaymentMethod(t, workspaceAddr)
-    return Resource{Name: "project"}.Config(t).WithFirstBlock(
-        ExtractAddress(&projectAddr),
-        OwnedByWorkspace(workspaceAddr),
-        Descend("metadata", "name")(SetString(projectName)),
-        Descend("spec")(
-            Descend("payment_method_identifier")(SetAddr(paymentMethodAddr, "metadata", "name")),
-            Descend("tags")(SetRawExpr(`{(%s) = ["tag-value1", "tag-value2"]}`, tagDefinitionAddr.Join("spec", "key"))),
-        ),
-    ).Join(tagConfig, paymentMethodConfig), projectAddr
-}
-```
+| Call | Returns |
+|---|---|
+| `examples.Resource.TestStepConfig(t, name, index, supports...)` | `resource-test-<index>.tf` followed by each named `test-support_<support>.tf` |
+| `examples.DataSource.TestStepConfig(t, name, index, supports...)` | the same for `data-source-test-<index>.tf` |
+| `examples.Resource.TestSupportConfigs(t, name, supports...)` | only the support files — for a step that composes several of an example's step files, or none of them |
+| `examples.JoinTestStepConfigs(configs...)` | several examples' step configs as the one config a step applies |
 
-Provide a `*AndWorkspace` convenience wrapper when a single resource + its workspace is commonly
-needed (e.g. `ProjectAndWorkspace`).
+Rules:
 
-## Config API reference
+- **Exactly one file in a composed config declares a given `variable`.** Two examples that each pull
+  in their own variables file collide, so a stack names it once.
+- **A subject that depends on another example's resources composes that example's step** instead of
+  redeclaring them. The `meshstack_project` data source reads back what the project resource example
+  created, and both project bindings target it.
+- **Resource addresses are plain string constants** (`meshstack_project.example`), declared once at
+  the top of the test file — the labels in the step files are fixed, so nothing needs extracting.
+- **A step file may reuse a label another support file declares.** Every building block definition
+  support file declares `meshstack_building_block_definition.example`, so swapping which file a
+  config composes swaps the definition the step files wire themselves to, without touching them.
 
-`Config` wraps `*hclwrite.File`; all modifications return a new `Config`. File layout:
-`config.go` (`Config`, `Block`, `Expression`, `Descend`, `WalkAttributes`, `Resource`/`DataSource`
-loaders), `config_expr.go` (`ExpressionConsumer` + constructors), `config_fake_block.go`,
-`traversal.go`, `build_*.go`.
+## Variable or step file?
 
-```go
-type Config struct { ... }                              // immutable; stores t from Config(t)
-type Traversal []string                                 // e.g. ["meshstack_workspace", "my_ws"]
-type Expression interface { Get(); Set(); RenameKey() }
-type ExpressionConsumer func(t *testing.T, e Expression)
+Both exist; what decides is what changes between the steps:
 
-func NewConfig(t *testing.T, src []byte) Config
-func (c Config) WithFirstBlock(mods ...ExpressionConsumer) Config  // clones, returns new
-func (c Config) Join(others ...Config) Config
-func (c Config) String() string                                   // for TestStep.Config
+- **A scalar the flow dials** — a display name, an input value, a flag — is a `variable` whose
+  default is the documented example's value. The steps then share one `Config` and differ only in
+  `ConfigVariables`.
+- **A structural difference** — an attribute appearing or disappearing, a different expression
+  behind a ref, an extra block — is its own step file. A conditional would have to reconcile both
+  branches' types, and the file stays readable as plain HCL.
 
-// Modifier constructors (no t — received at invocation)
-testconfig.SetString("value")
-testconfig.SetValue(cty.NumberIntVal(3))
-testconfig.SetAddr(addr, "metadata", "name")            // preferred for resource attributes
-testconfig.SetRawExpr(`{uuid = %s}`, addr)              // fmt.Sprintf format args
-testconfig.RenameKey("new_name")
-testconfig.ExtractAddress(&addr)
+`SuffixVariables(suffix)` is what every case starts from: it passes the run's random suffix, which
+every test-created name is built from, so parallel runs and re-runs never collide. Steps that must
+address the same resources share one value, so a case builds it once and reuses it — **including an
+import step**, whose plan the framework builds from the preceding step's config, so a missing
+variable there fails the whole case.
 
-// Higher-order (no t — received from ExpressionConsumer)
-testconfig.Descend("spec", "name")(modifier)            // navigate nested attribute
-testconfig.WalkAttributes()(modifier)
-testconfig.OwnedByWorkspace(workspaceAddr)              // sets metadata.owned_by_workspace
-
-// Traversal helpers
-addr.String()                              // "meshstack_workspace.my_ws"
-addr.Join("metadata", "name")              // appends segments
-
-// Loading .tf files
-testconfig.Resource{Name: "workspace"}.Config(t)                       // examples/resources/meshstack_workspace/resource.tf
-testconfig.Resource{Name: "platform", Suffix: "_01_azure"}.Config(t)
-testconfig.Resource{Name: "landingzone"}.TestSupportConfig(t, "_bbd")  // test-support_bbd.tf
-testconfig.DataSource{Name: "project"}.Config(t)
-```
-
-`Descend` nesting: nest only when a parent has **multiple** children; flatten single-child chains
-(`Descend("spec", "display_name")(...)`, not `Descend("spec")(Descend("display_name")(...))`).
-
-## Builder chain reference (bottom-up)
-
-`*AndWorkspace` builders create a fresh workspace internally — use for single-resource tests.
-For tests with multiple dependent resources, build the workspace once and share via `Config.Join`:
-
-```go
-workspaceConfig, workspaceAddr := testconfig.Workspace(t)
-projectConfig, projectAddr := testconfig.Project(t, workspaceAddr)
-platformConfig, platformAddr, platformTypeAddr := testconfig.CustomPlatform(t, workspaceAddr)
-landingZoneConfig, landingZoneAddr := testconfig.LandingZone(t, workspaceAddr, platformAddr, platformTypeAddr)
-config := landingZoneConfig.Join(platformConfig, projectConfig, workspaceConfig)
-```
-
-```
-testconfig.Workspace(t)                                                    → (config, workspaceAddr)
-testconfig.Project(t, workspaceAddr)                                       → (config, projectAddr)
-testconfig.ProjectAndWorkspace(t)                                          → (config, projectAddr, workspaceAddr)
-testconfig.PlatformType(t, workspaceAddr)                                  → (config, platformTypeAddr)
-testconfig.PlatformTypeAndWorkspace(t)                                     → (config, platformTypeAddr)
-testconfig.CustomPlatform(t, workspaceAddr)                                → (config, platformAddr, platformTypeAddr)
-testconfig.CustomPlatformAndWorkspace(t)                                   → (config, platformAddr, workspaceAddr)
-testconfig.PlatformAndWorkspace(t, suffix)                                 → (config, platformAddr)
-testconfig.LandingZone(t, workspaceAddr, platformAddr, platformTypeAddr)   → (config, landingZoneAddr)
-testconfig.LandingZoneAndWorkspace(t)                                      → (config, landingZoneAddr)
-testconfig.SimpleLandingZone(t, workspaceAddr, platformAddr)               → (config, landingZoneAddr)
-testconfig.PaymentMethod(t, workspaceAddr)                                 → (config, paymentMethodAddr)
-testconfig.PaymentMethodAndWorkspace(t)                                    → (config, paymentMethodAddr, workspaceAddr)
-testconfig.Integration(t, suffix)                                          → (config, integrationAddr)
-testconfig.Tenant(t, projectAddr, platformAddr, landingZoneAddr)           → (config, tenantAddr)
-testconfig.TenantAndWorkspace(t)                                           → (config, tenantAddr)
-testconfig.TagDefinition(t, targetKind)                                    → (config, tagDefinitionAddr, tagKey)
-testconfig.Location(t, workspaceAddr)                                      → (config, locationAddr, locationName)
-testconfig.BBDTerraform(t)                                                 → (config, buildingBlockDefinitionAddr)
-testconfig.BBDWithIntegration(t, suffix)                                   → (config, buildingBlockDefinitionAddr)
-testconfig.BBDManual(t)                                                    → (config, buildingBlockDefinitionAddr)
-testconfig.BBDGitlabPipeline(t)                                            → (config, buildingBlockDefinitionAddr)
-testconfig.BBv1Tenant(t)                                                   → (config, buildingBlockAddr)
-testconfig.BBv2Workspace(t)                                                → (config, buildingBlockAddr)
-testconfig.BBv2Tenant(t)                                                   → (config, buildingBlockAddr)
-```
+`building_block_resource_test.go` shows the pattern at its largest: a small `bbVariables` type whose
+`with*` methods return a copy, so a value one step introduces never reaches the variables an earlier
+step already ran with.
 
 ## State check helpers (`xknownvalue`)
 
@@ -153,40 +79,54 @@ Use these instead of raw `knownvalue` functions
 
 ## Worked TestAcc test (create → update → import)
 
-A good test is multi-step, uses the builder, and asserts with `plancheck` (the planned action) +
-`statecheck`/`xknownvalue` (resulting state). The builder-based snippet below is the shape of every
-not-yet-migrated test (live example: `workspace_resource_test.go`); for the per-step example-file
-shape that replaces it, see SKILL.md → Migration off `testconfig` and `project_resource_test.go`:
+A good test is multi-step and asserts with `plancheck` (the planned action) + `statecheck` /
+`xknownvalue` (the resulting state). Steps 1 and 2 are two step files of the same example; the
+import step repeats the preceding step's `ConfigVariables`. Live example:
+`project_resource_test.go`.
 
 ```go
-func TestAccProjectWithTestconfig(t *testing.T) {
-    config, resourceAddress, workspaceAddr := testconfig.ProjectAndWorkspace(t)
-    updateConfig := config.WithFirstBlock(
-        testconfig.Descend("spec", "display_name")(testconfig.SetString("Updated Display Name")),
-    )
+const (
+    projectResourceAddr          = "meshstack_project.example"
+    projectWorkspaceResourceAddr = "meshstack_workspace.example"
+)
+
+func TestAccProject(t *testing.T) {
+    vars := SuffixVariables(acctest.RandString(8))
+
     ApplyAndTest(t, resource.TestCase{
         Steps: []resource.TestStep{
             { // create
-                Config: config.String(),
+                Config:          examples.Resource.TestStepConfig(t, "project", 1, "prerequisites"),
+                ConfigVariables: vars,
                 ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
-                    plancheck.ExpectResourceAction(resourceAddress.String(), plancheck.ResourceActionCreate)}},
+                    plancheck.ExpectResourceAction(projectResourceAddr, plancheck.ResourceActionCreate)}},
                 ConfigStateChecks: []statecheck.StateCheck{
-                    statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("metadata").AtMapKey("name"), xknownvalue.NotEmptyString()),
-                    statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("My Project's Display Name")),
+                    statecheck.ExpectKnownValue(projectResourceAddr, tfjsonpath.New("metadata").AtMapKey("name"), xknownvalue.NotEmptyString()),
+                    statecheck.ExpectKnownValue(projectResourceAddr, tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("My Project's Display Name")),
                 },
             },
-            { // update
-                Config: updateConfig.String(),
+            { // update — step file 2 is step file 1 with a changed display name
+                Config:          examples.Resource.TestStepConfig(t, "project", 2, "prerequisites"),
+                ConfigVariables: vars,
                 ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
-                    plancheck.ExpectResourceAction(resourceAddress.String(), plancheck.ResourceActionUpdate)}},
+                    plancheck.ExpectResourceAction(projectResourceAddr, plancheck.ResourceActionUpdate)}},
                 ConfigStateChecks: []statecheck.StateCheck{
-                    statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("Updated Display Name"))},
+                    statecheck.ExpectKnownValue(projectResourceAddr, tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("Updated Display Name"))},
             },
             { // import
-                ResourceName: resourceAddress.String(), ImportState: true, ImportStateKind: resource.ImportBlockWithID,
+                ResourceName:    projectResourceAddr,
+                ImportState:     true,
+                ImportStateKind: resource.ImportBlockWithID,
+                ConfigVariables: vars,
                 ImportStateIdFunc: func(s *terraform.State) (string, error) {
-                    rs := s.RootModule().Resources[resourceAddress.String()]
-                    ws := s.RootModule().Resources[workspaceAddr.String()]
+                    rs := s.RootModule().Resources[projectResourceAddr]
+                    if rs == nil {
+                        return "", fmt.Errorf("resource not found: %s", projectResourceAddr)
+                    }
+                    ws := s.RootModule().Resources[projectWorkspaceResourceAddr]
+                    if ws == nil {
+                        return "", fmt.Errorf("workspace resource not found: %s", projectWorkspaceResourceAddr)
+                    }
                     return ws.Primary.Attributes["metadata.name"] + "." + rs.Primary.Attributes["metadata.name"], nil
                 },
             },
@@ -201,22 +141,25 @@ a stable uuid across steps), `MapExact{...}` (diff-friendly map assertion).
 
 ## Worked data source test
 
-Reference a **resource attribute** (so Terraform infers the dependency — never `depends_on`) and
-fluent-chain in one expression:
+The data source reads back what the resource example created, so the step composes both: the data
+source's own step file and the resource example's step with its prerequisites (which is what carries
+`variable "suffix"`). The data source step file references a **resource attribute**, so Terraform
+infers the dependency — never `depends_on`.
 
 ```go
+const projectDataSourceAddr = "data.meshstack_project.example"
+
 func TestAccProjectDataSource(t *testing.T) {
-    projectConfig, projectAddr, workspaceAddr := testconfig.ProjectAndWorkspace(t)
-    dataSourceAddress := testconfig.Traversal{"data.meshstack_project", "example"}
-    config := testconfig.DataSource{Name: "project"}.Config(t).WithFirstBlock(
-        testconfig.Descend("metadata")(
-            testconfig.Descend("name")(testconfig.SetAddr(projectAddr, "metadata", "name")),
-            testconfig.Descend("owned_by_workspace")(testconfig.SetAddr(workspaceAddr, "metadata", "name")),
-        )).Join(projectConfig)
+    config := examples.JoinTestStepConfigs(
+        examples.DataSource.TestStepConfig(t, "project", 1),
+        examples.Resource.TestStepConfig(t, "project", 1, "prerequisites"),
+    )
+
     ApplyAndTest(t, resource.TestCase{Steps: []resource.TestStep{{
-        Config: config.String(),
+        Config:          config,
+        ConfigVariables: SuffixVariables(acctest.RandString(8)),
         ConfigStateChecks: []statecheck.StateCheck{
-            statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("My Project's Display Name"))},
+            statecheck.ExpectKnownValue(projectDataSourceAddr, tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("My Project's Display Name"))},
     }}})
 }
 ```
