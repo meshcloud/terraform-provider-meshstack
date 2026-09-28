@@ -3,57 +3,70 @@ package provider
 import (
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 
-	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
+	"github.com/meshcloud/terraform-provider-meshstack/examples"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/xknownvalue"
 )
 
+// Address and name prefix of the block in examples/resources/meshstack_location/resource-test-*.tf.
+const (
+	locationResourceAddr = "meshstack_location.example"
+	locationNamePrefix   = "my-location-"
+)
+
 func TestAccLocation(t *testing.T) {
-	workspaceConfig, workspaceAddr := testconfig.Workspace(t)
-	locationConfig, locationAddr, locationName := testconfig.Location(t, workspaceAddr)
+	suffix := acctest.RandString(8)
+	vars := SuffixVariables(suffix)
+	locationName := locationNamePrefix + suffix
 
-	config := locationConfig.Join(workspaceConfig)
-
-	updateConfig := config.WithFirstBlock(
-		testconfig.Descend("spec", "display_name")(testconfig.SetString("My Updated Location")))
+	stepConfig := func(index int) string {
+		return examples.JoinTestStepConfigs(
+			examples.Resource.TestStepConfig(t, "location", index),
+			examples.Resource.TestStepConfig(t, "workspace", 1, "variables", "prerequisites"),
+		)
+	}
 
 	ApplyAndTest(t, resource.TestCase{
 		Steps: []resource.TestStep{
 			{
-				Config: config.String(),
+				Config:          stepConfig(1),
+				ConfigVariables: vars,
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectResourceAction(locationAddr.String(), plancheck.ResourceActionCreate),
+						plancheck.ExpectResourceAction(locationResourceAddr, plancheck.ResourceActionCreate),
 					},
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(locationAddr.String(), tfjsonpath.New("metadata"), checkLocationMetadata(locationName)),
-					statecheck.ExpectKnownValue(locationAddr.String(), tfjsonpath.New("spec"), checkLocationSpec("My Cloud Location")),
-					statecheck.ExpectKnownValue(locationAddr.String(), tfjsonpath.New("status"), checkLocationStatus()),
-					statecheck.ExpectKnownValue(locationAddr.String(), tfjsonpath.New("ref"), checkLocationRef(locationName)),
+					statecheck.ExpectKnownValue(locationResourceAddr, tfjsonpath.New("metadata"), checkLocationMetadata(locationName)),
+					statecheck.ExpectKnownValue(locationResourceAddr, tfjsonpath.New("spec"), checkLocationSpec("My Cloud Location")),
+					statecheck.ExpectKnownValue(locationResourceAddr, tfjsonpath.New("status"), checkLocationStatus()),
+					statecheck.ExpectKnownValue(locationResourceAddr, tfjsonpath.New("ref"), checkLocationRef(locationName)),
 				},
 			},
 			{
-				Config: updateConfig.String(),
+				Config:          stepConfig(2),
+				ConfigVariables: vars,
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectResourceAction(locationAddr.String(), plancheck.ResourceActionUpdate),
+						plancheck.ExpectResourceAction(locationResourceAddr, plancheck.ResourceActionUpdate),
 					},
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(locationAddr.String(), tfjsonpath.New("spec"), checkLocationSpec("My Updated Location")),
+					statecheck.ExpectKnownValue(locationResourceAddr, tfjsonpath.New("spec"), checkLocationSpec("My Updated Location")),
 				},
 			},
 			{
 				ImportState:     true,
 				ImportStateKind: resource.ImportBlockWithID,
 				ImportStateId:   locationName,
-				ResourceName:    locationAddr.String(),
+				ConfigVariables: vars,
+				ResourceName:    locationResourceAddr,
 			},
 		},
 	})

@@ -3,68 +3,73 @@ package provider
 import (
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 
-	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
+	"github.com/meshcloud/terraform-provider-meshstack/examples"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/xknownvalue"
 )
 
+// Address of the block in examples/resources/meshstack_api_key/resource-test-*.tf.
+const apiKeyResourceAddr = "meshstack_api_key.example"
+
 func TestAccApiKey(t *testing.T) {
-	workspaceConfig, workspaceAddr := testconfig.Workspace(t)
-	apiKeyConfig, apiKeyAddr := testconfig.ApiKey(t, workspaceAddr)
+	vars := SuffixVariables(acctest.RandString(8))
 
-	config := apiKeyConfig.Join(workspaceConfig)
-
-	updateConfig := config.WithFirstBlock(
-		testconfig.Descend("spec", "display_name")(testconfig.SetString("updated-key")))
-
-	rotateConfig := config.WithFirstBlock(
-		testconfig.Descend("spec", "expires_at")(testconfig.SetString("2099-06-30")))
+	stepConfig := func(index int) string {
+		return examples.JoinTestStepConfigs(
+			examples.Resource.TestStepConfig(t, "api_key", index),
+			examples.Resource.TestStepConfig(t, "workspace", 1, "variables", "prerequisites"),
+		)
+	}
 
 	ApplyAndTest(t, resource.TestCase{
 		Steps: []resource.TestStep{
 			{
-				Config: config.String(),
+				Config:          stepConfig(1),
+				ConfigVariables: vars,
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectResourceAction(apiKeyAddr.String(), plancheck.ResourceActionCreate),
+						plancheck.ExpectResourceAction(apiKeyResourceAddr, plancheck.ResourceActionCreate),
 					},
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(apiKeyAddr.String(), tfjsonpath.New("metadata").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
-					statecheck.ExpectKnownValue(apiKeyAddr.String(), tfjsonpath.New("metadata").AtMapKey("owned_by_workspace"), xknownvalue.NotEmptyString()),
-					statecheck.ExpectKnownValue(apiKeyAddr.String(), tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("ci-key")),
-					statecheck.ExpectKnownValue(apiKeyAddr.String(), tfjsonpath.New("status").AtMapKey("client_id"), xknownvalue.NotEmptyString()),
-					statecheck.ExpectKnownValue(apiKeyAddr.String(), tfjsonpath.New("status").AtMapKey("client_secret"), xknownvalue.NotEmptyString()),
+					statecheck.ExpectKnownValue(apiKeyResourceAddr, tfjsonpath.New("metadata").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
+					statecheck.ExpectKnownValue(apiKeyResourceAddr, tfjsonpath.New("metadata").AtMapKey("owned_by_workspace"), xknownvalue.NotEmptyString()),
+					statecheck.ExpectKnownValue(apiKeyResourceAddr, tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("ci-key")),
+					statecheck.ExpectKnownValue(apiKeyResourceAddr, tfjsonpath.New("status").AtMapKey("client_id"), xknownvalue.NotEmptyString()),
+					statecheck.ExpectKnownValue(apiKeyResourceAddr, tfjsonpath.New("status").AtMapKey("client_secret"), xknownvalue.NotEmptyString()),
 				},
 			},
 			{
-				Config: updateConfig.String(),
+				Config:          stepConfig(2),
+				ConfigVariables: vars,
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectResourceAction(apiKeyAddr.String(), plancheck.ResourceActionUpdate),
+						plancheck.ExpectResourceAction(apiKeyResourceAddr, plancheck.ResourceActionUpdate),
 					},
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(apiKeyAddr.String(), tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("updated-key")),
-					statecheck.ExpectKnownValue(apiKeyAddr.String(), tfjsonpath.New("status").AtMapKey("client_secret"), xknownvalue.NotEmptyString()),
+					statecheck.ExpectKnownValue(apiKeyResourceAddr, tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("updated-key")),
+					statecheck.ExpectKnownValue(apiKeyResourceAddr, tfjsonpath.New("status").AtMapKey("client_secret"), xknownvalue.NotEmptyString()),
 				},
 			},
 			{
-				Config: rotateConfig.String(),
+				Config:          stepConfig(3),
+				ConfigVariables: vars,
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectResourceAction(apiKeyAddr.String(), plancheck.ResourceActionUpdate),
-						plancheck.ExpectUnknownValue(apiKeyAddr.String(), tfjsonpath.New("status").AtMapKey("client_secret")),
+						plancheck.ExpectResourceAction(apiKeyResourceAddr, plancheck.ResourceActionUpdate),
+						plancheck.ExpectUnknownValue(apiKeyResourceAddr, tfjsonpath.New("status").AtMapKey("client_secret")),
 					},
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(apiKeyAddr.String(), tfjsonpath.New("spec").AtMapKey("expires_at"), knownvalue.StringExact("2099-06-30")),
-					statecheck.ExpectKnownValue(apiKeyAddr.String(), tfjsonpath.New("status").AtMapKey("client_secret"), xknownvalue.NotEmptyString()),
+					statecheck.ExpectKnownValue(apiKeyResourceAddr, tfjsonpath.New("spec").AtMapKey("expires_at"), knownvalue.StringExact("2099-06-30")),
+					statecheck.ExpectKnownValue(apiKeyResourceAddr, tfjsonpath.New("status").AtMapKey("client_secret"), xknownvalue.NotEmptyString()),
 				},
 			},
 		},
