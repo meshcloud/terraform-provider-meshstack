@@ -75,3 +75,11 @@ func (e Example) TestStepConfig(t *testing.T, name string, index int, supportNam
 	}
 	return strings.Join(parts, "\n")
 }
+
+// JoinTestStepConfigs concatenates the step configs of several examples into the config for one test
+// step. A subject that depends on resources another example already declares reuses that example's
+// step instead of redeclaring them: the project bindings target the project the project example
+// creates, and a data source reads back what its own resource example applied.
+func JoinTestStepConfigs(configs ...string) string {
+	return strings.Join(configs, "\n")
+}

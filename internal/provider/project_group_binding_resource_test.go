@@ -3,14 +3,23 @@ package provider
 import (
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 
-	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
+	"github.com/meshcloud/terraform-provider-meshstack/examples"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/xknownvalue"
+)
+
+// Addresses and the binding name of the blocks in
+// examples/{resources,data-sources}/meshstack_project_group_binding/*-test-*.tf.
+const (
+	projectGroupBindingResourceAddr   = "meshstack_project_group_binding.example"
+	projectGroupBindingDataSourceAddr = "data.meshstack_project_group_binding.example"
+	projectBindingName                = "this-is-an-example"
 )
 
 func TestAccProjectGroupBinding(t *testing.T) {
@@ -18,38 +27,36 @@ func TestAccProjectGroupBinding(t *testing.T) {
 		t.Skip("Skipping: requires user group 'my-user-group' in local meshStack")
 	}
 
-	projectConfig, projectAddr, workspaceAddr := testconfig.ProjectAndWorkspace(t)
+	config := examples.JoinTestStepConfigs(
+		examples.Resource.TestStepConfig(t, "project_group_binding", 1),
+		examples.Resource.TestStepConfig(t, "project", 1, "prerequisites"),
+	)
 
-	var resourceAddress testconfig.Traversal
-	config := testconfig.Resource{Name: "project_group_binding"}.Config(t).WithFirstBlock(
-		testconfig.ExtractAddress(&resourceAddress),
-		testconfig.Descend("target_ref")(
-			testconfig.Descend("owned_by_workspace")(testconfig.SetAddr(workspaceAddr, "metadata", "name")),
-			testconfig.Descend("name")(testconfig.SetAddr(projectAddr, "metadata", "name")),
-		),
-	).Join(projectConfig)
+	vars := projectConfigVariables(acctest.RandString(8))
 
 	ApplyAndTest(t, resource.TestCase{
 		Steps: []resource.TestStep{
 			{
-				Config: config.String(),
+				Config:          config,
+				ConfigVariables: vars,
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectResourceAction(resourceAddress.String(), plancheck.ResourceActionCreate),
+						plancheck.ExpectResourceAction(projectGroupBindingResourceAddr, plancheck.ResourceActionCreate),
 					},
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("metadata").AtMapKey("name"), knownvalue.StringExact("this-is-an-example")),
-					statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("role_ref").AtMapKey("name"), knownvalue.StringExact("Project Reader")),
-					statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("target_ref").AtMapKey("name"), xknownvalue.NotEmptyString()),
-					statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("subject").AtMapKey("name"), knownvalue.StringExact("my-user-group")),
+					statecheck.ExpectKnownValue(projectGroupBindingResourceAddr, tfjsonpath.New("metadata").AtMapKey("name"), knownvalue.StringExact(projectBindingName)),
+					statecheck.ExpectKnownValue(projectGroupBindingResourceAddr, tfjsonpath.New("role_ref").AtMapKey("name"), knownvalue.StringExact("Project Reader")),
+					statecheck.ExpectKnownValue(projectGroupBindingResourceAddr, tfjsonpath.New("target_ref").AtMapKey("name"), xknownvalue.NotEmptyString()),
+					statecheck.ExpectKnownValue(projectGroupBindingResourceAddr, tfjsonpath.New("subject").AtMapKey("name"), knownvalue.StringExact("my-user-group")),
 				},
 			},
 			{
-				ResourceName:    resourceAddress.String(),
+				ResourceName:    projectGroupBindingResourceAddr,
 				ImportState:     true,
-				ImportStateId:   "this-is-an-example",
+				ImportStateId:   projectBindingName,
 				ImportStateKind: resource.ImportBlockWithID,
+				ConfigVariables: vars,
 			},
 		},
 	})

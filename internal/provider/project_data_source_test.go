@@ -18,8 +18,10 @@ const projectDataSourceAddr = "data.meshstack_project.example"
 func TestAccProjectDataSource(t *testing.T) {
 	// The data source reads back the project the resource example creates, so the step applies both:
 	// the project resource's step 1 with its prerequisites, and the data source variant pointing at it.
-	config := examples.DataSource.TestStepConfig(t, "project", 1) + "\n" +
-		examples.Resource.TestStepConfig(t, "project", 1, "prerequisites")
+	config := examples.JoinTestStepConfigs(
+		examples.DataSource.TestStepConfig(t, "project", 1),
+		examples.Resource.TestStepConfig(t, "project", 1, "prerequisites"),
+	)
 
 	ApplyAndTest(t, resource.TestCase{
 		Steps: []resource.TestStep{

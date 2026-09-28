@@ -29,9 +29,9 @@ test applies:
 `meshstack_project` is the reference for this layout.
 
 A step file may also pull in another example's step config when its subject depends on those
-resources — the `meshstack_project` data source test reads the project the resource example creates,
-so it applies `data-source-test-1.tf` together with the resource example's step 1 rather than
-duplicating the prerequisites.
+resources, via `examples.JoinTestStepConfigs`, rather than duplicating the prerequisites: the
+`meshstack_project` data source reads the project the resource example creates, and both project
+bindings target it. Only one config in such a stack declares the shared `variable` blocks.
 
 Note that the docs tool globs `resource*.tf` / `data-source*.tf`, so `templates/resources.md.tmpl`
 and `templates/data-sources.md.tmpl` skip any example path containing `-test-`. Without that filter

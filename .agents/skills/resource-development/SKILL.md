@@ -131,8 +131,8 @@ See `REFERENCE.md` for the full worked example.
 
 The `testconfig` builders are being retired: instead of mutating an example's HCL in Go, each test
 step gets its own checked-in config file next to the documented example. `meshstack_project` is
-migrated — resource and data source both — and is the reference; every other resource/data source
-still uses `testconfig` and its builders stay until it is migrated too. The migrated shape:
+migrated — resource, data source and both project bindings — and is the reference; every other
+resource/data source still uses `testconfig` and its builders stay until it is migrated too. The migrated shape:
 
 - `examples/<kind>/meshstack_<name>/<kind-singular>-test-<index>.tf` — the example as step `<index>`
   applies it (data sources swapped for test-created resources, names built from `var.suffix`).
@@ -141,9 +141,12 @@ still uses `testconfig` and its builders stay until it is migrated too. The migr
 - The test assembles a step with `examples.Resource.TestStepConfig(t, "<name>", <index>, "<support>"…)`
   and passes the random suffix via `ConfigVariables`; resource addresses are plain string constants
   (`meshstack_project.example`) instead of extracted `Traversal`s.
-- A test whose subject needs another example's resources concatenates that example's step config
-  instead of duplicating it — `project_data_source_test.go` applies the project resource example's
-  step 1 alongside its own `data-source-test-1.tf`.
+- A test whose subject needs another example's resources composes that example's step config with
+  `examples.JoinTestStepConfigs` instead of duplicating it. `project_group_binding_data_source_test.go`
+  stacks three: its own `data-source-test-1.tf`, the binding's `resource-test-1.tf`, and the project
+  example's step 1 with its prerequisites (which is what carries `variable "suffix"`).
+- An import step needs the same `ConfigVariables` as the step before it — the framework re-applies
+  that step's config to build the import plan, and a missing variable fails the whole case.
 
 See `examples/README.md` for the file conventions, including the `-test-` filter that keeps the step
 files out of the generated docs.
