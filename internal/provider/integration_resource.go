@@ -83,7 +83,9 @@ func (model integrationModel) ToClientDto() client.MeshIntegration {
 			}
 		}
 	}
-	switch model.Spec.Config.InferTypeFromNonNilField() {
+	// A config that sets no type matches no case below, and meshStack rejects it with its own error.
+	configType, _ := model.Spec.Config.InferType()
+	switch configType {
 	case client.MeshIntegrationConfigTypeGithub:
 		setRunnerRefIfNil(&model.Spec.Config.Github.RunnerRef)
 	case client.MeshIntegrationConfigTypeGitlab:

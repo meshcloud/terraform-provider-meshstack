@@ -86,8 +86,10 @@ func versionSecretsNeedPlaintext(existing, updated client.MeshBuildingBlockDefin
 		}
 		return ref.Uuid
 	}
+	existingType, existingErr := existing.Implementation.InferType()
+	updatedType, updatedErr := updated.Implementation.InferType()
 	return runnerUuid(existing.RunnerRef) != runnerUuid(updated.RunnerRef) ||
-		existing.Implementation.InferTypeFromNonNilField() != updated.Implementation.InferTypeFromNonNilField()
+		existingErr != nil || updatedErr != nil || existingType != updatedType
 }
 
 // applyManualOutputBehavior mirrors the real backend's ManualBuildingBlockCreationModule /

@@ -819,8 +819,17 @@ func (r *buildingBlockDefinitionResource) Update(ctx context.Context, req resour
 	// type, so when the implementation type changes we pass through neutral in between.
 	plannedSpec := plan.Spec
 	versionIsWritten := state.VersionSpec.Draft || plan.VersionSpec.Draft
-	implementationTypeChanges := plan.VersionSpec.Implementation.InferTypeFromNonNilField() !=
-		state.VersionSpec.Implementation.InferTypeFromNonNilField()
+	plannedType, err := plan.VersionSpec.Implementation.InferType()
+	if err != nil {
+		resp.Diagnostics.AddError("Error updating MeshBuildingBlockDefinition", err.Error())
+		return
+	}
+	stateType, err := state.VersionSpec.Implementation.InferType()
+	if err != nil {
+		resp.Diagnostics.AddError("Error updating MeshBuildingBlockDefinition", err.Error())
+		return
+	}
+	implementationTypeChanges := plannedType != stateType
 	policiesDeferred := versionIsWritten && implementationTypeChanges
 	if policiesDeferred {
 		plan.Spec = plannedSpec.WithNeutralPolicies()
