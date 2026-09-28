@@ -47,3 +47,15 @@ variable "pre_run_script" {
   type    = string
   default = null
 }
+
+# The approval gates and the drift schedule. Which of these meshStack accepts depends on the
+# implementation the stored version carries, so a case dials them alongside an implementation swap.
+variable "approval_policies" {
+  type    = any
+  default = {}
+}
+
+variable "schedule" {
+  type    = any
+  default = null
+}
