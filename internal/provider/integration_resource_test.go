@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 
+	tfconfig "github.com/hashicorp/terraform-plugin-testing/config"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
@@ -12,23 +14,44 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 
-	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
+	"github.com/meshcloud/terraform-provider-meshstack/examples"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/xknownvalue"
 )
 
-// updateIntegrationDisplayName clones the config and replaces "Integration" with "Updated Integration"
-// in the integration resource's spec.display_name.
+// Addresses of the blocks in examples/resources/meshstack_integration/resource-test-*.tf, one per
+// integration type. The Entra ID steps are owned by the pre-seeded admin workspace, because
+// meshStack permits an Entra ID integration nowhere else; the rest own a freshly created one.
+const (
+	githubIntegrationAddr      = "meshstack_integration.example_github"
+	azureDevopsIntegrationAddr = "meshstack_integration.example_azure_devops"
+	gitlabIntegrationAddr      = "meshstack_integration.example_gitlab"
+	entraIDIntegrationAddr     = "meshstack_integration.example_entra_id"
+)
+
+// The sha256 of "updated-plaintext-secret", which is what non_ephemeral_secret writes to
+// secret_version — so rotating either secret to that value plans this hash.
+const rotatedSecretVersion = "b889814ec3c1da42df5abf57be4e989de7411b326ba30050fea6366185c0e206"
+
+// integrationStepConfig is an integration step with the workspace that owns it. The Entra ID steps
+// (8 through 12) name the admin workspace literally, so they take no workspace step of their own.
+func integrationStepConfig(t *testing.T, index int) string {
+	t.Helper()
+	if index >= 8 && index <= 12 {
+		return examples.JoinTestStepConfigs(
+			examples.Resource.TestStepConfig(t, "integration", index),
+			examples.Resource.TestSupportConfigs(t, "workspace", "variables"),
+		)
+	}
+	return examples.JoinTestStepConfigs(
+		examples.Resource.TestStepConfig(t, "integration", index),
+		examples.Resource.TestStepConfig(t, "workspace", 1, "variables", "prerequisites"),
+	)
+}
+
 // azureDevopsPatPath is a factory (fresh path per call) to work around the slice copy/clone bug
 // in tfjsonpath.Path.AtMapKey. Mirrors aksSecretPath in the platform test.
 func azureDevopsPatPath() tfjsonpath.Path {
 	return tfjsonpath.New("spec").AtMapKey("config").AtMapKey("azuredevops").AtMapKey("personal_access_token")
-}
-
-func updateIntegrationDisplayName(t *testing.T, config testconfig.Config, originalName string) string {
-	t.Helper()
-	updatedName := strings.Replace(originalName, "Integration", "Updated Integration", 1)
-	return config.WithFirstBlock(
-		testconfig.Descend("spec", "display_name")(testconfig.SetString(updatedName))).String()
 }
 
 // A factory for the same reason as azureDevopsPatPath.
@@ -36,258 +59,192 @@ func entraIdClientSecretPath() tfjsonpath.Path {
 	return tfjsonpath.New("spec").AtMapKey("config").AtMapKey("entraid").AtMapKey("client_secret")
 }
 
-func adoptIdentityProvider(t *testing.T, config testconfig.Config, idpAlias string) string {
+func entraIdIdpAliasPath() tfjsonpath.Path {
+	return tfjsonpath.New("spec").AtMapKey("config").AtMapKey("entraid").AtMapKey("idp_alias")
+}
+
+// integrationCreateUpdateSteps is the create → rename → import run every integration type shares.
+// createIndex and updateIndex name the step files; suffix and displayName drive the spec assertions.
+func integrationCreateUpdateSteps(t *testing.T, addr, suffix, displayName string, createIndex, updateIndex int, vars tfconfig.Variables, resourceUuid *string) []resource.TestStep {
 	t.Helper()
-	return config.WithFirstBlock(
-		testconfig.Descend("spec", "config", "entraid", "idp_alias")(testconfig.SetString(idpAlias))).String()
+	return []resource.TestStep{
+		{
+			Config:          integrationStepConfig(t, createIndex),
+			ConfigVariables: vars,
+			ConfigPlanChecks: resource.ConfigPlanChecks{
+				PreApply: []plancheck.PlanCheck{
+					plancheck.ExpectResourceAction(addr, plancheck.ResourceActionCreate),
+				},
+			},
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue(addr, tfjsonpath.New("metadata"), checkIntegrationMetadata()),
+				statecheck.ExpectKnownValue(addr, tfjsonpath.New("spec"), checkIntegrationSpec(suffix, displayName)),
+				statecheck.ExpectKnownValue(addr, tfjsonpath.New("status"), checkIntegrationStatus(knownvalue.Null())),
+				xknownvalue.Ref(addr, "meshIntegration", resourceUuid),
+			},
+		},
+		{
+			Config:          integrationStepConfig(t, updateIndex),
+			ConfigVariables: vars,
+			ConfigPlanChecks: resource.ConfigPlanChecks{
+				PreApply: []plancheck.PlanCheck{
+					plancheck.ExpectResourceAction(addr, plancheck.ResourceActionUpdate),
+				},
+			},
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue(addr, tfjsonpath.New("spec"), checkIntegrationSpec(suffix, updatedIntegrationName(displayName))),
+				xknownvalue.Ref(addr, "meshIntegration", resourceUuid),
+			},
+		},
+	}
+}
+
+// updatedIntegrationName mirrors the rename the -test- step files apply to spec.display_name.
+func updatedIntegrationName(displayName string) string {
+	return strings.Replace(displayName, "Integration", "Updated Integration", 1)
+}
+
+// integrationImportStep imports the integration by the uuid the create step recorded.
+func integrationImportStep(addr string, vars tfconfig.Variables, resourceUuid *string) resource.TestStep {
+	return resource.TestStep{
+		ImportState:     true,
+		ImportStateKind: resource.ImportBlockWithID,
+		ConfigVariables: vars,
+		ImportStateIdFunc: func(state *terraform.State) (string, error) {
+			return *resourceUuid, nil
+		},
+		ResourceName: addr,
+	}
 }
 
 func TestAccIntegrationResource(t *testing.T) {
 	t.Parallel()
 
 	t.Run("01_github", func(t *testing.T) {
-		config, resourceAddress := testconfig.Integration(t, "_01_github")
+		vars := SuffixVariables(acctest.RandString(8))
 		var resourceUuid string
 
 		ApplyAndTest(t, resource.TestCase{
-			Steps: []resource.TestStep{
-				{
-					Config: config.String(),
-					ConfigPlanChecks: resource.ConfigPlanChecks{
-						PreApply: []plancheck.PlanCheck{
-							plancheck.ExpectResourceAction(resourceAddress.String(), plancheck.ResourceActionCreate),
-						},
-					},
-					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("metadata"), checkIntegrationMetadata()),
-						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("spec"), checkIntegrationSpec("01_github", "GitHub Integration")),
-						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("status"), checkIntegrationStatus(knownvalue.Null())),
-						xknownvalue.Ref(resourceAddress, "meshIntegration", &resourceUuid),
-					},
-				},
-				{
-					Config: updateIntegrationDisplayName(t, config, "GitHub Integration"),
-					ConfigPlanChecks: resource.ConfigPlanChecks{
-						PreApply: []plancheck.PlanCheck{
-							plancheck.ExpectResourceAction(resourceAddress.String(), plancheck.ResourceActionUpdate),
-						},
-					},
-					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("spec"), checkIntegrationSpec("01_github", "GitHub Updated Integration")),
-						xknownvalue.Ref(resourceAddress, "meshIntegration", &resourceUuid),
-					},
-				},
-				{
-					ImportState:     true,
-					ImportStateKind: resource.ImportBlockWithID,
-					ImportStateIdFunc: func(state *terraform.State) (string, error) {
-						return resourceUuid, nil
-					},
-					ResourceName: resourceAddress.String(),
-				},
-			},
+			Steps: append(
+				integrationCreateUpdateSteps(t, githubIntegrationAddr, "01_github", "GitHub Integration", 1, 2, vars, &resourceUuid),
+				integrationImportStep(githubIntegrationAddr, vars, &resourceUuid),
+			),
 		})
 	})
 
 	t.Run("02_azure_devops", func(t *testing.T) {
-		config, resourceAddress := testconfig.Integration(t, "_02_azure_devops")
+		vars := SuffixVariables(acctest.RandString(8))
 		var resourceUuid string
 
 		ApplyAndTest(t, resource.TestCase{
-			Steps: []resource.TestStep{
-				{
-					Config: config.String(),
-					ConfigPlanChecks: resource.ConfigPlanChecks{
-						PreApply: []plancheck.PlanCheck{
-							plancheck.ExpectResourceAction(resourceAddress.String(), plancheck.ResourceActionCreate),
-						},
-					},
-					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("metadata"), checkIntegrationMetadata()),
-						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("spec"), checkIntegrationSpec("02_azure_devops", "Azure DevOps Integration")),
-						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("status"), checkIntegrationStatus(knownvalue.Null())),
-						xknownvalue.Ref(resourceAddress, "meshIntegration", &resourceUuid),
-					},
-				},
-				{
-					Config: updateIntegrationDisplayName(t, config, "Azure DevOps Integration"),
-					ConfigPlanChecks: resource.ConfigPlanChecks{
-						PreApply: []plancheck.PlanCheck{
-							plancheck.ExpectResourceAction(resourceAddress.String(), plancheck.ResourceActionUpdate),
-						},
-					},
-					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("spec"), checkIntegrationSpec("02_azure_devops", "Azure DevOps Updated Integration")),
-						xknownvalue.Ref(resourceAddress, "meshIntegration", &resourceUuid),
-					},
-				},
+			Steps: append(
+				integrationCreateUpdateSteps(t, azureDevopsIntegrationAddr, "02_azure_devops", "Azure DevOps Integration", 3, 4, vars, &resourceUuid),
 				// A different value gives a different secret_version hash, which rotates secret_value.
-				{
-					Config: func() string {
-						u := config.WithFirstBlock(
-							testconfig.Descend("spec", "config", "azuredevops", "personal_access_token")(
-								testconfig.SetRawExpr(`provider::meshstack::non_ephemeral_secret("updated-plaintext-secret")`),
-							))
-						return u.String()
-					}(),
+				resource.TestStep{
+					Config:          integrationStepConfig(t, 5),
+					ConfigVariables: vars,
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
-							plancheck.ExpectResourceAction(resourceAddress.String(), plancheck.ResourceActionUpdate),
-							plancheck.ExpectKnownValue(resourceAddress.String(), azureDevopsPatPath().AtMapKey("secret_version"), knownvalue.StringExact("b889814ec3c1da42df5abf57be4e989de7411b326ba30050fea6366185c0e206")),
+							plancheck.ExpectResourceAction(azureDevopsIntegrationAddr, plancheck.ResourceActionUpdate),
+							plancheck.ExpectKnownValue(azureDevopsIntegrationAddr, azureDevopsPatPath().AtMapKey("secret_version"), knownvalue.StringExact(rotatedSecretVersion)),
 						},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("metadata"), checkIntegrationMetadata()),
-						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("spec"), checkIntegrationSpec("02_azure_devops", "Azure DevOps Integration")),
-						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("status"), checkIntegrationStatus(knownvalue.Null())),
-						xknownvalue.Ref(resourceAddress, "meshIntegration", &resourceUuid),
+						statecheck.ExpectKnownValue(azureDevopsIntegrationAddr, tfjsonpath.New("metadata"), checkIntegrationMetadata()),
+						statecheck.ExpectKnownValue(azureDevopsIntegrationAddr, tfjsonpath.New("spec"), checkIntegrationSpec("02_azure_devops", "Azure DevOps Integration")),
+						statecheck.ExpectKnownValue(azureDevopsIntegrationAddr, tfjsonpath.New("status"), checkIntegrationStatus(knownvalue.Null())),
+						xknownvalue.Ref(azureDevopsIntegrationAddr, "meshIntegration", &resourceUuid),
 					},
 				},
 				// On import the config wants secret_version as the value's sha256, but the backend
 				// returns its own hash, so the two differ and the first plan sends the secret again.
 				// That plan is expected, not drift, and matches the platform AKS example.
-				{
+				resource.TestStep{
 					ImportState:     true,
 					ImportStateKind: resource.ImportBlockWithID,
+					ConfigVariables: vars,
 					ImportStateIdFunc: func(state *terraform.State) (string, error) {
 						return resourceUuid, nil
 					},
-					ResourceName:       resourceAddress.String(),
+					ResourceName:       azureDevopsIntegrationAddr,
 					ExpectNonEmptyPlan: true,
 					ImportPlanChecks: resource.ImportPlanChecks{
 						PreApply: []plancheck.PlanCheck{
-							plancheck.ExpectResourceAction(resourceAddress.String(), plancheck.ResourceActionUpdate),
-							plancheck.ExpectUnknownValue(resourceAddress.String(), azureDevopsPatPath().AtMapKey("secret_hash")),
-							plancheck.ExpectKnownValue(resourceAddress.String(), azureDevopsPatPath().AtMapKey("secret_version"), knownvalue.StringExact("b889814ec3c1da42df5abf57be4e989de7411b326ba30050fea6366185c0e206")),
+							plancheck.ExpectResourceAction(azureDevopsIntegrationAddr, plancheck.ResourceActionUpdate),
+							plancheck.ExpectUnknownValue(azureDevopsIntegrationAddr, azureDevopsPatPath().AtMapKey("secret_hash")),
+							plancheck.ExpectKnownValue(azureDevopsIntegrationAddr, azureDevopsPatPath().AtMapKey("secret_version"), knownvalue.StringExact(rotatedSecretVersion)),
 						},
 					},
 				},
-			},
+			),
 		})
 	})
 
 	t.Run("03_gitlab", func(t *testing.T) {
-		config, resourceAddress := testconfig.Integration(t, "_03_gitlab")
+		vars := SuffixVariables(acctest.RandString(8))
 		var resourceUuid string
 
 		ApplyAndTest(t, resource.TestCase{
-			Steps: []resource.TestStep{
-				{
-					Config: config.String(),
-					ConfigPlanChecks: resource.ConfigPlanChecks{
-						PreApply: []plancheck.PlanCheck{
-							plancheck.ExpectResourceAction(resourceAddress.String(), plancheck.ResourceActionCreate),
-						},
-					},
-					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("metadata"), checkIntegrationMetadata()),
-						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("spec"), checkIntegrationSpec("03_gitlab", "GitLab Integration")),
-						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("status"), checkIntegrationStatus(knownvalue.Null())),
-						xknownvalue.Ref(resourceAddress, "meshIntegration", &resourceUuid),
-					},
-				},
-				{
-					Config: updateIntegrationDisplayName(t, config, "GitLab Integration"),
-					ConfigPlanChecks: resource.ConfigPlanChecks{
-						PreApply: []plancheck.PlanCheck{
-							plancheck.ExpectResourceAction(resourceAddress.String(), plancheck.ResourceActionUpdate),
-						},
-					},
-					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("spec"), checkIntegrationSpec("03_gitlab", "GitLab Updated Integration")),
-						xknownvalue.Ref(resourceAddress, "meshIntegration", &resourceUuid),
-					},
-				},
-				{
-					ImportState:     true,
-					ImportStateKind: resource.ImportBlockWithID,
-					ImportStateIdFunc: func(state *terraform.State) (string, error) {
-						return resourceUuid, nil
-					},
-					ResourceName: resourceAddress.String(),
-				},
-			},
+			Steps: append(
+				integrationCreateUpdateSteps(t, gitlabIntegrationAddr, "03_gitlab", "GitLab Integration", 6, 7, vars, &resourceUuid),
+				integrationImportStep(gitlabIntegrationAddr, vars, &resourceUuid),
+			),
 		})
 	})
 
 	t.Run("04_entra_id", func(t *testing.T) {
-		// Entra ID integrations can only be owned by the admin (partner) workspace, so own it by
-		// the pre-seeded AdminWorkspaceIdentifier instead of a freshly created test workspace.
-		config, resourceAddress := testconfig.IntegrationForWorkspace(t, "_04_entra_id", AdminWorkspaceIdentifier)
+		vars := SuffixVariables(acctest.RandString(8))
 		var resourceUuid string
-		rotatedSecretConfig := config.WithFirstBlock(
-			testconfig.Descend("spec", "config", "entraid", "client_secret")(
-				testconfig.SetRawExpr(`provider::meshstack::non_ephemeral_secret("updated-plaintext-secret")`),
-			)).String()
+
+		steps := integrationCreateUpdateSteps(t, entraIDIntegrationAddr, "04_entra_id", "Entra ID Integration", 8, 9, vars, &resourceUuid)
+		// Entra ID reports a redirect_url in status, unlike the other types.
+		steps[0].ConfigStateChecks[2] = statecheck.ExpectKnownValue(entraIDIntegrationAddr, tfjsonpath.New("status"), checkIntegrationStatus(xknownvalue.MapExact(map[string]knownvalue.Check{
+			"redirect_url": xknownvalue.NotEmptyString(),
+		})))
 
 		ApplyAndTest(t, resource.TestCase{
-			Steps: []resource.TestStep{
-				{
-					Config: config.String(),
-					ConfigPlanChecks: resource.ConfigPlanChecks{
-						PreApply: []plancheck.PlanCheck{
-							plancheck.ExpectResourceAction(resourceAddress.String(), plancheck.ResourceActionCreate),
-						},
-					},
-					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("metadata"), checkIntegrationMetadata()),
-						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("spec"), checkIntegrationSpec("04_entra_id", "Entra ID Integration")),
-						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("status"), checkIntegrationStatus(xknownvalue.MapExact(map[string]knownvalue.Check{
-							"redirect_url": xknownvalue.NotEmptyString(),
-						}))),
-						xknownvalue.Ref(resourceAddress, "meshIntegration", &resourceUuid),
-					},
-				},
-				{
-					Config: updateIntegrationDisplayName(t, config, "Entra ID Integration"),
-					ConfigPlanChecks: resource.ConfigPlanChecks{
-						PreApply: []plancheck.PlanCheck{
-							plancheck.ExpectResourceAction(resourceAddress.String(), plancheck.ResourceActionUpdate),
-						},
-					},
-					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("spec"), checkIntegrationSpec("04_entra_id", "Entra ID Updated Integration")),
-						xknownvalue.Ref(resourceAddress, "meshIntegration", &resourceUuid),
-					},
-				},
+			Steps: append(steps,
 				// Applying this would delete the identity provider the integration points at, so the plan
 				// has to fail rather than destroy and recreate.
-				{
-					Config:      adoptIdentityProvider(t, config, "adopted-idp-alias"),
-					ExpectError: regexp.MustCompile(`identity provider alias of an Entra ID integration cannot be changed`),
+				resource.TestStep{
+					Config:          integrationStepConfig(t, 10),
+					ConfigVariables: vars,
+					ExpectError:     regexp.MustCompile(`identity provider alias of an Entra ID integration cannot be changed`),
 				},
 				// A different value gives a different secret_version hash, which rotates secret_value.
-				{
-					Config: rotatedSecretConfig,
+				resource.TestStep{
+					Config:          integrationStepConfig(t, 11),
+					ConfigVariables: vars,
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
-							plancheck.ExpectResourceAction(resourceAddress.String(), plancheck.ResourceActionUpdate),
-							plancheck.ExpectKnownValue(resourceAddress.String(), entraIdClientSecretPath().AtMapKey("secret_version"), knownvalue.StringExact("b889814ec3c1da42df5abf57be4e989de7411b326ba30050fea6366185c0e206")),
+							plancheck.ExpectResourceAction(entraIDIntegrationAddr, plancheck.ResourceActionUpdate),
+							plancheck.ExpectKnownValue(entraIDIntegrationAddr, entraIdClientSecretPath().AtMapKey("secret_version"), knownvalue.StringExact(rotatedSecretVersion)),
 						},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("spec"), checkIntegrationSpec("04_entra_id", "Entra ID Integration")),
-						xknownvalue.Ref(resourceAddress, "meshIntegration", &resourceUuid),
+						statecheck.ExpectKnownValue(entraIDIntegrationAddr, tfjsonpath.New("spec"), checkIntegrationSpec("04_entra_id", "Entra ID Integration")),
+						xknownvalue.Ref(entraIDIntegrationAddr, "meshIntegration", &resourceUuid),
 					},
 				},
 				// On import the config wants secret_version as the value's sha256, but the backend returns
 				// its own hash, so the first plan sends the secret again. Same as 02_azure_devops.
-				{
+				resource.TestStep{
 					ImportState:     true,
 					ImportStateKind: resource.ImportBlockWithID,
+					ConfigVariables: vars,
 					ImportStateIdFunc: func(state *terraform.State) (string, error) {
 						return resourceUuid, nil
 					},
-					ResourceName:       resourceAddress.String(),
+					ResourceName:       entraIDIntegrationAddr,
 					ExpectNonEmptyPlan: true,
 					ImportPlanChecks: resource.ImportPlanChecks{
 						PreApply: []plancheck.PlanCheck{
-							plancheck.ExpectResourceAction(resourceAddress.String(), plancheck.ResourceActionUpdate),
-							plancheck.ExpectUnknownValue(resourceAddress.String(), entraIdClientSecretPath().AtMapKey("secret_hash")),
+							plancheck.ExpectResourceAction(entraIDIntegrationAddr, plancheck.ResourceActionUpdate),
+							plancheck.ExpectUnknownValue(entraIDIntegrationAddr, entraIdClientSecretPath().AtMapKey("secret_hash")),
 						},
 					},
 				},
-			},
+			),
 		})
 	})
 
@@ -298,29 +255,27 @@ func TestAccIntegrationResource(t *testing.T) {
 			t.Skip("mock-only test: a fixed idp_alias cannot be re-adopted across runs on a real meshStack")
 		}
 
-		config, resourceAddress := testconfig.IntegrationForWorkspace(t, "_04_entra_id", AdminWorkspaceIdentifier)
+		vars := SuffixVariables(acctest.RandString(8))
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				// Creating with an alias adopts it rather than having meshStack generate one.
 				{
-					Config: adoptIdentityProvider(t, config, "pre-existing-idp"),
+					Config:          integrationStepConfig(t, 12),
+					ConfigVariables: vars,
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(resourceAddress.String(), entraIdIdpAliasPath(), knownvalue.StringExact("pre-existing-idp")),
+						statecheck.ExpectKnownValue(entraIDIntegrationAddr, entraIdIdpAliasPath(), knownvalue.StringExact("pre-existing-idp")),
 					},
 				},
 				// Dropping it from the configuration keeps the adopted alias, so the plan is empty.
 				{
-					Config:   config.String(),
-					PlanOnly: true,
+					Config:          integrationStepConfig(t, 8),
+					ConfigVariables: vars,
+					PlanOnly:        true,
 				},
 			},
 		})
 	})
-}
-
-func entraIdIdpAliasPath() tfjsonpath.Path {
-	return tfjsonpath.New("spec").AtMapKey("config").AtMapKey("entraid").AtMapKey("idp_alias")
 }
 
 func checkIntegrationMetadata() knownvalue.Check {
@@ -423,11 +378,9 @@ func checkIntegrationStatus(entraId knownvalue.Check) knownvalue.Check {
 // TestAccIntegrationResourceEmptyConfig covers a spec.config without any variant, which used to crash the
 // provider at apply time. The schema rejects it at plan time, so no backend is involved.
 func TestAccIntegrationResourceEmptyConfig(t *testing.T) {
-	config, _ := testconfig.Integration(t, "_01_github")
-	config = config.WithFirstBlock(testconfig.Descend("spec", "config")(testconfig.SetRawExpr("{}")))
-
 	ApplyAndTest(t, resource.TestCase{Steps: []resource.TestStep{{
-		Config:      config.String(),
-		ExpectError: regexp.MustCompile(`exactly one is\s+required`),
+		Config:          integrationStepConfig(t, 14),
+		ConfigVariables: SuffixVariables(acctest.RandString(8)),
+		ExpectError:     regexp.MustCompile(`exactly one is\s+required`),
 	}}})
 }

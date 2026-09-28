@@ -8,9 +8,12 @@ import (
 	"github.com/meshcloud/meshstack-cli/client"
 	clientTypes "github.com/meshcloud/meshstack-cli/client/types"
 
+	"github.com/meshcloud/terraform-provider-meshstack/examples"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/clientmock"
-	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
 )
+
+// The instance id examples/data-sources/meshstack_service_instance/data-source-test-1.tf reads.
+const serviceInstanceTestId = "test-instance-id"
 
 func TestServiceInstanceDataSource(t *testing.T) {
 	t.Parallel()
@@ -20,14 +23,12 @@ func TestServiceInstanceDataSource(t *testing.T) {
 			t.Skip("no Terraform resource creates a service instance, so a real meshStack has none to read")
 		}
 
-		instanceId := "test-instance-id"
-		config := testconfig.DataSource{Name: "service_instance"}.Config(t).WithFirstBlock(
-			testconfig.Descend("metadata", "instance_id")(testconfig.SetString(instanceId)))
+		instanceId := serviceInstanceTestId
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
-					Config: config.String(),
+					Config: examples.DataSource.TestStepConfig(t, "service_instance", 1),
 					Check: resource.ComposeAggregateTestCheckFunc(
 						resource.TestCheckResourceAttr("data.meshstack_service_instance.example", "metadata.instance_id", instanceId),
 						resource.TestCheckResourceAttr("data.meshstack_service_instance.example", "spec.display_name", "Test Service Instance"),

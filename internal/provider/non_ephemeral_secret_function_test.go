@@ -5,12 +5,11 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
-
-	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
 )
 
 func TestAccNonEphemeralSecretFunction(t *testing.T) {
@@ -37,23 +36,19 @@ func TestAccNonEphemeralSecretFunction(t *testing.T) {
 	t.Run("value unknown while planning", func(t *testing.T) {
 		const value = "token-from-another-resource"
 		hash := fmt.Sprintf("%x", sha256.Sum256([]byte(value)))
-		config, resourceAddress := testconfig.Integration(t, "_02_azure_devops")
-		config = config.
-			WithRawBlock(fmt.Sprintf(`resource "terraform_data" "token" { input = %q }`, value)).
-			WithFirstBlock(testconfig.Descend("spec", "config", "azuredevops", "personal_access_token")(
-				testconfig.SetRawExpr(`provider::meshstack::non_ephemeral_secret(terraform_data.token.output)`),
-			))
+		config := integrationStepConfig(t, 13)
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{{
-				Config: config.String(),
+				Config:          config,
+				ConfigVariables: SuffixVariables(acctest.RandString(8)),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectUnknownValue(resourceAddress.String(), azureDevopsPatPath().AtMapKey("secret_version")),
+						plancheck.ExpectUnknownValue(azureDevopsIntegrationAddr, azureDevopsPatPath().AtMapKey("secret_version")),
 					},
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(resourceAddress.String(),
+					statecheck.ExpectKnownValue(azureDevopsIntegrationAddr,
 						azureDevopsPatPath().AtMapKey("secret_version"), knownvalue.StringExact(hash)),
 				},
 			}},

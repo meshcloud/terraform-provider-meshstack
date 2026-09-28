@@ -6,14 +6,16 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 
-	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
+	"github.com/meshcloud/terraform-provider-meshstack/examples"
 )
 
+// The documented example applies unchanged — it takes no filters and only reads — so this step uses
+// it directly instead of a -test- variant.
 func TestAccIntegrationsDataSource(t *testing.T) {
 	ApplyAndTest(t, resource.TestCase{
 		Steps: []resource.TestStep{
 			{
-				Config: testconfig.DataSource{Name: "integrations"}.Config(t).String(),
+				Config: string(examples.DataSource.Read(t, "integrations")),
 			},
 		},
 	})

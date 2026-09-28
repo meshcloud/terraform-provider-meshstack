@@ -89,7 +89,7 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest_release"), knownvalue.Null()),
 						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest"), expectedVersion(1, versionStateDraft)),
 						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("versions"), knownvalue.ListExact([]knownvalue.Check{expectedVersion(1, versionStateDraft)})),
-						xknownvalue.Ref(addr, "meshBuildingBlockDefinition", &resourceUuid),
+						xknownvalue.Ref(addr.String(), "meshBuildingBlockDefinition", &resourceUuid),
 					},
 				},
 				// Step 2: Change secret input name (remove/add operation on inputs map)
@@ -137,7 +137,7 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest_release"), knownvalue.Null()),
 						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest"), expectedVersion(1, versionStateDraft)),
 						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("versions"), knownvalue.ListExact([]knownvalue.Check{expectedVersion(1, versionStateDraft)})),
-						xknownvalue.Ref(addr, "meshBuildingBlockDefinition", &resourceUuid),
+						xknownvalue.Ref(addr.String(), "meshBuildingBlockDefinition", &resourceUuid),
 					},
 				},
 				{
@@ -173,7 +173,7 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest_release"), knownvalue.Null()),
 						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest"), expectedVersion(1, versionStateDraft)),
 						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("versions"), knownvalue.ListExact([]knownvalue.Check{expectedVersion(1, versionStateDraft)})),
-						xknownvalue.Ref(addr, "meshBuildingBlockDefinition", &resourceUuid),
+						xknownvalue.Ref(addr.String(), "meshBuildingBlockDefinition", &resourceUuid),
 					},
 				},
 				// Step 2: Update spec (description change, no new version)
@@ -188,7 +188,7 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("metadata"), checkBBDMetadataMinimal()),
 						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("spec"), checkBBDSpecMinimal("An updated building block definition")),
 						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("versions"), knownvalue.ListExact([]knownvalue.Check{expectedVersion(1, versionStateDraft)})),
-						xknownvalue.Ref(addr, "meshBuildingBlockDefinition", &resourceUuid),
+						xknownvalue.Ref(addr.String(), "meshBuildingBlockDefinition", &resourceUuid),
 					},
 				},
 				// Step 3: Release (draft=false)
@@ -274,7 +274,7 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest_release"), knownvalue.Null()),
 						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest"), expectedVersion(1, versionStateDraft)),
 						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("versions"), knownvalue.ListExact([]knownvalue.Check{expectedVersion(1, versionStateDraft)})),
-						xknownvalue.Ref(addr, "meshBuildingBlockDefinition", &resourceUuid),
+						xknownvalue.Ref(addr.String(), "meshBuildingBlockDefinition", &resourceUuid),
 					},
 				},
 				{
@@ -316,7 +316,7 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest_release"), knownvalue.Null()),
 						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest"), expectedVersion(1, versionStateDraft)),
 						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("versions"), knownvalue.ListExact([]knownvalue.Check{expectedVersion(1, versionStateDraft)})),
-						xknownvalue.Ref(addr, "meshBuildingBlockDefinition", &resourceUuid),
+						xknownvalue.Ref(addr.String(), "meshBuildingBlockDefinition", &resourceUuid),
 					},
 				},
 				// Step 3: Import
@@ -347,7 +347,7 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("metadata"), checkBBDMetadataMinimal()),
 						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("spec"), checkBBDSpecMinimal(bbdDescription)),
 						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("versions"), knownvalue.ListExact([]knownvalue.Check{expectedVersion(1, versionStateDraft)})),
-						xknownvalue.Ref(addr, "meshBuildingBlockDefinition", &resourceUuid),
+						xknownvalue.Ref(addr.String(), "meshBuildingBlockDefinition", &resourceUuid),
 					},
 				},
 			},
@@ -706,7 +706,7 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 					Config: base.String(),
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_spec").AtMapKey("outputs"), expectedOutputs),
-						xknownvalue.Ref(addr, "meshBuildingBlockDefinition", &resourceUuid),
+						xknownvalue.Ref(addr.String(), "meshBuildingBlockDefinition", &resourceUuid),
 					},
 				},
 				{

@@ -1454,7 +1454,7 @@ func TestAccBuildingBlock(t *testing.T) {
 func bbv3StateChecks(buildingBlockAddr testconfig.Traversal, displayName string, extra ...statecheck.StateCheck) []statecheck.StateCheck {
 	checks := []statecheck.StateCheck{
 		statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("metadata").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
-		xknownvalue.Ref(buildingBlockAddr, client.MeshObjectKind.BuildingBlock, nil),
+		xknownvalue.Ref(buildingBlockAddr.String(), client.MeshObjectKind.BuildingBlock, nil),
 		statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact(displayName)),
 		statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("spec").AtMapKey("inputs").AtMapKey("name").AtMapKey("value"), knownvalue.StringExact(`"my-name"`)),
 		statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("status").AtMapKey("status"), xknownvalue.NotEmptyString()),

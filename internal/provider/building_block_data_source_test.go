@@ -37,7 +37,7 @@ func TestAccBuildingBlockDataSource(t *testing.T) {
 						statecheck.ExpectKnownValue(dataSourceAddr.String(), tfjsonpath.New("status").AtMapKey("status"), xknownvalue.NotEmptyString()),
 						statecheck.ExpectKnownValue(dataSourceAddr.String(), tfjsonpath.New("all_inputs").AtMapKey("size").AtMapKey("value"), knownvalue.StringExact("16")),
 						statecheck.ExpectKnownValue(dataSourceAddr.String(), tfjsonpath.New("all_inputs").AtMapKey("environment").AtMapKey("value"), knownvalue.StringExact(`"dev"`)),
-						xknownvalue.Ref(dataSourceAddr, client.MeshObjectKind.BuildingBlock, nil),
+						xknownvalue.Ref(dataSourceAddr.String(), client.MeshObjectKind.BuildingBlock, nil),
 						statecheck.CompareValuePairs(
 							buildingBlockAddr.String(), tfjsonpath.New("ref"),
 							dataSourceAddr.String(), tfjsonpath.New("ref"),

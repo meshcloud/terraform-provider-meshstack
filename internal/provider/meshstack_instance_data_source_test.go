@@ -8,24 +8,23 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 
-	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
+	"github.com/meshcloud/terraform-provider-meshstack/examples"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/xknownvalue"
 )
 
 func TestAccInstanceDataSource(t *testing.T) {
-	dataSourceAddress := testconfig.Traversal{"data.meshstack_instance", "this"}
-	config := testconfig.DataSource{Name: "instance"}.Config(t)
+	const dataSourceAddress = "data.meshstack_instance.this"
 
 	ApplyAndTest(t, resource.TestCase{
 		Steps: []resource.TestStep{
 			{
-				Config: config.String(),
+				Config: string(examples.DataSource.Read(t, "instance")),
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("endpoint"), xknownvalue.NotEmptyString()),
-					statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("version"), xknownvalue.NotEmptyString()),
-					statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("enabled_feature_flags"), knownvalue.NotNull()),
-					statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("metadata"), knownvalue.NotNull()),
-					statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("admin_workspace_identifier"), knownvalue.StringExact(AdminWorkspaceIdentifier)),
+					statecheck.ExpectKnownValue(dataSourceAddress, tfjsonpath.New("endpoint"), xknownvalue.NotEmptyString()),
+					statecheck.ExpectKnownValue(dataSourceAddress, tfjsonpath.New("version"), xknownvalue.NotEmptyString()),
+					statecheck.ExpectKnownValue(dataSourceAddress, tfjsonpath.New("enabled_feature_flags"), knownvalue.NotNull()),
+					statecheck.ExpectKnownValue(dataSourceAddress, tfjsonpath.New("metadata"), knownvalue.NotNull()),
+					statecheck.ExpectKnownValue(dataSourceAddress, tfjsonpath.New("admin_workspace_identifier"), knownvalue.StringExact(AdminWorkspaceIdentifier)),
 				},
 			},
 		},

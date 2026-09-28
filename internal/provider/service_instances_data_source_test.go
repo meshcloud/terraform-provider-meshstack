@@ -7,8 +7,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	clientTypes "github.com/meshcloud/meshstack-cli/client/types"
 
+	"github.com/meshcloud/terraform-provider-meshstack/examples"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/clientmock"
-	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
 )
 
 func TestServiceInstancesDataSource(t *testing.T) {
@@ -19,12 +19,10 @@ func TestServiceInstancesDataSource(t *testing.T) {
 			t.Skip("no Terraform resource creates a service instance, so a real meshStack has none to list")
 		}
 
-		config := testconfig.DataSource{Name: "service_instances"}.Config(t)
-
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
-					Config: config.String(),
+					Config: string(examples.DataSource.Read(t, "service_instances")),
 					Check: resource.ComposeAggregateTestCheckFunc(
 						resource.TestCheckResourceAttr("data.meshstack_service_instances.all", "service_instances.#", "2"),
 					),
@@ -41,12 +39,10 @@ func TestServiceInstancesDataSource(t *testing.T) {
 			t.Skip("no Terraform resource creates a service instance, so a real meshStack has none to list")
 		}
 
-		config := testconfig.DataSource{Name: "service_instances"}.Config(t)
-
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
-					Config: config.String(),
+					Config: string(examples.DataSource.Read(t, "service_instances")),
 					Check: resource.ComposeAggregateTestCheckFunc(
 						resource.TestCheckResourceAttr("data.meshstack_service_instances.all", "service_instances.#", "1"),
 						resource.TestCheckResourceAttr("data.meshstack_service_instances.all", "service_instances.0.metadata.instance_id", "instance-1"),
