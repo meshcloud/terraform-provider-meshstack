@@ -50,7 +50,7 @@ func acceptanceClient(t *testing.T) client.Client {
 	// The credential resolves the same way a real provider run resolves it from an empty provider
 	// block: the MESHSTACK_* environment variables supply the whole credential, and nothing is read
 	// from or written to a profile.
-	c, err := auth.ResolveClient(context.Background(), auth.ResolveSessionOptions{
+	c, err := auth.ResolveClient(context.Background(), auth.ResolveClientOptions{
 		Version: "acctest", GitHubRepo: gitHubRepo,
 	})
 	require.NoError(t, err)

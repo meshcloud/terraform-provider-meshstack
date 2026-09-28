@@ -77,10 +77,10 @@ func configureProviderClient(providerData any, consumer func(client client.Clien
 }
 
 func newProviderClient(ctx context.Context, data MeshStackProviderModel, providerVersion string, diags *diag.Diagnostics) client.Client {
-	providerClient, err := auth.ResolveClient(ctx, auth.ResolveSessionOptions{
+	providerClient, err := auth.ResolveClient(ctx, auth.ResolveClientOptions{
 		Version:        providerVersion,
 		GitHubRepo:     gitHubRepo,
-		SettingSources: append(setting.SingleSource(data), newWorkspaceSource()),
+		SettingSources: setting.SingleSource(data),
 	})
 	if err != nil {
 		diags.AddError("Failed to create meshStack client", err.Error())

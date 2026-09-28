@@ -3,6 +3,7 @@
 Requires meshStack 2026.40.0 or later (previously 2026.36.0).
 
 BREAKING CHANGES:
+- `provider` block, `profile` (preview): a profile that authenticates with a browser login no longer picks its workspace from the workspaces that login can reach. It acts in the workspace that `workspace`, `MESHSTACK_WORKSPACE` or the profile's default workspace names, and the provider fails to configure when none of them names one. `meshstack login` stores that default, so run it again for a profile that has none.
 - `meshstack_building_block_runner`: `spec.workload_identity_federation.subject` is renamed to `subject_template`. It takes the placeholders `{{ workspaceIdentifier }}` and `{{ buildingBlockDefinitionUuid }}` in place of `<bbd-workspace>` and `<bbd-uuid>`; a template without placeholders is a fixed subject. Rename the attribute and convert the placeholders together with the meshStack upgrade.
 
 FEATURES:
