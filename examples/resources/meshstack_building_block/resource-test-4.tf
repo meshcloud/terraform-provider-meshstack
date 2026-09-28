@@ -15,6 +15,13 @@ resource "meshstack_building_block" "example_tenant" {
       environment = {
         value = jsonencode("dev")
       }
+      # Sensitive inputs are supplied under `sensitive` and never stored in plaintext: the value is
+      # encrypted to the runner's public key and only its sha256 hash is surfaced in `all_inputs`.
+      api_key = {
+        sensitive = {
+          secret_value = "super-secret-api-key"
+        }
+      }
     }
   }
 

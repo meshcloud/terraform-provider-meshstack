@@ -1,13 +1,20 @@
+# A block with sensitive user inputs, pinned to its definition's latest *released* version so it
+# stays put while a draft exists and upgrades when that draft is released. api_key declares a
+# secret_version: the backend returns a hash rather than the value, so bumping the version is the
+# only way a rotation becomes visible to the provider.
+
 resource "meshstack_building_block" "sensitive_user_input" {
   spec = {
-    building_block_definition_version_ref = { uuid = "placeholder" }
-    display_name                          = "my-sensitive-user-input-bb"
-    target_ref                            = { kind = "meshWorkspace", name = "placeholder" }
+    building_block_definition_version_ref = { uuid = meshstack_building_block_definition.sensitive_user_input.version_latest_release.uuid }
+
+    display_name = "my-sensitive-user-input-bb"
+    target_ref   = meshstack_workspace.example.ref
 
     inputs = {
       api_key = {
         sensitive = {
-          secret_value = "super-secret-api-key"
+          secret_value   = var.secret_value
+          secret_version = var.secret_version
         }
       }
       script = {
@@ -26,8 +33,7 @@ resource "meshstack_building_block" "sensitive_user_input" {
   }
 
   # The strict form of the postcondition the resource example carries. Every run of this definition is
-  # expected to reach SUCCEEDED, so anything else is a test failure — which is what
-  # 11_run_transparency_failed_run relies on to fail an apply on a run the provider only warns about.
+  # expected to reach SUCCEEDED, so anything else is a test failure.
   lifecycle {
     postcondition {
       condition     = self.status.status == "SUCCEEDED"

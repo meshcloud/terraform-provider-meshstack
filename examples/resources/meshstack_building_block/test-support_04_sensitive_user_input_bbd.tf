@@ -10,7 +10,7 @@ resource "meshstack_building_block_definition" "sensitive_user_input" {
   }
 
   version_spec = {
-    draft = false
+    draft = var.bbd_draft
 
     inputs = {
       # STRING-typed sensitive USER_INPUT. The consumer supplies it; the backend (and the mock)
@@ -49,7 +49,7 @@ resource "meshstack_building_block_definition" "sensitive_user_input" {
     implementation = {
       terraform = {
         terraform_version = "1.9.0"
-        repository_url    = "https://github.com/example/sensitive-building-block.git"
+        repository_url    = var.terraform_repository_url
       }
     }
 

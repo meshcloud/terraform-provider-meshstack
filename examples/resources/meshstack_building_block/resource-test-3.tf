@@ -27,4 +27,11 @@ resource "meshstack_building_block" "child" {
     update = "2m"
     delete = "2m"
   }
+
+  lifecycle {
+    postcondition {
+      condition     = !contains(["FAILED", "ABORTED"], self.status.status)
+      error_message = "Building block ${self.metadata.uuid} is ${self.status.status}. See its run in meshPanel."
+    }
+  }
 }

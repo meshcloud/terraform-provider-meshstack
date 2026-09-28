@@ -1,3 +1,6 @@
+# resource-test-1.tf assigning `region` as a customer input. The definition declares it STATIC, so
+# this has to be rejected — by the backend, which is the only side that knows the assignment type.
+
 resource "meshstack_building_block" "example_workspace" {
   spec = {
     building_block_definition_version_ref = { uuid = meshstack_building_block_definition.example.version_latest.uuid }
@@ -15,11 +18,12 @@ resource "meshstack_building_block" "example_workspace" {
       environment = {
         value = jsonencode(var.bb_environment)
       }
+      region = {
+        value = jsonencode("eu-central-1")
+      }
     }
   }
 
-  # create/update wait for the building block run to reach a terminal state; delete waits for
-  # deprovisioning.
   timeouts = {
     create = "2m"
     update = "2m"

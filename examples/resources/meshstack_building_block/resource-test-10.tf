@@ -1,9 +1,12 @@
+# kind = meshTenant addressed by name. A tenant is addressed by uuid, so the provider's own validator
+# has to reject this before any backend call — which is why this case runs in both modes.
+
 resource "meshstack_building_block" "example_workspace" {
   spec = {
     building_block_definition_version_ref = { uuid = meshstack_building_block_definition.example.version_latest.uuid }
 
     display_name = var.bb_display_name
-    target_ref   = meshstack_workspace.example.ref
+    target_ref   = { kind = "meshTenant", name = "some-workspace" }
 
     inputs = {
       name = {
@@ -18,8 +21,6 @@ resource "meshstack_building_block" "example_workspace" {
     }
   }
 
-  # create/update wait for the building block run to reach a terminal state; delete waits for
-  # deprovisioning.
   timeouts = {
     create = "2m"
     update = "2m"

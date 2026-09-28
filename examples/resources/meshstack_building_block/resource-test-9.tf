@@ -1,3 +1,6 @@
+# resource-test-1.tf with purging turned on, so teardown deletes the block through
+# DELETE /{uuid}/purge instead of the regular deprovisioning run.
+
 resource "meshstack_building_block" "example_workspace" {
   spec = {
     building_block_definition_version_ref = { uuid = meshstack_building_block_definition.example.version_latest.uuid }
@@ -18,8 +21,8 @@ resource "meshstack_building_block" "example_workspace" {
     }
   }
 
-  # create/update wait for the building block run to reach a terminal state; delete waits for
-  # deprovisioning.
+  purge_on_delete = true
+
   timeouts = {
     create = "2m"
     update = "2m"

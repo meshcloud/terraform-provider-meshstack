@@ -51,7 +51,7 @@ resource "meshstack_building_block_definition" "example_tenant" {
     implementation = {
       terraform = {
         terraform_version = "1.9.0"
-        repository_url    = "https://github.com/example/tenant-building-block.git"
+        repository_url    = var.terraform_repository_url
       }
     }
 

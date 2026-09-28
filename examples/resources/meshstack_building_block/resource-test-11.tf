@@ -1,9 +1,12 @@
+# The mirror of resource-test-10.tf: kind = meshWorkspace addressed by uuid, where a workspace is
+# addressed by name.
+
 resource "meshstack_building_block" "example_workspace" {
   spec = {
     building_block_definition_version_ref = { uuid = meshstack_building_block_definition.example.version_latest.uuid }
 
     display_name = var.bb_display_name
-    target_ref   = meshstack_workspace.example.ref
+    target_ref   = { kind = "meshWorkspace", uuid = "00000000-0000-0000-0000-000000000000" }
 
     inputs = {
       name = {
@@ -18,8 +21,6 @@ resource "meshstack_building_block" "example_workspace" {
     }
   }
 
-  # create/update wait for the building block run to reach a terminal state; delete waits for
-  # deprovisioning.
   timeouts = {
     create = "2m"
     update = "2m"

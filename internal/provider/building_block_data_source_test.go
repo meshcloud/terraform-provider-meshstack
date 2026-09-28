@@ -33,7 +33,7 @@ func buildingBlockWorkspaceStepConfig(t *testing.T, indexes ...int) string {
 		parts = append(parts, examples.Resource.TestStepConfig(t, "building_block", index))
 	}
 	parts = append(parts,
-		examples.Resource.TestSupportConfigs(t, "building_block", "01_workspace"),
+		examples.Resource.TestSupportConfigs(t, "building_block", "lifecycle-variables", "01_workspace"),
 		examples.Resource.TestStepConfig(t, "workspace", 1, "variables", "prerequisites"),
 	)
 	return examples.JoinTestStepConfigs(parts...)

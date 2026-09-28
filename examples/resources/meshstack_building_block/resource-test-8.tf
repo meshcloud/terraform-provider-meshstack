@@ -1,25 +1,21 @@
+# resource-test-7.tf declaring only the operator input, so the user inputs are left to whoever owns
+# them. What this configuration omits must be preserved server-side and surfaced read-only in
+# all_inputs — not dropped, and not drift.
+
 resource "meshstack_building_block" "example_workspace" {
   spec = {
-    building_block_definition_version_ref = { uuid = meshstack_building_block_definition.example.version_latest.uuid }
+    building_block_definition_version_ref = meshstack_building_block_definition.example.version_latest
 
     display_name = var.bb_display_name
     target_ref   = meshstack_workspace.example.ref
 
     inputs = {
-      name = {
-        value = jsonencode(var.bb_name)
-      }
       size = {
         value = jsonencode(16)
-      }
-      environment = {
-        value = jsonencode(var.bb_environment)
       }
     }
   }
 
-  # create/update wait for the building block run to reach a terminal state; delete waits for
-  # deprovisioning.
   timeouts = {
     create = "2m"
     update = "2m"

@@ -1,6 +1,10 @@
+# resource-test-1.tf with the whole version object behind the ref plus an explicit content_hash, for
+# the steps that walk a definition content change. content_hash is provider-only and tracks the
+# version's content, so changing it must trigger a rerun even though the version uuid is unchanged.
+
 resource "meshstack_building_block" "example_workspace" {
   spec = {
-    building_block_definition_version_ref = { uuid = meshstack_building_block_definition.example.version_latest.uuid }
+    building_block_definition_version_ref = merge(meshstack_building_block_definition.example.version_latest, { content_hash = var.bb_content_hash })
 
     display_name = var.bb_display_name
     target_ref   = meshstack_workspace.example.ref
@@ -18,8 +22,6 @@ resource "meshstack_building_block" "example_workspace" {
     }
   }
 
-  # create/update wait for the building block run to reach a terminal state; delete waits for
-  # deprovisioning.
   timeouts = {
     create = "2m"
     update = "2m"

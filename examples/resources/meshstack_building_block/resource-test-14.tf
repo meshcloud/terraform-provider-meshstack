@@ -1,9 +1,12 @@
+# resource-test-13.tf with the operator input supplied, which resumes a block parked in
+# WAITING_FOR_OPERATOR_INPUT.
+
 resource "meshstack_building_block" "example_workspace" {
   spec = {
-    building_block_definition_version_ref = { uuid = meshstack_building_block_definition.example.version_latest.uuid }
+    building_block_definition_version_ref = { uuid = meshstack_building_block_definition.example.version_latest_release.uuid }
 
     display_name = var.bb_display_name
-    target_ref   = meshstack_workspace.example.ref
+    target_ref   = meshstack_workspace.other.ref
 
     inputs = {
       name = {
@@ -18,8 +21,9 @@ resource "meshstack_building_block" "example_workspace" {
     }
   }
 
-  # create/update wait for the building block run to reach a terminal state; delete waits for
-  # deprovisioning.
+  # Keeps the minted key alive until after the block is torn down.
+  depends_on = [meshstack_api_key.example]
+
   timeouts = {
     create = "2m"
     update = "2m"

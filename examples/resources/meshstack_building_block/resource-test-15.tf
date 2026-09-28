@@ -1,9 +1,15 @@
+# A block the consumer workspace creates itself, through the meshstack-other provider alias backed by
+# its own workspace-scoped key. Whether it may change a given input is then up to what the
+# definition marks updateable by a consumer.
+
 resource "meshstack_building_block" "example_workspace" {
+  provider = meshstack-other
+
   spec = {
-    building_block_definition_version_ref = { uuid = meshstack_building_block_definition.example.version_latest.uuid }
+    building_block_definition_version_ref = meshstack_building_block_definition.example.version_latest
 
     display_name = var.bb_display_name
-    target_ref   = meshstack_workspace.example.ref
+    target_ref   = meshstack_workspace.other.ref
 
     inputs = {
       name = {
@@ -18,8 +24,9 @@ resource "meshstack_building_block" "example_workspace" {
     }
   }
 
-  # create/update wait for the building block run to reach a terminal state; delete waits for
-  # deprovisioning.
+  # The other provider needs the key for teardown, so the block has to go first.
+  depends_on = [meshstack_api_key.example]
+
   timeouts = {
     create = "2m"
     update = "2m"
