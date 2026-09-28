@@ -1,13 +1,13 @@
 # v0.26.2
 
-Requires meshStack 2026.40.0 or later (previously 2026.36.0).
+The minimum meshStack version stays 2026.36.0. The resolved workload identity below is reported by meshStack 2026.40.0 and later; on an older meshStack it is null.
 
 BREAKING CHANGES:
 - `provider` block, `profile` (preview): a profile that authenticates with a browser login no longer picks its workspace from the workspaces that login can reach. It acts in the workspace that `workspace`, `MESHSTACK_WORKSPACE` or the profile's default workspace names, and the provider fails to configure when none of them names one. `meshstack login` stores that default, so run it again for a profile that has none.
 - `meshstack_building_block_runner`: `spec.workload_identity_federation.subject` is renamed to `subject_template`. It takes the placeholders `{{ workspaceIdentifier }}` and `{{ buildingBlockDefinitionUuid }}` in place of `<bbd-workspace>` and `<bbd-uuid>`; a template without placeholders is a fixed subject. Rename the attribute and convert the placeholders together with the meshStack upgrade.
 
 FEATURES:
-- `meshstack_building_block_definition`: every version entry (`versions`, `version_latest`, `version_latest_release`) carries a computed `workload_identity_federation` with `issuer`, `subject` and the per-cloud `gcp`, `aws` and `azure` blocks (`audience`, `token_path`): the identity a run of that version presents, with the runner's template filled in for this definition. Grant cloud access to `subject`. Null when the runner declares no workload identity federation; unknown in a plan that creates a version or changes its runner.
+- `meshstack_building_block_definition`: every version entry (`versions`, `version_latest`, `version_latest_release`) carries a computed `workload_identity_federation` with `issuer`, `subject` and the per-cloud `gcp`, `aws` and `azure` blocks (`audience`, `token_path`): the identity a run of that version presents, with the runner's template filled in for this definition. Grant cloud access to `subject`. Null when the runner declares no workload identity federation or the meshStack is older than 2026.40.0; unknown in a plan that creates a version or changes its runner.
 
 # v0.26.1
 
