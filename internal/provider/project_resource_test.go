@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"testing"
 
-	tfconfig "github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
@@ -41,7 +40,7 @@ func TestAccProject(t *testing.T) {
 			Steps: []resource.TestStep{
 				{
 					Config:          examples.Resource.TestStepConfig(t, "project", 3, "prerequisites", "restricted-tag"),
-					ConfigVariables: projectConfigVariables(suffix),
+					ConfigVariables: SuffixVariables(suffix),
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(projectResourceAddr, tfjsonpath.New("spec").AtMapKey("tags"), knownvalue.MapExact(map[string]knownvalue.Check{
 							projectTagKeyPrefix + suffix: knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("blue")}),
@@ -57,7 +56,7 @@ func TestAccProject(t *testing.T) {
 		}, TouchesExclusively(client.MeshObjectKind.Project))
 	})
 
-	vars := projectConfigVariables(acctest.RandString(8))
+	vars := SuffixVariables(acctest.RandString(8))
 
 	ApplyAndTest(t, resource.TestCase{
 		Steps: []resource.TestStep{
@@ -106,8 +105,4 @@ func TestAccProject(t *testing.T) {
 			},
 		},
 	})
-}
-
-func projectConfigVariables(suffix string) tfconfig.Variables {
-	return tfconfig.Variables{"suffix": tfconfig.StringVariable(suffix)}
 }

@@ -10,18 +10,20 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 
-	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
+	"github.com/meshcloud/terraform-provider-meshstack/examples"
 )
 
-func TestAccTagDefinitionResource(t *testing.T) {
-	config, tagDefinitionAddr, _ := testconfig.TagDefinition(t, "meshProject")
+// Address of the block in examples/resources/meshstack_tag_definition/resource-test-*.tf.
+const tagDefinitionResourceAddr = "meshstack_tag_definition.example"
 
+func TestAccTagDefinitionResource(t *testing.T) {
 	ApplyAndTest(t, resource.TestCase{
 		Steps: []resource.TestStep{
 			{
-				Config: config.String(),
+				Config:          examples.Resource.TestStepConfig(t, "tag_definition", 1, "variables"),
+				ConfigVariables: SuffixVariables(acctest.RandString(8)),
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(tagDefinitionAddr.String(), tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("Test Tag")),
+					statecheck.ExpectKnownValue(tagDefinitionResourceAddr, tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("Test Tag")),
 				},
 			},
 		},

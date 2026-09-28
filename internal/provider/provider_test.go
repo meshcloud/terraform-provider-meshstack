@@ -21,6 +21,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
+	tfconfig "github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/meshcloud/meshstack-cli/client"
 	"github.com/stretchr/testify/require"
@@ -373,4 +374,12 @@ func sanitizeTestName(name string) string {
 			return '_'
 		}
 	}, name)
+}
+
+// SuffixVariables passes a test case's random per-run suffix to its step configs' `variable "suffix"`.
+// Every test-created name is built from it, so parallel runs and re-runs never collide. Steps that
+// must address the same resources share one value, so a case builds it once and reuses it — including
+// for an import step, whose plan the framework builds from the preceding step's config.
+func SuffixVariables(suffix string) tfconfig.Variables {
+	return tfconfig.Variables{"suffix": tfconfig.StringVariable(suffix)}
 }

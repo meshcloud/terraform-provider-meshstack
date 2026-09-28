@@ -32,7 +32,7 @@ func TestAccProjectUserBinding(t *testing.T) {
 		examples.Resource.TestStepConfig(t, "project", 1, "prerequisites"),
 	)
 
-	vars := projectConfigVariables(acctest.RandString(8))
+	vars := SuffixVariables(acctest.RandString(8))
 
 	ApplyAndTest(t, resource.TestCase{
 		Steps: []resource.TestStep{

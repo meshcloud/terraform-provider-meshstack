@@ -27,7 +27,7 @@ func TestAccProjectDataSource(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:          config,
-				ConfigVariables: projectConfigVariables(acctest.RandString(8)),
+				ConfigVariables: SuffixVariables(acctest.RandString(8)),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(projectDataSourceAddr, tfjsonpath.New("metadata").AtMapKey("name"), xknownvalue.NotEmptyString()),
 					statecheck.ExpectKnownValue(projectDataSourceAddr, tfjsonpath.New("metadata").AtMapKey("owned_by_workspace"), xknownvalue.NotEmptyString()),

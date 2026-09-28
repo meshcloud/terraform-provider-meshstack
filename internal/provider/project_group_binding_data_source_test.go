@@ -28,7 +28,7 @@ func TestAccProjectGroupBindingDataSource(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:          config,
-				ConfigVariables: projectConfigVariables(acctest.RandString(8)),
+				ConfigVariables: SuffixVariables(acctest.RandString(8)),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(projectGroupBindingDataSourceAddr, tfjsonpath.New("metadata").AtMapKey("name"), knownvalue.StringExact(projectBindingName)),
 					statecheck.ExpectKnownValue(projectGroupBindingDataSourceAddr, tfjsonpath.New("role_ref").AtMapKey("name"), xknownvalue.NotEmptyString()),
