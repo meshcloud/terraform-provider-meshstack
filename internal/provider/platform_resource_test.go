@@ -1,171 +1,112 @@
 package provider
 
 import (
-	"bytes"
 	"fmt"
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/hcl/v2/hclwrite"
+	tfconfig "github.com/hashicorp/terraform-plugin-testing/config"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
-	"github.com/zclconf/go-cty/cty"
 
-	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
+	"github.com/meshcloud/terraform-provider-meshstack/examples"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/xknownvalue"
 )
 
-// setAllBooleanFlagsToTrue turns all default false flags to true in first block of config.
-// This detects in backend things of nullable/optional booleans
-// which are not properly propagated to persistence layer (as null is equal to false/default).
-// In particular for platform resources with their many boolean flags, this is worthwhile doing.
-func buildPlatformConfig(t *testing.T, suffix string) (config testconfig.Config, platformAddr testconfig.Traversal) {
+// platformVariant names one meshstack_platform example variant: the index of its step file in
+// examples/resources/meshstack_platform/resource-test-<index>.tf, and the address of the block it
+// declares. The step files carry every optional boolean set to true, which is what catches a
+// nullable flag the backend drops on the way to persistence — null and false look alike there.
+type platformVariant struct {
+	index int
+	addr  string
+	// suffix names the variant in the shared config/role-mapping/quota assertions.
+	suffix string
+}
+
+var platformVariants = []platformVariant{
+	{1, "meshstack_platform.example_azure", "01_azure"},
+	{2, "meshstack_platform.example_aws", "02_aws"},
+	{3, "meshstack_platform.example_gcp", "03_gcp"},
+	{4, "meshstack_platform.example_kubernetes", "04_kubernetes"},
+	{5, "meshstack_platform.example_aks", "05_aks"},
+	{6, "meshstack_platform.example_azurerg", "06_azurerg"},
+	{7, "meshstack_platform.example_openshift", "07_openshift"},
+	{8, "meshstack_platform.example_custom", "08_custom"},
+}
+
+// platformStepConfig is a platform variant's step, with the workspace that owns it. The custom
+// variant additionally needs the platform type its config points at.
+func platformStepConfig(t *testing.T, variant platformVariant) string {
 	t.Helper()
-	config, platformAddr = testconfig.PlatformAndWorkspace(t, suffix)
-	return config.WithFirstBlock(testconfig.WalkAttributes()(func(t *testing.T, e testconfig.Expression) {
-		t.Helper()
-		if bytes.Equal(bytes.TrimSpace(e.Get().Bytes()), []byte("false")) {
-			e.Set(hclwrite.TokensForValue(cty.True))
-		}
-	})), platformAddr
+	parts := []string{
+		examples.Resource.TestStepConfig(t, "platform", variant.index),
+		examples.Resource.TestStepConfig(t, "workspace", 1, "variables", "prerequisites"),
+	}
+	if variant.suffix == "08_custom" {
+		parts = append(parts, examples.Resource.TestStepConfig(t, "platform_type", 1))
+	}
+	return examples.JoinTestStepConfigs(parts...)
 }
 
 func TestAccPlatformResource(t *testing.T) {
 	t.Parallel()
 
-	t.Run("01_azure", func(t *testing.T) {
-		config, resourceAddress := buildPlatformConfig(t, "_01_azure")
-		var resourceUuid string
-		ApplyAndTest(t, resource.TestCase{
-			Steps: []resource.TestStep{
-				{
-					Config: config.String(),
-					ConfigPlanChecks: resource.ConfigPlanChecks{
-						PreApply: []plancheck.PlanCheck{
-							plancheck.ExpectResourceAction(resourceAddress.String(), plancheck.ResourceActionCreate),
-						},
-					},
-					ConfigStateChecks: append(
-						[]statecheck.StateCheck{
-							statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("metadata"), checkPlatformMetadata(&resourceUuid)),
-							statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("Example Platform")),
-							statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("identifier"), knownvalue.StringFunc(func(value string) error {
-								parts := strings.SplitN(value, ".", 2)
-								if len(parts) != 2 || !strings.HasPrefix(parts[0], "my-platform-") || parts[1] == "" {
-									return fmt.Errorf("expected identifier format <platform>.<location>, got %q", value)
-								}
-								return nil
-							})),
-							statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("spec").AtMapKey("access_information"), knownvalue.StringExact("Login via [Azure Portal](https://portal.azure.com) using your corporate credentials.")),
-						},
-						checkPlatformConfigState(resourceAddress.String(), "01_azure")...,
-					),
-				},
-				{
-					Config: func() string {
-						u := config.WithFirstBlock(
-							testconfig.Descend("spec", "display_name")(testconfig.SetString("Example Platform Updated")))
-						return u.String()
-					}(),
-					ConfigPlanChecks: resource.ConfigPlanChecks{
-						PreApply: []plancheck.PlanCheck{
-							plancheck.ExpectResourceAction(resourceAddress.String(), plancheck.ResourceActionUpdate),
-						},
-					},
-					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("Example Platform Updated")),
-					},
-				},
-				{
+	for _, variant := range platformVariants {
+		t.Run(variant.suffix, func(t *testing.T) {
+			vars := SuffixVariables(acctest.RandString(8))
+			config := platformStepConfig(t, variant)
+
+			var resourceUuid string
+			steps := platformCreateSteps(config, vars, variant, &resourceUuid)
+
+			switch variant.suffix {
+			case "01_azure":
+				// Only this variant also exercises an update, and asserts the identifier's
+				// <platform>.<location> shape.
+				steps[0].ConfigStateChecks = append(steps[0].ConfigStateChecks,
+					statecheck.ExpectKnownValue(variant.addr, tfjsonpath.New("identifier"), knownvalue.StringFunc(func(value string) error {
+						parts := strings.SplitN(value, ".", 2)
+						if len(parts) != 2 || !strings.HasPrefix(parts[0], "my-platform-") || parts[1] == "" {
+							return fmt.Errorf("expected identifier format <platform>.<location>, got %q", value)
+						}
+						return nil
+					})),
+				)
+			case "05_aks":
+				// The access token is write-only, so importing it plans an update: the hash is unknown
+				// until apply and only the version pins what the config declared.
+				steps = append(steps, resource.TestStep{
 					ImportState:     true,
 					ImportStateKind: resource.ImportBlockWithID,
+					ConfigVariables: vars,
 					ImportStateIdFunc: func(state *terraform.State) (string, error) {
 						return resourceUuid, nil
 					},
-					ResourceName: resourceAddress.String(),
-				},
-			},
-		})
-	})
+					ResourceName:       variant.addr,
+					ExpectNonEmptyPlan: true,
+					ImportPlanChecks: resource.ImportPlanChecks{
+						PreApply: []plancheck.PlanCheck{
+							plancheck.ExpectResourceAction(variant.addr, plancheck.ResourceActionUpdate),
+							plancheck.ExpectUnknownValue(variant.addr, aksSecretPath().AtMapKey("secret_hash")),
+							plancheck.ExpectKnownValue(variant.addr, aksSecretPath().AtMapKey("secret_version"), knownvalue.StringExact("4823648dbe986627638418ba4469261474bd52043ffef910a5b2d62c92df86bc")),
+						},
+					},
+				})
+			}
 
-	t.Run("02_aws", func(t *testing.T) {
-		config, resourceAddress := buildPlatformConfig(t, "_02_aws")
-		var resourceUuid string
-		ApplyAndTest(t, resource.TestCase{
-			Steps: platformCreateImportSteps(config, resourceAddress, &resourceUuid, "02_aws"),
-		})
-	})
+			if variant.suffix != "05_aks" {
+				steps = append(steps, platformImportStep(variant, vars, &resourceUuid))
+			}
 
-	t.Run("03_gcp", func(t *testing.T) {
-		config, resourceAddress := buildPlatformConfig(t, "_03_gcp")
-		var resourceUuid string
-		ApplyAndTest(t, resource.TestCase{
-			Steps: platformCreateImportSteps(config, resourceAddress, &resourceUuid, "03_gcp"),
+			ApplyAndTest(t, resource.TestCase{Steps: steps})
 		})
-	})
-
-	t.Run("04_kubernetes", func(t *testing.T) {
-		config, resourceAddress := buildPlatformConfig(t, "_04_kubernetes")
-		var resourceUuid string
-		ApplyAndTest(t, resource.TestCase{
-			Steps: platformCreateImportSteps(config, resourceAddress, &resourceUuid, "04_kubernetes"),
-		})
-	})
-
-	t.Run("05_aks", func(t *testing.T) {
-		config, resourceAddress := buildPlatformConfig(t, "_05_aks")
-		var resourceUuid string
-		importStep := resource.TestStep{
-			ImportState:     true,
-			ImportStateKind: resource.ImportBlockWithID,
-			ImportStateIdFunc: func(state *terraform.State) (string, error) {
-				return resourceUuid, nil
-			},
-			ResourceName:       resourceAddress.String(),
-			ExpectNonEmptyPlan: true,
-			ImportPlanChecks: resource.ImportPlanChecks{
-				PreApply: []plancheck.PlanCheck{
-					plancheck.ExpectResourceAction(resourceAddress.String(), plancheck.ResourceActionUpdate),
-					plancheck.ExpectUnknownValue(resourceAddress.String(), aksSecretPath().AtMapKey("secret_hash")),
-					plancheck.ExpectKnownValue(resourceAddress.String(), aksSecretPath().AtMapKey("secret_version"), knownvalue.StringExact("4823648dbe986627638418ba4469261474bd52043ffef910a5b2d62c92df86bc")),
-				},
-			},
-		}
-		ApplyAndTest(t, resource.TestCase{
-			Steps: append(
-				platformCreateSteps(config, resourceAddress, &resourceUuid, "05_aks"),
-				importStep,
-			),
-		})
-	})
-
-	t.Run("06_azurerg", func(t *testing.T) {
-		config, resourceAddress := buildPlatformConfig(t, "_06_azurerg")
-		var resourceUuid string
-		ApplyAndTest(t, resource.TestCase{
-			Steps: platformCreateImportSteps(config, resourceAddress, &resourceUuid, "06_azurerg"),
-		})
-	})
-
-	t.Run("07_openshift", func(t *testing.T) {
-		config, resourceAddress := buildPlatformConfig(t, "_07_openshift")
-		var resourceUuid string
-		ApplyAndTest(t, resource.TestCase{
-			Steps: platformCreateImportSteps(config, resourceAddress, &resourceUuid, "07_openshift"),
-		})
-	})
-
-	t.Run("08_custom", func(t *testing.T) {
-		config, resourceAddress, _ := testconfig.CustomPlatformAndWorkspace(t)
-		var resourceUuid string
-		ApplyAndTest(t, resource.TestCase{
-			Steps: platformCreateImportSteps(config, resourceAddress, &resourceUuid, "08_custom"),
-		})
-	})
+	}
 }
 
 // aksSecretPath is a factory to work around slice copy/clone bug in tfjsonpath.Path.AtMapKey.
@@ -174,39 +115,38 @@ func aksSecretPath() tfjsonpath.Path {
 }
 
 // platformCreateSteps returns create+state-check steps for a platform test.
-func platformCreateSteps(config testconfig.Config, resourceAddress testconfig.Traversal, resourceUuidOut *string, exampleSuffix string) []resource.TestStep {
+func platformCreateSteps(config string, vars tfconfig.Variables, variant platformVariant, resourceUuidOut *string) []resource.TestStep {
 	return []resource.TestStep{
 		{
-			Config: config.String(),
+			Config:          config,
+			ConfigVariables: vars,
 			ConfigPlanChecks: resource.ConfigPlanChecks{
 				PreApply: []plancheck.PlanCheck{
-					plancheck.ExpectResourceAction(resourceAddress.String(), plancheck.ResourceActionCreate),
+					plancheck.ExpectResourceAction(variant.addr, plancheck.ResourceActionCreate),
 				},
 			},
 			ConfigStateChecks: append(
 				[]statecheck.StateCheck{
-					statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("metadata"), checkPlatformMetadata(resourceUuidOut)),
-					statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("Example Platform")),
+					statecheck.ExpectKnownValue(variant.addr, tfjsonpath.New("metadata"), checkPlatformMetadata(resourceUuidOut)),
+					statecheck.ExpectKnownValue(variant.addr, tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("Example Platform")),
 				},
-				checkPlatformConfigState(resourceAddress.String(), exampleSuffix)...,
+				checkPlatformConfigState(variant.addr, variant.suffix)...,
 			),
 		},
 	}
 }
 
-// platformCreateImportSteps returns create + import steps for a platform test.
-func platformCreateImportSteps(config testconfig.Config, resourceAddress testconfig.Traversal, resourceUuidOut *string, exampleSuffix string) []resource.TestStep {
-	return append(
-		platformCreateSteps(config, resourceAddress, resourceUuidOut, exampleSuffix),
-		resource.TestStep{
-			ImportState:     true,
-			ImportStateKind: resource.ImportBlockWithID,
-			ImportStateIdFunc: func(state *terraform.State) (string, error) {
-				return *resourceUuidOut, nil
-			},
-			ResourceName: resourceAddress.String(),
+// platformImportStep imports the platform by the uuid the create step recorded.
+func platformImportStep(variant platformVariant, vars tfconfig.Variables, resourceUuidOut *string) resource.TestStep {
+	return resource.TestStep{
+		ImportState:     true,
+		ImportStateKind: resource.ImportBlockWithID,
+		ConfigVariables: vars,
+		ImportStateIdFunc: func(state *terraform.State) (string, error) {
+			return *resourceUuidOut, nil
 		},
-	)
+		ResourceName: variant.addr,
+	}
 }
 
 func checkPlatformMetadata(resourceUuidOut *string) knownvalue.Check {

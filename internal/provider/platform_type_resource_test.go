@@ -12,55 +12,66 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 
-	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
+	"github.com/meshcloud/terraform-provider-meshstack/examples"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/xknownvalue"
 )
 
-func TestAccPlatformType(t *testing.T) {
-	config, platformTypeAddr := testconfig.PlatformTypeAndWorkspace(t)
-	resourceAddress := platformTypeAddr.String()
+// Addresses of the blocks in examples/{resources,data-sources}/meshstack_platform_type/*-test-*.tf.
+const (
+	platformTypeResourceAddr   = "meshstack_platform_type.example"
+	platformTypeDataSourceAddr = "data.meshstack_platform_type.example"
+)
 
-	// Use a random suffix to avoid state pollution from previous test runs.
-	updateSuffix := acctest.RandString(8)
-	updatedConfig := config.WithFirstBlock(
-		testconfig.Descend("spec", "display_name")(testconfig.SetString("My Custom Platform Updated " + updateSuffix)),
+// platformTypeStepConfig is the platform type example's step, with the workspace that owns it.
+func platformTypeStepConfig(t *testing.T, index int) string {
+	t.Helper()
+	return examples.JoinTestStepConfigs(
+		examples.Resource.TestStepConfig(t, "platform_type", index),
+		examples.Resource.TestStepConfig(t, "workspace", 1, "variables", "prerequisites"),
 	)
+}
+
+func TestAccPlatformType(t *testing.T) {
+	vars := SuffixVariables(acctest.RandString(8))
 
 	ApplyAndTest(t, resource.TestCase{
 		Steps: []resource.TestStep{
 			{
-				Config: config.String(),
+				Config:          platformTypeStepConfig(t, 1),
+				ConfigVariables: vars,
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectResourceAction(resourceAddress, plancheck.ResourceActionCreate),
+						plancheck.ExpectResourceAction(platformTypeResourceAddr, plancheck.ResourceActionCreate),
 					},
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("metadata"), checkPlatformTypeMetadata()),
-					statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("spec").AtMapKey("display_name"), xknownvalue.KnownStringWithPrefix("My Custom Platform ")),
-					statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("status"), checkPlatformTypeStatus()),
-					statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("ref"), checkPlatformTypeRef()),
+					statecheck.ExpectKnownValue(platformTypeResourceAddr, tfjsonpath.New("metadata"), checkPlatformTypeMetadata()),
+					statecheck.ExpectKnownValue(platformTypeResourceAddr, tfjsonpath.New("spec").AtMapKey("display_name"), xknownvalue.KnownStringWithPrefix("My Custom Platform ")),
+					statecheck.ExpectKnownValue(platformTypeResourceAddr, tfjsonpath.New("status"), checkPlatformTypeStatus()),
+					statecheck.ExpectKnownValue(platformTypeResourceAddr, tfjsonpath.New("ref"), checkPlatformTypeRef()),
 				},
 			},
 			{
-				Config: updatedConfig.String(),
+				Config:          platformTypeStepConfig(t, 2),
+				ConfigVariables: vars,
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectResourceAction(resourceAddress, plancheck.ResourceActionUpdate),
+						plancheck.ExpectResourceAction(platformTypeResourceAddr, plancheck.ResourceActionUpdate),
 					},
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("spec").AtMapKey("display_name"), xknownvalue.KnownStringWithPrefix("My Custom Platform Updated")),
+					statecheck.ExpectKnownValue(platformTypeResourceAddr, tfjsonpath.New("spec").AtMapKey("display_name"), xknownvalue.KnownStringWithPrefix("My Custom Platform Updated")),
 				},
 			},
 			{
 				ImportState:     true,
 				ImportStateKind: resource.ImportBlockWithID,
-				ResourceName:    resourceAddress,
+				ResourceName:    platformTypeResourceAddr,
+				ConfigVariables: vars,
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					rs := s.RootModule().Resources[resourceAddress]
+					rs := s.RootModule().Resources[platformTypeResourceAddr]
 					if rs == nil {
-						return "", fmt.Errorf("resource not found: %s", resourceAddress)
+						return "", fmt.Errorf("resource not found: %s", platformTypeResourceAddr)
 					}
 					return rs.Primary.Attributes["metadata.name"], nil
 				},
