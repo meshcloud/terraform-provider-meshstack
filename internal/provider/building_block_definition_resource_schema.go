@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
@@ -530,15 +531,24 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 						},
 					},
 					"supported_platforms": schema.SetNestedAttribute{
-						MarkdownDescription: fmt.Sprintf("Set of platforms that this building block supports, each of them either a whole platform type or one individual platform. Required and must be non-empty if target_type is `%s`.", client.MeshBuildingBlockTypeTenantLevel),
+						MarkdownDescription: fmt.Sprintf("Set of platforms that this building block supports, each of them either a whole platform type or one individual platform. An individual platform is best written as that platform's own `ref`, for example `meshstack_platform.my_azure.ref`. Required and must be non-empty if target_type is `%s`.", client.MeshBuildingBlockTypeTenantLevel),
 						Optional:            true,
 						Validators: []validator.Set{
 							validators.SupportedPlatforms{},
 						},
 						NestedObject: schema.NestedAttributeObject{
+							Validators: []validator.Object{
+								validators.DiscriminatedAttributesValidator{
+									Discriminator: "kind",
+									RequiredFor: map[string]string{
+										client.MeshObjectKind.PlatformType: "name",
+										client.MeshObjectKind.Platform:     "uuid",
+									},
+								},
+							},
 							Attributes: map[string]schema.Attribute{
 								"kind": schema.StringAttribute{
-									MarkdownDescription: "Kind of the platform ref: `" + client.MeshObjectKind.PlatformType + "` for a whole platform type, `" + client.MeshObjectKind.Platform + "` for one individual platform. A definition that names a platform type supports every platform of that type, so narrow it by naming an individual platform instead of the type rather than next to it. Requires meshStack 2026.39.0 or later.",
+									MarkdownDescription: "Kind of the platform ref, one of `" + client.MeshObjectKind.PlatformType + "` and `" + client.MeshObjectKind.Platform + "`. An entry with a platform type supports every platform of that type, so narrow a definition by using an individual platform instead of the type rather than next to it. Using an individual platform requires meshStack 2026.40.0 or later.",
 									Optional:            true,
 									Computed:            true,
 									Default:             stringdefault.StaticString(client.MeshObjectKind.PlatformType),
@@ -547,7 +557,17 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 									},
 								},
 								"name": schema.StringAttribute{
-									MarkdownDescription: "Identifier of the platform type for kind `" + client.MeshObjectKind.PlatformType + "`, for example `AZURE`. For kind `" + client.MeshObjectKind.Platform + "` it is the platform's full identifier, for example `my-azure.eu-de`, taken from the platform's own `identifier`.",
+									MarkdownDescription: "Identifier (`metadata.name`) of the platform type, for example `AZURE`. Required when `kind = \"" + client.MeshObjectKind.PlatformType + "\"`, must be omitted for `kind = \"" + client.MeshObjectKind.Platform + "\"`.",
+									Optional:            true,
+									Validators: []validator.String{
+										stringvalidator.ExactlyOneOf(
+											path.MatchRelative().AtParent().AtName("name"),
+											path.MatchRelative().AtParent().AtName("uuid"),
+										),
+									},
+								},
+								"uuid": schema.StringAttribute{
+									MarkdownDescription: "UUID (`metadata.uuid`) of the platform. Required when `kind = \"" + client.MeshObjectKind.Platform + "\"`, must be omitted for `kind = \"" + client.MeshObjectKind.PlatformType + "\"`. Assigning the platform's whole `ref` sets this and `kind` together.",
 									Optional:            true,
 								},
 							},

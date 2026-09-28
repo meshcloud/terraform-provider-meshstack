@@ -1178,10 +1178,12 @@ func checkBBDSpecFull(expectedDescription string) knownvalue.Check {
 			xknownvalue.MapExact(map[string]knownvalue.Check{
 				"kind": knownvalue.StringExact("meshPlatformType"),
 				"name": knownvalue.StringExact("AZURE"),
+				"uuid": knownvalue.Null(),
 			}),
 			xknownvalue.MapExact(map[string]knownvalue.Check{
 				"kind": knownvalue.StringExact("meshPlatformType"),
 				"name": knownvalue.StringExact("AWS"),
+				"uuid": knownvalue.Null(),
 			}),
 		}),
 		"run_transparency":          knownvalue.Bool(true),
@@ -1981,17 +1983,72 @@ resource "meshstack_building_block_definition" "test" {
 }
 
 func TestAccBuildingBlockDefinitionSupportedPlatformKinds(t *testing.T) {
-	t.Parallel()
+	workspaceConfig, workspaceAddr := testconfig.Workspace(t)
+	platformConfig, platformAddr, platformTypeAddr := testconfig.CustomPlatform(t, workspaceAddr)
+	prerequisites := workspaceConfig.Join(platformConfig)
 
-	workspace, azurePlatform, otherPlatform := "my-workspace", "my-azure.my-location", "my-aws.my-location"
-	if !IsMockClientTest() {
-		workspace, azurePlatform, otherPlatform = AdminWorkspaceIdentifier, "azure.meshcloud-azure-dev", "okd-on-gcp.openshift"
+	platformTypeRef := func(name knownvalue.Check) knownvalue.Check {
+		return xknownvalue.MapExact(map[string]knownvalue.Check{
+			"kind": knownvalue.StringExact(client.MeshObjectKind.PlatformType),
+			"name": name,
+			"uuid": knownvalue.Null(),
+		})
 	}
 
-	supportedPlatformsConfig := func(supportedPlatforms string) string {
-		return fmt.Sprintf(`
+	var appliedPlatformUuid string
+	capturePlatformUuid := statecheck.ExpectKnownValue(
+		platformAddr.String(),
+		tfjsonpath.New("metadata").AtMapKey("uuid"),
+		xknownvalue.NotEmptyString(func(actualValue string) error {
+			appliedPlatformUuid = actualValue
+			return nil
+		}),
+	)
+	platformRef := xknownvalue.MapExact(map[string]knownvalue.Check{
+		"kind": knownvalue.StringExact(client.MeshObjectKind.Platform),
+		"name": knownvalue.Null(),
+		"uuid": xknownvalue.NotEmptyString(func(actualValue string) error {
+			if actualValue != appliedPlatformUuid {
+				return fmt.Errorf("expected the platform's uuid %q, got %q", appliedPlatformUuid, actualValue)
+			}
+			return nil
+		}),
+	})
+
+	platformUuidExpr := platformAddr.Join("metadata", "uuid").String()
+	platformTypeNameExpr := platformTypeAddr.Join("metadata", "name").String()
+
+	transitions := []struct {
+		supportedPlatforms string
+		expectStored       []knownvalue.Check
+	}{
+		{
+			supportedPlatforms: fmt.Sprintf("[%s]", platformAddr.Join("ref")),
+			expectStored:       []knownvalue.Check{platformRef},
+		},
+		{
+			supportedPlatforms: fmt.Sprintf(`[{ name = "AZURE" }, { kind = "meshPlatform", uuid = %s }]`, platformUuidExpr),
+			expectStored: []knownvalue.Check{
+				platformTypeRef(knownvalue.StringExact("AZURE")),
+				platformRef,
+			},
+		},
+		{
+			supportedPlatforms: fmt.Sprintf(`[{ name = %s }]`, platformTypeNameExpr),
+			expectStored:       []knownvalue.Check{platformTypeRef(xknownvalue.NotEmptyString())},
+		},
+		{
+			supportedPlatforms: fmt.Sprintf(`[{ kind = "meshPlatform", uuid = %s }]`, platformUuidExpr),
+			expectStored:       []knownvalue.Check{platformRef},
+		},
+	}
+
+	steps := make([]resource.TestStep, 0, len(transitions))
+	for _, transition := range transitions {
+		steps = append(steps, resource.TestStep{
+			Config: prerequisites.WithRawBlock(fmt.Sprintf(`
 resource "meshstack_building_block_definition" "test" {
-  metadata = { owned_by_workspace = %q }
+  metadata = { owned_by_workspace = %s }
   spec = {
     display_name        = "Test"
     description         = "Test"
@@ -2002,85 +2059,78 @@ resource "meshstack_building_block_definition" "test" {
     draft = true
     implementation = { manual = {} }
   }
-}`, workspace, supportedPlatforms)
-	}
-
-	platformRef := func(kind, name string) knownvalue.Check {
-		return xknownvalue.MapExact(map[string]knownvalue.Check{
-			"kind": knownvalue.StringExact(kind),
-			"name": knownvalue.StringExact(name),
+}`, workspaceAddr.Join("metadata", "name"), transition.supportedPlatforms)).String(),
+			ConfigStateChecks: []statecheck.StateCheck{
+				capturePlatformUuid,
+				statecheck.ExpectKnownValue(
+					"meshstack_building_block_definition.test",
+					tfjsonpath.New("spec").AtMapKey("supported_platforms"),
+					knownvalue.SetExact(transition.expectStored),
+				),
+			},
 		})
 	}
 
-	type platformStep struct {
-		supportedPlatforms string
-		expectStored       []knownvalue.Check
+	ApplyAndTest(t, resource.TestCase{Steps: steps})
+}
+
+func TestAccBuildingBlockDefinitionSupportedPlatformValidation(t *testing.T) {
+	t.Parallel()
+
+	const platformUuid = "3f1c0f2e-1a2b-4c3d-8e9f-0a1b2c3d4e5f"
+
+	supportedPlatformsConfig := func(supportedPlatforms string) string {
+		return fmt.Sprintf(`
+resource "meshstack_building_block_definition" "test" {
+  metadata = { owned_by_workspace = "my-workspace" }
+  spec = {
+    display_name        = "Test"
+    description         = "Test"
+    target_type         = "TENANT_LEVEL"
+    supported_platforms = %s
+  }
+  version_spec = {
+    draft = true
+    implementation = { manual = {} }
+  }
+}`, supportedPlatforms)
 	}
 
 	tests := []struct {
-		name        string
-		steps       []platformStep
-		expectError *regexp.Regexp
+		name               string
+		supportedPlatforms string
+		expectError        *regexp.Regexp
 	}{
 		{
-			name: "an individual platform, named by its full identifier",
-			steps: []platformStep{{
-				supportedPlatforms: fmt.Sprintf(`[{ kind = "meshPlatform", name = %q }]`, otherPlatform),
-				expectStored:       []knownvalue.Check{platformRef(client.MeshObjectKind.Platform, otherPlatform)},
-			}},
+			name:               "an unknown kind is rejected",
+			supportedPlatforms: fmt.Sprintf(`[{ kind = "meshPlatformInstance", uuid = %q }]`, platformUuid),
+			expectError:        regexp.MustCompile(`value must be one of: \["meshPlatformType" "meshPlatform"\]`),
 		},
 		{
-			name: "a platform type next to a platform of another type",
-			steps: []platformStep{{
-				supportedPlatforms: fmt.Sprintf(`[{ name = "AZURE" }, { kind = "meshPlatform", name = %q }]`, otherPlatform),
-				expectStored: []knownvalue.Check{
-					platformRef(client.MeshObjectKind.PlatformType, "AZURE"),
-					platformRef(client.MeshObjectKind.Platform, otherPlatform),
-				},
-			}},
+			name:               "a platform identified by name is rejected",
+			supportedPlatforms: `[{ kind = "meshPlatform", name = "my-azure.eu-de" }]`,
+			expectError:        regexp.MustCompile(`Invalid Attribute Combination`),
 		},
 		{
-			name: "narrowing a platform type down to one of its platforms",
-			steps: []platformStep{
-				{
-					supportedPlatforms: `[{ name = "AZURE" }]`,
-					expectStored:       []knownvalue.Check{platformRef(client.MeshObjectKind.PlatformType, "AZURE")},
-				},
-				{
-					supportedPlatforms: fmt.Sprintf(`[{ kind = "meshPlatform", name = %q }]`, azurePlatform),
-					expectStored:       []knownvalue.Check{platformRef(client.MeshObjectKind.Platform, azurePlatform)},
-				},
-			},
+			name:               "a platform type identified by uuid is rejected",
+			supportedPlatforms: fmt.Sprintf(`[{ kind = "meshPlatformType", uuid = %q }]`, platformUuid),
+			expectError:        regexp.MustCompile(`Invalid Attribute Combination`),
 		},
 		{
-			name: "an unknown kind is rejected",
-			steps: []platformStep{{
-				supportedPlatforms: fmt.Sprintf(`[{ kind = "meshPlatformInstance", name = %q }]`, otherPlatform),
-			}},
-			expectError: regexp.MustCompile(`value must be one of: \["meshPlatformType" "meshPlatform"\]`),
+			name:               "an entry with both identifiers is rejected",
+			supportedPlatforms: fmt.Sprintf(`[{ kind = "meshPlatform", name = "my-azure.eu-de", uuid = %q }]`, platformUuid),
+			expectError:        regexp.MustCompile(`Invalid Attribute Combination`),
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			steps := make([]resource.TestStep, 0, len(test.steps))
-			for _, configured := range test.steps {
-				step := resource.TestStep{Config: supportedPlatformsConfig(configured.supportedPlatforms)}
-				if test.expectError != nil {
-					step.ExpectError = test.expectError
-				} else {
-					step.ConfigStateChecks = []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(
-							"meshstack_building_block_definition.test",
-							tfjsonpath.New("spec").AtMapKey("supported_platforms"),
-							knownvalue.SetExact(configured.expectStored),
-						),
-					}
-				}
-				steps = append(steps, step)
-			}
-
-			ApplyAndTest(t, resource.TestCase{Steps: steps})
+			ApplyAndTest(t, resource.TestCase{
+				Steps: []resource.TestStep{{
+					Config:      supportedPlatformsConfig(test.supportedPlatforms),
+					ExpectError: test.expectError,
+				}},
+			})
 		})
 	}
 }
