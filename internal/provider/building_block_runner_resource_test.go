@@ -2,9 +2,12 @@ package provider
 
 import (
 	_ "embed"
+	"maps"
 	"regexp"
 	"testing"
 
+	tfconfig "github.com/hashicorp/terraform-plugin-testing/config"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
@@ -12,7 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 
-	testconfig "github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
+	"github.com/meshcloud/terraform-provider-meshstack/examples"
 	xknownvalue "github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/xknownvalue"
 )
 
@@ -22,101 +25,111 @@ import (
 //go:embed testdata/pubkey.txt
 var runnerPublicKey string
 
+// Addresses of the blocks in examples/resources/meshstack_building_block_runner/resource-test-*.tf.
+const (
+	buildingBlockRunnerAddr    = "meshstack_building_block_runner.example"
+	buildingBlockRunnerWifAddr = "meshstack_building_block_runner.example_with_wif"
+)
+
+// runnerStepConfig is a runner step with the workspace that owns it.
+func runnerStepConfig(t *testing.T, index int) string {
+	t.Helper()
+	return examples.JoinTestStepConfigs(
+		examples.Resource.TestStepConfig(t, "building_block_runner", index, "variables"),
+		examples.Resource.TestStepConfig(t, "workspace", 1, "variables", "prerequisites"),
+	)
+}
+
+// runnerVariables carries the run suffix plus the real public key the step files read.
+func runnerVariables() tfconfig.Variables {
+	vars := SuffixVariables(acctest.RandString(8))
+	vars["runner_public_key"] = tfconfig.StringVariable(runnerPublicKey)
+	return vars
+}
+
 func TestAccBuildingBlockRunnerResource(t *testing.T) {
 	t.Parallel()
 
 	t.Run("basic", func(t *testing.T) {
-		config, runnerAddr, _ := testconfig.BuildingBlockRunnerAndWorkspace(t)
-		config = config.WithFirstBlock(testconfig.Descend("spec", "public_key")(testconfig.SetString(runnerPublicKey)))
+		vars := runnerVariables()
 		var runnerUuid string
 		var replacedRunnerUuid string
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
-					Config: config.String(),
+					Config:          runnerStepConfig(t, 1),
+					ConfigVariables: vars,
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
-							plancheck.ExpectResourceAction(runnerAddr.String(), plancheck.ResourceActionCreate),
+							plancheck.ExpectResourceAction(buildingBlockRunnerAddr, plancheck.ResourceActionCreate),
 						},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(runnerAddr.String(), tfjsonpath.New("metadata").AtMapKey("owned_by_workspace"), xknownvalue.NotEmptyString()),
-						statecheck.ExpectKnownValue(runnerAddr.String(), tfjsonpath.New("metadata").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
-						statecheck.ExpectKnownValue(runnerAddr.String(), tfjsonpath.New("spec").AtMapKey("implementation_type"), knownvalue.StringExact("TERRAFORM")),
-						statecheck.ExpectKnownValue(runnerAddr.String(), tfjsonpath.New("spec").AtMapKey("restriction"), knownvalue.StringExact("PRIVATE")),
-						xknownvalue.Ref(runnerAddr.String(), "meshBuildingBlockRunner", &runnerUuid),
+						statecheck.ExpectKnownValue(buildingBlockRunnerAddr, tfjsonpath.New("metadata").AtMapKey("owned_by_workspace"), xknownvalue.NotEmptyString()),
+						statecheck.ExpectKnownValue(buildingBlockRunnerAddr, tfjsonpath.New("metadata").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
+						statecheck.ExpectKnownValue(buildingBlockRunnerAddr, tfjsonpath.New("spec").AtMapKey("implementation_type"), knownvalue.StringExact("TERRAFORM")),
+						statecheck.ExpectKnownValue(buildingBlockRunnerAddr, tfjsonpath.New("spec").AtMapKey("restriction"), knownvalue.StringExact("PRIVATE")),
+						xknownvalue.Ref(buildingBlockRunnerAddr, "meshBuildingBlockRunner", &runnerUuid),
 					},
 				},
 				{
-					Config: config.WithFirstBlock(
-						testconfig.Descend("spec", "display_name")(testconfig.SetString("Updated Runner")),
-					).String(),
+					Config:          runnerStepConfig(t, 2),
+					ConfigVariables: vars,
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
-							plancheck.ExpectResourceAction(runnerAddr.String(), plancheck.ResourceActionUpdate),
+							plancheck.ExpectResourceAction(buildingBlockRunnerAddr, plancheck.ResourceActionUpdate),
 						},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(runnerAddr.String(), tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("Updated Runner")),
-						xknownvalue.Ref(runnerAddr.String(), "meshBuildingBlockRunner", &runnerUuid),
+						statecheck.ExpectKnownValue(buildingBlockRunnerAddr, tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("Updated Runner")),
+						xknownvalue.Ref(buildingBlockRunnerAddr, "meshBuildingBlockRunner", &runnerUuid),
 					},
 				},
 				{
 					// TODO: Change this expectation to ResourceActionUpdate once meshStack supports
 					// in-place updates for implementation_type.
-					Config: config.WithFirstBlock(
-						testconfig.Descend("spec", "implementation_type")(testconfig.SetString("GITHUB_WORKFLOW")),
-					).String(),
+					Config:          runnerStepConfig(t, 3),
+					ConfigVariables: vars,
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
-							plancheck.ExpectResourceAction(runnerAddr.String(), plancheck.ResourceActionReplace),
+							plancheck.ExpectResourceAction(buildingBlockRunnerAddr, plancheck.ResourceActionReplace),
 						},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(runnerAddr.String(), tfjsonpath.New("spec").AtMapKey("implementation_type"), knownvalue.StringExact("GITHUB_WORKFLOW")),
-						xknownvalue.Ref(runnerAddr.String(), "meshBuildingBlockRunner", &replacedRunnerUuid),
+						statecheck.ExpectKnownValue(buildingBlockRunnerAddr, tfjsonpath.New("spec").AtMapKey("implementation_type"), knownvalue.StringExact("GITHUB_WORKFLOW")),
+						xknownvalue.Ref(buildingBlockRunnerAddr, "meshBuildingBlockRunner", &replacedRunnerUuid),
 					},
 				},
 				{
 					ImportState:     true,
 					ImportStateKind: resource.ImportBlockWithID,
+					ConfigVariables: vars,
 					ImportStateIdFunc: func(state *terraform.State) (string, error) {
 						return replacedRunnerUuid, nil
 					},
-					ResourceName: runnerAddr.String(),
+					ResourceName: buildingBlockRunnerAddr,
 				},
 			},
 		})
 	})
 
 	t.Run("wif", func(t *testing.T) {
-		config, runnerAddr, _ := testconfig.BuildingBlockRunnerAndWorkspace(t)
-		config = config.WithFirstBlock(testconfig.Descend("spec", "public_key")(testconfig.SetString(runnerPublicKey)))
 		var runnerUuid string
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
-					Config: config.WithFirstBlock(
-						testconfig.Descend("spec", "display_name")(testconfig.SetString("GCP WIF Runner")),
-						testconfig.Descend("spec", "workload_identity_federation")(testconfig.SetRawExpr(`{
-							subject_template = "system:serviceaccount:meshfed:my-runner"
-							issuer = "https://oidc.example.com"
-							gcp = {
-								audience = "//iam.googleapis.com/projects/123456/locations/global/workloadIdentityPools/meshstack/providers/meshfed"
-								token_path = "/var/run/secrets/workload-identity/token"
-							}
-						}`)),
-					).String(),
+					Config:          runnerStepConfig(t, 4),
+					ConfigVariables: runnerVariables(),
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
-							plancheck.ExpectResourceAction(runnerAddr.String(), plancheck.ResourceActionCreate),
+							plancheck.ExpectResourceAction(buildingBlockRunnerAddr, plancheck.ResourceActionCreate),
 						},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(runnerAddr.String(), tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("GCP WIF Runner")),
-						statecheck.ExpectKnownValue(runnerAddr.String(), tfjsonpath.New("spec").AtMapKey("workload_identity_federation"), xknownvalue.MapExact(map[string]knownvalue.Check{
+						statecheck.ExpectKnownValue(buildingBlockRunnerAddr, tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("GCP WIF Runner")),
+						statecheck.ExpectKnownValue(buildingBlockRunnerAddr, tfjsonpath.New("spec").AtMapKey("workload_identity_federation"), xknownvalue.MapExact(map[string]knownvalue.Check{
 							"subject_template": knownvalue.StringExact("system:serviceaccount:meshfed:my-runner"),
 							"issuer":           knownvalue.StringExact("https://oidc.example.com"),
 							"gcp": xknownvalue.MapExact(map[string]knownvalue.Check{
@@ -126,7 +139,7 @@ func TestAccBuildingBlockRunnerResource(t *testing.T) {
 							"aws":   knownvalue.Null(),
 							"azure": knownvalue.Null(),
 						})),
-						xknownvalue.Ref(runnerAddr.String(), "meshBuildingBlockRunner", &runnerUuid),
+						xknownvalue.Ref(buildingBlockRunnerAddr, "meshBuildingBlockRunner", &runnerUuid),
 					},
 				},
 			},
@@ -134,23 +147,25 @@ func TestAccBuildingBlockRunnerResource(t *testing.T) {
 	})
 
 	t.Run("wif_subject_template", func(t *testing.T) {
-		config, runnerAddr, _ := testconfig.BuildingBlockRunnerWifAndWorkspace(t)
-		config = config.WithFirstBlock(testconfig.Descend("spec", "public_key")(testconfig.SetString(runnerPublicKey)))
 		exampleTemplate := "system:serviceaccount:namespace:workspace.{{ workspaceIdentifier }}.buildingblockdefinition.{{ buildingBlockDefinitionUuid }}"
 		updatedTemplate := "system:serviceaccount:namespace:bbd.{{ buildingBlockDefinitionUuid }}"
+		vars := runnerVariables()
+		updatedVars := maps.Clone(vars)
+		updatedVars["subject_template"] = tfconfig.StringVariable(updatedTemplate)
 		var runnerUuid string
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
-					Config: config.String(),
+					Config:          runnerStepConfig(t, 9),
+					ConfigVariables: vars,
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
-							plancheck.ExpectResourceAction(runnerAddr.String(), plancheck.ResourceActionCreate),
+							plancheck.ExpectResourceAction(buildingBlockRunnerWifAddr, plancheck.ResourceActionCreate),
 						},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(runnerAddr.String(), tfjsonpath.New("spec").AtMapKey("workload_identity_federation"), xknownvalue.MapExact(map[string]knownvalue.Check{
+						statecheck.ExpectKnownValue(buildingBlockRunnerWifAddr, tfjsonpath.New("spec").AtMapKey("workload_identity_federation"), xknownvalue.MapExact(map[string]knownvalue.Check{
 							"subject_template": knownvalue.StringExact(exampleTemplate),
 							"issuer":           knownvalue.StringExact("https://oidc.example.com"),
 							"gcp": xknownvalue.MapExact(map[string]knownvalue.Check{
@@ -160,21 +175,20 @@ func TestAccBuildingBlockRunnerResource(t *testing.T) {
 							"aws":   knownvalue.Null(),
 							"azure": knownvalue.Null(),
 						})),
-						xknownvalue.Ref(runnerAddr.String(), "meshBuildingBlockRunner", &runnerUuid),
+						xknownvalue.Ref(buildingBlockRunnerWifAddr, "meshBuildingBlockRunner", &runnerUuid),
 					},
 				},
 				{
-					Config: config.WithFirstBlock(
-						testconfig.Descend("spec", "workload_identity_federation", "subject_template")(testconfig.SetString(updatedTemplate)),
-					).String(),
+					Config:          runnerStepConfig(t, 9),
+					ConfigVariables: updatedVars,
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
-							plancheck.ExpectResourceAction(runnerAddr.String(), plancheck.ResourceActionUpdate),
+							plancheck.ExpectResourceAction(buildingBlockRunnerWifAddr, plancheck.ResourceActionUpdate),
 						},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(runnerAddr.String(), tfjsonpath.New("spec").AtMapKey("workload_identity_federation").AtMapKey("subject_template"), knownvalue.StringExact(updatedTemplate)),
-						xknownvalue.Ref(runnerAddr.String(), "meshBuildingBlockRunner", &runnerUuid),
+						statecheck.ExpectKnownValue(buildingBlockRunnerWifAddr, tfjsonpath.New("spec").AtMapKey("workload_identity_federation").AtMapKey("subject_template"), knownvalue.StringExact(updatedTemplate)),
+						xknownvalue.Ref(buildingBlockRunnerWifAddr, "meshBuildingBlockRunner", &runnerUuid),
 					},
 				},
 			},
@@ -182,43 +196,24 @@ func TestAccBuildingBlockRunnerResource(t *testing.T) {
 	})
 
 	t.Run("wif_validation", func(t *testing.T) {
-		config, _, _ := testconfig.BuildingBlockRunnerAndWorkspace(t)
+		vars := runnerVariables()
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
-					Config: config.WithFirstBlock(
-						testconfig.Descend("spec", "workload_identity_federation")(testconfig.SetRawExpr(`{
-							subject_template = "system:serviceaccount:meshfed:my-runner"
-							issuer = "https://oidc.example.com"
-						}`)),
-					).String(),
-					ExpectError: regexp.MustCompile("At least one provider configuration must be set"),
+					Config:          runnerStepConfig(t, 5),
+					ConfigVariables: vars,
+					ExpectError:     regexp.MustCompile("At least one provider configuration must be set"),
 				},
 				{
-					Config: config.WithFirstBlock(
-						testconfig.Descend("spec", "workload_identity_federation")(testconfig.SetRawExpr(`{
-							issuer = "https://oidc.example.com"
-							gcp = {
-								audience = "//iam.googleapis.com/projects/123456/locations/global/workloadIdentityPools/meshstack/providers/meshfed"
-								token_path = "/var/run/secrets/workload-identity/token"
-							}
-						}`)),
-					).String(),
-					ExpectError: regexp.MustCompile(`(?s)attribute "subject_template" is required`),
+					Config:          runnerStepConfig(t, 6),
+					ConfigVariables: vars,
+					ExpectError:     regexp.MustCompile(`(?s)attribute "subject_template" is required`),
 				},
 				{
-					Config: config.WithFirstBlock(
-						testconfig.Descend("spec", "workload_identity_federation")(testconfig.SetRawExpr(`{
-							subject_template = ""
-							issuer = "https://oidc.example.com"
-							gcp = {
-								audience = "//iam.googleapis.com/projects/123456/locations/global/workloadIdentityPools/meshstack/providers/meshfed"
-								token_path = "/var/run/secrets/workload-identity/token"
-							}
-						}`)),
-					).String(),
-					ExpectError: regexp.MustCompile(`(?s)subject_template.*must not\s+be empty\s+or whitespace`),
+					Config:          runnerStepConfig(t, 7),
+					ConfigVariables: vars,
+					ExpectError:     regexp.MustCompile(`(?s)subject_template.*must not\s+be empty\s+or whitespace`),
 				},
 			},
 		})
@@ -229,33 +224,33 @@ func TestAccBuildingBlockRunnerResource(t *testing.T) {
 			t.Skip("mock-only test: PUBLIC restriction may require admin permissions in real meshStack")
 		}
 
-		config, runnerAddr, _ := testconfig.BuildingBlockRunnerAndWorkspace(t)
+		vars := runnerVariables()
 		var runnerUuid string
 		var replacedRunnerUuid string
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
-					Config: config.String(),
+					Config:          runnerStepConfig(t, 1),
+					ConfigVariables: vars,
 					ConfigStateChecks: []statecheck.StateCheck{
-						xknownvalue.Ref(runnerAddr.String(), "meshBuildingBlockRunner", &runnerUuid),
-						statecheck.ExpectKnownValue(runnerAddr.String(), tfjsonpath.New("spec").AtMapKey("restriction"), knownvalue.StringExact("PRIVATE")),
+						xknownvalue.Ref(buildingBlockRunnerAddr, "meshBuildingBlockRunner", &runnerUuid),
+						statecheck.ExpectKnownValue(buildingBlockRunnerAddr, tfjsonpath.New("spec").AtMapKey("restriction"), knownvalue.StringExact("PRIVATE")),
 					},
 				},
 				{
 					// TODO: Change this expectation to ResourceActionUpdate once meshStack supports
 					// in-place updates for restriction.
-					Config: config.WithFirstBlock(
-						testconfig.Descend("spec", "restriction")(testconfig.SetString("PUBLIC")),
-					).String(),
+					Config:          runnerStepConfig(t, 8),
+					ConfigVariables: vars,
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
-							plancheck.ExpectResourceAction(runnerAddr.String(), plancheck.ResourceActionReplace),
+							plancheck.ExpectResourceAction(buildingBlockRunnerAddr, plancheck.ResourceActionReplace),
 						},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						xknownvalue.Ref(runnerAddr.String(), "meshBuildingBlockRunner", &replacedRunnerUuid),
-						statecheck.ExpectKnownValue(runnerAddr.String(), tfjsonpath.New("spec").AtMapKey("restriction"), knownvalue.StringExact("PUBLIC")),
+						xknownvalue.Ref(buildingBlockRunnerAddr, "meshBuildingBlockRunner", &replacedRunnerUuid),
+						statecheck.ExpectKnownValue(buildingBlockRunnerAddr, tfjsonpath.New("spec").AtMapKey("restriction"), knownvalue.StringExact("PUBLIC")),
 					},
 				},
 			},

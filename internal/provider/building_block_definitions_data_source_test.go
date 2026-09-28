@@ -6,6 +6,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	tfconfig "github.com/hashicorp/terraform-plugin-testing/config"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
@@ -13,28 +14,43 @@ import (
 	"github.com/meshcloud/meshstack-cli/client"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/zclconf/go-cty/cty"
 
-	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
+	"github.com/meshcloud/terraform-provider-meshstack/examples"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/xknownvalue"
 )
 
+// Addresses of the blocks in
+// examples/{resources,data-sources}/meshstack_building_block_definition{,s}/*-test-*.tf.
+const (
+	manualBbdAddr                        = "meshstack_building_block_definition.example_03_manual"
+	buildingBlockDefinitionsDataSourceAd = "data.meshstack_building_block_definitions.example"
+)
+
+// manualBbdStepConfig is the manual building block definition's step with the workspace owning it.
+// Index 1 is the draft version the example declares, 2 the released one a cross-workspace listing
+// needs.
+func manualBbdStepConfig(t *testing.T, index int) string {
+	t.Helper()
+	return examples.JoinTestStepConfigs(
+		examples.Resource.TestStepConfig(t, "building_block_definition", index),
+		examples.Resource.TestStepConfig(t, "workspace", 1, "variables", "prerequisites"),
+	)
+}
+
 func TestAccBuildingBlockDefinitionsDataSource(t *testing.T) {
 	t.Run("simple state check", func(t *testing.T) {
-		buildingBlockDefinitionConfig, buildingBlockDefinitionAddr := testconfig.BBDManual(t)
-
-		var dataSourceAddress testconfig.Traversal
-		config := testconfig.DataSource{Name: "building_block_definitions"}.Config(t).WithFirstBlock(
-			testconfig.ExtractAddress(&dataSourceAddress),
-			testconfig.Descend("workspace_identifier")(testconfig.SetAddr(buildingBlockDefinitionAddr, "metadata", "owned_by_workspace")),
-		).Join(buildingBlockDefinitionConfig)
+		config := examples.JoinTestStepConfigs(
+			examples.DataSource.TestStepConfig(t, "building_block_definitions", 1),
+			manualBbdStepConfig(t, 1),
+		)
 
 		ApplyAndTest(t, resource.TestCase{Steps: []resource.TestStep{
 			{
-				Config: config.String(),
+				Config:          config,
+				ConfigVariables: SuffixVariables(acctest.RandString(8)),
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("workspace_identifier"), xknownvalue.NotEmptyString()),
-					statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("building_block_definitions"), knownvalue.ListExact([]knownvalue.Check{
+					statecheck.ExpectKnownValue(buildingBlockDefinitionsDataSourceAd, tfjsonpath.New("workspace_identifier"), xknownvalue.NotEmptyString()),
+					statecheck.ExpectKnownValue(buildingBlockDefinitionsDataSourceAd, tfjsonpath.New("building_block_definitions"), knownvalue.ListExact([]knownvalue.Check{
 						knownvalue.ObjectPartial(map[string]knownvalue.Check{
 							"metadata": knownvalue.ObjectPartial(map[string]knownvalue.Check{
 								"uuid":               xknownvalue.NotEmptyString(),
@@ -75,70 +91,52 @@ func TestAccBuildingBlockDefinitionsDataSource(t *testing.T) {
 			t.Skip("cross-workspace test requires real permission boundaries")
 		}
 
-		buildingBlockDefinitionConfig, buildingBlockDefinitionAddr := testconfig.BBDManual(t)
+		vars := SuffixVariables(acctest.RandString(8))
 
-		// AS the BBDManual above already creates an "example" workspace, we need to rename the other workspace
-		// and extract its correct address as well.
-		// This other workspace will hold the API key used to list the BBD cross
-		var otherWorkspaceAddr testconfig.Traversal
-		otherWorkspaceConfig, _ := testconfig.Workspace(t)
-		otherWorkspaceConfig = otherWorkspaceConfig.WithFirstBlock(
-			testconfig.RenameKey("other"),
-			testconfig.ExtractAddress(&otherWorkspaceAddr),
-		)
-		apiKeyConfig, apiKeyAddr := testconfig.ApiKey(t, otherWorkspaceAddr)
-		apiKeyConfig = apiKeyConfig.WithFirstBlock(
-			testconfig.Descend("spec", "permissions")(testconfig.SetRawExpr(`["BUILDINGBLOCKDEFINITION_LIST"]`)),
+		// Step 2 of the definition is the released one: a draft version is not visible to another
+		// workspace. The consumer workspace holds the restricted key the listing runs under.
+		supportConfig := examples.JoinTestStepConfigs(
+			examples.Resource.TestStepConfig(t, "building_block_definition", 2),
+			examples.Resource.TestStepConfig(t, "api_key", 6),
+			examples.Resource.TestStepConfig(t, "workspace", 1, "variables", "prerequisites", "consumer-workspace"),
 		)
 
-		supportConfig := buildingBlockDefinitionConfig.WithFirstBlock(
-			testconfig.Descend("version_spec", "draft")(testconfig.SetValue(cty.False)),
-		).Join(
-			otherWorkspaceConfig,
-			apiKeyConfig,
-		)
-
-		var dataSourceAddress testconfig.Traversal
-		example := testconfig.DataSource{Name: "building_block_definitions"}
-		config := example.Config(t).WithFirstBlock(
-			testconfig.ExtractAddress(&dataSourceAddress),
-			testconfig.Descend("workspace_identifier")(testconfig.SetAddr(buildingBlockDefinitionAddr, "metadata", "owned_by_workspace")),
-			// provider alias meshstack-other has hardcoded config in _other_provider test support file with restricted apikey
-			testconfig.Descend("provider")(testconfig.SetRawExpr("meshstack-other")),
-		).Join(
-			// keep the support config as is (containing the BBD to be read)
+		listConfig := examples.JoinTestStepConfigs(
+			examples.DataSource.TestStepConfig(t, "building_block_definitions", 2),
 			supportConfig,
-			// but make the data source use a different provider using the api key from the other workspace
-			// (credentials are passed in as variables in the second step)
-			testconfig.OtherProviderConfig(t),
+			examples.Resource.TestSupportConfigs(t, "api_key", "other_provider"),
 		)
 
 		var apiKeyClientId, apiKeyClientSecret lazyVariable
-		s := supportConfig.String()
+		listVars := tfconfig.Variables{
+			"apikey_client_id":     &apiKeyClientId,
+			"apikey_client_secret": &apiKeyClientSecret,
+		}
+		for name, value := range vars {
+			listVars[name] = value
+		}
+
 		ApplyAndTest(t, resource.TestCase{Steps: []resource.TestStep{
 			{
-				Config: s,
+				Config:          supportConfig,
+				ConfigVariables: vars,
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(buildingBlockDefinitionAddr.String(), tfjsonpath.New("version_latest_release").AtMapKey("state"), knownvalue.StringExact("RELEASED")),
-					statecheck.ExpectKnownValue(apiKeyAddr.String(), tfjsonpath.New("status").AtMapKey("client_id"), xknownvalue.NotEmptyString(func(clientId string) error {
+					statecheck.ExpectKnownValue(manualBbdAddr, tfjsonpath.New("version_latest_release").AtMapKey("state"), knownvalue.StringExact("RELEASED")),
+					statecheck.ExpectKnownValue(apiKeyResourceAddr, tfjsonpath.New("status").AtMapKey("client_id"), xknownvalue.NotEmptyString(func(clientId string) error {
 						apiKeyClientId = lazyVariable(clientId)
 						return nil
 					})),
-					statecheck.ExpectKnownValue(apiKeyAddr.String(), tfjsonpath.New("status").AtMapKey("client_secret"), xknownvalue.NotEmptyString(func(clientSecret string) error {
+					statecheck.ExpectKnownValue(apiKeyResourceAddr, tfjsonpath.New("status").AtMapKey("client_secret"), xknownvalue.NotEmptyString(func(clientSecret string) error {
 						apiKeyClientSecret = lazyVariable(clientSecret)
 						return nil
 					})),
 				},
 			},
 			{
-				Config: config.String(),
-				ConfigVariables: tfconfig.Variables{
-					// variables are hard-coded in test support file
-					"apikey_client_id":     &apiKeyClientId,
-					"apikey_client_secret": &apiKeyClientSecret,
-				},
+				Config:          listConfig,
+				ConfigVariables: listVars,
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("building_block_definitions"), knownvalue.ListExact([]knownvalue.Check{
+					statecheck.ExpectKnownValue(buildingBlockDefinitionsDataSourceAd, tfjsonpath.New("building_block_definitions"), knownvalue.ListExact([]knownvalue.Check{
 						knownvalue.ObjectPartial(func() map[string]knownvalue.Check {
 							versionRef := knownvalue.ObjectPartial(map[string]knownvalue.Check{
 								"uuid":         xknownvalue.NotEmptyString(),
