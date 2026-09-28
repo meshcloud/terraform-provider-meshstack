@@ -429,7 +429,7 @@ Optional:
 - `run_transparency` (Boolean) Specifies the building block run control. When set to `true`, both platform teams and workspace users can view detailed run logs and re-run building blocks. When set to `false` (default), only platform teams have this access.
 - `schedule` (Attributes) Drift detection and drift reconciliation schedule for the building blocks of this definition. Defaults to no schedule. (see [below for nested schema](#nestedatt--spec--schedule))
 - `support_url` (String) URL pointing to support resources for the building block definition. At most 255 characters.
-- `supported_platforms` (Attributes Set) Set of platforms that this building block supports, each of them either a whole platform type or one individual platform. Required and must be non-empty if target_type is `TENANT_LEVEL`. (see [below for nested schema](#nestedatt--spec--supported_platforms))
+- `supported_platforms` (Attributes Set) Set of platforms that this building block supports, each of them either a whole platform type or one individual platform. An individual platform is best written as that platform's own `ref`, for example `meshstack_platform.my_azure.ref`. Required and must be non-empty if target_type is `TENANT_LEVEL`. (see [below for nested schema](#nestedatt--spec--supported_platforms))
 - `symbol` (String) Symbol/icon of the building block definition as shown in meshPanel. This can either be an URL starting with `http[s]://` or a base64 encoded data blob. The function `provider::meshstack::load_image_file(<filepath>)` produces such a data blob from a local file.
 - `target_type` (String) Type of building block definition. Determines where building blocks can be attached. Cannot be changed after initial creation. One of `TENANT_LEVEL`, `WORKSPACE_LEVEL`.
 - `use_in_landing_zones_only` (Boolean) Whether this building block can only be used in landing zones.
@@ -461,8 +461,9 @@ Optional:
 
 Optional:
 
-- `kind` (String) Kind of the platform ref: `meshPlatformType` for a whole platform type, `meshPlatform` for one individual platform. A definition that names a platform type supports every platform of that type, so narrow it by naming an individual platform instead of the type rather than next to it. Requires meshStack 2026.39.0 or later.
-- `name` (String) Identifier of the platform type for kind `meshPlatformType`, for example `AZURE`. For kind `meshPlatform` it is the platform's full identifier, for example `my-azure.eu-de`, taken from the platform's own `identifier`.
+- `kind` (String) Kind of the platform ref, one of `meshPlatformType` and `meshPlatform`. An entry with a platform type supports every platform of that type, so narrow a definition by using an individual platform instead of the type rather than next to it. Using an individual platform requires meshStack 2026.40.0 or later.
+- `name` (String) Identifier (`metadata.name`) of the platform type, for example `AZURE`. Required when `kind = "meshPlatformType"`, must be omitted for `kind = "meshPlatform"`.
+- `uuid` (String) UUID (`metadata.uuid`) of the platform. Required when `kind = "meshPlatform"`, must be omitted for `kind = "meshPlatformType"`. Assigning the platform's whole `ref` sets this and `kind` together.
 
 
 

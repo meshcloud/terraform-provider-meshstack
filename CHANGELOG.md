@@ -1,3 +1,17 @@
+# v0.26.3
+
+BREAKING CHANGES:
+- `meshstack_building_block_definition`: an entry of `spec.supported_platforms` with `kind = "meshPlatform"` now takes the platform's `uuid` instead of its full identifier in `name`:
+
+  ```hcl
+  supported_platforms = [
+    { name = "AZURE" },
+    meshstack_platform.my_azure.ref,
+  ]
+  ```
+
+  in place of `{ kind = "meshPlatform", name = "my-azure.eu-de" }`. A platform's `ref` already has `kind` and `uuid`, so it can be assigned whole; `{ kind = "meshPlatform", uuid = ... }` works too. Needs meshStack 2026.40.0 or later.
+
 # v0.26.2
 
 The minimum meshStack version stays 2026.36.0. The resolved workload identity below is reported by meshStack 2026.40.0 and later; on an older meshStack it is null.
