@@ -1,3 +1,5 @@
+# The github definition switched to a second integration, to show a released version keeps pinning
+# the first one.
 # An example for github_workflows implementation with required attributes only
 resource "meshstack_building_block_definition" "example_02_github_workflows" {
   metadata = {
@@ -26,7 +28,7 @@ resource "meshstack_building_block_definition" "example_02_github_workflows" {
         repository      = "example/building-block"
         branch          = "main"
         apply_workflow  = "apply.yml"
-        integration_ref = meshstack_integration.github.ref
+        integration_ref = meshstack_integration.github_b.ref
         # Optional flags, default false
         async                 = true
         omit_run_object_input = true

@@ -26,22 +26,29 @@ const (
 	buildingBlockDefinitionsDataSourceAd = "data.meshstack_building_block_definitions.example"
 )
 
-// manualBbdStepConfig is the manual building block definition's step with the workspace owning it.
-// Index 1 is the draft version the example declares, 2 the released one a cross-workspace listing
-// needs.
-func manualBbdStepConfig(t *testing.T, index int) string {
+// manualBbdStepConfig is the manual building block definition's step (variant 3) with the workspace
+// owning it. Whether its version is a draft is a variable, not a second step file: a cross-workspace
+// listing needs it released, which is one scalar changing.
+func manualBbdStepConfig(t *testing.T) string {
 	t.Helper()
 	return examples.JoinTestStepConfigs(
-		examples.Resource.TestStepConfig(t, "building_block_definition", index),
+		examples.Resource.TestStepConfig(t, "building_block_definition", 3, "variables"),
 		examples.Resource.TestStepConfig(t, "workspace", 1, "variables", "prerequisites"),
 	)
+}
+
+// releasedBbdVariables flips the definition's version from draft to released.
+func releasedBbdVariables(suffix string) tfconfig.Variables {
+	vars := SuffixVariables(suffix)
+	vars["draft"] = tfconfig.BoolVariable(false)
+	return vars
 }
 
 func TestAccBuildingBlockDefinitionsDataSource(t *testing.T) {
 	t.Run("simple state check", func(t *testing.T) {
 		config := examples.JoinTestStepConfigs(
 			examples.DataSource.TestStepConfig(t, "building_block_definitions", 1),
-			manualBbdStepConfig(t, 1),
+			manualBbdStepConfig(t),
 		)
 
 		ApplyAndTest(t, resource.TestCase{Steps: []resource.TestStep{
@@ -91,12 +98,11 @@ func TestAccBuildingBlockDefinitionsDataSource(t *testing.T) {
 			t.Skip("cross-workspace test requires real permission boundaries")
 		}
 
-		vars := SuffixVariables(acctest.RandString(8))
-
-		// Step 2 of the definition is the released one: a draft version is not visible to another
-		// workspace. The consumer workspace holds the restricted key the listing runs under.
+		// The definition must be released: a draft version is not visible to another workspace. The
+		// consumer workspace holds the restricted key the listing runs under.
+		vars := releasedBbdVariables(acctest.RandString(8))
 		supportConfig := examples.JoinTestStepConfigs(
-			examples.Resource.TestStepConfig(t, "building_block_definition", 2),
+			examples.Resource.TestStepConfig(t, "building_block_definition", 3, "variables"),
 			examples.Resource.TestStepConfig(t, "api_key", 6),
 			examples.Resource.TestStepConfig(t, "workspace", 1, "variables", "prerequisites", "consumer-workspace"),
 		)
