@@ -1,5 +1,10 @@
 # v0.26.3
 
+**Upgrade to this release before your meshStack is upgraded to 2026.39.0.** That meshStack version changes what a
+workspace-scoped API key receives for a Building Block Definition it may consume but does not own, and earlier provider
+versions fail on the new answer (see below). This release handles both the old and the new answer, so it can be
+installed ahead of the meshStack upgrade.
+
 BREAKING CHANGES:
 - `meshstack_building_block_definition`: an entry of `spec.supported_platforms` with `kind = "meshPlatform"` now takes the platform's `uuid` instead of its full identifier in `name`:
 
@@ -11,6 +16,19 @@ BREAKING CHANGES:
   ```
 
   in place of `{ kind = "meshPlatform", name = "my-azure.eu-de" }`. A platform's `ref` already has `kind` and `uuid`, so it can be assigned whole; `{ kind = "meshPlatform", uuid = ... }` works too. Needs meshStack 2026.40.0 or later.
+
+FIXES:
+- `meshstack_building_block_definitions`: listing the definitions of another workspace against meshStack 2026.39.0 or
+  later crashes provider 0.26.1 and earlier with *"panic: cannot infer implementation type"*, and provider 0.26.2 fails
+  with an error. Such a meshStack no longer answers the version list of a definition your workspace may consume but does
+  not own with a 403. Instead, it returns the released versions without their implementation and marks them as redacted.
+  The data source now recognizes the mark and keeps the previous behavior for these definitions: the version references
+  come from the definition's status, and `content_hash` stays null. Against an older meshStack nothing changes.
+- `meshstack_building_block_definition`: refreshing a definition owned by another workspace against meshStack 2026.39.0
+  or later now fails with a clear error that names the owning workspace requirement. Provider 0.26.1 and earlier crash
+  instead.
+- `meshstack_integration`: an empty `spec.config = {}` crashed the provider at apply time. It is now rejected at plan
+  time with a message naming the four alternatives, exactly one of which is required.
 
 # v0.26.2
 
@@ -68,24 +86,6 @@ FIXES:
   provider waits that out within `timeouts.delete`.
 - `status.latest_run_uuid` and `status.latest_dry_run_uuid` no longer document a permission
   condition that cannot happen: the only reason either is null is that no such run exists.
-
-**Upgrade to this release before your meshStack is upgraded to 2026.39.0.** That meshStack version changes what a
-workspace-scoped API key receives for a Building Block Definition it may consume but does not own, and earlier terraform
-provider versions crash on the new answer (see below). This release handles both the old and the new answer, so it can
-be installed ahead of the meshStack upgrade.
-
-FIXES:
-
-- `meshstack_building_block_definitions`: listing the definitions of another workspace against meshStack 2026.39.0 or
-  later crashes provider 0.25.3 and earlier with *"panic: cannot infer implementation type"*. Such a meshStack no longer
-  answers the version list of a definition your workspace may consume but does not own with a 403. Instead, it returns the
-  released versions without their implementation and marks them as redacted. The data source now recognises the mark and
-  keeps the previous behaviour for these definitions: the version references come from the definition's status, and
-  `content_hash` stays null. Against an older meshStack nothing changes.
-- `meshstack_building_block_definition`: refreshing a definition owned by another workspace against meshStack 2026.39.0
-  or later now fails with a clear error that names the owning workspace requirement, instead of a crash.
-- `meshstack_integration`: an empty `spec.config = {}` crashed the provider at apply time. It is now rejected at plan
-  time with a message naming the four alternatives, exactly one of which is required.
 
 # v0.25.4
 
