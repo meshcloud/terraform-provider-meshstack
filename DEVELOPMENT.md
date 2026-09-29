@@ -121,6 +121,14 @@ imports to the sibling sources. `GOWORK=off` in front of a command gets the pinn
 that one run. `meshfed-release` also runs this repo's acceptance suite against a backend it builds:
 `./gradlew :terraform-provider-meshstack:acceptanceTest`.
 
+Because the `go.work` hides the `go.mod` pin, a pull request here can pass its acceptance run with a
+pin to a `meshstack-cli` commit that never reaches `meshstack-cli`'s `main`. GitHub rewrites the
+commits of a merged pull request, even one it could fast-forward. The `meshstack-cli Pin` check
+therefore requires the pin to be the head of the `meshstack-cli` branch with the same name as this
+pull request's branch, or of `main` when there is no such branch. After the `meshstack-cli` pull
+request merges, repin before you merge here:
+`GOWORK=off go get github.com/meshcloud/meshstack-cli@main && GOWORK=off go mod tidy`.
+
 ### Adding a resource / data source (and its tests)
 
 Adding or reworking a resource or data source — the implementation, example `.tf` files, the

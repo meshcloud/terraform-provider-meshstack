@@ -4,19 +4,12 @@
 locals {
   github_repository_name = "terraform-provider-meshstack"
 
-  # Every check that gates a merge, mapped to the app allowed to report it: a check that is not
-  # listed here cannot block a merge, and pinning the app stops anything else reporting under the
-  # same name. The first four are job names in .github/workflows/test.yml. The acceptance check is
-  # posted by meshfed-release, which runs that suite - see the acceptance-testing skill and
-  # .github/workflows/test-acceptance.yml.
-  #
-  # Apply this immediately before merging the workflow change, and merge right after: in between, a
-  # pull request off the old default branch requires a check that nothing reports.
   required_checks = {
     "Go Build"                             = local.github_actions_app_id
     "Go Lint and Format Check"             = local.github_actions_app_id
     "Generate Terraform Provider Docs"     = local.github_actions_app_id
     "Go Test"                              = local.github_actions_app_id
+    "meshstack-cli Pin"                    = local.github_actions_app_id
     "Acceptance Tests (meshStack backend)" = local.satellite_app_id
   }
 
