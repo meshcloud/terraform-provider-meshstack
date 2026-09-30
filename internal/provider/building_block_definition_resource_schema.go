@@ -238,7 +238,8 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 						"meshPanel renders the form from it, so a consumer fills in its fields rather than a single value. " +
 						"What the form produces reaches the building block as JSON text, exactly like a " +
 						client.MeshBuildingBlockIOTypeCode.Markdown() + " input, so a Terraform module needs nothing beyond a matching variable type. " +
-						"Only the schema itself is validated; values are not checked against it by the API.",
+						"meshStack checks every value against the schema when it is set, through meshPanel and the API alike, " +
+						"and rejects one the schema does not allow (meshStack 2026.37.0 or later).",
 					Optional: true,
 				},
 				"condition": schema.StringAttribute{
