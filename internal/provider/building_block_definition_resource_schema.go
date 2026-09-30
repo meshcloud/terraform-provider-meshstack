@@ -239,7 +239,7 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 						"What the form produces reaches the building block as JSON text, exactly like a " +
 						client.MeshBuildingBlockIOTypeCode.Markdown() + " input, so a Terraform module needs nothing beyond a matching variable type. " +
 						"meshStack checks every value against the schema when it is set, through meshPanel and the API alike, " +
-						"and rejects one the schema does not allow (meshStack 2026.37.0 or later).",
+						"and rejects one the schema does not allow.",
 					Optional: true,
 				},
 				"condition": schema.StringAttribute{
