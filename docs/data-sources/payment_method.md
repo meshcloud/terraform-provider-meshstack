@@ -30,6 +30,7 @@ data "meshstack_payment_method" "example" {
 
 ### Read-Only
 
+- `ref` (Attributes) Reference to this payment method. A building block takes it as the value of a `PAYMENT_METHOD` input: `jsonencode(meshstack_payment_method.mypay.ref)`. (see [below for nested schema](#nestedatt--ref))
 - `spec` (Attributes) (see [below for nested schema](#nestedatt--spec))
 
 <a id="nestedatt--metadata"></a>
@@ -44,6 +45,15 @@ Read-Only:
 
 - `created_on` (String) Creation date of the payment method.
 - `deleted_on` (String) Deletion date of the payment method.
+
+
+<a id="nestedatt--ref"></a>
+### Nested Schema for `ref`
+
+Read-Only:
+
+- `kind` (String) meshObject type, always `meshPaymentMethod`.
+- `name` (String) Named identifier (`metadata.name`) of `meshPaymentMethod`.
 
 
 <a id="nestedatt--spec"></a>

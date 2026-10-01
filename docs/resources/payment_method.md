@@ -41,6 +41,10 @@ resource "meshstack_payment_method" "example" {
 - `metadata` (Attributes) (see [below for nested schema](#nestedatt--metadata))
 - `spec` (Attributes) (see [below for nested schema](#nestedatt--spec))
 
+### Read-Only
+
+- `ref` (Attributes) Reference to this payment method. A building block takes it as the value of a `PAYMENT_METHOD` input: `jsonencode(meshstack_payment_method.mypay.ref)`. (see [below for nested schema](#nestedatt--ref))
+
 <a id="nestedatt--metadata"></a>
 ### Nested Schema for `metadata`
 
@@ -67,6 +71,15 @@ Optional:
 - `amount` (Number) Amount associated with the payment method.
 - `expiration_date` (String) Expiration date of the payment method (ISO 8601 format).
 - `tags` (Map of List of String) Tags of `meshPaymentMethod`. Only the tags you declare here are managed by Terraform.
+
+
+<a id="nestedatt--ref"></a>
+### Nested Schema for `ref`
+
+Read-Only:
+
+- `kind` (String) meshObject type, always `meshPaymentMethod`.
+- `name` (String) Named identifier (`metadata.name`) of `meshPaymentMethod`.
 
 ## Import
 
