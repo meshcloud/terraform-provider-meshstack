@@ -33,7 +33,7 @@ func TestAccTenantDataSource(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:          config,
-				ConfigVariables: SuffixVariables(suffix),
+				ConfigVariables: NewVariablesWithSuffix(suffix),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(tenantByNameDataSourceAddr, tfjsonpath.New("metadata").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
 					statecheck.ExpectKnownValue(tenantByNameDataSourceAddr, tfjsonpath.New("spec").AtMapKey("platform_ref").AtMapKey("uuid"), xknownvalue.NotEmptyString()),

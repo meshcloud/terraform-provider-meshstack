@@ -24,7 +24,7 @@ func TestAccPlatformTypeDataSource(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:          config,
-				ConfigVariables: SuffixVariables(suffix),
+				ConfigVariables: NewVariablesWithSuffix(suffix),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(platformTypeDataSourceAddr, tfjsonpath.New("metadata"), checkPlatformTypeMetadata(suffix)),
 					statecheck.ExpectKnownValue(platformTypeDataSourceAddr, tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("My Custom Platform "+suffix)),

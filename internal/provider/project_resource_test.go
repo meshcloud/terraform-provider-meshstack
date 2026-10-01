@@ -39,7 +39,7 @@ func TestAccProject(t *testing.T) {
 			Steps: []resource.TestStep{
 				{
 					Config:          examples.Resource.TestStepConfig(t, "project", 3, "prerequisites", "restricted-tag"),
-					ConfigVariables: SuffixVariables(suffix),
+					ConfigVariables: NewVariablesWithSuffix(suffix),
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(projectResourceAddr, tfjsonpath.New("spec").AtMapKey("tags"), knownvalue.MapExact(map[string]knownvalue.Check{
 							projectTagKeyPrefix + suffix: knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("blue")}),
@@ -56,7 +56,7 @@ func TestAccProject(t *testing.T) {
 	})
 
 	suffix := acctest.RandString(8)
-	vars := SuffixVariables(suffix)
+	vars := NewVariablesWithSuffix(suffix)
 
 	ApplyAndTest(t, resource.TestCase{
 		Steps: []resource.TestStep{

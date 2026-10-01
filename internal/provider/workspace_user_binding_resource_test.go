@@ -20,7 +20,7 @@ func TestAccWorkspaceUserBinding(t *testing.T) {
 
 	t.Run("with_expiry_date", func(t *testing.T) {
 		suffix := acctest.RandString(8)
-		vars := SuffixVariables(suffix)
+		vars := NewVariablesWithSuffix(suffix)
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
@@ -55,7 +55,7 @@ func TestAccWorkspaceUserBinding(t *testing.T) {
 	// fail the create with a "Received unknown value" conversion error (#267, #293).
 	t.Run("without_expiry_date", func(t *testing.T) {
 		suffix := acctest.RandString(8)
-		vars := SuffixVariables(suffix)
+		vars := NewVariablesWithSuffix(suffix)
 		bindingName := workspaceUserBindingNamePrefix + suffix
 
 		ApplyAndTest(t, resource.TestCase{

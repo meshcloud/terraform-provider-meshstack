@@ -24,7 +24,7 @@ func TestAccWorkspaceDataSource(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:          config,
-				ConfigVariables: SuffixVariables(suffix),
+				ConfigVariables: NewVariablesWithSuffix(suffix),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(workspaceDataSourceAddr, tfjsonpath.New("ref").AtMapKey("kind"), knownvalue.StringExact("meshWorkspace")),
 					statecheck.ExpectKnownValue(workspaceDataSourceAddr, tfjsonpath.New("ref").AtMapKey("name"), knownvalue.StringExact("test-ws-"+suffix)),

@@ -24,7 +24,7 @@ func TestAccPlatformTypesDataSource(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:          config,
-				ConfigVariables: SuffixVariables(acctest.RandString(8)),
+				ConfigVariables: NewVariablesWithSuffix(acctest.RandString(8)),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue("data.meshstack_platform_types.all", tfjsonpath.New("platform_types"), knownvalue.NotNull()),
 				},

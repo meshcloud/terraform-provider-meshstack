@@ -48,7 +48,7 @@ func TestAccLandingZoneBuildingBlockRefRequiresUuid(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:          landingZoneStepConfig(t, 3),
-				ConfigVariables: SuffixVariables(acctest.RandString(8)),
+				ConfigVariables: NewVariablesWithSuffix(acctest.RandString(8)),
 				PlanOnly:        true,
 				ExpectError:     regexp.MustCompile(`(?s)uuid.*must be specified when`),
 			},
@@ -71,7 +71,7 @@ func TestAccLandingZone(t *testing.T) {
 			Steps: []resource.TestStep{
 				{
 					Config:          landingZoneStepConfig(t, 6, "tags", "restricted-tag"),
-					ConfigVariables: SuffixVariables(suffix),
+					ConfigVariables: NewVariablesWithSuffix(suffix),
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(landingZoneResourceAddr, tfjsonpath.New("metadata").AtMapKey("tags"), knownvalue.MapExact(map[string]knownvalue.Check{
 							landingZoneTagKeyPrefix + suffix: knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("blue")}),
@@ -98,7 +98,7 @@ func TestAccLandingZone(t *testing.T) {
 			Steps: []resource.TestStep{
 				{
 					Config:          landingZoneStepConfig(t, 7, "restricted-tag"),
-					ConfigVariables: SuffixVariables(acctest.RandString(8)),
+					ConfigVariables: NewVariablesWithSuffix(acctest.RandString(8)),
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(landingZoneResourceAddr, tfjsonpath.New("metadata").AtMapKey("tags"), knownvalue.MapSizeExact(0)),
 					},
@@ -124,7 +124,7 @@ func TestAccLandingZone(t *testing.T) {
 			Steps: []resource.TestStep{
 				{
 					Config:          landingZoneStepConfig(t, 8, "tags", "restricted-tag", "declared-restricted-tag"),
-					ConfigVariables: SuffixVariables(suffix),
+					ConfigVariables: NewVariablesWithSuffix(suffix),
 					ConfigStateChecks: []statecheck.StateCheck{
 						// Both declared tags survive; only the undeclared injected restricted default is dropped.
 						statecheck.ExpectKnownValue(landingZoneResourceAddr, tfjsonpath.New("metadata").AtMapKey("tags"), knownvalue.MapExact(map[string]knownvalue.Check{
@@ -141,7 +141,7 @@ func TestAccLandingZone(t *testing.T) {
 	})
 
 	t.Run("restricted", func(t *testing.T) {
-		vars := SuffixVariables(acctest.RandString(8))
+		vars := NewVariablesWithSuffix(acctest.RandString(8))
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
@@ -183,7 +183,7 @@ func TestAccLandingZone(t *testing.T) {
 	})
 
 	suffix := acctest.RandString(8)
-	vars := SuffixVariables(suffix)
+	vars := NewVariablesWithSuffix(suffix)
 
 	ApplyAndTest(t, resource.TestCase{
 		Steps: []resource.TestStep{

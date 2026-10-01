@@ -59,60 +59,6 @@ func bbdStepConfig(t *testing.T, index int, supports ...string) string {
 	)
 }
 
-// bbdVars dials the attributes a definition case changes while the rest of the definition stays
-// byte-identical. The zero value beyond the suffix is the example as documented: a draft, the
-// example's own description, no policies and no name template.
-type bbdVars struct {
-	suffix              string
-	description         string
-	draft               *bool
-	secretValue         string
-	secretVersion       string
-	displayNameTemplate *string
-	preRunScript        string
-	// The policy attributes are objects, so they are typed variables rather than strings.
-	approvalPolicies tfconfig.Variable
-	schedule         tfconfig.Variable
-}
-
-func newBbdVars() bbdVars { return bbdVars{suffix: acctest.RandString(8)} }
-
-func (v bbdVars) variables() tfconfig.Variables {
-	vars := SuffixVariables(v.suffix)
-	vars["tag_suffix"] = tfconfig.StringVariable(v.suffix)
-	if v.description != "" {
-		vars["description"] = tfconfig.StringVariable(v.description)
-	}
-	if v.draft != nil {
-		vars["draft"] = tfconfig.BoolVariable(*v.draft)
-	}
-	if v.secretValue != "" {
-		vars["secret_value"] = tfconfig.StringVariable(v.secretValue)
-		vars["secret_version"] = tfconfig.StringVariable(v.secretVersion)
-	}
-	if v.displayNameTemplate != nil {
-		vars["display_name_template"] = tfconfig.StringVariable(*v.displayNameTemplate)
-	}
-	if v.preRunScript != "" {
-		vars["pre_run_script"] = tfconfig.StringVariable(v.preRunScript)
-	}
-	if v.approvalPolicies != nil {
-		vars["approval_policies"] = v.approvalPolicies
-	}
-	if v.schedule != nil {
-		vars["schedule"] = v.schedule
-	}
-	return vars
-}
-
-// withPolicies returns v with spec.approval_policies and spec.schedule set. Which of these meshStack
-// accepts depends on the implementation the stored version carries, which is what the policy cases
-// walk across an implementation swap.
-func (v bbdVars) withPolicies(approvalPolicies, schedule tfconfig.Variable) bbdVars {
-	v.approvalPolicies, v.schedule = approvalPolicies, schedule
-	return v
-}
-
 // bbdApprovalPolicies builds the approval_policies object from the gates that are enabled.
 func bbdApprovalPolicies(gates ...string) tfconfig.Variable {
 	policies := map[string]tfconfig.Variable{}
@@ -132,33 +78,6 @@ func bbdSchedule(mode string, automaticApproval bool) tfconfig.Variable {
 		schedule["automatic_approval"] = tfconfig.BoolVariable(true)
 	}
 	return tfconfig.ObjectVariable(schedule)
-}
-
-// released returns v with the version released rather than drafted.
-func (v bbdVars) released() bbdVars {
-	released := false
-	v.draft = &released
-	return v
-}
-
-// withDescription returns v with the definition's description changed, which updates the spec
-// without cutting a new version.
-func (v bbdVars) withDescription(description string) bbdVars {
-	v.description = description
-	return v
-}
-
-// withSecret returns v with the sensitive STATIC input's secret rotated.
-func (v bbdVars) withSecret(version, value string) bbdVars {
-	v.secretVersion, v.secretValue = version, value
-	return v
-}
-
-// withNameTemplate returns v with spec.display_name_template set to the given value; "" is an
-// explicitly empty template, which meshStack treats like no template but Terraform does not.
-func (v bbdVars) withNameTemplate(template string) bbdVars {
-	v.displayNameTemplate = &template
-	return v
 }
 
 func TestAccBuildingBlockDefinition(t *testing.T) {
@@ -185,23 +104,24 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 	const bbdDescription = "An example building block definition"
 
 	t.Run("01_terraform", func(t *testing.T) {
-		vars := newBbdVars()
+		suffix := acctest.RandString(8)
+		vars := With(NewVariablesWithSuffix(suffix), "tag_suffix", suffix)
 		var resourceUuid string
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
 					Config:          bbdStepConfig(t, 1, terraformBbdSupports...),
-					ConfigVariables: vars.variables(),
+					ConfigVariables: vars,
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectResourceAction(terraformBbdAddr, plancheck.ResourceActionCreate),
 						},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(terraformBbdAddr, tfjsonpath.New("metadata"), checkBBDMetadataFull(vars.suffix)),
+						statecheck.ExpectKnownValue(terraformBbdAddr, tfjsonpath.New("metadata"), checkBBDMetadataFull(suffix)),
 						statecheck.ExpectKnownValue(terraformBbdAddr, tfjsonpath.New("spec"), checkBBDSpecFull(bbdDescription)),
-						statecheck.ExpectKnownValue(terraformBbdAddr, tfjsonpath.New("version_spec"), checkBuildingBlockVersionSpec(vars.suffix, "01_terraform", versionStateDraft, 1)),
+						statecheck.ExpectKnownValue(terraformBbdAddr, tfjsonpath.New("version_spec"), checkBuildingBlockVersionSpec(suffix, "01_terraform", versionStateDraft, 1)),
 						statecheck.ExpectKnownValue(terraformBbdAddr, tfjsonpath.New("version_latest_release"), knownvalue.Null()),
 						statecheck.ExpectKnownValue(terraformBbdAddr, tfjsonpath.New("version_latest"), expectedVersion(1, versionStateDraft)),
 						statecheck.ExpectKnownValue(terraformBbdAddr, tfjsonpath.New("versions"), knownvalue.ListExact([]knownvalue.Check{expectedVersion(1, versionStateDraft)})),
@@ -212,7 +132,7 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 				// step file 1 with SOMETHING_VERY_SECRET renamed and nothing else touched.
 				{
 					Config:          bbdStepConfig(t, 21, terraformBbdSupports...),
-					ConfigVariables: vars.variables(),
+					ConfigVariables: vars,
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectResourceAction(terraformBbdAddr, plancheck.ResourceActionUpdate),
@@ -222,7 +142,7 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 				{
 					ImportState:     true,
 					ImportStateKind: resource.ImportBlockWithID,
-					ConfigVariables: vars.variables(),
+					ConfigVariables: vars,
 					ImportStateIdFunc: func(state *terraform.State) (string, error) {
 						return resourceUuid, nil
 					},
@@ -233,23 +153,24 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 	})
 
 	t.Run("02_github_workflows", func(t *testing.T) {
-		vars := newBbdVars()
+		suffix := acctest.RandString(8)
+		vars := With(NewVariablesWithSuffix(suffix), "tag_suffix", suffix)
 		var resourceUuid string
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
 					Config:          bbdStepConfig(t, 2, githubBbdSupports...),
-					ConfigVariables: vars.variables(),
+					ConfigVariables: vars,
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectResourceAction(githubBbdAddr, plancheck.ResourceActionCreate),
 						},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(githubBbdAddr, tfjsonpath.New("metadata"), checkBBDMetadataMinimal(vars.suffix)),
+						statecheck.ExpectKnownValue(githubBbdAddr, tfjsonpath.New("metadata"), checkBBDMetadataMinimal(suffix)),
 						statecheck.ExpectKnownValue(githubBbdAddr, tfjsonpath.New("spec"), checkBBDSpecMinimal(bbdDescription)),
-						statecheck.ExpectKnownValue(githubBbdAddr, tfjsonpath.New("version_spec"), checkBuildingBlockVersionSpec(vars.suffix, "02_github_workflows", versionStateDraft, 1)),
+						statecheck.ExpectKnownValue(githubBbdAddr, tfjsonpath.New("version_spec"), checkBuildingBlockVersionSpec(suffix, "02_github_workflows", versionStateDraft, 1)),
 						statecheck.ExpectKnownValue(githubBbdAddr, tfjsonpath.New("version_latest_release"), knownvalue.Null()),
 						statecheck.ExpectKnownValue(githubBbdAddr, tfjsonpath.New("version_latest"), expectedVersion(1, versionStateDraft)),
 						statecheck.ExpectKnownValue(githubBbdAddr, tfjsonpath.New("versions"), knownvalue.ListExact([]knownvalue.Check{expectedVersion(1, versionStateDraft)})),
@@ -259,7 +180,7 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 				{
 					ImportState:     true,
 					ImportStateKind: resource.ImportBlockWithID,
-					ConfigVariables: vars.variables(),
+					ConfigVariables: vars,
 					ImportStateIdFunc: func(state *terraform.State) (string, error) {
 						return resourceUuid, nil
 					},
@@ -270,8 +191,9 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 	})
 
 	t.Run("03_manual", func(t *testing.T) {
-		vars := newBbdVars()
-		updated := vars.withDescription("An updated building block definition")
+		suffix := acctest.RandString(8)
+		vars := With(NewVariablesWithSuffix(suffix), "tag_suffix", suffix)
+		updated := With(vars, "description", "An updated building block definition")
 		var resourceUuid string
 
 		ApplyAndTest(t, resource.TestCase{
@@ -279,16 +201,16 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 				// Step 1: Create
 				{
 					Config:          bbdStepConfig(t, 3),
-					ConfigVariables: vars.variables(),
+					ConfigVariables: vars,
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectResourceAction(manualBbdResAddr, plancheck.ResourceActionCreate),
 						},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("metadata"), checkBBDMetadataMinimal(vars.suffix)),
+						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("metadata"), checkBBDMetadataMinimal(suffix)),
 						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("spec"), checkBBDSpecMinimal(bbdDescription)),
-						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("version_spec"), checkBuildingBlockVersionSpec(vars.suffix, "03_manual", versionStateDraft, 1)),
+						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("version_spec"), checkBuildingBlockVersionSpec(suffix, "03_manual", versionStateDraft, 1)),
 						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("version_latest_release"), knownvalue.Null()),
 						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("version_latest"), expectedVersion(1, versionStateDraft)),
 						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("versions"), knownvalue.ListExact([]knownvalue.Check{expectedVersion(1, versionStateDraft)})),
@@ -298,14 +220,14 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 				// Step 2: Update spec (description change, no new version)
 				{
 					Config:          bbdStepConfig(t, 3),
-					ConfigVariables: updated.variables(),
+					ConfigVariables: updated,
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectResourceAction(manualBbdResAddr, plancheck.ResourceActionUpdate),
 						},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("metadata"), checkBBDMetadataMinimal(vars.suffix)),
+						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("metadata"), checkBBDMetadataMinimal(suffix)),
 						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("spec"), checkBBDSpecMinimal("An updated building block definition")),
 						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("versions"), knownvalue.ListExact([]knownvalue.Check{expectedVersion(1, versionStateDraft)})),
 						xknownvalue.Ref(manualBbdResAddr, "meshBuildingBlockDefinition", &resourceUuid),
@@ -314,14 +236,14 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 				// Step 3: Release (draft=false)
 				{
 					Config:          bbdStepConfig(t, 3),
-					ConfigVariables: vars.released().variables(),
+					ConfigVariables: With(vars, "draft", false),
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectResourceAction(manualBbdResAddr, plancheck.ResourceActionUpdate),
 						},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("version_spec"), checkBuildingBlockVersionSpec(vars.suffix, "03_manual", versionStateReleased, 1)),
+						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("version_spec"), checkBuildingBlockVersionSpec(suffix, "03_manual", versionStateReleased, 1)),
 						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("version_latest_release"), expectedVersion(1, versionStateReleased)),
 						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("version_latest"), expectedVersion(1, versionStateReleased)),
 						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("versions"), knownvalue.ListExact([]knownvalue.Check{expectedVersion(1, versionStateReleased)})),
@@ -330,14 +252,14 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 				// Step 4: New draft (draft=true again, description changed)
 				{
 					Config:          bbdStepConfig(t, 3),
-					ConfigVariables: updated.variables(),
+					ConfigVariables: updated,
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectResourceAction(manualBbdResAddr, plancheck.ResourceActionUpdate),
 						},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("version_spec"), checkBuildingBlockVersionSpec(vars.suffix, "03_manual", versionStateDraft, 2)),
+						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("version_spec"), checkBuildingBlockVersionSpec(suffix, "03_manual", versionStateDraft, 2)),
 						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("version_latest_release"), expectedVersion(1, versionStateReleased)),
 						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("version_latest"), expectedVersion(2, versionStateDraft)),
 						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("versions"), knownvalue.ListExact([]knownvalue.Check{
@@ -349,14 +271,14 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 				// Step 5: Release the new draft (draft=false)
 				{
 					Config:          bbdStepConfig(t, 3),
-					ConfigVariables: vars.released().variables(),
+					ConfigVariables: With(vars, "draft", false),
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectResourceAction(manualBbdResAddr, plancheck.ResourceActionUpdate),
 						},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("version_spec"), checkBuildingBlockVersionSpec(vars.suffix, "03_manual", versionStateReleased, 2)),
+						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("version_spec"), checkBuildingBlockVersionSpec(suffix, "03_manual", versionStateReleased, 2)),
 						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("version_latest_release"), expectedVersion(2, versionStateReleased)),
 						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("version_latest"), expectedVersion(2, versionStateReleased)),
 						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("versions"), knownvalue.ListExact([]knownvalue.Check{
@@ -368,7 +290,7 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 				{
 					ImportState:     true,
 					ImportStateKind: resource.ImportBlockWithID,
-					ConfigVariables: vars.released().variables(),
+					ConfigVariables: With(vars, "draft", false),
 					ImportStateIdFunc: func(state *terraform.State) (string, error) {
 						return resourceUuid, nil
 					},
@@ -379,23 +301,24 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 	})
 
 	t.Run("04_azure_devops_pipeline", func(t *testing.T) {
-		vars := newBbdVars()
+		suffix := acctest.RandString(8)
+		vars := With(NewVariablesWithSuffix(suffix), "tag_suffix", suffix)
 		var resourceUuid string
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
 					Config:          bbdStepConfig(t, 5, azureDevopsBbdSupports...),
-					ConfigVariables: vars.variables(),
+					ConfigVariables: vars,
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectResourceAction(azureDevopsBbdAddr, plancheck.ResourceActionCreate),
 						},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(azureDevopsBbdAddr, tfjsonpath.New("metadata"), checkBBDMetadataMinimal(vars.suffix)),
+						statecheck.ExpectKnownValue(azureDevopsBbdAddr, tfjsonpath.New("metadata"), checkBBDMetadataMinimal(suffix)),
 						statecheck.ExpectKnownValue(azureDevopsBbdAddr, tfjsonpath.New("spec"), checkBBDSpecMinimal(bbdDescription)),
-						statecheck.ExpectKnownValue(azureDevopsBbdAddr, tfjsonpath.New("version_spec"), checkBuildingBlockVersionSpec(vars.suffix, "04_azure_devops_pipeline", versionStateDraft, 1)),
+						statecheck.ExpectKnownValue(azureDevopsBbdAddr, tfjsonpath.New("version_spec"), checkBuildingBlockVersionSpec(suffix, "04_azure_devops_pipeline", versionStateDraft, 1)),
 						statecheck.ExpectKnownValue(azureDevopsBbdAddr, tfjsonpath.New("version_latest_release"), knownvalue.Null()),
 						statecheck.ExpectKnownValue(azureDevopsBbdAddr, tfjsonpath.New("version_latest"), expectedVersion(1, versionStateDraft)),
 						statecheck.ExpectKnownValue(azureDevopsBbdAddr, tfjsonpath.New("versions"), knownvalue.ListExact([]knownvalue.Check{expectedVersion(1, versionStateDraft)})),
@@ -405,7 +328,7 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 				{
 					ImportState:     true,
 					ImportStateKind: resource.ImportBlockWithID,
-					ConfigVariables: vars.variables(),
+					ConfigVariables: vars,
 					ImportStateIdFunc: func(state *terraform.State) (string, error) {
 						return resourceUuid, nil
 					},
@@ -416,7 +339,8 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 	})
 
 	t.Run("05_gitlab_pipeline", func(t *testing.T) {
-		vars := newBbdVars()
+		suffix := acctest.RandString(8)
+		vars := With(NewVariablesWithSuffix(suffix), "tag_suffix", suffix)
 		var resourceUuid string
 
 		ApplyAndTest(t, resource.TestCase{
@@ -424,23 +348,23 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 				// Step 1: Plan-only (ensure tf plan works before apply)
 				{
 					Config:             bbdStepConfig(t, 6, gitlabBbdSupports...),
-					ConfigVariables:    vars.variables(),
+					ConfigVariables:    vars,
 					PlanOnly:           true,
 					ExpectNonEmptyPlan: true,
 				},
 				// Step 2: Create
 				{
 					Config:          bbdStepConfig(t, 6, gitlabBbdSupports...),
-					ConfigVariables: vars.variables(),
+					ConfigVariables: vars,
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectResourceAction(gitlabBbdAddr, plancheck.ResourceActionCreate),
 						},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(gitlabBbdAddr, tfjsonpath.New("metadata"), checkBBDMetadataMinimal(vars.suffix)),
+						statecheck.ExpectKnownValue(gitlabBbdAddr, tfjsonpath.New("metadata"), checkBBDMetadataMinimal(suffix)),
 						statecheck.ExpectKnownValue(gitlabBbdAddr, tfjsonpath.New("spec"), checkBBDSpecMinimal(bbdDescription)),
-						statecheck.ExpectKnownValue(gitlabBbdAddr, tfjsonpath.New("version_spec"), checkBuildingBlockVersionSpec(vars.suffix, "05_gitlab_pipeline", versionStateDraft, 1)),
+						statecheck.ExpectKnownValue(gitlabBbdAddr, tfjsonpath.New("version_spec"), checkBuildingBlockVersionSpec(suffix, "05_gitlab_pipeline", versionStateDraft, 1)),
 						statecheck.ExpectKnownValue(gitlabBbdAddr, tfjsonpath.New("version_latest_release"), knownvalue.Null()),
 						statecheck.ExpectKnownValue(gitlabBbdAddr, tfjsonpath.New("version_latest"), expectedVersion(1, versionStateDraft)),
 						statecheck.ExpectKnownValue(gitlabBbdAddr, tfjsonpath.New("versions"), knownvalue.ListExact([]knownvalue.Check{expectedVersion(1, versionStateDraft)})),
@@ -451,7 +375,7 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 				{
 					ImportState:     true,
 					ImportStateKind: resource.ImportBlockWithID,
-					ConfigVariables: vars.variables(),
+					ConfigVariables: vars,
 					ImportStateIdFunc: func(state *terraform.State) (string, error) {
 						return resourceUuid, nil
 					},
@@ -460,14 +384,14 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 				// Step 4: Rotate the pipeline trigger token after import.
 				{
 					Config:          bbdStepConfig(t, 22, gitlabBbdSupports...),
-					ConfigVariables: vars.variables(),
+					ConfigVariables: vars,
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectResourceAction(gitlabBbdAddr, plancheck.ResourceActionUpdate),
 						},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(gitlabBbdAddr, tfjsonpath.New("metadata"), checkBBDMetadataMinimal(vars.suffix)),
+						statecheck.ExpectKnownValue(gitlabBbdAddr, tfjsonpath.New("metadata"), checkBBDMetadataMinimal(suffix)),
 						statecheck.ExpectKnownValue(gitlabBbdAddr, tfjsonpath.New("spec"), checkBBDSpecMinimal(bbdDescription)),
 						statecheck.ExpectKnownValue(gitlabBbdAddr, tfjsonpath.New("versions"), knownvalue.ListExact([]knownvalue.Check{expectedVersion(1, versionStateDraft)})),
 						xknownvalue.Ref(gitlabBbdAddr, "meshBuildingBlockDefinition", &resourceUuid),
@@ -485,7 +409,8 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 	// implementation because its implementation carries mutable fields (e.g. pre_run_script);
 	// the manual implementation could not surface this.
 	t.Run("06_release_redraft_implementation_change", func(t *testing.T) {
-		vars := newBbdVars()
+		suffix := acctest.RandString(8)
+		vars := With(NewVariablesWithSuffix(suffix), "tag_suffix", suffix)
 
 		// The released version's content_hash must be identical before and after the new draft
 		// is created from it.
@@ -497,7 +422,7 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 				// Step 1: Create draft v1
 				{
 					Config:          bbdStepConfig(t, 1, terraformBbdSupports...),
-					ConfigVariables: vars.variables(),
+					ConfigVariables: vars,
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(terraformBbdAddr, tfjsonpath.New("version_latest"), expectedVersion(1, versionStateDraft)),
 					},
@@ -505,7 +430,7 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 				// Step 2: Release v1
 				{
 					Config:          bbdStepConfig(t, 1, terraformBbdSupports...),
-					ConfigVariables: vars.released().variables(),
+					ConfigVariables: With(vars, "draft", false),
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(terraformBbdAddr, tfjsonpath.New("version_latest_release"), expectedVersion(1, versionStateReleased)),
 						statecheck.ExpectKnownValue(terraformBbdAddr, tfjsonpath.New("version_latest"), expectedVersion(1, versionStateReleased)),
@@ -516,7 +441,7 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 				// The released v1 must stay immutable (same content_hash, no inconsistent result).
 				{
 					Config:          bbdStepConfig(t, 1, terraformBbdSupports...),
-					ConfigVariables: vars.withPreRunScript(`echo "changed for the second version"`).variables(),
+					ConfigVariables: With(vars, "pre_run_script", `echo "changed for the second version"`),
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectResourceAction(terraformBbdAddr, plancheck.ResourceActionUpdate),
@@ -542,7 +467,8 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 	// re-drafting together with an input change must reconcile the derived outputs without "Provider produced
 	// inconsistent result after apply", and must not change the already-released version.
 	t.Run("07_manual_computed_outputs", func(t *testing.T) {
-		vars := newBbdVars()
+		suffix := acctest.RandString(8)
+		vars := With(NewVariablesWithSuffix(suffix), "tag_suffix", suffix)
 
 		// Outputs are omitted, so every derived output is a non-override (assignment NONE, display_name = the
 		// input's) and prunes away: the tracked subset is the empty map, across the input change too.
@@ -557,7 +483,7 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 				// Step 1: Create draft v1 with outputs omitted -> outputs computed from inputs
 				{
 					Config:          bbdStepConfig(t, 7),
-					ConfigVariables: vars.variables(),
+					ConfigVariables: vars,
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("version_spec").AtMapKey("outputs"), baseOutputs),
 						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("version_latest"), expectedVersion(1, versionStateDraft)),
@@ -566,7 +492,7 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 				// Step 2: Release v1
 				{
 					Config:          bbdStepConfig(t, 7),
-					ConfigVariables: vars.released().variables(),
+					ConfigVariables: With(vars, "draft", false),
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("version_latest_release"), expectedVersion(1, versionStateReleased)),
 						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("version_spec").AtMapKey("outputs"), baseOutputs),
@@ -577,7 +503,7 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 				// Step file 8 is step file 7 plus the STATIC ticket input.
 				{
 					Config:          bbdStepConfig(t, 8),
-					ConfigVariables: vars.variables(),
+					ConfigVariables: vars,
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectResourceAction(manualBbdResAddr, plancheck.ResourceActionUpdate),
@@ -601,7 +527,8 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 	// or a content_hash flip, and state must hold only the tracked keys. A declared output must not set type
 	// (always derived) - covered by the validation subtest.
 	t.Run("12_manual_declared_outputs", func(t *testing.T) {
-		vars := newBbdVars()
+		suffix := acctest.RandString(8)
+		vars := With(NewVariablesWithSuffix(suffix), "tag_suffix", suffix)
 
 		expectedOutputs := knownvalue.MapExact(map[string]knownvalue.Check{
 			"approval": xknownvalue.MapExact(map[string]knownvalue.Check{
@@ -625,7 +552,7 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 				// Step 1: Create draft v1 with a full declared output set (bug 1: create reconciliation).
 				{
 					Config:          bbdStepConfig(t, 9),
-					ConfigVariables: vars.variables(),
+					ConfigVariables: vars,
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("version_spec").AtMapKey("outputs"), expectedOutputs),
 						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("version_latest"), expectedVersion(1, versionStateDraft)),
@@ -634,7 +561,7 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 				// Step 2: Release v1 (bug 2: content_hash must not flip during apply).
 				{
 					Config:          bbdStepConfig(t, 9),
-					ConfigVariables: vars.released().variables(),
+					ConfigVariables: With(vars, "draft", false),
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("version_latest_release"), expectedVersion(1, versionStateReleased)),
 						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("version_spec").AtMapKey("outputs"), expectedOutputs),
@@ -645,7 +572,7 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 				// version content_hash must not flip); released v1 stays immutable.
 				{
 					Config:          bbdStepConfig(t, 9),
-					ConfigVariables: vars.variables(),
+					ConfigVariables: vars,
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectResourceAction(manualBbdResAddr, plancheck.ResourceActionUpdate),
@@ -668,7 +595,8 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 	// a new override key on an existing resource, whose backend-derived display_name/type/display_order must
 	// be planned unknown rather than null (no prior state for that key).
 	t.Run("13_manual_output_override_update", func(t *testing.T) {
-		vars := newBbdVars()
+		suffix := acctest.RandString(8)
+		vars := With(NewVariablesWithSuffix(suffix), "tag_suffix", suffix)
 
 		initialOutputs := knownvalue.MapExact(map[string]knownvalue.Check{
 			"approval": xknownvalue.MapExact(map[string]knownvalue.Check{
@@ -711,7 +639,7 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 			Steps: []resource.TestStep{
 				{
 					Config:          bbdStepConfig(t, 10),
-					ConfigVariables: vars.variables(),
+					ConfigVariables: vars,
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("version_spec").AtMapKey("outputs"), initialOutputs),
 						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("version_latest"), expectedVersion(1, versionStateDraft)),
@@ -719,7 +647,7 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 				},
 				{
 					Config:          bbdStepConfig(t, 11),
-					ConfigVariables: vars.variables(),
+					ConfigVariables: vars,
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectResourceAction(manualBbdResAddr, plancheck.ResourceActionUpdate),
@@ -732,7 +660,7 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 				},
 				{
 					Config:          bbdStepConfig(t, 12),
-					ConfigVariables: vars.variables(),
+					ConfigVariables: vars,
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectResourceAction(manualBbdResAddr, plancheck.ResourceActionUpdate),
@@ -750,7 +678,8 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 	// Import must materialize exactly the diff-rule subset: with no prior state, the read-back prunes the
 	// backend's full one-per-input set to the tracked overrides, so the imported state equals the applied one.
 	t.Run("14_manual_output_import", func(t *testing.T) {
-		vars := newBbdVars()
+		suffix := acctest.RandString(8)
+		vars := With(NewVariablesWithSuffix(suffix), "tag_suffix", suffix)
 		var resourceUuid string
 
 		// Only region is a tracked override (assignment != NONE); approval is derived (NONE, display_name equal
@@ -768,7 +697,7 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 			Steps: []resource.TestStep{
 				{
 					Config:          bbdStepConfig(t, 13),
-					ConfigVariables: vars.variables(),
+					ConfigVariables: vars,
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("version_spec").AtMapKey("outputs"), expectedOutputs),
 						xknownvalue.Ref(manualBbdResAddr, "meshBuildingBlockDefinition", &resourceUuid),
@@ -777,7 +706,7 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 				{
 					// Command-style import (not a plannable import block, which does not support ImportStateVerify).
 					ImportState:                          true,
-					ConfigVariables:                      vars.variables(),
+					ConfigVariables:                      vars,
 					ImportStateIdFunc:                    func(_ *terraform.State) (string, error) { return resourceUuid, nil },
 					ResourceName:                         manualBbdResAddr,
 					ImportStateVerify:                    true,
@@ -791,21 +720,22 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 	// attribute mean the same thing to meshStack - name the building block after the definition - but
 	// Terraform tells them apart, so each has to survive a refresh without leaving a diff behind.
 	t.Run("15_display_name_template_lifecycle", func(t *testing.T) {
-		vars := newBbdVars()
+		suffix := acctest.RandString(8)
+		vars := With(NewVariablesWithSuffix(suffix), "tag_suffix", suffix)
 		nameTemplatePath := tfjsonpath.New("spec").AtMapKey("display_name_template")
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
 					Config:          bbdStepConfig(t, 3),
-					ConfigVariables: vars.withNameTemplate("Block for {{ region }}").variables(),
+					ConfigVariables: With(vars, "display_name_template", "Block for {{ region }}"),
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(manualBbdResAddr, nameTemplatePath, knownvalue.StringExact("Block for {{ region }}")),
 					},
 				},
 				{
 					Config:          bbdStepConfig(t, 3),
-					ConfigVariables: vars.withNameTemplate("Block for {{ region }} v2").variables(),
+					ConfigVariables: With(vars, "display_name_template", "Block for {{ region }} v2"),
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectResourceAction(manualBbdResAddr, plancheck.ResourceActionUpdate),
@@ -817,7 +747,7 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 				},
 				{
 					Config:          bbdStepConfig(t, 3),
-					ConfigVariables: vars.withNameTemplate("").variables(),
+					ConfigVariables: With(vars, "display_name_template", ""),
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PostApplyPostRefresh: []plancheck.PlanCheck{
 							plancheck.ExpectEmptyPlan(),
@@ -832,7 +762,7 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 					// refresh has to agree: a state that still held the old value would leave the same diff on
 					// every later plan.
 					Config:          bbdStepConfig(t, 3),
-					ConfigVariables: vars.variables(),
+					ConfigVariables: vars,
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PostApplyPostRefresh: []plancheck.PlanCheck{
 							plancheck.ExpectEmptyPlan(),
@@ -852,19 +782,20 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 	// disallows plaintext keys. Released versions are immutable, so the rotation must be rejected with
 	// a clear, actionable error instead.
 	t.Run("08_release_secret_rotation_rejected", func(t *testing.T) {
-		vars := newBbdVars().withSecret("v1", "plaintext-secret-v1")
+		suffix := acctest.RandString(8)
+		vars := With(NewVariablesWithSuffix(suffix), "tag_suffix", suffix, "secret_version", "v1", "secret_value", "plaintext-secret-v1")
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				// Create draft v1 with the sensitive input.
-				{Config: bbdStepConfig(t, 14, terraformBbdSupports...), ConfigVariables: vars.variables()},
+				{Config: bbdStepConfig(t, 14, terraformBbdSupports...), ConfigVariables: vars},
 				// Release v1, which makes its version_spec immutable.
-				{Config: bbdStepConfig(t, 14, terraformBbdSupports...), ConfigVariables: vars.released().variables()},
+				{Config: bbdStepConfig(t, 14, terraformBbdSupports...), ConfigVariables: With(vars, "draft", false)},
 				// Rotating the secret on the released version must be rejected, not reported as a
 				// content-hash failure.
 				{
 					Config:          bbdStepConfig(t, 14, terraformBbdSupports...),
-					ConfigVariables: vars.released().withSecret("v2", "plaintext-secret-v2").variables(),
+					ConfigVariables: With(vars, "draft", false, "secret_version", "v2", "secret_value", "plaintext-secret-v2"),
 					ExpectError:     regexp.MustCompile("Updating a version_spec in non-draft state is not allowed"),
 				},
 			},
@@ -874,19 +805,20 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 	// A non-sensitive input named "plaintext" is not a secret. The content hash disallows plaintext
 	// keys, and a key-name match used to reject an unrelated spec update on a released version.
 	t.Run("09_released_plaintext_named_input_is_not_a_secret", func(t *testing.T) {
-		vars := newBbdVars()
+		suffix := acctest.RandString(8)
+		vars := With(NewVariablesWithSuffix(suffix), "tag_suffix", suffix)
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				// Step 1: Create draft v1 with a non-sensitive input named "plaintext"
-				{Config: bbdStepConfig(t, 15, terraformBbdSupports...), ConfigVariables: vars.variables()},
+				{Config: bbdStepConfig(t, 15, terraformBbdSupports...), ConfigVariables: vars},
 				// Step 2: Release v1 (now immutable)
-				{Config: bbdStepConfig(t, 15, terraformBbdSupports...), ConfigVariables: vars.released().variables()},
+				{Config: bbdStepConfig(t, 15, terraformBbdSupports...), ConfigVariables: With(vars, "draft", false)},
 				// Step 3: Change only the description on the released version. version_spec is unchanged and
 				// carries no secret, so this must succeed - the old "plaintext" key match wrongly rejected it.
 				{
 					Config:          bbdStepConfig(t, 15, terraformBbdSupports...),
-					ConfigVariables: vars.released().withDescription("updated description, version_spec untouched").variables(),
+					ConfigVariables: With(vars, "draft", false, "description", "updated description, version_spec untouched"),
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(terraformBbdAddr, tfjsonpath.New("spec").AtMapKey("description"),
 							knownvalue.StringExact("updated description, version_spec untouched")),
@@ -899,17 +831,18 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 	// The counterpart to 08: re-drafting a released version while rotating the secret is allowed,
 	// because the rotation lands on a new draft rather than the immutable released version.
 	t.Run("10_redraft_with_secret_rotation_allowed", func(t *testing.T) {
-		vars := newBbdVars().withSecret("v1", "plaintext-secret-v1")
+		suffix := acctest.RandString(8)
+		vars := With(NewVariablesWithSuffix(suffix), "tag_suffix", suffix, "secret_version", "v1", "secret_value", "plaintext-secret-v1")
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
-				{Config: bbdStepConfig(t, 14, terraformBbdSupports...), ConfigVariables: vars.variables()},
-				{Config: bbdStepConfig(t, 14, terraformBbdSupports...), ConfigVariables: vars.released().variables()},
+				{Config: bbdStepConfig(t, 14, terraformBbdSupports...), ConfigVariables: vars},
+				{Config: bbdStepConfig(t, 14, terraformBbdSupports...), ConfigVariables: With(vars, "draft", false)},
 				// Flipping back to draft while rotating the secret cuts a new version v2, which is where
 				// the rotated secret lands.
 				{
 					Config:          bbdStepConfig(t, 14, terraformBbdSupports...),
-					ConfigVariables: vars.withSecret("v2", "plaintext-secret-v2").variables(),
+					ConfigVariables: With(vars, "secret_version", "v2", "secret_value", "plaintext-secret-v2"),
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(terraformBbdAddr, tfjsonpath.New("version_latest_release"), expectedVersion(1, versionStateReleased)),
 						statecheck.ExpectKnownValue(terraformBbdAddr, tfjsonpath.New("version_latest"), expectedVersion(2, versionStateDraft)),
@@ -922,7 +855,8 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 	// Re-drafting a released github definition with a different integration must leave the released
 	// version pinned to the first one.
 	t.Run("11_github_release_redraft_integration_change", func(t *testing.T) {
-		vars := newBbdVars()
+		suffix := acctest.RandString(8)
+		vars := With(NewVariablesWithSuffix(suffix), "tag_suffix", suffix)
 		releasedHashStable := statecheck.CompareValue(compare.ValuesSame())
 		releasedHashPath := tfjsonpath.New("version_latest_release").AtMapKey("content_hash")
 
@@ -933,14 +867,14 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 			Steps: []resource.TestStep{
 				{
 					Config:          bbdStepConfig(t, 2, supports...),
-					ConfigVariables: vars.variables(),
+					ConfigVariables: vars,
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(githubBbdAddr, tfjsonpath.New("version_latest"), expectedVersion(1, versionStateDraft)),
 					},
 				},
 				{
 					Config:          bbdStepConfig(t, 2, supports...),
-					ConfigVariables: vars.released().variables(),
+					ConfigVariables: With(vars, "draft", false),
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(githubBbdAddr, tfjsonpath.New("version_latest_release"), expectedVersion(1, versionStateReleased)),
 						releasedHashStable.AddStateValue(githubBbdAddr, releasedHashPath),
@@ -949,7 +883,7 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 				// Step file 16 points at integration B; the released v1 still pins A.
 				{
 					Config:          bbdStepConfig(t, 16, supports...),
-					ConfigVariables: vars.variables(),
+					ConfigVariables: vars,
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectResourceAction(githubBbdAddr, plancheck.ResourceActionUpdate),
@@ -973,17 +907,18 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 			t.Skip("relies on the backend injecting a restricted tag's default value on create")
 		}
 
-		vars := newBbdVars()
+		suffix := acctest.RandString(8)
+		vars := With(NewVariablesWithSuffix(suffix), "tag_suffix", suffix)
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
 					Config:          bbdStepConfig(t, 17, "tags"),
-					ConfigVariables: vars.variables(),
+					ConfigVariables: vars,
 					ConfigStateChecks: []statecheck.StateCheck{
 						// Only the declared tag remains; the injected restricted default is reconciled away.
 						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("metadata").AtMapKey("tags"), knownvalue.MapExact(map[string]knownvalue.Check{
-							bbdTagKeyPrefix + vars.suffix: knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("blue")}),
+							bbdTagKeyPrefix + suffix: knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("blue")}),
 						})),
 					},
 					ConfigPlanChecks: resource.ConfigPlanChecks{
@@ -997,15 +932,10 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 	t.Run("16_policies_across_implementation_change", func(t *testing.T) {
 		// github_workflows has no dry run, so it supports drift reconciliation only with automatic
 		// approval, and no approval gate at all. terraform supports every policy.
-		vars := newBbdVars()
-		githubPolicies := vars.withPolicies(
-			bbdApprovalPolicies(),
-			bbdSchedule("DRIFT_RECONCILIATION", true),
-		)
-		terraformPolicies := vars.withPolicies(
-			bbdApprovalPolicies("manual_triggers", "version_upgrade"),
-			bbdSchedule("DRIFT_DETECTION", false),
-		)
+		suffix := acctest.RandString(8)
+		vars := With(NewVariablesWithSuffix(suffix), "tag_suffix", suffix)
+		githubPolicies := With(vars, "approval_policies", bbdApprovalPolicies(), "schedule", bbdSchedule("DRIFT_RECONCILIATION", true))
+		terraformPolicies := With(vars, "approval_policies", bbdApprovalPolicies("manual_triggers", "version_upgrade"), "schedule", bbdSchedule("DRIFT_DETECTION", false))
 
 		checkPolicies := func(approvalPolicies map[string]bool, mode enum.Entry[client.MeshBuildingBlockScheduleMode], automaticApproval bool) []statecheck.StateCheck {
 			return []statecheck.StateCheck{
@@ -1021,7 +951,7 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 				// schedule follows once the initial version carries the github_workflows implementation.
 				{
 					Config:          bbdStepConfig(t, 18, githubBbdSupports...),
-					ConfigVariables: githubPolicies.variables(),
+					ConfigVariables: githubPolicies,
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectResourceAction(githubBbdAddr, plancheck.ResourceActionCreate),
@@ -1034,7 +964,7 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 				// with the implementation swapped.
 				{
 					Config:          bbdStepConfig(t, 19, githubBbdSupports...),
-					ConfigVariables: terraformPolicies.variables(),
+					ConfigVariables: terraformPolicies,
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectResourceAction(githubBbdAddr, plancheck.ResourceActionUpdate),
@@ -1048,7 +978,7 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 				// nor drift detection, so they have to be gone before the version switches back to it.
 				{
 					Config:          bbdStepConfig(t, 18, githubBbdSupports...),
-					ConfigVariables: githubPolicies.variables(),
+					ConfigVariables: githubPolicies,
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectResourceAction(githubBbdAddr, plancheck.ResourceActionUpdate),
@@ -1067,29 +997,27 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 	// therefore report meshStack's policy rejection rather than the immutability error, and would store
 	// an approval gate for a version that stays as it is.
 	t.Run("17_released_version_rejected_before_policy_write", func(t *testing.T) {
-		vars := newBbdVars()
+		suffix := acctest.RandString(8)
+		vars := With(NewVariablesWithSuffix(suffix), "tag_suffix", suffix)
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				// Create draft v1 on manual, which accepts no policy at all.
-				{Config: bbdStepConfig(t, 3), ConfigVariables: vars.variables()},
+				{Config: bbdStepConfig(t, 3), ConfigVariables: vars},
 				// Release v1, which makes its version_spec immutable.
-				{Config: bbdStepConfig(t, 3), ConfigVariables: vars.released().variables()},
+				{Config: bbdStepConfig(t, 3), ConfigVariables: With(vars, "draft", false)},
 				// Switch the implementation to terraform and enable an approval gate on the released version.
 				// terraform supports the gate, so the plan-time validators pass and this reaches Update, where
 				// the immutable version_spec is what must be reported.
 				{
-					Config: bbdStepConfig(t, 20),
-					ConfigVariables: vars.released().withPolicies(
-						bbdApprovalPolicies("manual_triggers"),
-						nil,
-					).variables(),
-					ExpectError: regexp.MustCompile(`Updating a version_spec in non-draft \(released\) state is not allowed`),
+					Config:          bbdStepConfig(t, 20),
+					ConfigVariables: With(vars, "draft", false, "approval_policies", bbdApprovalPolicies("manual_triggers")),
+					ExpectError:     regexp.MustCompile(`Updating a version_spec in non-draft \(released\) state is not allowed`),
 				},
 				// The rejected apply must not have written the approval gate. Re-planning the configuration
 				// that was last applied refreshes from meshStack, so a stored policy change shows up here as a
 				// non-empty plan.
-				{Config: bbdStepConfig(t, 3), ConfigVariables: vars.released().variables(), PlanOnly: true},
+				{Config: bbdStepConfig(t, 3), ConfigVariables: With(vars, "draft", false), PlanOnly: true},
 			},
 		})
 	})
@@ -1943,7 +1871,7 @@ resource "meshstack_building_block_definition" "test" {
 }
 
 func TestAccBuildingBlockDefinitionSupportedPlatformKinds(t *testing.T) {
-	vars := SuffixVariables(acctest.RandString(8))
+	vars := NewVariablesWithSuffix(acctest.RandString(8))
 	platformAddr := platformVariants[7].addr
 	prerequisites := platformStepConfig(t, platformVariants[7])
 
@@ -2440,11 +2368,4 @@ resource "meshstack_building_block_definition" "test" {
 			})
 		})
 	}
-}
-
-// withPreRunScript returns v with the terraform implementation's pre-run script changed, which is a
-// version_spec change and therefore cuts a new draft.
-func (v bbdVars) withPreRunScript(script string) bbdVars {
-	v.preRunScript = script
-	return v
 }

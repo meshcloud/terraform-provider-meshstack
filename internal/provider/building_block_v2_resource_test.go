@@ -5,7 +5,6 @@ import (
 	"strings"
 	"testing"
 
-	tfconfig "github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
@@ -24,15 +23,6 @@ const (
 	bbv2SensitiveAddr          = "meshstack_building_block_v2.sensitive"
 	bbv2SensitiveUserInputAddr = "meshstack_building_block_v2.sensitive_user_input"
 )
-
-// bbv2Variables carries the run suffix plus the loopback repository URL the terraform-backed
-// definitions clone from.
-func bbv2Variables(t *testing.T) tfconfig.Variables {
-	t.Helper()
-	vars := SuffixVariables(acctest.RandString(8))
-	vars["terraform_repository_url"] = tfconfig.StringVariable(terraformTestdataRepoURL(t))
-	return vars
-}
 
 // assertIsHashNotPlaintext validates that a surfaced sensitive-input value is the backend's secret
 // hash and not the leaked plaintext. It guards against the toResourceModel fallback that stuffs a
@@ -66,7 +56,7 @@ func TestAccBuildingBlockV2(t *testing.T) {
 			Steps: []resource.TestStep{
 				{
 					Config:          config,
-					ConfigVariables: SuffixVariables(acctest.RandString(8)),
+					ConfigVariables: NewVariablesWithSuffix(acctest.RandString(8)),
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectResourceAction(bbv2WorkspaceAddr, plancheck.ResourceActionCreate),
@@ -88,7 +78,7 @@ func TestAccBuildingBlockV2(t *testing.T) {
 			Steps: []resource.TestStep{
 				{
 					Config:          config,
-					ConfigVariables: SuffixVariables(acctest.RandString(8)),
+					ConfigVariables: NewVariablesWithSuffix(acctest.RandString(8)),
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectResourceAction(bbv2TenantAddr, plancheck.ResourceActionCreate),
@@ -116,7 +106,7 @@ func TestAccBuildingBlockV2(t *testing.T) {
 			Steps: []resource.TestStep{
 				{
 					Config:          config,
-					ConfigVariables: bbv2Variables(t),
+					ConfigVariables: With(NewVariablesWithSuffix(acctest.RandString(8)), "terraform_repository_url", terraformTestdataRepoURL(t)),
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectResourceAction(bbv2SensitiveAddr, plancheck.ResourceActionCreate),
@@ -152,7 +142,7 @@ func TestAccBuildingBlockV2(t *testing.T) {
 			Steps: []resource.TestStep{
 				{
 					Config:          config,
-					ConfigVariables: bbv2Variables(t),
+					ConfigVariables: With(NewVariablesWithSuffix(acctest.RandString(8)), "terraform_repository_url", terraformTestdataRepoURL(t)),
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectResourceAction(bbv2SensitiveUserInputAddr, plancheck.ResourceActionCreate),

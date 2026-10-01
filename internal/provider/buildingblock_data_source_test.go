@@ -27,7 +27,7 @@ func TestAccBuildingblockDataSource(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:          config,
-				ConfigVariables: SuffixVariables(acctest.RandString(8)),
+				ConfigVariables: NewVariablesWithSuffix(acctest.RandString(8)),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(buildingBlockV1DataSourceAddr, tfjsonpath.New("metadata").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
 					statecheck.ExpectKnownValue(buildingBlockV1DataSourceAddr, tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("my-buildingblock")),

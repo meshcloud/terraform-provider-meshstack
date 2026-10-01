@@ -26,7 +26,7 @@ func TestAccTagDefinitionDataSource(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:          config,
-				ConfigVariables: SuffixVariables(suffix),
+				ConfigVariables: NewVariablesWithSuffix(suffix),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(tagDefinitionDataSourceAddr, tfjsonpath.New("name"), knownvalue.StringExact("meshProject."+projectTagKeyPrefix+suffix)),
 				},

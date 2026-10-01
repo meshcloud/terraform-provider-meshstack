@@ -2,11 +2,9 @@ package provider
 
 import (
 	_ "embed"
-	"maps"
 	"regexp"
 	"testing"
 
-	tfconfig "github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
@@ -40,19 +38,12 @@ func runnerStepConfig(t *testing.T, index int) string {
 	)
 }
 
-// runnerVariables carries the run suffix plus the real public key the step files read.
-func runnerVariables(suffix string) tfconfig.Variables {
-	vars := SuffixVariables(suffix)
-	vars["runner_public_key"] = tfconfig.StringVariable(runnerPublicKey)
-	return vars
-}
-
 func TestAccBuildingBlockRunnerResource(t *testing.T) {
 	t.Parallel()
 
 	t.Run("basic", func(t *testing.T) {
 		suffix := acctest.RandString(8)
-		vars := runnerVariables(suffix)
+		vars := With(NewVariablesWithSuffix(suffix), "runner_public_key", runnerPublicKey)
 		var runnerUuid string
 		var replacedRunnerUuid string
 
@@ -122,7 +113,7 @@ func TestAccBuildingBlockRunnerResource(t *testing.T) {
 			Steps: []resource.TestStep{
 				{
 					Config:          runnerStepConfig(t, 4),
-					ConfigVariables: runnerVariables(acctest.RandString(8)),
+					ConfigVariables: With(NewVariablesWithSuffix(acctest.RandString(8)), "runner_public_key", runnerPublicKey),
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectResourceAction(buildingBlockRunnerAddr, plancheck.ResourceActionCreate),
@@ -150,9 +141,8 @@ func TestAccBuildingBlockRunnerResource(t *testing.T) {
 	t.Run("wif_subject_template", func(t *testing.T) {
 		exampleTemplate := "system:serviceaccount:namespace:workspace.{{ workspaceIdentifier }}.buildingblockdefinition.{{ buildingBlockDefinitionUuid }}"
 		updatedTemplate := "system:serviceaccount:namespace:bbd.{{ buildingBlockDefinitionUuid }}"
-		vars := runnerVariables(acctest.RandString(8))
-		updatedVars := maps.Clone(vars)
-		updatedVars["subject_template"] = tfconfig.StringVariable(updatedTemplate)
+		vars := With(NewVariablesWithSuffix(acctest.RandString(8)), "runner_public_key", runnerPublicKey)
+		updatedVars := With(vars, "subject_template", updatedTemplate)
 		var runnerUuid string
 
 		ApplyAndTest(t, resource.TestCase{
@@ -197,7 +187,7 @@ func TestAccBuildingBlockRunnerResource(t *testing.T) {
 	})
 
 	t.Run("wif_validation", func(t *testing.T) {
-		vars := runnerVariables(acctest.RandString(8))
+		vars := With(NewVariablesWithSuffix(acctest.RandString(8)), "runner_public_key", runnerPublicKey)
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
@@ -225,7 +215,7 @@ func TestAccBuildingBlockRunnerResource(t *testing.T) {
 			t.Skip("mock-only test: PUBLIC restriction may require admin permissions in real meshStack")
 		}
 
-		vars := runnerVariables(acctest.RandString(8))
+		vars := With(NewVariablesWithSuffix(acctest.RandString(8)), "runner_public_key", runnerPublicKey)
 		var runnerUuid string
 		var replacedRunnerUuid string
 

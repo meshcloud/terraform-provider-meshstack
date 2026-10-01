@@ -20,7 +20,7 @@ const apiKeyResourceAddr = "meshstack_api_key.example"
 
 func TestAccApiKey(t *testing.T) {
 	suffix := acctest.RandString(8)
-	vars := SuffixVariables(suffix)
+	vars := NewVariablesWithSuffix(suffix)
 
 	stepConfig := func(index int) string {
 		return examples.JoinTestStepConfigs(

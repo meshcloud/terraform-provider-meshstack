@@ -24,7 +24,7 @@ func TestAccLandingZoneDataSource(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:          config,
-				ConfigVariables: SuffixVariables(suffix),
+				ConfigVariables: NewVariablesWithSuffix(suffix),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(landingZoneDataSourceAddr, tfjsonpath.New("metadata").AtMapKey("name"), knownvalue.StringExact("test-lz-"+suffix)),
 					statecheck.ExpectKnownValue(landingZoneDataSourceAddr, tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("My Custom Landing Zone")),

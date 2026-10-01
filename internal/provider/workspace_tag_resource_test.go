@@ -48,7 +48,7 @@ func TestAccWorkspaceTag(t *testing.T) {
 		// resource's Read only looks at its own key, so a clobbered tag surfaces as its resource dropping
 		// out of state — hence the empty-plan checks.
 		suffix := acctest.RandString(8)
-		vars := SuffixVariables(suffix)
+		vars := NewVariablesWithSuffix(suffix)
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
@@ -97,7 +97,7 @@ func TestAccWorkspaceTag(t *testing.T) {
 			Steps: []resource.TestStep{
 				{
 					Config:          config,
-					ConfigVariables: SuffixVariables(acctest.RandString(8)),
+					ConfigVariables: NewVariablesWithSuffix(acctest.RandString(8)),
 					ExpectError:     regexp.MustCompile(`Workspace .* not found`),
 				},
 			},
@@ -105,7 +105,7 @@ func TestAccWorkspaceTag(t *testing.T) {
 	})
 
 	suffix := acctest.RandString(8)
-	vars := SuffixVariables(suffix)
+	vars := NewVariablesWithSuffix(suffix)
 
 	ApplyAndTest(t, resource.TestCase{
 		Steps: []resource.TestStep{

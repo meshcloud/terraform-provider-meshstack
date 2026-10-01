@@ -2,11 +2,10 @@ package provider
 
 import (
 	"fmt"
-	"maps"
 	"strings"
 	"testing"
 
-	tfconfig "github.com/hashicorp/terraform-plugin-testing/config"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
@@ -70,8 +69,8 @@ func expectedVersions(wif knownvalue.Check, numbers ...int64) knownvalue.Check {
 }
 
 func TestAccBuildingBlockDefinitionWif(t *testing.T) {
-	vars := newBbdVars().variables()
-	vars["runner_public_key"] = tfconfig.StringVariable(runnerPublicKey)
+	suffix := acctest.RandString(8)
+	vars := With(NewVariablesWithSuffix(suffix), "tag_suffix", suffix, "runner_public_key", runnerPublicKey)
 	versionsPath := tfjsonpath.New("versions")
 	latestWifPath := tfjsonpath.New("version_latest").AtMapKey("workload_identity_federation")
 	latestSubjectPath := latestWifPath.AtMapKey("subject")
@@ -84,14 +83,10 @@ func TestAccBuildingBlockDefinitionWif(t *testing.T) {
 	otherRunnerSubject := resolvedSubject("system:serviceaccount:other-namespace:bbd.")
 	otherRunnerWif := resolvedWif(otherWifRunnerIssuer, otherRunnerSubject, gcp)
 
-	renamedVars := maps.Clone(vars)
-	renamedVars["display_name"] = tfconfig.StringVariable("Example Building Block, renamed")
-	releasedVars := maps.Clone(renamedVars)
-	releasedVars["draft"] = tfconfig.BoolVariable(false)
-	redraftedVars := maps.Clone(renamedVars)
-	redraftedVars["description"] = tfconfig.StringVariable("An updated building block definition")
-	replacedVars := maps.Clone(redraftedVars)
-	replacedVars["only_apply_once_per_tenant"] = tfconfig.BoolVariable(false)
+	renamedVars := With(vars, "display_name", "Example Building Block, renamed")
+	releasedVars := With(renamedVars, "draft", false)
+	redraftedVars := With(renamedVars, "description", "An updated building block definition")
+	replacedVars := With(redraftedVars, "only_apply_once_per_tenant", false)
 
 	// The subject carries the definition's uuid, so the replacement has to present a different one.
 	var subjectBeforeReplacement string

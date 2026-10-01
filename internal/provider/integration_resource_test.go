@@ -128,7 +128,7 @@ func TestAccIntegrationResource(t *testing.T) {
 
 	t.Run("01_github", func(t *testing.T) {
 		suffix := acctest.RandString(8)
-		vars := SuffixVariables(suffix)
+		vars := NewVariablesWithSuffix(suffix)
 		var resourceUuid string
 
 		ApplyAndTest(t, resource.TestCase{
@@ -141,7 +141,7 @@ func TestAccIntegrationResource(t *testing.T) {
 
 	t.Run("02_azure_devops", func(t *testing.T) {
 		suffix := acctest.RandString(8)
-		vars := SuffixVariables(suffix)
+		vars := NewVariablesWithSuffix(suffix)
 		var resourceUuid string
 
 		ApplyAndTest(t, resource.TestCase{
@@ -193,7 +193,7 @@ func TestAccIntegrationResource(t *testing.T) {
 
 	t.Run("03_gitlab", func(t *testing.T) {
 		suffix := acctest.RandString(8)
-		vars := SuffixVariables(suffix)
+		vars := NewVariablesWithSuffix(suffix)
 		var resourceUuid string
 
 		ApplyAndTest(t, resource.TestCase{
@@ -205,7 +205,7 @@ func TestAccIntegrationResource(t *testing.T) {
 	})
 
 	t.Run("04_entra_id", func(t *testing.T) {
-		vars := SuffixVariables(acctest.RandString(8))
+		vars := NewVariablesWithSuffix(acctest.RandString(8))
 		var resourceUuid string
 
 		steps := integrationCreateUpdateSteps(t, entraIDIntegrationAddr, AdminWorkspaceIdentifier, "04_entra_id", "Entra ID Integration", 8, 9, vars, &resourceUuid)
@@ -267,7 +267,7 @@ func TestAccIntegrationResource(t *testing.T) {
 			t.Skip("mock-only test: a fixed idp_alias cannot be re-adopted across runs on a real meshStack")
 		}
 
-		vars := SuffixVariables(acctest.RandString(8))
+		vars := NewVariablesWithSuffix(acctest.RandString(8))
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
@@ -396,7 +396,7 @@ func checkIntegrationStatus(entraId knownvalue.Check) knownvalue.Check {
 func TestAccIntegrationResourceEmptyConfig(t *testing.T) {
 	ApplyAndTest(t, resource.TestCase{Steps: []resource.TestStep{{
 		Config:          integrationStepConfig(t, 14),
-		ConfigVariables: SuffixVariables(acctest.RandString(8)),
+		ConfigVariables: NewVariablesWithSuffix(acctest.RandString(8)),
 		ExpectError:     regexp.MustCompile(`exactly one is\s+required`),
 	}}})
 }

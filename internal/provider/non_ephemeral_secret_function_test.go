@@ -41,7 +41,7 @@ func TestAccNonEphemeralSecretFunction(t *testing.T) {
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{{
 				Config:          config,
-				ConfigVariables: SuffixVariables(acctest.RandString(8)),
+				ConfigVariables: NewVariablesWithSuffix(acctest.RandString(8)),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectUnknownValue(azureDevopsIntegrationAddr, azureDevopsPatPath().AtMapKey("secret_version")),

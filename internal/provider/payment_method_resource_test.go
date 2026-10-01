@@ -43,7 +43,7 @@ func TestAccPaymentMethod(t *testing.T) {
 			Steps: []resource.TestStep{
 				{
 					Config:          paymentMethodStepConfig(t, 1, "prerequisites", "undeclared-tag"),
-					ConfigVariables: SuffixVariables(acctest.RandString(8)),
+					ConfigVariables: NewVariablesWithSuffix(acctest.RandString(8)),
 					ConfigStateChecks: []statecheck.StateCheck{
 						// Only the single declared tag remains; the undeclared property's empty-list
 						// superset entry was reconciled away.
@@ -58,7 +58,7 @@ func TestAccPaymentMethod(t *testing.T) {
 	})
 
 	suffix := acctest.RandString(8)
-	vars := SuffixVariables(suffix)
+	vars := NewVariablesWithSuffix(suffix)
 
 	ApplyAndTest(t, resource.TestCase{
 		Steps: []resource.TestStep{

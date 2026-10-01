@@ -3,13 +3,11 @@ package provider
 import (
 	"context"
 	"fmt"
-	"maps"
 	"regexp"
 	"testing"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-testing/compare"
-	tfconfig "github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
@@ -36,46 +34,6 @@ const (
 	bbBbdAddr                    = "meshstack_building_block_definition.example"
 	bbSensitiveBbdAddr           = "meshstack_building_block_definition.sensitive_user_input"
 )
-
-// bbVariables is a run's suffix plus whatever scalars its steps dial on the building block step
-// files. Dialling returns a copy, so a value one step introduces never reaches the variables an
-// earlier step already ran with — including an import step, whose plan the framework builds from the
-// preceding step's config.
-type bbVariables tfconfig.Variables
-
-func newBbVariables() bbVariables {
-	return bbVariables(SuffixVariables(acctest.RandString(8)))
-}
-
-func (v bbVariables) with(name string, value tfconfig.Variable) bbVariables {
-	dialled := make(bbVariables, len(v)+1)
-	maps.Copy(dialled, v)
-	dialled[name] = value
-	return dialled
-}
-
-func (v bbVariables) withString(name, value string) bbVariables {
-	return v.with(name, tfconfig.StringVariable(value))
-}
-
-// withAll folds in variables a step does not dial but still has to pass, such as the credentials of
-// a key an earlier step minted. Those arrive as pointers filled in during that step, so copying the
-// map here keeps them live.
-func (v bbVariables) withAll(others tfconfig.Variables) bbVariables {
-	dialled := make(bbVariables, len(v)+len(others))
-	maps.Copy(dialled, v)
-	maps.Copy(dialled, bbVariables(others))
-	return dialled
-}
-
-// withRepoURL points the terraform-backed definitions at the committed bare repo served over
-// loopback git smart-HTTP, so the real tf-block-runner clones it and runs OpenTofu offline.
-func (v bbVariables) withRepoURL(t *testing.T) bbVariables {
-	t.Helper()
-	return v.withString("terraform_repository_url", terraformTestdataRepoURL(t))
-}
-
-func (v bbVariables) variables() tfconfig.Variables { return tfconfig.Variables(v) }
 
 // bbWorkspaceStepConfig is a workspace building block step with the definition it instantiates and
 // the workspace both live in. The support names pick that definition, and anything else the step
@@ -168,14 +126,14 @@ func TestAccBuildingBlock(t *testing.T) {
 	// mock-only: it asserts a provider-side plan decision (RequiresReplaceIf), and the real backend
 	// rejects the synthetic parent-BB UUID before the plan can be observed.
 	t.Run("01_workspace_lifecycle", func(t *testing.T) {
-		vars := newBbVariables()
+		vars := NewVariablesWithSuffix(acctest.RandString(8))
 		// Renaming display_name must be an in-place Update and must not change anything else.
-		renamedVars := vars.withString("bb_display_name", "my-workspace-building-block-renamed")
-		updatedInputsVars := renamedVars.withString("bb_environment", "staging")
+		renamedVars := With(vars, "bb_display_name", "my-workspace-building-block-renamed")
+		updatedInputsVars := With(renamedVars, "bb_environment", "staging")
 		// content_hash tracks the BBD version's content; setting it, then changing it, simulates the
 		// BBD being updated and must trigger a rerun even though the version uuid is unchanged.
-		contentHashV1Vars := updatedInputsVars.withString("bb_content_hash", "v1")
-		contentHashV2Vars := updatedInputsVars.withString("bb_content_hash", "v2")
+		contentHashV1Vars := With(updatedInputsVars, "bb_content_hash", "v1")
+		contentHashV2Vars := With(updatedInputsVars, "bb_content_hash", "v2")
 
 		config := bbWorkspaceStepConfig(t, 1, "01_workspace")
 		// Step file 5 is step file 1 with the whole version object behind the ref plus an explicit
@@ -188,7 +146,7 @@ func TestAccBuildingBlock(t *testing.T) {
 			Steps: []resource.TestStep{
 				{
 					Config:          config,
-					ConfigVariables: vars.variables(),
+					ConfigVariables: vars,
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectResourceAction(buildingBlockWorkspaceAddr, plancheck.ResourceActionCreate),
@@ -211,7 +169,7 @@ func TestAccBuildingBlock(t *testing.T) {
 						return rs.Primary.Attributes["metadata.uuid"], nil
 					},
 					ResourceName:    buildingBlockWorkspaceAddr,
-					ConfigVariables: vars.variables(),
+					ConfigVariables: vars,
 				},
 				{
 					// The refreshed plan must be empty: unconfigured optional USER_INPUTs that the backend
@@ -219,13 +177,13 @@ func TestAccBuildingBlock(t *testing.T) {
 					// asserts an empty plan. Runs in both modes — the mock materializes the same null rows,
 					// so the check holds there too and we keep mock/acceptance behaviour in lock-step.
 					Config:          config,
-					ConfigVariables: vars.variables(),
+					ConfigVariables: vars,
 					PlanOnly:        true,
 				},
 				{
 					// Rename only display_name → in-place Update, never Replace.
 					Config:          config,
-					ConfigVariables: renamedVars.variables(),
+					ConfigVariables: renamedVars,
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectResourceAction(buildingBlockWorkspaceAddr, plancheck.ResourceActionUpdate),
@@ -238,7 +196,7 @@ func TestAccBuildingBlock(t *testing.T) {
 				{
 					// Change an input value → in-place Update.
 					Config:          config,
-					ConfigVariables: updatedInputsVars.variables(),
+					ConfigVariables: updatedInputsVars,
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectResourceAction(buildingBlockWorkspaceAddr, plancheck.ResourceActionUpdate),
@@ -251,7 +209,7 @@ func TestAccBuildingBlock(t *testing.T) {
 				{
 					// Set initial content_hash to track BBD version "v1".
 					Config:          contentHashConfig,
-					ConfigVariables: contentHashV1Vars.variables(),
+					ConfigVariables: contentHashV1Vars,
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectResourceAction(buildingBlockWorkspaceAddr, plancheck.ResourceActionUpdate),
@@ -264,7 +222,7 @@ func TestAccBuildingBlock(t *testing.T) {
 				{
 					// Bumping content_hash "v1"→"v2" simulates a BBD content update and triggers a rerun.
 					Config:          contentHashConfig,
-					ConfigVariables: contentHashV2Vars.variables(),
+					ConfigVariables: contentHashV2Vars,
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectResourceAction(buildingBlockWorkspaceAddr, plancheck.ResourceActionUpdate),
@@ -283,7 +241,7 @@ func TestAccBuildingBlock(t *testing.T) {
 						return !IsMockClientTest(), nil
 					},
 					Config:          withParentsConfig,
-					ConfigVariables: contentHashV2Vars.variables(),
+					ConfigVariables: contentHashV2Vars,
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectResourceAction(buildingBlockWorkspaceAddr, plancheck.ResourceActionDestroyBeforeCreate),
@@ -301,7 +259,7 @@ func TestAccBuildingBlock(t *testing.T) {
 	// holds in both modes — the mock hashes any sensitive plaintext just like the backend — so no
 	// mock/acceptance branch is needed here.
 	t.Run("02_tenant", func(t *testing.T) {
-		vars := newBbVariables().withRepoURL(t)
+		vars := With(NewVariablesWithSuffix(acctest.RandString(8)), "terraform_repository_url", terraformTestdataRepoURL(t))
 		config := examples.JoinTestStepConfigs(
 			examples.Resource.TestStepConfig(t, "building_block", 4, "02_tenant", "variables"),
 			tenantStepConfig(t, 1, 8, 1),
@@ -330,7 +288,7 @@ func TestAccBuildingBlock(t *testing.T) {
 			Steps: []resource.TestStep{
 				{
 					Config:          config,
-					ConfigVariables: vars.variables(),
+					ConfigVariables: vars,
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectResourceAction(buildingBlockTenantAddr, plancheck.ResourceActionCreate),
@@ -362,7 +320,7 @@ func TestAccBuildingBlock(t *testing.T) {
 						return rs.Primary.Attributes["metadata.uuid"], nil
 					},
 					ResourceName:    buildingBlockTenantAddr,
-					ConfigVariables: vars.variables(),
+					ConfigVariables: vars,
 				},
 			},
 		})
@@ -373,7 +331,7 @@ func TestAccBuildingBlock(t *testing.T) {
 	// moveFromV2 leaves target_ref/version_ref to be filled by the post-move refresh-Read, so the
 	// RequiresReplace modifiers see equal values and do not fire.
 	t.Run("03_workspace_moved_from_v2", func(t *testing.T) {
-		vars := newBbVariables()
+		vars := NewVariablesWithSuffix(acctest.RandString(8))
 		// The v2 block and the v3 block it moves to run on the same definition, so both steps compose the
 		// v2 example's definition.
 		v2Config := examples.JoinTestStepConfigs(
@@ -394,7 +352,7 @@ func TestAccBuildingBlock(t *testing.T) {
 			Steps: []resource.TestStep{
 				{
 					Config:          v2Config,
-					ConfigVariables: vars.variables(),
+					ConfigVariables: vars,
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectResourceAction(bbv2WorkspaceAddr, plancheck.ResourceActionCreate),
@@ -407,7 +365,7 @@ func TestAccBuildingBlock(t *testing.T) {
 				{
 					// The move must plan as an in-place Update; a regression to Replace fails here.
 					Config:          examples.JoinTestStepConfigs(v3Config, movedConfig),
-					ConfigVariables: vars.variables(),
+					ConfigVariables: vars,
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectResourceAction(buildingBlockWorkspaceAddr, plancheck.ResourceActionUpdate),
@@ -426,7 +384,7 @@ func TestAccBuildingBlock(t *testing.T) {
 	// evaluate. The move step's PreConfig awaits the v1 run's SUCCEEDED first (see
 	// awaitBuildingBlockV1Succeeded).
 	t.Run("04_tenant_moved_from_v1", func(t *testing.T) {
-		vars := newBbVariables()
+		vars := NewVariablesWithSuffix(acctest.RandString(8))
 		// Dedicated migration fixtures (manual impl, no sensitive inputs): the v1 legacy resource cannot
 		// carry sensitive inputs, so this test stays decoupled from the terraform + sensitive _02_tenant
 		// showcase, which both the v1 and v3 sides would otherwise have to satisfy.
@@ -451,7 +409,7 @@ func TestAccBuildingBlock(t *testing.T) {
 			Steps: []resource.TestStep{
 				{
 					Config:          v1Config,
-					ConfigVariables: vars.variables(),
+					ConfigVariables: vars,
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectResourceAction(buildingBlockV1ResourceAddr, plancheck.ResourceActionCreate),
@@ -473,7 +431,7 @@ func TestAccBuildingBlock(t *testing.T) {
 						}
 					},
 					Config:          examples.JoinTestStepConfigs(v3Config, movedConfig),
-					ConfigVariables: vars.variables(),
+					ConfigVariables: vars,
 					// Verified against a live backend (Plan: 0 add, 1 change, 0 destroy; metadata.uuid
 					// preserved across the move). A regression to Replace fails here.
 					ConfigPlanChecks: resource.ConfigPlanChecks{
@@ -499,12 +457,14 @@ func TestAccBuildingBlock(t *testing.T) {
 		// Workspace A owns the BBD (which declares `size` as PLATFORM_OPERATOR_MANUAL_INPUT) and the API
 		// key used to set the operator input. Workspace B is the consumer: the building block lives there,
 		// across the workspace boundary from the definition owner.
-		vars := newBbVariables()
-		renamedVars := vars.withString("bb_name", "updated-name")
+		vars := NewVariablesWithSuffix(acctest.RandString(8))
+		var apiKeyClientId, apiKeyClientSecret lazyVariable
+		keyVars := With(vars, "apikey_client_id", &apiKeyClientId, "apikey_client_secret", &apiKeyClientSecret)
+		renamedVars := With(keyVars, "bb_name", "updated-name")
 		// v2 of the definition adds a defaulted platform-operator input `tier`. Re-draft (new v2 draft;
 		// version_latest_release still v1) then re-release (v2 released) mirror the version dance in 06, so
 		// the upgrade steps below prove the backend applies an operator-input default on upgrade.
-		redraftVars := renamedVars.with("bbd_draft", tfconfig.BoolVariable(true))
+		redraftVars := With(renamedVars, "bbd_draft", true)
 
 		// Step 1 sets up the infrastructure and mints the key (default/admin provider). API key 7 is the
 		// MANAGED_BUILDINGBLOCK_SAVE key whose cross-workspace authority is the capability under test.
@@ -537,17 +497,12 @@ func TestAccBuildingBlock(t *testing.T) {
 			)
 		}
 
-		var apiKeyClientId, apiKeyClientSecret lazyVariable
-		creds := tfconfig.Variables{
-			"apikey_client_id":     &apiKeyClientId,
-			"apikey_client_secret": &apiKeyClientSecret,
-		}
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
 					// Mint the MANAGED key (default/admin provider) and capture its credentials.
 					Config:          step1Config,
-					ConfigVariables: vars.variables(),
+					ConfigVariables: vars,
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(apiKeyResourceAddr, tfjsonpath.New("status").AtMapKey("client_id"), xknownvalue.NotEmptyString(func(clientId string) error {
 							apiKeyClientId = lazyVariable(clientId)
@@ -563,7 +518,7 @@ func TestAccBuildingBlock(t *testing.T) {
 					// Create without the operator input → on a real backend the block parks
 					// WAITING_FOR_OPERATOR_INPUT (the provider surfaces a warning, not an error).
 					Config:          createConfig,
-					ConfigVariables: vars.withAll(creds).variables(),
+					ConfigVariables: keyVars,
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectResourceAction(buildingBlockWorkspaceAddr, plancheck.ResourceActionCreate),
@@ -578,7 +533,7 @@ func TestAccBuildingBlock(t *testing.T) {
 					// Supplying `size` via PUT resumes provisioning; the provider must poll THROUGH the
 					// transient WAITING to the resulting SUCCEEDED run instead of returning on the stale WAITING.
 					Config:          suppliedConfig,
-					ConfigVariables: vars.withAll(creds).variables(),
+					ConfigVariables: keyVars,
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectResourceAction(buildingBlockWorkspaceAddr, plancheck.ResourceActionUpdate),
@@ -593,7 +548,7 @@ func TestAccBuildingBlock(t *testing.T) {
 				{
 					// Changing a consumer input is an in-place Update; the operator input stays put.
 					Config:          suppliedConfig,
-					ConfigVariables: renamedVars.withAll(creds).variables(),
+					ConfigVariables: renamedVars,
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectResourceAction(buildingBlockWorkspaceAddr, plancheck.ResourceActionUpdate),
@@ -609,7 +564,7 @@ func TestAccBuildingBlock(t *testing.T) {
 					// Re-draft the BBD → v2 draft (adds the defaulted operator input);
 					// version_latest_release still resolves to v1, so the block is a no-op.
 					Config:          upgradeConfig,
-					ConfigVariables: redraftVars.withAll(creds).variables(),
+					ConfigVariables: redraftVars,
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectResourceAction(bbBbdAddr, plancheck.ResourceActionUpdate),
@@ -622,7 +577,7 @@ func TestAccBuildingBlock(t *testing.T) {
 					// defaulted operator input the config does not supply; the backend applies the default on
 					// upgrade, so the block reaches SUCCEEDED (not WAITING) and surfaces it in all_inputs.
 					Config:          upgradeConfig,
-					ConfigVariables: renamedVars.withAll(creds).variables(),
+					ConfigVariables: renamedVars,
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectResourceAction(bbBbdAddr, plancheck.ResourceActionUpdate),
@@ -642,12 +597,12 @@ func TestAccBuildingBlock(t *testing.T) {
 	// version ref pins version_latest_release.uuid so the BB stays on the released version while a draft
 	// exists; on the upgrade PUT the sensitive hash sentinel must preserve the secret, not corrupt it.
 	t.Run("06_sensitive_inputs_and_upgrade", func(t *testing.T) {
-		vars := newBbVariables().withRepoURL(t)
+		vars := With(NewVariablesWithSuffix(acctest.RandString(8)), "terraform_repository_url", terraformTestdataRepoURL(t))
 		// Re-draft (creates a v2 draft; version_latest_release still points to v1) and re-release (releases
 		// v2). The mock supports the version dance, so the upgrade steps run in both modes.
-		redraftVars := vars.with("bbd_draft", tfconfig.BoolVariable(true))
+		redraftVars := With(vars, "bbd_draft", true)
 		// Rotate api_key (new secret_value + bumped secret_version) once the BB is on v2 in both modes.
-		rotatedVars := vars.withString("secret_value", "rotated-api-key").withString("secret_version", "2")
+		rotatedVars := With(vars, "secret_value", "rotated-api-key", "secret_version", "2")
 
 		// Step file 16 pins the BBD's latest released version and declares api_key's secret_version, so the
 		// rotation step has something to bump.
@@ -694,7 +649,7 @@ func TestAccBuildingBlock(t *testing.T) {
 				{
 					// Step 1: create BBD v1 + BB on v1. Sensitive inputs surface as hashes in all_inputs.
 					Config:          config,
-					ConfigVariables: vars.variables(),
+					ConfigVariables: vars,
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectResourceAction(buildingBlockSensitiveAddr, plancheck.ResourceActionCreate),
@@ -727,13 +682,13 @@ func TestAccBuildingBlock(t *testing.T) {
 						return rs.Primary.Attributes["metadata.uuid"], nil
 					},
 					ResourceName:    buildingBlockSensitiveAddr,
-					ConfigVariables: vars.variables(),
+					ConfigVariables: vars,
 				},
 				{
 					// Step 3: re-draft the BBD → v2 draft. version_latest_release
 					// still resolves to v1, so the BB plan is a no-op.
 					Config:          config,
-					ConfigVariables: redraftVars.variables(),
+					ConfigVariables: redraftVars,
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectResourceAction(bbSensitiveBbdAddr, plancheck.ResourceActionUpdate),
@@ -745,7 +700,7 @@ func TestAccBuildingBlock(t *testing.T) {
 					// Step 4: release BBD v2 + upgrade the BB to v2 in one apply. The
 					// sensitive api_key is echoed as its hash sentinel and the secret must survive.
 					Config:          config,
-					ConfigVariables: vars.variables(),
+					ConfigVariables: vars,
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectResourceAction(bbSensitiveBbdAddr, plancheck.ResourceActionUpdate),
@@ -766,7 +721,7 @@ func TestAccBuildingBlock(t *testing.T) {
 					// Step 5: post-upgrade plan must be empty — no spurious rerun and
 					// no phantom-input drift.
 					Config:          config,
-					ConfigVariables: vars.variables(),
+					ConfigVariables: vars,
 					PlanOnly:        true,
 				},
 				{
@@ -774,7 +729,7 @@ func TestAccBuildingBlock(t *testing.T) {
 					// predicate and must be detected via the changed secret_version, so this is an
 					// in-place Update and latest_run_uuid must change vs. the previous run.
 					Config:          config,
-					ConfigVariables: rotatedVars.variables(),
+					ConfigVariables: rotatedVars,
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectResourceAction(buildingBlockSensitiveAddr, plancheck.ResourceActionUpdate),
@@ -810,20 +765,17 @@ func TestAccBuildingBlock(t *testing.T) {
 
 		// Step 2 config: the "other" provider creates a BB with consumer-only inputs. The BBD marks its
 		// `environment` input non-updateable-by-consumer, so step 3 dials that input and must fail.
-		vars := newBbVariables()
-		stagingVars := vars.withString("bb_environment", "staging")
+		vars := NewVariablesWithSuffix(acctest.RandString(8))
+		var apiKeyClientId, apiKeyClientSecret lazyVariable
+		keyVars := With(vars, "apikey_client_id", &apiKeyClientId, "apikey_client_secret", &apiKeyClientSecret)
+		stagingVars := With(keyVars, "bb_environment", "staging")
 		step2Config := bbCrossWorkspaceStepConfig(t, 15, 8, "07_non_updateable")
 
-		var apiKeyClientId, apiKeyClientSecret lazyVariable
-		creds := tfconfig.Variables{
-			"apikey_client_id":     &apiKeyClientId,
-			"apikey_client_secret": &apiKeyClientSecret,
-		}
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
 					Config:          step1Config,
-					ConfigVariables: vars.variables(),
+					ConfigVariables: vars,
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(apiKeyResourceAddr, tfjsonpath.New("status").AtMapKey("client_id"), xknownvalue.NotEmptyString(func(clientId string) error {
 							apiKeyClientId = lazyVariable(clientId)
@@ -837,7 +789,7 @@ func TestAccBuildingBlock(t *testing.T) {
 				},
 				{
 					Config:          step2Config,
-					ConfigVariables: vars.withAll(creds).variables(),
+					ConfigVariables: keyVars,
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectResourceAction(buildingBlockWorkspaceAddr, plancheck.ResourceActionCreate),
@@ -849,7 +801,7 @@ func TestAccBuildingBlock(t *testing.T) {
 				},
 				{
 					Config:          step2Config,
-					ConfigVariables: stagingVars.withAll(creds).variables(),
+					ConfigVariables: stagingVars,
 					ExpectError:     regexp.MustCompile("you don't have sufficient permissions"),
 				},
 			},
@@ -868,7 +820,7 @@ func TestAccBuildingBlock(t *testing.T) {
 		// provider_side_validators: target_ref kind/identifier mismatches caught by the provider's own
 		// validators (no backend involved), so both modes run them.
 		t.Run("provider_side_validators", func(t *testing.T) {
-			vars := newBbVariables()
+			vars := NewVariablesWithSuffix(acctest.RandString(8))
 			// Step files 10 and 11 are step file 1 with a mismatched target ref.
 			tenantWithName := bbWorkspaceStepConfig(t, 10, "01_workspace")
 			workspaceWithUuid := bbWorkspaceStepConfig(t, 11, "01_workspace")
@@ -878,13 +830,13 @@ func TestAccBuildingBlock(t *testing.T) {
 					{
 						// target_ref kind=meshTenant must use uuid, not name.
 						Config:          tenantWithName,
-						ConfigVariables: vars.variables(),
+						ConfigVariables: vars,
 						ExpectError:     regexp.MustCompile(`must not be set when kind`),
 					},
 					{
 						// target_ref kind=meshWorkspace must use name, not uuid.
 						Config:          workspaceWithUuid,
-						ConfigVariables: vars.variables(),
+						ConfigVariables: vars,
 						ExpectError:     regexp.MustCompile(`must not be set when kind`),
 					},
 				},
@@ -898,7 +850,7 @@ func TestAccBuildingBlock(t *testing.T) {
 			if IsMockClientTest() {
 				t.Skip("backend-only validation (STATIC-input rejection) the mock does not reproduce")
 			}
-			vars := newBbVariables()
+			vars := NewVariablesWithSuffix(acctest.RandString(8))
 			config := bbWorkspaceStepConfig(t, 1, "01_workspace")
 
 			// A STATIC BBD input (region) must not be accepted as a customer/operator input. Step file 12 is
@@ -911,7 +863,7 @@ func TestAccBuildingBlock(t *testing.T) {
 						// Create a valid BB first, then (next step) attempt the invalid STATIC-input
 						// assignment as an Update.
 						Config:          config,
-						ConfigVariables: vars.variables(),
+						ConfigVariables: vars,
 						ConfigPlanChecks: resource.ConfigPlanChecks{
 							PreApply: []plancheck.PlanCheck{
 								plancheck.ExpectResourceAction(buildingBlockWorkspaceAddr, plancheck.ResourceActionCreate),
@@ -924,7 +876,7 @@ func TestAccBuildingBlock(t *testing.T) {
 					{
 						// Assigning the STATIC input as a customer input must be rejected.
 						Config:          invalidInputAssignment,
-						ConfigVariables: vars.variables(),
+						ConfigVariables: vars,
 						ExpectError:     regexp.MustCompile("is not defined as a customer or platform-operator input"),
 					},
 				},
@@ -936,7 +888,7 @@ func TestAccBuildingBlock(t *testing.T) {
 	// Runs in both modes (create + flag wiring + purge teardown succeeds); the CheckDestroy below carries
 	// the mechanism and its acceptance-only 404 assertion.
 	t.Run("09_purge_on_delete", func(t *testing.T) {
-		vars := newBbVariables()
+		vars := NewVariablesWithSuffix(acctest.RandString(8))
 		config := bbWorkspaceStepConfig(t, 9, "01_workspace")
 
 		var bbUuid string
@@ -961,7 +913,7 @@ func TestAccBuildingBlock(t *testing.T) {
 			Steps: []resource.TestStep{
 				{
 					Config:          config,
-					ConfigVariables: vars.variables(),
+					ConfigVariables: vars,
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectResourceAction(buildingBlockWorkspaceAddr, plancheck.ResourceActionCreate),
@@ -985,7 +937,7 @@ func TestAccBuildingBlock(t *testing.T) {
 	// inputs (and vice versa). Runs in both modes — the mock preserves inputs omitted from a PUT just like
 	// the backend, and the provider's Read drops un-declared inputs to all_inputs in both.
 	t.Run("10_partial_input_ownership", func(t *testing.T) {
-		vars := newBbVariables()
+		vars := NewVariablesWithSuffix(acctest.RandString(8))
 		// The definition marks `size` a PLATFORM_OPERATOR_MANUAL_INPUT (name/environment stay user inputs).
 		// Step file 7 declares all of them, step file 8 only the operator one.
 		fullConfig := bbWorkspaceStepConfig(t, 7, "03_operator_inputs")
@@ -995,13 +947,13 @@ func TestAccBuildingBlock(t *testing.T) {
 			Steps: []resource.TestStep{
 				{
 					Config:            fullConfig,
-					ConfigVariables:   vars.variables(),
+					ConfigVariables:   vars,
 					ConfigStateChecks: bbv3StateChecks(buildingBlockWorkspaceAddr, "my-workspace-building-block", bbv3SizeEnvInputChecks(buildingBlockWorkspaceAddr)...),
 				},
 				{
 					// Dropping the user inputs is an in-place Update, never a Replace.
 					Config:          sizeOnlyConfig,
-					ConfigVariables: vars.variables(),
+					ConfigVariables: vars,
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectResourceAction(buildingBlockWorkspaceAddr, plancheck.ResourceActionUpdate),
@@ -1019,7 +971,7 @@ func TestAccBuildingBlock(t *testing.T) {
 				{
 					// No drift: the omitted user inputs must not reappear as a pending change.
 					Config:          sizeOnlyConfig,
-					ConfigVariables: vars.variables(),
+					ConfigVariables: vars,
 					PlanOnly:        true,
 				},
 			},
@@ -1055,17 +1007,14 @@ func TestAccBuildingBlock(t *testing.T) {
 			t.Helper()
 			// Workspace W owns the BBD; workspace O consumes it across the workspace boundary with its own
 			// unprivileged, workspace-scoped key (API key 8).
-			vars := newBbVariables().withRepoURL(t).with("run_transparency", tfconfig.BoolVariable(runTransparency))
+			vars := With(NewVariablesWithSuffix(acctest.RandString(8)), "terraform_repository_url", terraformTestdataRepoURL(t), "run_transparency", runTransparency)
 
 			step1Config := bbCrossWorkspaceSupportConfig(t, 8, "11_broken_run_bbd", "variables", "transparency-variables")
 			// The consumer creates the BB via the meshstack-other provider (its workspace-scoped key).
 			consumerConfig := bbCrossWorkspaceStepConfig(t, 17, 8, "11_broken_run_bbd", "variables", "transparency-variables")
 
 			var apiKeyClientId, apiKeyClientSecret lazyVariable
-			consumerVariables := tfconfig.Variables{
-				"apikey_client_id":     &apiKeyClientId,
-				"apikey_client_secret": &apiKeyClientSecret,
-			}
+			consumerVariables := With(vars, "apikey_client_id", &apiKeyClientId, "apikey_client_secret", &apiKeyClientSecret)
 			// The support file's postcondition rejects the FAILED status the broken ref produces. With run
 			// transparency ON the repair runs and fails on the broken ref again, so the postcondition fails
 			// that apply too; with it OFF meshStack refuses the trigger-run and that refusal is the error.
@@ -1079,7 +1028,7 @@ func TestAccBuildingBlock(t *testing.T) {
 				{
 					// Admin mints the infra + the workspace-scoped key; capture its credentials.
 					Config:          step1Config,
-					ConfigVariables: vars.variables(),
+					ConfigVariables: vars,
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(apiKeyResourceAddr, tfjsonpath.New("status").AtMapKey("client_id"), xknownvalue.NotEmptyString(func(clientId string) error {
 							apiKeyClientId = lazyVariable(clientId)
@@ -1096,7 +1045,7 @@ func TestAccBuildingBlock(t *testing.T) {
 					// set in the support file, so the create waits for that run, keeps the building block
 					// with a warning, and the postcondition is what turns that into a failed apply.
 					Config:          consumerConfig,
-					ConfigVariables: vars.withAll(consumerVariables).variables(),
+					ConfigVariables: consumerVariables,
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectResourceAction(buildingBlockSensitiveAddr, plancheck.ResourceActionCreate),
@@ -1109,7 +1058,7 @@ func TestAccBuildingBlock(t *testing.T) {
 					// issue is about: the create failed its apply, and the building block is still an
 					// in-place update rather than a replace, so nothing it created is about to be destroyed.
 					Config:          consumerConfig,
-					ConfigVariables: vars.withAll(consumerVariables).variables(),
+					ConfigVariables: consumerVariables,
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectResourceAction(buildingBlockSensitiveAddr, plancheck.ResourceActionUpdate),
@@ -1125,7 +1074,7 @@ func TestAccBuildingBlock(t *testing.T) {
 					// as an in-place update. A PlanOnly step skips the pre-apply plan, so the check has to
 					// be a post-refresh one, and the pending repair is why the plan is not empty.
 					Config:          consumerConfig,
-					ConfigVariables: vars.withAll(consumerVariables).variables(),
+					ConfigVariables: consumerVariables,
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PostApplyPostRefresh: []plancheck.PlanCheck{
 							plancheck.ExpectResourceAction(buildingBlockSensitiveAddr, plancheck.ResourceActionUpdate),
@@ -1158,10 +1107,10 @@ func TestAccBuildingBlock(t *testing.T) {
 	// detectable because sending the placeholder plaintext would change the all_inputs hash. Runs in both
 	// modes (the mock's backendSecretBehavior mirrors the backend).
 	t.Run("12_moved_from_v2_with_secret", func(t *testing.T) {
-		vars := newBbVariables().withRepoURL(t)
+		vars := With(NewVariablesWithSuffix(acctest.RandString(8)), "terraform_repository_url", terraformTestdataRepoURL(t))
 		// Rotation: bump secret_version (null->"2") + new value, so the secret is re-applied and its hash
 		// changes.
-		rotatedVars := vars.withString("moved_secret_value", "rotated-real-api-key").withString("moved_secret_version", "2")
+		rotatedVars := With(vars, "moved_secret_value", "rotated-real-api-key", "moved_secret_version", "2")
 
 		// Shared sensitive BBD (api_key STRING + script CODE USER_INPUTs, static_secret STATIC), pointed at
 		// the committed bare repo so acceptance runs execute quickly (unused in mock mode).
@@ -1194,7 +1143,7 @@ func TestAccBuildingBlock(t *testing.T) {
 			Steps: []resource.TestStep{
 				{
 					Config:          v2Config,
-					ConfigVariables: vars.variables(),
+					ConfigVariables: vars,
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{plancheck.ExpectResourceAction(bbv2MovedSecretAddr, plancheck.ResourceActionCreate)},
 					},
@@ -1208,7 +1157,7 @@ func TestAccBuildingBlock(t *testing.T) {
 					// The move must plan as an in-place Update (never Replace), and the secrets must be
 					// preserved: the v3 all_inputs hashes must equal the v2 hashes despite the placeholders.
 					Config:          examples.JoinTestStepConfigs(v3Config, movedConfig),
-					ConfigVariables: vars.variables(),
+					ConfigVariables: vars,
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{plancheck.ExpectResourceAction(buildingBlockMovedSecretAddr, plancheck.ResourceActionUpdate)},
 					},
@@ -1234,7 +1183,7 @@ func TestAccBuildingBlock(t *testing.T) {
 				{
 					// Rotating api_key (new value + bumped secret_version) re-applies the secret: its hash changes.
 					Config:          examples.JoinTestStepConfigs(v3Config, movedConfig),
-					ConfigVariables: rotatedVars.variables(),
+					ConfigVariables: rotatedVars,
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(buildingBlockMovedSecretAddr,
 							tfjsonpath.New("all_inputs").AtMapKey("api_key").AtMapKey("sensitive").AtMapKey("secret_hash"),
@@ -1253,7 +1202,7 @@ func TestAccBuildingBlock(t *testing.T) {
 	// 13_parent_child is the only scenario with a real parent. Every other parent step uses a
 	// synthetic uuid and therefore never reaches a live backend.
 	t.Run("13_parent_child", func(t *testing.T) {
-		vars := newBbVariables()
+		vars := NewVariablesWithSuffix(acctest.RandString(8))
 		// Both blocks come from the same definition, so each one is its own step file.
 		config := examples.JoinTestStepConfigs(
 			examples.Resource.TestStepConfig(t, "building_block", 3),
@@ -1264,7 +1213,7 @@ func TestAccBuildingBlock(t *testing.T) {
 			Steps: []resource.TestStep{
 				{
 					Config:          config,
-					ConfigVariables: vars.variables(),
+					ConfigVariables: vars,
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectResourceAction(buildingBlockParentAddr, plancheck.ResourceActionCreate),
@@ -1285,7 +1234,7 @@ func TestAccBuildingBlock(t *testing.T) {
 					// The parent ref read back must hash to the same set element as the one the
 					// configuration declares, or this plan is not empty.
 					Config:          config,
-					ConfigVariables: vars.variables(),
+					ConfigVariables: vars,
 					PlanOnly:        true,
 				},
 			},

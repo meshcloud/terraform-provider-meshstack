@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"testing"
 
-	tfconfig "github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
@@ -39,7 +38,7 @@ func TestAccPlatformsDataSource(t *testing.T) {
 			Steps: []resource.TestStep{
 				{
 					Config:          config,
-					ConfigVariables: SuffixVariables(suffix),
+					ConfigVariables: NewVariablesWithSuffix(suffix),
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(platformsDataSourceAddr, tfjsonpath.New("platforms"), knownvalue.ListSizeExact(1)),
 						statecheck.ExpectKnownValue(platformsDataSourceAddr, tfjsonpath.New("platforms").AtSliceIndex(0).AtMapKey("metadata").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
@@ -58,7 +57,7 @@ func TestAccPlatformsDataSource(t *testing.T) {
 	// negative). The exactly-one boundary that proves P_priv's exclusion and the config-redaction check
 	// are acceptance-only: the mock has no entitlement notion (it applies only plain attribute filters).
 	t.Run("cross-workspace listing", func(t *testing.T) {
-		vars := SuffixVariables(acctest.RandString(8))
+		vars := NewVariablesWithSuffix(acctest.RandString(8))
 
 		// The two platforms, both workspaces, the platform type they share and the consumer's key.
 		supportConfig := examples.JoinTestStepConfigs(
@@ -104,13 +103,7 @@ func TestAccPlatformsDataSource(t *testing.T) {
 		}
 
 		var apiKeyClientId, apiKeyClientSecret lazyVariable
-		listVars := tfconfig.Variables{
-			"apikey_client_id":     &apiKeyClientId,
-			"apikey_client_secret": &apiKeyClientSecret,
-		}
-		for name, value := range vars {
-			listVars[name] = value
-		}
+		listVars := With(vars, "apikey_client_id", &apiKeyClientId, "apikey_client_secret", &apiKeyClientSecret)
 
 		ApplyAndTest(t, resource.TestCase{Steps: []resource.TestStep{
 			{

@@ -34,7 +34,7 @@ func TestAccPlatformDataSource(t *testing.T) {
 			Steps: []resource.TestStep{
 				{
 					Config:          platformDataSourceConfig(t, platformVariants[0]),
-					ConfigVariables: SuffixVariables(acctest.RandString(8)),
+					ConfigVariables: NewVariablesWithSuffix(acctest.RandString(8)),
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(platformDataSourceAddr, tfjsonpath.New("identifier"), knownvalue.StringFunc(func(value string) error {
 							parts := strings.SplitN(value, ".", 2)
@@ -59,7 +59,7 @@ func TestAccPlatformDataSource(t *testing.T) {
 			Steps: []resource.TestStep{
 				{
 					Config:          platformDataSourceConfig(t, platformVariants[1]),
-					ConfigVariables: SuffixVariables(acctest.RandString(8)),
+					ConfigVariables: NewVariablesWithSuffix(acctest.RandString(8)),
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(
 							platformDataSourceAddr,

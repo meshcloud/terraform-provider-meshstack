@@ -2,10 +2,12 @@ package provider
 
 import (
 	"context"
+	"encoding/json/v2"
 	"fmt"
 	"maps"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 	"sync"
@@ -163,6 +165,8 @@ func ApplyAndTest(t *testing.T, testCase resource.TestCase, opts ...ApplyAndTest
 	for _, opt := range opts {
 		opt(&options)
 	}
+
+	requireDeclaredVariables(t, testCase.Steps)
 
 	if target := os.Getenv(envKeyScratchDump); target != "" {
 		dumpStepConfigs(t, target, testCase.Steps)
@@ -376,10 +380,73 @@ func sanitizeTestName(name string) string {
 	}, name)
 }
 
-// SuffixVariables passes a test case's random per-run suffix to its step configs' `variable "suffix"`.
-// Every test-created name is built from it, so parallel runs and re-runs never collide. Steps that
-// must address the same resources share one value, so a case builds it once and reuses it — including
-// for an import step, whose plan the framework builds from the preceding step's config.
-func SuffixVariables(suffix string) tfconfig.Variables {
+// NewVariablesWithSuffix returns the variables a test case starts from: its random per-run suffix,
+// for the step configs' `variable "suffix"`. Every test-created name is built from it, so parallel
+// runs and re-runs never collide. Steps that must address the same resources share one value, so a
+// case builds it once and reuses it — including for an import step, whose plan the framework builds
+// from the preceding step's config.
+func NewVariablesWithSuffix(suffix string) tfconfig.Variables {
 	return tfconfig.Variables{"suffix": tfconfig.StringVariable(suffix)}
+}
+
+// With returns a copy of vars with the given name/value pairs set. A value is a string, bool, int or
+// tfconfig.Variable.
+func With(vars tfconfig.Variables, nameValuePairs ...any) tfconfig.Variables {
+	if len(nameValuePairs)%2 != 0 {
+		panic(fmt.Sprintf("With: odd number of name/value arguments: %v", nameValuePairs))
+	}
+	with := make(tfconfig.Variables, len(vars)+len(nameValuePairs)/2)
+	maps.Copy(with, vars)
+	for i := 0; i < len(nameValuePairs); i += 2 {
+		name, ok := nameValuePairs[i].(string)
+		if !ok {
+			panic(fmt.Sprintf("With: variable name %v is not a string", nameValuePairs[i]))
+		}
+		with[name] = toVariable(nameValuePairs[i+1])
+	}
+	return with
+}
+
+func toVariable(value any) tfconfig.Variable {
+	switch v := value.(type) {
+	case tfconfig.Variable:
+		return v
+	case string:
+		return tfconfig.StringVariable(v)
+	case bool:
+		return tfconfig.BoolVariable(v)
+	case int:
+		return tfconfig.IntegerVariable(v)
+	default:
+		panic(fmt.Sprintf("With: unsupported value %v of type %T", value, value))
+	}
+}
+
+// lazyVariable is a value an earlier step fills in, such as the credentials of a key it minted. It is
+// passed by pointer, so a step built before that step ran still sends the value.
+type lazyVariable string
+
+func (l *lazyVariable) MarshalJSON() ([]byte, error) {
+	return json.Marshal(string(*l))
+}
+
+var declaredVariable = regexp.MustCompile(`(?m)^\s*variable\s+"([^"]+)"`)
+
+// requireDeclaredVariables fails on a value a step passes for a variable its config does not declare.
+// Terraform only warns about one and uses the default, so a misspelled name would quietly test less.
+func requireDeclaredVariables(t *testing.T, steps []resource.TestStep) {
+	t.Helper()
+	config := ""
+	for i, step := range steps {
+		if step.Config != "" {
+			config = step.Config
+		}
+		declared := map[string]bool{}
+		for _, match := range declaredVariable.FindAllStringSubmatch(config, -1) {
+			declared[match[1]] = true
+		}
+		for _, name := range slices.Sorted(maps.Keys(step.ConfigVariables)) {
+			require.Truef(t, declared[name], "step %d passes variable %q, but its config has no `variable %q` block", i+1, name, name)
+		}
+	}
 }

@@ -29,7 +29,7 @@ func TestAccBuildingBlockV2DataSource(t *testing.T) {
 			Steps: []resource.TestStep{
 				{
 					Config:          config,
-					ConfigVariables: SuffixVariables(acctest.RandString(8)),
+					ConfigVariables: NewVariablesWithSuffix(acctest.RandString(8)),
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(buildingBlockV2DataSourceAddr, tfjsonpath.New("metadata").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
 						statecheck.ExpectKnownValue(buildingBlockV2DataSourceAddr, tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("my-workspace-building-block")),
@@ -54,7 +54,7 @@ func TestAccBuildingBlockV2DataSource(t *testing.T) {
 			Steps: []resource.TestStep{
 				{
 					Config:          config,
-					ConfigVariables: bbv2Variables(t),
+					ConfigVariables: With(NewVariablesWithSuffix(acctest.RandString(8)), "terraform_repository_url", terraformTestdataRepoURL(t)),
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(buildingBlockV2DataSourceAddr, tfjsonpath.New("metadata").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
 						// Sensitive user inputs are hashed by the API; toResourceModelV2Input

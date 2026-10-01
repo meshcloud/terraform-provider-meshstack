@@ -1,11 +1,9 @@
 package provider
 
 import (
-	"encoding/json/v2"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	tfconfig "github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
@@ -37,13 +35,6 @@ func manualBbdStepConfig(t *testing.T) string {
 	)
 }
 
-// releasedBbdVariables flips the definition's version from draft to released.
-func releasedBbdVariables(suffix string) tfconfig.Variables {
-	vars := SuffixVariables(suffix)
-	vars["draft"] = tfconfig.BoolVariable(false)
-	return vars
-}
-
 func TestAccBuildingBlockDefinitionsDataSource(t *testing.T) {
 	t.Run("simple state check", func(t *testing.T) {
 		suffix := acctest.RandString(8)
@@ -55,7 +46,7 @@ func TestAccBuildingBlockDefinitionsDataSource(t *testing.T) {
 		ApplyAndTest(t, resource.TestCase{Steps: []resource.TestStep{
 			{
 				Config:          config,
-				ConfigVariables: SuffixVariables(suffix),
+				ConfigVariables: NewVariablesWithSuffix(suffix),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(buildingBlockDefinitionsDataSourceAd, tfjsonpath.New("workspace_identifier"), knownvalue.StringExact("test-ws-"+suffix)),
 					statecheck.ExpectKnownValue(buildingBlockDefinitionsDataSourceAd, tfjsonpath.New("building_block_definitions"), knownvalue.ListExact([]knownvalue.Check{
@@ -101,7 +92,7 @@ func TestAccBuildingBlockDefinitionsDataSource(t *testing.T) {
 
 		// The definition must be released: a draft version is not visible to another workspace. The
 		// consumer workspace holds the restricted key the listing runs under.
-		vars := releasedBbdVariables(acctest.RandString(8))
+		vars := With(NewVariablesWithSuffix(acctest.RandString(8)), "draft", false)
 		supportConfig := examples.JoinTestStepConfigs(
 			examples.Resource.TestStepConfig(t, "building_block_definition", 3, "variables"),
 			examples.Resource.TestStepConfig(t, "api_key", 6),
@@ -115,13 +106,7 @@ func TestAccBuildingBlockDefinitionsDataSource(t *testing.T) {
 		)
 
 		var apiKeyClientId, apiKeyClientSecret lazyVariable
-		listVars := tfconfig.Variables{
-			"apikey_client_id":     &apiKeyClientId,
-			"apikey_client_secret": &apiKeyClientSecret,
-		}
-		for name, value := range vars {
-			listVars[name] = value
-		}
+		listVars := With(vars, "apikey_client_id", &apiKeyClientId, "apikey_client_secret", &apiKeyClientSecret)
 
 		ApplyAndTest(t, resource.TestCase{Steps: []resource.TestStep{
 			{
@@ -161,12 +146,6 @@ func TestAccBuildingBlockDefinitionsDataSource(t *testing.T) {
 			},
 		}})
 	})
-}
-
-type lazyVariable string
-
-func (l *lazyVariable) MarshalJSON() ([]byte, error) {
-	return json.Marshal(string(*l))
 }
 
 // Test_buildVersionRefsFromStatus covers the fallback for a definition whose version specs meshStack withholds:

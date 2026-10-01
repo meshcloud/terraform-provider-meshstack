@@ -3,7 +3,6 @@ package provider
 import (
 	"testing"
 
-	tfconfig "github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
@@ -33,7 +32,7 @@ func TestAccLandingZonesDataSource(t *testing.T) {
 			Steps: []resource.TestStep{
 				{
 					Config:          config,
-					ConfigVariables: SuffixVariables(suffix),
+					ConfigVariables: NewVariablesWithSuffix(suffix),
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(landingZonesDataSourceAddr, tfjsonpath.New("landing_zones"), knownvalue.ListSizeExact(1)),
 						statecheck.ExpectKnownValue(landingZonesDataSourceAddr, tfjsonpath.New("landing_zones").AtSliceIndex(0).AtMapKey("metadata").AtMapKey("name"), knownvalue.StringExact("test-lz-"+suffix)),
@@ -50,7 +49,7 @@ func TestAccLandingZonesDataSource(t *testing.T) {
 	// a platform published (RESTRICTED) to it. The positive assertion runs in both modes.
 	t.Run("cross-workspace listing", func(t *testing.T) {
 		suffix := acctest.RandString(8)
-		vars := SuffixVariables(suffix)
+		vars := NewVariablesWithSuffix(suffix)
 
 		// Platform variant 9 is the RESTRICTED one, published to the consumer workspace as well.
 		supportConfig := examples.JoinTestStepConfigs(
@@ -68,13 +67,7 @@ func TestAccLandingZonesDataSource(t *testing.T) {
 		)
 
 		var apiKeyClientId, apiKeyClientSecret lazyVariable
-		listVars := tfconfig.Variables{
-			"apikey_client_id":     &apiKeyClientId,
-			"apikey_client_secret": &apiKeyClientSecret,
-		}
-		for name, value := range vars {
-			listVars[name] = value
-		}
+		listVars := With(vars, "apikey_client_id", &apiKeyClientId, "apikey_client_secret", &apiKeyClientSecret)
 
 		ApplyAndTest(t, resource.TestCase{Steps: []resource.TestStep{
 			{

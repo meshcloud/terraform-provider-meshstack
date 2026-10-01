@@ -32,7 +32,7 @@ func TestAccProjectGroupBinding(t *testing.T) {
 	)
 
 	suffix := acctest.RandString(8)
-	vars := SuffixVariables(suffix)
+	vars := NewVariablesWithSuffix(suffix)
 
 	ApplyAndTest(t, resource.TestCase{
 		Steps: []resource.TestStep{

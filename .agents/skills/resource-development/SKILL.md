@@ -159,14 +159,14 @@ func TestAccIntegrationResource(t *testing.T) {
     t.Run("01_github", func(t *testing.T) {
         ApplyAndTest(t, resource.TestCase{Steps: []resource.TestStep{{
             Config:          integrationStepConfig(t, 1),
-            ConfigVariables: SuffixVariables(acctest.RandString(8)),
+            ConfigVariables: NewVariablesWithSuffix(acctest.RandString(8)),
             // ... checks against githubIntegrationAddr
         }}})
     })
     t.Run("02_azure_devops", func(t *testing.T) {
         ApplyAndTest(t, resource.TestCase{Steps: []resource.TestStep{{
             Config:          integrationStepConfig(t, 2),
-            ConfigVariables: SuffixVariables(acctest.RandString(8)),
+            ConfigVariables: NewVariablesWithSuffix(acctest.RandString(8)),
         }}})
     })
 }

@@ -56,15 +56,26 @@ Both exist; what decides is what changes between the steps:
   behind a ref, an extra block — is its own step file. A conditional would have to reconcile both
   branches' types, and the file stays readable as plain HCL.
 
-`SuffixVariables(suffix)` is what every case starts from: it passes the run's random suffix, which
-every test-created name is built from, so parallel runs and re-runs never collide. Steps that must
+`NewVariablesWithSuffix(suffix)` is what every case starts from: it passes the run's random suffix,
+which every test-created name is built from, so parallel runs and re-runs never collide. Steps that must
 address the same resources share one value, so a case builds it once and reuses it — **including an
 import step**, whose plan the framework builds from the preceding step's config, so a missing
 variable there fails the whole case.
 
-`building_block_resource_test.go` shows the pattern at its largest: a small `bbVariables` type whose
-`with*` methods return a copy, so a value one step introduces never reaches the variables an earlier
-step already ran with.
+Every other value goes through **`With(vars, name, value, ...)`**, the one helper for this
+(`provider_test.go`). It returns a copy, so a value one step sets never reaches a step that already ran
+with `vars`. A value is a string, bool, int or `tfconfig.Variable`; a value only an earlier step knows,
+such as a minted key's credentials, is a `*lazyVariable` that step fills in.
+
+```go
+suffix := acctest.RandString(8)
+vars := NewVariablesWithSuffix(suffix)
+renamed := With(vars, "bb_display_name", "my-workspace-building-block-renamed")
+released := With(vars, "draft", false, "description", "updated")
+```
+
+`ApplyAndTest` fails a step that passes a variable its config does not declare. Terraform itself only
+warns about one and uses the default, so a misspelled name would otherwise quietly test less.
 
 ## State check helpers (`xknownvalue`)
 
@@ -91,7 +102,7 @@ const (
 )
 
 func TestAccProject(t *testing.T) {
-    vars := SuffixVariables(acctest.RandString(8))
+    vars := NewVariablesWithSuffix(acctest.RandString(8))
 
     ApplyAndTest(t, resource.TestCase{
         Steps: []resource.TestStep{
@@ -157,7 +168,7 @@ func TestAccProjectDataSource(t *testing.T) {
 
     ApplyAndTest(t, resource.TestCase{Steps: []resource.TestStep{{
         Config:          config,
-        ConfigVariables: SuffixVariables(acctest.RandString(8)),
+        ConfigVariables: NewVariablesWithSuffix(acctest.RandString(8)),
         ConfigStateChecks: []statecheck.StateCheck{
             statecheck.ExpectKnownValue(projectDataSourceAddr, tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("My Project's Display Name"))},
     }}})

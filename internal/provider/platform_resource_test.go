@@ -60,7 +60,7 @@ func TestAccPlatformResource(t *testing.T) {
 	for _, variant := range platformVariants {
 		t.Run(variant.suffix, func(t *testing.T) {
 			suffix := acctest.RandString(8)
-			vars := SuffixVariables(suffix)
+			vars := NewVariablesWithSuffix(suffix)
 			config := platformStepConfig(t, variant)
 
 			var resourceUuid string

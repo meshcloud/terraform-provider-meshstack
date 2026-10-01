@@ -54,7 +54,7 @@ func TestAccBuildingBlockDataSource(t *testing.T) {
 			Steps: []resource.TestStep{
 				{
 					Config:          config,
-					ConfigVariables: SuffixVariables(suffix),
+					ConfigVariables: NewVariablesWithSuffix(suffix),
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(buildingBlockDataSourceAddr, tfjsonpath.New("metadata").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
 						statecheck.ExpectKnownValue(buildingBlockDataSourceAddr, tfjsonpath.New("metadata").AtMapKey("owned_by_workspace"), knownvalue.StringExact("test-ws-"+suffix)),
@@ -85,7 +85,7 @@ func TestAccBuildingBlockDataSource(t *testing.T) {
 			Steps: []resource.TestStep{
 				{
 					Config:          config,
-					ConfigVariables: SuffixVariables(acctest.RandString(8)),
+					ConfigVariables: NewVariablesWithSuffix(acctest.RandString(8)),
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(buildingBlockDataSourceAddr, tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("my-child-building-block")),
 						statecheck.ExpectKnownValue(buildingBlockDataSourceAddr, tfjsonpath.New("spec").AtMapKey("parent_building_block_refs"), knownvalue.SetSizeExact(1)),

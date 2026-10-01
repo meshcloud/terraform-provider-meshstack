@@ -42,7 +42,7 @@ func TestAccWorkspaceTags(t *testing.T) {
 			Steps: []resource.TestStep{
 				{
 					Config:          workspaceTagsStepConfig(t, 3, "prerequisites"),
-					ConfigVariables: SuffixVariables(suffix),
+					ConfigVariables: NewVariablesWithSuffix(suffix),
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(workspaceTagsResourceAddr, tfjsonpath.New("spec").AtMapKey("tags"), knownvalue.MapExact(map[string]knownvalue.Check{
 							workspaceTagsFirstKeyPrefix + suffix: knownvalue.ListSizeExact(0),
@@ -60,7 +60,7 @@ func TestAccWorkspaceTags(t *testing.T) {
 		// The map is authoritative per key, not just as a whole: dropping one key of two must remove that
 		// tag and leave the other untouched.
 		suffix := acctest.RandString(8)
-		vars := SuffixVariables(suffix)
+		vars := NewVariablesWithSuffix(suffix)
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
@@ -108,7 +108,7 @@ func TestAccWorkspaceTags(t *testing.T) {
 			Steps: []resource.TestStep{
 				{
 					Config:          config,
-					ConfigVariables: SuffixVariables(acctest.RandString(8)),
+					ConfigVariables: NewVariablesWithSuffix(acctest.RandString(8)),
 					ExpectError:     regexp.MustCompile(`Workspace .* not found`),
 				},
 			},
@@ -116,7 +116,7 @@ func TestAccWorkspaceTags(t *testing.T) {
 	})
 
 	suffix := acctest.RandString(8)
-	vars := SuffixVariables(suffix)
+	vars := NewVariablesWithSuffix(suffix)
 
 	ApplyAndTest(t, resource.TestCase{
 		Steps: []resource.TestStep{

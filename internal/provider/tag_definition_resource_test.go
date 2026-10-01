@@ -21,7 +21,7 @@ func TestAccTagDefinitionResource(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:          examples.Resource.TestStepConfig(t, "tag_definition", 1, "variables"),
-				ConfigVariables: SuffixVariables(acctest.RandString(8)),
+				ConfigVariables: NewVariablesWithSuffix(acctest.RandString(8)),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(tagDefinitionResourceAddr, tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("Test Tag")),
 				},

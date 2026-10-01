@@ -3,7 +3,6 @@ package provider
 import (
 	"testing"
 
-	tfconfig "github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
@@ -33,7 +32,7 @@ func TestAccBuildingBlocksDataSource(t *testing.T) {
 			Steps: []resource.TestStep{
 				{
 					Config:          config,
-					ConfigVariables: SuffixVariables(acctest.RandString(8)),
+					ConfigVariables: NewVariablesWithSuffix(acctest.RandString(8)),
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(buildingBlocksDataSourceAddr, tfjsonpath.New("building_blocks"), knownvalue.ListSizeExact(1)),
 						statecheck.ExpectKnownValue(buildingBlocksDataSourceAddr, tfjsonpath.New("building_blocks").AtSliceIndex(0).AtMapKey("metadata").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
@@ -64,18 +63,12 @@ func TestAccBuildingBlocksDataSource(t *testing.T) {
 			buildingBlockWorkspaceStepConfig(t, 1),
 		)
 
-		withVersion := func(versionNumber string) tfconfig.Variables {
-			vars := SuffixVariables(suffix)
-			vars["version_number"] = tfconfig.StringVariable(versionNumber)
-			return vars
-		}
-
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
 					// Lenient "v1" matches definition version 1.
 					Config:          config,
-					ConfigVariables: withVersion("v1"),
+					ConfigVariables: With(NewVariablesWithSuffix(suffix), "version_number", "v1"),
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(buildingBlocksDataSourceAddr, tfjsonpath.New("building_blocks"), knownvalue.ListSizeExact(1)),
 						statecheck.ExpectKnownValue(buildingBlocksDataSourceAddr, tfjsonpath.New("building_blocks").AtSliceIndex(0).AtMapKey("spec").AtMapKey("display_name"), knownvalue.StringExact("my-workspace-building-block")),
@@ -84,7 +77,7 @@ func TestAccBuildingBlocksDataSource(t *testing.T) {
 				{
 					// Version 2 does not exist for this block → empty result (proves the param is applied).
 					Config:          config,
-					ConfigVariables: withVersion("v2"),
+					ConfigVariables: With(NewVariablesWithSuffix(suffix), "version_number", "v2"),
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(buildingBlocksDataSourceAddr, tfjsonpath.New("building_blocks"), knownvalue.ListSizeExact(0)),
 					},

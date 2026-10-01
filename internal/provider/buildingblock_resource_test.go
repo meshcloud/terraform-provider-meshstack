@@ -40,7 +40,7 @@ func TestAccBuildingblock(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:          buildingBlockV1StepConfig(t),
-				ConfigVariables: SuffixVariables(acctest.RandString(8)),
+				ConfigVariables: NewVariablesWithSuffix(acctest.RandString(8)),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectResourceAction(buildingBlockV1ResourceAddr, plancheck.ResourceActionCreate),

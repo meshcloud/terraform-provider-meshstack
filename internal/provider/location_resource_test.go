@@ -22,7 +22,7 @@ const (
 
 func TestAccLocation(t *testing.T) {
 	suffix := acctest.RandString(8)
-	vars := SuffixVariables(suffix)
+	vars := NewVariablesWithSuffix(suffix)
 	locationName := locationNamePrefix + suffix
 
 	stepConfig := func(index int) string {

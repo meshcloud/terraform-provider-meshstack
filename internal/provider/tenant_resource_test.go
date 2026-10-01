@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/compare"
-	tfconfig "github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
@@ -44,24 +43,6 @@ func tenantStepConfig(t *testing.T, index, platformIndex, landingZoneIndex int) 
 	)
 }
 
-// tenantQuotaVariables are the quota bounds a tenant quota case runs with, on top of the run suffix.
-// A zero lzMemoryDefault means no limits.memory quota is defined at all.
-type tenantQuotaVariables struct {
-	maxCpu                int64
-	autoApprovalThreshold int64
-	requestedCpu          int64
-	lzMemoryDefault       int64
-}
-
-func (q tenantQuotaVariables) variables(suffix string) tfconfig.Variables {
-	vars := SuffixVariables(suffix)
-	vars["max_cpu"] = tfconfig.IntegerVariable(q.maxCpu)
-	vars["cpu_auto_approval_threshold"] = tfconfig.IntegerVariable(q.autoApprovalThreshold)
-	vars["requested_cpu"] = tfconfig.IntegerVariable(q.requestedCpu)
-	vars["lz_memory_default"] = tfconfig.IntegerVariable(q.lzMemoryDefault)
-	return vars
-}
-
 func TestAccTenant(t *testing.T) {
 	t.Parallel()
 
@@ -73,7 +54,7 @@ func TestAccTenant(t *testing.T) {
 			Steps: []resource.TestStep{
 				{
 					Config:          tenantStepConfig(t, 1, 8, 1),
-					ConfigVariables: SuffixVariables(suffix),
+					ConfigVariables: NewVariablesWithSuffix(suffix),
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectResourceAction(tenantResourceAddr, plancheck.ResourceActionCreate),
@@ -119,7 +100,7 @@ func TestAccTenant(t *testing.T) {
 			Steps: []resource.TestStep{
 				{
 					Config:          tenantStepConfig(t, 2, 8, 1),
-					ConfigVariables: SuffixVariables(suffix),
+					ConfigVariables: NewVariablesWithSuffix(suffix),
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(tenantResourceAddr, tfjsonpath.New("spec").AtMapKey("platform_ref").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
 						statecheck.ExpectKnownValue(tenantResourceAddr, tfjsonpath.New("spec").AtMapKey("platform_ref").AtMapKey("kind"), knownvalue.StringExact("meshPlatform")),
@@ -158,9 +139,9 @@ func TestAccTenant(t *testing.T) {
 			Steps: []resource.TestStep{
 				{
 					Config: tenantStepConfig(t, 3, 11, 1),
-					ConfigVariables: tenantQuotaVariables{
-						maxCpu: 4000, autoApprovalThreshold: 4000, requestedCpu: 2000,
-					}.variables(acctest.RandString(8)),
+					ConfigVariables: With(NewVariablesWithSuffix(acctest.RandString(8)),
+						"max_cpu", 4000, "cpu_auto_approval_threshold", 4000, "requested_cpu", 2000, "lz_memory_default", 0,
+					),
 					ConfigStateChecks: []statecheck.StateCheck{
 						// Requested quotas echo the config verbatim (spec.requested_quotas is create-only, Optional).
 						statecheck.ExpectKnownValue(tenantResourceAddr, tfjsonpath.New("spec").AtMapKey("requested_quotas"), quotaMap),
@@ -186,15 +167,15 @@ func TestAccTenant(t *testing.T) {
 			Steps: []resource.TestStep{
 				{
 					Config: config,
-					ConfigVariables: tenantQuotaVariables{
-						maxCpu: 4000, autoApprovalThreshold: 4000, requestedCpu: 2000,
-					}.variables(suffix),
+					ConfigVariables: With(NewVariablesWithSuffix(suffix),
+						"max_cpu", 4000, "cpu_auto_approval_threshold", 4000, "requested_cpu", 2000, "lz_memory_default", 0,
+					),
 				},
 				{
 					Config: config,
-					ConfigVariables: tenantQuotaVariables{
-						maxCpu: 4000, autoApprovalThreshold: 4000, requestedCpu: 3000,
-					}.variables(suffix),
+					ConfigVariables: With(NewVariablesWithSuffix(suffix),
+						"max_cpu", 4000, "cpu_auto_approval_threshold", 4000, "requested_cpu", 3000, "lz_memory_default", 0,
+					),
 					ExpectError: regexp.MustCompile("Tenants can't be updated"),
 				},
 			},
@@ -213,9 +194,9 @@ func TestAccTenant(t *testing.T) {
 			Steps: []resource.TestStep{
 				{
 					Config: tenantStepConfig(t, 3, 11, 1),
-					ConfigVariables: tenantQuotaVariables{
-						maxCpu: 100, autoApprovalThreshold: 100, requestedCpu: 101,
-					}.variables(acctest.RandString(8)),
+					ConfigVariables: With(NewVariablesWithSuffix(acctest.RandString(8)),
+						"max_cpu", 100, "cpu_auto_approval_threshold", 100, "requested_cpu", 101, "lz_memory_default", 0,
+					),
 					ExpectError: regexp.MustCompile(`is out of range`),
 				},
 			},
@@ -240,9 +221,9 @@ func TestAccTenant(t *testing.T) {
 			Steps: []resource.TestStep{
 				{
 					Config: tenantStepConfig(t, 3, 11, 1),
-					ConfigVariables: tenantQuotaVariables{
-						maxCpu: 8000, autoApprovalThreshold: 2000, requestedCpu: 4000,
-					}.variables(acctest.RandString(8)),
+					ConfigVariables: With(NewVariablesWithSuffix(acctest.RandString(8)),
+						"max_cpu", 8000, "cpu_auto_approval_threshold", 2000, "requested_cpu", 4000, "lz_memory_default", 0,
+					),
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(tenantResourceAddr, tfjsonpath.New("status").AtMapKey("applied_quotas"),
 							knownvalue.MapExact(map[string]knownvalue.Check{
@@ -266,9 +247,9 @@ func TestAccTenant(t *testing.T) {
 	t.Run("quotas_landing_zone_defaults", func(t *testing.T) {
 		// Landing zone variant 9 carries the default quota; platform variant 11 defines both bounds.
 		config := tenantStepConfig(t, 3, 11, 9)
-		vars := tenantQuotaVariables{
-			maxCpu: 4000, autoApprovalThreshold: 4000, requestedCpu: 2000, lzMemoryDefault: 8192,
-		}.variables(acctest.RandString(8))
+		vars := With(NewVariablesWithSuffix(acctest.RandString(8)),
+			"max_cpu", 4000, "cpu_auto_approval_threshold", 4000, "requested_cpu", 2000, "lz_memory_default", 8192,
+		)
 
 		requestedQuotas := knownvalue.MapExact(map[string]knownvalue.Check{
 			"limits.cpu": knownvalue.ObjectExact(map[string]knownvalue.Check{
@@ -317,7 +298,7 @@ func TestAccTenant(t *testing.T) {
 			t.Skip("asserts a provider-side plan decision (RequiresReplace); mock-only")
 		}
 
-		vars := SuffixVariables(acctest.RandString(8))
+		vars := NewVariablesWithSuffix(acctest.RandString(8))
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
