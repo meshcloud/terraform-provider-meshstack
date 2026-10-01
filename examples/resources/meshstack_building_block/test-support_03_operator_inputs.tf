@@ -9,9 +9,9 @@ resource "meshstack_building_block_definition" "example" {
     run_transparency = true
   }
 
-  # Reuses the same input keys as the workspace example (resource_01_workspace.tf) so that example is
-  # 1:1 reusable, but changes their behaviour: `size` is a platform-operator input (settable only by an
-  # operator/admin), while `name`/`environment` stay regular consumer inputs.
+  # Reuses the same input keys as the workspace example (resource_01_workspace.tf), except its
+  # `payment_method`, but changes their behaviour: `size` is a platform-operator input (settable only by
+  # an operator/admin), while `name`/`environment` stay regular consumer inputs.
   version_spec = {
     draft = false
 
