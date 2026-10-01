@@ -130,8 +130,8 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 							client.MeshBuildingBlockInputAssignmentTypeFullPlatformIdentifier,
 						).Markdown() + " can only be declared on " + client.MeshBuildingBlockTypeTenantLevel.Markdown() + ", " +
 						client.MeshBuildingBlockInputAssignmentTypePaymentMethod.Markdown() + " only on " + client.MeshBuildingBlockTypeWorkspaceLevel.Markdown() + ".<br>" +
-						"The value of a " + client.MeshBuildingBlockInputAssignmentTypePaymentMethod.Markdown() + " input is the identifier of one of the workspace's active Payment Methods. " +
-						"The run receives it as the meshObject reference `{\"kind\": \"meshPaymentMethod\", \"name\": \"<identifier>\"}`.",
+						"The value of a " + client.MeshBuildingBlockInputAssignmentTypePaymentMethod.Markdown() + " input is the `ref` of one of the workspace's active Payment Methods, " +
+						"for example `jsonencode(meshstack_payment_method.mypay.ref)`. The run receives the same `{\"kind\": \"meshPaymentMethod\", \"name\": \"<identifier>\"}`.",
 					Required: true,
 					Validators: []validator.String{
 						stringvalidator.OneOf(client.MeshBuildingBlockInputAssignmentTypes.Strings()...),

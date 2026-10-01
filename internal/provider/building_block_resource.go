@@ -215,7 +215,7 @@ func (r *buildingBlockResource) Schema(ctx context.Context, req resource.SchemaR
 							"Set either `value` (always `jsonencode(...)`'d, including strings) or `sensitive = { secret_value = ... }`. " +
 							"The `sensitive` block must be used if and only if the BBD declares the input as sensitive.<br>" +
 							"App teams normally set only `USER_INPUT` and `PAYMENT_METHOD` inputs; a `PAYMENT_METHOD` value is " +
-							"`jsonencode(<payment method>.metadata.name)`. `PLATFORM_OPERATOR_MANUAL_INPUT` inputs require a " +
+							"`jsonencode(meshstack_payment_method.mypay.ref)`. `PLATFORM_OPERATOR_MANUAL_INPUT` inputs require a " +
 							"platform-operator key (admin, or `MANAGED_BUILDINGBLOCK_SAVE` for the definition's owning workspace): an " +
 							"operator sets them either on a block it creates from its own BBD (e.g. testing a draft), or by importing an " +
 							"app-team block created from its BBD to supply the operator inputs that block is awaiting. This shared " +
