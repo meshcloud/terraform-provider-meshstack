@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-testing/compare"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
@@ -65,6 +66,8 @@ func TestAccPaymentMethod(t *testing.T) {
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("metadata").AtMapKey("name"), xknownvalue.NotEmptyString()),
 					statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("My Payment Method")),
+					statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("ref").AtMapKey("kind"), knownvalue.StringExact(client.MeshObjectKind.PaymentMethod)),
+					statecheck.CompareValuePairs(resourceAddress.String(), tfjsonpath.New("ref").AtMapKey("name"), resourceAddress.String(), tfjsonpath.New("metadata").AtMapKey("name"), compare.ValuesSame()),
 				},
 			},
 			{
