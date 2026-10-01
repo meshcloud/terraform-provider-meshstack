@@ -9,7 +9,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/compare"
 	tfconfig "github.com/hashicorp/terraform-plugin-testing/config"
-	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
@@ -121,7 +120,8 @@ func TestAccBuildingBlock(t *testing.T) {
 							plancheck.ExpectResourceAction(buildingBlockAddr.String(), plancheck.ResourceActionCreate),
 						},
 					},
-					ConfigStateChecks: bbv3StateChecks(buildingBlockAddr, "my-workspace-building-block", bbv3SizeEnvInputChecks(buildingBlockAddr)...),
+					ConfigStateChecks: bbv3StateChecks(buildingBlockAddr, "my-workspace-building-block",
+						append(bbv3SizeEnvInputChecks(buildingBlockAddr), bbv3PaymentMethodInputChecks(buildingBlockAddr)...)...),
 				},
 				{
 					// Import with verify. content_hash is json:"-" and never returned by the API;
@@ -307,6 +307,8 @@ func TestAccBuildingBlock(t *testing.T) {
 			testconfig.ExtractAddress(&v3Addr),
 			testconfig.Descend("spec", "building_block_definition_version_ref")(testconfig.SetAddr(buildingBlockDefinitionAddr, "version_latest")),
 			testconfig.Descend("spec", "target_ref")(testconfig.SetAddr(workspaceAddr, "ref")),
+			// The v2 definition declares no Payment Method input.
+			testconfig.Descend("spec", "inputs", "payment_method")(testconfig.RemoveKey()),
 		).Join(workspaceConfig, buildingBlockDefinitionConfig)
 
 		// The moved-block source/target addresses are fixed (resource labels are not randomized), so the
@@ -870,23 +872,26 @@ func TestAccBuildingBlock(t *testing.T) {
 			testconfig.RenameKey("other"),
 			testconfig.ExtractAddress(&otherWorkspaceAddr),
 		)
+		// A workspace key may pick a Payment Method only with PAYMENTMETHOD_LIST.
 		apiKeyConfig, apiKeyAddr := testconfig.ApiKey(t, otherWorkspaceAddr)
 		apiKeyConfig = apiKeyConfig.WithFirstBlock(
-			testconfig.Descend("spec", "permissions")(testconfig.SetRawExpr(`["BUILDINGBLOCK_SAVE", "BUILDINGBLOCK_LIST", "BUILDINGBLOCK_DELETE"]`)),
+			testconfig.Descend("spec", "permissions")(testconfig.SetRawExpr(`["BUILDINGBLOCK_SAVE", "BUILDINGBLOCK_LIST", "BUILDINGBLOCK_DELETE", "PAYMENTMETHOD_LIST"]`)),
 		)
+		paymentMethodConfig, setPaymentMethodInput := testconfig.PaymentMethodInput(t, otherWorkspaceAddr)
 
-		step1Config := workspaceConfig.Join(buildingBlockDefinitionConfig, otherWorkspaceConfig, apiKeyConfig)
+		step1Config := workspaceConfig.Join(buildingBlockDefinitionConfig, otherWorkspaceConfig, apiKeyConfig, paymentMethodConfig)
 
 		// Step 2 config: the "other" provider creates a BB with consumer-only inputs.
 		otherProviderConfig := testconfig.OtherProviderConfig(t)
 
 		// Reuses the workspace example (resource_01_workspace.tf) 1:1; the BBD above marks its
-		// `environment` input non-updateable-by-consumer.
+		// `environment` and `payment_method` inputs non-updateable-by-consumer.
 		var buildingBlockAddr testconfig.Traversal
 		bbConfig := testconfig.Resource{Name: "building_block", Suffix: "_01_workspace"}.Config(t).WithFirstBlock(
 			testconfig.ExtractAddress(&buildingBlockAddr),
 			testconfig.Descend("spec", "building_block_definition_version_ref")(testconfig.SetAddr(buildingBlockDefinitionAddr, "version_latest")),
 			testconfig.Descend("spec", "target_ref")(testconfig.SetAddr(otherWorkspaceAddr, "ref")),
+			setPaymentMethodInput,
 			testconfig.Descend("provider")(testconfig.SetRawExpr("meshstack-other")),
 			// depends_on ensures the BB is destroyed before the API key the other provider needs.
 			testconfig.Descend("depends_on")(testconfig.SetRawExpr("[%s]", apiKeyAddr)),
@@ -1025,6 +1030,7 @@ func TestAccBuildingBlock(t *testing.T) {
 	// the mechanism and its acceptance-only 404 assertion.
 	t.Run("09_purge_on_delete", func(t *testing.T) {
 		workspaceConfig, workspaceAddr := testconfig.Workspace(t)
+		paymentMethodConfig, setPaymentMethodInput := testconfig.PaymentMethodInput(t, workspaceAddr)
 		var buildingBlockDefinitionAddr testconfig.Traversal
 		buildingBlockDefinitionConfig := testconfig.Resource{Name: "building_block", Suffix: "_01_workspace"}.TestSupportConfig(t, "").WithFirstBlock(
 			testconfig.ExtractAddress(&buildingBlockDefinitionAddr),
@@ -1036,8 +1042,9 @@ func TestAccBuildingBlock(t *testing.T) {
 			testconfig.ExtractAddress(&buildingBlockAddr),
 			testconfig.Descend("spec", "building_block_definition_version_ref")(testconfig.SetRawExpr(`{ uuid = %s }`, buildingBlockDefinitionAddr.Join("version_latest", "uuid"))),
 			testconfig.Descend("spec", "target_ref")(testconfig.SetAddr(workspaceAddr, "ref")),
+			setPaymentMethodInput,
 			testconfig.Descend("purge_on_delete")(testconfig.SetRawExpr("true")),
-		).Join(workspaceConfig, buildingBlockDefinitionConfig)
+		).Join(workspaceConfig, paymentMethodConfig, buildingBlockDefinitionConfig)
 
 		var bbUuid string
 		ApplyAndTest(t, resource.TestCase{
@@ -1099,6 +1106,7 @@ func TestAccBuildingBlock(t *testing.T) {
 			testconfig.ExtractAddress(&buildingBlockAddr),
 			testconfig.Descend("spec", "building_block_definition_version_ref")(testconfig.SetAddr(buildingBlockDefinitionAddr, "version_latest")),
 			testconfig.Descend("spec", "target_ref")(testconfig.SetAddr(workspaceAddr, "ref")),
+			testconfig.Descend("spec", "inputs", "payment_method")(testconfig.RemoveKey()),
 		).Join(workspaceConfig, buildingBlockDefinitionConfig)
 
 		// Then manage ONLY the operator input — drop the user inputs from the configuration.
@@ -1450,107 +1458,6 @@ func TestAccBuildingBlock(t *testing.T) {
 		})
 	})
 
-	// 14_payment_method_input orders a block with a Payment Method, switches it, and imports it. A
-	// Payment Method input cannot be optional, so it lives in this test's own definition instead of the
-	// shared one every other test orders from.
-	t.Run("14_payment_method_input", func(t *testing.T) {
-		if IsMockClientTest() {
-			t.Skip("which Payment Method a building block may pick is checked by meshStack only")
-		}
-
-		workspaceConfig, workspaceAddr := testconfig.Workspace(t)
-		var foreignWorkspaceAddr testconfig.Traversal
-		foreignWorkspaceConfig, _ := testconfig.Workspace(t)
-		foreignWorkspaceConfig = foreignWorkspaceConfig.WithFirstBlock(
-			testconfig.RenameKey("foreign"),
-			testconfig.ExtractAddress(&foreignWorkspaceAddr),
-		)
-
-		paymentMethod := func(label string, ownerAddr testconfig.Traversal) (config testconfig.Config, paymentMethodAddr testconfig.Traversal, name string) {
-			name = "test-pm-" + acctest.RandString(8)
-			config, _ = testconfig.PaymentMethod(t, ownerAddr)
-			config = config.WithFirstBlock(
-				testconfig.RenameKey(label),
-				testconfig.ExtractAddress(&paymentMethodAddr),
-				testconfig.Descend("metadata", "name")(testconfig.SetString(name)),
-			)
-			return config, paymentMethodAddr, name
-		}
-		firstConfig, firstAddr, firstName := paymentMethod("first", workspaceAddr)
-		secondConfig, secondAddr, secondName := paymentMethod("second", workspaceAddr)
-		foreignConfig, foreignAddr, _ := paymentMethod("foreign", foreignWorkspaceAddr)
-
-		var buildingBlockDefinitionAddr testconfig.Traversal
-		buildingBlockDefinitionConfig := testconfig.Resource{Name: "building_block", Suffix: "_01_workspace"}.TestSupportConfig(t, "").WithFirstBlock(
-			testconfig.ExtractAddress(&buildingBlockDefinitionAddr),
-			testconfig.OwnedByWorkspace(workspaceAddr),
-			testconfig.Descend("version_spec", "inputs", "payment_method")(testconfig.SetRawExpr(`{
-  display_name           = "Payment Method"
-  type                   = "CODE"
-  assignment_type        = "PAYMENT_METHOD"
-  updateable_by_consumer = true
-}`)),
-		)
-
-		var buildingBlockAddr testconfig.Traversal
-		buildingBlockWithPaymentMethod := func(paymentMethodAddr testconfig.Traversal) testconfig.Config {
-			return testconfig.Resource{Name: "building_block", Suffix: "_01_workspace"}.Config(t).WithFirstBlock(
-				testconfig.ExtractAddress(&buildingBlockAddr),
-				testconfig.Descend("spec", "building_block_definition_version_ref")(testconfig.SetRawExpr(`{ uuid = %s }`, buildingBlockDefinitionAddr.Join("version_latest", "uuid"))),
-				testconfig.Descend("spec", "target_ref")(testconfig.SetAddr(workspaceAddr, "ref")),
-				testconfig.Descend("spec", "inputs", "payment_method")(testconfig.SetRawExpr(`{ value = jsonencode(%s) }`, paymentMethodAddr.Join("metadata", "name"))),
-			).Join(workspaceConfig, buildingBlockDefinitionConfig, firstConfig, secondConfig, foreignWorkspaceConfig, foreignConfig)
-		}
-
-		paymentMethodInputChecks := func(paymentMethodName string) []statecheck.StateCheck {
-			encodedName := fmt.Sprintf("%q", paymentMethodName)
-			return []statecheck.StateCheck{
-				statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("spec").AtMapKey("inputs").AtMapKey("payment_method").AtMapKey("value"), knownvalue.StringExact(encodedName)),
-				statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("all_inputs").AtMapKey("payment_method").AtMapKey("assignment_type"),
-					knownvalue.StringExact(client.MeshBuildingBlockInputAssignmentTypePaymentMethod.String())),
-			}
-		}
-
-		ApplyAndTest(t, resource.TestCase{
-			Steps: []resource.TestStep{
-				{
-					Config:            buildingBlockWithPaymentMethod(firstAddr).String(),
-					ConfigStateChecks: paymentMethodInputChecks(firstName),
-				},
-				{
-					Config:   buildingBlockWithPaymentMethod(firstAddr).String(),
-					PlanOnly: true,
-				},
-				{
-					Config:      buildingBlockWithPaymentMethod(foreignAddr).String(),
-					ExpectError: regexp.MustCompile(`does not belong to workspace`),
-				},
-				{
-					Config: buildingBlockWithPaymentMethod(secondAddr).String(),
-					ConfigPlanChecks: resource.ConfigPlanChecks{
-						PreApply: []plancheck.PlanCheck{
-							plancheck.ExpectResourceAction(buildingBlockAddr.String(), plancheck.ResourceActionUpdate),
-						},
-					},
-					ConfigStateChecks: paymentMethodInputChecks(secondName),
-				},
-				{
-					ImportState:                          true,
-					ImportStateVerify:                    true,
-					ImportStateVerifyIdentifierAttribute: "metadata.uuid",
-					ImportStateVerifyIgnore:              []string{"wait_for_completion", "purge_on_delete", "timeouts.create", "timeouts.update", "timeouts.delete"},
-					ImportStateIdFunc: func(s *terraform.State) (string, error) {
-						rs := s.RootModule().Resources[buildingBlockAddr.String()]
-						if rs == nil {
-							return "", fmt.Errorf("resource not found: %s", buildingBlockAddr.String())
-						}
-						return rs.Primary.Attributes["metadata.uuid"], nil
-					},
-					ResourceName: buildingBlockAddr.String(),
-				},
-			},
-		})
-	})
 }
 
 // bbv3StateChecks returns the baseline state checks shared by every BB v3 create and move step.
@@ -1573,6 +1480,21 @@ func bbv3SizeEnvInputChecks(buildingBlockAddr testconfig.Traversal) []statecheck
 		statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("spec").AtMapKey("inputs").AtMapKey("size").AtMapKey("value"), knownvalue.StringExact("16")),
 		statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("spec").AtMapKey("inputs").AtMapKey("environment").AtMapKey("value"), knownvalue.StringExact(`"dev"`)),
 	}
+}
+
+// bbv3PaymentMethodInputChecks asserts that the payment_method input of resource_01_workspace.tf
+// keeps the Payment Method's ref that BBWorkspace sets.
+func bbv3PaymentMethodInputChecks(buildingBlockAddr testconfig.Traversal) []statecheck.StateCheck {
+	checks := []statecheck.StateCheck{
+		statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("spec").AtMapKey("inputs").AtMapKey("payment_method").AtMapKey("value"),
+			knownvalue.StringRegexp(regexp.MustCompile(`^\{"kind":"meshPaymentMethod","name":"test-pm-[a-z0-9]+"\}$`))),
+	}
+	// The mock reports every consumer input as USER_INPUT.
+	if !IsMockClientTest() {
+		checks = append(checks, statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("all_inputs").AtMapKey("payment_method").AtMapKey("assignment_type"),
+			knownvalue.StringExact(client.MeshBuildingBlockInputAssignmentTypePaymentMethod.String())))
+	}
+	return checks
 }
 
 // Test_compareContentHashes tests the content hash comparison logic for the building block rerun decision.

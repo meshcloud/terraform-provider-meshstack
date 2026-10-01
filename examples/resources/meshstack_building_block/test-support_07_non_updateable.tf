@@ -10,8 +10,8 @@ resource "meshstack_building_block_definition" "example" {
   }
 
   # Reuses the same input keys as the workspace example (resource_01_workspace.tf) so that example is
-  # 1:1 reusable, but marks `environment` as not updateable by the consumer — changing it from a
-  # consumer-scoped key must be rejected.
+  # 1:1 reusable, but marks `environment` and `payment_method` as not updateable by the consumer —
+  # changing them from a consumer-scoped key must be rejected.
   version_spec = {
     draft = false
 
@@ -37,6 +37,12 @@ resource "meshstack_building_block_definition" "example" {
         assignment_type        = "USER_INPUT"
         updateable_by_consumer = false
         selectable_values      = ["dev", "staging", "prod"]
+      }
+      payment_method = {
+        display_name           = "Payment Method"
+        type                   = "CODE"
+        assignment_type        = "PAYMENT_METHOD"
+        updateable_by_consumer = false
       }
     }
 

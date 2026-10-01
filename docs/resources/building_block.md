@@ -37,6 +37,9 @@ resource "meshstack_building_block" "example_workspace" {
       environment = {
         value = jsonencode("dev")
       }
+      payment_method = {
+        value = jsonencode(data.meshstack_payment_method.example.ref)
+      }
     }
 
     # Building blocks can depend on each other: a parent's outputs feed this block's inputs.
