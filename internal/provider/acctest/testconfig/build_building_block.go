@@ -36,39 +36,52 @@ func PaymentMethodInput(t *testing.T, workspaceAddr Traversal) (paymentMethodCon
 	return paymentMethodConfig, Descend("spec", "inputs", "payment_method", "value")(SetRawExpr(`jsonencode(%s)`, paymentMethodAddr.Join("ref")))
 }
 
-// BBWorkspaceParentChild builds a workspace, a building block definition owned by it, and two v3
-// building blocks from that definition, the child referencing the parent through
-// spec.parent_building_block_refs.
+// BBWorkspaceParentChild builds a workspace, two building block definitions owned by it, and a v3
+// building block from each, the child referencing the parent through spec.parent_building_block_refs.
+// The child's definition declares the parent's definition in version_spec.dependency_refs, which
+// meshStack requires of any parent.
 func BBWorkspaceParentChild(t *testing.T) (config Config, parentAddr Traversal, childAddr Traversal) {
 	t.Helper()
 	workspaceConfig, workspaceAddr := Workspace(t)
 	paymentMethodConfig, setPaymentMethodInput := PaymentMethodInput(t, workspaceAddr)
-	var buildingBlockDefinitionAddr Traversal
-	buildingBlockDefinitionConfig := Resource{Name: "building_block", Suffix: "_01_workspace"}.TestSupportConfig(t, "").WithFirstBlock(
-		ExtractAddress(&buildingBlockDefinitionAddr),
-		OwnedByWorkspace(workspaceAddr),
-	)
+
+	// Both definitions are built from the same example file, so each one needs its own resource label.
+	definition := func(name string, extra ...ExpressionConsumer) (definitionConfig Config, definitionAddr Traversal) {
+		return Resource{Name: "building_block", Suffix: "_01_workspace"}.TestSupportConfig(t, "").WithFirstBlock(
+			append([]ExpressionConsumer{
+				RenameKey(name),
+				ExtractAddress(&definitionAddr),
+				OwnedByWorkspace(workspaceAddr),
+				Descend("spec", "display_name")(SetString("Test BB v3 " + name + " Definition")),
+			}, extra...)...,
+		), definitionAddr
+	}
 
 	// Both blocks are built from the same example file, so each one needs its own resource label.
-	buildingBlock := func(name string, extra ...ExpressionConsumer) (buildingBlockConfig Config, buildingBlockAddr Traversal) {
+	buildingBlock := func(name string, definitionAddr Traversal, extra ...ExpressionConsumer) (buildingBlockConfig Config, buildingBlockAddr Traversal) {
 		return Resource{Name: "building_block", Suffix: "_01_workspace"}.Config(t).WithFirstBlock(
 			append([]ExpressionConsumer{
 				RenameKey(name),
 				ExtractAddress(&buildingBlockAddr),
 				Descend("spec", "display_name")(SetString("my-" + name + "-building-block")),
 				// Reference only the version uuid, for the reason given in BBWorkspace.
-				Descend("spec", "building_block_definition_version_ref")(SetRawExpr(`{ uuid = %s }`, buildingBlockDefinitionAddr.Join("version_latest", "uuid"))),
+				Descend("spec", "building_block_definition_version_ref")(SetRawExpr(`{ uuid = %s }`, definitionAddr.Join("version_latest", "uuid"))),
 				Descend("spec", "target_ref")(SetAddr(workspaceAddr, "ref")),
 				setPaymentMethodInput,
 			}, extra...)...,
 		), buildingBlockAddr
 	}
 
-	parentConfig, parentAddr := buildingBlock("parent")
-	childConfig, childAddr := buildingBlock("child",
+	parentDefinitionConfig, parentDefinitionAddr := definition("parent")
+	childDefinitionConfig, childDefinitionAddr := definition("child",
+		Descend("version_spec", "dependency_refs")(SetRawExpr("[%s]", parentDefinitionAddr.Join("ref"))),
+	)
+
+	parentConfig, parentAddr := buildingBlock("parent", parentDefinitionAddr)
+	childConfig, childAddr := buildingBlock("child", childDefinitionAddr,
 		Descend("spec", "parent_building_block_refs")(SetRawExpr("[%s]", parentAddr.Join("ref"))),
 	)
-	return childConfig.Join(parentConfig, workspaceConfig, paymentMethodConfig, buildingBlockDefinitionConfig), parentAddr, childAddr
+	return childConfig.Join(parentConfig, workspaceConfig, paymentMethodConfig, parentDefinitionConfig, childDefinitionConfig), parentAddr, childAddr
 }
 
 // BBTenant builds a workspace (+project/platform/landing-zone/tenant) and a v3 building block
