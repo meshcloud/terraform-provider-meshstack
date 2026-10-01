@@ -213,17 +213,15 @@ func (m meshBuildingBlockClient) resolveDefinitionRef(versionUuid string) (defin
 }
 
 // resolveTenant maps a tenant name (workspace.project.platformIdentifier) to the tenant's uuid and
-// owning workspace, mirroring how the backend resolves the target tenant of a v1 building block. Since
-// v4 references the platform by uuid, the mock cannot reconstruct the platform identifier segment, so
-// it matches on the unambiguous workspace.project prefix (mock scenarios have at most one tenant per
-// project).
+// owning workspace, mirroring how the backend resolves the target tenant of a v1 building block. It
+// matches on the unambiguous workspace.project prefix (mock scenarios have at most one tenant per
+// project), because a tenant whose platform the mock does not know carries no platform identifier.
 func (m meshBuildingBlockClient) resolveTenant(tenantName string) (tenantUuid string, ownedByWorkspace string, err error) {
 	for _, t := range m.TenantStore.Values() {
 		prefix := t.Metadata.OwnedByWorkspace + "." + t.Metadata.OwnedByProject + "."
 		if strings.HasPrefix(tenantName, prefix) {
-			// The mock stores the platform by ref (uuid) and cannot reconstruct the identifier-based
-			// tenant name, so record the caller's value as the canonical name — this makes
-			// resolveTenantName echo the exact value back (as the real backend does).
+			// Record the caller's value as the canonical name, so resolveTenantName echoes it back exactly
+			// as the real backend does — also for a tenant whose platform the mock does not know.
 			t.Status.TenantName = tenantName
 			return t.Metadata.Uuid, t.Metadata.OwnedByWorkspace, nil
 		}

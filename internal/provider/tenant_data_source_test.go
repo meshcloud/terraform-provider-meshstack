@@ -5,6 +5,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 
@@ -26,16 +27,18 @@ func TestAccTenantDataSource(t *testing.T) {
 		tenantStepConfig(t, 1, 8, 1),
 	)
 
+	suffix := acctest.RandString(8)
+
 	ApplyAndTest(t, resource.TestCase{
 		Steps: []resource.TestStep{
 			{
 				Config:          config,
-				ConfigVariables: SuffixVariables(acctest.RandString(8)),
+				ConfigVariables: SuffixVariables(suffix),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(tenantByNameDataSourceAddr, tfjsonpath.New("metadata").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
 					statecheck.ExpectKnownValue(tenantByNameDataSourceAddr, tfjsonpath.New("spec").AtMapKey("platform_ref").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
-					statecheck.ExpectKnownValue(tenantByNameDataSourceAddr, tfjsonpath.New("status").AtMapKey("tenant_name"), xknownvalue.NotEmptyString()),
-					statecheck.ExpectKnownValue(tenantByNameDataSourceAddr, tfjsonpath.New("status").AtMapKey("platform_type_identifier"), xknownvalue.NotEmptyString()),
+					statecheck.ExpectKnownValue(tenantByNameDataSourceAddr, tfjsonpath.New("status").AtMapKey("tenant_name"), knownvalue.StringExact("test-ws-"+suffix+".test-proj-"+suffix+".my-platform-"+suffix+".global")),
+					statecheck.ExpectKnownValue(tenantByNameDataSourceAddr, tfjsonpath.New("status").AtMapKey("platform_type_identifier"), knownvalue.StringExact(platformTypeName(suffix))),
 				},
 			},
 		},

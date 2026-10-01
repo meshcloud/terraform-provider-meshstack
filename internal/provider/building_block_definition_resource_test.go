@@ -199,9 +199,9 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 						},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(terraformBbdAddr, tfjsonpath.New("metadata"), checkBBDMetadataFull()),
+						statecheck.ExpectKnownValue(terraformBbdAddr, tfjsonpath.New("metadata"), checkBBDMetadataFull(vars.suffix)),
 						statecheck.ExpectKnownValue(terraformBbdAddr, tfjsonpath.New("spec"), checkBBDSpecFull(bbdDescription)),
-						statecheck.ExpectKnownValue(terraformBbdAddr, tfjsonpath.New("version_spec"), checkBuildingBlockVersionSpec("01_terraform", versionStateDraft, 1)),
+						statecheck.ExpectKnownValue(terraformBbdAddr, tfjsonpath.New("version_spec"), checkBuildingBlockVersionSpec(vars.suffix, "01_terraform", versionStateDraft, 1)),
 						statecheck.ExpectKnownValue(terraformBbdAddr, tfjsonpath.New("version_latest_release"), knownvalue.Null()),
 						statecheck.ExpectKnownValue(terraformBbdAddr, tfjsonpath.New("version_latest"), expectedVersion(1, versionStateDraft)),
 						statecheck.ExpectKnownValue(terraformBbdAddr, tfjsonpath.New("versions"), knownvalue.ListExact([]knownvalue.Check{expectedVersion(1, versionStateDraft)})),
@@ -247,9 +247,9 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 						},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(githubBbdAddr, tfjsonpath.New("metadata"), checkBBDMetadataMinimal()),
+						statecheck.ExpectKnownValue(githubBbdAddr, tfjsonpath.New("metadata"), checkBBDMetadataMinimal(vars.suffix)),
 						statecheck.ExpectKnownValue(githubBbdAddr, tfjsonpath.New("spec"), checkBBDSpecMinimal(bbdDescription)),
-						statecheck.ExpectKnownValue(githubBbdAddr, tfjsonpath.New("version_spec"), checkBuildingBlockVersionSpec("02_github_workflows", versionStateDraft, 1)),
+						statecheck.ExpectKnownValue(githubBbdAddr, tfjsonpath.New("version_spec"), checkBuildingBlockVersionSpec(vars.suffix, "02_github_workflows", versionStateDraft, 1)),
 						statecheck.ExpectKnownValue(githubBbdAddr, tfjsonpath.New("version_latest_release"), knownvalue.Null()),
 						statecheck.ExpectKnownValue(githubBbdAddr, tfjsonpath.New("version_latest"), expectedVersion(1, versionStateDraft)),
 						statecheck.ExpectKnownValue(githubBbdAddr, tfjsonpath.New("versions"), knownvalue.ListExact([]knownvalue.Check{expectedVersion(1, versionStateDraft)})),
@@ -286,9 +286,9 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 						},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("metadata"), checkBBDMetadataMinimal()),
+						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("metadata"), checkBBDMetadataMinimal(vars.suffix)),
 						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("spec"), checkBBDSpecMinimal(bbdDescription)),
-						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("version_spec"), checkBuildingBlockVersionSpec("03_manual", versionStateDraft, 1)),
+						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("version_spec"), checkBuildingBlockVersionSpec(vars.suffix, "03_manual", versionStateDraft, 1)),
 						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("version_latest_release"), knownvalue.Null()),
 						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("version_latest"), expectedVersion(1, versionStateDraft)),
 						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("versions"), knownvalue.ListExact([]knownvalue.Check{expectedVersion(1, versionStateDraft)})),
@@ -305,7 +305,7 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 						},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("metadata"), checkBBDMetadataMinimal()),
+						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("metadata"), checkBBDMetadataMinimal(vars.suffix)),
 						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("spec"), checkBBDSpecMinimal("An updated building block definition")),
 						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("versions"), knownvalue.ListExact([]knownvalue.Check{expectedVersion(1, versionStateDraft)})),
 						xknownvalue.Ref(manualBbdResAddr, "meshBuildingBlockDefinition", &resourceUuid),
@@ -321,7 +321,7 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 						},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("version_spec"), checkBuildingBlockVersionSpec("03_manual", versionStateReleased, 1)),
+						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("version_spec"), checkBuildingBlockVersionSpec(vars.suffix, "03_manual", versionStateReleased, 1)),
 						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("version_latest_release"), expectedVersion(1, versionStateReleased)),
 						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("version_latest"), expectedVersion(1, versionStateReleased)),
 						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("versions"), knownvalue.ListExact([]knownvalue.Check{expectedVersion(1, versionStateReleased)})),
@@ -337,7 +337,7 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 						},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("version_spec"), checkBuildingBlockVersionSpec("03_manual", versionStateDraft, 2)),
+						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("version_spec"), checkBuildingBlockVersionSpec(vars.suffix, "03_manual", versionStateDraft, 2)),
 						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("version_latest_release"), expectedVersion(1, versionStateReleased)),
 						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("version_latest"), expectedVersion(2, versionStateDraft)),
 						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("versions"), knownvalue.ListExact([]knownvalue.Check{
@@ -356,7 +356,7 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 						},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("version_spec"), checkBuildingBlockVersionSpec("03_manual", versionStateReleased, 2)),
+						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("version_spec"), checkBuildingBlockVersionSpec(vars.suffix, "03_manual", versionStateReleased, 2)),
 						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("version_latest_release"), expectedVersion(2, versionStateReleased)),
 						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("version_latest"), expectedVersion(2, versionStateReleased)),
 						statecheck.ExpectKnownValue(manualBbdResAddr, tfjsonpath.New("versions"), knownvalue.ListExact([]knownvalue.Check{
@@ -393,9 +393,9 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 						},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(azureDevopsBbdAddr, tfjsonpath.New("metadata"), checkBBDMetadataMinimal()),
+						statecheck.ExpectKnownValue(azureDevopsBbdAddr, tfjsonpath.New("metadata"), checkBBDMetadataMinimal(vars.suffix)),
 						statecheck.ExpectKnownValue(azureDevopsBbdAddr, tfjsonpath.New("spec"), checkBBDSpecMinimal(bbdDescription)),
-						statecheck.ExpectKnownValue(azureDevopsBbdAddr, tfjsonpath.New("version_spec"), checkBuildingBlockVersionSpec("04_azure_devops_pipeline", versionStateDraft, 1)),
+						statecheck.ExpectKnownValue(azureDevopsBbdAddr, tfjsonpath.New("version_spec"), checkBuildingBlockVersionSpec(vars.suffix, "04_azure_devops_pipeline", versionStateDraft, 1)),
 						statecheck.ExpectKnownValue(azureDevopsBbdAddr, tfjsonpath.New("version_latest_release"), knownvalue.Null()),
 						statecheck.ExpectKnownValue(azureDevopsBbdAddr, tfjsonpath.New("version_latest"), expectedVersion(1, versionStateDraft)),
 						statecheck.ExpectKnownValue(azureDevopsBbdAddr, tfjsonpath.New("versions"), knownvalue.ListExact([]knownvalue.Check{expectedVersion(1, versionStateDraft)})),
@@ -438,9 +438,9 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 						},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(gitlabBbdAddr, tfjsonpath.New("metadata"), checkBBDMetadataMinimal()),
+						statecheck.ExpectKnownValue(gitlabBbdAddr, tfjsonpath.New("metadata"), checkBBDMetadataMinimal(vars.suffix)),
 						statecheck.ExpectKnownValue(gitlabBbdAddr, tfjsonpath.New("spec"), checkBBDSpecMinimal(bbdDescription)),
-						statecheck.ExpectKnownValue(gitlabBbdAddr, tfjsonpath.New("version_spec"), checkBuildingBlockVersionSpec("05_gitlab_pipeline", versionStateDraft, 1)),
+						statecheck.ExpectKnownValue(gitlabBbdAddr, tfjsonpath.New("version_spec"), checkBuildingBlockVersionSpec(vars.suffix, "05_gitlab_pipeline", versionStateDraft, 1)),
 						statecheck.ExpectKnownValue(gitlabBbdAddr, tfjsonpath.New("version_latest_release"), knownvalue.Null()),
 						statecheck.ExpectKnownValue(gitlabBbdAddr, tfjsonpath.New("version_latest"), expectedVersion(1, versionStateDraft)),
 						statecheck.ExpectKnownValue(gitlabBbdAddr, tfjsonpath.New("versions"), knownvalue.ListExact([]knownvalue.Check{expectedVersion(1, versionStateDraft)})),
@@ -467,7 +467,7 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 						},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(gitlabBbdAddr, tfjsonpath.New("metadata"), checkBBDMetadataMinimal()),
+						statecheck.ExpectKnownValue(gitlabBbdAddr, tfjsonpath.New("metadata"), checkBBDMetadataMinimal(vars.suffix)),
 						statecheck.ExpectKnownValue(gitlabBbdAddr, tfjsonpath.New("spec"), checkBBDSpecMinimal(bbdDescription)),
 						statecheck.ExpectKnownValue(gitlabBbdAddr, tfjsonpath.New("versions"), knownvalue.ListExact([]knownvalue.Check{expectedVersion(1, versionStateDraft)})),
 						xknownvalue.Ref(gitlabBbdAddr, "meshBuildingBlockDefinition", &resourceUuid),
@@ -1096,19 +1096,19 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 }
 
 // checkBBDMetadataFull checks metadata for the 01_terraform example (tags with 2 entries).
-func checkBBDMetadataFull() knownvalue.Check {
+func checkBBDMetadataFull(suffix string) knownvalue.Check {
 	return xknownvalue.MapExact(map[string]knownvalue.Check{
 		"uuid":               xknownvalue.NotEmptyString(),
-		"owned_by_workspace": xknownvalue.NotEmptyString(),
+		"owned_by_workspace": knownvalue.StringExact("test-ws-" + suffix),
 		"tags":               knownvalue.MapSizeExact(2),
 	})
 }
 
 // checkBBDMetadataMinimal checks metadata for examples without tags.
-func checkBBDMetadataMinimal() knownvalue.Check {
+func checkBBDMetadataMinimal(suffix string) knownvalue.Check {
 	return xknownvalue.MapExact(map[string]knownvalue.Check{
 		"uuid":               xknownvalue.NotEmptyString(),
-		"owned_by_workspace": xknownvalue.NotEmptyString(),
+		"owned_by_workspace": knownvalue.StringExact("test-ws-" + suffix),
 		"tags":               knownvalue.MapSizeExact(0),
 	})
 }
@@ -1130,7 +1130,7 @@ func checkBBDSpecFull(expectedDescription string) knownvalue.Check {
 		}),
 		"display_name_template": knownvalue.StringExact("Example Building Block {{ resource_name }}"),
 		"description":           knownvalue.StringExact(expectedDescription),
-		"readme":                xknownvalue.NotEmptyString(),
+		"readme":                knownvalue.StringExact("# Example Building Block\n\nThis is a comprehensive example showcasing all available attributes."),
 		"support_url":           knownvalue.StringExact("https://support.example.com/building-blocks"),
 		"documentation_url":     knownvalue.StringExact("https://docs.example.com/building-blocks"),
 		"target_type":           knownvalue.StringExact("TENANT_LEVEL"),
@@ -1213,8 +1213,8 @@ func checkBBDSpecMinimal(expectedDescription string) knownvalue.Check {
 	})
 }
 
-func checkBuildingBlockVersionSpec(exampleSuffix string, expectedState enum.Entry[client.MeshBuildingBlockDefinitionVersionState], expectedNumber int64) knownvalue.Check {
-	checkInputs, checkImplementation, checkOutputs := checksForImplementation(exampleSuffix)
+func checkBuildingBlockVersionSpec(suffix, exampleSuffix string, expectedState enum.Entry[client.MeshBuildingBlockDefinitionVersionState], expectedNumber int64) knownvalue.Check {
+	checkInputs, checkImplementation, checkOutputs := checksForImplementation(suffix, exampleSuffix)
 	expectedDeletionMode := "DELETE"
 	if exampleSuffix == "02_github_workflows" {
 		expectedDeletionMode = "PURGE"
@@ -1251,7 +1251,7 @@ func checkBuildingBlockVersionSpec(exampleSuffix string, expectedState enum.Entr
 	return xknownvalue.MapExact(expected)
 }
 
-func checksForImplementation(exampleSuffix string) (checkInputs, checkImplementation, checkOutputs knownvalue.Check) {
+func checksForImplementation(suffix, exampleSuffix string) (checkInputs, checkImplementation, checkOutputs knownvalue.Check) {
 	switch exampleSuffix {
 	case "01_terraform":
 		return xknownvalue.MapExact(map[string]knownvalue.Check{
@@ -1348,7 +1348,7 @@ func checksForImplementation(exampleSuffix string) (checkInputs, checkImplementa
 					"updateable_by_consumer": knownvalue.Bool(false),
 					"description":            knownvalue.StringExact("The business unit tag of the workspace this building block belongs to"),
 					// The argument is the `<target>.<tagKey>` reference; the key carries a per-run random suffix.
-					"argument":                       xknownvalue.NotEmptyString(),
+					"argument":                       knownvalue.StringExact(`"WORKSPACE.business-unit-` + suffix + `"`),
 					"default_value":                  knownvalue.Null(),
 					"value_validation_regex":         knownvalue.Null(),
 					"validation_regex_error_message": knownvalue.Null(),
@@ -1578,7 +1578,7 @@ func checkTerraformImplementation() knownvalue.Check {
 		"ssh_known_host": xknownvalue.MapExact(map[string]knownvalue.Check{
 			"host":      knownvalue.StringExact("github.com"),
 			"key_type":  knownvalue.StringExact("ssh-rsa"),
-			"key_value": xknownvalue.NotEmptyString(),
+			"key_value": knownvalue.StringExact("AAAAB3NzaC1yc2EAAAABIwAAAQEAq2A7hRGmdnm9tUDbO9IDSwBK6TbQa+..."),
 		}),
 		"ssh_private_key": xknownvalue.MapExact(map[string]knownvalue.Check{
 			"secret_value":   knownvalue.Null(),

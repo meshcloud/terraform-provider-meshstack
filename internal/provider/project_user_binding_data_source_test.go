@@ -10,7 +10,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 
 	"github.com/meshcloud/terraform-provider-meshstack/examples"
-	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/xknownvalue"
 )
 
 func TestAccProjectUserBindingDataSource(t *testing.T) {
@@ -31,7 +30,7 @@ func TestAccProjectUserBindingDataSource(t *testing.T) {
 				ConfigVariables: SuffixVariables(acctest.RandString(8)),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(projectUserBindingDataSourceAddr, tfjsonpath.New("metadata").AtMapKey("name"), knownvalue.StringExact(projectBindingName)),
-					statecheck.ExpectKnownValue(projectUserBindingDataSourceAddr, tfjsonpath.New("role_ref").AtMapKey("name"), xknownvalue.NotEmptyString()),
+					statecheck.ExpectKnownValue(projectUserBindingDataSourceAddr, tfjsonpath.New("role_ref").AtMapKey("name"), knownvalue.StringExact("Project Reader")),
 				},
 			},
 		},

@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 
 	"github.com/meshcloud/terraform-provider-meshstack/examples"
-	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/xknownvalue"
 )
 
 // Addresses and the binding name of the blocks in
@@ -32,7 +31,8 @@ func TestAccProjectGroupBinding(t *testing.T) {
 		examples.Resource.TestStepConfig(t, "project", 1, "prerequisites"),
 	)
 
-	vars := SuffixVariables(acctest.RandString(8))
+	suffix := acctest.RandString(8)
+	vars := SuffixVariables(suffix)
 
 	ApplyAndTest(t, resource.TestCase{
 		Steps: []resource.TestStep{
@@ -47,7 +47,7 @@ func TestAccProjectGroupBinding(t *testing.T) {
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(projectGroupBindingResourceAddr, tfjsonpath.New("metadata").AtMapKey("name"), knownvalue.StringExact(projectBindingName)),
 					statecheck.ExpectKnownValue(projectGroupBindingResourceAddr, tfjsonpath.New("role_ref").AtMapKey("name"), knownvalue.StringExact("Project Reader")),
-					statecheck.ExpectKnownValue(projectGroupBindingResourceAddr, tfjsonpath.New("target_ref").AtMapKey("name"), xknownvalue.NotEmptyString()),
+					statecheck.ExpectKnownValue(projectGroupBindingResourceAddr, tfjsonpath.New("target_ref").AtMapKey("name"), knownvalue.StringExact("test-proj-"+suffix)),
 					statecheck.ExpectKnownValue(projectGroupBindingResourceAddr, tfjsonpath.New("subject").AtMapKey("name"), knownvalue.StringExact("my-user-group")),
 				},
 			},

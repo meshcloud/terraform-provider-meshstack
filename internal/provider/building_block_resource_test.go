@@ -522,7 +522,7 @@ func TestAccBuildingBlock(t *testing.T) {
 		// no such state and short-circuits the create to a terminal status.
 		createStatusCheck := statecheck.ExpectKnownValue(buildingBlockWorkspaceAddr, tfjsonpath.New("status").AtMapKey("status"), knownvalue.StringExact("WAITING_FOR_OPERATOR_INPUT"))
 		if IsMockClientTest() {
-			createStatusCheck = statecheck.ExpectKnownValue(buildingBlockWorkspaceAddr, tfjsonpath.New("status").AtMapKey("status"), xknownvalue.NotEmptyString())
+			createStatusCheck = statecheck.ExpectKnownValue(buildingBlockWorkspaceAddr, tfjsonpath.New("status").AtMapKey("status"), knownvalue.StringExact("SUCCEEDED"))
 		}
 
 		// Post-upgrade checks: the block reaches SUCCEEDED in both modes. The `tier` assertion is
@@ -1300,7 +1300,7 @@ func bbv3StateChecks(buildingBlockAddr, displayName string, extra ...statecheck.
 		xknownvalue.Ref(buildingBlockAddr, client.MeshObjectKind.BuildingBlock, nil),
 		statecheck.ExpectKnownValue(buildingBlockAddr, tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact(displayName)),
 		statecheck.ExpectKnownValue(buildingBlockAddr, tfjsonpath.New("spec").AtMapKey("inputs").AtMapKey("name").AtMapKey("value"), knownvalue.StringExact(`"my-name"`)),
-		statecheck.ExpectKnownValue(buildingBlockAddr, tfjsonpath.New("status").AtMapKey("status"), xknownvalue.NotEmptyString()),
+		statecheck.ExpectKnownValue(buildingBlockAddr, tfjsonpath.New("status").AtMapKey("status"), knownvalue.StringExact("SUCCEEDED")),
 		statecheck.ExpectKnownValue(buildingBlockAddr, tfjsonpath.New("status").AtMapKey("latest_run_uuid"), xknownvalue.NotEmptyString()),
 	}
 	return append(checks, extra...)

@@ -22,6 +22,8 @@ func TestAccLandingZonesDataSource(t *testing.T) {
 	// plain listing creates a landing zone in a fresh workspace and lists it back by platform_uuid,
 	// running identically in mock and acceptance mode.
 	t.Run("plain listing", func(t *testing.T) {
+		suffix := acctest.RandString(8)
+
 		config := examples.JoinTestStepConfigs(
 			examples.DataSource.TestStepConfig(t, "landingzones", 1),
 			landingZoneStepConfig(t, 1),
@@ -31,12 +33,12 @@ func TestAccLandingZonesDataSource(t *testing.T) {
 			Steps: []resource.TestStep{
 				{
 					Config:          config,
-					ConfigVariables: SuffixVariables(acctest.RandString(8)),
+					ConfigVariables: SuffixVariables(suffix),
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(landingZonesDataSourceAddr, tfjsonpath.New("landing_zones"), knownvalue.ListSizeExact(1)),
-						statecheck.ExpectKnownValue(landingZonesDataSourceAddr, tfjsonpath.New("landing_zones").AtSliceIndex(0).AtMapKey("metadata").AtMapKey("name"), xknownvalue.NotEmptyString()),
+						statecheck.ExpectKnownValue(landingZonesDataSourceAddr, tfjsonpath.New("landing_zones").AtSliceIndex(0).AtMapKey("metadata").AtMapKey("name"), knownvalue.StringExact("test-lz-"+suffix)),
 						statecheck.ExpectKnownValue(landingZonesDataSourceAddr, tfjsonpath.New("landing_zones").AtSliceIndex(0).AtMapKey("ref").AtMapKey("kind"), knownvalue.StringExact("meshLandingZone")),
-						statecheck.ExpectKnownValue(landingZonesDataSourceAddr, tfjsonpath.New("landing_zones").AtSliceIndex(0).AtMapKey("ref").AtMapKey("name"), xknownvalue.NotEmptyString()),
+						statecheck.ExpectKnownValue(landingZonesDataSourceAddr, tfjsonpath.New("landing_zones").AtSliceIndex(0).AtMapKey("ref").AtMapKey("name"), knownvalue.StringExact("test-lz-"+suffix)),
 						statecheck.ExpectKnownValue(landingZonesDataSourceAddr, tfjsonpath.New("landing_zones").AtSliceIndex(0).AtMapKey("spec").AtMapKey("platform_ref").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
 					},
 				},
@@ -47,7 +49,8 @@ func TestAccLandingZonesDataSource(t *testing.T) {
 	// cross-workspace listing proves a consumer workspace's restricted key can list the landing zones of
 	// a platform published (RESTRICTED) to it. The positive assertion runs in both modes.
 	t.Run("cross-workspace listing", func(t *testing.T) {
-		vars := SuffixVariables(acctest.RandString(8))
+		suffix := acctest.RandString(8)
+		vars := SuffixVariables(suffix)
 
 		// Platform variant 9 is the RESTRICTED one, published to the consumer workspace as well.
 		supportConfig := examples.JoinTestStepConfigs(
@@ -86,7 +89,7 @@ func TestAccLandingZonesDataSource(t *testing.T) {
 						apiKeyClientSecret = lazyVariable(clientSecret)
 						return nil
 					})),
-					statecheck.ExpectKnownValue(landingZoneResourceAddr, tfjsonpath.New("metadata").AtMapKey("name"), xknownvalue.NotEmptyString()),
+					statecheck.ExpectKnownValue(landingZoneResourceAddr, tfjsonpath.New("metadata").AtMapKey("name"), knownvalue.StringExact("test-lz-"+suffix)),
 				},
 			},
 			{

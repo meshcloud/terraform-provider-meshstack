@@ -2,6 +2,7 @@ package provider
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -31,8 +32,13 @@ func platformTypeStepConfig(t *testing.T, index int) string {
 	)
 }
 
+func platformTypeName(suffix string) string {
+	return "CUSTOM-PT-" + strings.ToUpper(suffix)
+}
+
 func TestAccPlatformType(t *testing.T) {
-	vars := SuffixVariables(acctest.RandString(8))
+	suffix := acctest.RandString(8)
+	vars := SuffixVariables(suffix)
 
 	ApplyAndTest(t, resource.TestCase{
 		Steps: []resource.TestStep{
@@ -45,10 +51,10 @@ func TestAccPlatformType(t *testing.T) {
 					},
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(platformTypeResourceAddr, tfjsonpath.New("metadata"), checkPlatformTypeMetadata()),
+					statecheck.ExpectKnownValue(platformTypeResourceAddr, tfjsonpath.New("metadata"), checkPlatformTypeMetadata(suffix)),
 					statecheck.ExpectKnownValue(platformTypeResourceAddr, tfjsonpath.New("spec").AtMapKey("display_name"), xknownvalue.KnownStringWithPrefix("My Custom Platform ")),
 					statecheck.ExpectKnownValue(platformTypeResourceAddr, tfjsonpath.New("status"), checkPlatformTypeStatus()),
-					statecheck.ExpectKnownValue(platformTypeResourceAddr, tfjsonpath.New("ref"), checkPlatformTypeRef()),
+					statecheck.ExpectKnownValue(platformTypeResourceAddr, tfjsonpath.New("ref"), checkPlatformTypeRef(suffix)),
 				},
 			},
 			{
@@ -80,10 +86,10 @@ func TestAccPlatformType(t *testing.T) {
 	})
 }
 
-func checkPlatformTypeMetadata() knownvalue.Check {
+func checkPlatformTypeMetadata(suffix string) knownvalue.Check {
 	return xknownvalue.MapExact(map[string]knownvalue.Check{
-		"name":               xknownvalue.NotEmptyString(),
-		"owned_by_workspace": xknownvalue.NotEmptyString(),
+		"name":               knownvalue.StringExact(platformTypeName(suffix)),
+		"owned_by_workspace": knownvalue.StringExact("test-ws-" + suffix),
 		"uuid":               xknownvalue.NotEmptyString(),
 	})
 }
@@ -96,9 +102,9 @@ func checkPlatformTypeStatus() knownvalue.Check {
 	})
 }
 
-func checkPlatformTypeRef() knownvalue.Check {
+func checkPlatformTypeRef(suffix string) knownvalue.Check {
 	return xknownvalue.MapExact(map[string]knownvalue.Check{
 		"kind": knownvalue.StringExact("meshPlatformType"),
-		"name": xknownvalue.NotEmptyString(),
+		"name": knownvalue.StringExact(platformTypeName(suffix)),
 	})
 }

@@ -87,6 +87,7 @@ func NewMock() Client {
 	// runner its latest version references, as the backend does.
 	buildingBlockRunnerStore := NewStore[client.MeshBuildingBlockRunner]()
 	buildingBlockRunnerStore.Set(SharedBuildingBlockRunnerUuid, sharedBuildingBlockRunner())
+	platformStore := NewStore[client.MeshPlatform]()
 	return Client{
 		ApiKey:                         MeshApiKeyClient{Store: NewStore[client.MeshApiKey]()},
 		BuildingBlock:                  meshBuildingBlockClient{Store: buildingBlockStore, BbdVersionStore: bbdVersionStore, TenantStore: tenantStore},
@@ -100,14 +101,14 @@ func NewMock() Client {
 		Location:                       MeshLocationClient{Store: NewStore[client.MeshLocation]()},
 		MeshInfo:                       MeshInfoClient{},
 		PaymentMethod:                  MeshPaymentMethodClient{Store: NewStore[client.MeshPaymentMethod]()},
-		Platform:                       MeshPlatformClient{Store: NewStore[client.MeshPlatform]()},
+		Platform:                       MeshPlatformClient{Store: platformStore},
 		PlatformType:                   MeshPlatformTypeClient{Store: NewStore[client.MeshPlatformType]()},
 		Project:                        MeshProjectClient{Store: NewStore[client.MeshProject]()},
 		ProjectGroupBinding:            MeshProjectGroupBindingClient{Store: NewStore[client.MeshProjectGroupBinding]()},
 		ProjectUserBinding:             MeshProjectUserBindingClient{Store: NewStore[client.MeshProjectUserBinding]()},
 		ServiceInstance:                MeshServiceInstanceClient{Store: NewStore[client.MeshServiceInstance]()},
 		TagDefinition:                  MeshTagDefinitionClient{Store: NewStore[client.MeshTagDefinition]()},
-		Tenant:                         MeshTenantClient{Store: tenantStore, LandingZoneStore: landingZoneStore},
+		Tenant:                         MeshTenantClient{Store: tenantStore, LandingZoneStore: landingZoneStore, PlatformStore: platformStore},
 		Workspace:                      MeshWorkspaceClient{Store: NewStore[client.MeshWorkspace]()},
 		WorkspaceGroupBinding:          MeshWorkspaceGroupBindingClient{Store: NewStore[client.MeshWorkspaceGroupBinding]()},
 		WorkspaceUserBinding:           MeshWorkspaceUserBindingClient{Store: NewStore[client.MeshWorkspaceUserBinding]()},

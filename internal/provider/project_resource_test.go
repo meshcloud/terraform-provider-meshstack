@@ -14,7 +14,6 @@ import (
 	"github.com/meshcloud/meshstack-cli/client"
 
 	"github.com/meshcloud/terraform-provider-meshstack/examples"
-	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/xknownvalue"
 )
 
 // Addresses and the tag key prefix of the blocks in
@@ -56,7 +55,8 @@ func TestAccProject(t *testing.T) {
 		}, TouchesExclusively(client.MeshObjectKind.Project))
 	})
 
-	vars := SuffixVariables(acctest.RandString(8))
+	suffix := acctest.RandString(8)
+	vars := SuffixVariables(suffix)
 
 	ApplyAndTest(t, resource.TestCase{
 		Steps: []resource.TestStep{
@@ -69,8 +69,8 @@ func TestAccProject(t *testing.T) {
 					},
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(projectResourceAddr, tfjsonpath.New("metadata").AtMapKey("name"), xknownvalue.NotEmptyString()),
-					statecheck.ExpectKnownValue(projectResourceAddr, tfjsonpath.New("metadata").AtMapKey("owned_by_workspace"), xknownvalue.NotEmptyString()),
+					statecheck.ExpectKnownValue(projectResourceAddr, tfjsonpath.New("metadata").AtMapKey("name"), knownvalue.StringExact("test-proj-"+suffix)),
+					statecheck.ExpectKnownValue(projectResourceAddr, tfjsonpath.New("metadata").AtMapKey("owned_by_workspace"), knownvalue.StringExact("test-ws-"+suffix)),
 					statecheck.ExpectKnownValue(projectResourceAddr, tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("My Project's Display Name")),
 				},
 			},

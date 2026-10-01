@@ -43,7 +43,7 @@ func TestAccLocation(t *testing.T) {
 					},
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(locationResourceAddr, tfjsonpath.New("metadata"), checkLocationMetadata(locationName)),
+					statecheck.ExpectKnownValue(locationResourceAddr, tfjsonpath.New("metadata"), checkLocationMetadata(locationName, "test-ws-"+suffix)),
 					statecheck.ExpectKnownValue(locationResourceAddr, tfjsonpath.New("spec"), checkLocationSpec("My Cloud Location")),
 					statecheck.ExpectKnownValue(locationResourceAddr, tfjsonpath.New("status"), checkLocationStatus()),
 					statecheck.ExpectKnownValue(locationResourceAddr, tfjsonpath.New("ref"), checkLocationRef(locationName)),
@@ -72,10 +72,10 @@ func TestAccLocation(t *testing.T) {
 	})
 }
 
-func checkLocationMetadata(name string) knownvalue.Check {
+func checkLocationMetadata(name, workspace string) knownvalue.Check {
 	return xknownvalue.MapExact(map[string]knownvalue.Check{
 		"name":               knownvalue.StringExact(name),
-		"owned_by_workspace": xknownvalue.NotEmptyString(),
+		"owned_by_workspace": knownvalue.StringExact(workspace),
 		"uuid":               xknownvalue.NotEmptyString(),
 	})
 }

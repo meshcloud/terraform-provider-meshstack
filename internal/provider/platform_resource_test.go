@@ -59,11 +59,12 @@ func TestAccPlatformResource(t *testing.T) {
 
 	for _, variant := range platformVariants {
 		t.Run(variant.suffix, func(t *testing.T) {
-			vars := SuffixVariables(acctest.RandString(8))
+			suffix := acctest.RandString(8)
+			vars := SuffixVariables(suffix)
 			config := platformStepConfig(t, variant)
 
 			var resourceUuid string
-			steps := platformCreateSteps(config, vars, variant, &resourceUuid)
+			steps := platformCreateSteps(config, suffix, vars, variant, &resourceUuid)
 
 			switch variant.suffix {
 			case "01_azure":
@@ -94,7 +95,7 @@ func TestAccPlatformResource(t *testing.T) {
 						PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectResourceAction(variant.addr, plancheck.ResourceActionUpdate),
 							plancheck.ExpectUnknownValue(variant.addr, aksSecretPath().AtMapKey("secret_hash")),
-							plancheck.ExpectKnownValue(variant.addr, aksSecretPath().AtMapKey("secret_version"), knownvalue.StringExact("4823648dbe986627638418ba4469261474bd52043ffef910a5b2d62c92df86bc")),
+							plancheck.ExpectKnownValue(variant.addr, aksSecretPath().AtMapKey("secret_version"), knownvalue.StringExact(nonEphemeralSecretVersion("top-secret-value"))),
 						},
 					},
 				})
@@ -115,7 +116,7 @@ func aksSecretPath() tfjsonpath.Path {
 }
 
 // platformCreateSteps returns create+state-check steps for a platform test.
-func platformCreateSteps(config string, vars tfconfig.Variables, variant platformVariant, resourceUuidOut *string) []resource.TestStep {
+func platformCreateSteps(config, suffix string, vars tfconfig.Variables, variant platformVariant, resourceUuidOut *string) []resource.TestStep {
 	return []resource.TestStep{
 		{
 			Config:          config,
@@ -127,10 +128,10 @@ func platformCreateSteps(config string, vars tfconfig.Variables, variant platfor
 			},
 			ConfigStateChecks: append(
 				[]statecheck.StateCheck{
-					statecheck.ExpectKnownValue(variant.addr, tfjsonpath.New("metadata"), checkPlatformMetadata(resourceUuidOut)),
+					statecheck.ExpectKnownValue(variant.addr, tfjsonpath.New("metadata"), checkPlatformMetadata(suffix, resourceUuidOut)),
 					statecheck.ExpectKnownValue(variant.addr, tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("Example Platform")),
 				},
-				checkPlatformConfigState(variant.addr, variant.suffix)...,
+				checkPlatformConfigState(variant.addr, variant.suffix, suffix)...,
 			),
 		},
 	}
@@ -149,10 +150,10 @@ func platformImportStep(variant platformVariant, vars tfconfig.Variables, resour
 	}
 }
 
-func checkPlatformMetadata(resourceUuidOut *string) knownvalue.Check {
+func checkPlatformMetadata(suffix string, resourceUuidOut *string) knownvalue.Check {
 	return xknownvalue.MapExact(map[string]knownvalue.Check{
-		"name":               xknownvalue.NotEmptyString(),
-		"owned_by_workspace": xknownvalue.NotEmptyString(),
+		"name":               knownvalue.StringExact("my-platform-" + suffix),
+		"owned_by_workspace": knownvalue.StringExact("test-ws-" + suffix),
 		"uuid": xknownvalue.NotEmptyString(func(actualValue string) error {
 			*resourceUuidOut = actualValue
 			return nil
@@ -167,7 +168,7 @@ func checkMeteringProcessingConfig() knownvalue.Check {
 	})
 }
 
-func checkPlatformConfigState(resourceAddress, exampleSuffix string) []statecheck.StateCheck {
+func checkPlatformConfigState(resourceAddress, exampleSuffix, suffix string) []statecheck.StateCheck {
 	var platformType string
 	var configCheck knownvalue.Check
 
@@ -195,7 +196,7 @@ func checkPlatformConfigState(resourceAddress, exampleSuffix string) []statechec
 		configCheck = checkOpenshiftPlatformConfig()
 	case "08_custom":
 		platformType = "custom"
-		configCheck = checkCustomPlatformConfig()
+		configCheck = checkCustomPlatformConfig(suffix)
 	default:
 		platformType = "azure"
 		configCheck = knownvalue.NotNull()
@@ -334,12 +335,12 @@ func checkAksPlatformConfig() knownvalue.Check {
 			"access_token": xknownvalue.MapExact(map[string]knownvalue.Check{
 				"secret_value":   knownvalue.Null(),
 				"secret_hash":    xknownvalue.NotEmptyString(),
-				"secret_version": xknownvalue.NotEmptyString(),
+				"secret_version": knownvalue.StringExact(nonEphemeralSecretVersion("top-secret-value")),
 			}),
 			"service_principal": xknownvalue.MapExact(map[string]knownvalue.Check{
 				"entra_tenant": knownvalue.StringExact("dev-mycompany.onmicrosoft.com"),
-				"client_id":    xknownvalue.NotEmptyString(),
-				"object_id":    xknownvalue.NotEmptyString(),
+				"client_id":    knownvalue.StringExact("58d6f907-7b0e-4fd8-b328-3e8342dddc8d"),
+				"object_id":    knownvalue.StringExact("3c305efe-625d-4eaf-9bfa-b981ddbcc99f"),
 				"auth": xknownvalue.MapExact(map[string]knownvalue.Check{
 					"type":       knownvalue.StringExact("workloadIdentity"),
 					"credential": knownvalue.Null(),
@@ -347,7 +348,7 @@ func checkAksPlatformConfig() knownvalue.Check {
 			}),
 			"namespace_name_pattern":     knownvalue.StringExact("#{workspaceIdentifier}-#{projectIdentifier}"),
 			"group_name_pattern":         knownvalue.StringExact("#{workspaceIdentifier}.#{projectIdentifier}-#{platformGroupAlias}"),
-			"aks_subscription_id":        xknownvalue.NotEmptyString(),
+			"aks_subscription_id":        knownvalue.StringExact("12345678-90ab-cdef-1234-567890abcdef"),
 			"aks_cluster_name":           knownvalue.StringExact("my-aks-cluster"),
 			"aks_resource_group":         knownvalue.StringExact("my-aks-rg"),
 			"send_azure_invitation_mail": knownvalue.Bool(true),
@@ -373,8 +374,8 @@ func checkAzureRgPlatformConfig() knownvalue.Check {
 		"entra_tenant": knownvalue.StringExact("example-tenant.onmicrosoft.com"),
 		"replication": xknownvalue.MapExact(map[string]knownvalue.Check{
 			"service_principal": xknownvalue.MapExact(map[string]knownvalue.Check{
-				"client_id": xknownvalue.NotEmptyString(),
-				"object_id": xknownvalue.NotEmptyString(),
+				"client_id": knownvalue.StringExact("12345678-1234-1234-1234-123456789abc"),
+				"object_id": knownvalue.StringExact("87654321-4321-4321-4321-cba987654321"),
 				"auth": xknownvalue.MapExact(map[string]knownvalue.Check{
 					"type": knownvalue.StringExact("credential"),
 					"credential": xknownvalue.MapExact(map[string]knownvalue.Check{
@@ -384,7 +385,7 @@ func checkAzureRgPlatformConfig() knownvalue.Check {
 					}),
 				}),
 			}),
-			"subscription":                       xknownvalue.NotEmptyString(),
+			"subscription":                       knownvalue.StringExact("12345678-1234-1234-1234-123456789abc"),
 			"resource_group_name_pattern":        knownvalue.StringExact("#{workspaceIdentifier}-#{projectIdentifier}"),
 			"user_group_name_pattern":            knownvalue.StringExact("#{workspaceIdentifier}.#{projectIdentifier}-#{platformGroupAlias}"),
 			"user_lookup_strategy":               knownvalue.StringExact("UserByMailLookupStrategy"),
@@ -451,10 +452,10 @@ func checkOpenshiftPlatformConfig() knownvalue.Check {
 	})
 }
 
-func checkCustomPlatformConfig() knownvalue.Check {
+func checkCustomPlatformConfig(suffix string) knownvalue.Check {
 	return xknownvalue.MapExact(map[string]knownvalue.Check{
 		"platform_type_ref": xknownvalue.MapExact(map[string]knownvalue.Check{
-			"name": xknownvalue.NotEmptyString(),
+			"name": knownvalue.StringExact(platformTypeName(suffix)),
 			"kind": knownvalue.StringExact("meshPlatformType"),
 		}),
 		"metering": xknownvalue.MapExact(map[string]knownvalue.Check{

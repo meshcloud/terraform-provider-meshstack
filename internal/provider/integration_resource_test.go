@@ -1,6 +1,8 @@
 package provider
 
 import (
+	"crypto/sha256"
+	"fmt"
 	"regexp"
 	"strings"
 	"testing"
@@ -31,6 +33,10 @@ const (
 // The sha256 of "updated-plaintext-secret", which is what non_ephemeral_secret writes to
 // secret_version — so rotating either secret to that value plans this hash.
 const rotatedSecretVersion = "b889814ec3c1da42df5abf57be4e989de7411b326ba30050fea6366185c0e206"
+
+func nonEphemeralSecretVersion(value string) string {
+	return fmt.Sprintf("%x", sha256.Sum256([]byte(value)))
+}
 
 // integrationStepConfig is an integration step with the workspace that owns it. The Entra ID steps
 // (8 through 12) name the admin workspace literally, so they take no workspace step of their own.
@@ -65,7 +71,7 @@ func entraIdIdpAliasPath() tfjsonpath.Path {
 
 // integrationCreateUpdateSteps is the create → rename → import run every integration type shares.
 // createIndex and updateIndex name the step files; suffix and displayName drive the spec assertions.
-func integrationCreateUpdateSteps(t *testing.T, addr, suffix, displayName string, createIndex, updateIndex int, vars tfconfig.Variables, resourceUuid *string) []resource.TestStep {
+func integrationCreateUpdateSteps(t *testing.T, addr, workspace, suffix, displayName string, createIndex, updateIndex int, vars tfconfig.Variables, resourceUuid *string) []resource.TestStep {
 	t.Helper()
 	return []resource.TestStep{
 		{
@@ -77,7 +83,7 @@ func integrationCreateUpdateSteps(t *testing.T, addr, suffix, displayName string
 				},
 			},
 			ConfigStateChecks: []statecheck.StateCheck{
-				statecheck.ExpectKnownValue(addr, tfjsonpath.New("metadata"), checkIntegrationMetadata()),
+				statecheck.ExpectKnownValue(addr, tfjsonpath.New("metadata"), checkIntegrationMetadata(workspace)),
 				statecheck.ExpectKnownValue(addr, tfjsonpath.New("spec"), checkIntegrationSpec(suffix, displayName)),
 				statecheck.ExpectKnownValue(addr, tfjsonpath.New("status"), checkIntegrationStatus(knownvalue.Null())),
 				xknownvalue.Ref(addr, "meshIntegration", resourceUuid),
@@ -121,24 +127,26 @@ func TestAccIntegrationResource(t *testing.T) {
 	t.Parallel()
 
 	t.Run("01_github", func(t *testing.T) {
-		vars := SuffixVariables(acctest.RandString(8))
+		suffix := acctest.RandString(8)
+		vars := SuffixVariables(suffix)
 		var resourceUuid string
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: append(
-				integrationCreateUpdateSteps(t, githubIntegrationAddr, "01_github", "GitHub Integration", 1, 2, vars, &resourceUuid),
+				integrationCreateUpdateSteps(t, githubIntegrationAddr, "test-ws-"+suffix, "01_github", "GitHub Integration", 1, 2, vars, &resourceUuid),
 				integrationImportStep(githubIntegrationAddr, vars, &resourceUuid),
 			),
 		})
 	})
 
 	t.Run("02_azure_devops", func(t *testing.T) {
-		vars := SuffixVariables(acctest.RandString(8))
+		suffix := acctest.RandString(8)
+		vars := SuffixVariables(suffix)
 		var resourceUuid string
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: append(
-				integrationCreateUpdateSteps(t, azureDevopsIntegrationAddr, "02_azure_devops", "Azure DevOps Integration", 3, 4, vars, &resourceUuid),
+				integrationCreateUpdateSteps(t, azureDevopsIntegrationAddr, "test-ws-"+suffix, "02_azure_devops", "Azure DevOps Integration", 3, 4, vars, &resourceUuid),
 				// A different value gives a different secret_version hash, which rotates secret_value.
 				resource.TestStep{
 					Config:          integrationStepConfig(t, 5),
@@ -150,8 +158,11 @@ func TestAccIntegrationResource(t *testing.T) {
 						},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(azureDevopsIntegrationAddr, tfjsonpath.New("metadata"), checkIntegrationMetadata()),
-						statecheck.ExpectKnownValue(azureDevopsIntegrationAddr, tfjsonpath.New("spec"), checkIntegrationSpec("02_azure_devops", "Azure DevOps Integration")),
+						statecheck.ExpectKnownValue(azureDevopsIntegrationAddr, tfjsonpath.New("metadata"), checkIntegrationMetadata("test-ws-"+suffix)),
+						statecheck.ExpectKnownValue(azureDevopsIntegrationAddr, tfjsonpath.New("spec"), xknownvalue.MapExact(map[string]knownvalue.Check{
+							"display_name": knownvalue.StringExact("Azure DevOps Integration"),
+							"config":       checkAzureDevopsIntegrationConfig(rotatedSecretVersion),
+						})),
 						statecheck.ExpectKnownValue(azureDevopsIntegrationAddr, tfjsonpath.New("status"), checkIntegrationStatus(knownvalue.Null())),
 						xknownvalue.Ref(azureDevopsIntegrationAddr, "meshIntegration", &resourceUuid),
 					},
@@ -181,12 +192,13 @@ func TestAccIntegrationResource(t *testing.T) {
 	})
 
 	t.Run("03_gitlab", func(t *testing.T) {
-		vars := SuffixVariables(acctest.RandString(8))
+		suffix := acctest.RandString(8)
+		vars := SuffixVariables(suffix)
 		var resourceUuid string
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: append(
-				integrationCreateUpdateSteps(t, gitlabIntegrationAddr, "03_gitlab", "GitLab Integration", 6, 7, vars, &resourceUuid),
+				integrationCreateUpdateSteps(t, gitlabIntegrationAddr, "test-ws-"+suffix, "03_gitlab", "GitLab Integration", 6, 7, vars, &resourceUuid),
 				integrationImportStep(gitlabIntegrationAddr, vars, &resourceUuid),
 			),
 		})
@@ -196,7 +208,7 @@ func TestAccIntegrationResource(t *testing.T) {
 		vars := SuffixVariables(acctest.RandString(8))
 		var resourceUuid string
 
-		steps := integrationCreateUpdateSteps(t, entraIDIntegrationAddr, "04_entra_id", "Entra ID Integration", 8, 9, vars, &resourceUuid)
+		steps := integrationCreateUpdateSteps(t, entraIDIntegrationAddr, AdminWorkspaceIdentifier, "04_entra_id", "Entra ID Integration", 8, 9, vars, &resourceUuid)
 		// Entra ID reports a redirect_url in status, unlike the other types.
 		steps[0].ConfigStateChecks[2] = statecheck.ExpectKnownValue(entraIDIntegrationAddr, tfjsonpath.New("status"), checkIntegrationStatus(xknownvalue.MapExact(map[string]knownvalue.Check{
 			"redirect_url": xknownvalue.NotEmptyString(),
@@ -278,10 +290,10 @@ func TestAccIntegrationResource(t *testing.T) {
 	})
 }
 
-func checkIntegrationMetadata() knownvalue.Check {
+func checkIntegrationMetadata(workspace string) knownvalue.Check {
 	return xknownvalue.MapExact(map[string]knownvalue.Check{
 		"uuid":               xknownvalue.NotEmptyString(),
-		"owned_by_workspace": xknownvalue.NotEmptyString(),
+		"owned_by_workspace": knownvalue.StringExact(workspace),
 	})
 }
 
@@ -315,24 +327,7 @@ func checkIntegrationConfig(exampleSuffix string) knownvalue.Check {
 			"entraid":     knownvalue.Null(),
 		})
 	case "02_azure_devops":
-		return xknownvalue.MapExact(map[string]knownvalue.Check{
-			"github": knownvalue.Null(),
-			"azuredevops": xknownvalue.MapExact(map[string]knownvalue.Check{
-				"base_url":     knownvalue.StringExact("https://dev.azure.com"),
-				"organization": knownvalue.StringExact("my-organization"),
-				"personal_access_token": xknownvalue.MapExact(map[string]knownvalue.Check{
-					"secret_value":   knownvalue.Null(),
-					"secret_hash":    xknownvalue.NotEmptyString(),
-					"secret_version": xknownvalue.NotEmptyString(),
-				}),
-				"runner_ref": xknownvalue.MapExact(map[string]knownvalue.Check{
-					"uuid": knownvalue.StringExact(SharedBuildingBlockRunnerUuid),
-					"kind": knownvalue.StringExact("meshBuildingBlockRunner"),
-				}),
-			}),
-			"gitlab":  knownvalue.Null(),
-			"entraid": knownvalue.Null(),
-		})
+		return checkAzureDevopsIntegrationConfig(nonEphemeralSecretVersion("mock-pat-token-12345"))
 	case "03_gitlab":
 		return xknownvalue.MapExact(map[string]knownvalue.Check{
 			"github":      knownvalue.Null(),
@@ -365,6 +360,27 @@ func checkIntegrationConfig(exampleSuffix string) knownvalue.Check {
 	default:
 		panic("unknown example suffix: " + exampleSuffix)
 	}
+}
+
+func checkAzureDevopsIntegrationConfig(patSecretVersion string) knownvalue.Check {
+	return xknownvalue.MapExact(map[string]knownvalue.Check{
+		"github": knownvalue.Null(),
+		"azuredevops": xknownvalue.MapExact(map[string]knownvalue.Check{
+			"base_url":     knownvalue.StringExact("https://dev.azure.com"),
+			"organization": knownvalue.StringExact("my-organization"),
+			"personal_access_token": xknownvalue.MapExact(map[string]knownvalue.Check{
+				"secret_value":   knownvalue.Null(),
+				"secret_hash":    xknownvalue.NotEmptyString(),
+				"secret_version": knownvalue.StringExact(patSecretVersion),
+			}),
+			"runner_ref": xknownvalue.MapExact(map[string]knownvalue.Check{
+				"uuid": knownvalue.StringExact(SharedBuildingBlockRunnerUuid),
+				"kind": knownvalue.StringExact("meshBuildingBlockRunner"),
+			}),
+		}),
+		"gitlab":  knownvalue.Null(),
+		"entraid": knownvalue.Null(),
+	})
 }
 
 func checkIntegrationStatus(entraId knownvalue.Check) knownvalue.Check {

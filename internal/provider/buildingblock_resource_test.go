@@ -49,7 +49,7 @@ func TestAccBuildingblock(t *testing.T) {
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(buildingBlockV1ResourceAddr, tfjsonpath.New("metadata").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
 					statecheck.ExpectKnownValue(buildingBlockV1ResourceAddr, tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("my-buildingblock")),
-					statecheck.ExpectKnownValue(buildingBlockV1ResourceAddr, tfjsonpath.New("status").AtMapKey("status"), xknownvalue.NotEmptyString()),
+					statecheck.ExpectKnownValue(buildingBlockV1ResourceAddr, tfjsonpath.New("status").AtMapKey("status"), knownvalue.StringExact("SUCCEEDED")),
 				},
 			},
 		},

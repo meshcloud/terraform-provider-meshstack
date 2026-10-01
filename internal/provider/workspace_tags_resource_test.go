@@ -14,7 +14,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 
 	"github.com/meshcloud/terraform-provider-meshstack/examples"
-	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/xknownvalue"
 )
 
 // Address and tag-key prefixes of the blocks in
@@ -116,7 +115,8 @@ func TestAccWorkspaceTags(t *testing.T) {
 		})
 	})
 
-	vars := SuffixVariables(acctest.RandString(8))
+	suffix := acctest.RandString(8)
+	vars := SuffixVariables(suffix)
 
 	ApplyAndTest(t, resource.TestCase{
 		Steps: []resource.TestStep{
@@ -129,7 +129,7 @@ func TestAccWorkspaceTags(t *testing.T) {
 					},
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(workspaceTagsResourceAddr, tfjsonpath.New("metadata").AtMapKey("workspace_identifier"), xknownvalue.NotEmptyString()),
+					statecheck.ExpectKnownValue(workspaceTagsResourceAddr, tfjsonpath.New("metadata").AtMapKey("workspace_identifier"), knownvalue.StringExact("test-ws-"+suffix)),
 					statecheck.ExpectKnownValue(workspaceTagsResourceAddr, tfjsonpath.New("spec").AtMapKey("tags"), knownvalue.MapSizeExact(1)),
 				},
 			},

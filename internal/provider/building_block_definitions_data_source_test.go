@@ -46,6 +46,7 @@ func releasedBbdVariables(suffix string) tfconfig.Variables {
 
 func TestAccBuildingBlockDefinitionsDataSource(t *testing.T) {
 	t.Run("simple state check", func(t *testing.T) {
+		suffix := acctest.RandString(8)
 		config := examples.JoinTestStepConfigs(
 			examples.DataSource.TestStepConfig(t, "building_block_definitions", 1),
 			manualBbdStepConfig(t),
@@ -54,18 +55,18 @@ func TestAccBuildingBlockDefinitionsDataSource(t *testing.T) {
 		ApplyAndTest(t, resource.TestCase{Steps: []resource.TestStep{
 			{
 				Config:          config,
-				ConfigVariables: SuffixVariables(acctest.RandString(8)),
+				ConfigVariables: SuffixVariables(suffix),
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(buildingBlockDefinitionsDataSourceAd, tfjsonpath.New("workspace_identifier"), xknownvalue.NotEmptyString()),
+					statecheck.ExpectKnownValue(buildingBlockDefinitionsDataSourceAd, tfjsonpath.New("workspace_identifier"), knownvalue.StringExact("test-ws-"+suffix)),
 					statecheck.ExpectKnownValue(buildingBlockDefinitionsDataSourceAd, tfjsonpath.New("building_block_definitions"), knownvalue.ListExact([]knownvalue.Check{
 						knownvalue.ObjectPartial(map[string]knownvalue.Check{
 							"metadata": knownvalue.ObjectPartial(map[string]knownvalue.Check{
 								"uuid":               xknownvalue.NotEmptyString(),
-								"owned_by_workspace": xknownvalue.NotEmptyString(),
+								"owned_by_workspace": knownvalue.StringExact("test-ws-" + suffix),
 							}),
 							"spec": knownvalue.ObjectPartial(map[string]knownvalue.Check{
-								"display_name": xknownvalue.NotEmptyString(),
-								"target_type":  xknownvalue.NotEmptyString(),
+								"display_name": knownvalue.StringExact("Example Building Block"),
+								"target_type":  knownvalue.StringExact("WORKSPACE_LEVEL"),
 							}),
 							"ref": knownvalue.ObjectPartial(map[string]knownvalue.Check{
 								"kind": knownvalue.StringExact("meshBuildingBlockDefinition"),

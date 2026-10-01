@@ -3,6 +3,7 @@ package provider
 import (
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-testing/compare"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
@@ -18,7 +19,8 @@ import (
 const apiKeyResourceAddr = "meshstack_api_key.example"
 
 func TestAccApiKey(t *testing.T) {
-	vars := SuffixVariables(acctest.RandString(8))
+	suffix := acctest.RandString(8)
+	vars := SuffixVariables(suffix)
 
 	stepConfig := func(index int) string {
 		return examples.JoinTestStepConfigs(
@@ -26,6 +28,10 @@ func TestAccApiKey(t *testing.T) {
 			examples.Resource.TestStepConfig(t, "workspace", 1, "variables", "prerequisites"),
 		)
 	}
+
+	clientSecretPath := tfjsonpath.New("status").AtMapKey("client_secret")
+	secretUnchanged := statecheck.CompareValue(compare.ValuesSame())
+	secretRotated := statecheck.CompareValue(compare.ValuesDiffer())
 
 	ApplyAndTest(t, resource.TestCase{
 		Steps: []resource.TestStep{
@@ -39,10 +45,11 @@ func TestAccApiKey(t *testing.T) {
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(apiKeyResourceAddr, tfjsonpath.New("metadata").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
-					statecheck.ExpectKnownValue(apiKeyResourceAddr, tfjsonpath.New("metadata").AtMapKey("owned_by_workspace"), xknownvalue.NotEmptyString()),
+					statecheck.ExpectKnownValue(apiKeyResourceAddr, tfjsonpath.New("metadata").AtMapKey("owned_by_workspace"), knownvalue.StringExact("test-ws-"+suffix)),
 					statecheck.ExpectKnownValue(apiKeyResourceAddr, tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("ci-key")),
 					statecheck.ExpectKnownValue(apiKeyResourceAddr, tfjsonpath.New("status").AtMapKey("client_id"), xknownvalue.NotEmptyString()),
-					statecheck.ExpectKnownValue(apiKeyResourceAddr, tfjsonpath.New("status").AtMapKey("client_secret"), xknownvalue.NotEmptyString()),
+					statecheck.ExpectKnownValue(apiKeyResourceAddr, clientSecretPath, xknownvalue.NotEmptyString()),
+					secretUnchanged.AddStateValue(apiKeyResourceAddr, clientSecretPath),
 				},
 			},
 			{
@@ -55,7 +62,8 @@ func TestAccApiKey(t *testing.T) {
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(apiKeyResourceAddr, tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("updated-key")),
-					statecheck.ExpectKnownValue(apiKeyResourceAddr, tfjsonpath.New("status").AtMapKey("client_secret"), xknownvalue.NotEmptyString()),
+					secretUnchanged.AddStateValue(apiKeyResourceAddr, clientSecretPath),
+					secretRotated.AddStateValue(apiKeyResourceAddr, clientSecretPath),
 				},
 			},
 			{
@@ -69,7 +77,8 @@ func TestAccApiKey(t *testing.T) {
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(apiKeyResourceAddr, tfjsonpath.New("spec").AtMapKey("expires_at"), knownvalue.StringExact("2099-06-30")),
-					statecheck.ExpectKnownValue(apiKeyResourceAddr, tfjsonpath.New("status").AtMapKey("client_secret"), xknownvalue.NotEmptyString()),
+					statecheck.ExpectKnownValue(apiKeyResourceAddr, clientSecretPath, xknownvalue.NotEmptyString()),
+					secretRotated.AddStateValue(apiKeyResourceAddr, clientSecretPath),
 				},
 			},
 		},

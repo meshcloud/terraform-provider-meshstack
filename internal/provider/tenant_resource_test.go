@@ -67,11 +67,13 @@ func TestAccTenant(t *testing.T) {
 
 	// create covers the plain create path of the unsuffixed meshstack_tenant on the v4 body.
 	t.Run("create", func(t *testing.T) {
+		suffix := acctest.RandString(8)
+
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
 					Config:          tenantStepConfig(t, 1, 8, 1),
-					ConfigVariables: SuffixVariables(acctest.RandString(8)),
+					ConfigVariables: SuffixVariables(suffix),
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectResourceAction(tenantResourceAddr, plancheck.ResourceActionCreate),
@@ -84,17 +86,17 @@ func TestAccTenant(t *testing.T) {
 
 						// Metadata
 						statecheck.ExpectKnownValue(tenantResourceAddr, tfjsonpath.New("metadata").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
-						statecheck.ExpectKnownValue(tenantResourceAddr, tfjsonpath.New("metadata").AtMapKey("owned_by_workspace"), xknownvalue.NotEmptyString()),
-						statecheck.ExpectKnownValue(tenantResourceAddr, tfjsonpath.New("metadata").AtMapKey("owned_by_project"), xknownvalue.NotEmptyString()),
+						statecheck.ExpectKnownValue(tenantResourceAddr, tfjsonpath.New("metadata").AtMapKey("owned_by_workspace"), knownvalue.StringExact("test-ws-"+suffix)),
+						statecheck.ExpectKnownValue(tenantResourceAddr, tfjsonpath.New("metadata").AtMapKey("owned_by_project"), knownvalue.StringExact("test-proj-"+suffix)),
 
 						// Spec
 						statecheck.ExpectKnownValue(tenantResourceAddr, tfjsonpath.New("spec").AtMapKey("platform_ref").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
 						statecheck.ExpectKnownValue(tenantResourceAddr, tfjsonpath.New("spec").AtMapKey("platform_ref").AtMapKey("kind"), knownvalue.StringExact("meshPlatform")),
-						statecheck.ExpectKnownValue(tenantResourceAddr, tfjsonpath.New("spec").AtMapKey("landing_zone_ref").AtMapKey("name"), xknownvalue.NotEmptyString()),
+						statecheck.ExpectKnownValue(tenantResourceAddr, tfjsonpath.New("spec").AtMapKey("landing_zone_ref").AtMapKey("name"), knownvalue.StringExact("test-lz-"+suffix)),
 
 						// Status
-						statecheck.ExpectKnownValue(tenantResourceAddr, tfjsonpath.New("status").AtMapKey("tenant_name"), xknownvalue.NotEmptyString()),
-						statecheck.ExpectKnownValue(tenantResourceAddr, tfjsonpath.New("status").AtMapKey("platform_type_identifier"), xknownvalue.NotEmptyString()),
+						statecheck.ExpectKnownValue(tenantResourceAddr, tfjsonpath.New("status").AtMapKey("tenant_name"), knownvalue.StringExact("test-ws-"+suffix+".test-proj-"+suffix+".my-platform-"+suffix+".global")),
+						statecheck.ExpectKnownValue(tenantResourceAddr, tfjsonpath.New("status").AtMapKey("platform_type_identifier"), knownvalue.StringExact(platformTypeName(suffix))),
 					},
 				},
 			},
@@ -111,15 +113,17 @@ func TestAccTenant(t *testing.T) {
 	// ({kind, uuid} for the platform, {kind, name} for the landing zone). The fresh workspace holds
 	// exactly one platform and one landing zone, so the plural lists have a single element at index 0.
 	t.Run("create_via_data_sources", func(t *testing.T) {
+		suffix := acctest.RandString(8)
+
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
 					Config:          tenantStepConfig(t, 2, 8, 1),
-					ConfigVariables: SuffixVariables(acctest.RandString(8)),
+					ConfigVariables: SuffixVariables(suffix),
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(tenantResourceAddr, tfjsonpath.New("spec").AtMapKey("platform_ref").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
 						statecheck.ExpectKnownValue(tenantResourceAddr, tfjsonpath.New("spec").AtMapKey("platform_ref").AtMapKey("kind"), knownvalue.StringExact("meshPlatform")),
-						statecheck.ExpectKnownValue(tenantResourceAddr, tfjsonpath.New("spec").AtMapKey("landing_zone_ref").AtMapKey("name"), xknownvalue.NotEmptyString()),
+						statecheck.ExpectKnownValue(tenantResourceAddr, tfjsonpath.New("spec").AtMapKey("landing_zone_ref").AtMapKey("name"), knownvalue.StringExact("test-lz-"+suffix)),
 						statecheck.ExpectKnownValue(tenantResourceAddr, tfjsonpath.New("ref").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
 
 						// singular and plural data sources resolve to the same platform / landing zone.

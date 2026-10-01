@@ -49,7 +49,8 @@ func TestAccWorkspace(t *testing.T) {
 		})
 	})
 
-	vars := SuffixVariables(acctest.RandString(8))
+	suffix := acctest.RandString(8)
+	vars := SuffixVariables(suffix)
 
 	ApplyAndTest(t, resource.TestCase{
 		Steps: []resource.TestStep{
@@ -67,7 +68,7 @@ func TestAccWorkspace(t *testing.T) {
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
 					// Metadata
-					statecheck.ExpectKnownValue(workspaceResourceAddr, tfjsonpath.New("metadata").AtMapKey("name"), xknownvalue.NotEmptyString()),
+					statecheck.ExpectKnownValue(workspaceResourceAddr, tfjsonpath.New("metadata").AtMapKey("name"), knownvalue.StringExact("test-ws-"+suffix)),
 					statecheck.ExpectKnownValue(workspaceResourceAddr, tfjsonpath.New("metadata").AtMapKey("created_on"), xknownvalue.NotEmptyString()),
 
 					// Spec
@@ -75,7 +76,7 @@ func TestAccWorkspace(t *testing.T) {
 
 					// Ref
 					statecheck.ExpectKnownValue(workspaceResourceAddr, tfjsonpath.New("ref").AtMapKey("kind"), knownvalue.StringExact("meshWorkspace")),
-					statecheck.ExpectKnownValue(workspaceResourceAddr, tfjsonpath.New("ref").AtMapKey("name"), xknownvalue.NotEmptyString()),
+					statecheck.ExpectKnownValue(workspaceResourceAddr, tfjsonpath.New("ref").AtMapKey("name"), knownvalue.StringExact("test-ws-"+suffix)),
 				},
 			},
 			{

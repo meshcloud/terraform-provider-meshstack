@@ -10,7 +10,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 
 	"github.com/meshcloud/terraform-provider-meshstack/examples"
-	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/xknownvalue"
 )
 
 const projectDataSourceAddr = "data.meshstack_project.example"
@@ -23,14 +22,16 @@ func TestAccProjectDataSource(t *testing.T) {
 		examples.Resource.TestStepConfig(t, "project", 1, "prerequisites"),
 	)
 
+	suffix := acctest.RandString(8)
+
 	ApplyAndTest(t, resource.TestCase{
 		Steps: []resource.TestStep{
 			{
 				Config:          config,
-				ConfigVariables: SuffixVariables(acctest.RandString(8)),
+				ConfigVariables: SuffixVariables(suffix),
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(projectDataSourceAddr, tfjsonpath.New("metadata").AtMapKey("name"), xknownvalue.NotEmptyString()),
-					statecheck.ExpectKnownValue(projectDataSourceAddr, tfjsonpath.New("metadata").AtMapKey("owned_by_workspace"), xknownvalue.NotEmptyString()),
+					statecheck.ExpectKnownValue(projectDataSourceAddr, tfjsonpath.New("metadata").AtMapKey("name"), knownvalue.StringExact("test-proj-"+suffix)),
+					statecheck.ExpectKnownValue(projectDataSourceAddr, tfjsonpath.New("metadata").AtMapKey("owned_by_workspace"), knownvalue.StringExact("test-ws-"+suffix)),
 					statecheck.ExpectKnownValue(projectDataSourceAddr, tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("My Project's Display Name")),
 				},
 			},

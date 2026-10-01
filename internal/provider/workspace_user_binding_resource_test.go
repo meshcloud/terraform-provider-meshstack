@@ -9,8 +9,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
-
-	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/xknownvalue"
 )
 
 func TestAccWorkspaceUserBinding(t *testing.T) {
@@ -21,7 +19,8 @@ func TestAccWorkspaceUserBinding(t *testing.T) {
 	t.Parallel()
 
 	t.Run("with_expiry_date", func(t *testing.T) {
-		vars := SuffixVariables(acctest.RandString(8))
+		suffix := acctest.RandString(8)
+		vars := SuffixVariables(suffix)
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
@@ -36,7 +35,7 @@ func TestAccWorkspaceUserBinding(t *testing.T) {
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(workspaceUserBindingResourceAddr, tfjsonpath.New("metadata").AtMapKey("name"), knownvalue.StringExact(workspaceBindingName)),
 						statecheck.ExpectKnownValue(workspaceUserBindingResourceAddr, tfjsonpath.New("role_ref").AtMapKey("name"), knownvalue.StringExact("Workspace Member")),
-						statecheck.ExpectKnownValue(workspaceUserBindingResourceAddr, tfjsonpath.New("target_ref").AtMapKey("name"), xknownvalue.NotEmptyString()),
+						statecheck.ExpectKnownValue(workspaceUserBindingResourceAddr, tfjsonpath.New("target_ref").AtMapKey("name"), knownvalue.StringExact("test-ws-"+suffix)),
 						statecheck.ExpectKnownValue(workspaceUserBindingResourceAddr, tfjsonpath.New("subject").AtMapKey("name"), knownvalue.StringExact("user@meshcloud.io")),
 						statecheck.ExpectKnownValue(workspaceUserBindingResourceAddr, tfjsonpath.New("expiry_date"), knownvalue.StringExact("2026-12-31")),
 					},

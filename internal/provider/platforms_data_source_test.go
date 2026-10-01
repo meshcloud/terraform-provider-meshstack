@@ -28,6 +28,8 @@ func TestAccPlatformsDataSource(t *testing.T) {
 	// plain listing creates a platform in a fresh workspace and lists it back, running identically in
 	// mock and acceptance mode. Filtering by the fresh workspace yields exactly one platform.
 	t.Run("plain listing", func(t *testing.T) {
+		suffix := acctest.RandString(8)
+
 		config := examples.JoinTestStepConfigs(
 			examples.DataSource.TestStepConfig(t, "platforms", 1),
 			platformStepConfig(t, platformVariants[7]),
@@ -37,11 +39,11 @@ func TestAccPlatformsDataSource(t *testing.T) {
 			Steps: []resource.TestStep{
 				{
 					Config:          config,
-					ConfigVariables: SuffixVariables(acctest.RandString(8)),
+					ConfigVariables: SuffixVariables(suffix),
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(platformsDataSourceAddr, tfjsonpath.New("platforms"), knownvalue.ListSizeExact(1)),
 						statecheck.ExpectKnownValue(platformsDataSourceAddr, tfjsonpath.New("platforms").AtSliceIndex(0).AtMapKey("metadata").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
-						statecheck.ExpectKnownValue(platformsDataSourceAddr, tfjsonpath.New("platforms").AtSliceIndex(0).AtMapKey("identifier"), xknownvalue.NotEmptyString()),
+						statecheck.ExpectKnownValue(platformsDataSourceAddr, tfjsonpath.New("platforms").AtSliceIndex(0).AtMapKey("identifier"), knownvalue.StringExact("my-platform-"+suffix+".global")),
 						statecheck.ExpectKnownValue(platformsDataSourceAddr, tfjsonpath.New("platforms").AtSliceIndex(0).AtMapKey("ref").AtMapKey("kind"), knownvalue.StringExact("meshPlatform")),
 						statecheck.ExpectKnownValue(platformsDataSourceAddr, tfjsonpath.New("platforms").AtSliceIndex(0).AtMapKey("ref").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
 						statecheck.ExpectKnownValue(platformsDataSourceAddr, tfjsonpath.New("platforms").AtSliceIndex(0).AtMapKey("spec").AtMapKey("availability").AtMapKey("publication_state"), knownvalue.StringExact("PUBLISHED")),

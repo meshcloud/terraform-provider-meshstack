@@ -10,7 +10,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 
 	"github.com/meshcloud/terraform-provider-meshstack/examples"
-	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/xknownvalue"
 )
 
 func TestAccPaymentMethodDataSource(t *testing.T) {
@@ -19,13 +18,15 @@ func TestAccPaymentMethodDataSource(t *testing.T) {
 		paymentMethodStepConfig(t, 1, "prerequisites"),
 	)
 
+	suffix := acctest.RandString(8)
+
 	ApplyAndTest(t, resource.TestCase{
 		Steps: []resource.TestStep{
 			{
 				Config:          config,
-				ConfigVariables: SuffixVariables(acctest.RandString(8)),
+				ConfigVariables: SuffixVariables(suffix),
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(paymentMethodDataSourceAddr, tfjsonpath.New("metadata").AtMapKey("name"), xknownvalue.NotEmptyString()),
+					statecheck.ExpectKnownValue(paymentMethodDataSourceAddr, tfjsonpath.New("metadata").AtMapKey("name"), knownvalue.StringExact("test-pm-"+suffix)),
 					statecheck.ExpectKnownValue(paymentMethodDataSourceAddr, tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("My Payment Method")),
 				},
 			},

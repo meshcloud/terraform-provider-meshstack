@@ -14,6 +14,7 @@ type MeshTenantClient struct {
 	// LandingZoneStore lets Create resolve the assigned landing zone's default quotas, which the backend
 	// merges into a tenant's effective quotas.
 	LandingZoneStore *Store[client.MeshLandingZone]
+	PlatformStore    *Store[client.MeshPlatform]
 }
 
 func (m MeshTenantClient) Read(_ context.Context, uuid string) (*client.MeshTenant, error) {
@@ -40,6 +41,13 @@ func (m MeshTenantClient) Create(_ context.Context, tenant *client.MeshTenantCre
 
 	// Simulate a successful tenant creation with platformTenantId set
 	tenantName := tenant.Metadata.OwnedByWorkspace + "." + tenant.Metadata.OwnedByProject + "." + tenant.Spec.PlatformRef.Uuid
+	platformTypeIdentifier := "mock-platform-type"
+	if platform, ok := m.PlatformStore.Get(tenant.Spec.PlatformRef.Uuid); ok {
+		tenantName = tenant.Metadata.OwnedByWorkspace + "." + tenant.Metadata.OwnedByProject + "." + platform.Metadata.Name + "." + platform.Spec.LocationRef.Name
+		if platform.Spec.Config != nil && platform.Spec.Config.Custom != nil {
+			platformTypeIdentifier = platform.Spec.Config.Custom.PlatformTypeRef.Name
+		}
+	}
 
 	// The mock applies the requested quotas verbatim (it enforces no bounds or auto-approval threshold),
 	// but does overlay them on the landing zone's default quotas as the backend does, so
@@ -60,7 +68,7 @@ func (m MeshTenantClient) Create(_ context.Context, tenant *client.MeshTenantCre
 		},
 		Status: client.MeshTenantStatus{
 			TenantName:             tenantName,
-			PlatformTypeIdentifier: "mock-platform-type",
+			PlatformTypeIdentifier: platformTypeIdentifier,
 			PlatformWorkspaceId:    new("mock-platform-workspace-id"),
 			Tags:                   map[string][]string{},
 			AppliedQuotas:          appliedQuotas,

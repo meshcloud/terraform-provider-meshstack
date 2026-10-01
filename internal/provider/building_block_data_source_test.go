@@ -43,6 +43,8 @@ func TestAccBuildingBlockDataSource(t *testing.T) {
 	t.Parallel()
 
 	t.Run("01_workspace", func(t *testing.T) {
+		suffix := acctest.RandString(8)
+
 		config := examples.JoinTestStepConfigs(
 			examples.DataSource.TestStepConfig(t, "building_block", 1),
 			buildingBlockWorkspaceStepConfig(t, 1),
@@ -52,12 +54,12 @@ func TestAccBuildingBlockDataSource(t *testing.T) {
 			Steps: []resource.TestStep{
 				{
 					Config:          config,
-					ConfigVariables: SuffixVariables(acctest.RandString(8)),
+					ConfigVariables: SuffixVariables(suffix),
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(buildingBlockDataSourceAddr, tfjsonpath.New("metadata").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
-						statecheck.ExpectKnownValue(buildingBlockDataSourceAddr, tfjsonpath.New("metadata").AtMapKey("owned_by_workspace"), xknownvalue.NotEmptyString()),
+						statecheck.ExpectKnownValue(buildingBlockDataSourceAddr, tfjsonpath.New("metadata").AtMapKey("owned_by_workspace"), knownvalue.StringExact("test-ws-"+suffix)),
 						statecheck.ExpectKnownValue(buildingBlockDataSourceAddr, tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("my-workspace-building-block")),
-						statecheck.ExpectKnownValue(buildingBlockDataSourceAddr, tfjsonpath.New("status").AtMapKey("status"), xknownvalue.NotEmptyString()),
+						statecheck.ExpectKnownValue(buildingBlockDataSourceAddr, tfjsonpath.New("status").AtMapKey("status"), knownvalue.StringExact("SUCCEEDED")),
 						statecheck.ExpectKnownValue(buildingBlockDataSourceAddr, tfjsonpath.New("all_inputs").AtMapKey("size").AtMapKey("value"), knownvalue.StringExact("16")),
 						statecheck.ExpectKnownValue(buildingBlockDataSourceAddr, tfjsonpath.New("all_inputs").AtMapKey("environment").AtMapKey("value"), knownvalue.StringExact(`"dev"`)),
 						xknownvalue.Ref(buildingBlockDataSourceAddr, client.MeshObjectKind.BuildingBlock, nil),

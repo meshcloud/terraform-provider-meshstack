@@ -41,8 +41,8 @@ func runnerStepConfig(t *testing.T, index int) string {
 }
 
 // runnerVariables carries the run suffix plus the real public key the step files read.
-func runnerVariables() tfconfig.Variables {
-	vars := SuffixVariables(acctest.RandString(8))
+func runnerVariables(suffix string) tfconfig.Variables {
+	vars := SuffixVariables(suffix)
 	vars["runner_public_key"] = tfconfig.StringVariable(runnerPublicKey)
 	return vars
 }
@@ -51,7 +51,8 @@ func TestAccBuildingBlockRunnerResource(t *testing.T) {
 	t.Parallel()
 
 	t.Run("basic", func(t *testing.T) {
-		vars := runnerVariables()
+		suffix := acctest.RandString(8)
+		vars := runnerVariables(suffix)
 		var runnerUuid string
 		var replacedRunnerUuid string
 
@@ -66,7 +67,7 @@ func TestAccBuildingBlockRunnerResource(t *testing.T) {
 						},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(buildingBlockRunnerAddr, tfjsonpath.New("metadata").AtMapKey("owned_by_workspace"), xknownvalue.NotEmptyString()),
+						statecheck.ExpectKnownValue(buildingBlockRunnerAddr, tfjsonpath.New("metadata").AtMapKey("owned_by_workspace"), knownvalue.StringExact("test-ws-"+suffix)),
 						statecheck.ExpectKnownValue(buildingBlockRunnerAddr, tfjsonpath.New("metadata").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
 						statecheck.ExpectKnownValue(buildingBlockRunnerAddr, tfjsonpath.New("spec").AtMapKey("implementation_type"), knownvalue.StringExact("TERRAFORM")),
 						statecheck.ExpectKnownValue(buildingBlockRunnerAddr, tfjsonpath.New("spec").AtMapKey("restriction"), knownvalue.StringExact("PRIVATE")),
@@ -121,7 +122,7 @@ func TestAccBuildingBlockRunnerResource(t *testing.T) {
 			Steps: []resource.TestStep{
 				{
 					Config:          runnerStepConfig(t, 4),
-					ConfigVariables: runnerVariables(),
+					ConfigVariables: runnerVariables(acctest.RandString(8)),
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectResourceAction(buildingBlockRunnerAddr, plancheck.ResourceActionCreate),
@@ -149,7 +150,7 @@ func TestAccBuildingBlockRunnerResource(t *testing.T) {
 	t.Run("wif_subject_template", func(t *testing.T) {
 		exampleTemplate := "system:serviceaccount:namespace:workspace.{{ workspaceIdentifier }}.buildingblockdefinition.{{ buildingBlockDefinitionUuid }}"
 		updatedTemplate := "system:serviceaccount:namespace:bbd.{{ buildingBlockDefinitionUuid }}"
-		vars := runnerVariables()
+		vars := runnerVariables(acctest.RandString(8))
 		updatedVars := maps.Clone(vars)
 		updatedVars["subject_template"] = tfconfig.StringVariable(updatedTemplate)
 		var runnerUuid string
@@ -196,7 +197,7 @@ func TestAccBuildingBlockRunnerResource(t *testing.T) {
 	})
 
 	t.Run("wif_validation", func(t *testing.T) {
-		vars := runnerVariables()
+		vars := runnerVariables(acctest.RandString(8))
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
@@ -224,7 +225,7 @@ func TestAccBuildingBlockRunnerResource(t *testing.T) {
 			t.Skip("mock-only test: PUBLIC restriction may require admin permissions in real meshStack")
 		}
 
-		vars := runnerVariables()
+		vars := runnerVariables(acctest.RandString(8))
 		var runnerUuid string
 		var replacedRunnerUuid string
 
