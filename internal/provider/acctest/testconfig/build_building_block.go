@@ -11,6 +11,7 @@ import (
 func BBWorkspace(t *testing.T) (config Config, buildingBlockAddr Traversal, buildingBlockDefinitionAddr Traversal, workspaceAddr Traversal) {
 	t.Helper()
 	workspaceConfig, workspaceAddr := Workspace(t)
+	paymentMethodConfig, setPaymentMethodInput := PaymentMethodInput(t, workspaceAddr)
 	buildingBlockDefinitionConfig := Resource{Name: "building_block", Suffix: "_01_workspace"}.TestSupportConfig(t, "").WithFirstBlock(
 		ExtractAddress(&buildingBlockDefinitionAddr),
 		OwnedByWorkspace(workspaceAddr),
@@ -23,7 +24,16 @@ func BBWorkspace(t *testing.T) (config Config, buildingBlockAddr Traversal, buil
 		// set it explicitly in later steps.
 		Descend("spec", "building_block_definition_version_ref")(SetRawExpr(`{ uuid = %s }`, buildingBlockDefinitionAddr.Join("version_latest", "uuid"))),
 		Descend("spec", "target_ref")(SetAddr(workspaceAddr, "ref")),
-	).Join(workspaceConfig, buildingBlockDefinitionConfig), buildingBlockAddr, buildingBlockDefinitionAddr, workspaceAddr
+		setPaymentMethodInput,
+	).Join(workspaceConfig, paymentMethodConfig, buildingBlockDefinitionConfig), buildingBlockAddr, buildingBlockDefinitionAddr, workspaceAddr
+}
+
+// PaymentMethodInput builds a payment method in the workspace, and the consumer that sets it as the
+// payment_method input of a building block from resource_01_workspace.tf.
+func PaymentMethodInput(t *testing.T, workspaceAddr Traversal) (paymentMethodConfig Config, setPaymentMethodInput ExpressionConsumer) {
+	t.Helper()
+	paymentMethodConfig, paymentMethodAddr := PaymentMethod(t, workspaceAddr)
+	return paymentMethodConfig, Descend("spec", "inputs", "payment_method", "value")(SetRawExpr(`jsonencode(%s)`, paymentMethodAddr.Join("ref")))
 }
 
 // BBWorkspaceParentChild builds a workspace, a building block definition owned by it, and two v3
@@ -32,6 +42,7 @@ func BBWorkspace(t *testing.T) (config Config, buildingBlockAddr Traversal, buil
 func BBWorkspaceParentChild(t *testing.T) (config Config, parentAddr Traversal, childAddr Traversal) {
 	t.Helper()
 	workspaceConfig, workspaceAddr := Workspace(t)
+	paymentMethodConfig, setPaymentMethodInput := PaymentMethodInput(t, workspaceAddr)
 	var buildingBlockDefinitionAddr Traversal
 	buildingBlockDefinitionConfig := Resource{Name: "building_block", Suffix: "_01_workspace"}.TestSupportConfig(t, "").WithFirstBlock(
 		ExtractAddress(&buildingBlockDefinitionAddr),
@@ -48,6 +59,7 @@ func BBWorkspaceParentChild(t *testing.T) (config Config, parentAddr Traversal, 
 				// Reference only the version uuid, for the reason given in BBWorkspace.
 				Descend("spec", "building_block_definition_version_ref")(SetRawExpr(`{ uuid = %s }`, buildingBlockDefinitionAddr.Join("version_latest", "uuid"))),
 				Descend("spec", "target_ref")(SetAddr(workspaceAddr, "ref")),
+				setPaymentMethodInput,
 			}, extra...)...,
 		), buildingBlockAddr
 	}
@@ -56,7 +68,7 @@ func BBWorkspaceParentChild(t *testing.T) (config Config, parentAddr Traversal, 
 	childConfig, childAddr := buildingBlock("child",
 		Descend("spec", "parent_building_block_refs")(SetRawExpr("[%s]", parentAddr.Join("ref"))),
 	)
-	return childConfig.Join(parentConfig, workspaceConfig, buildingBlockDefinitionConfig), parentAddr, childAddr
+	return childConfig.Join(parentConfig, workspaceConfig, paymentMethodConfig, buildingBlockDefinitionConfig), parentAddr, childAddr
 }
 
 // BBTenant builds a workspace (+project/platform/landing-zone/tenant) and a v3 building block
