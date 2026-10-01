@@ -5,6 +5,10 @@ FEATURES:
   `(MANAGED_|ADM_)TENANTDELETION_APPROVE`, `[ADM_]TENANTUSAGEREPORT_LIST` and `ADM_WORKSPACEUSERGROUP_(DELETE|SAVE)`.
   Its documentation lists the permissions per resource in this pattern notation.
 
+FIXES:
+- Update google.golang.org/grpc to v1.83.2, which fixes the vulnerabilities GO-2026-6061, GO-2026-6348 and
+  GO-2026-6443 in the gRPC server the provider runs for Terraform.
+
 # v0.26.4
 
 **Upgrade to this release before your meshStack is upgraded to 2026.41.0.** That meshStack version changes what a

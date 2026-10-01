@@ -33,6 +33,11 @@ tasks:
       # it, so the formatting they enforce comes from the Go that BUILT the linter.
       - go tool golangci-lint run {{.CLI_ARGS}}
 
+  vuln:
+    desc: Check for known vulnerabilities with govulncheck
+    cmds:
+      - go tool govulncheck {{.CLI_ARGS}} ./...
+
   generate:
     desc: Generate documentation
     cmds:
