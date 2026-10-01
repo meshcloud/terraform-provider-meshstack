@@ -49,8 +49,9 @@ func (d *platformsDataSource) Schema(_ context.Context, _ datasource.SchemaReque
 				Optional:            true,
 			},
 			"identifier": schema.StringAttribute{
-				MarkdownDescription: "Filter by platform identifier (`metadata.name`).",
-				Optional:            true,
+				MarkdownDescription: "Filter by the full platform identifier `<metadata.name>.<location>`, for example `my-platform.global` " +
+					"(exact match). To filter by location alone, use `location_identifier`.",
+				Optional: true,
 			},
 			"location_identifier": schema.StringAttribute{
 				MarkdownDescription: "Filter by location identifier.",
