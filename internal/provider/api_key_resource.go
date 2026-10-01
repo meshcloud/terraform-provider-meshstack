@@ -80,7 +80,8 @@ func (r *apiKeyResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 							"See [API Permissions](https://docs.meshcloud.io/api/authentication/api-permissions/) for detailed documentation. " +
 							"Each permission exists as a workspace-scoped variant, an admin-scoped (`ADM_`-prefixed) variant, or both. " +
 							"`ADM_`-prefixed permissions grant access across all workspaces. " +
-							"`MANAGED_`-prefixed permissions grant cross-workspace access scoped to resources managed by the API key's workspace (e.g. building block definitions, landing zones, or platforms it owns)." +
+							"`MANAGED_`-prefixed permissions grant cross-workspace access scoped to resources managed by the API key's workspace (e.g. building block definitions, landing zones, or platforms it owns). " +
+							"In the list below, `[ADM_]` marks an optional prefix, `(MANAGED_|ADM_)` a prefix that is one of the alternatives, and `(DELETE|LIST|SAVE)` one of the actions." +
 							permissionsMarkdown(),
 						Validators: []validator.Set{
 							setvalidator.ValueStringsAre(

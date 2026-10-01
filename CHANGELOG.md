@@ -1,3 +1,10 @@
+# v0.26.5
+
+FEATURES:
+- `meshstack_api_key`: `permissions` accepts `(MANAGED_|ADM_)BUILDINGBLOCKRUNARTIFACT_(LIST|SAVE)`,
+  `(MANAGED_|ADM_)TENANTDELETION_APPROVE`, `[ADM_]TENANTUSAGEREPORT_LIST` and `ADM_WORKSPACEUSERGROUP_(DELETE|SAVE)`.
+  Its documentation lists the permissions per resource in this pattern notation.
+
 # v0.26.4
 
 **Upgrade to this release before your meshStack is upgraded to 2026.41.0.** That meshStack version changes what a

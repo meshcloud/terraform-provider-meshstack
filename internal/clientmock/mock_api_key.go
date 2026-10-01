@@ -64,3 +64,7 @@ func (m MeshApiKeyClient) Delete(_ context.Context, uuid string) error {
 	m.Store.Delete(uuid)
 	return nil
 }
+
+func (m MeshApiKeyClient) ReadSelf(_ context.Context) (*client.MeshApiKey, error) {
+	panic("not implemented / unused")
+}
