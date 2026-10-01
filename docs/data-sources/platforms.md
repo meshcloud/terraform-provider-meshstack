@@ -44,7 +44,7 @@ locals {
 
 - `contributing_workspace` (String) Filter by a contributing workspace identifier.
 - `display_name` (String) Filter by display name.
-- `identifier` (String) Filter by platform identifier (`metadata.name`).
+- `identifier` (String) Filter by the full platform identifier `<metadata.name>.<location>`, for example `my-platform.global` (exact match). To filter by location alone, use `location_identifier`.
 - `location_identifier` (String) Filter by location identifier.
 - `owned_by_workspace` (String) Filter by the identifier of the workspace that owns the platform.
 - `platform_type_identifier` (String) Filter by platform type identifier (the platform type's `metadata.name`), matched server-side. Consistent with `meshstack_tenant`'s `status.platform_type_identifier`.
