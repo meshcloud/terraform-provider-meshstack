@@ -8,6 +8,8 @@ FEATURES:
   `assignment_type = "PAYMENT_METHOD"`.
   Only a `WORKSPACE_LEVEL` definition can declare such an input, and it must be of type `CODE`.
   Needs meshStack 2026.41.0 or later.
+- `meshstack_payment_method`: new `ref` attribute, also on the data source. A building block sets a
+  `PAYMENT_METHOD` input to it, as `value = jsonencode(meshstack_payment_method.mypay.ref)`.
 
 FIXES:
 - Update google.golang.org/grpc to v1.83.2, which fixes the vulnerabilities GO-2026-6061, GO-2026-6348 and
