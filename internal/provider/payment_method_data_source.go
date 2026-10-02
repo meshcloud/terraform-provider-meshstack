@@ -32,6 +32,8 @@ func (d *paymentMethodDataSource) Schema(_ context.Context, _ datasource.SchemaR
 		MarkdownDescription: "Read a single payment method by workspace and identifier.",
 
 		Attributes: map[string]schema.Attribute{
+			"ref": meshRefByName(meshRefOptions{Kind: client.MeshObjectKind.PaymentMethod, Description: "Reference to this payment method. A building block takes it as the value of a `PAYMENT_METHOD` input: `jsonencode(meshstack_payment_method.mypay.ref)`.", Output: true}),
+
 			"metadata": schema.SingleNestedAttribute{
 				Required: true,
 				Attributes: map[string]schema.Attribute{
@@ -113,5 +115,5 @@ func (d *paymentMethodDataSource) Read(ctx context.Context, req datasource.ReadR
 		paymentMethod.Spec.Tags = make(map[string][]string)
 	}
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, paymentMethod)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, newPaymentMethodModel(paymentMethod))...)
 }

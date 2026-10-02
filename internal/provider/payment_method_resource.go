@@ -45,6 +45,8 @@ func (r *paymentMethodResource) Schema(_ context.Context, _ resource.SchemaReque
 		MarkdownDescription: "Represents a meshStack payment method.\n\n~> **Note:** Managing payment methods requires an API key with sufficient admin permissions.",
 
 		Attributes: map[string]schema.Attribute{
+			"ref": meshRefByName(meshRefOptions{Kind: client.MeshObjectKind.PaymentMethod, Description: "Reference to this payment method. A building block takes it as the value of a `PAYMENT_METHOD` input: `jsonencode(meshstack_payment_method.mypay.ref)`.", Output: true}),
+
 			"metadata": schema.SingleNestedAttribute{
 				Required: true,
 				Attributes: map[string]schema.Attribute{
@@ -132,7 +134,7 @@ func (r *paymentMethodResource) Create(ctx context.Context, req resource.CreateR
 		createdPaymentMethod.Spec.Tags = make(map[string][]string)
 	}
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, createdPaymentMethod)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, newPaymentMethodModel(createdPaymentMethod))...)
 }
 
 func (r *paymentMethodResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -170,7 +172,7 @@ func (r *paymentMethodResource) Read(ctx context.Context, req resource.ReadReque
 		paymentMethod.Spec.Tags = make(map[string][]string)
 	}
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, paymentMethod)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, newPaymentMethodModel(paymentMethod))...)
 }
 
 func (r *paymentMethodResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -202,7 +204,7 @@ func (r *paymentMethodResource) Update(ctx context.Context, req resource.UpdateR
 		updatedPaymentMethod.Spec.Tags = make(map[string][]string)
 	}
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, updatedPaymentMethod)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, newPaymentMethodModel(updatedPaymentMethod))...)
 }
 
 func (r *paymentMethodResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {

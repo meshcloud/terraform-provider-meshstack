@@ -34,6 +34,12 @@ resource "meshstack_building_block_definition" "example" {
         updateable_by_consumer = true
         selectable_values      = ["dev", "staging", "prod"]
       }
+      payment_method = {
+        display_name           = "Payment Method"
+        type                   = "CODE"
+        assignment_type        = "PAYMENT_METHOD"
+        updateable_by_consumer = true
+      }
       region = {
         display_name    = "Region"
         type            = "STRING"

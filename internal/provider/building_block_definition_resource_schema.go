@@ -86,6 +86,7 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 		Optional: true,
 		Validators: []validator.Map{
 			validators.BuildingBlockDefinitionTagInputs{},
+			validators.BuildingBlockDefinitionPaymentMethodInputs{},
 			mapvalidator.KeysAre(stringvalidator.LengthAtMost(maxLengthText)),
 		},
 		NestedObject: schema.NestedAttributeObject{
@@ -108,12 +109,12 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 					MarkdownDescription: "Data type of the input. One of " + client.MeshBuildingBlockDefinitionInputTypes.Markdown() + ". " +
 						client.MeshBuildingBlockIOTypeList.Markdown() + " is deprecated, use " + client.MeshBuildingBlockIOTypeCode.Markdown() + " instead. " +
 						"Type " + client.MeshBuildingBlockIOTypeJson.Markdown() + " does not describe a single value: it gives the input a form of its own, " +
-						"declared by `json_schema`, which meshPanel renders in place of one field. " +
+						"declared by `json_schema`, which meshPanel renders in place of one field.<br>" +
 						"For type " + client.MeshBuildingBlockIOTypeFile.Markdown() + ", the value must be a MIME-typed base64 data blob. " +
 						"Use `provider::meshstack::load_file` or `provider::meshstack::encode_file` to produce such a data blob. " +
 						"When providing this value via `argument` or `default_value`, wrap the blob in `jsonencode(...)`, for example `argument = jsonencode(provider::meshstack::load_file(...))`.<br>" +
 						"Must be " + client.MeshBuildingBlockIOTypeCode.Markdown() + " when `assignment_type` is " + client.MeshBuildingBlockInputAssignmentTypeTag.Markdown() +
-						", because a meshStack tag value is a list of strings.",
+						" (list of strings) or " + client.MeshBuildingBlockInputAssignmentTypePaymentMethod.Markdown() + " (object), as those assignment types send JSON-encoded values.",
 					Required: true,
 					Validators: []validator.String{
 						stringvalidator.OneOf(client.MeshBuildingBlockDefinitionInputTypes.Strings()...),
@@ -121,7 +122,16 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 				},
 				"assignment_type": schema.StringAttribute{
 					MarkdownDescription: "How the input value is assigned. One of " + client.MeshBuildingBlockInputAssignmentTypes.Markdown() + ". " +
-						"Determines which additional attributes are required or allowed.",
+						"Also determines which additional attributes of an input are required or allowed.<br>" +
+						enum.Of(
+							client.MeshBuildingBlockInputAssignmentTypePlatformTenantID,
+							client.MeshBuildingBlockInputAssignmentTypeMeshstackTenantUuid,
+							client.MeshBuildingBlockInputAssignmentTypeProjectIdentifier,
+							client.MeshBuildingBlockInputAssignmentTypeFullPlatformIdentifier,
+						).Markdown() + " can only be declared on " + client.MeshBuildingBlockTypeTenantLevel.Markdown() + ", " +
+						client.MeshBuildingBlockInputAssignmentTypePaymentMethod.Markdown() + " only on " + client.MeshBuildingBlockTypeWorkspaceLevel.Markdown() + ".<br>" +
+						"The value of a " + client.MeshBuildingBlockInputAssignmentTypePaymentMethod.Markdown() + " input is the `ref` of one of the workspace's active Payment Methods, " +
+						"for example `jsonencode(meshstack_payment_method.mypay.ref)`. The run receives the same `{\"kind\": \"meshPaymentMethod\", \"name\": \"<identifier>\"}`.",
 					Required: true,
 					Validators: []validator.String{
 						stringvalidator.OneOf(client.MeshBuildingBlockInputAssignmentTypes.Strings()...),
@@ -187,10 +197,13 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 					Default:             booldefault.StaticBool(false),
 				},
 				"updateable_by_consumer": schema.BoolAttribute{
-					MarkdownDescription: "Whether the input value can be updated by consumers without admin or platform operator permissions.",
-					Optional:            true,
-					Computed:            true,
-					Default:             booldefault.StaticBool(false),
+					MarkdownDescription: "Whether the input value can be updated by consumers without admin or platform operator permissions.<br>" +
+						"Note for " + client.MeshBuildingBlockInputAssignmentTypePaymentMethod.Markdown() + " input: Only an admin can change the Payment Method " +
+						"after ordering the building block if this flag is `false`. " +
+						"Existing BBDs must use `true` here when adding a " + client.MeshBuildingBlockInputAssignmentTypePaymentMethod.Markdown() + " input in later versions.",
+					Optional: true,
+					Computed: true,
+					Default:  booldefault.StaticBool(false),
 				},
 				"is_optional": schema.BoolAttribute{
 					MarkdownDescription: "Whether the input may be left unset when a building block is filled in. " +
