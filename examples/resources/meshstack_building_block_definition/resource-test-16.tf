@@ -43,4 +43,8 @@ resource "meshstack_building_block_definition" "example_02_github_workflows" {
       }
     }
   }
+
+  # The released version still pins the first integration, which meshStack refuses to delete while it is
+  # referenced, so the definition has to go first.
+  depends_on = [meshstack_integration.github]
 }
