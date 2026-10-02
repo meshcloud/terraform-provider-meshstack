@@ -1,7 +1,7 @@
 # A minimal manual BBD used as a dependency for the terraform example
 resource "meshstack_building_block_definition" "other" {
   metadata = {
-    owned_by_workspace = "my-workspace"
+    owned_by_workspace = meshstack_workspace.example.metadata.name
   }
 
   spec = {

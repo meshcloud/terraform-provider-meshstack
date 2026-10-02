@@ -1,6 +1,6 @@
 resource "meshstack_integration" "azuredevops" {
   metadata = {
-    owned_by_workspace = "my-workspace"
+    owned_by_workspace = meshstack_workspace.example.metadata.name
   }
 
   spec = {
