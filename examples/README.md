@@ -12,3 +12,32 @@ This is useful for creating examples that can run and/or ar testable even if som
 * `data-sources/<full resource name>/data-source.tf` example file for the named data source page
 * `resources/<full resource name>/resource.tf` example file for the named data source page
 * `resources/<<full resource name>>/import.sh`
+
+## Files used by the acceptance tests
+
+Beyond the documented example, a resource/data source directory holds the configs its acceptance
+test applies:
+
+* `resource-test-<index>.tf` / `data-source-test-<index>.tf` — the example as one test step applies
+  it: same block, but with the documented data sources swapped for resources the test creates and
+  names carrying the run's random `var.suffix`. One file per step, numbered from 1; the index is
+  what links the file to the step in the test (`examples.Resource.TestStepConfig(t, name, index, …)`).
+* `test-support_<name>.tf` — the prerequisites those step files reference (owning workspace, tag
+  definitions, …) plus the `variable` declarations the test fills via `ConfigVariables`. A step
+  config is its `resource-test-<index>.tf` followed by the support files the test names.
+
+`meshstack_project` is the reference for this layout.
+
+The documented examples run against the backend as well: `TestAccProjectExample` applies
+`resource.tf` and `data-source.tf` exactly as published (`examples.Resource.DocumentedConfig`), with
+`test-support_documented-example.tf` creating what they look up under the names they use. Those names
+are fixed, so that test cannot run twice at once against the same meshStack.
+
+A step file may also pull in another example's step config when its subject depends on those
+resources, via `examples.JoinTestStepConfigs`, rather than duplicating the prerequisites: the
+`meshstack_project` data source reads the project the resource example creates, and both project
+bindings target it. Only one config in such a stack declares the shared `variable` blocks.
+
+Note that the docs tool globs `resource*.tf` / `data-source*.tf`, so `templates/resources.md.tmpl`
+and `templates/data-sources.md.tmpl` skip any example path containing `-test-`. Without that filter
+the step configs would show up as documented examples in the registry.

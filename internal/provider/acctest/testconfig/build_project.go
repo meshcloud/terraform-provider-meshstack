@@ -22,11 +22,3 @@ func Project(t *testing.T, workspaceAddr Traversal) (config Config, projectAddr 
 		),
 	).Join(tagConfig, paymentMethodConfig), projectAddr
 }
-
-// ProjectAndWorkspace builds a project with a new workspace.
-func ProjectAndWorkspace(t *testing.T) (config Config, projectAddr, workspaceAddr Traversal) {
-	t.Helper()
-	workspaceConfig, workspaceAddr := Workspace(t)
-	config, projectAddr = Project(t, workspaceAddr)
-	return config.Join(workspaceConfig), projectAddr, workspaceAddr
-}

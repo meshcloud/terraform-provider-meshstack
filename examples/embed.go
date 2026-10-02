@@ -2,6 +2,7 @@ package examples
 
 import (
 	"embed"
+	"fmt"
 	"io/fs"
 	"path"
 	"strings"
@@ -58,4 +59,37 @@ func (e Example) Read(t *testing.T, name string, fileNameParts ...string) []byte
 	content, err := fsys.ReadFile(filePath)
 	require.NoErrorf(t, err, "cannot read examples config file %s:", filePath)
 	return content
+}
+
+// TestStepConfig assembles the HCL for one acceptance test step: the step's own variant of the
+// example (<resource|data-source>-test-<index>.tf) followed by the named test-support files
+// (test-support_<name>.tf) holding the prerequisites that variant references.
+//
+// One file per step keeps every applied config readable as plain HCL and diffable against the
+// documented example; the index is the link between the file and the step that uses it.
+func (e Example) TestStepConfig(t *testing.T, name string, index int, supportNames ...string) string {
+	t.Helper()
+	return e.withSupport(t, e.Read(t, name, fmt.Sprintf("-test-%d", index)), name, supportNames)
+}
+
+func (e Example) DocumentedConfig(t *testing.T, name string, supportNames ...string) string {
+	t.Helper()
+	return e.withSupport(t, e.Read(t, name), name, supportNames)
+}
+
+func (e Example) withSupport(t *testing.T, config []byte, name string, supportNames []string) string {
+	t.Helper()
+	parts := []string{string(config)}
+	for _, supportName := range supportNames {
+		parts = append(parts, string(e.Read(t, name, "test-support", "_"+supportName)))
+	}
+	return strings.Join(parts, "\n")
+}
+
+// JoinTestStepConfigs concatenates the step configs of several examples into the config for one test
+// step. A subject that depends on resources another example already declares reuses that example's
+// step instead of redeclaring them: the project bindings target the project the project example
+// creates, and a data source reads back what its own resource example applied.
+func JoinTestStepConfigs(configs ...string) string {
+	return strings.Join(configs, "\n")
 }
