@@ -5,7 +5,7 @@ resource "meshstack_platform" "example_azure" {
   }
 
   spec = {
-    display_name       = "Example Platform"
+    display_name       = var.platform_display_name
     description        = "Azure is the Public Cloud Service provided by Microsoft."
     endpoint           = "https://azure.microsoft.com"
     documentation_url  = "https://azure.microsoft.com"

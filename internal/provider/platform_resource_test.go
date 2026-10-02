@@ -45,7 +45,7 @@ var platformVariants = []platformVariant{
 func platformStepConfig(t *testing.T, variant platformVariant) string {
 	t.Helper()
 	parts := []string{
-		examples.Resource.TestStepConfig(t, "platform", variant.index),
+		examples.Resource.TestStepConfig(t, "platform", variant.index, "variables"),
 		examples.Resource.TestStepConfig(t, "workspace", 1, "variables", "prerequisites"),
 	}
 	if variant.suffix == "08_custom" {
@@ -78,7 +78,20 @@ func TestAccPlatformResource(t *testing.T) {
 						}
 						return nil
 					})),
+					statecheck.ExpectKnownValue(variant.addr, tfjsonpath.New("spec").AtMapKey("access_information"), knownvalue.StringExact("Login via [Azure Portal](https://portal.azure.com) using your corporate credentials.")),
 				)
+				steps = append(steps, resource.TestStep{
+					Config:          config,
+					ConfigVariables: With(vars, "platform_display_name", "Example Platform Updated"),
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PreApply: []plancheck.PlanCheck{
+							plancheck.ExpectResourceAction(variant.addr, plancheck.ResourceActionUpdate),
+						},
+					},
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(variant.addr, tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("Example Platform Updated")),
+					},
+				})
 			case "05_aks":
 				// The access token is write-only, so importing it plans an update: the hash is unknown
 				// until apply and only the version pins what the config declared.
@@ -102,7 +115,7 @@ func TestAccPlatformResource(t *testing.T) {
 			}
 
 			if variant.suffix != "05_aks" {
-				steps = append(steps, platformImportStep(variant, vars, &resourceUuid))
+				steps = append(steps, platformImportStep(variant, steps[len(steps)-1].ConfigVariables, &resourceUuid))
 			}
 
 			ApplyAndTest(t, resource.TestCase{Steps: steps})
