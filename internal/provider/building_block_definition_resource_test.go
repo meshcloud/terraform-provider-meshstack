@@ -820,6 +820,7 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 					Config:          bbdStepConfig(t, 15, terraformBbdSupports...),
 					ConfigVariables: With(vars, "draft", false, "description", "updated description, version_spec untouched"),
 					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(terraformBbdAddr, tfjsonpath.New("version_latest"), expectedVersion(1, versionStateReleased)),
 						statecheck.ExpectKnownValue(terraformBbdAddr, tfjsonpath.New("spec").AtMapKey("description"),
 							knownvalue.StringExact("updated description, version_spec untouched")),
 					},
@@ -843,9 +844,18 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 				{
 					Config:          bbdStepConfig(t, 14, terraformBbdSupports...),
 					ConfigVariables: With(vars, "secret_version", "v2", "secret_value", "plaintext-secret-v2"),
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PreApply: []plancheck.PlanCheck{
+							plancheck.ExpectResourceAction(terraformBbdAddr, plancheck.ResourceActionUpdate),
+						},
+					},
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(terraformBbdAddr, tfjsonpath.New("version_latest_release"), expectedVersion(1, versionStateReleased)),
 						statecheck.ExpectKnownValue(terraformBbdAddr, tfjsonpath.New("version_latest"), expectedVersion(2, versionStateDraft)),
+						statecheck.ExpectKnownValue(terraformBbdAddr, tfjsonpath.New("versions"), knownvalue.ListExact([]knownvalue.Check{
+							expectedVersion(1, versionStateReleased),
+							expectedVersion(2, versionStateDraft),
+						})),
 					},
 				},
 			},
@@ -859,6 +869,9 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 		vars := With(NewVariablesWithSuffix(suffix), "tag_suffix", suffix)
 		releasedHashStable := statecheck.CompareValue(compare.ValuesSame())
 		releasedHashPath := tfjsonpath.New("version_latest_release").AtMapKey("content_hash")
+		integrationSwitched := statecheck.CompareValue(compare.ValuesDiffer())
+		integrationUuidPath := tfjsonpath.New("version_spec").AtMapKey("implementation").
+			AtMapKey("github_workflows").AtMapKey("integration_ref").AtMapKey("uuid")
 
 		// Both integrations live in the same support file pair, so every step carries both.
 		supports := []string{"02_github_workflows_integration", "02_github_workflows_integration_b"}
@@ -870,6 +883,7 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 					ConfigVariables: vars,
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(githubBbdAddr, tfjsonpath.New("version_latest"), expectedVersion(1, versionStateDraft)),
+						integrationSwitched.AddStateValue(githubBbdAddr, integrationUuidPath),
 					},
 				},
 				{
@@ -877,6 +891,7 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 					ConfigVariables: With(vars, "draft", false),
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(githubBbdAddr, tfjsonpath.New("version_latest_release"), expectedVersion(1, versionStateReleased)),
+						statecheck.ExpectKnownValue(githubBbdAddr, tfjsonpath.New("version_latest"), expectedVersion(1, versionStateReleased)),
 						releasedHashStable.AddStateValue(githubBbdAddr, releasedHashPath),
 					},
 				},
@@ -892,7 +907,12 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(githubBbdAddr, tfjsonpath.New("version_latest_release"), expectedVersion(1, versionStateReleased)),
 						statecheck.ExpectKnownValue(githubBbdAddr, tfjsonpath.New("version_latest"), expectedVersion(2, versionStateDraft)),
+						statecheck.ExpectKnownValue(githubBbdAddr, tfjsonpath.New("versions"), knownvalue.ListExact([]knownvalue.Check{
+							expectedVersion(1, versionStateReleased),
+							expectedVersion(2, versionStateDraft),
+						})),
 						releasedHashStable.AddStateValue(githubBbdAddr, releasedHashPath),
+						integrationSwitched.AddStateValue(githubBbdAddr, integrationUuidPath),
 					},
 				},
 			},
