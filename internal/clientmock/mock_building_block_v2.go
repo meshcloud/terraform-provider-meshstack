@@ -267,10 +267,10 @@ func (m MeshBuildingBlockV2Client) Delete(_ context.Context, bbUuid string, purg
 	return nil
 }
 
-func (m MeshBuildingBlockV2Client) TriggerRun(_ context.Context, bbUuid string) error {
+func (m MeshBuildingBlockV2Client) TriggerRun(_ context.Context, bbUuid string) (*client.MeshBuildingBlockV2, error) {
 	bb, ok := m.Store.Get(bbUuid)
 	if !ok {
-		return fmt.Errorf("building block %q not found", bbUuid)
+		return nil, fmt.Errorf("building block %q not found", bbUuid)
 	}
 	cp := deepCopyBB(bb)
 	if cp.Status == nil {
@@ -280,11 +280,15 @@ func (m MeshBuildingBlockV2Client) TriggerRun(_ context.Context, bbUuid string) 
 			},
 		}
 	}
+	// Like the backend, the answer reports the run PENDING but still names the run before it, which the
+	// backend creates only after it answered. The store skips ahead to the run having succeeded.
+	accepted := deepCopyBB(cp)
+	accepted.Status.Status = client.BuildingBlockStatusPending
 	cp.Status.Status = client.BuildingBlockStatusSucceeded
 	cp.Status.LatestRunUuid = new(uuid.NewString())
 	cp.Status.LatestDryRunUuid = nil
 	m.Store.Set(bbUuid, cp)
-	return nil
+	return m.withDerivedParents(accepted), nil
 }
 
 // provisioningChanged reports whether a PUT made a backend-visible change that triggers an apply run:

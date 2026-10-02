@@ -119,7 +119,7 @@ func validateTagInputArgument(
 		return
 	}
 
-	readableTargets := client.TagInputTargetsFor(client.MeshBuildingBlockType(targetType))
+	readableTargets := client.MeshBuildingBlockType(targetType).TagInputTargets()
 	if slices.Contains(readableTargets.Strings(), target) {
 		return
 	}

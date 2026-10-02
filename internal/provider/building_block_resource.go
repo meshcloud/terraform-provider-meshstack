@@ -1125,8 +1125,10 @@ func (r *buildingBlockResource) Update(ctx context.Context, req resource.UpdateR
 		planInputsChanged(plan.Spec.Inputs, state.Spec.Inputs) ||
 		!reflect.DeepEqual(plan.Spec.ParentBuildingBlockRefs, state.Spec.ParentBuildingBlockRefs) ||
 		secretRotated
+	effective := updated
 	if needsRun && !backendWillRun {
-		if err := r.BuildingBlockClient.TriggerRun(ctx, *updated.Metadata.Uuid); err != nil {
+		triggered, err := r.BuildingBlockClient.TriggerRun(ctx, *updated.Metadata.Uuid)
+		if err != nil {
 			// A repair is the one run the provider starts without the user changing anything, so this 403
 			// would fail every apply identically. Say what blocks it instead of repeating a bare HTTP error.
 			if httpErr, ok := errors.AsType[client.HttpError](err); ok && httpErr.IsForbidden() && repairNeeded {
@@ -1144,10 +1146,13 @@ func (r *buildingBlockResource) Update(ctx context.Context, req resource.UpdateR
 			resp.Diagnostics.AddError("Error triggering building block run", err.Error())
 			return
 		}
+		// Unlike the PUT's answer, the trigger-run's reports the run PENDING rather than the status before it.
+		if triggered != nil {
+			effective = triggered
+		}
 	}
 
 	// Wait for the triggered run (whether the PUT or the explicit trigger-run started it).
-	effective := updated
 	if needsRun {
 		timeout := resolveTimeout(ctx, req.Plan, "update", &resp.Diagnostics)
 		if resp.Diagnostics.HasError() {
@@ -1158,14 +1163,14 @@ func (r *buildingBlockResource) Update(ctx context.Context, req resource.UpdateR
 		case final != nil:
 			effective = final
 		case !plan.WaitForCompletion:
-			// Nothing was awaited, so `updated` still carries the pre-run status — for a repair, the FAILED or
+			// Nothing was awaited, so a PUT's answer still carries the pre-run status — for a repair, the FAILED or
 			// ABORTED one this apply just triggered a run for. Writing that back would make the next plan
 			// trigger a second run on a block that is already running.
 			if reread, err := r.BuildingBlockClient.Read(ctx, *updated.Metadata.Uuid); err != nil {
 				resp.Diagnostics.AddWarning(
 					"Could not read the building block after triggering its run",
 					fmt.Sprintf("The run was triggered, but reading building block %s to record its new status failed, so "+
-						"state keeps the status from before the run. Underlying error: %s", *updated.Metadata.Uuid, err.Error()),
+						"state keeps the status meshStack answered the update with. Underlying error: %s", *updated.Metadata.Uuid, err.Error()),
 				)
 			} else if reread != nil {
 				effective = reread
