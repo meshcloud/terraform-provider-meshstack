@@ -108,6 +108,58 @@ func TestAccProject(t *testing.T) {
 	})
 }
 
+func TestAccProjectExample(t *testing.T) {
+	resourceConfig := examples.Resource.DocumentedConfig(t, "project", "documented-example")
+	documentedTags := knownvalue.MapExact(map[string]knownvalue.Check{
+		"tag-key": knownvalue.ListExact([]knownvalue.Check{
+			knownvalue.StringExact("tag-value1"),
+			knownvalue.StringExact("tag-value2"),
+			knownvalue.StringExact("tag-valueN"),
+		}),
+	})
+
+	ApplyAndTest(t, resource.TestCase{
+		Steps: []resource.TestStep{
+			{
+				Config: resourceConfig,
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(projectResourceAddr, plancheck.ResourceActionCreate),
+					},
+				},
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(projectResourceAddr, tfjsonpath.New("metadata").AtMapKey("name"), knownvalue.StringExact("my-project")),
+					statecheck.ExpectKnownValue(projectResourceAddr, tfjsonpath.New("metadata").AtMapKey("owned_by_workspace"), knownvalue.StringExact("my-workspace")),
+					statecheck.ExpectKnownValue(projectResourceAddr, tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("My Project's Display Name")),
+					statecheck.ExpectKnownValue(projectResourceAddr, tfjsonpath.New("spec").AtMapKey("payment_method_identifier"), knownvalue.StringExact("my-payment-method")),
+					statecheck.ExpectKnownValue(projectResourceAddr, tfjsonpath.New("spec").AtMapKey("tags"), documentedTags),
+				},
+			},
+			{
+				Config: examples.JoinTestStepConfigs(examples.DataSource.DocumentedConfig(t, "project"), resourceConfig),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(projectResourceAddr, plancheck.ResourceActionNoop),
+					},
+				},
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(projectDataSourceAddr, tfjsonpath.New("metadata").AtMapKey("name"), knownvalue.StringExact("my-project")),
+					statecheck.ExpectKnownValue(projectDataSourceAddr, tfjsonpath.New("metadata").AtMapKey("owned_by_workspace"), knownvalue.StringExact("my-workspace")),
+					statecheck.ExpectKnownValue(projectDataSourceAddr, tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("My Project's Display Name")),
+					statecheck.ExpectKnownValue(projectDataSourceAddr, tfjsonpath.New("spec").AtMapKey("payment_method_identifier"), knownvalue.StringExact("my-payment-method")),
+					statecheck.ExpectKnownValue(projectDataSourceAddr, tfjsonpath.New("spec").AtMapKey("tags"), documentedTags),
+				},
+			},
+			{
+				ResourceName:    projectResourceAddr,
+				ImportState:     true,
+				ImportStateKind: resource.ImportBlockWithID,
+				ImportStateId:   "my-workspace.my-project",
+			},
+		},
+	})
+}
+
 func projectConfigVariables(suffix string) tfconfig.Variables {
 	return tfconfig.Variables{"suffix": tfconfig.StringVariable(suffix)}
 }

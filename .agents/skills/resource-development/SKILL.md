@@ -147,6 +147,10 @@ resource/data source still uses `testconfig` and its builders stay until it is m
   example's step 1 with its prerequisites (which is what carries `variable "suffix"`).
 - An import step needs the same `ConfigVariables` as the step before it — the framework re-applies
   that step's config to build the import plan, and a missing variable fails the whole case.
+- The documented example runs too, unchanged: `TestAccProjectExample` applies `resource.tf` and
+  `data-source.tf` via `examples.Resource.DocumentedConfig(t, "project", "documented-example")`, whose
+  support file creates what they look up under the published names. The step files are copies, so
+  without this nothing would test what the docs show.
 
 See `examples/README.md` for the file conventions, including the `-test-` filter that keeps the step
 files out of the generated docs.

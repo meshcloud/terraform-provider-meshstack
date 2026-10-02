@@ -69,7 +69,17 @@ func (e Example) Read(t *testing.T, name string, fileNameParts ...string) []byte
 // documented example; the index is the link between the file and the step that uses it.
 func (e Example) TestStepConfig(t *testing.T, name string, index int, supportNames ...string) string {
 	t.Helper()
-	parts := []string{string(e.Read(t, name, fmt.Sprintf("-test-%d", index)))}
+	return e.withSupport(t, e.Read(t, name, fmt.Sprintf("-test-%d", index)), name, supportNames)
+}
+
+func (e Example) DocumentedConfig(t *testing.T, name string, supportNames ...string) string {
+	t.Helper()
+	return e.withSupport(t, e.Read(t, name), name, supportNames)
+}
+
+func (e Example) withSupport(t *testing.T, config []byte, name string, supportNames []string) string {
+	t.Helper()
+	parts := []string{string(config)}
 	for _, supportName := range supportNames {
 		parts = append(parts, string(e.Read(t, name, "test-support", "_"+supportName)))
 	}

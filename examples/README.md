@@ -28,6 +28,11 @@ test applies:
 
 `meshstack_project` is the reference for this layout.
 
+The documented examples run against the backend as well: `TestAccProjectExample` applies
+`resource.tf` and `data-source.tf` exactly as published (`examples.Resource.DocumentedConfig`), with
+`test-support_documented-example.tf` creating what they look up under the names they use. Those names
+are fixed, so that test cannot run twice at once against the same meshStack.
+
 A step file may also pull in another example's step config when its subject depends on those
 resources, via `examples.JoinTestStepConfigs`, rather than duplicating the prerequisites: the
 `meshstack_project` data source reads the project the resource example creates, and both project
