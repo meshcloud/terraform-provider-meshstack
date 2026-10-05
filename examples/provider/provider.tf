@@ -1,6 +1,6 @@
-# An API key, with its secret exported as MESHSTACK_API_SECRET rather than written here, so that it
-# reaches neither the configuration nor terraform state.
+# A browser login, stored in a meshStack CLI profile by `meshstack login`. The profile carries
+# the endpoint and the credential, and the workspace says which one this configuration acts in.
 provider "meshstack" {
-  endpoint = "https://api.my.meshstack.io"
-  apikey   = "API_KEY"
+  profile   = "my-profile"
+  workspace = "my-workspace-ab12c"
 }
