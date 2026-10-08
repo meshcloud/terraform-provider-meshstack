@@ -5,6 +5,7 @@ plugins {
 satellite {
   acceptance {
     run = 'TestAcc'
+    services 'meshfed-api', 'replicator-api', 'block-coordinator-api', 'building-block-runner:runners'
     files 'internal/provider/testdata/tf-building-block/**'
     environment TF_ACC: '1',
                 TF_ACC_PROVIDER_HOST: 'registry.opentofu.org',
