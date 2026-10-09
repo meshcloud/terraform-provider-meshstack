@@ -17,13 +17,8 @@ yields only `main.tf`.
 
 ## How it is served
 
-- **Acceptance test** serves it over git **smart-HTTP** (`git-http-backend` behind a Go `net/http/cgi`
-  server, see `git_http_server_test.go`) and hands the runner an `http://127.0.0.1:<port>/…` clone
-  URL — in CI the runner is a separate container, so `file://` would not be visible to it.
-- **Local demos** (`scratch/bbv3-demo*`) run the runner via `go run` on the host, so they clone via
-  `file://${abspath(...)}`.
-
-Either way the runner clones a packfile, so the on-disk object encoding does not matter.
+The acceptance test and the local demos (`scratch/bbv3-demo*`) hand the runner a
+`file://${abspath(...)}` URL, because the runner runs on the same filesystem.
 
 ## Editing the module
 

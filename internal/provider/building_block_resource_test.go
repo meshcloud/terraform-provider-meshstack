@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"regexp"
 	"testing"
 	"time"
@@ -23,18 +24,12 @@ import (
 	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/xknownvalue"
 )
 
-// terraformTestdataRepoURL returns the clone URL of the committed bare git repo under
-// testdata/tf-building-block (a single-commit no-op OpenTofu module) that the tf-block-runner clones
-// to run terraform offline. In acceptance mode it serves the repo over git smart-HTTP (see
-// git_http_server_test.go) and returns an http://127.0.0.1:<port>/... URL the runner can reach across
-// containers -- a file:// URL cannot, since the runner has its own filesystem. In mock mode the value
-// is never cloned, so a stable placeholder is returned without starting a server.
+// The runner runs on the same filesystem as the test, so it clones the fixture by path.
 func terraformTestdataRepoURL(t *testing.T) string {
 	t.Helper()
-	if IsMockClientTest() {
-		return "http://127.0.0.1:0/tf-building-block"
-	}
-	return gitHTTPRepoBaseURL(t) + "/tf-building-block"
+	path, err := filepath.Abs("testdata/tf-building-block")
+	require.NoError(t, err)
+	return "file://" + path
 }
 
 // The subtests below are scenario flows rather than one-assertion-per-case tests: each walks a
@@ -673,9 +668,6 @@ func TestAccBuildingBlock(t *testing.T) {
 		bbdV1Released := exampleResource.TestSupportConfig(t, "_bbd").WithFirstBlock(
 			testconfig.ExtractAddress(&bbdAddr),
 			testconfig.OwnedByWorkspace(workspaceAddr),
-			// Point the terraform implementation at the committed bare repo served over loopback git
-			// smart-HTTP so the real tf-block-runner clones and runs OpenTofu offline. In mock mode this
-			// value is unused. The static example URL in the .tf is only a docs placeholder.
 			testconfig.Descend("version_spec", "implementation", "terraform", "repository_url")(
 				testconfig.SetRawExpr("%q", terraformTestdataRepoURL(t)),
 			),
