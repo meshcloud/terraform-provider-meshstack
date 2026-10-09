@@ -13,7 +13,7 @@ locally-built provider against **any meshStack you hold API credentials for**. T
 - **Scaffold** — grow a working example from an acceptance test (or from scratch) into a demo or a
   starting point for real platform-engineering work.
 
-Complements the **acceptance-testing** skill (brings up a local backend and runs the suite). The
+Complements the **acceptance-testing** skill, which runs the suite against a local backend. The
 `testconfig` builders make a dumped config self-contained: applied to an empty meshStack it creates
 its full dependency chain (workspace → dependent resources).
 
@@ -28,8 +28,8 @@ worth keeping (a demo, a reusable example, a module you intend to apply for real
    the acceptance suite, which a test-harness guard (`provider_test.go`) pins to `http://localhost`
    (so a failed cleanup is fixed by rebuilding the local backend DB, not by touching shared data) —
    it can target any meshStack you have an API key for:
-   - **meshcloud-internal:** a local backend from the **acceptance-testing** skill (Backend
-     bring-up). Endpoint `http://localhost:8080`.
+   - **meshcloud-internal:** the local dev stack from `../meshfed-release`'s `local-dev-stack`
+     skill. Endpoint `http://localhost:8080`.
    - **any dev/sandbox meshStack:** set `MESHSTACK_ENDPOINT` / `MESHSTACK_API_KEY` /
      `MESHSTACK_API_SECRET` to its values. `scratch/` applies **real** changes to that meshStack —
      never point it at a production instance.
@@ -97,24 +97,11 @@ terraform destroy      # clean up the meshObjects when done
 Provider-side logs: `TF_LOG_PROVIDER=debug terraform apply`. To step through with a debugger,
 build with `go build -gcflags="all=-N -l"` and attach delve to the running provider process.
 
-## terraform-implementation BBDs (meshcloud-internal — real `tf-block-runner`)
+## terraform-implementation BBDs
 
-*meshcloud-internal:* this path needs the private local dev stack (`meshfed-release`'s
-`local-dev-stack` skill) — the `tf-block-runner`, `meshfed-api`, the dev seed and its
-`building-blocks.pem` are not available to an external contributor.
-
-The standard local fan-out from the **`local-dev-stack`** skill already runs
-the **`tf-block-runner`** behind the multiplexer (mux `:8300`), so a `meshstack_building_block_definition`
-whose `implementation.terraform` clones a repo and runs OpenTofu — plus its consuming
-`meshstack_building_block` — works in `scratch/` with **no runner swap**. (This is the same fan-out the
-acceptance suite uses; nothing special is needed for `scratch/` play.)
-
-The tf-block-runner downloads OpenTofu via tofudl, clones the BBD's `repository_url`, and for a module
-that declares no backend injects the mesh http backend (`use_mesh_http_backend_fallback = true`). Watch
-`/tmp/tf-runner.log`; the building block reaches `SUCCEEDED` with real tofu outputs in TF state.
-Sensitive inputs (`sensitive = { argument = { secret_value = ... } }`) decrypt end to end out of the
-box — the dev seed registers `building-blocks.pem` on the magic runner UUID and the tf-block-runner
-ships the matching private key. A minimal BBD `implementation`:
+*meshcloud-internal:* on the local dev stack the runner executes terraform runs, so a
+`meshstack_building_block_definition` with `implementation.terraform`, and a building block that
+uses it, reach `SUCCEEDED` in `scratch/`. A minimal `implementation`:
 
 ```hcl
 implementation = {
@@ -122,17 +109,14 @@ implementation = {
     repository_url                 = "https://github.com/meshcloud/meshstack-hub.git"
     repository_path                = "modules/meshstack/noop/buildingblock"   # NoOp reference module: all input/output types, no real infra
     ref_name                       = "main"
-    terraform_version              = "1.9.0"                                   # >1.5.5 → OpenTofu via tofudl
+    terraform_version              = "1.9.0"
     use_mesh_http_backend_fallback = true
   }
 }
 ```
 
-One gotcha when hand-writing such a config:
-- **`draft = false` versions are immutable** (`Updating a version_spec in non-draft state is not
-  allowed`). Use `draft = true` to iterate — each apply updates the version in place and reruns
-  the block; flip to `false` only to "release". A released version can't return to draft (destroy
-  + recreate).
+A released version (`draft = false`) cannot change and cannot return to draft. Iterate with
+`draft = true`: each apply updates the version in place and reruns the block.
 
 ## Notes
 

@@ -1,9 +1,8 @@
 # `tf-building-block` — bare git repo (test/demo fixture)
 
-This directory **is a bare git repository** (note `HEAD`, `objects/`, `refs/` — no working tree, no
-nested `.git`), so it is tracked in the provider repo as ordinary files, not a submodule. It holds a
-no-op OpenTofu building-block module that the real `tf-block-runner` clones and runs **offline** (the
-only network access is the OpenTofu binary download).
+This directory **is a bare git repository** (`HEAD`, `objects/`, `refs/`, no working tree), so the
+provider repo tracks it as ordinary files. It holds a no-op OpenTofu building-block module that the
+runner clones and runs offline; its only download is the OpenTofu binary.
 
 This `README.md` lives next to the git objects and is **not** committed inside the repo — a clone
 yields only `main.tf`.
@@ -17,8 +16,8 @@ yields only `main.tf`.
 
 ## How it is served
 
-The acceptance test and the local demos (`scratch/bbv3-demo*`) hand the runner a
-`file://${abspath(...)}` URL, because the runner runs on the same filesystem.
+The acceptance test and the local demos (`scratch/bbv3-demo*`) hand the runner a `file://` URL of
+this directory, because the runner runs on the same filesystem.
 
 ## Editing the module
 
