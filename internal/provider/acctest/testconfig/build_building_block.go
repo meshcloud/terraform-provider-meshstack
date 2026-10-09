@@ -85,11 +85,8 @@ func BBWorkspaceParentChild(t *testing.T) (config Config, parentAddr Traversal, 
 }
 
 // BBTenant builds a workspace (+project/platform/landing-zone/tenant) and a v3 building block
-// targeting that tenant. The building block definition uses the terraform implementation; callers
-// pass terraformRepoUrl (a loopback git smart-HTTP URL to the committed bare repo, served by the
-// test's git-http-backend — see git_http_server_test.go) so the real tf-block-runner can clone and
-// run OpenTofu offline in acceptance mode. In mock mode the URL is unused. workspaceAddr
-// is the underlying Workspace(t) address, returned so callers can attach further workspace-scoped
+// targeting that tenant. The building block definition uses the terraform implementation and
+// clones terraformRepoUrl. workspaceAddr is returned so callers can attach further workspace-scoped
 // resources without rebuilding the workspace.
 func BBTenant(t *testing.T, terraformRepoUrl string) (config Config, buildingBlockAddr Traversal, workspaceAddr Traversal) {
 	t.Helper()
@@ -116,9 +113,6 @@ func BBTenant(t *testing.T, terraformRepoUrl string) (config Config, buildingBlo
 		ExtractAddress(&buildingBlockDefinitionAddr),
 		OwnedByWorkspace(workspaceAddr),
 		Descend("spec", "supported_platforms")(SetRawExpr("[{name = %s}]", platformTypeAddr.Join("metadata", "name"))),
-		// Point the terraform implementation at the committed bare repo served over loopback git
-		// smart-HTTP so the real tf-block-runner clones and runs OpenTofu offline. The static example
-		// URL in the .tf is a docs placeholder; in mock mode this value is unused.
 		Descend("version_spec", "implementation", "terraform", "repository_url")(SetRawExpr("%q", terraformRepoUrl)),
 	)
 

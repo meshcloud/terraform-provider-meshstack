@@ -1,9 +1,8 @@
 # `tf-building-block` — bare git repo (test/demo fixture)
 
-This directory **is a bare git repository** (note `HEAD`, `objects/`, `refs/` — no working tree, no
-nested `.git`), so it is tracked in the provider repo as ordinary files, not a submodule. It holds a
-no-op OpenTofu building-block module that the real `tf-block-runner` clones and runs **offline** (the
-only network access is the OpenTofu binary download).
+This directory **is a bare git repository** (`HEAD`, `objects/`, `refs/`, no working tree), so the
+provider repo tracks it as ordinary files. It holds a no-op OpenTofu building-block module that the
+runner clones and runs offline; its only download is the OpenTofu binary.
 
 This `README.md` lives next to the git objects and is **not** committed inside the repo — a clone
 yields only `main.tf`.
@@ -17,13 +16,8 @@ yields only `main.tf`.
 
 ## How it is served
 
-- **Acceptance test** serves it over git **smart-HTTP** (`git-http-backend` behind a Go `net/http/cgi`
-  server, see `git_http_server_test.go`) and hands the runner an `http://127.0.0.1:<port>/…` clone
-  URL — in CI the runner is a separate container, so `file://` would not be visible to it.
-- **Local demos** (`scratch/bbv3-demo*`) run the runner via `go run` on the host, so they clone via
-  `file://${abspath(...)}`.
-
-Either way the runner clones a packfile, so the on-disk object encoding does not matter.
+The acceptance test and the local demos (`scratch/bbv3-demo*`) hand the runner a `file://` URL of
+this directory, because the runner runs on the same filesystem.
 
 ## Editing the module
 
