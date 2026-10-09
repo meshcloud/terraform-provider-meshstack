@@ -99,7 +99,7 @@ require them.
 |---|---|
 | `resource-development` | Add/rework a resource or data source + tests; schema/client design conventions |
 | `modern-go` | Modern Go idioms (`new(expr)`, generics), the `encoding/json/v2` tag rules, the `go fix` sweep |
-| `acceptance-testing` | Local backend bring-up; run & debug the acceptance suite |
+| `acceptance-testing` | Run & debug the acceptance suite against a local backend |
 | `scratch-config` | Standalone repro/debug/prototype against any meshStack you own |
 | `changelog-management` | Pick the next version, maintain `CHANGELOG.md` |
 
