@@ -209,12 +209,7 @@ func TestAccBuildingBlock(t *testing.T) {
 		})
 	})
 
-	// 02_tenant covers the tenant-targeted create + import-with-verify path (the tenant analogue of
-	// the 01 create/import steps). Tenant target_ref uses uuid (not name). The BBD uses the terraform
-	// implementation (the real tf-block-runner clones the local bare repo and runs OpenTofu in
-	// acceptance) and declares a STRING-typed sensitive api_key USER_INPUT. The sensitive-hash check
-	// holds in both modes — the mock hashes any sensitive plaintext just like the backend — so no
-	// mock/acceptance branch is needed here.
+	// The mock hashes sensitive plaintext like the backend, so the hash check runs in both modes.
 	t.Run("02_tenant", func(t *testing.T) {
 		config, buildingBlockAddr, _ := testconfig.BBTenant(t, terraformTestdataRepoURL(t))
 
@@ -225,11 +220,7 @@ func TestAccBuildingBlock(t *testing.T) {
 				xknownvalue.NotEmptyString()),
 		)
 		if !IsMockClientTest() {
-			// Acceptance-only proof of end-to-end decryption: the real tf-block-runner decrypts the
-			// sensitive api_key and the module echoes the plaintext back as the non-sensitive
-			// `api_key_echo` output (declared in the BBD), surfaced here on status.outputs. The value is
-			// JSON-encoded, so a STRING output is quoted. The mock neither runs OpenTofu nor produces
-			// outputs, so this check is gated.
+			// Only the runner decrypts api_key, which the module echoes back as a JSON-encoded output.
 			sensitiveInputChecks = append(sensitiveInputChecks,
 				statecheck.ExpectKnownValue(buildingBlockAddr.String(),
 					tfjsonpath.New("status").AtMapKey("outputs").AtMapKey("api_key_echo").AtMapKey("value"),
@@ -731,10 +722,7 @@ func TestAccBuildingBlock(t *testing.T) {
 				statecheck.ExpectKnownValue(bbAddr.String(),
 					tfjsonpath.New("all_inputs").AtMapKey("static_secret").AtMapKey("sensitive").AtMapKey("secret_hash"),
 					xknownvalue.NotEmptyString()),
-				// Acceptance-only: with wait_for_completion (default true) the create apply blocks until
-				// the run is terminal. Against the real tf-block-runner (cloning the local bare repo and
-				// running OpenTofu) this proves the run actually reached SUCCEEDED — the no-op manual
-				// runner used to complete it trivially without running terraform.
+				// SUCCEEDED proves the runner cloned the fixture and ran OpenTofu.
 				statecheck.ExpectKnownValue(bbAddr.String(),
 					tfjsonpath.New("status").AtMapKey("status"),
 					knownvalue.StringExact("SUCCEEDED")),
