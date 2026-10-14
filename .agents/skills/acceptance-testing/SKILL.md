@@ -31,9 +31,9 @@ teardown is fixed by rebuilding the local backend and never touches a shared mes
 *meshcloud-internal:* bring up the stack, runner included, with the `local-dev-stack` skill in
 `../meshfed-release`. Leave alone any service that another worktree already runs.
 
-The terraform tests clone `internal/provider/testdata/tf-building-block` over `file://`, so the
-runner must run on the same filesystem as the tests. They also check that the runner decrypts a
-sensitive input, which the module echoes as `status.outputs.api_key_echo`.
+The terraform tests commit `internal/provider/testdata/tf-building-block` to a temporary git repo
+and hand its `file://` URL to the runner, so the runner must run on the same filesystem as the
+tests. They also check that the runner decrypts a sensitive input, which the module echoes as `status.outputs.api_key_echo`.
 
 ## `.env`
 

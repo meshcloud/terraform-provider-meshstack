@@ -47,8 +47,7 @@ func TestAccBuildingBlockV2DataSource(t *testing.T) {
 		buildingBlockDefinitionConfig := exampleResource.TestSupportConfig(t, "_bbd").WithFirstBlock(
 			testconfig.ExtractAddress(&buildingBlockDefinitionAddr),
 			testconfig.OwnedByWorkspace(workspaceAddr),
-			// Point at the committed bare repo served over loopback so the run completes and the block
-			// reaches a final state under the default wait_for_completion (unused in mock mode).
+			// A real module lets the run reach a final state under the default wait_for_completion.
 			testconfig.Descend("version_spec", "implementation", "terraform", "repository_url")(
 				testconfig.SetRawExpr("%q", terraformTestdataRepoURL(t)),
 			),

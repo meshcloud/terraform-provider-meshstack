@@ -86,9 +86,7 @@ func TestAccBuildingBlockV2(t *testing.T) {
 		buildingBlockDefinitionConfig := exampleResource.TestSupportConfig(t, "_bbd").WithFirstBlock(
 			testconfig.ExtractAddress(&buildingBlockDefinitionAddr),
 			testconfig.OwnedByWorkspace(workspaceAddr),
-			// Point at the committed bare repo served over loopback so the run actually completes and the
-			// block reaches a final state, letting the default wait_for_completion/purge_on_delete exercise
-			// the full lifecycle instead of leaving a stuck run behind.
+			// A real module lets the run reach a final state, so the full lifecycle runs.
 			testconfig.Descend("version_spec", "implementation", "terraform", "repository_url")(
 				testconfig.SetRawExpr("%q", terraformTestdataRepoURL(t)),
 			),
@@ -138,9 +136,7 @@ func TestAccBuildingBlockV2(t *testing.T) {
 		buildingBlockDefinitionConfig := exampleResource.TestSupportConfig(t, "_bbd").WithFirstBlock(
 			testconfig.ExtractAddress(&buildingBlockDefinitionAddr),
 			testconfig.OwnedByWorkspace(workspaceAddr),
-			// Point at the committed bare repo served over loopback so the run actually completes and the
-			// block reaches a final state, letting the default wait_for_completion/purge_on_delete exercise
-			// the full lifecycle instead of leaving a stuck run behind.
+			// A real module lets the run reach a final state, so the full lifecycle runs.
 			testconfig.Descend("version_spec", "implementation", "terraform", "repository_url")(
 				testconfig.SetRawExpr("%q", terraformTestdataRepoURL(t)),
 			),

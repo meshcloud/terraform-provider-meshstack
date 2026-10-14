@@ -3,6 +3,8 @@ package provider
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"testing"
@@ -24,12 +26,33 @@ import (
 	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/xknownvalue"
 )
 
-// The runner runs on the same filesystem as the test, so it clones the fixture by path.
+// The runner shares the test's filesystem, so it clones the repo by path.
 func terraformTestdataRepoURL(t *testing.T) string {
 	t.Helper()
-	path, err := filepath.Abs("testdata/tf-building-block")
-	require.NoError(t, err)
-	return "file://" + path
+	repo := t.TempDir()
+	git := func(args ...string) {
+		t.Helper()
+		cmd := exec.Command("git", append([]string{"-C", repo}, args...)...)
+		cmd.Env = append(os.Environ(),
+			"GIT_CONFIG_GLOBAL="+os.DevNull, "GIT_CONFIG_NOSYSTEM=1",
+			"GIT_AUTHOR_NAME=acctest", "GIT_AUTHOR_EMAIL=acctest@example.com",
+			"GIT_COMMITTER_NAME=acctest", "GIT_COMMITTER_EMAIL=acctest@example.com",
+		)
+		out, err := cmd.CombinedOutput()
+		require.NoError(t, err, "git %v: %s", args, out)
+	}
+	commit := func(dir string) {
+		t.Helper()
+		require.NoError(t, os.CopyFS(repo, os.DirFS(filepath.Join("testdata/tf-building-block", dir))))
+		git("add", ".")
+		git("commit", "-m", dir)
+	}
+	git("init", "-b", "main")
+	commit("main")
+	git("switch", "-c", "broken")
+	commit("broken")
+	git("switch", "main")
+	return "file://" + repo
 }
 
 // The subtests below are scenario flows rather than one-assertion-per-case tests: each walks a
@@ -1161,8 +1184,7 @@ func TestAccBuildingBlock(t *testing.T) {
 			bbdConfig := bbdResource.TestSupportConfig(t, "_bbd").WithFirstBlock(
 				testconfig.ExtractAddress(&bbdAddr),
 				testconfig.OwnedByWorkspace(workspaceAddr),
-				// Point the terraform implementation at the committed bare repo's `broken` branch, whose
-				// module fails `tofu apply` on a precondition. In mock mode this whole test is skipped.
+				// The `broken` branch fails `tofu apply` on a precondition.
 				testconfig.Descend("version_spec", "implementation", "terraform", "repository_url")(testconfig.SetRawExpr("%q", terraformTestdataRepoURL(t))),
 				testconfig.Descend("version_spec", "implementation", "terraform", "ref_name")(testconfig.SetRawExpr("%q", "broken")),
 				testconfig.Descend("spec", "run_transparency")(testconfig.SetRawExpr("%t", runTransparency)),
@@ -1302,8 +1324,6 @@ func TestAccBuildingBlock(t *testing.T) {
 	t.Run("12_moved_from_v2_with_secret", func(t *testing.T) {
 		workspaceConfig, workspaceAddr := testconfig.Workspace(t)
 
-		// Shared sensitive BBD (api_key STRING + script CODE USER_INPUTs, static_secret STATIC), pointed
-		// at the committed bare repo so acceptance runs execute quickly (unused in mock mode).
 		var bbdAddr testconfig.Traversal
 		bbdConfig := testconfig.Resource{Name: "building_block", Suffix: "_04_sensitive_user_input"}.TestSupportConfig(t, "_bbd").WithFirstBlock(
 			testconfig.ExtractAddress(&bbdAddr),
