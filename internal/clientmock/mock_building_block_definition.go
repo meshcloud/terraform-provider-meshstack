@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/meshcloud/meshstack-cli/client"
+	clientTypes "github.com/meshcloud/meshstack-cli/client/types"
 )
 
 type meshBuildingBlockDefinitionClient struct {
@@ -125,6 +126,7 @@ func (m meshBuildingBlockDefinitionClient) Create(_ context.Context, definition 
 	if definition.Spec.Symbol == nil {
 		definition.Spec.Symbol = new("mock-default-symbol")
 	}
+	definitionNullCollectionsAsEmpty(&definition.Spec)
 	m.Store.Set(definitionUuid, &definition)
 
 	// Create initial empty version (as the backend does)
@@ -150,10 +152,17 @@ func (m meshBuildingBlockDefinitionClient) Create(_ context.Context, definition 
 func (m meshBuildingBlockDefinitionClient) Update(_ context.Context, uuid string, definition client.MeshBuildingBlockDefinition) (*client.MeshBuildingBlockDefinition, error) {
 	if existing, ok := m.Store.Get(uuid); ok {
 		existing.Spec = definition.Spec
+		definitionNullCollectionsAsEmpty(&existing.Spec)
 		existing.Metadata.Tags = definition.Metadata.Tags
 		return m.setStatus(existing), nil
 	}
 	return nil, fmt.Errorf("building block definition not found: %s", uuid)
+}
+
+func definitionNullCollectionsAsEmpty(spec *client.MeshBuildingBlockDefinitionSpec) {
+	if spec.NotificationSubscribers == nil {
+		spec.NotificationSubscribers = clientTypes.Set[string]{}
+	}
 }
 
 func (m meshBuildingBlockDefinitionClient) Delete(_ context.Context, uuid string) error {

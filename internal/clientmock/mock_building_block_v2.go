@@ -148,6 +148,7 @@ func (m MeshBuildingBlockV2Client) Create(_ context.Context, bb *client.MeshBuil
 
 	// Deep-copy the incoming DTO before any mutation so we never modify the caller's data.
 	stored := deepCopyBB(bb)
+	buildingBlockNullCollectionsAsEmpty(&stored.Spec)
 
 	for _, input := range stored.Spec.Inputs {
 		if input.AssignmentType == "" {
@@ -197,12 +198,10 @@ func (m MeshBuildingBlockV2Client) Update(_ context.Context, bb *client.MeshBuil
 	}
 	existing := deepCopyBB(prior)
 
+	buildingBlockNullCollectionsAsEmpty(&stored.Spec)
 	// Mirror the backend: a PUT patches only the inputs it carries, so inputs omitted from the request
 	// keep their existing values. Without this the mock would null out the other party's inputs when a
 	// configuration manages only a subset (e.g. a platform operator sending only operator inputs).
-	if stored.Spec.Inputs == nil {
-		stored.Spec.Inputs = map[string]*client.MeshBuildingBlockInput{}
-	}
 	for key, prior := range existing.Spec.Inputs {
 		if _, sent := stored.Spec.Inputs[key]; !sent {
 			stored.Spec.Inputs[key] = prior
@@ -245,4 +244,13 @@ func finishedRun(status client.MeshBuildingBlockV2Status) *client.MeshBuildingBl
 	status.LatestRunUuid = new(uuid.NewString())
 	status.LatestDryRunUuid = nil
 	return &status
+}
+
+func buildingBlockNullCollectionsAsEmpty(spec *client.MeshBuildingBlockV2Spec) {
+	if spec.Inputs == nil {
+		spec.Inputs = map[string]*client.MeshBuildingBlockInput{}
+	}
+	if spec.ParentBuildingBlockRefs == nil {
+		spec.ParentBuildingBlockRefs = clientTypes.Set[client.UuidRef]{}
+	}
 }

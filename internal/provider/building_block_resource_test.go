@@ -801,6 +801,23 @@ func TestAccBuildingBlock(t *testing.T) {
 		sizeOnlyConfig := fullConfig.WithFirstBlock(
 			testconfig.Descend("spec", "inputs")(testconfig.SetRawExpr(`{ size = { value = jsonencode(16) } }`)),
 		)
+		withoutInputsConfig := fullConfig.WithFirstBlock(testconfig.Descend("spec", "inputs")(testconfig.RemoveKey()))
+		emptyCollectionsConfig := fullConfig.WithFirstBlock(
+			testconfig.Descend("spec", "inputs")(testconfig.SetRawExpr(`{}`)),
+			testconfig.Descend("spec", "parent_building_block_refs")(testconfig.SetRawExpr(`[]`)),
+		)
+		updateWithoutRun := resource.ConfigPlanChecks{
+			PreApply: []plancheck.PlanCheck{
+				plancheck.ExpectResourceAction(buildingBlockAddr.String(), plancheck.ResourceActionUpdate),
+				plancheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("status").AtMapKey("latest_run_uuid"), knownvalue.NotNull()),
+			},
+		}
+
+		importIgnore := []string{"spec.inputs", "spec.building_block_definition_version_ref.content_hash", "wait_for_completion", "purge_on_delete", "timeouts.create", "timeouts.update", "timeouts.delete"}
+		if IsMockClientTest() {
+			// The mock starts a run on every PUT, also on the update without a run before the import.
+			importIgnore = append(importIgnore, "status.latest_run_uuid")
+		}
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
@@ -829,6 +846,49 @@ func TestAccBuildingBlock(t *testing.T) {
 					// No drift: the omitted user inputs must not reappear as a pending change.
 					Config:   sizeOnlyConfig.String(),
 					PlanOnly: true,
+				},
+				{
+					Config: withoutInputsConfig.String(),
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("spec").AtMapKey("inputs"), knownvalue.Null()),
+						statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("spec").AtMapKey("parent_building_block_refs"), knownvalue.Null()),
+						statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("all_inputs").AtMapKey("size").AtMapKey("value"), knownvalue.StringExact("16")),
+					},
+				},
+				{
+					Config:   withoutInputsConfig.String(),
+					PlanOnly: true,
+				},
+				{
+					// An import keeps the inputs the block has in spec.inputs, because there is no configuration to compare with.
+					ImportState:                          true,
+					ImportStateVerify:                    true,
+					ImportStateVerifyIdentifierAttribute: "metadata.uuid",
+					ImportStateVerifyIgnore:              importIgnore,
+					ImportStateIdFunc: func(s *terraform.State) (string, error) {
+						return s.RootModule().Resources[buildingBlockAddr.String()].Primary.Attributes["metadata.uuid"], nil
+					},
+					ResourceName: buildingBlockAddr.String(),
+				},
+				{
+					Config:           emptyCollectionsConfig.String(),
+					ConfigPlanChecks: updateWithoutRun,
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("spec").AtMapKey("inputs"), knownvalue.MapExact(map[string]knownvalue.Check{})),
+						statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("spec").AtMapKey("parent_building_block_refs"), knownvalue.SetExact([]knownvalue.Check{})),
+					},
+				},
+				{
+					Config:   emptyCollectionsConfig.String(),
+					PlanOnly: true,
+				},
+				{
+					// The one-time update for state that an older provider wrote with its empty default.
+					Config:           withoutInputsConfig.String(),
+					ConfigPlanChecks: updateWithoutRun,
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("spec").AtMapKey("parent_building_block_refs"), knownvalue.Null()),
+					},
 				},
 			},
 		})

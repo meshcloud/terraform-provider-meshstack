@@ -9,6 +9,19 @@ BREAKING CHANGES:
   attribute and the deprecated `status` filter are removed. Read `status.succeeded`, or `status.health_status` and
   `status.action`, and filter by `health_status` and `action`.
 
+FEATURES:
+- `meshstack_building_block`: `spec.inputs` and `spec.parent_building_block_refs`, and `meshstack_building_block_definition`:
+  `spec.notification_subscribers`, `version_spec.inputs`, `version_spec.permissions` and `version_spec.dependency_refs`
+  are optional and no longer computed, so a `mock_provider` in `terraform test` no longer generates values for them. An
+  attribute you leave out stays null in the state, and `[]` or `{}` stays empty. If you never set one of them, your state
+  holds `[]` from the earlier default, and the first plan after the upgrade shows a one-time in-place update from `[]` to
+  null. This update changes nothing in meshStack and does not run the building block.
+
+FIXES:
+- `meshstack_building_block_definition`: `version_spec.inputs = {}` no longer shows a change after a refresh.
+- `meshstack_building_block_definition`: `version_spec.outputs` now defaults to `{}`. Removing `outputs` from the
+  configuration of a non-manual definition now removes the outputs; before, the provider kept them.
+
 # v0.27.1
 
 FEATURES:
