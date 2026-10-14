@@ -33,6 +33,11 @@ tasks:
       # it, so the formatting they enforce comes from the Go that BUILT the linter.
       - go tool golangci-lint run {{.CLI_ARGS}}
 
+  cli:pin:
+    desc: Check that go.mod pins the meshstack-cli sources that the go.work builds against
+    cmds:
+      - tools/check-cli-pin.sh
+
   vuln:
     desc: Check for known vulnerabilities with govulncheck
     cmds:

@@ -38,40 +38,32 @@ jobs:
           git diff --compact-summary --exit-code || \
             (echo; echo "Unexpected difference in directories after 'go mod tidy'. Run 'go mod tidy' command and commit."; exit 1)
 
-  # The acceptance run builds against a go.work with the meshstack-cli checkout, so it ignores the
-  # go.mod pin. A pin to a commit that never reaches meshstack-cli's main breaks every later build
-  # without a go.work, and GitHub rewrites the commits of a merged pull request even when it could
-  # fast-forward. So the pin has to match the meshstack-cli branch of the same name, or main when
-  # there is none: after the CLI pull request merges, this fails until you repin to main.
-  # Pull requests only, because a new meshstack-cli commit on main must not turn this main red.
+  # The acceptance run builds against a go.work with the meshstack-cli branch of the same name, which
+  # hides the go.mod pin. Pull requests only, so a new meshstack-cli commit never turns main red.
   cli-pin:
     name: meshstack-cli Pin
     if: github.event_name == 'pull_request'
     needs: [ build ]
     runs-on: ubuntu-latest
+    env:
+      # A fresh branch commit is not always on the module proxy and checksum database yet.
+      GOPRIVATE: github.com/meshcloud/meshstack-cli
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: 'go.mod'
           cache: true
-      - name: Repin meshstack-cli
+      - name: Build against the meshstack-cli branch of the same name
         env:
           BRANCH: ${{ github.head_ref }}
           CLI_REPO: https://github.com/meshcloud/meshstack-cli
-          # A fresh branch commit is not always on the module proxy and checksum database yet.
-          GOPROXY: direct
-          GONOSUMDB: github.com/meshcloud/meshstack-cli
         run: |
-          ref=main
           if git ls-remote --exit-code --heads "$CLI_REPO" "refs/heads/$BRANCH" >/dev/null; then
-            ref="$BRANCH"
+            git clone --quiet --depth=1 --branch "$BRANCH" "$CLI_REPO" "$RUNNER_TEMP/meshstack-cli"
+            go work init . "$RUNNER_TEMP/meshstack-cli"
           fi
-          echo "Pinning meshstack-cli to its $ref branch."
-          go get "github.com/meshcloud/meshstack-cli@$ref"
-          go mod tidy
-          git diff --compact-summary --exit-code go.mod go.sum || \
-            (echo; echo "::error::The meshstack-cli pin is not the head of its '$ref' branch. Run 'GOWORK=off go get github.com/meshcloud/meshstack-cli@$ref && GOWORK=off go mod tidy' and commit."; exit 1)
+      - run: tools/check-cli-pin.sh
 
   golangci:
     needs: [ build ]

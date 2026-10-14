@@ -124,10 +124,11 @@ that one run. `meshfed-release` also runs this repo's acceptance suite against a
 Because the `go.work` hides the `go.mod` pin, a pull request here can pass its acceptance run with a
 pin to a `meshstack-cli` commit that never reaches `meshstack-cli`'s `main`. GitHub rewrites the
 commits of a merged pull request, even one it could fast-forward. The `meshstack-cli Pin` check
-therefore requires the pin to be the head of the `meshstack-cli` branch with the same name as this
-pull request's branch, or of `main` when there is no such branch. After the `meshstack-cli` pull
-request merges, repin before you merge here:
-`GOWORK=off go get github.com/meshcloud/meshstack-cli@main && GOWORK=off go mod tidy`.
+therefore builds a pull request against the `meshstack-cli` branch of the same name, and requires
+that the pin compiles the same `meshstack-cli` sources. A change to a package this provider does not
+compile needs no repin. Without such a branch, it requires the pinned commit to be on
+`meshstack-cli`'s `main`. `task cli:pin` runs the same check against your own `go.work`, and names
+the command that repins.
 
 ### Adding a resource / data source (and its tests)
 
