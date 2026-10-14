@@ -62,6 +62,10 @@ func emptySetDefault(nested schema.NestedAttributeObject) defaults.Set {
 	return setdefault.StaticValue(types.SetValueMust(nestedObjectToObjectType(nested), nil))
 }
 
+func emptyMapDefault(nested schema.NestedAttributeObject) defaults.Map {
+	return mapdefault.StaticValue(types.MapValueMust(nestedObjectToObjectType(nested), map[string]attr.Value{}))
+}
+
 // tagsOptions configures the shared meshObject `tags` attribute. Kind is required (it names the
 // object in the description); the zero value is not meaningful on its own.
 type tagsOptions struct {

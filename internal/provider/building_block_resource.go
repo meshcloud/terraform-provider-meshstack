@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"maps"
 	"reflect"
+	"slices"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-jsontypes/jsontypes"
@@ -86,14 +87,8 @@ func (r *buildingBlockResource) Configure(_ context.Context, req resource.Config
 	})...)
 }
 
-// parentBuildingBlockRefsNestedObject is defined once so the Default and the NestedObject field of
-// parent_building_block_refs share one element type.
-var parentBuildingBlockRefsNestedObject = func() schema.NestedAttributeObject {
-	ref := meshRefByUuid(meshRefOptions{Kind: client.MeshObjectKind.BuildingBlock, InSet: true})
-	return schema.NestedAttributeObject{Attributes: ref.Attributes, Validators: ref.Validators}
-}()
-
 func (r *buildingBlockResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+	parentRef := meshRefByUuid(meshRefOptions{Kind: client.MeshObjectKind.BuildingBlock, InSet: true})
 	resp.Schema = schema.Schema{
 		Version: 1,
 		MarkdownDescription: "Manage a workspace or tenant building block created from a building block definition (BBD).\n\n" +
@@ -218,8 +213,8 @@ func (r *buildingBlockResource) Schema(ctx context.Context, req resource.SchemaR
 							"operator sets them either on a block it creates from its own BBD (e.g. testing a draft), or by importing an " +
 							"app-team block created from its BBD to supply the operator inputs that block is awaiting. This shared " +
 							"ownership of a block (app team and operator) is experimental and will be documented more fully later; " +
-							"supplying an operator input with a non-operator/non-owner key is rejected.",
-						Required: true,
+							"supplying an operator input with a non-operator/non-owner key is rejected. Omit it to manage no inputs.",
+						Optional: true,
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
 								"value": schema.StringAttribute{
@@ -243,15 +238,13 @@ func (r *buildingBlockResource) Schema(ctx context.Context, req resource.SchemaR
 					},
 					"parent_building_block_refs": schema.SetNestedAttribute{
 						Optional: true,
-						Computed: true,
 						MarkdownDescription: "Set of refs to the parent building blocks this block depends on, forming a dependency hierarchy: " +
 							"a parent's outputs can feed this block's inputs, so the parents listed here should align with the " +
 							"inputs that consume them (see [building block concepts](https://docs.meshcloud.io/concepts/building-block/)). " +
 							"Prefer reusable refs from `meshstack_building_block.<name>.ref`.<br>" +
 							"Parent building blocks can only change as part of a version upgrade; changing them on their own " +
 							"forces the building block to be replaced (destroyed and recreated).",
-						Default:      emptySetDefault(parentBuildingBlockRefsNestedObject),
-						NestedObject: parentBuildingBlockRefsNestedObject,
+						NestedObject: schema.NestedAttributeObject{Attributes: parentRef.Attributes, Validators: parentRef.Validators},
 						PlanModifiers: []planmodifier.Set{
 							setplanmodifier.RequiresReplaceIf(
 								requiresReplaceParentsWhenVersionUnchanged,
@@ -573,6 +566,15 @@ func buildingBlockConverterOptions(ctx context.Context, config, plan, state gene
 	}
 }
 
+// withBuildingBlockContainersAsIn keeps these attributes null or empty as configured, because meshStack
+// returns an empty collection for both.
+func withBuildingBlockContainersAsIn(ctx context.Context, prior generic.AttributeGetter) generic.ConverterOption {
+	return generic.WithEmptyContainersAsIn(ctx, prior,
+		path.Root("spec").AtName("inputs"),
+		path.Root("spec").AtName("parent_building_block_refs"),
+	)
+}
+
 // resolveTimeout reads the configured timeout for the given operation ("create"/"update"/"delete")
 // from the resource's timeouts block, falling back to defaultBuildingBlockTimeout when unset. The
 // getter is the plan for create/update and the state for delete.
@@ -775,7 +777,7 @@ func (r *buildingBlockResource) awaitRun(
 }
 
 func (r *buildingBlockResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	converterOptions := buildingBlockConverterOptions(ctx, req.Config, req.Plan, nil)
+	converterOptions := buildingBlockConverterOptions(ctx, req.Config, req.Plan, nil).Append(withBuildingBlockContainersAsIn(ctx, req.Plan))
 
 	plan := generic.Get[buildingBlockModel](ctx, req.Plan, &resp.Diagnostics, converterOptions.Append(generic.WithSetUnknownValueToZero())...)
 	if resp.Diagnostics.HasError() {
@@ -818,7 +820,7 @@ func (r *buildingBlockResource) Create(ctx context.Context, req resource.CreateR
 }
 
 func (r *buildingBlockResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	converterOptions := buildingBlockConverterOptions(ctx, nil, nil, req.State)
+	converterOptions := buildingBlockConverterOptions(ctx, nil, nil, req.State).Append(withBuildingBlockContainersAsIn(ctx, req.State))
 	state := generic.Get[buildingBlockModel](ctx, req.State, &resp.Diagnostics, converterOptions.Append(generic.WithSetUnknownValueToZero())...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -865,6 +867,10 @@ func (r *buildingBlockResource) Read(ctx context.Context, req resource.ReadReque
 func requiresReplaceParentsWhenVersionUnchanged(ctx context.Context, req planmodifier.SetRequest, resp *setplanmodifier.RequiresReplaceIfFuncResponse) {
 	// Not applicable on create (no prior state) or destroy (no plan).
 	if req.State.Raw.IsNull() || req.Plan.Raw.IsNull() {
+		return
+	}
+	// meshStack stores null as an empty set, so a change between the two changes no parents.
+	if !req.PlanValue.IsUnknown() && len(req.PlanValue.Elements()) == 0 && len(req.StateValue.Elements()) == 0 {
 		return
 	}
 
@@ -915,12 +921,7 @@ func rerunNeeded(plan, state client.MeshBuildingBlockV2Spec) bool {
 		return true
 	}
 
-	// parent building blocks change detection
-	if !reflect.DeepEqual(plan.ParentBuildingBlockRefs, state.ParentBuildingBlockRefs) {
-		return true
-	}
-
-	return false
+	return !slices.Equal(plan.ParentBuildingBlockRefs, state.ParentBuildingBlockRefs)
 }
 
 func compareContentHashes(planHash, stateHash string) hashComparison {
@@ -1060,7 +1061,7 @@ func planInputsChanged(plan, state map[string]*client.MeshBuildingBlockInput) bo
 }
 
 func (r *buildingBlockResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	converterOptions := buildingBlockConverterOptions(ctx, req.Config, req.Plan, req.State)
+	converterOptions := buildingBlockConverterOptions(ctx, req.Config, req.Plan, req.State).Append(withBuildingBlockContainersAsIn(ctx, req.Plan))
 	plan := generic.Get[buildingBlockModel](ctx, req.Plan, &resp.Diagnostics, converterOptions.Append(generic.WithSetUnknownValueToZero())...)
 	state := generic.Get[buildingBlockModel](ctx, req.State, &resp.Diagnostics, converterOptions.Append(generic.WithSetUnknownValueToZero())...)
 	if resp.Diagnostics.HasError() {
@@ -1124,7 +1125,7 @@ func (r *buildingBlockResource) Update(ctx context.Context, req resource.UpdateR
 	// an explicit (non-dry) trigger-run.
 	backendWillRun := versionChanging ||
 		planInputsChanged(plan.Spec.Inputs, state.Spec.Inputs) ||
-		!reflect.DeepEqual(plan.Spec.ParentBuildingBlockRefs, state.Spec.ParentBuildingBlockRefs) ||
+		!slices.Equal(plan.Spec.ParentBuildingBlockRefs, state.Spec.ParentBuildingBlockRefs) ||
 		secretRotated
 	effective := updated
 	if needsRun && !backendWillRun {

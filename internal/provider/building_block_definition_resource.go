@@ -48,7 +48,7 @@ func (r *buildingBlockDefinitionResource) Configure(_ context.Context, req resou
 }
 
 func (r *buildingBlockDefinitionResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	converterOptions := buildingBlockDefinitionConverterOptions().
+	converterOptions := buildingBlockDefinitionConverterOptions(ctx, req.Plan).
 		Append(buildingBlockDefinitionVersionConverterOptions(ctx, req.Config, req.Plan, nil)...)
 	plan := generic.Get[buildingBlockDefinition](ctx, req.Plan, &resp.Diagnostics, converterOptions.Append(generic.WithSetUnknownValueToZero())...)
 	if resp.Diagnostics.HasError() {
@@ -74,8 +74,8 @@ func (r *buildingBlockDefinitionResource) Create(ctx context.Context, req resour
 	plannedTags := plan.Metadata.Tags
 	plan.SetFromClientDto(createdDto, &resp.Diagnostics)
 	plan.Metadata.Tags = plannedTags
-	resp.Diagnostics.Append(generic.SetAttributeTo(ctx, &resp.State, path.Root("metadata"), plan.Metadata, buildingBlockDefinitionConverterOptions()...)...)
-	resp.Diagnostics.Append(generic.SetAttributeTo(ctx, &resp.State, path.Root("spec"), plan.Spec, buildingBlockDefinitionConverterOptions()...)...)
+	resp.Diagnostics.Append(generic.SetAttributeTo(ctx, &resp.State, path.Root("metadata"), plan.Metadata, buildingBlockDefinitionConverterOptions(ctx, req.Plan)...)...)
+	resp.Diagnostics.Append(generic.SetAttributeTo(ctx, &resp.State, path.Root("spec"), plan.Spec, buildingBlockDefinitionConverterOptions(ctx, req.Plan)...)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -251,7 +251,7 @@ func (r *buildingBlockDefinitionResource) Read(ctx context.Context, req resource
 		return
 	}
 	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, state,
-		buildingBlockDefinitionConverterOptions().Append(buildingBlockDefinitionVersionConverterOptions(ctx, nil, nil, req.State)...)...)...)
+		buildingBlockDefinitionConverterOptions(ctx, req.State).Append(buildingBlockDefinitionVersionConverterOptions(ctx, nil, nil, req.State)...)...)...)
 }
 
 // outputStringAttr safely extracts a string attribute from a nested output object's attribute map,
@@ -611,9 +611,7 @@ func (r *buildingBlockDefinitionResource) ModifyPlan(ctx context.Context, req re
 	}
 
 	if !req.State.Raw.IsKnown() || req.State.Raw.IsNull() {
-		// Create needs no output handling. Manual outputs are Computed and derived by the backend at apply;
-		// the create plan leaves them known-after-apply and the read-back prunes to the tracked overrides, so
-		// the create plan is consistent with the apply result.
+		// Create needs no output handling: the read-back prunes manual outputs to the configured overrides.
 		return
 	}
 
@@ -678,7 +676,7 @@ func (r *buildingBlockDefinitionResource) ModifyPlan(ctx context.Context, req re
 		case configOutputs.IsNull():
 			// Outputs omitted: the whole set is derived. Leave it unknown when the derived result cannot be
 			// predicted - the inputs changed, or overrides are being dropped (state still holds some) - so apply
-			// reconciles. When nothing changed, leaving the state value avoids a perpetual "known after apply".
+			// reconciles. When nothing changed, the empty default already matches the state.
 			stateEmpty := stateOutputs.IsNull() || len(stateOutputs.Elements()) == 0
 			if inputsChanged || !stateEmpty {
 				versionSpecOutputsUncertain = true
@@ -808,7 +806,7 @@ func (r *buildingBlockDefinitionResource) ModifyPlan(ctx context.Context, req re
 }
 
 func (r *buildingBlockDefinitionResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	converterOptions := buildingBlockDefinitionConverterOptions().Append(buildingBlockDefinitionVersionConverterOptions(ctx, req.Config, req.Plan, req.State)...)
+	converterOptions := buildingBlockDefinitionConverterOptions(ctx, req.Plan).Append(buildingBlockDefinitionVersionConverterOptions(ctx, req.Config, req.Plan, req.State)...)
 	state := generic.Get[buildingBlockDefinition](ctx, req.State, &resp.Diagnostics, converterOptions...)
 	plan := generic.Get[buildingBlockDefinition](ctx, req.Plan, &resp.Diagnostics, converterOptions.Append(generic.WithSetUnknownValueToZero())...)
 	if resp.Diagnostics.HasError() {
@@ -862,8 +860,8 @@ func (r *buildingBlockDefinitionResource) Update(ctx context.Context, req resour
 	plannedTags := plan.Metadata.Tags
 	plan.SetFromClientDto(updatedDto, &resp.Diagnostics)
 	plan.Metadata.Tags = plannedTags
-	resp.Diagnostics.Append(generic.SetAttributeTo(ctx, &resp.State, path.Root("metadata"), plan.Metadata, buildingBlockDefinitionConverterOptions()...)...)
-	resp.Diagnostics.Append(generic.SetAttributeTo(ctx, &resp.State, path.Root("spec"), plan.Spec, buildingBlockDefinitionConverterOptions()...)...)
+	resp.Diagnostics.Append(generic.SetAttributeTo(ctx, &resp.State, path.Root("metadata"), plan.Metadata, buildingBlockDefinitionConverterOptions(ctx, req.Plan)...)...)
+	resp.Diagnostics.Append(generic.SetAttributeTo(ctx, &resp.State, path.Root("spec"), plan.Spec, buildingBlockDefinitionConverterOptions(ctx, req.Plan)...)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}

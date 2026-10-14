@@ -1133,6 +1133,59 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 			},
 		})
 	})
+
+	t.Run("18_unset_and_empty_collections", func(t *testing.T) {
+		config, addr := testconfig.BBDManual(t)
+		unset := config.WithFirstBlock(
+			testconfig.Descend("version_spec", "inputs")(testconfig.RemoveKey()),
+			testconfig.Descend("version_spec", "outputs")(testconfig.RemoveKey()),
+		)
+		empty := config.WithFirstBlock(
+			testconfig.Descend("spec", "notification_subscribers")(testconfig.SetRawExpr(`[]`)),
+			testconfig.Descend("version_spec", "inputs")(testconfig.SetRawExpr(`{}`)),
+			testconfig.Descend("version_spec", "outputs")(testconfig.SetRawExpr(`{}`)),
+			testconfig.Descend("version_spec", "permissions")(testconfig.SetRawExpr(`[]`)),
+			testconfig.Descend("version_spec", "dependency_refs")(testconfig.SetRawExpr(`[]`)),
+		)
+		collectionChecks := func(setCheck, mapCheck knownvalue.Check) []statecheck.StateCheck {
+			return []statecheck.StateCheck{
+				statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("spec").AtMapKey("notification_subscribers"), setCheck),
+				statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_spec").AtMapKey("permissions"), setCheck),
+				statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_spec").AtMapKey("dependency_refs"), setCheck),
+				statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_spec").AtMapKey("inputs"), mapCheck),
+				statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_spec").AtMapKey("outputs"), knownvalue.MapSizeExact(0)),
+			}
+		}
+		var resourceUuid string
+
+		ApplyAndTest(t, resource.TestCase{
+			Steps: []resource.TestStep{
+				{
+					Config:            unset.String(),
+					ConfigStateChecks: append(collectionChecks(knownvalue.Null(), knownvalue.Null()), xknownvalue.Ref(addr, "meshBuildingBlockDefinition", &resourceUuid)),
+				},
+				{Config: unset.String(), PlanOnly: true},
+				{
+					ImportState:     true,
+					ImportStateKind: resource.ImportBlockWithID,
+					ImportStateIdFunc: func(state *terraform.State) (string, error) {
+						return resourceUuid, nil
+					},
+					ResourceName: addr.String(),
+				},
+				{Config: empty.String(), ConfigStateChecks: collectionChecks(knownvalue.SetSizeExact(0), knownvalue.MapSizeExact(0))},
+				{Config: empty.String(), PlanOnly: true},
+				{
+					// The one-time update for state that an older provider wrote with its empty defaults.
+					Config: unset.String(),
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PreApply: []plancheck.PlanCheck{plancheck.ExpectResourceAction(addr.String(), plancheck.ResourceActionUpdate)},
+					},
+					ConfigStateChecks: collectionChecks(knownvalue.Null(), knownvalue.Null()),
+				},
+			},
+		})
+	})
 }
 
 // checkBBDMetadataFull checks metadata for the 01_terraform example (tags with 2 entries).
@@ -1242,7 +1295,7 @@ func checkBBDSpecMinimal(expectedDescription string) knownvalue.Check {
 		"supported_platforms":       knownvalue.Null(),
 		"run_transparency":          knownvalue.Bool(false),
 		"use_in_landing_zones_only": knownvalue.Bool(false),
-		"notification_subscribers":  knownvalue.SetSizeExact(0),
+		"notification_subscribers":  knownvalue.Null(),
 		// Omitted in the example, so both fall back to the neutral default.
 		"approval_policies": checkBBDApprovalPolicies(nil),
 		"schedule": checkBBDSchedule(
@@ -1269,11 +1322,11 @@ func checkBuildingBlockVersionSpec(exampleSuffix string, expectedState enum.Entr
 			"kind": knownvalue.StringExact("meshBuildingBlockRunner"),
 			"uuid": knownvalue.StringExact(SharedBuildingBlockRunnerUuid),
 		}),
-		"dependency_refs": knownvalue.SetSizeExact(0),
+		"dependency_refs": knownvalue.Null(),
 		"inputs":          checkInputs,
 		"implementation":  checkImplementation,
 		"outputs":         checkOutputs,
-		"permissions":     knownvalue.SetSizeExact(0),
+		"permissions":     knownvalue.Null(),
 	}
 
 	if exampleSuffix == "01_terraform" {

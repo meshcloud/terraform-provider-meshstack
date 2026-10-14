@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/meshcloud/meshstack-cli/client"
+	clientTypes "github.com/meshcloud/meshstack-cli/client/types"
 )
 
 type meshBuildingBlockDefinitionVersionClient struct {
@@ -28,6 +29,7 @@ func (m meshBuildingBlockDefinitionVersionClient) Create(_ context.Context, owne
 	versionUuid := uuid.NewString()
 	// Compute hashes for all secrets in the spec
 	backendSecretBehavior(true, &versionSpec, nil)
+	nullCollectionsAsEmpty(&versionSpec)
 	if err := applyManualOutputBehavior(&versionSpec); err != nil {
 		return nil, err
 	}
@@ -63,6 +65,7 @@ func (m meshBuildingBlockDefinitionVersionClient) Update(_ context.Context, uuid
 		}
 		// Compute hashes for all secrets in the spec
 		backendSecretBehavior(false, &versionSpec, &existing.Spec)
+		nullCollectionsAsEmpty(&versionSpec)
 		if err := applyManualOutputBehavior(&versionSpec); err != nil {
 			return nil, err
 		}
@@ -73,6 +76,21 @@ func (m meshBuildingBlockDefinitionVersionClient) Update(_ context.Context, uuid
 		return existing, nil
 	}
 	return nil, fmt.Errorf("building block definition version not found: %s", uuid)
+}
+
+func nullCollectionsAsEmpty(versionSpec *client.MeshBuildingBlockDefinitionVersionSpec) {
+	if versionSpec.Inputs == nil {
+		versionSpec.Inputs = map[string]*client.MeshBuildingBlockDefinitionInput{}
+	}
+	if versionSpec.Outputs == nil {
+		versionSpec.Outputs = map[string]client.MeshBuildingBlockDefinitionOutput{}
+	}
+	if versionSpec.Permissions == nil {
+		versionSpec.Permissions = clientTypes.Set[client.ApiPermission]{}
+	}
+	if versionSpec.DependencyDefinitionRefs == nil {
+		versionSpec.DependencyDefinitionRefs = clientTypes.Set[client.UuidRef]{}
+	}
 }
 
 // versionSecretsNeedPlaintext reports whether an update moves the version to another runner or another
