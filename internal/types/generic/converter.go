@@ -37,6 +37,7 @@ type converter struct {
 	ValueFromConverters   []ValueFromConverter
 	SetUnknownValueToZero bool
 	SliceTypeAsSet        func(reflect.Type) bool
+	EmptyContainerIsNull  func(attributePath path.Path) (isNull, matched bool)
 }
 
 func (conv converter) walkPathToAttributePath(walkPath reflectwalk.WalkPath) (result path.Path) {

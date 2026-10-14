@@ -18,7 +18,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -456,8 +455,7 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Manages a meshBuildingBlockDefinition in meshStack. " +
 			"Building Block Definitions define reusable automation components that can be executed on workspaces or tenants. " +
-			"This resource combines the building block definition metadata with version information in a single resource for simplified management." +
-			previewDisclaimer(),
+			"This resource combines the building block definition metadata with version information in a single resource for simplified management.",
 
 		Attributes: map[string]schema.Attribute{
 			"metadata": schema.SingleNestedAttribute{
@@ -617,11 +615,9 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 						MarkdownDescription: "Set of subscribers to notify about events related to this building block. Prefix usernames with `user:` and emails with `email:`.",
 						ElementType:         types.StringType,
 						Optional:            true,
-						Computed:            true,
 						Validators: []validator.Set{
 							setvalidator.ValueStringsAre(stringvalidator.RegexMatches(regexp.MustCompile(`^(user:|email:)\S`), "Entries must start with user: or email:")),
 						},
-						Default: setdefault.StaticValue(types.SetValueMust(types.StringType, nil)),
 					},
 				},
 			},
@@ -677,9 +673,7 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 							"See [Workspace Permissions](https://docs.meshcloud.io/api/authentication/api-permissions/) for available values and " +
 							"[documentation on ephemeral API keys](https://docs.dev.meshcloud.io/concepts/building-block/#ephemeral-api-keys).",
 						Optional:    true,
-						Computed:    true,
 						ElementType: types.StringType,
-						Default:     setdefault.StaticValue(types.SetValueMust(types.StringType, nil)),
 						Validators: []validator.Set{
 							setvalidator.ValueStringsAre(
 								stringvalidator.OneOf(client.WorkspacePermissionCodes()...),
@@ -691,8 +685,6 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 							"Prefer reusable refs from `meshstack_building_block_definition.<name>.ref` or " +
 							"`one(data.meshstack_building_block_definitions.<name>.building_block_definitions).ref`.",
 						Optional:     true,
-						Computed:     true,
-						Default:      emptySetDefault(dependencyRefs),
 						NestedObject: dependencyRefs,
 					},
 					"inputs": inputsAttribute,
@@ -708,6 +700,7 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 							"its `type` is always derived from the input's translated output type (`SINGLE_SELECT` becomes `STRING`, `MULTI_SELECT`/`LIST` become `CODE`) and must not be set.",
 						Optional:     true,
 						Computed:     true,
+						Default:      emptyMapDefault(outputs),
 						NestedObject: outputs,
 						Validators: []validator.Map{
 							mapvalidator.KeysAre(stringvalidator.LengthAtMost(maxLengthText)),
@@ -874,7 +867,7 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 			},
 
 			"version_latest": schema.SingleNestedAttribute{
-				MarkdownDescription: "Latest version (including drafts). Useful for wiring `meshstack_building_block_v2.spec.building_block_definition_version_ref`.",
+				MarkdownDescription: "Latest version (including drafts). Useful for wiring `meshstack_building_block.spec.building_block_definition_version_ref`.",
 				Computed:            true,
 				Attributes:          versionAttributes,
 			},

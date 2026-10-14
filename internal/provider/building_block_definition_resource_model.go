@@ -68,9 +68,17 @@ func newBuildingBlockDefinitionRef(uuid string) buildingBlockDefinitionRef {
 	}
 }
 
-func buildingBlockDefinitionConverterOptions() generic.ConverterOptions {
+// buildingBlockDefinitionConverterOptions keeps the collections below null or empty as configured, because
+// meshStack returns an empty collection for both.
+func buildingBlockDefinitionConverterOptions(ctx context.Context, prior generic.AttributeGetter) generic.ConverterOptions {
 	return generic.ConverterOptions{
 		generic.WithSliceTypeAsSet(clientTypes.IsSet),
+		generic.WithEmptyContainersAsIn(ctx, prior,
+			path.Root("spec").AtName("notification_subscribers"),
+			path.Root("version_spec").AtName("inputs"),
+			path.Root("version_spec").AtName("permissions"),
+			path.Root("version_spec").AtName("dependency_refs"),
+		),
 	}
 }
 
@@ -100,15 +108,6 @@ func (model buildingBlockDefinitionVersionSpec) ToClientDto(buildingBlockDefinit
 	if dto.VersionNumber == nil {
 		dto.VersionNumber = new(int64(1))
 	}
-
-	// Backend doesn't accept null inputs/outputs, so work around this
-	if dto.Inputs == nil {
-		dto.Inputs = make(map[string]*client.MeshBuildingBlockDefinitionInput)
-	}
-	if dto.Outputs == nil {
-		dto.Outputs = make(map[string]client.MeshBuildingBlockDefinitionOutput)
-	}
-
 	return
 }
 
@@ -317,20 +316,12 @@ func (model *buildingBlockDefinition) SetFromVersionClientDtos(diags *diag.Diagn
 		return
 	}
 	latestIndex := len(versionDtos) - 1
-	inputsNil := model.VersionSpec.Inputs == nil
 	model.VersionSpec = buildingBlockDefinitionVersionSpec{
 		MeshBuildingBlockDefinitionVersionSpec: versionDtos[latestIndex].Spec,
 	}
-	if inputsNil && len(model.VersionSpec.Inputs) == 0 {
-		model.VersionSpec.Inputs = nil
-	}
 
-	// A manual building block's backend response carries the full one-per-input output set, but config/state
-	// track only the user's overrides. Prune to the tracked subset so state matches config (the core fix for
-	// "inconsistent result after apply"). "No overrides" is represented as an empty map, not null: an explicit
-	// `outputs = {}` config plans as a known empty map, and an omitted config plans as unknown which can become
-	// the empty map - both land on {} consistently, whereas normalizing to null would diverge from an explicit
-	// `{}`. Non-manual outputs are left as configured.
+	// A manual definition's response has one output per input, while config and state hold only the user's
+	// overrides, so state must be pruned to them to match the plan.
 	if model.VersionSpec.Implementation.Manual != nil {
 		model.VersionSpec.Outputs = manualTrackedOutputs(model.VersionSpec.MeshBuildingBlockDefinitionVersionSpec)
 	}
