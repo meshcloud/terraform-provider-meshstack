@@ -1,6 +1,6 @@
 *.tfstate
 *.tfplan
-.terraform/
+.terraform*
 
 *.backup
 *.log
@@ -16,7 +16,6 @@
 
 /terraform-provider-meshstack
 
-.terraform-bin/
 providers-schema.json
 .nix-go/
 
