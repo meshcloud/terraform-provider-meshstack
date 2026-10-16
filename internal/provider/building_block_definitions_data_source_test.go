@@ -55,14 +55,14 @@ func TestAccBuildingBlockDefinitionsDataSource(t *testing.T) {
 								"state":        knownvalue.StringExact("DRAFT"),
 								"content_hash": xknownvalue.NotEmptyString(),
 							}),
-							"versions": knownvalue.ListExact([]knownvalue.Check{
+							"versions": ascendingVersionsExact(
 								knownvalue.ObjectPartial(map[string]knownvalue.Check{
 									"uuid":         xknownvalue.NotEmptyString(),
 									"number":       knownvalue.Int64Exact(1),
 									"state":        knownvalue.StringExact("DRAFT"),
 									"content_hash": xknownvalue.NotEmptyString(),
 								}),
-							}),
+							),
 							"version_latest_release": knownvalue.Null(),
 						}),
 					})),
@@ -119,7 +119,7 @@ func TestAccBuildingBlockDefinitionsDataSource(t *testing.T) {
 							return map[string]knownvalue.Check{
 								"version_latest":         versionRef,
 								"version_latest_release": versionRef,
-								"versions":               knownvalue.ListExact([]knownvalue.Check{versionRef}),
+								"versions":               ascendingVersionsExact(versionRef),
 							}
 						}()),
 					})),
@@ -151,8 +151,8 @@ func TestAccBuildingBlockDefinitionsDataSource(t *testing.T) {
 							"subject": resolvedSubject("system:serviceaccount:namespace:workspace."),
 						})),
 					statecheck.CompareValuePairs(
-						bbdAddr.String(), tfjsonpath.New("versions").AtSliceIndex(0).AtMapKey("workload_identity_federation"),
-						dataSourceAddress.String(), listedPath.AtMapKey("versions").AtSliceIndex(0).AtMapKey("workload_identity_federation"),
+						bbdAddr.String(), tfjsonpath.New("versions").AtMapKey("v1").AtMapKey("workload_identity_federation"),
+						dataSourceAddress.String(), listedPath.AtMapKey("versions").AtMapKey("v1").AtMapKey("workload_identity_federation"),
 						compare.ValuesSame(),
 					),
 				},
@@ -283,9 +283,11 @@ func Test_buildVersionRefsFromStatus(t *testing.T) {
 			Metadata: buildingBlockDefinitionDataSourceMetadataModel{Uuid: definitionUuid, OwnedByWorkspace: "consumer-workspace"},
 			Spec:     buildingBlockDefinitionDataSourceSpecModel{DisplayName: "Consumable Building Block", TargetType: client.MeshBuildingBlockTypeTenantLevel.Unwrap()},
 			// The content hash needs the version spec, which is exactly what is withheld.
-			Versions: []buildingBlockDefinitionDataSourceVersionRefModel{
-				{Uuid: releasedUuid, Number: 1, State: "RELEASED", WorkloadIdentityFederation: releasedWif},
-				{Uuid: draftUuid, Number: 2, State: "DRAFT"},
+			Versions: map[string]buildingBlockDefinitionDataSourceVersionRefModel{
+				"v1": {Uuid: releasedUuid, Number: 1, State: "RELEASED", WorkloadIdentityFederation: releasedWif},
+				"v2": {Uuid: draftUuid, Number: 2, State: "DRAFT"},
+				"0":  {Uuid: releasedUuid, Number: 1, State: "RELEASED", WorkloadIdentityFederation: releasedWif},
+				"1":  {Uuid: draftUuid, Number: 2, State: "DRAFT"},
 			},
 			VersionLatest:        buildingBlockDefinitionDataSourceVersionRefModel{Uuid: draftUuid, Number: 2, State: "DRAFT"},
 			VersionLatestRelease: &buildingBlockDefinitionDataSourceVersionRefModel{Uuid: releasedUuid, Number: 1, State: "RELEASED", WorkloadIdentityFederation: releasedWif},

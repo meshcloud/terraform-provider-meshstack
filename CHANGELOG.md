@@ -1,5 +1,13 @@
 # v0.26.8
 
+BREAKING CHANGES:
+- `meshstack_building_block_definition` and the `meshstack_building_block_definitions` data source: `versions` is a
+  map keyed by `v<number>` instead of a list, so `versions["v3"]` is version 3 even after an older version is gone.
+  Each version is also keyed by its position, so `versions[0]` keeps working; these keys are deprecated. Because of
+  them, `length(versions)` counts every version twice, `versions[length(versions) - 1]` fails, and a `for` expression
+  over `versions` sees every version twice; filter it to the `v` keys, or use `version_latest` and
+  `version_latest_release`. Existing state upgrades on its own.
+
 FEATURES:
 - New data source `meshstack_building_block_definition`: reads one definition by UUID, with the same `versions`,
   `version_latest`, `version_latest_release` and `ref` as an entry of `meshstack_building_block_definitions`.

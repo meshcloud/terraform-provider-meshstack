@@ -40,17 +40,17 @@ func resolvedWif(issuer string, subject knownvalue.Check, gcp knownvalue.Check) 
 	})
 }
 
-// expectedVersions is the versions list of a definition whose versions, the given numbers, all run on
-// one runner, so every entry carries the same identity.
-func expectedVersions(wif knownvalue.Check, numbers ...int64) knownvalue.Check {
-	versions := make([]knownvalue.Check, len(numbers))
-	for i, number := range numbers {
+// expectedVersions is the versions of a definition whose versions, numbered 1 to count, all run on one
+// runner, so every entry carries the same identity.
+func expectedVersions(wif knownvalue.Check, count int) knownvalue.Check {
+	versions := make([]knownvalue.Check, count)
+	for i := range versions {
 		versions[i] = knownvalue.ObjectPartial(map[string]knownvalue.Check{
-			"number":                       knownvalue.Int64Exact(number),
+			"number":                       knownvalue.Int64Exact(int64(i + 1)),
 			"workload_identity_federation": wif,
 		})
 	}
-	return knownvalue.ListExact(versions)
+	return ascendingVersionsExact(versions...)
 }
 
 func TestAccBuildingBlockDefinitionWif(t *testing.T) {
@@ -172,7 +172,7 @@ func TestAccBuildingBlockDefinitionWif(t *testing.T) {
 					},
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(bbdAddr.String(), versionsPath, expectedVersions(otherRunnerWif, 1, 2)),
+					statecheck.ExpectKnownValue(bbdAddr.String(), versionsPath, expectedVersions(otherRunnerWif, 2)),
 					statecheck.ExpectKnownValue(bbdAddr.String(), latestReleaseWifPath, otherRunnerWif),
 					statecheck.ExpectKnownValue(bbdAddr.String(), latestSubjectPath, recordSubject),
 				},
