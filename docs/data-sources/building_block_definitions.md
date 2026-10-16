@@ -42,6 +42,7 @@ locals {
 
 ### Optional
 
+- `uuids` (Set of String) Optional filter: return only the definitions with these uuids. The versions of the other definitions are then not loaded. A uuid that matches no definition is ignored.
 - `workspace_identifier` (String) Optional workspace identifier filter (maps to `ownedByWorkspace` query param).
 
 ### Read-Only
