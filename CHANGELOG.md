@@ -1,5 +1,10 @@
 # v0.26.7
 
+FEATURES:
+- `meshstack_building_block_definition`: a `TAG` input can now set `is_optional = true`. The building block then runs
+  without the value when the tag holds none, instead of waiting for someone to set the tag. The provider rejected this
+  at plan time before. Needs meshStack 2026.38.0 or later.
+
 FIXES:
 - `meshstack_api_key`: an update no longer fails with "Provider produced inconsistent final plan" for `.status` when
   `spec.expires_at` is only known at apply time, e.g. when it comes from a `time_rotating` resource. The plan now
