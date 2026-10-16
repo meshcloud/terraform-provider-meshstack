@@ -1,3 +1,10 @@
+# v0.26.7
+
+FIXES:
+- `meshstack_api_key`: an update no longer fails with "Provider produced inconsistent final plan" for `.status` when
+  `spec.expires_at` is only known at apply time, e.g. when it comes from a `time_rotating` resource. The plan now
+  shows `status.client_secret` as known after apply in this case.
+
 # v0.26.5
 
 FEATURES:
