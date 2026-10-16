@@ -43,7 +43,7 @@ func TestAccBuildingBlockDefinitionDataSource(t *testing.T) {
 						"target_type":  knownvalue.StringExact("WORKSPACE_LEVEL"),
 					})),
 					statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("version_latest"), versionRef),
-					statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("versions"), knownvalue.ListExact([]knownvalue.Check{versionRef})),
+					statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("versions"), ascendingVersionsExact(versionRef)),
 					statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("version_latest_release"), knownvalue.Null()),
 					statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("ref").AtMapKey("kind"), knownvalue.StringExact("meshBuildingBlockDefinition")),
 					statecheck.CompareValuePairs(dataSourceAddress.String(), tfjsonpath.New("ref"), buildingBlockDefinitionAddr.String(), tfjsonpath.New("ref"), compare.ValuesSame()),
@@ -89,7 +89,7 @@ func TestAccBuildingBlockDefinitionDataSource(t *testing.T) {
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("version_latest"), versionRef),
 					statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("version_latest_release"), versionRef),
-					statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("versions"), knownvalue.ListExact([]knownvalue.Check{versionRef})),
+					statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("versions"), ascendingVersionsExact(versionRef)),
 					statecheck.CompareValuePairs(dataSourceAddress.String(), tfjsonpath.New("ref"), buildingBlockDefinitionAddr.String(), tfjsonpath.New("ref"), compare.ValuesSame()),
 				},
 			},

@@ -626,9 +626,9 @@ func (r *buildingBlockDefinitionResource) ModifyPlan(ctx context.Context, req re
 			VersionNumber int64                                                                 `tfsdk:"version_number"`
 			State         generic.NullIsUnknown[client.MeshBuildingBlockDefinitionVersionState] `tfsdk:"state"`
 		} `tfsdk:"version_spec"`
-		Versions             []buildingBlockDefinitionVersionRef                       `tfsdk:"versions"`
-		VersionLatest        buildingBlockDefinitionVersionRef                         `tfsdk:"version_latest"`
-		VersionLatestRelease generic.NullIsUnknown[*buildingBlockDefinitionVersionRef] `tfsdk:"version_latest_release"`
+		Versions             generic.NullIsUnknown[map[string]buildingBlockDefinitionVersionRef] `tfsdk:"versions"`
+		VersionLatest        buildingBlockDefinitionVersionRef                                   `tfsdk:"version_latest"`
+		VersionLatestRelease generic.NullIsUnknown[*buildingBlockDefinitionVersionRef]           `tfsdk:"version_latest_release"`
 	}
 
 	state := generic.Get[buildingBlockDefinitionPartial](ctx, req.State, &resp.Diagnostics)
@@ -751,11 +751,10 @@ func (r *buildingBlockDefinitionResource) ModifyPlan(ctx context.Context, req re
 
 	// always start from the current state
 	plan.VersionLatestRelease = state.VersionLatestRelease
-	plan.Versions = state.Versions
-	plan.VersionLatest = state.VersionLatest
+	versions := ascendingVersions(state.Versions.Get())
 
 	defer func() {
-		plan.VersionLatest = plan.Versions[len(plan.Versions)-1]
+		plan.VersionLatest = versions[len(versions)-1]
 		resp.Diagnostics.Append(generic.SetPartial(ctx, &resp.Plan, plan)...)
 	}()
 
@@ -765,17 +764,21 @@ func (r *buildingBlockDefinitionResource) ModifyPlan(ctx context.Context, req re
 		resp.Diagnostics.AddWarning("version_spec.draft flag unknown",
 			"If version_spec.draft is unknown, it cannot be determined if a new version is released. "+
 				"Please make that flag available at plan time.")
-		plan.Versions[len(plan.Versions)-1] = buildingBlockDefinitionVersionRef{} // all unknown
-		plan.Versions[len(plan.Versions)-1].ContentHash = versionSpecContentHash  // possibly also unknown
+		// A new version may get a key of its own, so all of them stay unknown.
+		plan.Versions = generic.NullIsUnknown[map[string]buildingBlockDefinitionVersionRef]{}
+		versions = []buildingBlockDefinitionVersionRef{{ContentHash: versionSpecContentHash}} // possibly also unknown
 		return
 	}
+	defer func() {
+		plan.Versions = generic.KnownValue(versionsByKey(versions, buildingBlockDefinitionVersionRef.number))
+	}()
 
 	switch {
 	case !state.VersionSpec.Draft.Get() && plan.VersionSpec.Draft.Get():
 		// changing draft=false->true means creating a new draft version from the existing one with increased version number
 		plan.VersionSpec.State = generic.KnownValue(client.MeshBuildingBlockDefinitionVersionStateDraft.Unwrap())
 		plan.VersionSpec.VersionNumber = state.VersionSpec.VersionNumber + 1
-		plan.Versions = append(state.Versions, buildingBlockDefinitionVersionRef{
+		versions = append(versions, buildingBlockDefinitionVersionRef{
 			Uuid:        generic.NullIsUnknown[string]{},
 			Number:      generic.KnownValue(plan.VersionSpec.VersionNumber),
 			State:       generic.KnownValue(client.MeshBuildingBlockDefinitionVersionStateDraft.Unwrap()),
@@ -792,8 +795,7 @@ func (r *buildingBlockDefinitionResource) ModifyPlan(ctx context.Context, req re
 			plan.VersionLatestRelease = generic.NullIsUnknown[*buildingBlockDefinitionVersionRef]{}
 		}
 
-		plan.Versions = slices.Clone(state.Versions)
-		latestVersionRef := &plan.Versions[len(plan.Versions)-1]
+		latestVersionRef := &versions[len(versions)-1]
 
 		latestVersionRef.State = plan.VersionSpec.State
 		latestVersionRef.ContentHash = versionSpecContentHash

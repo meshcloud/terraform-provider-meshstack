@@ -5,6 +5,14 @@ BREAKING CHANGES:
   identifies the runner. Update references to it. Needs meshStack 2026.44.0 or later; `status` is null on older
   versions.
 
+BREAKING CHANGES:
+- `meshstack_building_block_definition` and the `meshstack_building_block_definitions` data source: `versions` is a
+  map keyed by `v<number>` instead of a list, so `versions["v3"]` is version 3 even after an older version is gone.
+  Each version is also keyed by its position, so `versions[0]` keeps working; these keys are deprecated. Because of
+  them, `length(versions)` counts every version twice, `versions[length(versions) - 1]` fails, and a `for` expression
+  over `versions` sees every version twice; filter it to the `v` keys, or use `version_latest` and
+  `version_latest_release`. Existing state upgrades on its own.
+
 FEATURES:
 - `meshstack_building_block_runner`: new `status.last_known_version`, the version the runner reported when it last
   polled for work.

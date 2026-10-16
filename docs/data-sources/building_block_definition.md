@@ -52,7 +52,7 @@ data "meshstack_building_block_definition" "example" {
 - `spec` (Attributes) Key specification fields for selecting a definition. (see [below for nested schema](#nestedatt--spec))
 - `version_latest` (Attributes) Latest version (including drafts). Useful for BB specs that may target drafts. (see [below for nested schema](#nestedatt--version_latest))
 - `version_latest_release` (Attributes) Latest released version. Null when no release exists yet. (see [below for nested schema](#nestedatt--version_latest_release))
-- `versions` (Attributes List) All available versions, sorted ascending by version number. (see [below for nested schema](#nestedatt--versions))
+- `versions` (Attributes Map) All available versions. Keyed by `v<number>`, such as `versions["v2"]`. Each version is also keyed by its position in ascending order, so `versions[0]` still works as it did while this was a list. These position keys are deprecated, so iterate over the `v<number>` keys only. (see [below for nested schema](#nestedatt--versions))
 
 <a id="nestedatt--metadata"></a>
 ### Nested Schema for `metadata`

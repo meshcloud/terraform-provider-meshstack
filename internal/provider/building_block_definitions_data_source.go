@@ -36,12 +36,12 @@ type buildingBlockDefinitionsDataSourceModel struct {
 }
 
 type buildingBlockDefinitionDataSourceModel struct {
-	Metadata             buildingBlockDefinitionDataSourceMetadataModel     `tfsdk:"metadata"`
-	Spec                 buildingBlockDefinitionDataSourceSpecModel         `tfsdk:"spec"`
-	Versions             []buildingBlockDefinitionDataSourceVersionRefModel `tfsdk:"versions"`
-	VersionLatest        buildingBlockDefinitionDataSourceVersionRefModel   `tfsdk:"version_latest"`
-	VersionLatestRelease *buildingBlockDefinitionDataSourceVersionRefModel  `tfsdk:"version_latest_release"`
-	Ref                  buildingBlockDefinitionRef                         `tfsdk:"ref"`
+	Metadata             buildingBlockDefinitionDataSourceMetadataModel              `tfsdk:"metadata"`
+	Spec                 buildingBlockDefinitionDataSourceSpecModel                  `tfsdk:"spec"`
+	Versions             map[string]buildingBlockDefinitionDataSourceVersionRefModel `tfsdk:"versions"`
+	VersionLatest        buildingBlockDefinitionDataSourceVersionRefModel            `tfsdk:"version_latest"`
+	VersionLatestRelease *buildingBlockDefinitionDataSourceVersionRefModel           `tfsdk:"version_latest_release"`
+	Ref                  buildingBlockDefinitionRef                                  `tfsdk:"ref"`
 }
 
 type buildingBlockDefinitionDataSourceMetadataModel struct {
@@ -134,8 +134,8 @@ func buildingBlockDefinitionDataSourceAttributes() map[string]schema.Attribute {
 			Computed:            true,
 			Attributes:          versionRefAttributes,
 		},
-		"versions": schema.ListNestedAttribute{
-			MarkdownDescription: "All available versions, sorted ascending by version number.",
+		"versions": schema.MapNestedAttribute{
+			MarkdownDescription: "All available versions. " + versionsKeyDescription,
 			Computed:            true,
 			NestedObject: schema.NestedAttributeObject{
 				Attributes: versionRefAttributes,
@@ -265,7 +265,7 @@ func buildingBlockDefinitionDataSourceModelFrom(ctx context.Context, versionClie
 			DisplayName: definition.Spec.DisplayName,
 			TargetType:  definition.Spec.TargetType,
 		},
-		Versions:      convertBBDVersionRefs(diags, "versions", versionModel.Versions),
+		Versions:      convertBBDVersionRefs(diags, "versions", ascendingVersions(versionModel.Versions)),
 		VersionLatest: convertBBDVersionRef(diags, "version_latest", versionModel.VersionLatest),
 		Ref:           versionModel.Ref,
 	}
@@ -290,9 +290,9 @@ func buildVersionRefsFromStatus(diags *diag.Diagnostics, definition client.MeshB
 	status := definition.Status
 
 	// Convert status.Versions to version refs (no content_hash available)
-	versions := make([]buildingBlockDefinitionDataSourceVersionRefModel, len(status.Versions))
+	ascending := make([]buildingBlockDefinitionDataSourceVersionRefModel, len(status.Versions))
 	for i, v := range status.Versions {
-		versions[i] = buildingBlockDefinitionDataSourceVersionRefModel{
+		ascending[i] = buildingBlockDefinitionDataSourceVersionRefModel{
 			Uuid:                       v.VersionUuid,
 			Number:                     v.VersionNumber,
 			State:                      string(v.State),
@@ -302,7 +302,7 @@ func buildVersionRefsFromStatus(diags *diag.Diagnostics, definition client.MeshB
 	}
 
 	// Sort versions ascending by number
-	slices.SortFunc(versions, func(a, b buildingBlockDefinitionDataSourceVersionRefModel) int {
+	slices.SortFunc(ascending, func(a, b buildingBlockDefinitionDataSourceVersionRefModel) int {
 		return cmp.Compare(a.Number, b.Number)
 	})
 
@@ -337,7 +337,7 @@ func buildVersionRefsFromStatus(diags *diag.Diagnostics, definition client.MeshB
 			DisplayName: definition.Spec.DisplayName,
 			TargetType:  definition.Spec.TargetType,
 		},
-		Versions:             versions,
+		Versions:             versionsByKey(ascending, buildingBlockDefinitionDataSourceVersionRefModel.number),
 		VersionLatest:        latestVersion,
 		VersionLatestRelease: latestReleasedVersion,
 		Ref:                  newBuildingBlockDefinitionRef(*definition.Metadata.Uuid),
@@ -372,12 +372,16 @@ func convertBBDVersionRef(diags *diag.Diagnostics, field string, ref buildingBlo
 	}
 }
 
-func convertBBDVersionRefs(diags *diag.Diagnostics, field string, refs []buildingBlockDefinitionVersionRef) []buildingBlockDefinitionDataSourceVersionRefModel {
-	converted := make([]buildingBlockDefinitionDataSourceVersionRefModel, len(refs))
-	for i, ref := range refs {
+func convertBBDVersionRefs(diags *diag.Diagnostics, field string, ascending []buildingBlockDefinitionVersionRef) map[string]buildingBlockDefinitionDataSourceVersionRefModel {
+	converted := make([]buildingBlockDefinitionDataSourceVersionRefModel, len(ascending))
+	for i, ref := range ascending {
 		converted[i] = convertBBDVersionRef(diags, field, ref)
 	}
-	return converted
+	return versionsByKey(converted, buildingBlockDefinitionDataSourceVersionRefModel.number)
+}
+
+func (ref buildingBlockDefinitionDataSourceVersionRefModel) number() int64 {
+	return ref.Number
 }
 
 func deriveDraftFromLatestVersion(versionDtos []client.MeshBuildingBlockDefinitionVersion) generic.NullIsUnknown[bool] {
