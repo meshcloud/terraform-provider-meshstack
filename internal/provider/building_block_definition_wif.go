@@ -1,6 +1,9 @@
 package provider
 
 import (
+	"fmt"
+
+	datasourceschema "github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 )
 
@@ -41,5 +44,28 @@ func versionWifCloudAttribute(cloud string) schema.SingleNestedAttribute {
 				Computed:            true,
 			},
 		},
+	}
+}
+
+// dataSourceVersionWifAttribute is versionWifAttribute for a data source schema, converted so both
+// schemas keep the same shape and descriptions.
+func dataSourceVersionWifAttribute(description string) datasourceschema.Attribute {
+	return computedDataSourceAttribute(versionWifAttribute(description))
+}
+
+// computedDataSourceAttribute converts a computed-only resource attribute built from strings and nested
+// objects into its data source counterpart.
+func computedDataSourceAttribute(attribute schema.Attribute) datasourceschema.Attribute {
+	switch a := attribute.(type) {
+	case schema.StringAttribute:
+		return datasourceschema.StringAttribute{MarkdownDescription: a.MarkdownDescription, Computed: true}
+	case schema.SingleNestedAttribute:
+		attributes := make(map[string]datasourceschema.Attribute, len(a.Attributes))
+		for name, nested := range a.Attributes {
+			attributes[name] = computedDataSourceAttribute(nested)
+		}
+		return datasourceschema.SingleNestedAttribute{MarkdownDescription: a.MarkdownDescription, Computed: true, Attributes: attributes}
+	default:
+		panic(fmt.Sprintf("computedDataSourceAttribute: unsupported attribute type %T", attribute))
 	}
 }

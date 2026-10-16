@@ -4,7 +4,7 @@ page_title: "meshstack_building_block_definitions Data Source - terraform-provid
 subcategory: ""
 description: |-
   List building block definitions with optional workspace filter. Prefer this plural data source with one(...) for reusable wiring in examples. For each returned definition, this data source performs an additional API call to load all versions; use workspace_identifier to narrow scope where possible.
-  Cross-Workspace Access: When accessing building block definitions from workspaces other than your own using a workspace-scoped API key, the content_hash attribute will be null as it requires detailed version information that is not accessible without workspace permissions. The versions, version_latest, and version_latest_release attributes will still be populated with uuid, number, and state.
+  Cross-Workspace Access: When accessing building block definitions from workspaces other than your own using a workspace-scoped API key, the content_hash attribute will be null as it requires detailed version information that is not accessible without workspace permissions. The versions, version_latest, and version_latest_release attributes will still be populated with uuid, number, state, and workload_identity_federation.
   ~> Preview: This resource is in preview. Breaking changes are possible without prior notice due to changes in the underlying meshStack preview API https://docs.meshcloud.io/api/technical-specifications#preview-endpoints or due to changes in this provider. Please ensure you are running the latest version of the provider and report any bugs via GitHub issues https://github.com/meshcloud/terraform-provider-meshstack/issues or via support@meshcloud.io.
 ---
 
@@ -12,7 +12,7 @@ description: |-
 
 List building block definitions with optional workspace filter. Prefer this plural data source with `one(...)` for reusable wiring in examples. For each returned definition, this data source performs an additional API call to load all versions; use `workspace_identifier` to narrow scope where possible. 
 
-**Cross-Workspace Access**: When accessing building block definitions from workspaces other than your own using a workspace-scoped API key, the `content_hash` attribute will be null as it requires detailed version information that is not accessible without workspace permissions. The `versions`, `version_latest`, and `version_latest_release` attributes will still be populated with uuid, number, and state.
+**Cross-Workspace Access**: When accessing building block definitions from workspaces other than your own using a workspace-scoped API key, the `content_hash` attribute will be null as it requires detailed version information that is not accessible without workspace permissions. The `versions`, `version_latest`, and `version_latest_release` attributes will still be populated with uuid, number, state, and workload_identity_federation.
 
 
 
@@ -42,6 +42,7 @@ locals {
 
 ### Optional
 
+- `uuids` (Set of String) Optional filter: return only the definitions with these uuids. The versions of the other definitions are then not loaded. A uuid that matches no definition is ignored.
 - `workspace_identifier` (String) Optional workspace identifier filter (maps to `ownedByWorkspace` query param).
 
 ### Read-Only
@@ -75,6 +76,46 @@ Read-Only:
 - `number` (Number) Version number.
 - `state` (String) State of the version.
 - `uuid` (String) UUID of the version.
+- `workload_identity_federation` (Attributes) The identity a run of this version presents to a cloud: the subject template of the version's runner, filled in by meshStack for this definition. Grant cloud access to `subject`. Null when the runner declares no workload identity federation, or when meshStack is older than 2026.40.0. (see [below for nested schema](#nestedatt--building_block_definitions--version_latest_release--workload_identity_federation))
+
+<a id="nestedatt--building_block_definitions--version_latest_release--workload_identity_federation"></a>
+### Nested Schema for `building_block_definitions.version_latest_release.workload_identity_federation`
+
+Read-Only:
+
+- `aws` (Attributes) Workload identity federation values for AWS. Null when the runner does not federate with AWS. (see [below for nested schema](#nestedatt--building_block_definitions--version_latest_release--workload_identity_federation--aws))
+- `azure` (Attributes) Workload identity federation values for Azure. Null when the runner does not federate with Azure. (see [below for nested schema](#nestedatt--building_block_definitions--version_latest_release--workload_identity_federation--azure))
+- `gcp` (Attributes) Workload identity federation values for GCP. Null when the runner does not federate with GCP. (see [below for nested schema](#nestedatt--building_block_definitions--version_latest_release--workload_identity_federation--gcp))
+- `issuer` (String) OIDC issuer URL of the identity provider that issues the tokens of a run.
+- `subject` (String) The subject claim of those tokens: the runner's subject template with every placeholder filled in for this definition. Grant cloud access to this identity.
+
+<a id="nestedatt--building_block_definitions--version_latest_release--workload_identity_federation--aws"></a>
+### Nested Schema for `building_block_definitions.version_latest_release.workload_identity_federation.aws`
+
+Read-Only:
+
+- `audience` (String) Audience the federated identity token is issued for.
+- `token_path` (String) Path the runner writes that token to.
+
+
+<a id="nestedatt--building_block_definitions--version_latest_release--workload_identity_federation--azure"></a>
+### Nested Schema for `building_block_definitions.version_latest_release.workload_identity_federation.azure`
+
+Read-Only:
+
+- `audience` (String) Audience the federated identity token is issued for.
+- `token_path` (String) Path the runner writes that token to.
+
+
+<a id="nestedatt--building_block_definitions--version_latest_release--workload_identity_federation--gcp"></a>
+### Nested Schema for `building_block_definitions.version_latest_release.workload_identity_federation.gcp`
+
+Read-Only:
+
+- `audience` (String) Audience the federated identity token is issued for.
+- `token_path` (String) Path the runner writes that token to.
+
+
 
 
 <a id="nestedatt--building_block_definitions--metadata"></a>
@@ -116,6 +157,46 @@ Read-Only:
 - `number` (Number) Version number.
 - `state` (String) State of the version.
 - `uuid` (String) UUID of the version.
+- `workload_identity_federation` (Attributes) The identity a run of this version presents to a cloud: the subject template of the version's runner, filled in by meshStack for this definition. Grant cloud access to `subject`. Null when the runner declares no workload identity federation, or when meshStack is older than 2026.40.0. (see [below for nested schema](#nestedatt--building_block_definitions--version_latest--workload_identity_federation))
+
+<a id="nestedatt--building_block_definitions--version_latest--workload_identity_federation"></a>
+### Nested Schema for `building_block_definitions.version_latest.workload_identity_federation`
+
+Read-Only:
+
+- `aws` (Attributes) Workload identity federation values for AWS. Null when the runner does not federate with AWS. (see [below for nested schema](#nestedatt--building_block_definitions--version_latest--workload_identity_federation--aws))
+- `azure` (Attributes) Workload identity federation values for Azure. Null when the runner does not federate with Azure. (see [below for nested schema](#nestedatt--building_block_definitions--version_latest--workload_identity_federation--azure))
+- `gcp` (Attributes) Workload identity federation values for GCP. Null when the runner does not federate with GCP. (see [below for nested schema](#nestedatt--building_block_definitions--version_latest--workload_identity_federation--gcp))
+- `issuer` (String) OIDC issuer URL of the identity provider that issues the tokens of a run.
+- `subject` (String) The subject claim of those tokens: the runner's subject template with every placeholder filled in for this definition. Grant cloud access to this identity.
+
+<a id="nestedatt--building_block_definitions--version_latest--workload_identity_federation--aws"></a>
+### Nested Schema for `building_block_definitions.version_latest.workload_identity_federation.aws`
+
+Read-Only:
+
+- `audience` (String) Audience the federated identity token is issued for.
+- `token_path` (String) Path the runner writes that token to.
+
+
+<a id="nestedatt--building_block_definitions--version_latest--workload_identity_federation--azure"></a>
+### Nested Schema for `building_block_definitions.version_latest.workload_identity_federation.azure`
+
+Read-Only:
+
+- `audience` (String) Audience the federated identity token is issued for.
+- `token_path` (String) Path the runner writes that token to.
+
+
+<a id="nestedatt--building_block_definitions--version_latest--workload_identity_federation--gcp"></a>
+### Nested Schema for `building_block_definitions.version_latest.workload_identity_federation.gcp`
+
+Read-Only:
+
+- `audience` (String) Audience the federated identity token is issued for.
+- `token_path` (String) Path the runner writes that token to.
+
+
 
 
 <a id="nestedatt--building_block_definitions--versions"></a>
@@ -130,3 +211,41 @@ Read-Only:
 - `number` (Number) Version number.
 - `state` (String) State of the version.
 - `uuid` (String) UUID of the version.
+- `workload_identity_federation` (Attributes) The identity a run of this version presents to a cloud: the subject template of the version's runner, filled in by meshStack for this definition. Grant cloud access to `subject`. Null when the runner declares no workload identity federation, or when meshStack is older than 2026.40.0. (see [below for nested schema](#nestedatt--building_block_definitions--versions--workload_identity_federation))
+
+<a id="nestedatt--building_block_definitions--versions--workload_identity_federation"></a>
+### Nested Schema for `building_block_definitions.versions.workload_identity_federation`
+
+Read-Only:
+
+- `aws` (Attributes) Workload identity federation values for AWS. Null when the runner does not federate with AWS. (see [below for nested schema](#nestedatt--building_block_definitions--versions--workload_identity_federation--aws))
+- `azure` (Attributes) Workload identity federation values for Azure. Null when the runner does not federate with Azure. (see [below for nested schema](#nestedatt--building_block_definitions--versions--workload_identity_federation--azure))
+- `gcp` (Attributes) Workload identity federation values for GCP. Null when the runner does not federate with GCP. (see [below for nested schema](#nestedatt--building_block_definitions--versions--workload_identity_federation--gcp))
+- `issuer` (String) OIDC issuer URL of the identity provider that issues the tokens of a run.
+- `subject` (String) The subject claim of those tokens: the runner's subject template with every placeholder filled in for this definition. Grant cloud access to this identity.
+
+<a id="nestedatt--building_block_definitions--versions--workload_identity_federation--aws"></a>
+### Nested Schema for `building_block_definitions.versions.workload_identity_federation.aws`
+
+Read-Only:
+
+- `audience` (String) Audience the federated identity token is issued for.
+- `token_path` (String) Path the runner writes that token to.
+
+
+<a id="nestedatt--building_block_definitions--versions--workload_identity_federation--azure"></a>
+### Nested Schema for `building_block_definitions.versions.workload_identity_federation.azure`
+
+Read-Only:
+
+- `audience` (String) Audience the federated identity token is issued for.
+- `token_path` (String) Path the runner writes that token to.
+
+
+<a id="nestedatt--building_block_definitions--versions--workload_identity_federation--gcp"></a>
+### Nested Schema for `building_block_definitions.versions.workload_identity_federation.gcp`
+
+Read-Only:
+
+- `audience` (String) Audience the federated identity token is issued for.
+- `token_path` (String) Path the runner writes that token to.
