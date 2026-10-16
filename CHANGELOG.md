@@ -1,5 +1,12 @@
 # v0.26.7
 
+FEATURES:
+- `meshstack_building_block_definitions`: each version entry has a new `workload_identity_federation` attribute. It is
+  the identity that runs of this version present to a cloud, as resolved by meshStack for the version's runner. The
+  `meshstack_building_block_definition` resource already has it. A building block can now grant cloud access to a
+  definition it only knows by uuid. A workspace that may consume a definition but does not own it gets the identity of
+  the released versions. Needs meshStack 2026.40.0 or later. On an older meshStack, the attribute is null.
+
 FIXES:
 - `meshstack_api_key`: an update no longer fails with "Provider produced inconsistent final plan" for `.status` when
   `spec.expires_at` is only known at apply time, e.g. when it comes from a `time_rotating` resource. The plan now

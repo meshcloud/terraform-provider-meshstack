@@ -2,6 +2,7 @@ package provider
 
 import (
 	"encoding/json/v2"
+	"fmt"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -156,6 +157,45 @@ func TestAccBuildingBlockDefinitionsDataSource(t *testing.T) {
 			},
 		}})
 	})
+
+	t.Run("workload identity of each version", func(t *testing.T) {
+		bbdConfig, bbdAddr, _, _ := testconfig.BBDTerraformWithWifRunners(t, runnerPublicKey)
+
+		var dataSourceAddress testconfig.Traversal
+		config := testconfig.DataSource{Name: "building_block_definitions"}.Config(t).WithFirstBlock(
+			testconfig.ExtractAddress(&dataSourceAddress),
+			testconfig.Descend("workspace_identifier")(testconfig.SetAddr(bbdAddr, "metadata", "owned_by_workspace")),
+		).Join(bbdConfig)
+		// The workspace also holds the definition's dependency, which runs on another runner, so the entry is
+		// picked by uuid.
+		config = config.WithRawBlock(fmt.Sprintf(`
+locals {
+  listed = one([for d in %[1]s.building_block_definitions : d if d.metadata.uuid == %[2]s.metadata.uuid])
+}
+
+output "listed_wif" {
+  value = local.listed.version_latest.workload_identity_federation
+}
+
+output "listed_wif_matches_resource" {
+  value = (local.listed.version_latest.workload_identity_federation == %[2]s.version_latest.workload_identity_federation &&
+    local.listed.versions[*].workload_identity_federation == %[2]s.versions[*].workload_identity_federation)
+}
+`, dataSourceAddress, bbdAddr))
+
+		ApplyAndTest(t, resource.TestCase{Steps: []resource.TestStep{
+			{
+				Config: config.String(),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownOutputValue("listed_wif", knownvalue.ObjectPartial(map[string]knownvalue.Check{
+						"issuer":  knownvalue.StringExact("https://oidc.example.com"),
+						"subject": resolvedSubject("system:serviceaccount:namespace:workspace."),
+					})),
+					statecheck.ExpectKnownOutputValue("listed_wif_matches_resource", knownvalue.Bool(true)),
+				},
+			},
+		}})
+	})
 }
 
 type lazyVariable string
@@ -177,7 +217,12 @@ func Test_buildVersionRefsFromStatus(t *testing.T) {
 	}
 
 	t.Run("derives the version refs from the status", func(t *testing.T) {
-		released := client.MeshBuildingBlockDefinitionStatusVersion{VersionUuid: releasedUuid, VersionNumber: 1, State: client.MeshBuildingBlockDefinitionVersionStateReleased.Unwrap()}
+		releasedWif := &client.MeshBuildingBlockDefinitionWif{
+			Issuer:  "https://oidc.example.com",
+			Subject: "system:serviceaccount:namespace:workspace.owner-workspace.buildingblockdefinition." + definitionUuid,
+			Gcp:     &client.MeshBuildingBlockDefinitionCloudWif{Audience: "gcp-audience", TokenPath: "/var/run/secrets/workload-identity/token"},
+		}
+		released := client.MeshBuildingBlockDefinitionStatusVersion{VersionUuid: releasedUuid, VersionNumber: 1, State: client.MeshBuildingBlockDefinitionVersionStateReleased.Unwrap(), WorkloadIdentityFederation: releasedWif}
 		draft := client.MeshBuildingBlockDefinitionStatusVersion{VersionUuid: draftUuid, VersionNumber: 2, State: client.MeshBuildingBlockDefinitionVersionStateDraft.Unwrap()}
 		definition := consumableDefinition(&client.MeshBuildingBlockDefinitionStatus{
 			// Out of order on purpose: the data source sorts by version number.
@@ -198,11 +243,11 @@ func Test_buildVersionRefsFromStatus(t *testing.T) {
 			Spec:     buildingBlockDefinitionDataSourceSpecModel{DisplayName: "Consumable Building Block", TargetType: client.MeshBuildingBlockTypeTenantLevel.Unwrap()},
 			// The content hash needs the version spec, which is exactly what is withheld.
 			Versions: []buildingBlockDefinitionDataSourceVersionRefModel{
-				{Uuid: releasedUuid, Number: 1, State: "RELEASED"},
+				{Uuid: releasedUuid, Number: 1, State: "RELEASED", WorkloadIdentityFederation: releasedWif},
 				{Uuid: draftUuid, Number: 2, State: "DRAFT"},
 			},
 			VersionLatest:        buildingBlockDefinitionDataSourceVersionRefModel{Uuid: draftUuid, Number: 2, State: "DRAFT"},
-			VersionLatestRelease: &buildingBlockDefinitionDataSourceVersionRefModel{Uuid: releasedUuid, Number: 1, State: "RELEASED"},
+			VersionLatestRelease: &buildingBlockDefinitionDataSourceVersionRefModel{Uuid: releasedUuid, Number: 1, State: "RELEASED", WorkloadIdentityFederation: releasedWif},
 			Ref:                  newBuildingBlockDefinitionRef(definitionUuid),
 		}, got)
 	})
