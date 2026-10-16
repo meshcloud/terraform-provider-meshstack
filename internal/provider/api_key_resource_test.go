@@ -70,3 +70,36 @@ func TestAccApiKey(t *testing.T) {
 		},
 	})
 }
+
+// An expires_at only known at apply time (e.g. from time_rotating) must still plan a rotation.
+func TestAccApiKey_ExpiresAtUnknownUntilApply(t *testing.T) {
+	workspaceConfig, workspaceAddr := testconfig.Workspace(t)
+	apiKeyConfig, apiKeyAddr := testconfig.ApiKey(t, workspaceAddr)
+
+	config := apiKeyConfig.Join(workspaceConfig)
+
+	unknownExpiryConfig := config.
+		WithFirstBlock(testconfig.Descend("spec", "expires_at")(testconfig.SetRawExpr("terraform_data.expiry.output"))).
+		WithRawBlock(`resource "terraform_data" "expiry" { input = "2099-06-30" }`)
+
+	ApplyAndTest(t, resource.TestCase{
+		Steps: []resource.TestStep{
+			{
+				Config: config.String(),
+			},
+			{
+				Config: unknownExpiryConfig.String(),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(apiKeyAddr.String(), plancheck.ResourceActionUpdate),
+						plancheck.ExpectUnknownValue(apiKeyAddr.String(), tfjsonpath.New("status").AtMapKey("client_secret")),
+					},
+				},
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(apiKeyAddr.String(), tfjsonpath.New("spec").AtMapKey("expires_at"), knownvalue.StringExact("2099-06-30")),
+					statecheck.ExpectKnownValue(apiKeyAddr.String(), tfjsonpath.New("status").AtMapKey("client_secret"), xknownvalue.NotEmptyString()),
+				},
+			},
+		},
+	})
+}

@@ -132,12 +132,9 @@ func (r *apiKeyResource) ModifyPlan(ctx context.Context, req resource.ModifyPlan
 		return
 	}
 
-	// If either value is unknown, we can't compare — leave client_secret untouched.
-	if planExpiresAt.IsUnknown() || stateExpiresAt.IsUnknown() {
-		return
-	}
-
-	if planExpiresAt.ValueString() != stateExpiresAt.ValueString() {
+	// An expires_at known only at apply time may still rotate the secret. Terraform re-plans with the
+	// known value then, and rejects a client_secret that was known here but turns unknown there.
+	if planExpiresAt.IsUnknown() || planExpiresAt.ValueString() != stateExpiresAt.ValueString() {
 		// Rotating the secret: mark client_secret as unknown so TF expects a new value.
 		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("status").AtName("client_secret"), types.StringUnknown())...)
 	}
