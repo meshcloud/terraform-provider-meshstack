@@ -2,10 +2,10 @@ package provider
 
 import (
 	"encoding/json/v2"
-	"fmt"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-testing/compare"
 	tfconfig "github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
@@ -165,33 +165,93 @@ func TestAccBuildingBlockDefinitionsDataSource(t *testing.T) {
 		config := testconfig.DataSource{Name: "building_block_definitions"}.Config(t).WithFirstBlock(
 			testconfig.ExtractAddress(&dataSourceAddress),
 			testconfig.Descend("workspace_identifier")(testconfig.SetAddr(bbdAddr, "metadata", "owned_by_workspace")),
+			// The workspace also holds the definition's dependency, which the filter leaves out.
+			testconfig.Descend("uuids")(testconfig.SetRawExpr("[%s]", bbdAddr.Join("metadata", "uuid"))),
 		).Join(bbdConfig)
-		// The workspace also holds the definition's dependency, which runs on another runner, so the entry is
-		// picked by uuid.
-		config = config.WithRawBlock(fmt.Sprintf(`
-locals {
-  listed = one([for d in %[1]s.building_block_definitions : d if d.metadata.uuid == %[2]s.metadata.uuid])
-}
 
-output "listed_wif" {
-  value = local.listed.version_latest.workload_identity_federation
-}
-
-output "listed_wif_matches_resource" {
-  value = (local.listed.version_latest.workload_identity_federation == %[2]s.version_latest.workload_identity_federation &&
-    local.listed.versions[*].workload_identity_federation == %[2]s.versions[*].workload_identity_federation)
-}
-`, dataSourceAddress, bbdAddr))
-
+		listedPath := tfjsonpath.New("building_block_definitions").AtSliceIndex(0)
 		ApplyAndTest(t, resource.TestCase{Steps: []resource.TestStep{
 			{
 				Config: config.String(),
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownOutputValue("listed_wif", knownvalue.ObjectPartial(map[string]knownvalue.Check{
-						"issuer":  knownvalue.StringExact("https://oidc.example.com"),
-						"subject": resolvedSubject("system:serviceaccount:namespace:workspace."),
+					statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("building_block_definitions"), knownvalue.ListSizeExact(1)),
+					statecheck.ExpectKnownValue(dataSourceAddress.String(), listedPath.AtMapKey("version_latest").AtMapKey("workload_identity_federation"),
+						knownvalue.ObjectPartial(map[string]knownvalue.Check{
+							"issuer":  knownvalue.StringExact("https://oidc.example.com"),
+							"subject": resolvedSubject("system:serviceaccount:namespace:workspace."),
+						})),
+					statecheck.CompareValuePairs(
+						bbdAddr.String(), tfjsonpath.New("versions").AtSliceIndex(0).AtMapKey("workload_identity_federation"),
+						dataSourceAddress.String(), listedPath.AtMapKey("versions").AtSliceIndex(0).AtMapKey("workload_identity_federation"),
+						compare.ValuesSame(),
+					),
+				},
+			},
+		}})
+	})
+
+	t.Run("cross-workspace workload identity", func(t *testing.T) {
+		if IsMockClientTest() {
+			t.Skip("cross-workspace test requires real permission boundaries")
+		}
+
+		bbdConfig, bbdAddr, _, _ := testconfig.BBDTerraformWithWifRunners(t, runnerPublicKey)
+
+		var otherWorkspaceAddr testconfig.Traversal
+		otherWorkspaceConfig, _ := testconfig.Workspace(t)
+		otherWorkspaceConfig = otherWorkspaceConfig.WithFirstBlock(
+			testconfig.RenameKey("other"),
+			testconfig.ExtractAddress(&otherWorkspaceAddr),
+		)
+		apiKeyConfig, apiKeyAddr := testconfig.ApiKey(t, otherWorkspaceAddr)
+		apiKeyConfig = apiKeyConfig.WithFirstBlock(
+			testconfig.Descend("spec", "permissions")(testconfig.SetRawExpr(`["BUILDINGBLOCKDEFINITION_LIST"]`)),
+		)
+
+		// Another workspace only sees released versions, through the redacted status of the definition.
+		supportConfig := bbdConfig.WithFirstBlock(
+			testconfig.Descend("version_spec", "draft")(testconfig.SetValue(cty.False)),
+		).Join(otherWorkspaceConfig, apiKeyConfig)
+
+		var dataSourceAddress testconfig.Traversal
+		config := testconfig.DataSource{Name: "building_block_definitions"}.Config(t).WithFirstBlock(
+			testconfig.ExtractAddress(&dataSourceAddress),
+			testconfig.Descend("workspace_identifier")(testconfig.SetAddr(bbdAddr, "metadata", "owned_by_workspace")),
+			testconfig.Descend("uuids")(testconfig.SetRawExpr("[%s]", bbdAddr.Join("metadata", "uuid"))),
+			testconfig.Descend("provider")(testconfig.SetRawExpr("meshstack-other")),
+		).Join(supportConfig, testconfig.OtherProviderConfig(t))
+
+		var apiKeyClientId, apiKeyClientSecret lazyVariable
+		listedPath := tfjsonpath.New("building_block_definitions").AtSliceIndex(0)
+		ApplyAndTest(t, resource.TestCase{Steps: []resource.TestStep{
+			{
+				Config: supportConfig.String(),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(apiKeyAddr.String(), tfjsonpath.New("status").AtMapKey("client_id"), xknownvalue.NotEmptyString(func(clientId string) error {
+						apiKeyClientId = lazyVariable(clientId)
+						return nil
 					})),
-					statecheck.ExpectKnownOutputValue("listed_wif_matches_resource", knownvalue.Bool(true)),
+					statecheck.ExpectKnownValue(apiKeyAddr.String(), tfjsonpath.New("status").AtMapKey("client_secret"), xknownvalue.NotEmptyString(func(clientSecret string) error {
+						apiKeyClientSecret = lazyVariable(clientSecret)
+						return nil
+					})),
+				},
+			},
+			{
+				Config: config.String(),
+				ConfigVariables: tfconfig.Variables{
+					"apikey_client_id":     &apiKeyClientId,
+					"apikey_client_secret": &apiKeyClientSecret,
+				},
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(dataSourceAddress.String(), listedPath.AtMapKey("version_latest_release").AtMapKey("content_hash"), knownvalue.Null()),
+					statecheck.CompareValuePairs(
+						bbdAddr.String(), tfjsonpath.New("version_latest_release").AtMapKey("workload_identity_federation"),
+						dataSourceAddress.String(), listedPath.AtMapKey("version_latest_release").AtMapKey("workload_identity_federation"),
+						compare.ValuesSame(),
+					),
+					statecheck.ExpectKnownValue(dataSourceAddress.String(), listedPath.AtMapKey("version_latest_release").AtMapKey("workload_identity_federation").AtMapKey("subject"),
+						resolvedSubject("system:serviceaccount:namespace:workspace.")),
 				},
 			},
 		}})
