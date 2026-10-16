@@ -6,6 +6,8 @@ FEATURES:
   `meshstack_building_block_definition` resource already has it. A building block can now grant cloud access to a
   definition it only knows by uuid. A workspace that may consume a definition but does not own it gets the identity of
   the released versions. Needs meshStack 2026.40.0 or later. On an older meshStack, the attribute is null.
+- `meshstack_building_block_definitions`: new optional `uuids` filter. The data source then returns only these
+  definitions and loads the versions of no other definition.
 
 FIXES:
 - `meshstack_api_key`: an update no longer fails with "Provider produced inconsistent final plan" for `.status` when

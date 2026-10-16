@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/meshcloud/meshstack-cli/client"
 
 	"github.com/meshcloud/terraform-provider-meshstack/internal/types/generic"
@@ -30,6 +31,7 @@ type buildingBlockDefinitionsDataSource struct {
 
 type buildingBlockDefinitionsDataSourceModel struct {
 	WorkspaceIdentifier      *string                                  `tfsdk:"workspace_identifier"`
+	Uuids                    []string                                 `tfsdk:"uuids"`
 	BuildingBlockDefinitions []buildingBlockDefinitionDataSourceModel `tfsdk:"building_block_definitions"`
 }
 
@@ -114,6 +116,12 @@ func (d *buildingBlockDefinitionsDataSource) Schema(_ context.Context, _ datasou
 				MarkdownDescription: "Optional workspace identifier filter (maps to `ownedByWorkspace` query param).",
 				Optional:            true,
 			},
+			"uuids": schema.SetAttribute{
+				MarkdownDescription: "Optional filter: return only the definitions with these uuids. " +
+					"The versions of the other definitions are then not loaded. A uuid that matches no definition is ignored.",
+				ElementType: types.StringType,
+				Optional:    true,
+			},
 			"building_block_definitions": schema.ListNestedAttribute{
 				MarkdownDescription: "Matching building block definitions.",
 				Computed:            true,
@@ -195,6 +203,9 @@ func (d *buildingBlockDefinitionsDataSource) Read(ctx context.Context, req datas
 			)
 			return
 		}
+		if data.Uuids != nil && !slices.Contains(data.Uuids, *definition.Metadata.Uuid) {
+			continue
+		}
 
 		redacted := definition.Status != nil && definition.Status.RedactedForNonOwnerAccess
 
@@ -221,9 +232,9 @@ func (d *buildingBlockDefinitionsDataSource) Read(ctx context.Context, req datas
 			return
 		}
 
-		var identities map[string]*client.MeshBuildingBlockDefinitionWif
-		if definition.Status != nil {
-			identities = workloadIdentitiesByVersion(definition.Status, *definition.Metadata.Uuid, &resp.Diagnostics)
+		identities := workloadIdentitiesByVersion(definition.Status, *definition.Metadata.Uuid, &resp.Diagnostics)
+		if resp.Diagnostics.HasError() {
+			return
 		}
 		var versionModel buildingBlockDefinition
 		versionModel.SetFromVersionClientDtos(&resp.Diagnostics, deriveDraftFromLatestVersion(versions), *definition.Metadata.Uuid, identities, versions...)
