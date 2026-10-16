@@ -57,6 +57,8 @@ type buildingBlockDefinitionDataSourceVersionRefModel struct {
 	Number      int64   `tfsdk:"number"`
 	State       string  `tfsdk:"state"`
 	ContentHash *string `tfsdk:"content_hash"`
+
+	WorkloadIdentityFederation *client.MeshBuildingBlockDefinitionWif `tfsdk:"workload_identity_federation"`
 }
 
 func (d *buildingBlockDefinitionsDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -89,6 +91,11 @@ func (d *buildingBlockDefinitionsDataSource) Schema(_ context.Context, _ datasou
 			Computed:            true,
 			Optional:            true,
 		},
+		"workload_identity_federation": dataSourceVersionWifAttribute(
+			"The identity a run of this version presents to a cloud: the subject template of the version's runner, " +
+				"filled in by meshStack for this definition. Grant cloud access to `subject`. " +
+				"Null when the runner declares no workload identity federation, or when meshStack is older than 2026.40.0.",
+		),
 	}
 
 	resp.Schema = schema.Schema{
@@ -100,7 +107,7 @@ func (d *buildingBlockDefinitionsDataSource) Schema(_ context.Context, _ datasou
 			"**Cross-Workspace Access**: When accessing building block definitions from workspaces other than your own " +
 			"using a workspace-scoped API key, the `content_hash` attribute will be null as it requires detailed version " +
 			"information that is not accessible without workspace permissions. The `versions`, `version_latest`, and " +
-			"`version_latest_release` attributes will still be populated with uuid, number, and state." +
+			"`version_latest_release` attributes will still be populated with uuid, number, state, and workload_identity_federation." +
 			"\n\n" + previewDisclaimer(),
 		Attributes: map[string]schema.Attribute{
 			"workspace_identifier": schema.StringAttribute{
@@ -214,9 +221,12 @@ func (d *buildingBlockDefinitionsDataSource) Read(ctx context.Context, req datas
 			return
 		}
 
+		var identities map[string]*client.MeshBuildingBlockDefinitionWif
+		if definition.Status != nil {
+			identities = workloadIdentitiesByVersion(definition.Status, *definition.Metadata.Uuid, &resp.Diagnostics)
+		}
 		var versionModel buildingBlockDefinition
-		// The data source does not expose the resolved workload identities yet, so none are looked up.
-		versionModel.SetFromVersionClientDtos(&resp.Diagnostics, deriveDraftFromLatestVersion(versions), *definition.Metadata.Uuid, nil, versions...)
+		versionModel.SetFromVersionClientDtos(&resp.Diagnostics, deriveDraftFromLatestVersion(versions), *definition.Metadata.Uuid, identities, versions...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -268,10 +278,11 @@ func buildVersionRefsFromStatus(diags *diag.Diagnostics, definition client.MeshB
 	versions := make([]buildingBlockDefinitionDataSourceVersionRefModel, len(status.Versions))
 	for i, v := range status.Versions {
 		versions[i] = buildingBlockDefinitionDataSourceVersionRefModel{
-			Uuid:        v.VersionUuid,
-			Number:      v.VersionNumber,
-			State:       string(v.State),
-			ContentHash: nil, // Not available without full version spec
+			Uuid:                       v.VersionUuid,
+			Number:                     v.VersionNumber,
+			State:                      string(v.State),
+			ContentHash:                nil, // Not available without full version spec
+			WorkloadIdentityFederation: v.WorkloadIdentityFederation,
 		}
 	}
 
@@ -281,21 +292,24 @@ func buildVersionRefsFromStatus(diags *diag.Diagnostics, definition client.MeshB
 	})
 
 	// Build latest version ref
+	latestStatusVersion := findStatusVersion(status.Versions, status.LatestVersionUuid)
 	latestVersion := buildingBlockDefinitionDataSourceVersionRefModel{
-		Uuid:        status.LatestVersionUuid,
-		Number:      status.LatestVersion,
-		State:       findVersionState(status.Versions, status.LatestVersionUuid),
-		ContentHash: nil, // Not available without full version spec
+		Uuid:                       status.LatestVersionUuid,
+		Number:                     status.LatestVersion,
+		State:                      string(latestStatusVersion.State),
+		ContentHash:                nil, // Not available without full version spec
+		WorkloadIdentityFederation: latestStatusVersion.WorkloadIdentityFederation,
 	}
 
 	// Build latest released version ref (if exists)
 	var latestReleasedVersion *buildingBlockDefinitionDataSourceVersionRefModel
 	if status.LatestReleasedVersionUuid != nil && status.LatestReleasedVersion != nil {
 		latestReleasedVersion = &buildingBlockDefinitionDataSourceVersionRefModel{
-			Uuid:        *status.LatestReleasedVersionUuid,
-			Number:      *status.LatestReleasedVersion,
-			State:       string(client.MeshBuildingBlockDefinitionVersionStateReleased.Unwrap()),
-			ContentHash: nil, // Not available without full version spec
+			Uuid:                       *status.LatestReleasedVersionUuid,
+			Number:                     *status.LatestReleasedVersion,
+			State:                      string(client.MeshBuildingBlockDefinitionVersionStateReleased.Unwrap()),
+			ContentHash:                nil, // Not available without full version spec
+			WorkloadIdentityFederation: findStatusVersion(status.Versions, *status.LatestReleasedVersionUuid).WorkloadIdentityFederation,
 		}
 	}
 
@@ -315,18 +329,18 @@ func buildVersionRefsFromStatus(diags *diag.Diagnostics, definition client.MeshB
 	}
 }
 
-// findVersionState finds the state of a version by UUID from the status versions list.
-func findVersionState(versions []client.MeshBuildingBlockDefinitionStatusVersion, uuid string) string {
+// findStatusVersion finds a version by UUID in the status versions list, or returns the zero value.
+func findStatusVersion(versions []client.MeshBuildingBlockDefinitionStatusVersion, uuid string) client.MeshBuildingBlockDefinitionStatusVersion {
 	for _, v := range versions {
 		if v.VersionUuid == uuid {
-			return string(v.State)
+			return v
 		}
 	}
-	return ""
+	return client.MeshBuildingBlockDefinitionStatusVersion{}
 }
 
 func convertBBDVersionRef(diags *diag.Diagnostics, field string, ref buildingBlockDefinitionVersionRef) buildingBlockDefinitionDataSourceVersionRefModel {
-	if ref.Uuid.IsUnknown() || ref.Number.IsUnknown() || ref.State.IsUnknown() || ref.ContentHash.IsUnknown() {
+	if ref.Uuid.IsUnknown() || ref.Number.IsUnknown() || ref.State.IsUnknown() || ref.ContentHash.IsUnknown() || ref.WorkloadIdentityFederation.IsUnknown() {
 		diags.AddError(
 			"Building block definition version reference unknown",
 			"The field "+field+" contains unknown values in data source read, which indicates inconsistent API/model conversion.",
@@ -338,6 +352,8 @@ func convertBBDVersionRef(diags *diag.Diagnostics, field string, ref buildingBlo
 		Number:      ref.Number.Get(),
 		State:       string(ref.State.Get()),
 		ContentHash: new(ref.ContentHash.Get()),
+
+		WorkloadIdentityFederation: ref.WorkloadIdentityFederation.Get(),
 	}
 }
 
