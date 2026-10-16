@@ -455,6 +455,7 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 	}
 
 	resp.Schema = schema.Schema{
+		Version: 1,
 		MarkdownDescription: "Manages a meshBuildingBlockDefinition in meshStack. " +
 			"Building Block Definitions define reusable automation components that can be executed on workspaces or tenants. " +
 			"This resource combines the building block definition metadata with version information in a single resource for simplified management." +
@@ -885,8 +886,8 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 				Optional:            true,
 				Attributes:          versionAttributes,
 			},
-			"versions": schema.ListNestedAttribute{
-				MarkdownDescription: "List of all available versions of this building block definition. Never empty.",
+			"versions": schema.MapNestedAttribute{
+				MarkdownDescription: "All versions of this building block definition. Never empty. " + versionsKeyDescription,
 				Computed:            true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: versionAttributes,

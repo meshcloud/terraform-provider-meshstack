@@ -24,9 +24,9 @@ type buildingBlockDefinition struct {
 	Spec        client.MeshBuildingBlockDefinitionSpec     `tfsdk:"spec"`
 	VersionSpec buildingBlockDefinitionVersionSpec         `tfsdk:"version_spec"`
 
-	Versions             []buildingBlockDefinitionVersionRef `tfsdk:"versions"`
-	VersionLatest        buildingBlockDefinitionVersionRef   `tfsdk:"version_latest"`
-	VersionLatestRelease *buildingBlockDefinitionVersionRef  `tfsdk:"version_latest_release"`
+	Versions             map[string]buildingBlockDefinitionVersionRef `tfsdk:"versions"`
+	VersionLatest        buildingBlockDefinitionVersionRef            `tfsdk:"version_latest"`
+	VersionLatestRelease *buildingBlockDefinitionVersionRef           `tfsdk:"version_latest_release"`
 
 	Ref buildingBlockDefinitionRef `tfsdk:"ref"`
 }
@@ -301,9 +301,9 @@ func (model *buildingBlockDefinition) SetFromVersionClientDtos(diags *diag.Diagn
 		return cmp.Compare(*a.Spec.VersionNumber, *b.Spec.VersionNumber)
 	})
 
-	model.Versions = make([]buildingBlockDefinitionVersionRef, len(versionDtos))
+	ascending := make([]buildingBlockDefinitionVersionRef, len(versionDtos))
 	for i, versionDto := range versionDtos {
-		model.Versions[i] = buildingBlockDefinitionVersionRef{
+		ascending[i] = buildingBlockDefinitionVersionRef{
 			Uuid:        generic.KnownValue(versionDto.Metadata.Uuid),
 			Number:      generic.KnownValue(*versionDto.Spec.VersionNumber),
 			State:       generic.KnownValue(*versionDto.Spec.State),
@@ -316,6 +316,7 @@ func (model *buildingBlockDefinition) SetFromVersionClientDtos(diags *diag.Diagn
 	if diags.HasError() {
 		return
 	}
+	model.Versions = versionsByKey(ascending, buildingBlockDefinitionVersionRef.number)
 	latestIndex := len(versionDtos) - 1
 	inputsNil := model.VersionSpec.Inputs == nil
 	model.VersionSpec = buildingBlockDefinitionVersionSpec{
@@ -350,12 +351,12 @@ func (model *buildingBlockDefinition) SetFromVersionClientDtos(diags *diag.Diagn
 	} else {
 		model.VersionSpec.Draft = *model.VersionSpec.State == client.MeshBuildingBlockDefinitionVersionStateDraft.Unwrap()
 	}
-	model.VersionLatest = model.Versions[latestIndex]
+	model.VersionLatest = ascending[latestIndex]
 
 	if model.VersionLatest.State.Get() == client.MeshBuildingBlockDefinitionVersionStateReleased.Unwrap() {
 		model.VersionLatestRelease = new(model.VersionLatest)
-	} else if len(model.Versions) > 1 {
-		if latestButOneVersion := model.Versions[latestIndex-1]; latestButOneVersion.State.Get() == client.MeshBuildingBlockDefinitionVersionStateReleased.Unwrap() {
+	} else if len(ascending) > 1 {
+		if latestButOneVersion := ascending[latestIndex-1]; latestButOneVersion.State.Get() == client.MeshBuildingBlockDefinitionVersionStateReleased.Unwrap() {
 			model.VersionLatestRelease = new(latestButOneVersion)
 		} else {
 			diags.AddError("version_latest_release points to non-release version", fmt.Sprintf(
