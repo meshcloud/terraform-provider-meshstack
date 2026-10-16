@@ -110,6 +110,7 @@ resource "meshstack_building_block_definition" "example_01_terraform" {
         description     = "The business unit tag of the workspace this building block belongs to" # Optional
         type            = "CODE"                                                                  # Tag inputs are always CODE: a tag value is a list of strings
         assignment_type = "TAG"
+        is_optional     = true # Optional: run without the value while the tag is unset, instead of waiting for it
         # Names the tag to read as "<target>.<tagKey>". A TENANT_LEVEL building block can read WORKSPACE,
         # PROJECT, PAYMENT_METHOD and LANDING_ZONE tags; a WORKSPACE_LEVEL one only WORKSPACE tags.
         argument      = jsonencode("WORKSPACE.${meshstack_tag_definition.workspace_business_unit.spec.key}")
