@@ -370,15 +370,17 @@ func (r *buildingBlockDefinitionResource) ValidateConfig(ctx context.Context, re
 	}
 }
 
+var optionalInputAssignmentTypes = enum.Of(
+	client.MeshBuildingBlockInputAssignmentTypeUserInput,
+	client.MeshBuildingBlockInputAssignmentTypePlatformOperatorManualInput,
+	client.MeshBuildingBlockInputAssignmentTypeTag,
+)
+
 // validateOptionalInputs re-imposes the backend's rules for an optional input at plan time.
 func validateOptionalInputs(manual types.Object, inputs types.Map, inputsPath path.Path, diags *diag.Diagnostics) {
 	if inputs.IsNull() || inputs.IsUnknown() {
 		return
 	}
-	supportedAssignmentTypes := enum.Of(
-		client.MeshBuildingBlockInputAssignmentTypeUserInput,
-		client.MeshBuildingBlockInputAssignmentTypePlatformOperatorManualInput,
-	)
 	for key, elem := range inputs.Elements() {
 		obj, ok := elem.(types.Object)
 		if !ok || obj.IsNull() || obj.IsUnknown() {
@@ -398,11 +400,11 @@ func validateOptionalInputs(manual types.Object, inputs types.Map, inputsPath pa
 		}
 
 		if assignment := outputStringAttr(attrs, "assignment_type"); !assignment.IsNull() && !assignment.IsUnknown() &&
-			!slices.Contains(supportedAssignmentTypes.Strings(), assignment.ValueString()) {
+			!slices.Contains(optionalInputAssignmentTypes.Strings(), assignment.ValueString()) {
 			diags.AddAttributeError(optionalPath,
 				"input cannot be optional with this assignment_type",
 				fmt.Sprintf("Input %q is optional, which is only supported for assignment types %s. Its assignment_type is %q.",
-					key, strings.Join(supportedAssignmentTypes.Strings(), ", "), assignment.ValueString()))
+					key, strings.Join(optionalInputAssignmentTypes.Strings(), ", "), assignment.ValueString()))
 		}
 
 		if inputType := outputStringAttr(attrs, "type"); inputType.ValueString() == client.MeshBuildingBlockIOTypeBoolean.String() {

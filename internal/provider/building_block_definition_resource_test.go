@@ -1384,7 +1384,7 @@ func checksForImplementation(exampleSuffix string) (checkInputs, checkImplementa
 					"type":                   knownvalue.StringExact("CODE"),
 					"assignment_type":        knownvalue.StringExact("TAG"),
 					"is_environment":         knownvalue.Bool(false),
-					"is_optional":            knownvalue.Bool(false),
+					"is_optional":            knownvalue.Bool(true),
 					"updateable_by_consumer": knownvalue.Bool(false),
 					"description":            knownvalue.StringExact("The business unit tag of the workspace this building block belongs to"),
 					// The argument is the `<target>.<tagKey>` reference; the key carries a per-run random suffix.
@@ -2283,8 +2283,8 @@ resource "meshstack_building_block_definition" "test" {
 			expectError:    regexp.MustCompile(`cannot be optional on a manual building block`),
 		},
 		{
-			// Optionality is a decision of whoever fills the input in, so only their assignment types qualify.
-			name:           "optional input rejected for a non-user assignment type",
+			// A STATIC value is always there, so there is nothing for the implementation to fall back from.
+			name:           "optional input rejected for a STATIC assignment type",
 			implementation: terraformImplementation,
 			input:          `{ display_name = "Candidate", type = "STRING", assignment_type = "STATIC", argument = jsonencode("c"), is_optional = true }`,
 			expectError:    regexp.MustCompile(`cannot be optional with this assignment_type`),
@@ -2316,6 +2316,11 @@ resource "meshstack_building_block_definition" "test" {
 			name:           "optional PLATFORM_OPERATOR_MANUAL_INPUT accepted",
 			implementation: terraformImplementation,
 			input:          `{ display_name = "Candidate", type = "STRING", assignment_type = "PLATFORM_OPERATOR_MANUAL_INPUT", is_optional = true }`,
+		},
+		{
+			name:           "optional TAG accepted",
+			implementation: terraformImplementation,
+			input:          `{ display_name = "Candidate", type = "CODE", assignment_type = "TAG", argument = jsonencode("WORKSPACE.costCenter"), is_optional = true }`,
 		},
 		{
 			// None of the rules applies to an input that is not optional.
