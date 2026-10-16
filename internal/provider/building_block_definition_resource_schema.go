@@ -209,13 +209,14 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 					MarkdownDescription: "Whether the input may be left unset when a building block is filled in. " +
 						"meshStack then sends no value and your implementation falls back to the default declared in its own code, " +
 						"e.g. the Terraform variable's `default` or the GitHub workflow input's `default`. " +
-						"**Only supported** for `assignment_type` " + enum.Of(
-						client.MeshBuildingBlockInputAssignmentTypeUserInput,
-						client.MeshBuildingBlockInputAssignmentTypePlatformOperatorManualInput,
-					).Markdown() + ", and **not** for type " + client.MeshBuildingBlockIOTypeBoolean.Markdown() +
+						"For " + client.MeshBuildingBlockInputAssignmentTypeTag.Markdown() + " it means the tag may hold no value, " +
+						"so the building block runs without it instead of waiting for the tag to be set. " +
+						"**Only supported** for `assignment_type` " + optionalInputAssignmentTypes.Markdown() +
+						", and **not** for type " + client.MeshBuildingBlockIOTypeBoolean.Markdown() +
 						" or for the `manual` implementation. " +
 						"**Mutually exclusive** with `default_value` and `sensitive.default_value`, which would defeat the purpose. " +
-						"Requires meshStack 2026.36.0 or later.",
+						"Requires meshStack 2026.36.0 or later, and 2026.38.0 or later for " +
+						client.MeshBuildingBlockInputAssignmentTypeTag.Markdown() + ".",
 					Optional: true,
 					Computed: true,
 					Default:  booldefault.StaticBool(false),
