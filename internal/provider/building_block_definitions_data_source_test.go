@@ -77,27 +77,11 @@ func TestAccBuildingBlockDefinitionsDataSource(t *testing.T) {
 		}
 
 		buildingBlockDefinitionConfig, buildingBlockDefinitionAddr := testconfig.BBDManual(t)
-
-		// AS the BBDManual above already creates an "example" workspace, we need to rename the other workspace
-		// and extract its correct address as well.
-		// This other workspace will hold the API key used to list the BBD cross
-		var otherWorkspaceAddr testconfig.Traversal
-		otherWorkspaceConfig, _ := testconfig.Workspace(t)
-		otherWorkspaceConfig = otherWorkspaceConfig.WithFirstBlock(
-			testconfig.RenameKey("other"),
-			testconfig.ExtractAddress(&otherWorkspaceAddr),
-		)
-		apiKeyConfig, apiKeyAddr := testconfig.ApiKey(t, otherWorkspaceAddr)
-		apiKeyConfig = apiKeyConfig.WithFirstBlock(
-			testconfig.Descend("spec", "permissions")(testconfig.SetRawExpr(`["BUILDINGBLOCKDEFINITION_LIST"]`)),
-		)
+		readerConfig, captureReaderKey, readerKey := otherWorkspaceReader(t)
 
 		supportConfig := buildingBlockDefinitionConfig.WithFirstBlock(
 			testconfig.Descend("version_spec", "draft")(testconfig.SetValue(cty.False)),
-		).Join(
-			otherWorkspaceConfig,
-			apiKeyConfig,
-		)
+		).Join(readerConfig)
 
 		var dataSourceAddress testconfig.Traversal
 		example := testconfig.DataSource{Name: "building_block_definitions"}
@@ -114,30 +98,16 @@ func TestAccBuildingBlockDefinitionsDataSource(t *testing.T) {
 			testconfig.OtherProviderConfig(t),
 		)
 
-		var apiKeyClientId, apiKeyClientSecret lazyVariable
-		s := supportConfig.String()
 		ApplyAndTest(t, resource.TestCase{Steps: []resource.TestStep{
 			{
-				Config: s,
-				ConfigStateChecks: []statecheck.StateCheck{
+				Config: supportConfig.String(),
+				ConfigStateChecks: append([]statecheck.StateCheck{
 					statecheck.ExpectKnownValue(buildingBlockDefinitionAddr.String(), tfjsonpath.New("version_latest_release").AtMapKey("state"), knownvalue.StringExact("RELEASED")),
-					statecheck.ExpectKnownValue(apiKeyAddr.String(), tfjsonpath.New("status").AtMapKey("client_id"), xknownvalue.NotEmptyString(func(clientId string) error {
-						apiKeyClientId = lazyVariable(clientId)
-						return nil
-					})),
-					statecheck.ExpectKnownValue(apiKeyAddr.String(), tfjsonpath.New("status").AtMapKey("client_secret"), xknownvalue.NotEmptyString(func(clientSecret string) error {
-						apiKeyClientSecret = lazyVariable(clientSecret)
-						return nil
-					})),
-				},
+				}, captureReaderKey...),
 			},
 			{
-				Config: config.String(),
-				ConfigVariables: tfconfig.Variables{
-					// variables are hard-coded in test support file
-					"apikey_client_id":     &apiKeyClientId,
-					"apikey_client_secret": &apiKeyClientSecret,
-				},
+				Config:          config.String(),
+				ConfigVariables: readerKey,
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("building_block_definitions"), knownvalue.ListExact([]knownvalue.Check{
 						knownvalue.ObjectPartial(func() map[string]knownvalue.Check {
@@ -196,22 +166,12 @@ func TestAccBuildingBlockDefinitionsDataSource(t *testing.T) {
 		}
 
 		bbdConfig, bbdAddr, _, _ := testconfig.BBDTerraformWithWifRunners(t, runnerPublicKey)
-
-		var otherWorkspaceAddr testconfig.Traversal
-		otherWorkspaceConfig, _ := testconfig.Workspace(t)
-		otherWorkspaceConfig = otherWorkspaceConfig.WithFirstBlock(
-			testconfig.RenameKey("other"),
-			testconfig.ExtractAddress(&otherWorkspaceAddr),
-		)
-		apiKeyConfig, apiKeyAddr := testconfig.ApiKey(t, otherWorkspaceAddr)
-		apiKeyConfig = apiKeyConfig.WithFirstBlock(
-			testconfig.Descend("spec", "permissions")(testconfig.SetRawExpr(`["BUILDINGBLOCKDEFINITION_LIST"]`)),
-		)
+		readerConfig, captureReaderKey, readerKey := otherWorkspaceReader(t)
 
 		// Another workspace only sees released versions, through the redacted status of the definition.
 		supportConfig := bbdConfig.WithFirstBlock(
 			testconfig.Descend("version_spec", "draft")(testconfig.SetValue(cty.False)),
-		).Join(otherWorkspaceConfig, apiKeyConfig)
+		).Join(readerConfig)
 
 		var dataSourceAddress testconfig.Traversal
 		config := testconfig.DataSource{Name: "building_block_definitions"}.Config(t).WithFirstBlock(
@@ -221,28 +181,15 @@ func TestAccBuildingBlockDefinitionsDataSource(t *testing.T) {
 			testconfig.Descend("provider")(testconfig.SetRawExpr("meshstack-other")),
 		).Join(supportConfig, testconfig.OtherProviderConfig(t))
 
-		var apiKeyClientId, apiKeyClientSecret lazyVariable
 		listedPath := tfjsonpath.New("building_block_definitions").AtSliceIndex(0)
 		ApplyAndTest(t, resource.TestCase{Steps: []resource.TestStep{
 			{
-				Config: supportConfig.String(),
-				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(apiKeyAddr.String(), tfjsonpath.New("status").AtMapKey("client_id"), xknownvalue.NotEmptyString(func(clientId string) error {
-						apiKeyClientId = lazyVariable(clientId)
-						return nil
-					})),
-					statecheck.ExpectKnownValue(apiKeyAddr.String(), tfjsonpath.New("status").AtMapKey("client_secret"), xknownvalue.NotEmptyString(func(clientSecret string) error {
-						apiKeyClientSecret = lazyVariable(clientSecret)
-						return nil
-					})),
-				},
+				Config:            supportConfig.String(),
+				ConfigStateChecks: captureReaderKey,
 			},
 			{
-				Config: config.String(),
-				ConfigVariables: tfconfig.Variables{
-					"apikey_client_id":     &apiKeyClientId,
-					"apikey_client_secret": &apiKeyClientSecret,
-				},
+				Config:          config.String(),
+				ConfigVariables: readerKey,
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(dataSourceAddress.String(), listedPath.AtMapKey("version_latest_release").AtMapKey("content_hash"), knownvalue.Null()),
 					statecheck.CompareValuePairs(
@@ -256,6 +203,40 @@ func TestAccBuildingBlockDefinitionsDataSource(t *testing.T) {
 			},
 		}})
 	})
+}
+
+// otherWorkspaceReader builds a second workspace, renamed so it does not clash with the "example" one the
+// definition builders create, holding an API key that may only list definitions. It returns that config,
+// the state checks that capture the key once it exists, and the variables that hand the key to the
+// meshstack-other provider of testconfig.OtherProviderConfig.
+func otherWorkspaceReader(t *testing.T) (config testconfig.Config, captureKey []statecheck.StateCheck, keyVariables tfconfig.Variables) {
+	t.Helper()
+	var otherWorkspaceAddr testconfig.Traversal
+	otherWorkspaceConfig, _ := testconfig.Workspace(t)
+	otherWorkspaceConfig = otherWorkspaceConfig.WithFirstBlock(
+		testconfig.RenameKey("other"),
+		testconfig.ExtractAddress(&otherWorkspaceAddr),
+	)
+	apiKeyConfig, apiKeyAddr := testconfig.ApiKey(t, otherWorkspaceAddr)
+	apiKeyConfig = apiKeyConfig.WithFirstBlock(
+		testconfig.Descend("spec", "permissions")(testconfig.SetRawExpr(`["BUILDINGBLOCKDEFINITION_LIST"]`)),
+	)
+
+	clientId, clientSecret := new(lazyVariable), new(lazyVariable)
+	capture := func(target *lazyVariable) knownvalue.Check {
+		return xknownvalue.NotEmptyString(func(value string) error {
+			*target = lazyVariable(value)
+			return nil
+		})
+	}
+	captureKey = []statecheck.StateCheck{
+		statecheck.ExpectKnownValue(apiKeyAddr.String(), tfjsonpath.New("status").AtMapKey("client_id"), capture(clientId)),
+		statecheck.ExpectKnownValue(apiKeyAddr.String(), tfjsonpath.New("status").AtMapKey("client_secret"), capture(clientSecret)),
+	}
+	return otherWorkspaceConfig.Join(apiKeyConfig), captureKey, tfconfig.Variables{
+		"apikey_client_id":     clientId,
+		"apikey_client_secret": clientSecret,
+	}
 }
 
 type lazyVariable string
