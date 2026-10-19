@@ -1,3 +1,9 @@
+# v0.26.8
+
+FEATURES:
+- Provider: with a browser login, a 403 error names the setting that chose the workspace, such as
+  the profile's default workspace or `MESHSTACK_WORKSPACE`.
+
 # v0.26.7
 
 FEATURES:
