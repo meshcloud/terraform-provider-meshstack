@@ -34,3 +34,7 @@ unit.txt
 
 go.work
 go.work.sum
+
+# Per-developer direnv setup, e.g. "use flake" with nix-direnv
+.envrc
+.direnv/
