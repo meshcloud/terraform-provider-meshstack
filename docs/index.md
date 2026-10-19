@@ -11,31 +11,6 @@ The meshStack terraform provider is an open-source tool, licensed under the Apac
 
 **Note:** This provider version requires meshStack version 2026.36.0 or higher. The provider automatically validates version compatibility during initialization.
 
-## Dependency wiring patterns
-
-Many meshStack resources depend on other meshStack objects. Prefer reusable references from data sources and computed outputs:
-
-- Prefer plural data sources with `one(...)` when your filter selects exactly one match.
-- Use singular data sources mainly for existence checks where `metadata.uuid` is enough.
-- Reuse computed outputs such as `ref`, `identifier`, `version_latest`, and `version_latest_release` to avoid hardcoded identifiers.
-
-Example dependency graphs:
-
-```text
-BBD -> BB
-meshstack_building_block_definition
-  └─ version_latest / version_latest_release
-     └─ meshstack_building_block.spec.building_block_definition_version_ref
-
-Tenant BB dependency chain
-meshstack_workspace
-  └─ meshstack_location
-     └─ meshstack_platform (identifier)
-        └─ meshstack_landingzone
-           └─ meshstack_tenant
-              └─ meshstack_building_block (target_ref)
-```
-
 ## Authentication
 
 ~> **Preview:** the `profile` and `workspace` arguments are a preview and can change without prior notice, because the meshStack CLI they read is under heavy development.
@@ -102,3 +77,28 @@ provider "meshstack" {
 - `workspace` (String) The workspace to act in, identified as in meshPanel, such as my-workspace-ab12c. Also read from MESHSTACK_WORKSPACE.
   
   Leaving this empty takes the profile's default workspace, which `meshstack login` stores. An API key or an API token needs no workspace.
+
+## Dependency wiring patterns
+
+Many meshStack resources depend on other meshStack objects. Prefer reusable references from data sources and computed outputs:
+
+- Prefer plural data sources with `one(...)` when your filter selects exactly one match.
+- Use singular data sources mainly for existence checks where `metadata.uuid` is enough.
+- Reuse computed outputs such as `ref`, `identifier`, `version_latest`, and `version_latest_release` to avoid hardcoded identifiers.
+
+Example dependency graphs:
+
+```text
+BBD -> BB
+meshstack_building_block_definition
+  └─ version_latest / version_latest_release
+     └─ meshstack_building_block.spec.building_block_definition_version_ref
+
+Tenant BB dependency chain
+meshstack_workspace
+  └─ meshstack_location
+     └─ meshstack_platform (identifier)
+        └─ meshstack_landingzone
+           └─ meshstack_tenant
+              └─ meshstack_building_block (target_ref)
+```
