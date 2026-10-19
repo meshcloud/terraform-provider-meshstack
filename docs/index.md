@@ -53,7 +53,8 @@ that secret unusable and fails the run with an error naming both ids.
 The provider never opens a browser: it refreshes a profile's existing browser login and writes the
 rotated refresh token back, but creating one is `meshstack login`. Each run of a browser login acts
 in one workspace, because meshStack binds a user access token to one. The run takes `workspace`,
-else `MESHSTACK_WORKSPACE`, else the default workspace that `meshstack login` stored in the profile.
+else `MESHSTACK_WORKSPACE`. It never takes the default workspace that `meshstack login` stored in the
+profile, so a configuration acts in the same workspace for everyone who applies it.
 
 That workspace only decides which of your workspace roles the provider acts with. A resource names
 its own workspace, such as `metadata.owned_by_workspace` of `meshstack_project`. So an Organization
@@ -107,4 +108,4 @@ provider "meshstack" {
   With no name given, the profile is the one whose endpoint matches the endpoint in use, else the one the last `meshstack login` selected, else `default`.
 - `workspace` (String) The workspace to act in, identified as in meshPanel, such as my-workspace-ab12c. Also read from MESHSTACK_WORKSPACE.
   
-  A browser login acts with your role in this workspace. Leaving this empty takes the profile's default workspace, which `meshstack login` stores. An API key or an API token needs no workspace.
+  A browser login acts with your role in this workspace and needs one. The provider does not take the profile's default workspace, which `meshstack login` stores. An API key or an API token needs no workspace.

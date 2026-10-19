@@ -1,5 +1,10 @@
 # v0.26.8
 
+BREAKING CHANGES:
+- Provider: a browser login needs `workspace` in the provider block or `MESHSTACK_WORKSPACE`. The
+  provider no longer takes the profile's default workspace, so a configuration acts in the same
+  workspace for everyone who applies it. An API key or an API token is not affected.
+
 FEATURES:
 - Provider: with a browser login, a 403 error names the setting that chose the workspace, such as
   the profile's default workspace or `MESHSTACK_WORKSPACE`.
