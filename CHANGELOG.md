@@ -4,13 +4,11 @@ FEATURES:
 - `meshstack_building_block_definition`: a `TAG` input can now set `is_optional = true`. The building block then runs
   without the value when the tag holds none, instead of waiting for someone to set the tag. The provider rejected this
   at plan time before. Needs meshStack 2026.38.0 or later.
-- `meshstack_building_block_definitions`: each version entry has a new `workload_identity_federation` attribute. It is
-  the identity that runs of this version present to a cloud, as resolved by meshStack for the version's runner. The
-  `meshstack_building_block_definition` resource already has it. A building block can now grant cloud access to a
-  definition it only knows by uuid. A workspace that may consume a definition but does not own it gets the identity of
-  the released versions. Needs meshStack 2026.40.0 or later. On an older meshStack, the attribute is null.
-- `meshstack_building_block_definitions`: new optional `uuids` filter. The data source then returns only these
-  definitions and loads the versions of no other definition.
+- `meshstack_building_block_definitions`: each version entry has `workload_identity_federation`, the identity
+  meshStack resolves for the version's runner, as on the resource. Other workspaces get it for released versions.
+  Needs meshStack 2026.40.0 or later; null on older versions.
+- `meshstack_building_block_definitions`: new optional `uuids` filter, which skips the version lookups of all other
+  definitions.
 
 FIXES:
 - `meshstack_api_key`: an update no longer fails with "Provider produced inconsistent final plan" for `.status` when
