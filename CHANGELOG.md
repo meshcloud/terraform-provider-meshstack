@@ -10,7 +10,8 @@ FEATURES:
   polled for work.
 - New data source `meshstack_location`: reads a location by name, including the `ref` a platform takes as
   `location_ref`.
-- New data source `meshstack_workspace_group_binding`: reads a workspace group binding by name.
+- New data sources `meshstack_workspace_group_binding` and `meshstack_workspace_user_binding`: read a workspace
+  binding by name.
 
 # v0.26.8
 
