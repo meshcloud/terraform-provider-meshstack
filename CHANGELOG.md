@@ -8,10 +8,16 @@ BREAKING CHANGES:
 FEATURES:
 - `meshstack_building_block_runner`: new `status.last_known_version`, the version the runner reported when it last
   polled for work.
+- New data source `meshstack_building_block_definition`: reads one definition by UUID, with the same `versions`,
+  `version_latest`, `version_latest_release` and `ref` as an entry of `meshstack_building_block_definitions`.
 - New data source `meshstack_location`: reads a location by name, including the `ref` a platform takes as
   `location_ref`.
 - New data sources `meshstack_workspace_group_binding` and `meshstack_workspace_user_binding`: read a workspace
   binding by name.
+
+FIXES:
+- `meshstack_building_block_definitions`: `version_latest_release` is read-only in the documentation; it was listed
+  as optional although it cannot be set.
 
 # v0.26.8
 
