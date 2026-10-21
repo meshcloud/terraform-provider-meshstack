@@ -113,6 +113,8 @@ func (r *workspaceUserBindingResource) Schema(_ context.Context, _ resource.Sche
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
+
+			"status": userBindingStatusResourceAttribute(),
 		},
 	}
 }
@@ -121,7 +123,7 @@ func (r *workspaceUserBindingResource) Schema(_ context.Context, _ resource.Sche
 func (r *workspaceUserBindingResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	// expiry_date is Optional+Computed, so a configuration that omits it leaves the planned value
 	// unknown, which the DTO's *string cannot hold. WithSetUnknownValueToZero turns it into nil,
-	// and the binding is then created without an expiry date.
+	// and the binding is then created without an expiry date. The same applies to the computed status.
 	plan := generic.Get[*client.MeshWorkspaceUserBinding](ctx, req.Plan, &resp.Diagnostics, generic.WithSetUnknownValueToZero())
 	if resp.Diagnostics.HasError() {
 		return

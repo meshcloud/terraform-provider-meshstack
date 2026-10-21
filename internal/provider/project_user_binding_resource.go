@@ -106,13 +106,15 @@ func (r *projectUserBindingResource) Schema(_ context.Context, _ resource.Schema
 			},
 
 			"expiry_date": projectBindingExpiryDateAttribute,
+
+			"status": userBindingStatusResourceAttribute(),
 		},
 	}
 }
 
 // Create creates the resource and sets the initial Terraform state.
 func (r *projectUserBindingResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	// An omitted expiry_date plans as unknown, which the DTO's *string cannot hold.
+	// An omitted expiry_date and the computed status plan as unknown, which the DTO's pointers cannot hold.
 	plan := generic.Get[*client.MeshProjectUserBinding](ctx, req.Plan, &resp.Diagnostics, generic.WithSetUnknownValueToZero())
 	if resp.Diagnostics.HasError() {
 		return

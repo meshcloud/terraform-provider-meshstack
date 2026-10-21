@@ -26,6 +26,7 @@ func (m MeshWorkspaceUserBindingClient) List(_ context.Context, filter client.Me
 }
 
 func (m MeshWorkspaceUserBindingClient) Create(_ context.Context, binding *client.MeshWorkspaceUserBinding) (*client.MeshWorkspaceUserBinding, error) {
+	binding.Status = &client.MeshUserBindingStatus{UserDisabled: false}
 	m.Store.Set(binding.Metadata.Name, binding)
 	return binding, nil
 }

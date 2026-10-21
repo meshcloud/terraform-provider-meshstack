@@ -9,5 +9,8 @@ func NewProjectGroupBindingDataSource() datasource.DataSource {
 	return newProjectBindingDataSource("group", "Identifier of the workspace user group.",
 		func(c client.Client) projectBindingClient[client.MeshProjectGroupBinding] {
 			return c.ProjectGroupBinding
+		},
+		func(binding client.MeshProjectGroupBinding) projectBindingModel {
+			return newProjectBindingModel(binding.MeshProjectBinding)
 		})
 }

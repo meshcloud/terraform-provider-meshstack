@@ -50,6 +50,10 @@ resource "meshstack_project_user_binding" "example" {
 
 - `expiry_date` (String) Last day the binding is effective (`YYYY-MM-DD`); null if it never expires. Changing it replaces the binding.
 
+### Read-Only
+
+- `status` (Attributes) Read-only status of the binding. (see [below for nested schema](#nestedatt--status))
+
 <a id="nestedatt--metadata"></a>
 ### Nested Schema for `metadata`
 
@@ -81,6 +85,14 @@ Required:
 
 - `name` (String) Project identifier.
 - `owned_by_workspace` (String) Identifier of workspace containing the target project.
+
+
+<a id="nestedatt--status"></a>
+### Nested Schema for `status`
+
+Read-Only:
+
+- `user_disabled` (Boolean) Whether the bound user is disabled, for example through SCIM. A disabled user keeps the binding but has no access until the user is enabled again.
 
 ## Import
 
