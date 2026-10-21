@@ -8,6 +8,8 @@ BREAKING CHANGES:
 FEATURES:
 - `meshstack_building_block_runner`: new `status.last_known_version`, the version the runner reported when it last
   polled for work.
+- New data source `meshstack_location`: reads a location by name, including the `ref` a platform takes as
+  `location_ref`.
 
 # v0.26.8
 
