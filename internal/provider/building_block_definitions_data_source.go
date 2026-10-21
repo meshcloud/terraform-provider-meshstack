@@ -74,7 +74,7 @@ func (d *buildingBlockDefinitionsDataSource) Configure(_ context.Context, req da
 	})...)
 }
 
-func (d *buildingBlockDefinitionsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func buildingBlockDefinitionDataSourceAttributes() map[string]schema.Attribute {
 	versionRefAttributes := map[string]schema.Attribute{
 		"uuid": schema.StringAttribute{
 			MarkdownDescription: "UUID of the version.",
@@ -100,6 +100,57 @@ func (d *buildingBlockDefinitionsDataSource) Schema(_ context.Context, _ datasou
 		),
 	}
 
+	return map[string]schema.Attribute{
+		"metadata": schema.SingleNestedAttribute{
+			MarkdownDescription: "Building block definition metadata.",
+			Computed:            true,
+			Attributes: map[string]schema.Attribute{
+				"uuid": schema.StringAttribute{
+					MarkdownDescription: "UUID of the building block definition.",
+					Computed:            true,
+				},
+				"owned_by_workspace": schema.StringAttribute{
+					MarkdownDescription: "Workspace identifier owning this definition.",
+					Computed:            true,
+				},
+			},
+		},
+		"spec": schema.SingleNestedAttribute{
+			MarkdownDescription: "Key specification fields for selecting a definition.",
+			Computed:            true,
+			Attributes: map[string]schema.Attribute{
+				"display_name": schema.StringAttribute{
+					MarkdownDescription: "Display name of the definition.",
+					Computed:            true,
+				},
+				"target_type": schema.StringAttribute{
+					MarkdownDescription: "Target type (`TENANT_LEVEL` or `WORKSPACE_LEVEL`).",
+					Computed:            true,
+				},
+			},
+		},
+		"version_latest": schema.SingleNestedAttribute{
+			MarkdownDescription: "Latest version (including drafts). Useful for BB specs that may target drafts.",
+			Computed:            true,
+			Attributes:          versionRefAttributes,
+		},
+		"versions": schema.ListNestedAttribute{
+			MarkdownDescription: "All available versions, sorted ascending by version number.",
+			Computed:            true,
+			NestedObject: schema.NestedAttributeObject{
+				Attributes: versionRefAttributes,
+			},
+		},
+		"version_latest_release": schema.SingleNestedAttribute{
+			MarkdownDescription: "Latest released version. Null when no release exists yet.",
+			Computed:            true,
+			Attributes:          versionRefAttributes,
+		},
+		"ref": meshRefByUuid(meshRefOptions{Kind: client.MeshObjectKind.BuildingBlockDefinition, Description: "Reference to this building block definition (for dependency refs).", Output: true}),
+	}
+}
+
+func (d *buildingBlockDefinitionsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "List building block definitions with optional workspace filter. " +
 			"Prefer this plural data source with `one(...)` for reusable wiring in examples. " +
@@ -126,55 +177,7 @@ func (d *buildingBlockDefinitionsDataSource) Schema(_ context.Context, _ datasou
 				MarkdownDescription: "Matching building block definitions.",
 				Computed:            true,
 				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"metadata": schema.SingleNestedAttribute{
-							MarkdownDescription: "Building block definition metadata.",
-							Computed:            true,
-							Attributes: map[string]schema.Attribute{
-								"uuid": schema.StringAttribute{
-									MarkdownDescription: "UUID of the building block definition.",
-									Computed:            true,
-								},
-								"owned_by_workspace": schema.StringAttribute{
-									MarkdownDescription: "Workspace identifier owning this definition.",
-									Computed:            true,
-								},
-							},
-						},
-						"spec": schema.SingleNestedAttribute{
-							MarkdownDescription: "Key specification fields for selecting a definition.",
-							Computed:            true,
-							Attributes: map[string]schema.Attribute{
-								"display_name": schema.StringAttribute{
-									MarkdownDescription: "Display name of the definition.",
-									Computed:            true,
-								},
-								"target_type": schema.StringAttribute{
-									MarkdownDescription: "Target type (`TENANT_LEVEL` or `WORKSPACE_LEVEL`).",
-									Computed:            true,
-								},
-							},
-						},
-						"version_latest": schema.SingleNestedAttribute{
-							MarkdownDescription: "Latest version (including drafts). Useful for BB specs that may target drafts.",
-							Computed:            true,
-							Attributes:          versionRefAttributes,
-						},
-						"versions": schema.ListNestedAttribute{
-							MarkdownDescription: "All available versions, sorted ascending by version number.",
-							Computed:            true,
-							NestedObject: schema.NestedAttributeObject{
-								Attributes: versionRefAttributes,
-							},
-						},
-						"version_latest_release": schema.SingleNestedAttribute{
-							MarkdownDescription: "Latest released version. Null when no release exists yet.",
-							Computed:            true,
-							Optional:            true,
-							Attributes:          versionRefAttributes,
-						},
-						"ref": meshRefByUuid(meshRefOptions{Kind: client.MeshObjectKind.BuildingBlockDefinition, Description: "Reference to this building block definition (for dependency refs).", Output: true}),
-					},
+					Attributes: buildingBlockDefinitionDataSourceAttributes(),
 				},
 			},
 		},
@@ -207,60 +210,11 @@ func (d *buildingBlockDefinitionsDataSource) Read(ctx context.Context, req datas
 			continue
 		}
 
-		redacted := definition.Status != nil && definition.Status.RedactedForNonOwnerAccess
-
-		var versions []client.MeshBuildingBlockDefinitionVersion
-		var err error
-		if !redacted {
-			versions, err = d.meshBuildingBlockDefinitionVersionClient.List(ctx, *definition.Metadata.Uuid)
-		}
-		httpErr, isHttpErr := errors.AsType[client.HttpError](err)
-		if redacted || (isHttpErr && httpErr.IsForbidden()) {
-			defModel := buildVersionRefsFromStatus(&resp.Diagnostics, definition)
-			if resp.Diagnostics.HasError() {
-				return
-			}
-			result = append(result, defModel)
-			continue
-		}
-
-		if err != nil {
-			resp.Diagnostics.AddError(
-				"Unable to list building block definition versions",
-				err.Error(),
-			)
-			return
-		}
-
-		identities := workloadIdentitiesByVersion(definition.Status, *definition.Metadata.Uuid, &resp.Diagnostics)
+		model := buildingBlockDefinitionDataSourceModelFrom(ctx, d.meshBuildingBlockDefinitionVersionClient, definition, &resp.Diagnostics)
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		var versionModel buildingBlockDefinition
-		versionModel.SetFromVersionClientDtos(&resp.Diagnostics, deriveDraftFromLatestVersion(versions), *definition.Metadata.Uuid, identities, versions...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-
-		result = append(result, buildingBlockDefinitionDataSourceModel{
-			Metadata: buildingBlockDefinitionDataSourceMetadataModel{
-				Uuid:             *definition.Metadata.Uuid,
-				OwnedByWorkspace: definition.Metadata.OwnedByWorkspace,
-			},
-			Spec: buildingBlockDefinitionDataSourceSpecModel{
-				DisplayName: definition.Spec.DisplayName,
-				TargetType:  definition.Spec.TargetType,
-			},
-			Versions:      convertBBDVersionRefs(&resp.Diagnostics, "versions", versionModel.Versions),
-			VersionLatest: convertBBDVersionRef(&resp.Diagnostics, "version_latest", versionModel.VersionLatest),
-			Ref:           versionModel.Ref,
-		})
-		if versionModel.VersionLatestRelease != nil {
-			result[len(result)-1].VersionLatestRelease = new(convertBBDVersionRef(&resp.Diagnostics, "version_latest_release", *versionModel.VersionLatestRelease))
-		}
-		if resp.Diagnostics.HasError() {
-			return
-		}
+		result = append(result, model)
 	}
 
 	slices.SortFunc(result, func(a, b buildingBlockDefinitionDataSourceModel) int {
@@ -269,6 +223,56 @@ func (d *buildingBlockDefinitionsDataSource) Read(ctx context.Context, req datas
 
 	data.BuildingBlockDefinitions = result
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+}
+
+func buildingBlockDefinitionDataSourceModelFrom(ctx context.Context, versionClient client.MeshBuildingBlockDefinitionVersionClient, definition client.MeshBuildingBlockDefinition, diags *diag.Diagnostics) buildingBlockDefinitionDataSourceModel {
+	redacted := definition.Status != nil && definition.Status.RedactedForNonOwnerAccess
+
+	var versions []client.MeshBuildingBlockDefinitionVersion
+	var err error
+	if !redacted {
+		versions, err = versionClient.List(ctx, *definition.Metadata.Uuid)
+	}
+	httpErr, isHttpErr := errors.AsType[client.HttpError](err)
+	if redacted || (isHttpErr && httpErr.IsForbidden()) {
+		return buildVersionRefsFromStatus(diags, definition)
+	}
+
+	if err != nil {
+		diags.AddError(
+			"Unable to list building block definition versions",
+			err.Error(),
+		)
+		return buildingBlockDefinitionDataSourceModel{}
+	}
+
+	identities := workloadIdentitiesByVersion(definition.Status, *definition.Metadata.Uuid, diags)
+	if diags.HasError() {
+		return buildingBlockDefinitionDataSourceModel{}
+	}
+	var versionModel buildingBlockDefinition
+	versionModel.SetFromVersionClientDtos(diags, deriveDraftFromLatestVersion(versions), *definition.Metadata.Uuid, identities, versions...)
+	if diags.HasError() {
+		return buildingBlockDefinitionDataSourceModel{}
+	}
+
+	model := buildingBlockDefinitionDataSourceModel{
+		Metadata: buildingBlockDefinitionDataSourceMetadataModel{
+			Uuid:             *definition.Metadata.Uuid,
+			OwnedByWorkspace: definition.Metadata.OwnedByWorkspace,
+		},
+		Spec: buildingBlockDefinitionDataSourceSpecModel{
+			DisplayName: definition.Spec.DisplayName,
+			TargetType:  definition.Spec.TargetType,
+		},
+		Versions:      convertBBDVersionRefs(diags, "versions", versionModel.Versions),
+		VersionLatest: convertBBDVersionRef(diags, "version_latest", versionModel.VersionLatest),
+		Ref:           versionModel.Ref,
+	}
+	if versionModel.VersionLatestRelease != nil {
+		model.VersionLatestRelease = new(convertBBDVersionRef(diags, "version_latest_release", *versionModel.VersionLatestRelease))
+	}
+	return model
 }
 
 // buildVersionRefsFromStatus builds version refs from definition status when the full version spec is not
