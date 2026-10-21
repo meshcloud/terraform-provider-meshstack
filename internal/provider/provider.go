@@ -128,6 +128,7 @@ func (p *MeshStackProvider) DataSources(_ context.Context) []func() datasource.D
 		NewProjectUserBindingDataSource,
 		NewProjectGroupBindingDataSource,
 		NewWorkspaceDataSource,
+		NewWorkspaceGroupBindingDataSource,
 		NewTenantDataSource,
 		NewTagDefinitionDataSource,
 		NewTagDefinitionsDataSource,

@@ -3,6 +3,7 @@
 FEATURES:
 - New data source `meshstack_location`: reads a location by name, including the `ref` a platform takes as
   `location_ref`.
+- New data source `meshstack_workspace_group_binding`: reads a workspace group binding by name.
 
 # v0.26.7
 
