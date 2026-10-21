@@ -1,3 +1,9 @@
+# v0.26.8
+
+FEATURES:
+- New data source `meshstack_location`: reads a location by name, including the `ref` a platform takes as
+  `location_ref`.
+
 # v0.26.7
 
 FEATURES:
