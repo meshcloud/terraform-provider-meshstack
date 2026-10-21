@@ -13,24 +13,34 @@ The meshStack terraform provider is an open-source tool, licensed under the Apac
 
 ## Authentication
 
-~> **Preview:** the `profile` and `workspace` arguments are a preview and can change without prior notice, because the meshStack CLI they read is under heavy development.
+~> **Preview:** The `profile` and `workspace` arguments may change without prior notice while the meshStack CLI is under active development.
 
-The provider reads its configuration from three places, highest first: the `provider` block, the
-`MESHSTACK_*` environment variables, and a **meshStack CLI profile** written by `meshstack login`
-and selected with `profile`. Every argument in the schema below names the variable it also reads,
-and the meshStack CLI documentation describes the resolution order in full. A
-credential resolves as one unit: the first place that names an identity decides which credential is
-used, and its secret comes from that same place, or else from the highest place below it that names
-no identity of its own. So `apikey` in the provider block with the secret in `MESHSTACK_API_SECRET`
-is the normal non-interactive setup, while a `MESHSTACK_API_KEY` left over from something else makes
-that secret unusable and fails the run with an error naming both ids.
+### Available Authentication Methods
 
-The provider never opens a browser: it refreshes a profile's existing browser login and writes the
-rotated refresh token back, but creating one is `meshstack login`. Such a login acts in exactly one
-workspace, because meshStack binds a user access token to one, and `workspace` says which.
-Anything resolution has to report without stopping the run — a profile picked by matching its
-endpoint, or a `MESHSTACK_API_SECRET` ignored in favour of the secret a profile stores — is a log
-record, which terraform shows only under `TF_LOG=WARN`.
+* **[meshStack CLI](https://github.com/meshcloud/meshstack-cli):** Use the current meshStack CLI profile or select an existing profile by setting the `profile` provider argument or `MESHSTACK_PROFILE`.
+  * The provider refreshes stored browser logins automatically but never opens a browser.
+  * Browser logins require a workspace identifier set via the `workspace` provider argument, `MESHSTACK_WORKSPACE`, or the profile’s default workspace saved during login.
+* **API key (recommended for automation):** Set `MESHSTACK_API_KEY` (the key's client ID) and `MESHSTACK_API_SECRET`.
+* **Existing access token:** Set `MESHSTACK_API_TOKEN` (for example, from a building block run). The provider does not renew tokens or change their workspace scope.
+
+Setting `endpoint` or `MESHSTACK_ENDPOINT` is required, unless a CLI profile supplies it.
+
+~> **Security Note:** Set secrets using environment variables (`MESHSTACK_*`) rather than setting sensitive arguments like `apisecret` or `apitoken` directly in the provider block.
+
+### Precedence and Defaults
+
+Provider arguments take precedence over their `MESHSTACK_*` environment variable counterparts, listed in the schema below.
+A CLI profile supplies endpoint and workspace defaults.
+Its stored credentials are used only when no API key or access token is configured explicitly.
+An incomplete API key configuration fails rather than using a profile's stored secret.
+
+If neither `profile` nor `MESHSTACK_PROFILE` is set, profile selection follows this order:
+
+1. A unique match for `endpoint` or `MESHSTACK_ENDPOINT`.
+2. The current CLI profile.
+3. The profile named `default`.
+
+With no arguments or environment variables set, the current CLI profile (or `default`) must supply the endpoint and credentials. Run `meshstack login` to create one.
 
 {{ if .HasExamples -}}
 ## Example Usage
@@ -42,7 +52,7 @@ record, which terraform shows only under `TF_LOG=WARN`.
 
 {{ .SchemaMarkdown | trimspace }}
 
-## Dependency wiring patterns
+## Dependency Wiring Patterns
 
 Many meshStack resources depend on other meshStack objects. Prefer reusable references from data sources and computed outputs:
 

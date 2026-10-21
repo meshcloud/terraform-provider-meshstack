@@ -25,7 +25,7 @@ var modelAttributes = func() (result map[string]providerModelAttribute) {
 		"profile":   {Setting: setting.Profile},
 		"workspace": {Setting: setting.Workspace, ExtraDescription: "Leaving this empty takes the profile's default workspace, which `meshstack login` stores. An API key or an API token needs no workspace."},
 		"apikey":    {Setting: setting.ApiKeyClientId, ExtraDescription: fmt.Sprintf("Setting this here with the secret in `%s` keeps the secret out of the configuration and out of state.", setting.ApiKeyClientSecret.EnvKey())},
-		"apisecret": {Setting: setting.ApiKeyClientSecret, Sensitive: true, ExtraDescription: "Always set this through the environment: a value set here is written to Terraform state. The warning about a stored secret winning is a log record, which `TF_LOG=WARN` shows."},
+		"apisecret": {Setting: setting.ApiKeyClientSecret, Sensitive: true, ExtraDescription: "Always set this through the environment: a value set here is written to Terraform state."},
 		"apitoken":  {Setting: setting.ApiToken, Sensitive: true, ExtraDescription: "Always set this through the environment: a value set here is written to Terraform state."},
 	}
 	for field := range reflect.TypeFor[MeshStackProviderModel]().Fields() {
