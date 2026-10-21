@@ -39,6 +39,7 @@ func TestAccProjectUserBindingDataSource(t *testing.T) {
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue("data.meshstack_project_user_binding.example", tfjsonpath.New("metadata").AtMapKey("name"), knownvalue.StringExact("this-is-an-example")),
 					statecheck.ExpectKnownValue("data.meshstack_project_user_binding.example", tfjsonpath.New("role_ref").AtMapKey("name"), xknownvalue.NotEmptyString()),
+					statecheck.ExpectKnownValue("data.meshstack_project_user_binding.example", tfjsonpath.New("status").AtMapKey("user_disabled"), knownvalue.Bool(false)),
 				},
 			},
 		},

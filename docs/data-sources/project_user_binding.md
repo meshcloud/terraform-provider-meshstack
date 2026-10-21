@@ -30,6 +30,7 @@ data "meshstack_project_user_binding" "example" {
 ### Read-Only
 
 - `role_ref` (Attributes) Project role assigned by this binding. (see [below for nested schema](#nestedatt--role_ref))
+- `status` (Attributes) Read-only status of the binding. (see [below for nested schema](#nestedatt--status))
 - `subject` (Attributes) User assigned by this binding. (see [below for nested schema](#nestedatt--subject))
 - `target_ref` (Attributes) Project, identified by workspace and project identifier. (see [below for nested schema](#nestedatt--target_ref))
 
@@ -47,6 +48,14 @@ Required:
 Read-Only:
 
 - `name` (String)
+
+
+<a id="nestedatt--status"></a>
+### Nested Schema for `status`
+
+Read-Only:
+
+- `user_disabled` (Boolean) Whether the bound user is disabled, for example through SCIM. A disabled user keeps the binding but has no access until the user is enabled again.
 
 
 <a id="nestedatt--subject"></a>

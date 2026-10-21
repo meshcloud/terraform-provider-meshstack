@@ -16,6 +16,7 @@ func (m MeshProjectUserBindingClient) Read(_ context.Context, name string) (*cli
 }
 
 func (m MeshProjectUserBindingClient) Create(_ context.Context, binding *client.MeshProjectUserBinding) (*client.MeshProjectUserBinding, error) {
+	binding.Status = &client.MeshUserBindingStatus{UserDisabled: false}
 	m.Store.Set(binding.Metadata.Name, binding)
 	return binding, nil
 }

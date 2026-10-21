@@ -44,6 +44,7 @@ func TestAccWorkspaceUserBinding(t *testing.T) {
 						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("role_ref").AtMapKey("name"), knownvalue.StringExact("Workspace Member")),
 						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("target_ref").AtMapKey("name"), xknownvalue.NotEmptyString()),
 						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("subject").AtMapKey("name"), knownvalue.StringExact("user@meshcloud.io")),
+						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("status").AtMapKey("user_disabled"), knownvalue.Bool(false)),
 						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("expiry_date"), knownvalue.StringExact("2026-12-31")),
 					},
 				},
@@ -83,6 +84,7 @@ func TestAccWorkspaceUserBinding(t *testing.T) {
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("metadata").AtMapKey("name"), knownvalue.StringExact(bindingName)),
 						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("subject").AtMapKey("name"), knownvalue.StringExact("user@meshcloud.io")),
+						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("status").AtMapKey("user_disabled"), knownvalue.Bool(false)),
 						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("expiry_date"), knownvalue.Null()),
 					},
 				},

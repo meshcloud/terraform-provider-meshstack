@@ -1,3 +1,10 @@
+# v0.26.8
+
+FEATURES:
+- `meshstack_project_user_binding`, `meshstack_workspace_user_binding` and the `meshstack_project_user_binding` data
+  source: new read-only `status.user_disabled`, `true` when the bound user is disabled, for example through SCIM. A
+  disabled user keeps their bindings but has no access. Needs meshStack 2026.44.0 or later; null on older versions.
+
 # v0.26.7
 
 FEATURES:

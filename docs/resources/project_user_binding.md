@@ -43,6 +43,10 @@ resource "meshstack_project_user_binding" "example" {
 - `subject` (Attributes) Selects the user for this binding. (see [below for nested schema](#nestedatt--subject))
 - `target_ref` (Attributes) Selects the project to which this binding applies. (see [below for nested schema](#nestedatt--target_ref))
 
+### Read-Only
+
+- `status` (Attributes) Read-only status of the binding. (see [below for nested schema](#nestedatt--status))
+
 <a id="nestedatt--metadata"></a>
 ### Nested Schema for `metadata`
 
@@ -74,6 +78,14 @@ Required:
 
 - `name` (String) Project identifier.
 - `owned_by_workspace` (String) Identifier of workspace containing the target project.
+
+
+<a id="nestedatt--status"></a>
+### Nested Schema for `status`
+
+Read-Only:
+
+- `user_disabled` (Boolean) Whether the bound user is disabled, for example through SCIM. A disabled user keeps the binding but has no access until the user is enabled again.
 
 ## Import
 

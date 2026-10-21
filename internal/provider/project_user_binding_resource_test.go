@@ -43,6 +43,7 @@ func TestAccProjectUserBinding(t *testing.T) {
 					statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("role_ref").AtMapKey("name"), knownvalue.StringExact("Project Reader")),
 					statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("target_ref").AtMapKey("name"), xknownvalue.NotEmptyString()),
 					statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("subject").AtMapKey("name"), knownvalue.StringExact("user@meshcloud.io")),
+					statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("status").AtMapKey("user_disabled"), knownvalue.Bool(false)),
 				},
 			},
 			{
