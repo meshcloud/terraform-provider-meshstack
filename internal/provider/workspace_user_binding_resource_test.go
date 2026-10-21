@@ -2,11 +2,11 @@ package provider
 
 import (
 	"testing"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
-	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 
@@ -15,46 +15,29 @@ import (
 )
 
 func TestAccWorkspaceUserBinding(t *testing.T) {
-	if !IsMockClientTest() {
-		t.Skip("Skipping: requires user 'user@meshcloud.io' in local meshStack")
-	}
-
 	t.Parallel()
 
 	t.Run("with_expiry_date", func(t *testing.T) {
 		workspaceConfig, workspaceAddr := testconfig.Workspace(t)
+		bindingName := "test-wub-" + acctest.RandString(8)
+		// meshStack rejects an expiry date that is not in the future.
+		expiryDate := time.Now().AddDate(1, 0, 0).Format(time.DateOnly)
 
 		var resourceAddress testconfig.Traversal
 		config := testconfig.Resource{Name: "workspace_user_binding"}.Config(t).WithFirstBlock(
 			testconfig.ExtractAddress(&resourceAddress),
+			testconfig.Descend("metadata", "name")(testconfig.SetString(bindingName)),
+			testconfig.Descend("subject", "name")(testconfig.SetString(SeededUsername)),
+			testconfig.Descend("expiry_date")(testconfig.SetString(expiryDate)),
 			testconfig.Descend("target_ref", "name")(testconfig.SetAddr(workspaceAddr, "metadata", "name"))).
 			Join(workspaceConfig)
 
 		ApplyAndTest(t, resource.TestCase{
-			Steps: []resource.TestStep{
-				{
-					Config: config.String(),
-					ConfigPlanChecks: resource.ConfigPlanChecks{
-						PreApply: []plancheck.PlanCheck{
-							plancheck.ExpectResourceAction(resourceAddress.String(), plancheck.ResourceActionCreate),
-						},
-					},
-					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("metadata").AtMapKey("name"), knownvalue.StringExact("this-is-an-example")),
-						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("role_ref").AtMapKey("name"), knownvalue.StringExact("Workspace Member")),
-						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("target_ref").AtMapKey("name"), xknownvalue.NotEmptyString()),
-						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("subject").AtMapKey("name"), knownvalue.StringExact("user@meshcloud.io")),
-						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("status").AtMapKey("user_disabled"), knownvalue.Bool(false)),
-						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("expiry_date"), knownvalue.StringExact("2026-12-31")),
-					},
-				},
-				{
-					ResourceName:    resourceAddress.String(),
-					ImportState:     true,
-					ImportStateId:   "this-is-an-example",
-					ImportStateKind: resource.ImportBlockWithID,
-				},
-			},
+			Steps: seededUserBindingCreateImportSteps(config, resourceAddress, bindingName,
+				statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("role_ref").AtMapKey("name"), knownvalue.StringExact("Workspace Member")),
+				statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("target_ref").AtMapKey("name"), xknownvalue.NotEmptyString()),
+				statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("expiry_date"), knownvalue.StringExact(expiryDate)),
+			),
 		})
 	})
 
@@ -68,33 +51,15 @@ func TestAccWorkspaceUserBinding(t *testing.T) {
 		config := testconfig.Resource{Name: "workspace_user_binding"}.Config(t).WithFirstBlock(
 			testconfig.ExtractAddress(&resourceAddress),
 			testconfig.Descend("metadata", "name")(testconfig.SetString(bindingName)),
+			testconfig.Descend("subject", "name")(testconfig.SetString(SeededUsername)),
 			testconfig.Descend("expiry_date")(testconfig.RemoveKey()),
 			testconfig.Descend("target_ref", "name")(testconfig.SetAddr(workspaceAddr, "metadata", "name"))).
 			Join(workspaceConfig)
 
 		ApplyAndTest(t, resource.TestCase{
-			Steps: []resource.TestStep{
-				{
-					Config: config.String(),
-					ConfigPlanChecks: resource.ConfigPlanChecks{
-						PreApply: []plancheck.PlanCheck{
-							plancheck.ExpectResourceAction(resourceAddress.String(), plancheck.ResourceActionCreate),
-						},
-					},
-					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("metadata").AtMapKey("name"), knownvalue.StringExact(bindingName)),
-						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("subject").AtMapKey("name"), knownvalue.StringExact("user@meshcloud.io")),
-						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("status").AtMapKey("user_disabled"), knownvalue.Bool(false)),
-						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("expiry_date"), knownvalue.Null()),
-					},
-				},
-				{
-					ResourceName:    resourceAddress.String(),
-					ImportState:     true,
-					ImportStateId:   bindingName,
-					ImportStateKind: resource.ImportBlockWithID,
-				},
-			},
+			Steps: seededUserBindingCreateImportSteps(config, resourceAddress, bindingName,
+				statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("expiry_date"), knownvalue.Null()),
+			),
 		})
 	})
 }
