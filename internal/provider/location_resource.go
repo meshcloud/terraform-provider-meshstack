@@ -29,16 +29,6 @@ type locationResource struct {
 	meshLocationClient client.MeshLocationClient
 }
 
-type locationRef struct {
-	Kind string `tfsdk:"kind"`
-	Name string `tfsdk:"name"`
-}
-
-type locationResourceModel struct {
-	client.MeshLocation
-	Ref locationRef `tfsdk:"ref"`
-}
-
 func (r *locationResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_location"
 }
@@ -149,15 +139,7 @@ func (r *locationResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	state := locationResourceModel{
-		MeshLocation: *createdLocation,
-		Ref: locationRef{
-			Kind: client.MeshObjectKind.Location,
-			Name: createdLocation.Metadata.Name,
-		},
-	}
-
-	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, newLocationModel(createdLocation))...)
 }
 
 func (r *locationResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -182,15 +164,7 @@ func (r *locationResource) Read(ctx context.Context, req resource.ReadRequest, r
 		return
 	}
 
-	state := locationResourceModel{
-		MeshLocation: *location,
-		Ref: locationRef{
-			Kind: client.MeshObjectKind.Location,
-			Name: location.Metadata.Name,
-		},
-	}
-
-	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, newLocationModel(location))...)
 }
 
 func (r *locationResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -230,15 +204,7 @@ func (r *locationResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	state := locationResourceModel{
-		MeshLocation: *updatedLocation,
-		Ref: locationRef{
-			Kind: client.MeshObjectKind.Location,
-			Name: updatedLocation.Metadata.Name,
-		},
-	}
-
-	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, newLocationModel(updatedLocation))...)
 }
 
 func (r *locationResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
