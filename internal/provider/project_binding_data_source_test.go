@@ -7,15 +7,15 @@ import (
 )
 
 func TestAccProjectUserBindingDataSource(t *testing.T) {
-	testAccProjectBindingDataSource(t, "user", seededUsername)
+	testAccProjectBindingDataSource(t, "user", seededUsername, expectUserEnabled)
 }
 
 func TestAccProjectGroupBindingDataSource(t *testing.T) {
 	testAccProjectBindingDataSource(t, "group", seededGroupName)
 }
 
-func testAccProjectBindingDataSource(t *testing.T, subjectKind, subjectName string) {
+func testAccProjectBindingDataSource(t *testing.T, subjectKind, subjectName string, subjectChecks ...subjectStateCheck) {
 	t.Helper()
 	bindingConfig, bindingAddr, _, _ := testconfig.ProjectBinding(t, subjectKind, subjectName)
-	testAccBindingDataSource(t, "project_"+subjectKind+"_binding", bindingConfig, bindingAddr, "Project Reader", "Project Admin")
+	testAccBindingDataSource(t, "project_"+subjectKind+"_binding", bindingConfig, bindingAddr, "Project Reader", "Project Admin", subjectChecks...)
 }

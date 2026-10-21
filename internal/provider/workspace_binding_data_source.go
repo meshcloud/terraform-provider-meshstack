@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 
-	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/meshcloud/meshstack-cli/client"
@@ -14,17 +13,31 @@ type workspaceBindingModel struct {
 	Expired bool `tfsdk:"expired"`
 }
 
+func newWorkspaceBindingModel(binding client.MeshWorkspaceBinding) workspaceBindingModel {
+	return workspaceBindingModel{MeshWorkspaceBinding: binding, Expired: bindingExpired(binding.ExpiryDate)}
+}
+
+// workspaceBindingView lets the lookups read a model that embeds workspaceBindingModel.
+type workspaceBindingView interface {
+	workspaceBinding() client.MeshWorkspaceBinding
+}
+
+func (m workspaceBindingModel) workspaceBinding() client.MeshWorkspaceBinding {
+	return m.MeshWorkspaceBinding
+}
+
 type workspaceBindingClient[B any] interface {
 	Read(ctx context.Context, name string) (*B, error)
 	List(ctx context.Context, filter client.MeshWorkspaceBindingListFilter) ([]B, error)
 }
 
-func newWorkspaceBindingDataSource[B ~struct{ client.MeshWorkspaceBinding }](
+func newWorkspaceBindingDataSource[B any, M workspaceBindingView](
 	subject, subjectNameDescription string,
 	listBySubject bool,
 	selectClient func(client.Client) workspaceBindingClient[B],
-) datasource.DataSource {
-	return &bindingDataSource[workspaceBindingModel]{
+	model func(B) M,
+) *bindingDataSource[M] {
+	return &bindingDataSource[M]{
 		typeName: "workspace_" + subject + "_binding",
 		kind:     "workspace " + subject + " binding",
 		attributes: bindingDataSourceAttributes("workspace", "`Workspace Manager` or `Workspace Member`", subject, subjectNameDescription,
@@ -35,13 +48,13 @@ func newWorkspaceBindingDataSource[B ~struct{ client.MeshWorkspaceBinding }](
 					"name": schema.StringAttribute{MarkdownDescription: "Workspace identifier.", Computed: true},
 				},
 			}, "name"),
-		lookups: []bindingLookup[workspaceBindingModel]{
-			{path.Root("metadata").AtName("name"), func(m workspaceBindingModel) string { return m.Metadata.Name }},
-			{path.Root("target_ref").AtName("name"), func(m workspaceBindingModel) string { return m.TargetRef.Name }},
-			{path.Root("subject").AtName("name"), func(m workspaceBindingModel) string { return m.Subject.Name }},
-			{path.Root("role_ref").AtName("name"), func(m workspaceBindingModel) string { return m.RoleRef.Name }},
+		lookups: []bindingLookup[M]{
+			{path.Root("metadata").AtName("name"), func(m M) string { return m.workspaceBinding().Metadata.Name }},
+			{path.Root("target_ref").AtName("name"), func(m M) string { return m.workspaceBinding().TargetRef.Name }},
+			{path.Root("subject").AtName("name"), func(m M) string { return m.workspaceBinding().Subject.Name }},
+			{path.Root("role_ref").AtName("name"), func(m M) string { return m.workspaceBinding().RoleRef.Name }},
 		},
-		selectClient: func(c client.Client) bindingClient[workspaceBindingModel] {
+		selectClient: func(c client.Client) bindingClient[M] {
 			bindings := selectClient(c)
 			list := func(ctx context.Context, filter bindingFilter) ([]B, error) {
 				listFilter := client.MeshWorkspaceBindingListFilter{
@@ -53,10 +66,7 @@ func newWorkspaceBindingDataSource[B ~struct{ client.MeshWorkspaceBinding }](
 				}
 				return bindings.List(ctx, listFilter)
 			}
-			return newBindingClient(bindings.Read, list, func(binding B) workspaceBindingModel {
-				b := struct{ client.MeshWorkspaceBinding }(binding).MeshWorkspaceBinding
-				return workspaceBindingModel{MeshWorkspaceBinding: b, Expired: bindingExpired(b.ExpiryDate)}
-			})
+			return newBindingClient(bindings.Read, list, model)
 		},
 	}
 }

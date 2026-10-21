@@ -11,5 +11,8 @@ func NewWorkspaceGroupBindingDataSource() datasource.DataSource {
 	return newWorkspaceBindingDataSource("group", "Identifier of the workspace user group.", listBySubject,
 		func(c client.Client) workspaceBindingClient[client.MeshWorkspaceGroupBinding] {
 			return c.WorkspaceGroupBinding
+		},
+		func(binding client.MeshWorkspaceGroupBinding) workspaceBindingModel {
+			return newWorkspaceBindingModel(binding.MeshWorkspaceBinding)
 		})
 }

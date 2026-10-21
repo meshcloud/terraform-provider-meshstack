@@ -15,14 +15,14 @@ import (
 )
 
 func TestAccProjectUserBinding(t *testing.T) {
-	testAccProjectBinding(t, "user", seededUsername)
+	testAccProjectBinding(t, "user", seededUsername, expectUserEnabled)
 }
 
 func TestAccProjectGroupBinding(t *testing.T) {
 	testAccProjectBinding(t, "group", seededGroupName)
 }
 
-func testAccProjectBinding(t *testing.T, subjectKind, subjectName string) {
+func testAccProjectBinding(t *testing.T, subjectKind, subjectName string, subjectChecks ...subjectStateCheck) {
 	t.Helper()
 	config, bindingAddr, workspaceAddr, bindingName := testconfig.ProjectBinding(t, subjectKind, subjectName)
 
@@ -35,14 +35,14 @@ func testAccProjectBinding(t *testing.T, subjectKind, subjectName string) {
 						plancheck.ExpectResourceAction(bindingAddr.String(), plancheck.ResourceActionCreate),
 					},
 				},
-				ConfigStateChecks: []statecheck.StateCheck{
+				ConfigStateChecks: append([]statecheck.StateCheck{
 					statecheck.ExpectKnownValue(bindingAddr.String(), tfjsonpath.New("metadata").AtMapKey("name"), knownvalue.StringExact(bindingName)),
 					statecheck.ExpectKnownValue(bindingAddr.String(), tfjsonpath.New("role_ref").AtMapKey("name"), knownvalue.StringExact("Project Reader")),
 					statecheck.ExpectKnownValue(bindingAddr.String(), tfjsonpath.New("target_ref").AtMapKey("name"), xknownvalue.NotEmptyString()),
 					statecheck.CompareValuePairs(bindingAddr.String(), tfjsonpath.New("target_ref").AtMapKey("owned_by_workspace"), workspaceAddr.String(), tfjsonpath.New("metadata").AtMapKey("name"), compare.ValuesSame()),
 					statecheck.ExpectKnownValue(bindingAddr.String(), tfjsonpath.New("subject").AtMapKey("name"), knownvalue.StringExact(subjectName)),
 					statecheck.ExpectKnownValue(bindingAddr.String(), tfjsonpath.New("expiry_date"), knownvalue.StringExact("2099-12-31")),
-				},
+				}, subjectStateChecks(bindingAddr, subjectChecks)...),
 			},
 			{
 				ResourceName:    bindingAddr.String(),

@@ -38,6 +38,9 @@ FEATURES:
   `expiry_date`, optional on the resources.
 - `meshstack_project_group_binding` and `meshstack_project_user_binding` data sources: look up a binding by project,
   subject and role as well, and read `expired`.
+- `meshstack_project_user_binding` and `meshstack_workspace_user_binding`, as resources and as data sources: new
+  read-only `status.user_disabled`, `true` when the bound user is disabled, for example through SCIM. A disabled user
+  keeps their bindings but has no access. Needs meshStack 2026.44.0 or later; null on older versions.
 
 FIXES:
 - `meshstack_building_block_definitions`: `version_latest_release` and the `content_hash` of each version are
