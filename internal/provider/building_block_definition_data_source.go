@@ -3,9 +3,12 @@ package provider
 import (
 	"context"
 	"fmt"
+	"maps"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/meshcloud/meshstack-cli/client"
 )
@@ -24,6 +27,13 @@ type buildingBlockDefinitionDataSource struct {
 	meshBuildingBlockDefinitionVersionClient client.MeshBuildingBlockDefinitionVersionClient
 }
 
+type buildingBlockDefinitionFilter struct {
+	Uuid             *string
+	OwnedByWorkspace *string
+	DisplayName      *string
+	TargetType       *string
+}
+
 func (d *buildingBlockDefinitionDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_building_block_definition"
 }
@@ -37,25 +47,15 @@ func (d *buildingBlockDefinitionDataSource) Configure(_ context.Context, req dat
 
 func (d *buildingBlockDefinitionDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	attributes := buildingBlockDefinitionDataSourceAttributes()
-	attributes["metadata"] = schema.SingleNestedAttribute{
-		MarkdownDescription: "Building block definition metadata.",
-		Required:            true,
-		Attributes: map[string]schema.Attribute{
-			"uuid": schema.StringAttribute{
-				MarkdownDescription: "UUID of the building block definition.",
-				Required:            true,
-			},
-			"owned_by_workspace": schema.StringAttribute{
-				MarkdownDescription: "Workspace identifier owning this definition.",
-				Computed:            true,
-			},
-		},
-	}
+	attributes["metadata"] = asFilter(attributes["metadata"], "uuid", "owned_by_workspace")
+	attributes["spec"] = asFilter(attributes["spec"], "display_name", "target_type")
 
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Read a single building block definition by UUID, with its versions and a `ref` for dependency refs. " +
-			"This data source performs an additional API call to load all versions of the definition. " +
-			"Use `meshstack_building_block_definitions` to look definitions up by workspace instead of by UUID." +
+		MarkdownDescription: "Read the one building block definition that matches what you set in `metadata` and `spec`, " +
+			"such as `spec.display_name`, the name the marketplace in meshPanel shows. " +
+			"It searches your workspace's own and all published definitions, and fails unless exactly one of them matches. " +
+			"Assign `version_latest_release`, or a version such as `versions[\"v2\"]`, to `building_block_definition_version_ref` of a building block. " +
+			"This data source performs an additional API call to load all versions of the definition." +
 			"\n\n" +
 			"**Cross-Workspace Access**: When accessing building block definitions from workspaces other than your own " +
 			"using a workspace-scoped API key, the `content_hash` attribute will be null as it requires detailed version " +
@@ -66,30 +66,126 @@ func (d *buildingBlockDefinitionDataSource) Schema(_ context.Context, _ datasour
 	}
 }
 
+// asFilter lets configuration set the given attributes of a computed block, each narrowing the search.
+func asFilter(attribute schema.Attribute, filterAttributes ...string) schema.SingleNestedAttribute {
+	block, ok := attribute.(schema.SingleNestedAttribute)
+	if !ok {
+		panic(fmt.Sprintf("a filter block must be a SingleNestedAttribute, got %T", attribute))
+	}
+	block.Optional = true
+	block.Attributes = maps.Clone(block.Attributes)
+	for _, name := range filterAttributes {
+		filter, ok := block.Attributes[name].(schema.StringAttribute)
+		if !ok {
+			panic(fmt.Sprintf("filter attribute %s must be a StringAttribute, got %T", name, block.Attributes[name]))
+		}
+		filter.Optional = true
+		filter.MarkdownDescription += " Set it to look the definition up by it."
+		block.Attributes[name] = filter
+	}
+	return block
+}
+
 func (d *buildingBlockDefinitionDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var uuid string
-	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("metadata").AtName("uuid"), &uuid)...)
+	var filter buildingBlockDefinitionFilter
+	for attributePath, target := range map[string]**string{
+		"metadata.uuid":               &filter.Uuid,
+		"metadata.owned_by_workspace": &filter.OwnedByWorkspace,
+		"spec.display_name":           &filter.DisplayName,
+		"spec.target_type":            &filter.TargetType,
+	} {
+		block, attribute, _ := strings.Cut(attributePath, ".")
+		resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(block).AtName(attribute), target)...)
+	}
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	definition, err := d.meshBuildingBlockDefinitionClient.Read(ctx, uuid)
-	if err != nil {
-		resp.Diagnostics.AddError("Unable to read building block definition", err.Error())
+	candidates := d.candidates(ctx, filter, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
 		return
+	}
+	definition := filter.only(candidates, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	model := buildingBlockDefinitionDataSourceModelFrom(ctx, d.meshBuildingBlockDefinitionVersionClient, definition, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	resp.Diagnostics.Append(resp.State.Set(ctx, &model)...)
+}
+
+func (d *buildingBlockDefinitionDataSource) candidates(ctx context.Context, filter buildingBlockDefinitionFilter, diags *diag.Diagnostics) []client.MeshBuildingBlockDefinition {
+	if filter.Uuid == nil {
+		definitions, err := d.meshBuildingBlockDefinitionClient.List(ctx, filter.OwnedByWorkspace)
+		if err != nil {
+			diags.AddError("Unable to list building block definitions", err.Error())
+		}
+		return definitions
+	}
+	definition, err := d.meshBuildingBlockDefinitionClient.Read(ctx, *filter.Uuid)
+	if err != nil {
+		diags.AddError("Unable to read building block definition", err.Error())
 	}
 	if definition == nil {
-		resp.Diagnostics.AddError(
-			"Building block definition not found",
-			fmt.Sprintf("Building block definition with UUID '%s' was not found", uuid),
-		)
-		return
+		return nil
 	}
+	return []client.MeshBuildingBlockDefinition{*definition}
+}
 
-	model := buildingBlockDefinitionDataSourceModelFrom(ctx, d.meshBuildingBlockDefinitionVersionClient, *definition, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
+// only checks owned_by_workspace on listed definitions too, because the list always holds all
+// published definitions next to the workspace's own.
+func (filter buildingBlockDefinitionFilter) only(candidates []client.MeshBuildingBlockDefinition, diags *diag.Diagnostics) (definition client.MeshBuildingBlockDefinition) {
+	var matches []client.MeshBuildingBlockDefinition
+	for _, candidate := range candidates {
+		if filter.matches(candidate) {
+			matches = append(matches, candidate)
+		}
 	}
+	switch len(matches) {
+	case 1:
+		return matches[0]
+	case 0:
+		diags.AddError("Building block definition not found",
+			fmt.Sprintf("No building block definition that you can see matches %s.", filter))
+	default:
+		found := make([]string, len(matches))
+		for i, match := range matches {
+			found[i] = fmt.Sprintf("%s (%q in workspace %s)", *match.Metadata.Uuid, match.Spec.DisplayName, match.Metadata.OwnedByWorkspace)
+		}
+		diags.AddError("Building block definition is ambiguous",
+			fmt.Sprintf("%d building block definitions match %s: %s. Set `metadata.owned_by_workspace` or `metadata.uuid` to pick one.",
+				len(matches), filter, strings.Join(found, ", ")))
+	}
+	return
+}
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, &model)...)
+func (filter buildingBlockDefinitionFilter) matches(definition client.MeshBuildingBlockDefinition) bool {
+	return (filter.Uuid == nil || definition.Metadata.Uuid != nil && *definition.Metadata.Uuid == *filter.Uuid) &&
+		(filter.OwnedByWorkspace == nil || definition.Metadata.OwnedByWorkspace == *filter.OwnedByWorkspace) &&
+		(filter.DisplayName == nil || definition.Spec.DisplayName == *filter.DisplayName) &&
+		(filter.TargetType == nil || string(definition.Spec.TargetType) == *filter.TargetType)
+}
+
+func (filter buildingBlockDefinitionFilter) String() string {
+	var set []string
+	for _, attribute := range []struct {
+		name  string
+		value *string
+	}{
+		{"metadata.uuid", filter.Uuid},
+		{"metadata.owned_by_workspace", filter.OwnedByWorkspace},
+		{"spec.display_name", filter.DisplayName},
+		{"spec.target_type", filter.TargetType},
+	} {
+		if attribute.value != nil {
+			set = append(set, fmt.Sprintf("%s = %q", attribute.name, *attribute.value))
+		}
+	}
+	if len(set) == 0 {
+		return "an empty filter"
+	}
+	return strings.Join(set, " and ")
 }

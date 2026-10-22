@@ -22,7 +22,7 @@ A building block is usually managed by the app team that owns its workspace; a p
 resource "meshstack_building_block" "example_workspace" {
   spec = {
     # Alternatively, use version_latest_release to target only released versions
-    building_block_definition_version_ref = one(data.meshstack_building_block_definitions.example.building_block_definitions).version_latest
+    building_block_definition_version_ref = data.meshstack_building_block_definition.example.version_latest
 
     display_name = "my-workspace-building-block"
     target_ref   = data.meshstack_workspace.example.ref
@@ -80,7 +80,7 @@ resource "meshstack_building_block" "example_workspace" {
 resource "meshstack_building_block" "example_tenant" {
   spec = {
     # Alternatively, use version_latest_release to target only released versions
-    building_block_definition_version_ref = one(data.meshstack_building_block_definitions.example.building_block_definitions).version_latest
+    building_block_definition_version_ref = data.meshstack_building_block_definition.example.version_latest
 
     display_name = "my-tenant-building-block"
     target_ref   = one(data.meshstack_tenants.example.tenants).ref
