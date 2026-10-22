@@ -3,6 +3,7 @@ package provider
 import (
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
@@ -13,15 +14,17 @@ import (
 )
 
 func TestAccProjectUserBindingDataSource(t *testing.T) {
-	if !IsMockClientTest() {
-		t.Skip("Skipping: requires user 'user@meshcloud.io' in local meshStack")
-	}
-
 	projectConfig, projectAddr, workspaceAddr := testconfig.ProjectAndWorkspace(t)
+
+	bindingName := "test-pub-" + acctest.RandString(8)
+	workspaceBindingConfig, workspaceBindingAddr := testconfig.WorkspaceUserBinding(t, workspaceAddr, SeededUsername)
 
 	var resourceAddress testconfig.Traversal
 	bindingConfig := testconfig.Resource{Name: "project_user_binding"}.Config(t).WithFirstBlock(
 		testconfig.ExtractAddress(&resourceAddress),
+		testconfig.Descend("metadata", "name")(testconfig.SetString(bindingName)),
+		testconfig.Descend("subject", "name")(testconfig.SetString(SeededUsername)),
+		testconfig.Descend("depends_on")(testconfig.SetRawExpr("[%s]", workspaceBindingAddr)),
 		testconfig.Descend("target_ref")(
 			testconfig.Descend("owned_by_workspace")(testconfig.SetAddr(workspaceAddr, "metadata", "name")),
 			testconfig.Descend("name")(testconfig.SetAddr(projectAddr, "metadata", "name")),
@@ -30,15 +33,16 @@ func TestAccProjectUserBindingDataSource(t *testing.T) {
 
 	config := testconfig.DataSource{Name: "project_user_binding"}.Config(t).WithFirstBlock(
 		testconfig.Descend("metadata", "name")(testconfig.SetAddr(resourceAddress, "metadata", "name")),
-	).Join(bindingConfig, projectConfig)
+	).Join(bindingConfig, projectConfig, workspaceBindingConfig)
 
 	ApplyAndTest(t, resource.TestCase{
 		Steps: []resource.TestStep{
 			{
 				Config: config.String(),
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue("data.meshstack_project_user_binding.example", tfjsonpath.New("metadata").AtMapKey("name"), knownvalue.StringExact("this-is-an-example")),
+					statecheck.ExpectKnownValue("data.meshstack_project_user_binding.example", tfjsonpath.New("metadata").AtMapKey("name"), knownvalue.StringExact(bindingName)),
 					statecheck.ExpectKnownValue("data.meshstack_project_user_binding.example", tfjsonpath.New("role_ref").AtMapKey("name"), xknownvalue.NotEmptyString()),
+					statecheck.ExpectKnownValue("data.meshstack_project_user_binding.example", tfjsonpath.New("status").AtMapKey("user_disabled"), knownvalue.Bool(false)),
 				},
 			},
 		},

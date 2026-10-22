@@ -75,6 +75,16 @@ func (d *projectUserBindingDataSource) Schema(ctx context.Context, req datasourc
 					},
 				},
 			},
+			"status": schema.SingleNestedAttribute{
+				MarkdownDescription: "Read-only status of the binding.",
+				Computed:            true,
+				Attributes: map[string]schema.Attribute{
+					"user_disabled": schema.BoolAttribute{
+						MarkdownDescription: userDisabledDescription,
+						Computed:            true,
+					},
+				},
+			},
 		},
 	}
 }

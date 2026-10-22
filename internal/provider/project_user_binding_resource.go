@@ -11,6 +11,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/meshcloud/meshstack-cli/client"
+
+	"github.com/meshcloud/terraform-provider-meshstack/internal/types/generic"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -102,21 +104,21 @@ func (r *projectUserBindingResource) Schema(_ context.Context, _ resource.Schema
 					},
 				},
 			},
+
+			"status": userBindingStatusResourceAttribute(),
 		},
 	}
 }
 
 // Create creates the resource and sets the initial Terraform state.
 func (r *projectUserBindingResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var plan client.MeshProjectUserBinding
-
-	diags := req.Plan.Get(ctx, &plan)
-	resp.Diagnostics.Append(diags...)
+	// status is computed and unknown in the plan; WithSetUnknownValueToZero turns it into nil.
+	plan := generic.Get[*client.MeshProjectUserBinding](ctx, req.Plan, &resp.Diagnostics, generic.WithSetUnknownValueToZero())
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	binding, err := r.meshProjectUserBindingClient.Create(ctx, &plan)
+	binding, err := r.meshProjectUserBindingClient.Create(ctx, plan)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating project user binding",
@@ -125,8 +127,7 @@ func (r *projectUserBindingResource) Create(ctx context.Context, req resource.Cr
 		return
 	}
 
-	diags = resp.State.Set(ctx, binding)
-	resp.Diagnostics.Append(diags...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, binding)...)
 }
 
 // Read refreshes the Terraform state with the latest data.
