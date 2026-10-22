@@ -1651,7 +1651,7 @@ func checkGitlabPipelineImplementation() knownvalue.Check {
 
 func checkGithubWorkflowsImplementation() knownvalue.Check {
 	return xknownvalue.MapExact(map[string]knownvalue.Check{
-		"repository":            knownvalue.StringExact("example/building-block"),
+		"repository":            knownvalue.StringExact("building-block"),
 		"branch":                knownvalue.StringExact("main"),
 		"apply_workflow":        knownvalue.StringExact("apply.yml"),
 		"destroy_workflow":      knownvalue.Null(),

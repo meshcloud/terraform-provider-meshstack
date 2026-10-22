@@ -23,7 +23,7 @@ resource "meshstack_building_block_definition" "example_02_github_workflows" {
     deletion_mode = "PURGE"
     implementation = {
       github_workflows = {
-        repository      = "example/building-block"
+        repository      = "building-block"
         branch          = "main"
         apply_workflow  = "apply.yml"
         integration_ref = { uuid = one(data.meshstack_integrations.all.integrations).metadata.uuid }
