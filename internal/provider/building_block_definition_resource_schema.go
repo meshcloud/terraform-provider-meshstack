@@ -796,7 +796,7 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 								Optional:            true,
 								Attributes: map[string]schema.Attribute{
 									"repository": schema.StringAttribute{
-										MarkdownDescription: "GitHub repository in format `owner/repo`.",
+										MarkdownDescription: "Name of the GitHub repository, without the owner. The owner comes from the integration.",
 										Required:            true,
 									},
 									"branch": schema.StringAttribute{

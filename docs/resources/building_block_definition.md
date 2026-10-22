@@ -217,7 +217,7 @@ resource "meshstack_building_block_definition" "example_02_github_workflows" {
     deletion_mode = "PURGE"
     implementation = {
       github_workflows = {
-        repository      = "example/building-block"
+        repository      = "building-block"
         branch          = "main"
         apply_workflow  = "apply.yml"
         integration_ref = { uuid = one(data.meshstack_integrations.all.integrations).metadata.uuid }
@@ -537,7 +537,7 @@ Required:
 - `apply_workflow` (String) Workflow file name for apply operations.
 - `branch` (String) Branch to use for workflows.
 - `integration_ref` (Attributes) Reference to the integration to use. (see [below for nested schema](#nestedatt--version_spec--implementation--github_workflows--integration_ref))
-- `repository` (String) GitHub repository in format `owner/repo`.
+- `repository` (String) Name of the GitHub repository, without the owner. The owner comes from the integration.
 
 Optional:
 
