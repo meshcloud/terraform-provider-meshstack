@@ -35,11 +35,11 @@ record, which terraform shows only under `TF_LOG=WARN`.
 ## Example Usage
 
 ```terraform
-# A browser login, stored in a meshStack CLI profile by `meshstack login`. The profile carries
-# the endpoint and the credential, and the workspace says which one this configuration acts in.
+# After `meshstack login`, an empty block works: it takes the profile of that login with its endpoint,
+# its credential and its default workspace.
 provider "meshstack" {
-  profile   = "my-profile"
-  workspace = "my-workspace-ab12c"
+  # profile   = "my-profile"
+  # workspace = "my-workspace-ab12c"
 }
 ```
 
