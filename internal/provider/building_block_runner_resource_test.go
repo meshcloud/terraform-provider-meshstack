@@ -45,6 +45,10 @@ func TestAccBuildingBlockRunnerResource(t *testing.T) {
 						statecheck.ExpectKnownValue(runnerAddr.String(), tfjsonpath.New("metadata").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
 						statecheck.ExpectKnownValue(runnerAddr.String(), tfjsonpath.New("spec").AtMapKey("implementation_type"), knownvalue.StringExact("TERRAFORM")),
 						statecheck.ExpectKnownValue(runnerAddr.String(), tfjsonpath.New("spec").AtMapKey("restriction"), knownvalue.StringExact("PRIVATE")),
+						statecheck.ExpectKnownValue(runnerAddr.String(), tfjsonpath.New("status"), xknownvalue.MapExact(map[string]knownvalue.Check{
+							"last_seen":          knownvalue.Null(),
+							"last_known_version": knownvalue.Null(),
+						})),
 						xknownvalue.Ref(runnerAddr, "meshBuildingBlockRunner", &runnerUuid),
 					},
 				},

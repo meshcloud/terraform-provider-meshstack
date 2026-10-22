@@ -26,7 +26,6 @@ func sharedBuildingBlockRunner() *client.MeshBuildingBlockRunner {
 			Uuid:             new(SharedBuildingBlockRunnerUuid),
 			OwnedByWorkspace: "meshcloud",
 			CreatedOn:        new("2026-01-01T00:00:00Z"),
-			LastSeen:         new("2026-01-01T00:00:00Z"),
 		},
 		Spec: client.MeshBuildingBlockRunnerSpec{
 			DisplayName:        "meshStack Hosted Runner",
@@ -40,6 +39,10 @@ func sharedBuildingBlockRunner() *client.MeshBuildingBlockRunner {
 				Aws:             &client.MeshRunnerWifProviderConfig{Audience: "aws-workload-identity-provider:meshfed", TokenPath: "/var/run/secrets/workload-identity/aws/token"},
 				Azure:           &client.MeshRunnerWifProviderConfig{Audience: "api://AzureADTokenExchange", TokenPath: "/var/run/secrets/workload-identity/azure/token"},
 			},
+		},
+		Status: &client.MeshBuildingBlockRunnerStatus{
+			LastSeen:         new("2026-01-01T00:00:00Z"),
+			LastKnownVersion: new("1.0.0"),
 		},
 	}
 }
@@ -55,7 +58,6 @@ func (m MeshBuildingBlockRunnerClient) Create(_ context.Context, runner client.M
 			Uuid:             new(runnerUuid),
 			OwnedByWorkspace: runner.Metadata.OwnedByWorkspace,
 			CreatedOn:        new("2026-01-01T00:00:00Z"),
-			LastSeen:         new("2026-01-01T00:00:00Z"),
 		},
 		Spec: client.MeshBuildingBlockRunnerSpec{
 			DisplayName:                runner.Spec.DisplayName,
@@ -65,6 +67,7 @@ func (m MeshBuildingBlockRunnerClient) Create(_ context.Context, runner client.M
 			IsSelfHosted:               new(true),
 			WorkloadIdentityFederation: runner.Spec.WorkloadIdentityFederation,
 		},
+		Status: &client.MeshBuildingBlockRunnerStatus{},
 	}
 	m.Store.Set(runnerUuid, created)
 	return created, nil

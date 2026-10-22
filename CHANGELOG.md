@@ -1,3 +1,15 @@
+# v0.26.9
+
+BREAKING CHANGES:
+- `meshstack_building_block_runner`: `metadata.last_seen` is now `status.last_seen`, so `metadata` only holds what
+  identifies the runner. Update references to it. Needs meshStack 2026.44.0 or later; `status` is null on older
+  versions.
+
+FEATURES:
+- `meshstack_building_block_runner`: new `status.last_known_version`, the version the runner reported when it last
+  polled for work. Together with `status.last_seen` it tells a module whether a self-hosted runner is alive and up to
+  date, and a `mock_provider` test can now set both.
+
 # v0.26.8
 
 BREAKING CHANGES:

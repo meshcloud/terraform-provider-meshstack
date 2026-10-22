@@ -68,6 +68,7 @@ resource "meshstack_building_block_runner" "example_with_wif" {
 ### Read-Only
 
 - `ref` (Attributes) Reference to this runner, can be used in building block definitions. (see [below for nested schema](#nestedatt--ref))
+- `status` (Attributes) What meshStack last observed of the runner. It changes whenever the runner polls for work. (see [below for nested schema](#nestedatt--status))
 
 <a id="nestedatt--metadata"></a>
 ### Nested Schema for `metadata`
@@ -79,7 +80,6 @@ Required:
 Read-Only:
 
 - `created_on` (String) Timestamp when the runner was created (ISO 8601).
-- `last_seen` (String) Timestamp when the runner last connected to meshStack (ISO 8601).
 - `uuid` (String) Unique identifier of the runner. Assigned by meshStack on creation.
 
 
@@ -151,3 +151,12 @@ Read-Only:
 
 - `kind` (String) meshObject type, always `meshBuildingBlockRunner`.
 - `uuid` (String) UUID (`metadata.uuid`) of `meshBuildingBlockRunner`.
+
+
+<a id="nestedatt--status"></a>
+### Nested Schema for `status`
+
+Read-Only:
+
+- `last_known_version` (String) Version the runner reported when it last polled for work. Null if it has never reported one.
+- `last_seen` (String) Timestamp when the runner last polled meshStack for work (ISO 8601). Null if it has never connected.
