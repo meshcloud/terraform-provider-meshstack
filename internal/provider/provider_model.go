@@ -23,7 +23,7 @@ var modelAttributes = func() (result map[string]providerModelAttribute) {
 	result = map[string]providerModelAttribute{
 		"endpoint":  {Setting: setting.Endpoint},
 		"profile":   {Setting: setting.Profile},
-		"workspace": {Setting: setting.Workspace, ExtraDescription: "Leaving this empty takes the profile's default workspace, which `meshstack login` stores. An API key or an API token needs no workspace."},
+		"workspace": {Setting: setting.Workspace, ExtraDescription: "A browser login needs this or `MESHSTACK_WORKSPACE`: the provider does not take the profile's default workspace, which `meshstack login` stores. An API key or an API token needs no workspace."},
 		"apikey":    {Setting: setting.ApiKeyClientId, ExtraDescription: fmt.Sprintf("Setting this here with the secret in `%s` keeps the secret out of the configuration and out of state.", setting.ApiKeyClientSecret.EnvKey())},
 		"apisecret": {Setting: setting.ApiKeyClientSecret, Sensitive: true, ExtraDescription: "Always set this through the environment: a value set here is written to Terraform state."},
 		"apitoken":  {Setting: setting.ApiToken, Sensitive: true, ExtraDescription: "Always set this through the environment: a value set here is written to Terraform state."},

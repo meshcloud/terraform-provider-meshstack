@@ -1,3 +1,13 @@
+# v0.26.8
+
+BREAKING CHANGES:
+- `provider` block: this only affects you if the provider authenticates with a browser login of the
+  [meshStack CLI](https://github.com/meshcloud/meshstack-cli) (`meshstack login`). With such a
+  login, you now have to set the workspace explicitly, in the provider block or in
+  `MESHSTACK_WORKSPACE`. This way, the outcome of a `tofu apply` no longer depends on which default
+  workspace the person applying it stored with `meshstack login`. An API key or an API token is not
+  affected.
+
 # v0.26.7
 
 FEATURES:

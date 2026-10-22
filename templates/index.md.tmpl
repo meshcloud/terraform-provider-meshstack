@@ -19,7 +19,8 @@ The meshStack terraform provider is an open-source tool, licensed under the Apac
 
 * **[meshStack CLI](https://github.com/meshcloud/meshstack-cli):** Use the current meshStack CLI profile or select an existing profile by setting the `profile` provider argument or `MESHSTACK_PROFILE`.
   * The provider refreshes stored browser logins automatically but never opens a browser.
-  * Browser logins require a workspace identifier set via the `workspace` provider argument, `MESHSTACK_WORKSPACE`, or the profile’s default workspace saved during login.
+  * Browser logins require a workspace identifier set via the `workspace` provider argument or `MESHSTACK_WORKSPACE`. The provider does not use the profile's default workspace saved during login, so a configuration acts in the same workspace for everyone who applies it.
+  * That workspace only decides which of your workspace roles the provider acts with. A resource names its own workspace, such as `metadata.owned_by_workspace` of `meshstack_project`, so an Organization Admin still manages the resources of every workspace.
 * **API key (recommended for automation):** Set `MESHSTACK_API_KEY` (the key's client ID) and `MESHSTACK_API_SECRET`.
 * **Existing access token:** Set `MESHSTACK_API_TOKEN` (for example, from a building block run). The provider does not renew tokens or change their workspace scope.
 
@@ -30,7 +31,7 @@ Setting `endpoint` or `MESHSTACK_ENDPOINT` is required, unless a CLI profile sup
 ### Precedence and Defaults
 
 Provider arguments take precedence over their `MESHSTACK_*` environment variable counterparts, listed in the schema below.
-A CLI profile supplies endpoint and workspace defaults.
+A CLI profile supplies the endpoint default.
 Its stored credentials are used only when no API key or access token is configured explicitly.
 An incomplete API key configuration fails rather than using a profile's stored secret.
 
