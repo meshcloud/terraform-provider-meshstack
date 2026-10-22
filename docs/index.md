@@ -65,7 +65,7 @@ provider "meshstack" {
 
 ```terraform
 # A browser login acts in one workspace per provider block, so manage several workspaces with an
-# aliased block each, as with one `azurerm` block per subscription. Your login needs a role in each.
+# aliased block each
 provider "meshstack" {
   alias     = "team_a"
   workspace = "team-a-ab12c"
