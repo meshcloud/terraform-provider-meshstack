@@ -168,6 +168,6 @@ resource "meshstack_building_block_definition" "example_01_terraform" {
     }
 
     # Optional: Dependencies on other building blocks, prefer using .ref output attributes.
-    dependency_refs = [one(data.meshstack_building_block_definitions.example.building_block_definitions).ref]
+    dependency_refs = [data.meshstack_building_block_definition.example.ref]
   }
 }

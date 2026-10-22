@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/compare"
@@ -21,7 +22,8 @@ func TestAccBuildingBlockDefinitionDataSource(t *testing.T) {
 		var dataSourceAddress testconfig.Traversal
 		config := testconfig.DataSource{Name: "building_block_definition"}.Config(t).WithFirstBlock(
 			testconfig.ExtractAddress(&dataSourceAddress),
-			testconfig.Descend("metadata", "uuid")(testconfig.SetAddr(buildingBlockDefinitionAddr, "metadata", "uuid")),
+			testconfig.Descend("spec")(testconfig.RemoveKey()),
+			testconfig.Descend("metadata")(testconfig.SetRawExpr("{ uuid = %s }", buildingBlockDefinitionAddr.Join("metadata", "uuid"))),
 		).Join(buildingBlockDefinitionConfig)
 
 		versionRef := knownvalue.ObjectPartial(map[string]knownvalue.Check{
@@ -52,6 +54,44 @@ func TestAccBuildingBlockDefinitionDataSource(t *testing.T) {
 		}})
 	})
 
+	t.Run("filters", func(t *testing.T) {
+		definitionConfig, definitionAddr := testconfig.BBDManual(t)
+		dataSourceAddr := testconfig.Traversal{"data.meshstack_building_block_definition", "example"}
+		example := testconfig.DataSource{Name: "building_block_definition"}.Config(t)
+
+		// Parallel tests create definitions of the same display name, so the workspace keeps the lookup unique.
+		byDisplayName := example.WithFirstBlock(
+			testconfig.Descend("spec")(testconfig.SetRawExpr("{ display_name = %s }", definitionAddr.Join("spec", "display_name"))),
+			testconfig.Descend("metadata")(testconfig.SetRawExpr("{ owned_by_workspace = %s }", definitionAddr.Join("metadata", "owned_by_workspace"))),
+		).Join(definitionConfig)
+		unknownName := example.WithFirstBlock(
+			testconfig.Descend("spec")(testconfig.SetRawExpr(`{ display_name = "No Such Building Block" }`)),
+			testconfig.Descend("metadata")(testconfig.SetRawExpr("{ owned_by_workspace = %s }", definitionAddr.Join("metadata", "owned_by_workspace"))),
+		).Join(definitionConfig)
+		uuidWithOtherTargetType := example.WithFirstBlock(
+			testconfig.Descend("spec")(testconfig.SetRawExpr(`{ target_type = "TENANT_LEVEL" }`)),
+			testconfig.Descend("metadata")(testconfig.SetRawExpr("{ uuid = %s }", definitionAddr.Join("metadata", "uuid"))),
+		).Join(definitionConfig)
+
+		ApplyAndTest(t, resource.TestCase{Steps: []resource.TestStep{
+			{
+				Config: byDisplayName.String(),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.CompareValuePairs(dataSourceAddr.String(), tfjsonpath.New("ref"), definitionAddr.String(), tfjsonpath.New("ref"), compare.ValuesSame()),
+					statecheck.ExpectKnownValue(dataSourceAddr.String(), tfjsonpath.New("spec").AtMapKey("target_type"), knownvalue.StringExact("WORKSPACE_LEVEL")),
+				},
+			},
+			{
+				Config:      unknownName.String(),
+				ExpectError: regexp.MustCompile(`(?s)No building block definition that you can see matches.*spec.display_name\s+=\s+"No\s+Such\s+Building\s+Block"`),
+			},
+			{
+				Config:      uuidWithOtherTargetType.String(),
+				ExpectError: regexp.MustCompile(`No building block definition that you can see matches\s+metadata.uuid`),
+			},
+		}})
+	})
+
 	t.Run("cross-workspace read", func(t *testing.T) {
 		if IsMockClientTest() {
 			t.Skip("cross-workspace test requires real permission boundaries")
@@ -67,7 +107,8 @@ func TestAccBuildingBlockDefinitionDataSource(t *testing.T) {
 		var dataSourceAddress testconfig.Traversal
 		config := testconfig.DataSource{Name: "building_block_definition"}.Config(t).WithFirstBlock(
 			testconfig.ExtractAddress(&dataSourceAddress),
-			testconfig.Descend("metadata", "uuid")(testconfig.SetAddr(buildingBlockDefinitionAddr, "metadata", "uuid")),
+			testconfig.Descend("spec")(testconfig.RemoveKey()),
+			testconfig.Descend("metadata")(testconfig.SetRawExpr("{ uuid = %s }", buildingBlockDefinitionAddr.Join("metadata", "uuid"))),
 			testconfig.Descend("provider")(testconfig.SetRawExpr("meshstack-other")),
 		).Join(supportConfig, testconfig.OtherProviderConfig(t))
 
