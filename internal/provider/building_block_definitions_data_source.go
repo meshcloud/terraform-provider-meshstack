@@ -91,7 +91,6 @@ func buildingBlockDefinitionDataSourceAttributes() map[string]schema.Attribute {
 		"content_hash": schema.StringAttribute{
 			MarkdownDescription: "Content hash of the version. Null when accessing cross-workspace definitions without sufficient permissions.",
 			Computed:            true,
-			Optional:            true,
 		},
 		"workload_identity_federation": dataSourceVersionWifAttribute(
 			"The identity a run of this version presents to a cloud: the subject template of the version's runner, " +

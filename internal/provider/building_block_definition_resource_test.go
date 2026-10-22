@@ -48,11 +48,9 @@ func setBBDPolicies(t *testing.T, config testconfig.Config, approvalPolicies, sc
 
 // ascendingVersionsExact checks the versions numbered 1, 2, … in that order.
 func ascendingVersionsExact(versions ...knownvalue.Check) knownvalue.Check {
-	byKey := make(map[string]knownvalue.Check, 2*len(versions))
+	byKey := make(map[string]knownvalue.Check, len(versions))
 	for position, version := range versions {
-		for _, key := range versionKeys(position, int64(position+1)) {
-			byKey[key] = version
-		}
+		byKey[versionKey(int64(position+1))] = version
 	}
 	return xknownvalue.MapExact(byKey)
 }

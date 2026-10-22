@@ -1,14 +1,20 @@
 package provider
 
 import (
+	"context"
+	"net/http"
 	"regexp"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-testing/compare"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
+	"github.com/meshcloud/meshstack-cli/client"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/zclconf/go-cty/cty"
 
 	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
@@ -135,5 +141,47 @@ func TestAccBuildingBlockDefinitionDataSource(t *testing.T) {
 				},
 			},
 		}})
+	})
+}
+
+type stubBuildingBlockDefinitionClient struct {
+	client.MeshBuildingBlockDefinitionClient
+	listed  []client.MeshBuildingBlockDefinition
+	readErr error
+}
+
+func (s stubBuildingBlockDefinitionClient) List(context.Context, *string) ([]client.MeshBuildingBlockDefinition, error) {
+	return s.listed, nil
+}
+
+func (s stubBuildingBlockDefinitionClient) Read(context.Context, string) (*client.MeshBuildingBlockDefinition, error) {
+	return nil, s.readErr
+}
+
+func Test_buildingBlockDefinitionDataSourceCandidates(t *testing.T) {
+	t.Run("reports a uuid the caller may not read as not found", func(t *testing.T) {
+		dataSource := buildingBlockDefinitionDataSource{
+			meshBuildingBlockDefinitionClient: stubBuildingBlockDefinitionClient{readErr: client.HttpError{StatusCode: http.StatusForbidden}},
+		}
+		filter := buildingBlockDefinitionFilter{Uuid: new("unpublished-uuid")}
+
+		var diags diag.Diagnostics
+		filter.only(dataSource.candidates(t.Context(), filter, &diags), &diags)
+
+		require.Len(t, diags, 1)
+		assert.Equal(t, "Building block definition not found", diags[0].Summary())
+	})
+
+	t.Run("reports a listed definition without uuid", func(t *testing.T) {
+		dataSource := buildingBlockDefinitionDataSource{
+			meshBuildingBlockDefinitionClient: stubBuildingBlockDefinitionClient{listed: []client.MeshBuildingBlockDefinition{{}}},
+		}
+
+		var diags diag.Diagnostics
+		candidates := dataSource.candidates(t.Context(), buildingBlockDefinitionFilter{DisplayName: new("")}, &diags)
+
+		assert.Nil(t, candidates)
+		require.Len(t, diags, 1)
+		assert.Equal(t, "Building block definition UUID missing", diags[0].Summary())
 	})
 }

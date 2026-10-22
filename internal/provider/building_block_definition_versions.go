@@ -7,8 +7,6 @@ import (
 	"maps"
 	"math/big"
 	"slices"
-	"strconv"
-	"strings"
 	"sync"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -18,20 +16,16 @@ import (
 )
 
 const versionsKeyDescription = "Keyed by `v<number>`, such as `versions[\"v2\"]`. " +
-	"Each version is also keyed by its position in ascending order, so `versions[0]` still works as it did while this was a list. " +
-	"These position keys are deprecated, so iterate over the `v<number>` keys only."
+	"A `for` expression visits the keys in lexical order, so `v10` comes before `v2`."
 
-// versionKeys keeps `versions[0]` working from the time `versions` was a list.
-func versionKeys(position int, number int64) [2]string {
-	return [2]string{fmt.Sprintf("v%d", number), strconv.Itoa(position)}
+func versionKey(number int64) string {
+	return fmt.Sprintf("v%d", number)
 }
 
 func versionsByKey[V any](ascending []V, number func(V) int64) map[string]V {
-	byKey := make(map[string]V, 2*len(ascending))
-	for position, version := range ascending {
-		for _, key := range versionKeys(position, number(version)) {
-			byKey[key] = version
-		}
+	byKey := make(map[string]V, len(ascending))
+	for _, version := range ascending {
+		byKey[versionKey(number(version))] = version
 	}
 	return byKey
 }
@@ -41,16 +35,9 @@ func (ref buildingBlockDefinitionVersionRef) number() int64 {
 }
 
 func ascendingVersions(byKey map[string]buildingBlockDefinitionVersionRef) []buildingBlockDefinitionVersionRef {
-	var ascending []buildingBlockDefinitionVersionRef
-	for key, version := range byKey {
-		if strings.HasPrefix(key, "v") {
-			ascending = append(ascending, version)
-		}
-	}
-	slices.SortFunc(ascending, func(a, b buildingBlockDefinitionVersionRef) int {
+	return slices.SortedFunc(maps.Values(byKey), func(a, b buildingBlockDefinitionVersionRef) int {
 		return cmp.Compare(a.number(), b.number())
 	})
-	return ascending
 }
 
 var buildingBlockDefinitionSchemaV0Once = sync.OnceValue(func() schema.Schema {
@@ -94,8 +81,8 @@ func (r *buildingBlockDefinitionResource) upgradeVersionsListToMap(ctx context.C
 		resp.Diagnostics.AddError("Cannot read versions from the prior building block definition state", err.Error())
 		return
 	}
-	byKey := make(map[string]tftypes.Value, 2*len(ascending))
-	for position, version := range ascending {
+	byKey := make(map[string]tftypes.Value, len(ascending))
+	for _, version := range ascending {
 		var fields map[string]tftypes.Value
 		var number big.Float
 		if err := version.As(&fields); err != nil {
@@ -107,9 +94,7 @@ func (r *buildingBlockDefinitionResource) upgradeVersionsListToMap(ctx context.C
 			return
 		}
 		numberInt, _ := number.Int64()
-		for _, key := range versionKeys(position, numberInt) {
-			byKey[key] = version
-		}
+		byKey[versionKey(numberInt)] = version
 	}
 	if attributes["versions"].IsNull() {
 		byKey = nil

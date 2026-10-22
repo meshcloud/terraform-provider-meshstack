@@ -12,10 +12,9 @@ BREAKING CHANGES:
   null before.
 - `meshstack_building_block_definition` resource and the `meshstack_building_block_definitions` data source:
   `versions` is a map keyed by `v<number>` instead of a list, so `versions["v3"]` is version 3 even after an older
-  version is gone. Each version is also keyed by its position, so `versions[0]` keeps working; these keys are
-  deprecated. Because of them, `length(versions)` counts every version twice, `versions[length(versions) - 1]` fails,
-  and a `for` expression over `versions` sees every version twice; filter it to the `v` keys, or use `version_latest`
-  and `version_latest_release`. Existing state upgrades on its own.
+  version is gone. Write `versions["v1"]` in place of `versions[0]`, or use `version_latest` and
+  `version_latest_release`. A `for` expression over `versions` visits the keys in lexical order, so `v10` comes before
+  `v2`. Existing state upgrades on its own.
 
 FEATURES:
 - `meshstack_building_block_runner`: new `status.last_known_version`, the version the runner reported when it last
@@ -31,8 +30,8 @@ FEATURES:
   binding by name.
 
 FIXES:
-- `meshstack_building_block_definitions`: `version_latest_release` is read-only in the documentation; it was listed
-  as optional although it cannot be set.
+- `meshstack_building_block_definitions`: `version_latest_release` and the `content_hash` of each version are
+  read-only in the documentation; they were listed as optional although they cannot be set.
 
 # v0.26.8
 

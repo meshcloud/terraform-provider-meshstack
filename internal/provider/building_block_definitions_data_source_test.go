@@ -286,8 +286,6 @@ func Test_buildVersionRefsFromStatus(t *testing.T) {
 			Versions: map[string]buildingBlockDefinitionDataSourceVersionRefModel{
 				"v1": {Uuid: releasedUuid, Number: 1, State: "RELEASED", WorkloadIdentityFederation: releasedWif},
 				"v2": {Uuid: draftUuid, Number: 2, State: "DRAFT"},
-				"0":  {Uuid: releasedUuid, Number: 1, State: "RELEASED", WorkloadIdentityFederation: releasedWif},
-				"1":  {Uuid: draftUuid, Number: 2, State: "DRAFT"},
 			},
 			VersionLatest:        buildingBlockDefinitionDataSourceVersionRefModel{Uuid: draftUuid, Number: 2, State: "DRAFT"},
 			VersionLatestRelease: &buildingBlockDefinitionDataSourceVersionRefModel{Uuid: releasedUuid, Number: 1, State: "RELEASED", WorkloadIdentityFederation: releasedWif},

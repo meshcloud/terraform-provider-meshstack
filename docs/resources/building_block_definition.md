@@ -394,7 +394,7 @@ resource "meshstack_building_block_definition" "example_05_gitlab_pipeline" {
 
 - `ref` (Attributes) Reference to this building block definition. Reuse in `version_spec.dependency_refs` of other building block definitions. (see [below for nested schema](#nestedatt--ref))
 - `version_latest` (Attributes) Latest version (including drafts). Useful for wiring `meshstack_building_block_v2.spec.building_block_definition_version_ref`. (see [below for nested schema](#nestedatt--version_latest))
-- `versions` (Attributes Map) All versions of this building block definition. Never empty. Keyed by `v<number>`, such as `versions["v2"]`. Each version is also keyed by its position in ascending order, so `versions[0]` still works as it did while this was a list. These position keys are deprecated, so iterate over the `v<number>` keys only. (see [below for nested schema](#nestedatt--versions))
+- `versions` (Attributes Map) All versions of this building block definition. Never empty. Keyed by `v<number>`, such as `versions["v2"]`. A `for` expression visits the keys in lexical order, so `v10` comes before `v2`. (see [below for nested schema](#nestedatt--versions))
 
 <a id="nestedatt--metadata"></a>
 ### Nested Schema for `metadata`

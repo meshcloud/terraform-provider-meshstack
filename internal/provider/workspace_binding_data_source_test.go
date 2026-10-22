@@ -13,20 +13,29 @@ import (
 )
 
 func TestAccWorkspaceGroupBindingDataSource(t *testing.T) {
+	testAccWorkspaceBindingDataSource(t, "workspace_group_binding", "my-user-group")
+}
+
+func TestAccWorkspaceUserBindingDataSource(t *testing.T) {
+	testAccWorkspaceBindingDataSource(t, "workspace_user_binding", "user@meshcloud.io")
+}
+
+func testAccWorkspaceBindingDataSource(t *testing.T, name, subjectName string) {
+	t.Helper()
 	if !IsMockClientTest() {
-		t.Skip("Skipping: requires user group 'my-user-group' in local meshStack")
+		t.Skipf("Skipping: requires subject '%s' in local meshStack", subjectName)
 	}
 
 	workspaceConfig, workspaceAddr := testconfig.Workspace(t)
 
 	var bindingAddr testconfig.Traversal
-	bindingConfig := testconfig.Resource{Name: "workspace_group_binding"}.Config(t).WithFirstBlock(
+	bindingConfig := testconfig.Resource{Name: name}.Config(t).WithFirstBlock(
 		testconfig.ExtractAddress(&bindingAddr),
 		testconfig.Descend("target_ref", "name")(testconfig.SetAddr(workspaceAddr, "metadata", "name")),
 	)
 
 	var dataSourceAddress testconfig.Traversal
-	config := testconfig.DataSource{Name: "workspace_group_binding"}.Config(t).WithFirstBlock(
+	config := testconfig.DataSource{Name: name}.Config(t).WithFirstBlock(
 		testconfig.ExtractAddress(&dataSourceAddress),
 		testconfig.Descend("metadata", "name")(testconfig.SetAddr(bindingAddr, "metadata", "name")),
 	).Join(bindingConfig, workspaceConfig)
@@ -39,7 +48,7 @@ func TestAccWorkspaceGroupBindingDataSource(t *testing.T) {
 					statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("metadata").AtMapKey("name"), knownvalue.StringExact("this-is-an-example")),
 					statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("role_ref").AtMapKey("name"), knownvalue.StringExact("Workspace Member")),
 					statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("target_ref").AtMapKey("name"), xknownvalue.NotEmptyString()),
-					statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("subject").AtMapKey("name"), knownvalue.StringExact("my-user-group")),
+					statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("subject").AtMapKey("name"), knownvalue.StringExact(subjectName)),
 					statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("expiry_date"), knownvalue.StringExact("2026-12-31")),
 				},
 			},
