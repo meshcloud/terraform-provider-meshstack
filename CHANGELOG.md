@@ -4,8 +4,6 @@ BREAKING CHANGES:
 - `meshstack_building_block_runner`: `metadata.last_seen` is now `status.last_seen`, so `metadata` only holds what
   identifies the runner. Update references to it. Needs meshStack 2026.44.0 or later; `status` is null on older
   versions.
-
-BREAKING CHANGES:
 - `meshstack_building_block_definition` and the `meshstack_building_block_definitions` data source: `versions` is a
   map keyed by `v<number>` instead of a list, so `versions["v3"]` is version 3 even after an older version is gone.
   Each version is also keyed by its position, so `versions[0]` keeps working; these keys are deprecated. Because of
@@ -16,8 +14,11 @@ BREAKING CHANGES:
 FEATURES:
 - `meshstack_building_block_runner`: new `status.last_known_version`, the version the runner reported when it last
   polled for work.
-- New data source `meshstack_building_block_definition`: reads one definition by UUID, with the same `versions`,
-  `version_latest`, `version_latest_release` and `ref` as an entry of `meshstack_building_block_definitions`.
+- New data source `meshstack_building_block_definition`: reads the one definition that matches what you set of
+  `metadata.uuid`, `metadata.owned_by_workspace`, `spec.display_name` and `spec.target_type`, among your workspace's own
+  and all published definitions. It fails when no definition or several definitions match. It returns the same
+  `versions`, `version_latest`, `version_latest_release` and `ref` as an entry of `meshstack_building_block_definitions`,
+  and replaces the `one(...)` filter over that data source.
 - New data source `meshstack_location`: reads a location by name, including the `ref` a platform takes as
   `location_ref`.
 - New data sources `meshstack_workspace_group_binding` and `meshstack_workspace_user_binding`: read a workspace
