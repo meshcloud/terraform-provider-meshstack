@@ -138,10 +138,6 @@ func (r *buildingBlockRunnerResource) Schema(_ context.Context, _ resource.Schem
 						Computed:            true,
 						PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 					},
-					"last_seen": schema.StringAttribute{
-						MarkdownDescription: "Timestamp when the runner last connected to meshStack (ISO 8601).",
-						Computed:            true,
-					},
 				},
 			},
 			"spec": schema.SingleNestedAttribute{
@@ -190,6 +186,20 @@ func (r *buildingBlockRunnerResource) Schema(_ context.Context, _ resource.Schem
 						MarkdownDescription: "Optional workload identity federation configuration. When provided, at least one of `gcp`, `aws`, or `azure` must be set.",
 						Optional:            true,
 						Attributes:          wifAttributes,
+					},
+				},
+			},
+			"status": schema.SingleNestedAttribute{
+				MarkdownDescription: "What meshStack last observed of the runner. It changes whenever the runner polls for work.",
+				Computed:            true,
+				Attributes: map[string]schema.Attribute{
+					"last_seen": schema.StringAttribute{
+						MarkdownDescription: "Timestamp when the runner last polled meshStack for work (ISO 8601). Null if it has never connected.",
+						Computed:            true,
+					},
+					"last_known_version": schema.StringAttribute{
+						MarkdownDescription: "Version the runner reported when it last polled for work. Null if it has never reported one.",
+						Computed:            true,
 					},
 				},
 			},
