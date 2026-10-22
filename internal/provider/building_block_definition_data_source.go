@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -53,7 +54,8 @@ func (d *buildingBlockDefinitionDataSource) Schema(_ context.Context, _ datasour
 		MarkdownDescription: "Read the one building block definition that matches what you set in `metadata` and `spec`, " +
 			"such as `spec.display_name`, the name the marketplace in meshPanel shows. " +
 			"It searches your workspace's own and all published definitions, and fails unless exactly one of them matches. " +
-			"Assign `version_latest_release`, or a version such as `versions[\"v2\"]`, to `building_block_definition_version_ref` of a building block. " +
+			"Assign `version_latest`, `version_latest_release` once a version is released, or a version such as `versions[\"v2\"]` " +
+			"to `building_block_definition_version_ref` of a building block. " +
 			"This data source performs an additional API call to load all versions of the definition." +
 			"\n\n" +
 			"**Cross-Workspace Access**: When accessing building block definitions from workspaces other than your own " +
@@ -101,10 +103,23 @@ func (d *buildingBlockDefinitionDataSource) candidates(ctx context.Context, filt
 		definitions, err := d.meshBuildingBlockDefinitionClient.List(ctx, filter.OwnedByWorkspace)
 		if err != nil {
 			diags.AddError("Unable to list building block definitions", err.Error())
+			return nil
+		}
+		for _, definition := range definitions {
+			if definition.Metadata.Uuid == nil {
+				diags.AddError(
+					"Building block definition UUID missing",
+					"API returned a building block definition without metadata.uuid, which cannot be represented in this data source.",
+				)
+				return nil
+			}
 		}
 		return definitions
 	}
 	definition, err := d.meshBuildingBlockDefinitionClient.Read(ctx, *filter.Uuid)
+	if httpErr, isHttpErr := errors.AsType[client.HttpError](err); isHttpErr && httpErr.IsForbidden() {
+		return nil
+	}
 	if err != nil {
 		diags.AddError("Unable to read building block definition", err.Error())
 	}

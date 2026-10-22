@@ -59,7 +59,7 @@ Read-Only:
 - `spec` (Attributes) Key specification fields for selecting a definition. (see [below for nested schema](#nestedatt--building_block_definitions--spec))
 - `version_latest` (Attributes) Latest version (including drafts). Useful for BB specs that may target drafts. (see [below for nested schema](#nestedatt--building_block_definitions--version_latest))
 - `version_latest_release` (Attributes) Latest released version. Null when no release exists yet. (see [below for nested schema](#nestedatt--building_block_definitions--version_latest_release))
-- `versions` (Attributes Map) All available versions. Keyed by `v<number>`, such as `versions["v2"]`. Each version is also keyed by its position in ascending order, so `versions[0]` still works as it did while this was a list. These position keys are deprecated, so iterate over the `v<number>` keys only. (see [below for nested schema](#nestedatt--building_block_definitions--versions))
+- `versions` (Attributes Map) All available versions. Keyed by `v<number>`, such as `versions["v2"]`. A `for` expression visits the keys in lexical order, so `v10` comes before `v2`. (see [below for nested schema](#nestedatt--building_block_definitions--versions))
 
 <a id="nestedatt--building_block_definitions--metadata"></a>
 ### Nested Schema for `building_block_definitions.metadata`
@@ -91,12 +91,9 @@ Read-Only:
 <a id="nestedatt--building_block_definitions--version_latest"></a>
 ### Nested Schema for `building_block_definitions.version_latest`
 
-Optional:
-
-- `content_hash` (String) Content hash of the version. Null when accessing cross-workspace definitions without sufficient permissions.
-
 Read-Only:
 
+- `content_hash` (String) Content hash of the version. Null when accessing cross-workspace definitions without sufficient permissions.
 - `number` (Number) Version number.
 - `state` (String) State of the version.
 - `uuid` (String) UUID of the version.
@@ -145,12 +142,9 @@ Read-Only:
 <a id="nestedatt--building_block_definitions--version_latest_release"></a>
 ### Nested Schema for `building_block_definitions.version_latest_release`
 
-Optional:
-
-- `content_hash` (String) Content hash of the version. Null when accessing cross-workspace definitions without sufficient permissions.
-
 Read-Only:
 
+- `content_hash` (String) Content hash of the version. Null when accessing cross-workspace definitions without sufficient permissions.
 - `number` (Number) Version number.
 - `state` (String) State of the version.
 - `uuid` (String) UUID of the version.
@@ -199,12 +193,9 @@ Read-Only:
 <a id="nestedatt--building_block_definitions--versions"></a>
 ### Nested Schema for `building_block_definitions.versions`
 
-Optional:
-
-- `content_hash` (String) Content hash of the version. Null when accessing cross-workspace definitions without sufficient permissions.
-
 Read-Only:
 
+- `content_hash` (String) Content hash of the version. Null when accessing cross-workspace definitions without sufficient permissions.
 - `number` (Number) Version number.
 - `state` (String) State of the version.
 - `uuid` (String) UUID of the version.

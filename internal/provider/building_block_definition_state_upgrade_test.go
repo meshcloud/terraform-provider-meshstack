@@ -30,7 +30,7 @@ func TestBuildingBlockDefinitionUpgradeState(t *testing.T) {
 		require.True(t, ok)
 		uuids[key] = uuid.ValueString()
 	}
-	assert.Equal(t, map[string]string{"v1": "uuid-1", "v2": "uuid-2", "0": "uuid-1", "1": "uuid-2"}, uuids)
+	assert.Equal(t, map[string]string{"v1": "uuid-1", "v2": "uuid-2"}, uuids)
 
 	var metadataUuid string
 	upgraded.Attribute("metadata.uuid", &metadataUuid)

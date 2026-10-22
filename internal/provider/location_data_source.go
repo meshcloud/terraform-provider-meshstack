@@ -39,28 +39,16 @@ func (d *locationDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 						MarkdownDescription: "Location identifier.",
 						Required:            true,
 					},
-					"owned_by_workspace": schema.StringAttribute{
-						MarkdownDescription: "Identifier of the workspace that owns this location.",
-						Computed:            true,
-					},
-					"uuid": schema.StringAttribute{
-						MarkdownDescription: "Unique identifier of the location (server-generated).",
-						Computed:            true,
-					},
+					"owned_by_workspace": computedString("Identifier of the workspace that owns this location."),
+					"uuid":               computedString("Unique identifier of the location (server-generated)."),
 				},
 			},
 
 			"spec": schema.SingleNestedAttribute{
 				Computed: true,
 				Attributes: map[string]schema.Attribute{
-					"display_name": schema.StringAttribute{
-						MarkdownDescription: "The human-readable display name of the location.",
-						Computed:            true,
-					},
-					"description": schema.StringAttribute{
-						MarkdownDescription: "The description of the location.",
-						Computed:            true,
-					},
+					"display_name": computedString("The human-readable display name of the location."),
+					"description":  computedString("The description of the location."),
 				},
 			},
 

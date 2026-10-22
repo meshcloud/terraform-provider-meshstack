@@ -13,7 +13,8 @@ data "meshstack_building_block_definition" "example" {
 #
 #   resource "meshstack_building_block" "example" {
 #     spec = {
-#       building_block_definition_version_ref = data.meshstack_building_block_definition.example.version_latest_release
+#       # version_latest_release targets released versions only, and is null until the first release
+#       building_block_definition_version_ref = data.meshstack_building_block_definition.example.version_latest
 #       # ...
 #     }
 #   }

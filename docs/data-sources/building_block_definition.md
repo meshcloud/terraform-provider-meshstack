@@ -3,14 +3,14 @@
 page_title: "meshstack_building_block_definition Data Source - terraform-provider-meshstack"
 subcategory: ""
 description: |-
-  Read the one building block definition that matches what you set in metadata and spec, such as spec.display_name, the name the marketplace in meshPanel shows. It searches your workspace's own and all published definitions, and fails unless exactly one of them matches. Assign version_latest_release, or a version such as versions["v2"], to building_block_definition_version_ref of a building block. This data source performs an additional API call to load all versions of the definition.
+  Read the one building block definition that matches what you set in metadata and spec, such as spec.display_name, the name the marketplace in meshPanel shows. It searches your workspace's own and all published definitions, and fails unless exactly one of them matches. Assign version_latest, version_latest_release once a version is released, or a version such as versions["v2"] to building_block_definition_version_ref of a building block. This data source performs an additional API call to load all versions of the definition.
   Cross-Workspace Access: When accessing building block definitions from workspaces other than your own using a workspace-scoped API key, the content_hash attribute will be null as it requires detailed version information that is not accessible without workspace permissions. The versions, version_latest, and version_latest_release attributes will still be populated with uuid, number, state, and workload_identity_federation.
   ~> Preview: This resource is in preview. Breaking changes are possible without prior notice due to changes in the underlying meshStack preview API https://docs.meshcloud.io/api/technical-specifications#preview-endpoints or due to changes in this provider. Please ensure you are running the latest version of the provider and report any bugs via GitHub issues https://github.com/meshcloud/terraform-provider-meshstack/issues or via support@meshcloud.io.
 ---
 
 # meshstack_building_block_definition (Data Source)
 
-Read the one building block definition that matches what you set in `metadata` and `spec`, such as `spec.display_name`, the name the marketplace in meshPanel shows. It searches your workspace's own and all published definitions, and fails unless exactly one of them matches. Assign `version_latest_release`, or a version such as `versions["v2"]`, to `building_block_definition_version_ref` of a building block. This data source performs an additional API call to load all versions of the definition.
+Read the one building block definition that matches what you set in `metadata` and `spec`, such as `spec.display_name`, the name the marketplace in meshPanel shows. It searches your workspace's own and all published definitions, and fails unless exactly one of them matches. Assign `version_latest`, `version_latest_release` once a version is released, or a version such as `versions["v2"]` to `building_block_definition_version_ref` of a building block. This data source performs an additional API call to load all versions of the definition.
 
 **Cross-Workspace Access**: When accessing building block definitions from workspaces other than your own using a workspace-scoped API key, the `content_hash` attribute will be null as it requires detailed version information that is not accessible without workspace permissions. The `versions`, `version_latest`, and `version_latest_release` attributes will still be populated with uuid, number, state, and workload_identity_federation.
 
@@ -36,7 +36,8 @@ data "meshstack_building_block_definition" "example" {
 #
 #   resource "meshstack_building_block" "example" {
 #     spec = {
-#       building_block_definition_version_ref = data.meshstack_building_block_definition.example.version_latest_release
+#       # version_latest_release targets released versions only, and is null until the first release
+#       building_block_definition_version_ref = data.meshstack_building_block_definition.example.version_latest
 #       # ...
 #     }
 #   }
@@ -57,7 +58,7 @@ data "meshstack_building_block_definition" "example" {
 - `ref` (Attributes) Reference to this building block definition (for dependency refs). (see [below for nested schema](#nestedatt--ref))
 - `version_latest` (Attributes) Latest version (including drafts). Useful for BB specs that may target drafts. (see [below for nested schema](#nestedatt--version_latest))
 - `version_latest_release` (Attributes) Latest released version. Null when no release exists yet. (see [below for nested schema](#nestedatt--version_latest_release))
-- `versions` (Attributes Map) All available versions. Keyed by `v<number>`, such as `versions["v2"]`. Each version is also keyed by its position in ascending order, so `versions[0]` still works as it did while this was a list. These position keys are deprecated, so iterate over the `v<number>` keys only. (see [below for nested schema](#nestedatt--versions))
+- `versions` (Attributes Map) All available versions. Keyed by `v<number>`, such as `versions["v2"]`. A `for` expression visits the keys in lexical order, so `v10` comes before `v2`. (see [below for nested schema](#nestedatt--versions))
 
 <a id="nestedatt--metadata"></a>
 ### Nested Schema for `metadata`
@@ -89,12 +90,9 @@ Read-Only:
 <a id="nestedatt--version_latest"></a>
 ### Nested Schema for `version_latest`
 
-Optional:
-
-- `content_hash` (String) Content hash of the version. Null when accessing cross-workspace definitions without sufficient permissions.
-
 Read-Only:
 
+- `content_hash` (String) Content hash of the version. Null when accessing cross-workspace definitions without sufficient permissions.
 - `number` (Number) Version number.
 - `state` (String) State of the version.
 - `uuid` (String) UUID of the version.
@@ -143,12 +141,9 @@ Read-Only:
 <a id="nestedatt--version_latest_release"></a>
 ### Nested Schema for `version_latest_release`
 
-Optional:
-
-- `content_hash` (String) Content hash of the version. Null when accessing cross-workspace definitions without sufficient permissions.
-
 Read-Only:
 
+- `content_hash` (String) Content hash of the version. Null when accessing cross-workspace definitions without sufficient permissions.
 - `number` (Number) Version number.
 - `state` (String) State of the version.
 - `uuid` (String) UUID of the version.
@@ -197,12 +192,9 @@ Read-Only:
 <a id="nestedatt--versions"></a>
 ### Nested Schema for `versions`
 
-Optional:
-
-- `content_hash` (String) Content hash of the version. Null when accessing cross-workspace definitions without sufficient permissions.
-
 Read-Only:
 
+- `content_hash` (String) Content hash of the version. Null when accessing cross-workspace definitions without sufficient permissions.
 - `number` (Number) Version number.
 - `state` (String) State of the version.
 - `uuid` (String) UUID of the version.
