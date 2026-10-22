@@ -135,7 +135,7 @@ func (filter buildingBlockDefinitionFilter) only(candidates []client.MeshBuildin
 			found[i] = fmt.Sprintf("%s (%q in workspace %s)", *match.Metadata.Uuid, match.Spec.DisplayName, match.Metadata.OwnedByWorkspace)
 		}
 		diags.AddError("Building block definition is ambiguous",
-			fmt.Sprintf("%d building block definitions match %s: %s. Set `metadata.owned_by_workspace` or `metadata.uuid` to pick one.",
+			fmt.Sprintf("%d building block definitions match %s: %s. Set `metadata.uuid` to pick exactly one.",
 				len(matches), filter, strings.Join(found, ", ")))
 	}
 	return
