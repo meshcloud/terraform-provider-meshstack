@@ -64,8 +64,8 @@ data "meshstack_building_block_definition" "example" {
 
 Optional:
 
-- `owned_by_workspace` (String) Workspace identifier owning this definition. Set it to look the definition up by it.
-- `uuid` (String) UUID of the building block definition. Set it to look the definition up by it.
+- `owned_by_workspace` (String) Workspace identifier owning this definition. Set it to narrow the lookup.
+- `uuid` (String) UUID of the building block definition. Set it to narrow the lookup.
 
 
 <a id="nestedatt--spec"></a>
@@ -73,8 +73,8 @@ Optional:
 
 Optional:
 
-- `display_name` (String) Display name of the definition. Set it to look the definition up by it.
-- `target_type` (String) Target type (`TENANT_LEVEL` or `WORKSPACE_LEVEL`). Set it to look the definition up by it.
+- `display_name` (String) Display name of the definition. Set it to narrow the lookup.
+- `target_type` (String) Target type (`TENANT_LEVEL` or `WORKSPACE_LEVEL`). Set it to narrow the lookup.
 
 
 <a id="nestedatt--ref"></a>

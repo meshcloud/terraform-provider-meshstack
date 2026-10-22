@@ -1,6 +1,12 @@
-# v0.26.8
+# v0.27.0
 
 BREAKING CHANGES:
+- `meshstack_tag_definition` data source: it has the shape of the other singular data sources. `metadata` and `spec`
+  are top-level attributes, and the `name` input and the `tag_definition` wrapper are gone. Write
+  `metadata = { name = "meshWorkspace.costCenter" }` in place of `name = "meshWorkspace.costCenter"`, and read
+  `data.meshstack_tag_definition.x.spec` in place of `data.meshstack_tag_definition.x.tag_definition.spec`. A lookup by
+  `spec.target_kind` and `spec.key` works as well. The data source fails when no tag definition matches; it returned
+  null before.
 - `meshstack_building_block_definition` and the `meshstack_building_block_definitions` data source: `versions` is a
   map keyed by `v<number>` instead of a list, so `versions["v3"]` is version 3 even after an older version is gone.
   Each version is also keyed by its position, so `versions[0]` keeps working; these keys are deprecated. Because of
