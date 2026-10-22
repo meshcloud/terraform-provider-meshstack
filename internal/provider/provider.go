@@ -81,6 +81,8 @@ func newProviderClient(ctx context.Context, data MeshStackProviderModel, provide
 		Version:        providerVersion,
 		GitHubRepo:     gitHubRepo,
 		SettingSources: setting.SingleSource(data),
+		// The outcome of a `tofu plan` or `tofu apply` must not depend on your profile's default workspace.
+		IgnoreDefaultWorkspace: true,
 	})
 	if err != nil {
 		diags.AddError("Failed to create meshStack client", err.Error())
