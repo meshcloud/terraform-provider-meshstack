@@ -78,8 +78,15 @@ func TestAccBuildingBlockDefinitionDataSource(t *testing.T) {
 			testconfig.Descend("spec")(testconfig.SetRawExpr(`{ target_type = "TENANT_LEVEL" }`)),
 			testconfig.Descend("metadata")(testconfig.SetRawExpr("{ uuid = %s }", definitionAddr.Join("metadata", "uuid"))),
 		).Join(definitionConfig)
+		noFilter := example.WithFirstBlock(
+			testconfig.Descend("spec")(testconfig.RemoveKey()),
+		).Join(definitionConfig)
 
 		ApplyAndTest(t, resource.TestCase{Steps: []resource.TestStep{
+			{
+				Config:      noFilter.String(),
+				ExpectError: regexp.MustCompile(`(?s)At\s+least\s+one\s+of\s+these\s+attributes\s+must\s+be\s+configured.*metadata.uuid`),
+			},
 			{
 				Config: byDisplayName.String(),
 				ConfigStateChecks: []statecheck.StateCheck{

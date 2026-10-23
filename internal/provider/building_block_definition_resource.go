@@ -25,6 +25,7 @@ var (
 	_ resource.ResourceWithImportState    = &buildingBlockDefinitionResource{}
 	_ resource.ResourceWithModifyPlan     = &buildingBlockDefinitionResource{}
 	_ resource.ResourceWithValidateConfig = &buildingBlockDefinitionResource{}
+	_ resource.ResourceWithUpgradeState   = &buildingBlockDefinitionResource{}
 )
 
 func NewBuildingBlockDefinitionResource() resource.Resource {

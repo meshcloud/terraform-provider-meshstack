@@ -33,7 +33,8 @@ func (d *locationDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 
 		Attributes: map[string]schema.Attribute{
 			"metadata": schema.SingleNestedAttribute{
-				Required: true,
+				MarkdownDescription: "Location metadata.",
+				Required:            true,
 				Attributes: map[string]schema.Attribute{
 					"name": schema.StringAttribute{
 						MarkdownDescription: "Location identifier.",
@@ -45,7 +46,8 @@ func (d *locationDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 			},
 
 			"spec": schema.SingleNestedAttribute{
-				Computed: true,
+				MarkdownDescription: "Location specification.",
+				Computed:            true,
 				Attributes: map[string]schema.Attribute{
 					"display_name": computedString("The human-readable display name of the location."),
 					"description":  computedString("The description of the location."),
@@ -53,7 +55,8 @@ func (d *locationDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 			},
 
 			"status": schema.SingleNestedAttribute{
-				Computed: true,
+				MarkdownDescription: "Location status.",
+				Computed:            true,
 				Attributes: map[string]schema.Attribute{
 					"is_public": schema.BoolAttribute{
 						MarkdownDescription: "Indicates whether the location has any public platform instances associated with it.",

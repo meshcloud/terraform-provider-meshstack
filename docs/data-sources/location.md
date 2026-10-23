@@ -25,13 +25,13 @@ data "meshstack_location" "example" {
 
 ### Required
 
-- `metadata` (Attributes) (see [below for nested schema](#nestedatt--metadata))
+- `metadata` (Attributes) Location metadata. (see [below for nested schema](#nestedatt--metadata))
 
 ### Read-Only
 
 - `ref` (Attributes) Reference to this location, can be used as input for `location_ref` in platform resources. (see [below for nested schema](#nestedatt--ref))
-- `spec` (Attributes) (see [below for nested schema](#nestedatt--spec))
-- `status` (Attributes) (see [below for nested schema](#nestedatt--status))
+- `spec` (Attributes) Location specification. (see [below for nested schema](#nestedatt--spec))
+- `status` (Attributes) Location status. (see [below for nested schema](#nestedatt--status))
 
 <a id="nestedatt--metadata"></a>
 ### Nested Schema for `metadata`

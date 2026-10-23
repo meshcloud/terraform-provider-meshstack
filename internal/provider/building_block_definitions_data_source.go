@@ -152,7 +152,7 @@ func buildingBlockDefinitionDataSourceAttributes() map[string]schema.Attribute {
 func (d *buildingBlockDefinitionsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "List building block definitions with optional workspace filter. " +
-			"Prefer this plural data source with `one(...)` for reusable wiring in examples. " +
+			"To read one definition, use the `meshstack_building_block_definition` data source. " +
 			"For each returned definition, this data source performs an additional API call to load all versions; " +
 			"use `workspace_identifier` to narrow scope where possible. " +
 			"\n\n" +
@@ -264,7 +264,7 @@ func buildingBlockDefinitionDataSourceModelFrom(ctx context.Context, versionClie
 			DisplayName: definition.Spec.DisplayName,
 			TargetType:  definition.Spec.TargetType,
 		},
-		Versions:      convertBBDVersionRefs(diags, "versions", ascendingVersions(versionModel.Versions)),
+		Versions:      convertBBDVersionRefs(diags, "versions", versionModel.Versions),
 		VersionLatest: convertBBDVersionRef(diags, "version_latest", versionModel.VersionLatest),
 		Ref:           versionModel.Ref,
 	}
@@ -289,9 +289,9 @@ func buildVersionRefsFromStatus(diags *diag.Diagnostics, definition client.MeshB
 	status := definition.Status
 
 	// Convert status.Versions to version refs (no content_hash available)
-	ascending := make([]buildingBlockDefinitionDataSourceVersionRefModel, len(status.Versions))
-	for i, v := range status.Versions {
-		ascending[i] = buildingBlockDefinitionDataSourceVersionRefModel{
+	versions := make(map[string]buildingBlockDefinitionDataSourceVersionRefModel, len(status.Versions))
+	for _, v := range status.Versions {
+		versions[versionKey(v.VersionNumber)] = buildingBlockDefinitionDataSourceVersionRefModel{
 			Uuid:                       v.VersionUuid,
 			Number:                     v.VersionNumber,
 			State:                      string(v.State),
@@ -299,11 +299,6 @@ func buildVersionRefsFromStatus(diags *diag.Diagnostics, definition client.MeshB
 			WorkloadIdentityFederation: v.WorkloadIdentityFederation,
 		}
 	}
-
-	// Sort versions ascending by number
-	slices.SortFunc(ascending, func(a, b buildingBlockDefinitionDataSourceVersionRefModel) int {
-		return cmp.Compare(a.Number, b.Number)
-	})
 
 	// Build latest version ref
 	latestStatusVersion := findStatusVersion(status.Versions, status.LatestVersionUuid)
@@ -336,7 +331,7 @@ func buildVersionRefsFromStatus(diags *diag.Diagnostics, definition client.MeshB
 			DisplayName: definition.Spec.DisplayName,
 			TargetType:  definition.Spec.TargetType,
 		},
-		Versions:             versionsByKey(ascending, buildingBlockDefinitionDataSourceVersionRefModel.number),
+		Versions:             versions,
 		VersionLatest:        latestVersion,
 		VersionLatestRelease: latestReleasedVersion,
 		Ref:                  newBuildingBlockDefinitionRef(*definition.Metadata.Uuid),
@@ -371,16 +366,12 @@ func convertBBDVersionRef(diags *diag.Diagnostics, field string, ref buildingBlo
 	}
 }
 
-func convertBBDVersionRefs(diags *diag.Diagnostics, field string, ascending []buildingBlockDefinitionVersionRef) map[string]buildingBlockDefinitionDataSourceVersionRefModel {
-	converted := make([]buildingBlockDefinitionDataSourceVersionRefModel, len(ascending))
-	for i, ref := range ascending {
-		converted[i] = convertBBDVersionRef(diags, field, ref)
+func convertBBDVersionRefs(diags *diag.Diagnostics, field string, refs map[string]buildingBlockDefinitionVersionRef) map[string]buildingBlockDefinitionDataSourceVersionRefModel {
+	converted := make(map[string]buildingBlockDefinitionDataSourceVersionRefModel, len(refs))
+	for key, ref := range refs {
+		converted[key] = convertBBDVersionRef(diags, field, ref)
 	}
-	return versionsByKey(converted, buildingBlockDefinitionDataSourceVersionRefModel.number)
-}
-
-func (ref buildingBlockDefinitionDataSourceVersionRefModel) number() int64 {
-	return ref.Number
+	return converted
 }
 
 func deriveDraftFromLatestVersion(versionDtos []client.MeshBuildingBlockDefinitionVersion) generic.NullIsUnknown[bool] {

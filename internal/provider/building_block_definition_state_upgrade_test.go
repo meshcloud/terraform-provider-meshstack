@@ -36,3 +36,17 @@ func TestBuildingBlockDefinitionUpgradeState(t *testing.T) {
 	upgraded.Attribute("metadata.uuid", &metadataUuid)
 	assert.Equal(t, "bbd-uuid", metadataUuid)
 }
+
+func TestBuildingBlockDefinitionUpgradeStateRejectsVersionsWithoutUniqueNumber(t *testing.T) {
+	for name, versions := range map[string]string{
+		"no number":         `[{"uuid": "uuid-1", "number": null}]`,
+		"fractional number": `[{"uuid": "uuid-1", "number": 1.5}]`,
+		"duplicate number":  `[{"uuid": "uuid-1", "number": 1}, {"uuid": "uuid-2", "number": 1}]`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			_, diags := UpgradeResourceState(t, &buildingBlockDefinitionResource{}, 0, `{"versions": `+versions+`}`)
+			require.True(t, diags.HasError())
+			assert.Equal(t, "Cannot read a version number from the prior building block definition state", diags[0].Summary())
+		})
+	}
+}
