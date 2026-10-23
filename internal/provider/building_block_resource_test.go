@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-testing/compare"
 	tfconfig "github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -121,8 +122,8 @@ func TestAccBuildingBlock(t *testing.T) {
 				buildingBlockDefinitionAddr,
 			)),
 		)
-		// Adding a parent without a version upgrade must force a replacement (RequiresReplaceIf →
-		// DestroyBeforeCreate). Derived from the last config so only parent_building_block_refs changes.
+		// Adding a parent without a version upgrade to a block on a released version must force a replacement
+		// (RequiresReplaceIf → DestroyBeforeCreate). Derived from the last config so only parent_building_block_refs changes.
 		withParentsConfig := contentHashV2Config.WithFirstBlock(
 			testconfig.Descend("spec", "parent_building_block_refs")(testconfig.SetRawExpr(
 				`[{ uuid = "11111111-1111-1111-1111-111111111111" }]`,
@@ -214,7 +215,7 @@ func TestAccBuildingBlock(t *testing.T) {
 					},
 				},
 				{
-					// Adding a parent while the version is unchanged must force a replacement. This is a
+					// Adding a parent while the version is unchanged and released must force a replacement. This is a
 					// provider-side plan decision (RequiresReplaceIf → DestroyBeforeCreate); it runs
 					// mock-only because the real backend rejects the synthetic parent-BB UUID before the
 					// plan can be applied.
@@ -1458,6 +1459,44 @@ func TestAccBuildingBlock(t *testing.T) {
 		})
 	})
 
+	t.Run("14_parent_change_on_drafts", func(t *testing.T) {
+		config, parentAAddr, parentBAddr, childAddr := testconfig.BBWorkspaceDraftParents(t)
+		movedConfig := config.WithFirstBlock(
+			testconfig.Descend("spec", "parent_building_block_refs")(testconfig.SetRawExpr("[%s]", parentBAddr.Join("ref"))),
+		)
+		parentRefIs := func(parentAddr testconfig.Traversal) statecheck.StateCheck {
+			return statecheck.CompareValuePairs(
+				parentAddr.String(), tfjsonpath.New("ref"),
+				childAddr.String(), tfjsonpath.New("spec").AtMapKey("parent_building_block_refs").AtSliceIndex(0),
+				compare.ValuesSame(),
+			)
+		}
+
+		ApplyAndTest(t, resource.TestCase{
+			Steps: []resource.TestStep{
+				{
+					Config:            config.String(),
+					ConfigStateChecks: []statecheck.StateCheck{parentRefIs(parentAAddr)},
+				},
+				{
+					Config: movedConfig.String(),
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PreApply: []plancheck.PlanCheck{
+							plancheck.ExpectResourceAction(childAddr.String(), plancheck.ResourceActionUpdate),
+						},
+					},
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(childAddr.String(), tfjsonpath.New("spec").AtMapKey("parent_building_block_refs"), knownvalue.SetSizeExact(1)),
+						parentRefIs(parentBAddr),
+					},
+				},
+				{
+					Config:   movedConfig.String(),
+					PlanOnly: true,
+				},
+			},
+		})
+	})
 }
 
 // bbv3StateChecks returns the baseline state checks shared by every BB v3 create and move step.
@@ -1568,6 +1607,26 @@ func Test_rerunNeeded(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			require.Equal(t, tt.want, rerunNeeded(tt.plan, tt.state))
+		})
+	}
+}
+
+func Test_requiresReplaceParentsWhenVersionUnchanged(t *testing.T) {
+	tests := []struct {
+		name              string
+		planVersion       types.String
+		parentsChangeable *bool
+		want              bool
+	}{
+		{"same version, parents changeable", types.StringValue("v1"), new(true), false},
+		{"same version, parents not changeable", types.StringValue("v1"), new(false), true},
+		{"same version, meshStack does not report it", types.StringValue("v1"), nil, true},
+		{"version upgrade", types.StringValue("v2"), new(false), false},
+		{"version unknown", types.StringUnknown(), new(false), false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.want, requiresReplaceParentsForTest(t, types.StringValue("v1"), tt.planVersion, tt.parentsChangeable))
 		})
 	}
 }

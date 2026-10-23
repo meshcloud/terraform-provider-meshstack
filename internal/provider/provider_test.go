@@ -6,6 +6,7 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strings"
 	"sync"
@@ -18,7 +19,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	fwresource "github.com/hashicorp/terraform-plugin-framework/resource"
 	fwschema "github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -355,6 +359,37 @@ func UpgradeResourceState(t *testing.T, r fwresource.ResourceWithUpgradeState, v
 	upgrader.StateUpgrader(ctx, req, &resp)
 
 	return UpgradedState{t: t, state: resp.State}, resp.Diagnostics
+}
+
+// requiresReplaceParentsForTest runs the parent plan modifier of meshstack_building_block against a prior
+// state and a plan that hold only the definition version uuid, with parentsChangeable in private state
+// unless it is nil.
+func requiresReplaceParentsForTest(t *testing.T, stateVersion, planVersion types.String, parentsChangeable *bool) bool {
+	t.Helper()
+	ctx := context.Background()
+	s := ResourceSchemaForTest(t, NewBuildingBlockResource())
+	objectWith := func(version types.String) tftypes.Value {
+		state := tfsdk.State{Schema: s, Raw: tftypes.NewValue(s.Type().TerraformType(ctx), nil)}
+		require.False(t, state.SetAttribute(ctx, path.Root("spec").AtName("building_block_definition_version_ref").AtName("uuid"), version).HasError())
+		return state.Raw
+	}
+
+	req := planmodifier.SetRequest{
+		State: tfsdk.State{Schema: s, Raw: objectWith(stateVersion)},
+		Plan:  tfsdk.Plan{Schema: s, Raw: objectWith(planVersion)},
+	}
+	if parentsChangeable != nil {
+		// The framework offers no constructor for private state outside its own packages.
+		private := reflect.ValueOf(&req).Elem().FieldByName("Private")
+		private.Set(reflect.New(private.Type().Elem()))
+		require.False(t, setParentsChangeablePrivate(ctx, req.Private, &client.MeshBuildingBlockV2{
+			Status: &client.MeshBuildingBlockV2Status{ParentsChangeable: parentsChangeable},
+		}).HasError())
+	}
+	var resp setplanmodifier.RequiresReplaceIfFuncResponse
+	requiresReplaceParentsWhenVersionUnchanged(ctx, req, &resp)
+	require.False(t, resp.Diagnostics.HasError(), "%s", resp.Diagnostics)
+	return resp.RequiresReplace
 }
 
 // sanitizeTestName turns a *testing.T name into a relative path. Subtest separators ("/")

@@ -68,13 +68,14 @@ type MeshBuildingBlockV2Client struct {
 	BbdVersionStore *Store[client.MeshBuildingBlockDefinitionVersion]
 }
 
-// withDerivedParents rebuilds the deprecated parent entries, which do not survive deepCopyBB because
-// the wire format carries no definition uuid. The backend derives the same value from the referenced
-// building block for every response.
-func (m MeshBuildingBlockV2Client) withDerivedParents(bb *client.MeshBuildingBlockV2) *client.MeshBuildingBlockV2 {
+// withDerivedFields rebuilds what the backend derives for every response: the deprecated parent entries,
+// which do not survive deepCopyBB because the wire format carries no definition uuid, and
+// status.parentsChangeable.
+func (m MeshBuildingBlockV2Client) withDerivedFields(bb *client.MeshBuildingBlockV2) *client.MeshBuildingBlockV2 {
 	if bb == nil {
 		return nil
 	}
+	parentsChangeable := m.isOnDraftVersion(bb)
 	parents := make(clientTypes.Set[client.MeshBuildingBlockV2Parent], 0, len(bb.Spec.ParentBuildingBlockRefs))
 	for _, ref := range bb.Spec.ParentBuildingBlockRefs {
 		parent := client.MeshBuildingBlockV2Parent{
@@ -82,20 +83,34 @@ func (m MeshBuildingBlockV2Client) withDerivedParents(bb *client.MeshBuildingBlo
 			BuildingBlockUuid: ref.Uuid,
 		}
 		if storedParent, ok := m.Store.Get(ref.Uuid); ok {
-			version, ok := m.BbdVersionStore.Get(storedParent.Spec.BuildingBlockDefinitionVersionRef.Uuid)
-			if ok && version.Spec.BuildingBlockDefinitionRef != nil {
-				parent.DefinitionUuid = version.Spec.BuildingBlockDefinitionRef.Uuid
-			}
+			parent.DefinitionUuid = m.definitionUuidOf(storedParent)
+			parentsChangeable = parentsChangeable && m.isOnDraftVersion(storedParent)
 		}
 		parents = append(parents, parent)
 	}
 	bb.Spec.ParentBuildingBlocks = parents
+	if bb.Status != nil {
+		bb.Status.ParentsChangeable = &parentsChangeable
+	}
 	return bb
+}
+
+func (m MeshBuildingBlockV2Client) definitionUuidOf(bb *client.MeshBuildingBlockV2) string {
+	version, ok := m.BbdVersionStore.Get(bb.Spec.BuildingBlockDefinitionVersionRef.Uuid)
+	if !ok || version.Spec.BuildingBlockDefinitionRef == nil {
+		return ""
+	}
+	return version.Spec.BuildingBlockDefinitionRef.Uuid
+}
+
+func (m MeshBuildingBlockV2Client) isOnDraftVersion(bb *client.MeshBuildingBlockV2) bool {
+	version, ok := m.BbdVersionStore.Get(bb.Spec.BuildingBlockDefinitionVersionRef.Uuid)
+	return ok && version.Spec.State != nil && *version.Spec.State == client.MeshBuildingBlockDefinitionVersionStateDraft.Unwrap()
 }
 
 func (m MeshBuildingBlockV2Client) Read(_ context.Context, bbUuid string) (*client.MeshBuildingBlockV2, error) {
 	if bb, ok := m.Store.Get(bbUuid); ok {
-		return m.withDerivedParents(deepCopyBB(bb)), nil
+		return m.withDerivedFields(deepCopyBB(bb)), nil
 	}
 	return nil, nil
 }
@@ -117,7 +132,7 @@ func (m MeshBuildingBlockV2Client) List(_ context.Context, filter client.MeshBui
 		if !mockBuildingBlockMatchesFilter(bb, filter) {
 			continue
 		}
-		result = append(result, *m.withDerivedParents(deepCopyBB(bb)))
+		result = append(result, *m.withDerivedFields(deepCopyBB(bb)))
 	}
 	return result, nil
 }
@@ -188,7 +203,7 @@ func (m MeshBuildingBlockV2Client) Create(_ context.Context, bb *client.MeshBuil
 
 	m.Store.Set(id, stored)
 	// Return a fresh deep copy so SetFromClientDto cannot mutate the store via the returned pointer.
-	return m.withDerivedParents(deepCopyBB(stored)), nil
+	return m.withDerivedFields(deepCopyBB(stored)), nil
 }
 
 func (m MeshBuildingBlockV2Client) Update(_ context.Context, bb *client.MeshBuildingBlockV2) (*client.MeshBuildingBlockV2, error) {
@@ -259,7 +274,7 @@ func (m MeshBuildingBlockV2Client) Update(_ context.Context, bb *client.MeshBuil
 	}
 
 	m.Store.Set(*stored.Metadata.Uuid, stored)
-	return m.withDerivedParents(deepCopyBB(stored)), nil // fresh copy out (see Create)
+	return m.withDerivedFields(deepCopyBB(stored)), nil // fresh copy out (see Create)
 }
 
 func (m MeshBuildingBlockV2Client) Delete(_ context.Context, bbUuid string, purge bool) error {
@@ -288,7 +303,7 @@ func (m MeshBuildingBlockV2Client) TriggerRun(_ context.Context, bbUuid string) 
 	cp.Status.LatestRunUuid = new(uuid.NewString())
 	cp.Status.LatestDryRunUuid = nil
 	m.Store.Set(bbUuid, cp)
-	return m.withDerivedParents(accepted), nil
+	return m.withDerivedFields(accepted), nil
 }
 
 // provisioningChanged reports whether a PUT made a backend-visible change that triggers an apply run:
