@@ -1,3 +1,8 @@
+# v0.27.1
+
+FEATURES:
+- `meshstack_building_block`: changing the parents of a block on a draft definition version updates it in place.
+
 # v0.27.0
 
 BREAKING CHANGES:

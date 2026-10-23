@@ -139,7 +139,7 @@ Required:
 
 Optional:
 
-- `parent_building_block_refs` (Attributes Set) Set of refs to the parent building blocks this block depends on, forming a dependency hierarchy: a parent's outputs can feed this block's inputs, so the parents listed here should align with the inputs that consume them (see [building block concepts](https://docs.meshcloud.io/concepts/building-block/)). Prefer reusable refs from `meshstack_building_block.<name>.ref`.<br>Parent building blocks can only change as part of a version upgrade; changing them on their own forces the building block to be replaced (destroyed and recreated). (see [below for nested schema](#nestedatt--spec--parent_building_block_refs))
+- `parent_building_block_refs` (Attributes Set) Set of refs to the parent building blocks this block depends on, forming a dependency hierarchy: a parent's outputs can feed this block's inputs, so the parents listed here should align with the inputs that consume them (see [building block concepts](https://docs.meshcloud.io/concepts/building-block/)). Prefer reusable refs from `meshstack_building_block.<name>.ref`.<br>Parent building blocks can only change as part of a version upgrade or while the block is on a draft version of its definition; changing them otherwise forces the building block to be replaced (destroyed and recreated). (see [below for nested schema](#nestedatt--spec--parent_building_block_refs))
 
 <a id="nestedatt--spec--building_block_definition_version_ref"></a>
 ### Nested Schema for `spec.building_block_definition_version_ref`

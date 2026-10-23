@@ -71,7 +71,7 @@ type MeshBuildingBlockV2Client struct {
 
 // withDerivedParents rebuilds the deprecated parent entries, which do not survive deepCopyBB because
 // the wire format carries no definition uuid. The backend derives the same value from the referenced
-// building block for every response.
+// building block for every response, and status.basedOnDraftVersion from the block's own version.
 func (m MeshBuildingBlockV2Client) withDerivedParents(bb *client.MeshBuildingBlockV2) *client.MeshBuildingBlockV2 {
 	if bb == nil {
 		return nil
@@ -91,6 +91,10 @@ func (m MeshBuildingBlockV2Client) withDerivedParents(bb *client.MeshBuildingBlo
 		parents = append(parents, parent)
 	}
 	bb.Spec.ParentBuildingBlocks = parents
+	if bb.Status != nil {
+		version, ok := m.BbdVersionStore.Get(bb.Spec.BuildingBlockDefinitionVersionRef.Uuid)
+		bb.Status.BasedOnDraftVersion = new(ok && version.Spec.State != nil && *version.Spec.State == client.MeshBuildingBlockDefinitionVersionStateDraft.Unwrap())
+	}
 	return bb
 }
 

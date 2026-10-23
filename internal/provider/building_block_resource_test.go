@@ -1287,7 +1287,7 @@ func TestAccBuildingBlock(t *testing.T) {
 	// 13_parent_child is the only scenario with a real parent. Every other parent step uses a
 	// synthetic uuid and therefore never reaches a live backend.
 	t.Run("13_parent_child", func(t *testing.T) {
-		config, parentAddr, childAddr := testconfig.BBWorkspaceParentChild(t)
+		config, parentAddr, _, childAddr := testconfig.BBWorkspaceParentChild(t, false)
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
@@ -1314,6 +1314,28 @@ func TestAccBuildingBlock(t *testing.T) {
 					// configuration declares, or this plan is not empty.
 					Config:   config.String(),
 					PlanOnly: true,
+				},
+			},
+		})
+	})
+
+	t.Run("14_parent_change_on_drafts", func(t *testing.T) {
+		config, _, otherParentAddr, childAddr := testconfig.BBWorkspaceParentChild(t, true)
+		ApplyAndTest(t, resource.TestCase{
+			Steps: []resource.TestStep{
+				{Config: config.String()},
+				{
+					Config: config.WithFirstBlock(
+						testconfig.Descend("spec", "parent_building_block_refs")(testconfig.SetRawExpr("[%s]", otherParentAddr.Join("ref"))),
+					).String(),
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PreApply: []plancheck.PlanCheck{plancheck.ExpectResourceAction(childAddr.String(), plancheck.ResourceActionUpdate)},
+					},
+					ConfigStateChecks: []statecheck.StateCheck{statecheck.CompareValuePairs(
+						otherParentAddr.String(), tfjsonpath.New("ref"),
+						childAddr.String(), tfjsonpath.New("spec").AtMapKey("parent_building_block_refs").AtSliceIndex(0),
+						compare.ValuesSame(),
+					)},
 				},
 			},
 		})
