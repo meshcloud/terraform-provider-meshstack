@@ -53,7 +53,7 @@ func TestAccBuildingBlockDataSource(t *testing.T) {
 	})
 
 	t.Run("02_parent_child", func(t *testing.T) {
-		buildingBlockConfig, parentAddr, childAddr := testconfig.BBWorkspaceParentChild(t)
+		buildingBlockConfig, parentAddr, _, childAddr := testconfig.BBWorkspaceParentChild(t, false)
 
 		config := testconfig.DataSource{Name: "building_block"}.Config(t).WithFirstBlock(
 			testconfig.Descend("metadata", "uuid")(testconfig.SetAddr(childAddr, "metadata", "uuid")),

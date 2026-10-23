@@ -39,8 +39,9 @@ func PaymentMethodInput(t *testing.T, workspaceAddr Traversal) (paymentMethodCon
 // BBWorkspaceParentChild builds a workspace, two building block definitions owned by it, and a v3
 // building block from each, the child referencing the parent through spec.parent_building_block_refs.
 // The child's definition declares the parent's definition in version_spec.dependency_refs, which
-// meshStack requires of any parent.
-func BBWorkspaceParentChild(t *testing.T) (config Config, parentAddr Traversal, childAddr Traversal) {
+// meshStack requires of any parent. A draftChild puts the child's definition on a draft version and adds a
+// second parent block.
+func BBWorkspaceParentChild(t *testing.T, draftChild bool) (config Config, parentAddr, otherParentAddr, childAddr Traversal) {
 	t.Helper()
 	workspaceConfig, workspaceAddr := Workspace(t)
 	paymentMethodConfig, setPaymentMethodInput := PaymentMethodInput(t, workspaceAddr)
@@ -75,13 +76,20 @@ func BBWorkspaceParentChild(t *testing.T) (config Config, parentAddr Traversal, 
 	parentDefinitionConfig, parentDefinitionAddr := definition("parent")
 	childDefinitionConfig, childDefinitionAddr := definition("child",
 		Descend("version_spec", "dependency_refs")(SetRawExpr("[%s]", parentDefinitionAddr.Join("ref"))),
+		Descend("version_spec", "draft")(SetBool(draftChild)),
 	)
 
 	parentConfig, parentAddr := buildingBlock("parent", parentDefinitionAddr)
 	childConfig, childAddr := buildingBlock("child", childDefinitionAddr,
 		Descend("spec", "parent_building_block_refs")(SetRawExpr("[%s]", parentAddr.Join("ref"))),
 	)
-	return childConfig.Join(parentConfig, workspaceConfig, paymentMethodConfig, parentDefinitionConfig, childDefinitionConfig), parentAddr, childAddr
+	config = childConfig.Join(parentConfig, workspaceConfig, paymentMethodConfig, parentDefinitionConfig, childDefinitionConfig)
+	if draftChild {
+		var otherParentConfig Config
+		otherParentConfig, otherParentAddr = buildingBlock("other_parent", parentDefinitionAddr)
+		config = config.Join(otherParentConfig)
+	}
+	return config, parentAddr, otherParentAddr, childAddr
 }
 
 // BBTenant builds a workspace (+project/platform/landing-zone/tenant) and a v3 building block

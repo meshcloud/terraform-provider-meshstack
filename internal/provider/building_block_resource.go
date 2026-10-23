@@ -95,6 +95,13 @@ var parentBuildingBlockRefsNestedObject = func() schema.NestedAttributeObject {
 	return schema.NestedAttributeObject{Attributes: ref.Attributes, Validators: ref.Validators}
 }()
 
+// basedOnDraftVersionPrivateKey hands meshStack's status.basedOnDraftVersion to the parent plan modifier without a schema attribute.
+const basedOnDraftVersionPrivateKey = "based_on_draft_version"
+
+func basedOnDraftVersion(dto *client.MeshBuildingBlockV2) []byte {
+	return fmt.Appendf(nil, "%t", dto.Status != nil && dto.Status.BasedOnDraftVersion != nil && *dto.Status.BasedOnDraftVersion)
+}
+
 func (r *buildingBlockResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Version: 1,
@@ -250,15 +257,15 @@ func (r *buildingBlockResource) Schema(ctx context.Context, req resource.SchemaR
 							"a parent's outputs can feed this block's inputs, so the parents listed here should align with the " +
 							"inputs that consume them (see [building block concepts](https://docs.meshcloud.io/concepts/building-block/)). " +
 							"Prefer reusable refs from `meshstack_building_block.<name>.ref`.<br>" +
-							"Parent building blocks can only change as part of a version upgrade; changing them on their own " +
-							"forces the building block to be replaced (destroyed and recreated).",
+							"Parent building blocks can only change as part of a version upgrade or while the block is on a draft version " +
+							"of its definition; changing them otherwise forces the building block to be replaced (destroyed and recreated).",
 						Default:      emptySetDefault(parentBuildingBlockRefsNestedObject),
 						NestedObject: parentBuildingBlockRefsNestedObject,
 						PlanModifiers: []planmodifier.Set{
 							setplanmodifier.RequiresReplaceIf(
 								requiresReplaceParentsWhenVersionUnchanged,
-								"Parent building blocks can only change as part of a version upgrade.",
-								"Parent building blocks can only change as part of a version upgrade.",
+								"Parent building blocks can only change as part of a version upgrade or while the block is on a draft version.",
+								"Parent building blocks can only change as part of a version upgrade or while the block is on a draft version.",
 							),
 						},
 					},
@@ -815,6 +822,7 @@ func (r *buildingBlockResource) Create(ctx context.Context, req resource.CreateR
 	}
 	plan.SetFromClientDto(created, false, &resp.Diagnostics)
 	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, plan, converterOptions...)...)
+	resp.Diagnostics.Append(resp.Private.SetKey(ctx, basedOnDraftVersionPrivateKey, basedOnDraftVersion(created))...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -838,6 +846,7 @@ func (r *buildingBlockResource) Create(ctx context.Context, req resource.CreateR
 		if final != nil {
 			plan.SetFromClientDto(final, false, &resp.Diagnostics)
 			resp.Diagnostics.Append(generic.Set(ctx, &resp.State, plan, converterOptions...)...)
+			resp.Diagnostics.Append(resp.Private.SetKey(ctx, basedOnDraftVersionPrivateKey, basedOnDraftVersion(final))...)
 		}
 	}
 }
@@ -880,12 +889,12 @@ func (r *buildingBlockResource) Read(ctx context.Context, req resource.ReadReque
 	state.WaitForCompletion = waitForCompletionBool
 	state.PurgeOnDelete = purgeOnDelete
 	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, state, converterOptions...)...)
+	resp.Diagnostics.Append(resp.Private.SetKey(ctx, basedOnDraftVersionPrivateKey, basedOnDraftVersion(readDto))...)
 }
 
 // requiresReplaceParentsWhenVersionUnchanged forces replacement when parent_building_block_refs changes
-// but the building block definition version does NOT. The backend only accepts a parent change as part
-// of a version-change PUT (requireParentsUnchanged on a same-version PUT → 400), so an in-place update of
-// parents alone is doomed. When the version uuid also changes, the in-place upgrade carries the parent
+// but the building block definition version does NOT, unless meshStack reports status.basedOnDraftVersion.
+// When the version uuid also changes, the in-place upgrade carries the parent
 // change, so no replacement is needed. RequiresReplaceIf is only invoked when the attribute actually changed.
 func requiresReplaceParentsWhenVersionUnchanged(ctx context.Context, req planmodifier.SetRequest, resp *setplanmodifier.RequiresReplaceIfFuncResponse) {
 	// Not applicable on create (no prior state) or destroy (no plan).
@@ -906,7 +915,9 @@ func requiresReplaceParentsWhenVersionUnchanged(ctx context.Context, req planmod
 	if planVersion.IsUnknown() {
 		return
 	}
-	resp.RequiresReplace = planVersion.Equal(stateVersion)
+	basedOnDraft, diags := req.Private.GetKey(ctx, basedOnDraftVersionPrivateKey)
+	resp.Diagnostics.Append(diags...)
+	resp.RequiresReplace = planVersion.Equal(stateVersion) && string(basedOnDraft) != "true"
 }
 
 // rerunNeeded is the single shared predicate determining whether an Update should trigger a run.
@@ -1211,6 +1222,7 @@ func (r *buildingBlockResource) Update(ctx context.Context, req resource.UpdateR
 	// Reuse the converter options built at the top of Update (same config/plan/state getters), so
 	// secret_version resolves consistently with Read without rebuilding the converters.
 	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, plan, converterOptions...)...)
+	resp.Diagnostics.Append(resp.Private.SetKey(ctx, basedOnDraftVersionPrivateKey, basedOnDraftVersion(effective))...)
 }
 
 // requestDeletion waits out the conflict meshStack answers while the block's run has not reached a
