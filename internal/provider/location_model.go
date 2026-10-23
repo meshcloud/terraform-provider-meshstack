@@ -5,13 +5,13 @@ import (
 )
 
 type locationModel struct {
-	*client.MeshLocation
+	client.MeshLocation
 	Ref client.NamedRef `tfsdk:"ref"`
 }
 
 func newLocationModel(location *client.MeshLocation) locationModel {
 	return locationModel{
-		MeshLocation: location,
+		MeshLocation: *location,
 		Ref: client.NamedRef{
 			Kind: client.MeshObjectKind.Location,
 			Name: location.Metadata.Name,

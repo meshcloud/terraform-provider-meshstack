@@ -81,20 +81,34 @@ func (r *buildingBlockDefinitionResource) upgradeVersionsListToMap(ctx context.C
 		resp.Diagnostics.AddError("Cannot read versions from the prior building block definition state", err.Error())
 		return
 	}
+	const numberSummary = "Cannot read a version number from the prior building block definition state"
 	byKey := make(map[string]tftypes.Value, len(ascending))
 	for _, version := range ascending {
 		var fields map[string]tftypes.Value
-		var number big.Float
+		var number *big.Float
 		if err := version.As(&fields); err != nil {
 			resp.Diagnostics.AddError("Cannot read a version from the prior building block definition state", err.Error())
 			return
 		}
 		if err := fields["number"].As(&number); err != nil {
-			resp.Diagnostics.AddError("Cannot read a version number from the prior building block definition state", err.Error())
+			resp.Diagnostics.AddError(numberSummary, err.Error())
 			return
 		}
-		numberInt, _ := number.Int64()
-		byKey[versionKey(numberInt)] = version
+		if number == nil {
+			resp.Diagnostics.AddError(numberSummary, "A version has no number.")
+			return
+		}
+		numberInt, accuracy := number.Int64()
+		if accuracy != big.Exact {
+			resp.Diagnostics.AddError(numberSummary, fmt.Sprintf("Version number %v is not a whole number.", number))
+			return
+		}
+		key := versionKey(numberInt)
+		if _, taken := byKey[key]; taken {
+			resp.Diagnostics.AddError(numberSummary, fmt.Sprintf("Version number %d occurs twice.", numberInt))
+			return
+		}
+		byKey[key] = version
 	}
 	if attributes["versions"].IsNull() {
 		byKey = nil

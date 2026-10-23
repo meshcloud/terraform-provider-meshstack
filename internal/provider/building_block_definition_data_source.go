@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/datasourcevalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -14,8 +15,9 @@ import (
 )
 
 var (
-	_ datasource.DataSource              = &buildingBlockDefinitionDataSource{}
-	_ datasource.DataSourceWithConfigure = &buildingBlockDefinitionDataSource{}
+	_ datasource.DataSource                     = &buildingBlockDefinitionDataSource{}
+	_ datasource.DataSourceWithConfigure        = &buildingBlockDefinitionDataSource{}
+	_ datasource.DataSourceWithConfigValidators = &buildingBlockDefinitionDataSource{}
 )
 
 func NewBuildingBlockDefinitionDataSource() datasource.DataSource {
@@ -53,6 +55,7 @@ func (d *buildingBlockDefinitionDataSource) Schema(_ context.Context, _ datasour
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Read the one building block definition that matches what you set in `metadata` and `spec`, " +
 			"such as `spec.display_name`, the name the marketplace in meshPanel shows. " +
+			"Set at least one of `metadata.uuid`, `metadata.owned_by_workspace`, `spec.display_name` and `spec.target_type`. " +
 			"It searches your workspace's own and all published definitions, and fails unless exactly one of them matches. " +
 			"Assign `version_latest`, `version_latest_release` once a version is released, or a version such as `versions[\"v2\"]` " +
 			"to `building_block_definition_version_ref` of a building block. " +
@@ -67,17 +70,23 @@ func (d *buildingBlockDefinitionDataSource) Schema(_ context.Context, _ datasour
 	}
 }
 
+func (d *buildingBlockDefinitionDataSource) ConfigValidators(_ context.Context) []datasource.ConfigValidator {
+	return []datasource.ConfigValidator{
+		datasourcevalidator.AtLeastOneOf(
+			path.MatchRoot("metadata").AtName("uuid"),
+			path.MatchRoot("metadata").AtName("owned_by_workspace"),
+			path.MatchRoot("spec").AtName("display_name"),
+			path.MatchRoot("spec").AtName("target_type"),
+		),
+	}
+}
+
 func (d *buildingBlockDefinitionDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var filter buildingBlockDefinitionFilter
-	for attributePath, target := range map[string]**string{
-		"metadata.uuid":               &filter.Uuid,
-		"metadata.owned_by_workspace": &filter.OwnedByWorkspace,
-		"spec.display_name":           &filter.DisplayName,
-		"spec.target_type":            &filter.TargetType,
-	} {
-		block, attribute, _ := strings.Cut(attributePath, ".")
-		resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(block).AtName(attribute), target)...)
-	}
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("metadata").AtName("uuid"), &filter.Uuid)...)
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("metadata").AtName("owned_by_workspace"), &filter.OwnedByWorkspace)...)
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("spec").AtName("display_name"), &filter.DisplayName)...)
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("spec").AtName("target_type"), &filter.TargetType)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}

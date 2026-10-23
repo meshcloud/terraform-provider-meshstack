@@ -3,13 +3,13 @@ package provider
 import (
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-testing/compare"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 
 	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
-	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/xknownvalue"
 )
 
 func TestAccWorkspaceGroupBindingDataSource(t *testing.T) {
@@ -47,7 +47,7 @@ func testAccWorkspaceBindingDataSource(t *testing.T, name, subjectName string) {
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("metadata").AtMapKey("name"), knownvalue.StringExact("this-is-an-example")),
 					statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("role_ref").AtMapKey("name"), knownvalue.StringExact("Workspace Member")),
-					statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("target_ref").AtMapKey("name"), xknownvalue.NotEmptyString()),
+					statecheck.CompareValuePairs(dataSourceAddress.String(), tfjsonpath.New("target_ref").AtMapKey("name"), workspaceAddr.String(), tfjsonpath.New("metadata").AtMapKey("name"), compare.ValuesSame()),
 					statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("subject").AtMapKey("name"), knownvalue.StringExact(subjectName)),
 					statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("expiry_date"), knownvalue.StringExact("2026-12-31")),
 				},
