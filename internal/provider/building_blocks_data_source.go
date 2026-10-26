@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/meshcloud/meshstack-cli/client"
 	clientTypes "github.com/meshcloud/meshstack-cli/client/types"
 
@@ -29,18 +30,20 @@ type buildingBlocksDataSource struct {
 // buildingBlocksDataSourceModel is the root model: optional filters plus the resulting list.
 // All filter fields are nil/empty when unset and are then omitted from the backend query.
 type buildingBlocksDataSourceModel struct {
-	WorkspaceIdentifier          *string `tfsdk:"workspace_identifier"`
-	ProjectIdentifier            *string `tfsdk:"project_identifier"`
-	PlatformIdentifier           *string `tfsdk:"platform_identifier"`
-	Name                         *string `tfsdk:"name"`
-	DefinitionUuid               *string `tfsdk:"definition_uuid"`
-	VersionUuid                  *string `tfsdk:"version_uuid"`
-	VersionNumber                *string `tfsdk:"version_number"`
-	TenantUuid                   *string `tfsdk:"tenant_uuid"`
-	TargetKind                   *string `tfsdk:"target_kind"`
-	Status                       *string `tfsdk:"status"`
-	ManagedByWorkspaceIdentifier *string `tfsdk:"managed_by_workspace_identifier"`
-	ManagedByDefinitionUuid      *string `tfsdk:"managed_by_definition_uuid"`
+	WorkspaceIdentifier          *string                 `tfsdk:"workspace_identifier"`
+	ProjectIdentifier            *string                 `tfsdk:"project_identifier"`
+	PlatformIdentifier           *string                 `tfsdk:"platform_identifier"`
+	Name                         *string                 `tfsdk:"name"`
+	DefinitionUuid               *string                 `tfsdk:"definition_uuid"`
+	VersionUuid                  *string                 `tfsdk:"version_uuid"`
+	VersionNumber                *string                 `tfsdk:"version_number"`
+	TenantUuid                   *string                 `tfsdk:"tenant_uuid"`
+	TargetKind                   *string                 `tfsdk:"target_kind"`
+	Status                       *string                 `tfsdk:"status"`
+	HealthStatus                 clientTypes.Set[string] `tfsdk:"health_status"`
+	Action                       clientTypes.Set[string] `tfsdk:"action"`
+	ManagedByWorkspaceIdentifier *string                 `tfsdk:"managed_by_workspace_identifier"`
+	ManagedByDefinitionUuid      *string                 `tfsdk:"managed_by_definition_uuid"`
 
 	BuildingBlocks []buildingBlockListItem `tfsdk:"building_blocks"`
 }
@@ -90,11 +93,25 @@ func (d *buildingBlocksDataSource) Schema(_ context.Context, _ datasource.Schema
 				},
 			},
 			"status": schema.StringAttribute{
-				MarkdownDescription: "Only return building blocks in this execution status. One of " + client.BuildingBlockStatuses.Markdown() + ".",
-				Optional:            true,
+				MarkdownDescription: "Only return building blocks in this execution status. One of " + client.BuildingBlockStatuses.Markdown() + ". " +
+					"Use the `health_status` and `action` filters instead.",
+				Optional: true,
 				Validators: []validator.String{
 					stringvalidator.OneOf(client.BuildingBlockStatuses.Strings()...),
 				},
+				DeprecationMessage: "Use the `health_status` and `action` filters instead.",
+			},
+			"health_status": schema.SetAttribute{
+				MarkdownDescription: "Only return building blocks with one of these health statuses (see `status.health_status`). One of " +
+					client.BuildingBlockHealthStatuses.Markdown() + "; later meshStack releases may add values.",
+				ElementType: types.StringType,
+				Optional:    true,
+			},
+			"action": schema.SetAttribute{
+				MarkdownDescription: "Only return building blocks with one of these actions (see `status.action`). One of " +
+					client.BuildingBlockActions.Markdown() + "; later meshStack releases may add values.",
+				ElementType: types.StringType,
+				Optional:    true,
 			},
 			"managed_by_workspace_identifier": optionalString("Platform-operator scope: return building blocks created from definitions owned by this workspace. " +
 				"Requires the `MANAGED_BUILDINGBLOCK_LIST` authority."),
@@ -143,6 +160,8 @@ func (d *buildingBlocksDataSource) Read(ctx context.Context, req datasource.Read
 		TenantUuid:                   config.TenantUuid,
 		TargetKind:                   config.TargetKind,
 		Status:                       config.Status,
+		HealthStatus:                 config.HealthStatus,
+		Action:                       config.Action,
 		ManagedByWorkspaceIdentifier: config.ManagedByWorkspaceIdentifier,
 		ManagedByDefinitionUuid:      config.ManagedByDefinitionUuid,
 	})
@@ -170,6 +189,7 @@ func (d *buildingBlocksDataSource) Read(ctx context.Context, req datasource.Read
 	// reduced to a hash-only secret.HashOnly by buildAllInput, so no secret converter is needed.
 	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, config,
 		withValueFromConverterForClientTypeAny(),
+		withBuildingBlockStatusValueFromConverter(),
 		generic.WithSliceTypeAsSet(clientTypes.IsSet),
 	)...)
 }

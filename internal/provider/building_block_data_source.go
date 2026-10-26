@@ -113,6 +113,7 @@ func (d *buildingBlockDataSource) Read(ctx context.Context, req datasource.ReadR
 	// secret converter is needed here.
 	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, model,
 		withValueFromConverterForClientTypeAny(),
+		withBuildingBlockStatusValueFromConverter(),
 		generic.WithSliceTypeAsSet(clientTypes.IsSet),
 	)...)
 }
@@ -200,7 +201,14 @@ func buildingBlockReadStatusAttribute() schema.SingleNestedAttribute {
 		MarkdownDescription: "Current building block status.",
 		Computed:            true,
 		Attributes: map[string]schema.Attribute{
-			"status": computedString("Execution status. One of " + client.BuildingBlockStatuses.Markdown() + "."),
+			"status": schema.StringAttribute{
+				MarkdownDescription: "Execution status. One of " + client.BuildingBlockStatuses.Markdown() + ". " + buildingBlockStatusDeprecation,
+				Computed:            true,
+				DeprecationMessage:  buildingBlockStatusDeprecation,
+			},
+			"succeeded":     schema.BoolAttribute{MarkdownDescription: buildingBlockSucceededDescription, Computed: true},
+			"health_status": computedString(buildingBlockHealthStatusDescription),
+			"action":        computedString(buildingBlockActionDescription),
 			"force_purge": schema.BoolAttribute{MarkdownDescription: "True once a purge has been requested for this building block. " +
 				"A purge removes the block without a destroy run, leaving its cloud resources unmanaged (the lifecycle still reaches DELETED).", Computed: true},
 			"latest_run_uuid":     computedString("UUID of the latest modifying (apply/destroy) run. Null when none exists."),

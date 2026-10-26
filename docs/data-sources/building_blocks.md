@@ -34,7 +34,10 @@ data "meshstack_building_blocks" "all" {
 
   # tenant_uuid = "00000000-0000-0000-0000-000000000000"
   # target_kind = "meshTenant" # or "meshWorkspace"
-  # status      = "SUCCEEDED"
+
+  # A building block matches when it has any one of the listed values:
+  # health_status = ["FAILED"]
+  # action        = ["PROVIDE_INPUT", "APPROVE_RUN"]
 
   # Platform-operator scope (requires the MANAGED_BUILDINGBLOCK_LIST authority): list building
   # blocks created from definitions you own, even when they live in other workspaces.
@@ -48,13 +51,15 @@ data "meshstack_building_blocks" "all" {
 
 ### Optional
 
+- `action` (Set of String) Only return building blocks with one of these actions (see `status.action`). One of `PROVIDE_INPUT`, `WAITING_FOR_DEPENDENCY`, `APPROVE_RUN`, `REVIEW_DRIFT`, `PENDING`, `IN_PROGRESS`, `UPGRADE_AVAILABLE`, `REVIEW_ERRORS`, `REVIEW_ABORTED_RUN`, `NO_ACTION`; later meshStack releases may add values.
 - `definition_uuid` (String) Only return building blocks created from the building block definition with this UUID (the definition, not a specific version).
+- `health_status` (Set of String) Only return building blocks with one of these health statuses (see `status.health_status`). One of `NONE`, `SUCCEEDED`, `FAILED`, `DELETED`; later meshStack releases may add values.
 - `managed_by_definition_uuid` (String) Platform-operator scope: return building blocks created from the definition owned by the caller with this UUID. Requires the `MANAGED_BUILDINGBLOCK_LIST` authority.
 - `managed_by_workspace_identifier` (String) Platform-operator scope: return building blocks created from definitions owned by this workspace. Requires the `MANAGED_BUILDINGBLOCK_LIST` authority.
 - `name` (String) Only return building blocks with this exact name.
 - `platform_identifier` (String) Only return building blocks on this platform (`<platformInstance>.<location>`).
 - `project_identifier` (String) Only return building blocks in this project.
-- `status` (String) Only return building blocks in this execution status. One of `WAITING_FOR_DEPENDENT_INPUT`, `WAITING_FOR_OPERATOR_INPUT`, `WAITING_FOR_USER_INPUT`, `WAITING_FOR_APPROVAL`, `PENDING`, `IN_PROGRESS`, `SUCCEEDED`, `FAILED`, `ABORTED`.
+- `status` (String, Deprecated) Only return building blocks in this execution status. One of `WAITING_FOR_DEPENDENT_INPUT`, `WAITING_FOR_OPERATOR_INPUT`, `WAITING_FOR_USER_INPUT`, `WAITING_FOR_APPROVAL`, `PENDING`, `IN_PROGRESS`, `SUCCEEDED`, `FAILED`, `ABORTED`. Use the `health_status` and `action` filters instead.
 - `target_kind` (String) Only return building blocks with this target kind. One of `meshTenant`, `meshWorkspace`.
 - `tenant_uuid` (String) Only return building blocks targeting the tenant with this UUID.
 - `version_number` (String) Only return building blocks created from this building block definition version number. Accepts a plain number (`1`) or a `v`-prefixed string (`v1`); the `v` is stripped server-side.
@@ -147,11 +152,14 @@ Read-Only:
 
 Read-Only:
 
+- `action` (String) What the building block needs next, as in the Action column of meshPanel. One of `PROVIDE_INPUT`, `WAITING_FOR_DEPENDENCY`, `APPROVE_RUN`, `REVIEW_DRIFT`, `PENDING`, `IN_PROGRESS`, `UPGRADE_AVAILABLE`, `REVIEW_ERRORS`, `REVIEW_ABORTED_RUN`, `NO_ACTION`. `PROVIDE_INPUT` covers user and operator input, `REVIEW_DRIFT` reports a dry run that detected changes, `REVIEW_ABORTED_RUN` an aborted or rejected latest run, and `UPGRADE_AVAILABLE` a building block that needs nothing else while a newer definition version exists. Later meshStack releases may add values, which `succeeded` reads as not succeeded.
 - `force_purge` (Boolean) True once a purge has been requested for this building block. A purge removes the block without a destroy run, leaving its cloud resources unmanaged (the lifecycle still reaches DELETED).
+- `health_status` (String) Outcome of the latest run that speaks for the building block. One of `NONE`, `SUCCEEDED`, `FAILED`, `DELETED`. Only a run that finished as succeeded or failed moves it: it keeps the previous outcome while a run is pending, in progress, waiting for input or approval, or after a run was aborted, and it stays `NONE` until the first run finished. Read `action` to tell these apart.
 - `latest_dry_run_uuid` (String) UUID of the latest dry (DETECT) run, but only when it is the newest run; null otherwise.
 - `latest_run_uuid` (String) UUID of the latest modifying (apply/destroy) run. Null when none exists.
 - `outputs` (Attributes Map) Outputs of the building block, available after a successful run. (see [below for nested schema](#nestedatt--building_blocks--status--outputs))
-- `status` (String) Execution status. One of `WAITING_FOR_DEPENDENT_INPUT`, `WAITING_FOR_OPERATOR_INPUT`, `WAITING_FOR_USER_INPUT`, `WAITING_FOR_APPROVAL`, `PENDING`, `IN_PROGRESS`, `SUCCEEDED`, `FAILED`, `ABORTED`.
+- `status` (String, Deprecated) Execution status. One of `WAITING_FOR_DEPENDENT_INPUT`, `WAITING_FOR_OPERATOR_INPUT`, `WAITING_FOR_USER_INPUT`, `WAITING_FOR_APPROVAL`, `PENDING`, `IN_PROGRESS`, `SUCCEEDED`, `FAILED`, `ABORTED`. Use `succeeded`, or `health_status` and `action` for finer checks.
+- `succeeded` (Boolean) True when the latest run succeeded and the building block needs no attention: `health_status` is `SUCCEEDED` and `action` is one of `NO_ACTION`, `UPGRADE_AVAILABLE`, `REVIEW_DRIFT`. On meshStack versions before the `REVIEW_ABORTED_RUN` action an aborted run reads as succeeded.
 
 <a id="nestedatt--building_blocks--status--outputs"></a>
 ### Nested Schema for `building_blocks.status.outputs`

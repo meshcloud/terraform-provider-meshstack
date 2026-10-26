@@ -546,7 +546,8 @@ func TestAccBuildingBlock(t *testing.T) {
 }`
 
 		// Pre-build the step configs so buildingBlockAddr is populated before the state checks reference it.
-		createConfig := buildBB(buildingBlockDefinitionConfig, inputsNoSize)
+		// The example's postcondition would fail the apply of a block that waits for an operator input.
+		createConfig := buildBB(buildingBlockDefinitionConfig, inputsNoSize).WithFirstBlock(testconfig.RemoveNestedBlock("lifecycle"))
 		suppliedConfig := buildBB(buildingBlockDefinitionConfig, inputsWithSize)
 		renamedConfig := buildBB(buildingBlockDefinitionConfig, inputsRenamed)
 		redraftConfig := buildBB(bbdV2Draft, inputsRenamed)
@@ -554,9 +555,16 @@ func TestAccBuildingBlock(t *testing.T) {
 
 		// On a real backend the operator-input-less create parks WAITING_FOR_OPERATOR_INPUT; the mock has
 		// no such state and short-circuits the create to a terminal status.
-		createStatusCheck := statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("status").AtMapKey("status"), knownvalue.StringExact("WAITING_FOR_OPERATOR_INPUT"))
+		createStatusChecks := []statecheck.StateCheck{
+			statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("status").AtMapKey("status"), knownvalue.StringExact("WAITING_FOR_OPERATOR_INPUT")),
+			statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("status").AtMapKey("health_status"), knownvalue.StringExact("NONE")),
+			statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("status").AtMapKey("action"), knownvalue.StringExact("PROVIDE_INPUT")),
+			statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("status").AtMapKey("succeeded"), knownvalue.Bool(false)),
+		}
 		if IsMockClientTest() {
-			createStatusCheck = statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("status").AtMapKey("status"), xknownvalue.NotEmptyString())
+			createStatusChecks = []statecheck.StateCheck{
+				statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("status").AtMapKey("status"), xknownvalue.NotEmptyString()),
+			}
 		}
 
 		// Post-upgrade checks: the block reaches SUCCEEDED in both modes. The `tier` assertion is
@@ -602,10 +610,9 @@ func TestAccBuildingBlock(t *testing.T) {
 							plancheck.ExpectResourceAction(buildingBlockAddr.String(), plancheck.ResourceActionCreate),
 						},
 					},
-					ConfigStateChecks: []statecheck.StateCheck{
+					ConfigStateChecks: append([]statecheck.StateCheck{
 						statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("spec").AtMapKey("inputs").AtMapKey("name").AtMapKey("value"), knownvalue.StringExact(`"my-name"`)),
-						createStatusCheck,
-					},
+					}, createStatusChecks...),
 				},
 				{
 					// Supplying `size` via PUT resumes provisioning; the provider must poll THROUGH the
@@ -620,6 +627,9 @@ func TestAccBuildingBlock(t *testing.T) {
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("all_inputs").AtMapKey("size").AtMapKey("value"), knownvalue.StringExact("16")),
 						statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("status").AtMapKey("status"), knownvalue.StringExact("SUCCEEDED")),
+						statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("status").AtMapKey("health_status"), knownvalue.StringExact("SUCCEEDED")),
+						statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("status").AtMapKey("action"), knownvalue.StringExact("NO_ACTION")),
+						statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("status").AtMapKey("succeeded"), knownvalue.Bool(true)),
 						statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("status").AtMapKey("latest_run_uuid"), xknownvalue.NotEmptyString()),
 					},
 				},
@@ -1231,10 +1241,10 @@ func TestAccBuildingBlock(t *testing.T) {
 				"apikey_client_id":     &apiKeyClientId,
 				"apikey_client_secret": &apiKeyClientSecret,
 			}
-			// The support file's postcondition rejects the FAILED status the broken ref produces. With run
+			// The support file's postcondition rejects the failed run the broken ref produces. With run
 			// transparency ON the repair runs and fails on the broken ref again, so the postcondition fails
 			// that apply too; with it OFF meshStack refuses the trigger-run and that refusal is the error.
-			postconditionFailed := regexp.MustCompile("not SUCCEEDED")
+			postconditionFailed := regexp.MustCompile(`did\s+not\s+succeed\s+\(health\s+status`)
 			repairApplyErr := postconditionFailed
 			if expectRepairErr != nil {
 				repairApplyErr = expectRepairErr
@@ -1468,6 +1478,8 @@ func bbv3StateChecks(buildingBlockAddr testconfig.Traversal, displayName string,
 		statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact(displayName)),
 		statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("spec").AtMapKey("inputs").AtMapKey("name").AtMapKey("value"), knownvalue.StringExact(`"my-name"`)),
 		statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("status").AtMapKey("status"), xknownvalue.NotEmptyString()),
+		statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("status").AtMapKey("health_status"), xknownvalue.NotEmptyString()),
+		statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("status").AtMapKey("action"), xknownvalue.NotEmptyString()),
 		statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("status").AtMapKey("latest_run_uuid"), xknownvalue.NotEmptyString()),
 	}
 	return append(checks, extra...)

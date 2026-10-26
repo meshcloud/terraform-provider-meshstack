@@ -17,6 +17,16 @@ BREAKING CHANGES:
   `v2`. Existing state upgrades on its own.
 
 FEATURES:
+- `meshstack_building_block` resource and data source, and `meshstack_building_blocks`: new `status.health_status`, the
+  outcome of the latest run (`NONE`, `SUCCEEDED`, `FAILED`, `DELETED`), new `status.action`, what the building block
+  needs next as in the Action column of meshPanel, and new `status.succeeded`, true when the latest run succeeded and
+  the building block needs no attention. `status.status` is deprecated. Replace a postcondition on
+  `self.status.status == "SUCCEEDED"`, or one that rejected `FAILED` and `ABORTED`, with `self.status.succeeded`.
+  `status.action` is `REVIEW_ABORTED_RUN` after an aborted run, also when an approval was rejected. On meshStack
+  versions before `REVIEW_ABORTED_RUN` an aborted run reads as succeeded.
+- `meshstack_building_blocks`: new `health_status` and `action` filters, each a set that matches a building block with
+  any one of its values, including values that later meshStack releases add. The `status` filter is deprecated in their
+  favour.
 - `meshstack_building_block_runner`: new `status.last_known_version`, the version the runner reported when it last
   polled for work.
 - New data source `meshstack_building_block_definition`: reads the one definition that matches what you set of

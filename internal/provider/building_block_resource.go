@@ -270,7 +270,20 @@ func (r *buildingBlockResource) Schema(ctx context.Context, req resource.SchemaR
 				PlanModifiers:       []planmodifier.Object{objectplanmodifier.UseStateForUnknown()},
 				Attributes: map[string]schema.Attribute{
 					"status": schema.StringAttribute{
-						MarkdownDescription: "Execution status. One of " + client.BuildingBlockStatuses.Markdown() + ".",
+						MarkdownDescription: "Execution status. One of " + client.BuildingBlockStatuses.Markdown() + ". " + buildingBlockStatusDeprecation,
+						Computed:            true,
+						DeprecationMessage:  buildingBlockStatusDeprecation,
+					},
+					"succeeded": schema.BoolAttribute{
+						MarkdownDescription: buildingBlockSucceededDescription,
+						Computed:            true,
+					},
+					"health_status": schema.StringAttribute{
+						MarkdownDescription: buildingBlockHealthStatusDescription,
+						Computed:            true,
+					},
+					"action": schema.StringAttribute{
+						MarkdownDescription: buildingBlockActionDescription,
 						Computed:            true,
 					},
 					"force_purge": schema.BoolAttribute{
@@ -532,6 +545,8 @@ func buildingBlockConverterOptions(ctx context.Context, config, plan, state gene
 		withValueToConverterForClientTypeAny(),
 
 		generic.WithSliceTypeAsSet(clientTypes.IsSet),
+		withBuildingBlockStatusValueFromConverter(),
+		withBuildingBlockStatusValueToConverter(),
 
 		// inputs: from Client DTO to model
 		generic.WithValueFromConverterFor[client.MeshBuildingBlockInput](
@@ -696,8 +711,9 @@ func addWaitingForInputWarning(diags *diag.Diagnostics, bb *client.MeshBuildingB
 //
 // A terminal status that is not SUCCEEDED is always a warning, never an error, on a create and on an
 // update alike. Whether it fails the apply is the configuration's decision, taken with a postcondition
-// on status.status — see the resource example. Erroring on a create would also taint the building block
-// and have the next apply destroy and recreate it (#277), which is what this reporting exists to avoid.
+// on status.succeeded or status.action — see the resource example. Erroring on a create would also
+// taint the building block and have the next apply destroy and recreate it (#277), which is what this
+// reporting exists to avoid.
 func (r *buildingBlockResource) awaitRun(
 	ctx context.Context,
 	diags *diag.Diagnostics,
@@ -768,7 +784,7 @@ func (r *buildingBlockResource) awaitRun(
 		r.addRunFailureDiagnostics(ctx, diags, diag.SeverityWarning, "Building block run did not succeed",
 			fmt.Sprintf("The run of building block %s ended in status %s, so the building block is not in the state its "+
 				"configuration describes. Inspect the run in meshPanel and fix the cause; the next plan shows an in-place "+
-				"update that runs it again. Add a postcondition on self.status.status to fail the apply on this.",
+				"update that runs it again. Add a postcondition on self.status.succeeded to fail the apply on this.",
 				uuid, final.Status.Status), final)
 	case final.IsWaitingForInput():
 		addWaitingForInputWarning(diags, final)
@@ -969,6 +985,9 @@ func (r *buildingBlockResource) ModifyPlan(ctx context.Context, req resource.Mod
 	// resolve them after the triggered run.
 	triggerRun := func() {
 		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("status").AtName("status"), types.StringUnknown())...)
+		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("status").AtName("succeeded"), types.BoolUnknown())...)
+		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("status").AtName("health_status"), types.StringUnknown())...)
+		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("status").AtName("action"), types.StringUnknown())...)
 		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("status").AtName("latest_run_uuid"), types.StringUnknown())...)
 		// latest_dry_run_uuid resolves to null once the applying run is the newest; mark it unknown so the
 		// apply can resolve it without a "provider produced inconsistent result" error if state carried a

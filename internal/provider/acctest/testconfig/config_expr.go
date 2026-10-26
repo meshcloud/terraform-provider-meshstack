@@ -77,6 +77,20 @@ func RemoveKey() ExpressionConsumer {
 	}
 }
 
+// RemoveNestedBlock returns an ExpressionConsumer that deletes the first nested block of the given type,
+// such as `lifecycle`, from the block it is applied to.
+func RemoveNestedBlock(blockType string) ExpressionConsumer {
+	return func(t *testing.T, e Expression) {
+		t.Helper()
+		b, ok := e.(Block)
+		require.True(t, ok, "RemoveNestedBlock requires a block, got %T", e)
+		body := b.internal.Body()
+		nested := body.FirstMatchingBlock(blockType, nil)
+		require.NotNil(t, nested, "RemoveNestedBlock: no %q block to remove", blockType)
+		body.RemoveBlock(nested)
+	}
+}
+
 // keyRemovable is implemented by attributeExpression only; a Block has no key of its own to remove.
 type keyRemovable interface {
 	RemoveKey()
