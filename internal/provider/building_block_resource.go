@@ -709,11 +709,11 @@ func addWaitingForInputWarning(diags *diag.Diagnostics, bb *client.MeshBuildingB
 // A WAITING_FOR_*_INPUT status means the block is parked and cannot proceed from this apply, since a
 // runnable block would be PENDING. That is a warning rather than polling to the timeout.
 //
-// A terminal status that is not SUCCEEDED is always a warning, never an error, on a create and on an
-// update alike. Whether it fails the apply is the configuration's decision, taken with a postcondition
-// on status.succeeded or status.action — see the resource example. Erroring on a create would also
-// taint the building block and have the next apply destroy and recreate it (#277), which is what this
-// reporting exists to avoid.
+// A terminal status that is not SUCCEEDED, or a timeout while the run is PENDING or IN_PROGRESS, is always
+// a warning, never an error, on a create and on an update alike. Whether it fails the apply is the
+// configuration's decision, taken with a postcondition on status.succeeded or status.action — see the
+// resource example. Erroring on a create would also taint the building block and have the next apply
+// destroy and recreate it (#277), which is what this reporting exists to avoid.
 func (r *buildingBlockResource) awaitRun(
 	ctx context.Context,
 	diags *diag.Diagnostics,
@@ -776,9 +776,16 @@ func (r *buildingBlockResource) awaitRun(
 				"new run appears there at all, report this building block's uuid as a backend issue.",
 				uuid, runStartTimeout, unchanged),
 		)
+	case errors.Is(err, poll.ErrTimedOut) && final != nil && final.Status != nil &&
+		(final.Status.Status == client.BuildingBlockStatusPending || final.Status.Status == client.BuildingBlockStatusInProgress):
+		diags.AddWarning(
+			"Building block run has not finished",
+			fmt.Sprintf("The run of building block %s is still in status %s after %s. Inspect the run in meshPanel, or "+
+				"raise timeouts to wait longer.", uuid, final.Status.Status, timeout),
+		)
 	case err != nil:
-		// A timeout, an unknown status or a vanished block is not a run status a postcondition could
-		// decide on, so it stays an error.
+		// An unknown status or a vanished block is not a run status a postcondition could decide on, so
+		// it stays an error.
 		r.addRunFailureDiagnostics(ctx, diags, diag.SeverityError, "Building block run could not be awaited", err.Error(), final)
 	case final.Status.Status == client.BuildingBlockStatusFailed || final.Status.Status == client.BuildingBlockStatusAborted:
 		r.addRunFailureDiagnostics(ctx, diags, diag.SeverityWarning, "Building block run did not succeed",

@@ -2,6 +2,7 @@ package poll
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -18,6 +19,8 @@ func AtMostFor[T any](timeout time.Duration, f Func[T], options ...Option[T]) (p
 	}
 	return
 }
+
+var ErrTimedOut = errors.New("timed out")
 
 type Func[T any] func(ctx context.Context) (*T, error)
 
@@ -56,7 +59,7 @@ func (pollable Pollable[T]) Until(ctx context.Context, until func(item *T) (done
 		} else if done {
 			return nil
 		} else {
-			return retry.RetryableError(fmt.Errorf("item %T not (yet) in desired state", item))
+			return retry.RetryableError(fmt.Errorf("item %T not (yet) in desired state: %w", item, ErrTimedOut))
 		}
 	})
 }

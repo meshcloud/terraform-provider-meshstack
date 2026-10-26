@@ -42,6 +42,9 @@ FEATURES:
 FIXES:
 - `meshstack_building_block_definitions`: `version_latest_release` and the `content_hash` of each version are
   read-only in the documentation; they were listed as optional although they cannot be set.
+- `meshstack_building_block`: a create whose run is still `PENDING` or `IN_PROGRESS` when `timeouts.create` passes
+  keeps the building block and reports a warning. Before, the apply failed and the next apply destroyed and recreated
+  the building block. An update that times out the same way reports a warning as well.
 
 # v0.26.8
 
