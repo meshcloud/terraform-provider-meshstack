@@ -30,6 +30,9 @@ resource "meshstack_project_group_binding" "example" {
   subject = {
     name = "my-user-group"
   }
+
+  # Optional. If omitted, the binding never expires.
+  expiry_date = "2099-12-31"
 }
 ```
 

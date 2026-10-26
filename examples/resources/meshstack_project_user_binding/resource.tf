@@ -15,4 +15,7 @@ resource "meshstack_project_user_binding" "example" {
   subject = {
     name = "user@meshcloud.io"
   }
+
+  # Optional. If omitted, the binding never expires.
+  expiry_date = "2099-12-31"
 }

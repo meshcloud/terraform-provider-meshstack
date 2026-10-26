@@ -36,6 +36,8 @@ FEATURES:
   binding by name, or by workspace, subject and role, including whether it has expired.
 - `meshstack_project_group_binding` and `meshstack_project_user_binding` resources and data sources: new
   `expiry_date`, optional on the resources.
+- `meshstack_project_group_binding` and `meshstack_project_user_binding` data sources: look up a binding by project,
+  subject and role as well, and read `expired`.
 
 FIXES:
 - `meshstack_building_block_definitions`: `version_latest_release` and the `content_hash` of each version are
