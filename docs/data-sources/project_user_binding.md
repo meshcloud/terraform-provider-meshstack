@@ -29,6 +29,7 @@ data "meshstack_project_user_binding" "example" {
 
 ### Read-Only
 
+- `expiry_date` (String) Last day the binding is effective (`YYYY-MM-DD`); null if it never expires.
 - `role_ref` (Attributes) Project role assigned by this binding. (see [below for nested schema](#nestedatt--role_ref))
 - `subject` (Attributes) User assigned by this binding. (see [below for nested schema](#nestedatt--subject))
 - `target_ref` (Attributes) Project, identified by workspace and project identifier. (see [below for nested schema](#nestedatt--target_ref))

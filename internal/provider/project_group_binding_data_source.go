@@ -75,6 +75,10 @@ func (d *projectGroupBindingDataSource) Schema(ctx context.Context, req datasour
 					},
 				},
 			},
+			"expiry_date": schema.StringAttribute{
+				MarkdownDescription: "Last day the binding is effective (`YYYY-MM-DD`); null if it never expires.",
+				Computed:            true,
+			},
 		},
 	}
 }

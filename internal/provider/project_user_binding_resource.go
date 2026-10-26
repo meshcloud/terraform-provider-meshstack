@@ -11,6 +11,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/meshcloud/meshstack-cli/client"
+
+	"github.com/meshcloud/terraform-provider-meshstack/internal/types/generic"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -102,21 +104,21 @@ func (r *projectUserBindingResource) Schema(_ context.Context, _ resource.Schema
 					},
 				},
 			},
+
+			"expiry_date": projectBindingExpiryDateAttribute,
 		},
 	}
 }
 
 // Create creates the resource and sets the initial Terraform state.
 func (r *projectUserBindingResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var plan client.MeshProjectUserBinding
-
-	diags := req.Plan.Get(ctx, &plan)
-	resp.Diagnostics.Append(diags...)
+	// An omitted expiry_date plans as unknown, which the DTO's *string cannot hold.
+	plan := generic.Get[*client.MeshProjectUserBinding](ctx, req.Plan, &resp.Diagnostics, generic.WithSetUnknownValueToZero())
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	binding, err := r.meshProjectUserBindingClient.Create(ctx, &plan)
+	binding, err := r.meshProjectUserBindingClient.Create(ctx, plan)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating project user binding",
@@ -125,8 +127,7 @@ func (r *projectUserBindingResource) Create(ctx context.Context, req resource.Cr
 		return
 	}
 
-	diags = resp.State.Set(ctx, binding)
-	resp.Diagnostics.Append(diags...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, binding)...)
 }
 
 // Read refreshes the Terraform state with the latest data.
@@ -175,4 +176,14 @@ func (r *projectUserBindingResource) Delete(ctx context.Context, req resource.De
 
 func (r *projectUserBindingResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("metadata").AtName("name"), req.ID)...)
+}
+
+var projectBindingExpiryDateAttribute = schema.StringAttribute{
+	MarkdownDescription: "Last day the binding is effective (`YYYY-MM-DD`); null if it never expires. Changing it replaces the binding.",
+	Optional:            true,
+	Computed:            true,
+	PlanModifiers: []planmodifier.String{
+		stringplanmodifier.RequiresReplace(),
+		stringplanmodifier.UseStateForUnknown(),
+	},
 }

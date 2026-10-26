@@ -370,7 +370,7 @@ func TestDescendUpsertsNewAttribute(t *testing.T) {
 
 func TestDescendRemoveKey(t *testing.T) {
 	c := newConfig(t, []byte(`resource "test" "ex" {
-  expiry_date = "2026-12-31"
+  expiry_date = "2099-12-31"
 
   spec = {
     name    = "test"

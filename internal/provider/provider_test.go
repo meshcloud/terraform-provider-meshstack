@@ -56,6 +56,12 @@ func IsMockClientTest() bool {
 // ever runs against the dev dump.
 const AdminWorkspaceIdentifier = "demo-partner"
 
+// Binding subjects seeded by the dev dump.
+const (
+	seededUsername  = "customer@meshcloud.io"
+	seededGroupName = "global-group"
+)
+
 // envKeyScratchDump, when non-empty, makes ApplyAndTest dump each step's HCL config to disk
 // (as a standalone, re-runnable config) instead of running the test. Set it to "1"/"true" to
 // dump into the repo-root scratch/ dir, or to a directory path to dump there. See the

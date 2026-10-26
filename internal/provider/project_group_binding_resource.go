@@ -11,6 +11,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/meshcloud/meshstack-cli/client"
+
+	"github.com/meshcloud/terraform-provider-meshstack/internal/types/generic"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -102,21 +104,21 @@ func (r *projectGroupBindingResource) Schema(_ context.Context, _ resource.Schem
 					},
 				},
 			},
+
+			"expiry_date": projectBindingExpiryDateAttribute,
 		},
 	}
 }
 
 // Create creates the resource and sets the initial Terraform state.
 func (r *projectGroupBindingResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var plan client.MeshProjectGroupBinding
-
-	diags := req.Plan.Get(ctx, &plan)
-	resp.Diagnostics.Append(diags...)
+	// An omitted expiry_date plans as unknown, which the DTO's *string cannot hold.
+	plan := generic.Get[*client.MeshProjectGroupBinding](ctx, req.Plan, &resp.Diagnostics, generic.WithSetUnknownValueToZero())
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	binding, err := r.meshProjectGroupBindingClient.Create(ctx, &plan)
+	binding, err := r.meshProjectGroupBindingClient.Create(ctx, plan)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating project group binding",
@@ -125,8 +127,7 @@ func (r *projectGroupBindingResource) Create(ctx context.Context, req resource.C
 		return
 	}
 
-	diags = resp.State.Set(ctx, binding)
-	resp.Diagnostics.Append(diags...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, binding)...)
 }
 
 // Read refreshes the Terraform state with the latest data.

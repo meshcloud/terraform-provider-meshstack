@@ -43,6 +43,10 @@ resource "meshstack_project_group_binding" "example" {
 - `subject` (Attributes) Selects the group for this binding. (see [below for nested schema](#nestedatt--subject))
 - `target_ref` (Attributes) Selects the project to which this binding applies. (see [below for nested schema](#nestedatt--target_ref))
 
+### Optional
+
+- `expiry_date` (String) Last day the binding is effective (`YYYY-MM-DD`); null if it never expires. Changing it replaces the binding.
+
 <a id="nestedatt--metadata"></a>
 ### Nested Schema for `metadata`
 

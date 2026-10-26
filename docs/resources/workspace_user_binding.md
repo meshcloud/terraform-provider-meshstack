@@ -32,7 +32,7 @@ resource "meshstack_workspace_user_binding" "example" {
 
   # Optional. If omitted, the binding never expires. If recertification is enabled
   # for the role, meshStack assigns the maximum allowed expiry date instead.
-  expiry_date = "2026-12-31"
+  expiry_date = "2099-12-31"
 }
 ```
 

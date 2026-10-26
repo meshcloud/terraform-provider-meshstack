@@ -15,18 +15,17 @@ import (
 )
 
 func TestAccWorkspaceGroupBinding(t *testing.T) {
-	if !IsMockClientTest() {
-		t.Skip("Skipping: requires user group 'my-user-group' in local meshStack")
-	}
-
 	t.Parallel()
 
 	t.Run("with_expiry_date", func(t *testing.T) {
 		workspaceConfig, workspaceAddr := testconfig.Workspace(t)
+		bindingName := "test-wgb-" + acctest.RandString(8)
 
 		var resourceAddress testconfig.Traversal
 		config := testconfig.Resource{Name: "workspace_group_binding"}.Config(t).WithFirstBlock(
 			testconfig.ExtractAddress(&resourceAddress),
+			testconfig.Descend("metadata", "name")(testconfig.SetString(bindingName)),
+			testconfig.Descend("subject", "name")(testconfig.SetString(seededGroupName)),
 			testconfig.Descend("target_ref", "name")(testconfig.SetAddr(workspaceAddr, "metadata", "name"))).
 			Join(workspaceConfig)
 
@@ -40,17 +39,17 @@ func TestAccWorkspaceGroupBinding(t *testing.T) {
 						},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("metadata").AtMapKey("name"), knownvalue.StringExact("this-is-an-example")),
+						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("metadata").AtMapKey("name"), knownvalue.StringExact(bindingName)),
 						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("role_ref").AtMapKey("name"), knownvalue.StringExact("Workspace Member")),
 						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("target_ref").AtMapKey("name"), xknownvalue.NotEmptyString()),
-						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("subject").AtMapKey("name"), knownvalue.StringExact("my-user-group")),
-						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("expiry_date"), knownvalue.StringExact("2026-12-31")),
+						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("subject").AtMapKey("name"), knownvalue.StringExact(seededGroupName)),
+						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("expiry_date"), knownvalue.StringExact("2099-12-31")),
 					},
 				},
 				{
 					ResourceName:    resourceAddress.String(),
 					ImportState:     true,
-					ImportStateId:   "this-is-an-example",
+					ImportStateId:   bindingName,
 					ImportStateKind: resource.ImportBlockWithID,
 				},
 			},
@@ -66,6 +65,7 @@ func TestAccWorkspaceGroupBinding(t *testing.T) {
 		var resourceAddress testconfig.Traversal
 		config := testconfig.Resource{Name: "workspace_group_binding"}.Config(t).WithFirstBlock(
 			testconfig.ExtractAddress(&resourceAddress),
+			testconfig.Descend("subject", "name")(testconfig.SetString(seededGroupName)),
 			testconfig.Descend("metadata", "name")(testconfig.SetString(bindingName)),
 			testconfig.Descend("expiry_date")(testconfig.RemoveKey()),
 			testconfig.Descend("target_ref", "name")(testconfig.SetAddr(workspaceAddr, "metadata", "name"))).
@@ -82,7 +82,7 @@ func TestAccWorkspaceGroupBinding(t *testing.T) {
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("metadata").AtMapKey("name"), knownvalue.StringExact(bindingName)),
-						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("subject").AtMapKey("name"), knownvalue.StringExact("my-user-group")),
+						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("subject").AtMapKey("name"), knownvalue.StringExact(seededGroupName)),
 						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("expiry_date"), knownvalue.Null()),
 					},
 				},
