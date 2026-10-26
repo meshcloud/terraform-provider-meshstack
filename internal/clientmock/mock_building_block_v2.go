@@ -5,6 +5,7 @@ import (
 	"encoding/json/v2"
 	"fmt"
 	"reflect"
+	"slices"
 
 	"github.com/google/uuid"
 	"github.com/meshcloud/meshstack-cli/client"
@@ -146,6 +147,12 @@ func mockBuildingBlockMatchesFilter(bb *client.MeshBuildingBlockV2, filter clien
 	if filter.Status != nil && (bb.Status == nil || string(bb.Status.Status) != *filter.Status) {
 		return false
 	}
+	if filter.HealthStatus != nil && (bb.Status == nil || !slices.Contains(filter.HealthStatus, bb.Status.HealthStatus.String())) {
+		return false
+	}
+	if filter.Action != nil && (bb.Status == nil || !slices.Contains(filter.Action, bb.Status.Action.String())) {
+		return false
+	}
 	return true
 }
 
@@ -180,6 +187,8 @@ func (m MeshBuildingBlockV2Client) Create(_ context.Context, bb *client.MeshBuil
 	}
 	stored.Status = &client.MeshBuildingBlockV2Status{
 		Status:        client.BuildingBlockStatusSucceeded,
+		HealthStatus:  client.BuildingBlockHealthStatusSucceeded,
+		Action:        client.BuildingBlockActionNoAction,
 		LatestRunUuid: &runUuid,
 		Lifecycle: client.MeshBuildingBlockV2Lifecycle{
 			State: client.BuildingBlockLifecycleStateActive,
@@ -241,6 +250,8 @@ func (m MeshBuildingBlockV2Client) Update(_ context.Context, bb *client.MeshBuil
 			runUuid := uuid.NewString()
 			stored.Status = &client.MeshBuildingBlockV2Status{
 				Status:        client.BuildingBlockStatusSucceeded,
+				HealthStatus:  client.BuildingBlockHealthStatusSucceeded,
+				Action:        client.BuildingBlockActionNoAction,
 				LatestRunUuid: &runUuid,
 				Lifecycle: client.MeshBuildingBlockV2Lifecycle{
 					State: client.BuildingBlockLifecycleStateActive,
@@ -250,6 +261,8 @@ func (m MeshBuildingBlockV2Client) Update(_ context.Context, bb *client.MeshBuil
 			status := *existing.Status
 			runUuid := uuid.NewString()
 			status.Status = client.BuildingBlockStatusSucceeded
+			status.HealthStatus = client.BuildingBlockHealthStatusSucceeded
+			status.Action = client.BuildingBlockActionNoAction
 			status.LatestRunUuid = &runUuid
 			status.LatestDryRunUuid = nil
 			stored.Status = &status
@@ -284,7 +297,10 @@ func (m MeshBuildingBlockV2Client) TriggerRun(_ context.Context, bbUuid string) 
 	// backend creates only after it answered. The store skips ahead to the run having succeeded.
 	accepted := deepCopyBB(cp)
 	accepted.Status.Status = client.BuildingBlockStatusPending
+	accepted.Status.Action = client.BuildingBlockActionPending
 	cp.Status.Status = client.BuildingBlockStatusSucceeded
+	cp.Status.HealthStatus = client.BuildingBlockHealthStatusSucceeded
+	cp.Status.Action = client.BuildingBlockActionNoAction
 	cp.Status.LatestRunUuid = new(uuid.NewString())
 	cp.Status.LatestDryRunUuid = nil
 	m.Store.Set(bbUuid, cp)

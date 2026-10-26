@@ -58,19 +58,11 @@ resource "meshstack_building_block" "example_workspace" {
     delete = "2m"
   }
 
-  # The provider only reports a run that does not succeed: FAILED and ABORTED are warnings and the next
-  # plan runs the building block again, a WAITING_FOR_* one stays parked until someone acts in meshPanel.
-  # This postcondition is what fails the apply instead. It is checked after the building block is written
-  # to state, so it does not taint the block and the next apply still runs it again.
-  #
-  # FAILED and ABORTED mean the run broke. The WAITING_FOR_* statuses do not: the block is waiting for an
-  # input or an approval, which is why they are not listed here. Use
-  # `self.status.status == "SUCCEEDED"` instead where the apply must go red until the block is finished —
-  # a starterkit ordering blocks for a tenant, for example.
+  # The provider only warns about a run that does not succeed; this fails the apply without tainting the block.
   lifecycle {
     postcondition {
-      condition     = !contains(["FAILED", "ABORTED"], self.status.status)
-      error_message = "Building block ${self.metadata.uuid} is ${self.status.status}. See its run in meshPanel."
+      condition     = self.status.succeeded
+      error_message = "Building block ${self.metadata.uuid} did not succeed (health status ${self.status.health_status}, action ${self.status.action}). See its run in meshPanel."
     }
   }
 }
@@ -262,11 +254,14 @@ Read-Only:
 
 Read-Only:
 
+- `action` (String) What the building block needs next, as in the Action column of meshPanel. One of `PROVIDE_INPUT`, `WAITING_FOR_DEPENDENCY`, `APPROVE_RUN`, `REVIEW_DRIFT`, `PENDING`, `IN_PROGRESS`, `UPGRADE_AVAILABLE`, `REVIEW_ERRORS`, `REVIEW_ABORTED_RUN`, `NO_ACTION`. `PROVIDE_INPUT` covers user and operator input, `REVIEW_DRIFT` reports a dry run that detected changes, `REVIEW_ABORTED_RUN` an aborted or rejected latest run, and `UPGRADE_AVAILABLE` a building block that needs nothing else while a newer definition version exists. Later meshStack releases may add values, which `succeeded` reads as not succeeded.
 - `force_purge` (Boolean) Read-only: true once a purge has been requested for this building block — via `purge_on_delete` here, or by an operator out-of-band. A purge removes the block without a destroy run, leaving its cloud resources unmanaged (the lifecycle still reaches DELETED).
+- `health_status` (String) Outcome of the latest run that speaks for the building block. One of `NONE`, `SUCCEEDED`, `FAILED`, `DELETED`. Only a run that finished as succeeded or failed moves it: it keeps the previous outcome while a run is pending, in progress, waiting for input or approval, or after a run was aborted, and it stays `NONE` until the first run finished. Read `action` to tell these apart.
 - `latest_dry_run_uuid` (String) UUID of the latest dry (DETECT) run for this Building Block, but only when it is the newest run; null otherwise.
 - `latest_run_uuid` (String) UUID of the latest modifying (apply/destroy) run for this Building Block. Excludes dry runs (see `latest_dry_run_uuid`). Null when no modifying run exists.
 - `outputs` (Attributes Map) Outputs of building block, available after a successful run. (see [below for nested schema](#nestedatt--status--outputs))
-- `status` (String) Execution status. One of `WAITING_FOR_DEPENDENT_INPUT`, `WAITING_FOR_OPERATOR_INPUT`, `WAITING_FOR_USER_INPUT`, `WAITING_FOR_APPROVAL`, `PENDING`, `IN_PROGRESS`, `SUCCEEDED`, `FAILED`, `ABORTED`.
+- `status` (String, Deprecated) Execution status. One of `WAITING_FOR_DEPENDENT_INPUT`, `WAITING_FOR_OPERATOR_INPUT`, `WAITING_FOR_USER_INPUT`, `WAITING_FOR_APPROVAL`, `PENDING`, `IN_PROGRESS`, `SUCCEEDED`, `FAILED`, `ABORTED`. Use `succeeded`, or `health_status` and `action` for finer checks.
+- `succeeded` (Boolean) True when the latest run succeeded and the building block needs no attention: `health_status` is `SUCCEEDED` and `action` is one of `NO_ACTION`, `UPGRADE_AVAILABLE`, `REVIEW_DRIFT`. On meshStack versions before the `REVIEW_ABORTED_RUN` action an aborted run reads as succeeded.
 
 <a id="nestedatt--status--outputs"></a>
 ### Nested Schema for `status.outputs`

@@ -16,7 +16,10 @@ data "meshstack_building_blocks" "all" {
 
   # tenant_uuid = "00000000-0000-0000-0000-000000000000"
   # target_kind = "meshTenant" # or "meshWorkspace"
-  # status      = "SUCCEEDED"
+
+  # A building block matches when it has any one of the listed values:
+  # health_status = ["FAILED"]
+  # action        = ["PROVIDE_INPUT", "APPROVE_RUN"]
 
   # Platform-operator scope (requires the MANAGED_BUILDINGBLOCK_LIST authority): list building
   # blocks created from definitions you own, even when they live in other workspaces.

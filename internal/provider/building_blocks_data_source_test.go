@@ -28,6 +28,7 @@ func TestAccBuildingBlocksDataSource(t *testing.T) {
 		dataSourceAddr := "data.meshstack_building_blocks.all"
 		config := testconfig.DataSource{Name: "building_blocks"}.Config(t).WithFirstBlock(
 			testconfig.Descend("workspace_identifier")(testconfig.SetAddr(buildingBlockAddr, "metadata", "owned_by_workspace")),
+			testconfig.Descend("health_status")(testconfig.SetRawExpr(`["SUCCEEDED", "FAILED"]`)),
 		).Join(buildingBlockConfig)
 
 		ApplyAndTest(t, resource.TestCase{
@@ -38,6 +39,9 @@ func TestAccBuildingBlocksDataSource(t *testing.T) {
 						statecheck.ExpectKnownValue(dataSourceAddr, tfjsonpath.New("building_blocks"), knownvalue.ListSizeExact(1)),
 						statecheck.ExpectKnownValue(dataSourceAddr, tfjsonpath.New("building_blocks").AtSliceIndex(0).AtMapKey("metadata").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
 						statecheck.ExpectKnownValue(dataSourceAddr, tfjsonpath.New("building_blocks").AtSliceIndex(0).AtMapKey("spec").AtMapKey("display_name"), knownvalue.StringExact("my-workspace-building-block")),
+						statecheck.ExpectKnownValue(dataSourceAddr, tfjsonpath.New("building_blocks").AtSliceIndex(0).AtMapKey("status").AtMapKey("health_status"), knownvalue.StringExact("SUCCEEDED")),
+						statecheck.ExpectKnownValue(dataSourceAddr, tfjsonpath.New("building_blocks").AtSliceIndex(0).AtMapKey("status").AtMapKey("action"), knownvalue.StringExact("NO_ACTION")),
+						statecheck.ExpectKnownValue(dataSourceAddr, tfjsonpath.New("building_blocks").AtSliceIndex(0).AtMapKey("status").AtMapKey("succeeded"), knownvalue.Bool(true)),
 						// all_inputs surfaces every backend input read-only (the _01_workspace BBD declares size + environment).
 						statecheck.ExpectKnownValue(dataSourceAddr, tfjsonpath.New("building_blocks").AtSliceIndex(0).AtMapKey("all_inputs").AtMapKey("size").AtMapKey("value"), knownvalue.StringExact("16")),
 						statecheck.ExpectKnownValue(dataSourceAddr, tfjsonpath.New("building_blocks").AtSliceIndex(0).AtMapKey("all_inputs").AtMapKey("environment").AtMapKey("value"), knownvalue.StringExact(`"dev"`)),

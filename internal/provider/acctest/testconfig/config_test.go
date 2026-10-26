@@ -387,3 +387,20 @@ func TestDescendRemoveKey(t *testing.T) {
 	assert.NotContains(t, c.String(), `comment`)
 	assert.Contains(t, c.String(), `name = "test"`)
 }
+
+func TestRemoveNestedBlock(t *testing.T) {
+	c := newConfig(t, []byte(`resource "test" "ex" {
+  name = "test"
+
+  lifecycle {
+    postcondition {
+      condition = true
+    }
+  }
+}
+`))
+	c = c.WithFirstBlock(RemoveNestedBlock("lifecycle"))
+
+	assert.NotContains(t, c.String(), `lifecycle`)
+	assert.Contains(t, c.String(), `name = "test"`)
+}

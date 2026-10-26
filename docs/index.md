@@ -87,7 +87,7 @@ resource "meshstack_building_block" "team_a_sandbox" {
 
 ### Optional
 
-- `apikey` (String) The client id of a meshStack API key, which mints tokens together with its secret, also read from `MESHSTACK_API_KEY`.
+- `apikey` (String) The client id of a meshStack API key to authenticate with, together with its secret, also read from `MESHSTACK_API_KEY`.
   
   Setting this here with the secret in `MESHSTACK_API_SECRET` keeps the secret out of the configuration and out of state.
 - `apisecret` (String, Sensitive) The client secret belonging to the API key, also read from `MESHSTACK_API_SECRET`.

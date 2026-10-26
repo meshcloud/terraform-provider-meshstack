@@ -25,13 +25,11 @@ resource "meshstack_building_block" "sensitive_user_input" {
     delete = "2m"
   }
 
-  # The strict form of the postcondition the resource example carries. Every run of this definition is
-  # expected to reach SUCCEEDED, so anything else is a test failure — which is what
-  # 11_run_transparency_failed_run relies on to fail an apply on a run the provider only warns about.
+  # 11_run_transparency_failed_run relies on this to fail an apply on a run the provider only warns about.
   lifecycle {
     postcondition {
-      condition     = self.status.status == "SUCCEEDED"
-      error_message = "Building block ${self.metadata.uuid} is ${self.status.status}, not SUCCEEDED. See its run in meshPanel."
+      condition     = self.status.succeeded
+      error_message = "Building block ${self.metadata.uuid} did not succeed (health status ${self.status.health_status}, action ${self.status.action}). See its run in meshPanel."
     }
   }
 }
