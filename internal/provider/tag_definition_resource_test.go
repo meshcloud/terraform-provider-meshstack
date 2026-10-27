@@ -1,7 +1,6 @@
 package provider
 
 import (
-	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -132,7 +131,7 @@ resource "meshstack_tag_definition" "invalid_options" {
 		Steps: []resource.TestStep{
 			{
 				Config:      config,
-				ExpectError: regexp.MustCompile(`Incorrect attribute value type|Invalid value for`),
+				ExpectError: expectErrorWords("Incorrect", "attribute", "type"),
 			},
 		},
 	})

@@ -2,7 +2,6 @@ package provider
 
 import (
 	"fmt"
-	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -32,7 +31,7 @@ func TestAccLandingZoneBuildingBlockRefRequiresUuid(t *testing.T) {
 			{
 				Config:      badConfig.String(),
 				PlanOnly:    true,
-				ExpectError: regexp.MustCompile(`(?s)uuid.*must be specified when`),
+				ExpectError: expectErrorWords("uuid", "specified"),
 			},
 		},
 	})

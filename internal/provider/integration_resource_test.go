@@ -1,7 +1,6 @@
 package provider
 
 import (
-	"regexp"
 	"strings"
 	"testing"
 
@@ -254,7 +253,7 @@ func TestAccIntegrationResource(t *testing.T) {
 				// has to fail rather than destroy and recreate.
 				{
 					Config:      adoptIdentityProvider(t, config, "adopted-idp-alias"),
-					ExpectError: regexp.MustCompile(`identity provider alias of an Entra ID integration cannot be changed`),
+					ExpectError: expectErrorWords("alias", "Entra", "changed"),
 				},
 				// A different value gives a different secret_version hash, which rotates secret_value.
 				{
@@ -428,6 +427,6 @@ func TestAccIntegrationResourceEmptyConfig(t *testing.T) {
 
 	ApplyAndTest(t, resource.TestCase{Steps: []resource.TestStep{{
 		Config:      config.String(),
-		ExpectError: regexp.MustCompile(`exactly one is\s+required`),
+		ExpectError: expectErrorWords("exactly", "required"),
 	}}})
 }

@@ -2,7 +2,6 @@ package provider
 
 import (
 	"fmt"
-	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -113,7 +112,7 @@ func TestAccWorkspaceTags(t *testing.T) {
 			Steps: []resource.TestStep{
 				{
 					Config:      config.String(),
-					ExpectError: regexp.MustCompile(`Workspace .* not found`),
+					ExpectError: expectErrorWords("Workspace", "not", "found"),
 				},
 			},
 		})

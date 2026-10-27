@@ -59,7 +59,7 @@ func terraformTestdataRepoURL(t *testing.T) string {
 // building block through a sequence of steps. Every flow runs in both modes; where an assertion
 // only holds against the real backend the ConfigStateChecks are gated on IsMockClientTest(), and
 // where a whole flow needs the real backend it lives in its own subtest that t.Skip()s in mock
-// (see 07, 08's backend_rejections, 11). See the lock-step policy on IsMockClientTest.
+// (see 11). See the lock-step policy on IsMockClientTest.
 
 // acceptanceClient builds a real meshStack API client from the test env vars.
 // Only valid in acceptance mode (TF_ACC set); callers must guard with IsMockClientTest.
@@ -862,179 +862,30 @@ func TestAccBuildingBlock(t *testing.T) {
 		})
 	})
 
-	// 07_non_updateable_rejected is a cross-workspace permission test: a consumer in another workspace
-	// (using a scoped API key) must be rejected when it tries to change an input the BBD marks
-	// non-updateable-by-consumer. Acceptance-only — it needs real permission boundaries and a second
-	// provider alias, which the mock cannot model.
-	t.Run("07_non_updateable_rejected", func(t *testing.T) {
-		if IsMockClientTest() {
-			t.Skip("cross-workspace test requires real permission boundaries")
-		}
+	// 08_validation_rejects: a target_ref whose kind and identifier disagree is rejected by a provider-side validator.
+	t.Run("08_validation_rejects", func(t *testing.T) {
+		config, _, _, _ := testconfig.BBWorkspace(t)
 
-		// Step 1 config: admin creates workspace + BBD + other workspace + API key.
-		workspaceConfig, workspaceAddr := testconfig.Workspace(t)
-		var buildingBlockDefinitionAddr testconfig.Traversal
-		buildingBlockDefinitionConfig := testconfig.Resource{Name: "building_block", Suffix: "_07_non_updateable"}.TestSupportConfig(t, "").WithFirstBlock(
-			testconfig.ExtractAddress(&buildingBlockDefinitionAddr),
-			testconfig.OwnedByWorkspace(workspaceAddr),
+		tenantWithName := config.WithFirstBlock(
+			testconfig.Descend("spec", "target_ref")(testconfig.SetRawExpr(`{ kind = "meshTenant", name = "some-workspace" }`)),
+		)
+		workspaceWithUuid := config.WithFirstBlock(
+			testconfig.Descend("spec", "target_ref")(testconfig.SetRawExpr(`{ kind = "meshWorkspace", uuid = "00000000-0000-0000-0000-000000000000" }`)),
 		)
 
-		var otherWorkspaceAddr testconfig.Traversal
-		otherWorkspaceConfig, _ := testconfig.Workspace(t)
-		otherWorkspaceConfig = otherWorkspaceConfig.WithFirstBlock(
-			testconfig.RenameKey("other"),
-			testconfig.ExtractAddress(&otherWorkspaceAddr),
-		)
-		// A workspace key may pick a Payment Method only with PAYMENTMETHOD_LIST.
-		apiKeyConfig, apiKeyAddr := testconfig.ApiKey(t, otherWorkspaceAddr)
-		apiKeyConfig = apiKeyConfig.WithFirstBlock(
-			testconfig.Descend("spec", "permissions")(testconfig.SetRawExpr(`["BUILDINGBLOCK_SAVE", "BUILDINGBLOCK_LIST", "BUILDINGBLOCK_DELETE", "PAYMENTMETHOD_LIST"]`)),
-		)
-		paymentMethodConfig, setPaymentMethodInput := testconfig.PaymentMethodInput(t, otherWorkspaceAddr)
-
-		step1Config := workspaceConfig.Join(buildingBlockDefinitionConfig, otherWorkspaceConfig, apiKeyConfig, paymentMethodConfig)
-
-		// Step 2 config: the "other" provider creates a BB with consumer-only inputs.
-		otherProviderConfig := testconfig.OtherProviderConfig(t)
-
-		// Reuses the workspace example (resource_01_workspace.tf) 1:1; the BBD above marks its
-		// `environment` and `payment_method` inputs non-updateable-by-consumer.
-		var buildingBlockAddr testconfig.Traversal
-		bbConfig := testconfig.Resource{Name: "building_block", Suffix: "_01_workspace"}.Config(t).WithFirstBlock(
-			testconfig.ExtractAddress(&buildingBlockAddr),
-			testconfig.Descend("spec", "building_block_definition_version_ref")(testconfig.SetAddr(buildingBlockDefinitionAddr, "version_latest")),
-			testconfig.Descend("spec", "target_ref")(testconfig.SetAddr(otherWorkspaceAddr, "ref")),
-			setPaymentMethodInput,
-			testconfig.Descend("provider")(testconfig.SetRawExpr("meshstack-other")),
-			// depends_on ensures the BB is destroyed before the API key the other provider needs.
-			testconfig.Descend("depends_on")(testconfig.SetRawExpr("[%s]", apiKeyAddr)),
-		)
-
-		step2Config := bbConfig.Join(step1Config, otherProviderConfig)
-
-		// Step 3 config: try to change the non-updateable input (must fail).
-		step3Config := step2Config.WithFirstBlock(
-			testconfig.Descend("spec", "inputs", "environment")(testconfig.SetRawExpr(`{ value = jsonencode("staging") }`)),
-		)
-
-		var apiKeyClientId, apiKeyClientSecret lazyVariable
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
-					Config: step1Config.String(),
-					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(apiKeyAddr.String(), tfjsonpath.New("status").AtMapKey("client_id"), xknownvalue.NotEmptyString(func(clientId string) error {
-							apiKeyClientId = lazyVariable(clientId)
-							return nil
-						})),
-						statecheck.ExpectKnownValue(apiKeyAddr.String(), tfjsonpath.New("status").AtMapKey("client_secret"), xknownvalue.NotEmptyString(func(clientSecret string) error {
-							apiKeyClientSecret = lazyVariable(clientSecret)
-							return nil
-						})),
-					},
+					// target_ref kind=meshTenant must use uuid, not name.
+					Config:      tenantWithName.String(),
+					ExpectError: expectErrorWords("not", "set", "kind"),
 				},
 				{
-					Config: step2Config.String(),
-					ConfigVariables: tfconfig.Variables{
-						"apikey_client_id":     &apiKeyClientId,
-						"apikey_client_secret": &apiKeyClientSecret,
-					},
-					ConfigPlanChecks: resource.ConfigPlanChecks{
-						PreApply: []plancheck.PlanCheck{
-							plancheck.ExpectResourceAction(buildingBlockAddr.String(), plancheck.ResourceActionCreate),
-						},
-					},
-					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("spec").AtMapKey("inputs").AtMapKey("environment").AtMapKey("value"), knownvalue.StringExact(`"dev"`)),
-					},
-				},
-				{
-					Config: step3Config.String(),
-					ConfigVariables: tfconfig.Variables{
-						"apikey_client_id":     &apiKeyClientId,
-						"apikey_client_secret": &apiKeyClientSecret,
-					},
-					ExpectError: regexp.MustCompile("you don't have sufficient permissions"),
+					// target_ref kind=meshWorkspace must use name, not uuid.
+					Config:      workspaceWithUuid.String(),
+					ExpectError: expectErrorWords("not", "set", "kind"),
 				},
 			},
-		})
-	})
-
-	// 08_validation_rejects collects the plan-time and create-time rejection checks over the workspace
-	// BBWorkspace config: a target_ref whose kind and identifier disagree, and a STATIC BBD input
-	// wrongly assigned as a customer input. It splits along the mock/acceptance line into two subtests
-	// (each a single ApplyAndTest), so no per-step mode gate is needed:
-	//   - provider_side_validators runs in BOTH modes: the target_ref kind/identifier mismatch is
-	//     rejected by a provider-side validator before any backend call, so the mock exercises it too.
-	//   - backend_rejections runs in ACCEPTANCE only (it skips itself in mock): the STATIC-input
-	//     rejection is a backend validation the in-memory mock does not reproduce.
-	t.Run("08_validation_rejects", func(t *testing.T) {
-		// provider_side_validators: target_ref kind/identifier mismatches caught by the provider's own
-		// validators (no backend involved), so both modes run them.
-		t.Run("provider_side_validators", func(t *testing.T) {
-			config, _, _, _ := testconfig.BBWorkspace(t)
-
-			tenantWithName := config.WithFirstBlock(
-				testconfig.Descend("spec", "target_ref")(testconfig.SetRawExpr(`{ kind = "meshTenant", name = "some-workspace" }`)),
-			)
-			workspaceWithUuid := config.WithFirstBlock(
-				testconfig.Descend("spec", "target_ref")(testconfig.SetRawExpr(`{ kind = "meshWorkspace", uuid = "00000000-0000-0000-0000-000000000000" }`)),
-			)
-
-			ApplyAndTest(t, resource.TestCase{
-				Steps: []resource.TestStep{
-					{
-						// target_ref kind=meshTenant must use uuid, not name.
-						Config:      tenantWithName.String(),
-						ExpectError: regexp.MustCompile(`must not be set when kind`),
-					},
-					{
-						// target_ref kind=meshWorkspace must use name, not uuid.
-						Config:      workspaceWithUuid.String(),
-						ExpectError: regexp.MustCompile(`must not be set when kind`),
-					},
-				},
-			})
-		})
-
-		// backend_rejections: rejections that only the real backend produces. The whole subtest is
-		// skipped in mock — the in-memory mock does not reject a STATIC input assigned as a customer
-		// input, so there is nothing here it could exercise.
-		t.Run("backend_rejections", func(t *testing.T) {
-			if IsMockClientTest() {
-				t.Skip("backend-only validation (STATIC-input rejection) the mock does not reproduce")
-			}
-			config, buildingBlockAddr, _, _ := testconfig.BBWorkspace(t)
-
-			// A STATIC BBD input (region) must not be accepted as a customer/operator input.
-			invalidInputAssignment := config.WithFirstBlock(
-				testconfig.Descend("spec", "inputs", "region")(testconfig.SetRawExpr(`{
-  value = jsonencode("eu-central-1")
-}`)),
-			)
-
-			ApplyAndTest(t, resource.TestCase{
-				Steps: []resource.TestStep{
-					{
-						// Create a valid BB first, then (next step) attempt the invalid STATIC-input
-						// assignment as an Update.
-						Config: config.String(),
-						ConfigPlanChecks: resource.ConfigPlanChecks{
-							PreApply: []plancheck.PlanCheck{
-								plancheck.ExpectResourceAction(buildingBlockAddr.String(), plancheck.ResourceActionCreate),
-							},
-						},
-						ConfigStateChecks: []statecheck.StateCheck{
-							statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("metadata").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
-						},
-					},
-					{
-						// Assigning the STATIC input as a customer input must be rejected.
-						Config:      invalidInputAssignment.String(),
-						ExpectError: regexp.MustCompile(`is\s+not\s+defined\s+as\s+a\s+customer\s+or\s+platform-operator\s+input`),
-					},
-				},
-			})
 		})
 	})
 
@@ -1244,7 +1095,7 @@ func TestAccBuildingBlock(t *testing.T) {
 			// The support file's postcondition rejects the failed run the broken ref produces. With run
 			// transparency ON the repair runs and fails on the broken ref again, so the postcondition fails
 			// that apply too; with it OFF meshStack refuses the trigger-run and that refusal is the error.
-			postconditionFailed := regexp.MustCompile(`did\s+not\s+succeed\s+\(health\s+status`)
+			postconditionFailed := expectErrorWords("succeed", "health", "status")
 			repairApplyErr := postconditionFailed
 			if expectRepairErr != nil {
 				repairApplyErr = expectRepairErr
@@ -1321,7 +1172,7 @@ func TestAccBuildingBlock(t *testing.T) {
 		// Run transparency OFF: meshStack refuses a workspace-scoped key's trigger-run on an opaque
 		// definition, so the repair cannot start at all and the apply says so.
 		t.Run("transparency_off_refuses_the_repair", func(t *testing.T) {
-			runCase(t, false, regexp.MustCompile("meshStack refused to run it again"))
+			runCase(t, false, expectErrorWords("refused", "run", "again"))
 		})
 	})
 

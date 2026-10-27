@@ -2,7 +2,6 @@ package provider
 
 import (
 	"fmt"
-	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -84,7 +83,7 @@ func TestAccWorkspaceTag(t *testing.T) {
 			Steps: []resource.TestStep{
 				{
 					Config:      config.String(),
-					ExpectError: regexp.MustCompile(`Workspace .* not found`),
+					ExpectError: expectErrorWords("Workspace", "not", "found"),
 				},
 			},
 		})
@@ -144,7 +143,7 @@ func TestAccWorkspaceTag(t *testing.T) {
 				ImportState:   true,
 				ResourceName:  workspaceTagAddr.String(),
 				ImportStateId: "no-dot",
-				ExpectError:   regexp.MustCompile(`Unexpected Import Identifier`),
+				ExpectError:   expectErrorWords("Unexpected", "Import", "Identifier"),
 			},
 		},
 	})

@@ -1,7 +1,6 @@
 package provider
 
 import (
-	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/compare"
@@ -71,7 +70,7 @@ func testAccBindingDataSource(t *testing.T, name string, bindingConfig testconfi
 			{Config: byTargetSubjectAndRole(role).String(), ConfigStateChecks: expectFound},
 			{
 				Config:      byTargetSubjectAndRole(otherRole).String(),
-				ExpectError: regexp.MustCompile(`No\s+\w+\s+\w+\s+binding\s+matches`),
+				ExpectError: expectErrorWords("binding", "matches"),
 			},
 		},
 	})

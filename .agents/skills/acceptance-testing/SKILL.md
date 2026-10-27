@@ -82,10 +82,9 @@ grep -E -- '--- (PASS|FAIL|SKIP)' /tmp/acc-tests.log
 `IsMockClientTest()` reports which. The mock guards the acceptance flow, so both modes run the same
 steps wherever they can.
 
-- Gate on `IsMockClientTest()` only what the mock cannot reproduce: backend-only validations and
-  errors, real runs, defaults the backend materializes (e.g. an operator input on upgrade),
-  cross-workspace permission boundaries.
-- Prefer skipping a whole subtest (`if IsMockClientTest() { t.Skip(...) }`, see `08`/`11`) over a
+- Gate on `IsMockClientTest()` only what the mock cannot reproduce: real runs, defaults the backend
+  materializes (e.g. an operator input on upgrade), cross-workspace permission boundaries.
+- Prefer skipping a whole subtest (`if IsMockClientTest() { t.Skip(...) }`, see `11`) over a
   per-step `SkipFunc`, so each `ApplyAndTest` runs identically in both modes. Gate a single
   `ConfigStateCheck` only when just one assertion diverges (see `05`/`06`).
 - Every gate says what the mock cannot do. An unexplained gate is a bug.

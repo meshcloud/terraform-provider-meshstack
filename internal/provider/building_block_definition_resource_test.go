@@ -823,7 +823,7 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 				// Step 3: Rotate the secret on the released version -> clear error, not an opaque hash failure
 				{
 					Config:      releaseBBDVersion(t, rotated).String(),
-					ExpectError: regexp.MustCompile("Updating a version_spec in non-draft state is not allowed"),
+					ExpectError: expectErrorWords("version_spec", "non-draft", "allowed"),
 				},
 			},
 		})
@@ -1133,7 +1133,7 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 				// the immutable version_spec is what must be reported.
 				{
 					Config:      releasedWithTerraformAndApprovalPolicies.String(),
-					ExpectError: regexp.MustCompile(`Updating a version_spec in non-draft \(released\) state is not allowed`),
+					ExpectError: expectErrorWords("version_spec", "non-draft", "released", "allowed"),
 				},
 				// The rejected apply must not have written the approval gate. Re-planning the configuration
 				// that was last applied refreshes from meshStack, so a stored policy change shows up here as a
@@ -1741,35 +1741,35 @@ resource "meshstack_building_block_definition" "test" {
 			implementation:   manualImpl,
 			approvalPolicies: `{ manual_triggers = true }`,
 			schedule:         `{}`,
-			expectError:      regexp.MustCompile(`Approvals require a dry run`),
+			expectError:      expectErrorWords("Approvals", "dry"),
 		},
 		{
 			name:             "drift detection on manual is rejected",
 			implementation:   manualImpl,
 			approvalPolicies: `{}`,
 			schedule:         `{ mode = "DRIFT_DETECTION", frequency = "DAILY" }`,
-			expectError:      regexp.MustCompile(`Scheduling is not supported for manual building blocks`),
+			expectError:      expectErrorWords("Scheduling", "supported", "manual"),
 		},
 		{
 			name:             "frequency without a schedule is rejected",
 			implementation:   terraformImpl,
 			approvalPolicies: `{}`,
 			schedule:         `{ mode = "DISABLED", frequency = "DAILY" }`,
-			expectError:      regexp.MustCompile(`Schedule frequency without a schedule`),
+			expectError:      expectErrorWords("frequency", "without", "schedule"),
 		},
 		{
 			name:             "schedule without a frequency is rejected",
 			implementation:   terraformImpl,
 			approvalPolicies: `{}`,
 			schedule:         `{ mode = "DRIFT_DETECTION" }`,
-			expectError:      regexp.MustCompile(`Schedule frequency required`),
+			expectError:      expectErrorWords("frequency", "required"),
 		},
 		{
 			name:             "automatic approval without reconciliation is rejected",
 			implementation:   terraformImpl,
 			approvalPolicies: `{}`,
 			schedule:         `{ mode = "DRIFT_DETECTION", frequency = "DAILY", automatic_approval = true }`,
-			expectError:      regexp.MustCompile(`Automatic approval without drift reconciliation`),
+			expectError:      expectErrorWords("Automatic", "approval", "drift"),
 		},
 	}
 
@@ -1852,43 +1852,43 @@ resource "meshstack_building_block_definition" "test" {
 			name:            "a project tag on a workspace building block is rejected",
 			specAttributes:  workspaceLevel,
 			inputAttributes: codeType + "\n        argument = jsonencode(\"PROJECT.costCenter\")",
-			expectError:     regexp.MustCompile(`A tag input cannot read this target`),
+			expectError:     expectErrorWords("tag", "read", "target"),
 		},
 		{
 			name:            "a non-code input type is rejected",
 			specAttributes:  workspaceLevel,
 			inputAttributes: "type = \"STRING\"\n        argument = jsonencode(\"WORKSPACE.costCenter\")",
-			expectError:     regexp.MustCompile(`A tag input must be a code input`),
+			expectError:     expectErrorWords("tag", "code"),
 		},
 		{
 			name:            "a sensitive tag input is rejected",
 			specAttributes:  workspaceLevel,
 			inputAttributes: codeType + "\n        sensitive = { argument = { secret_value = \"WORKSPACE.costCenter\" } }",
-			expectError:     regexp.MustCompile(`A tag input cannot be sensitive`),
+			expectError:     expectErrorWords("tag", "sensitive"),
 		},
 		{
 			name:            "a missing argument is rejected",
 			specAttributes:  workspaceLevel,
 			inputAttributes: codeType,
-			expectError:     regexp.MustCompile(`A tag input requires an argument naming the tag to read`),
+			expectError:     expectErrorWords("tag", "requires", "argument"),
 		},
 		{
 			name:            "an argument without a tag key is rejected",
 			specAttributes:  workspaceLevel,
 			inputAttributes: codeType + "\n        argument = jsonencode(\"WORKSPACE\")",
-			expectError:     regexp.MustCompile(`A tag input argument must name a target and a tag key`),
+			expectError:     expectErrorWords("tag", "argument", "target", "key"),
 		},
 		{
 			name:            "an unknown target is rejected",
 			specAttributes:  workspaceLevel,
 			inputAttributes: codeType + "\n        argument = jsonencode(\"TENANT.costCenter\")",
-			expectError:     regexp.MustCompile(`A tag input argument must name a known target`),
+			expectError:     expectErrorWords("tag", "argument", "known", "target"),
 		},
 		{
 			name:            "an argument that is not a string is rejected",
 			specAttributes:  workspaceLevel,
 			inputAttributes: codeType + "\n        argument = jsonencode([\"WORKSPACE.costCenter\"])",
-			expectError:     regexp.MustCompile(`A tag input argument must be an encoded string`),
+			expectError:     expectErrorWords("tag", "argument", "encoded"),
 		},
 	}
 
@@ -1961,43 +1961,43 @@ resource "meshstack_building_block_definition" "test" {
 			name:            "a tenant building block is rejected",
 			specAttributes:  tenantLevel,
 			inputAttributes: codeType,
-			expectError:     regexp.MustCompile(`A Payment Method input needs a workspace building block`),
+			expectError:     expectErrorWords("Payment", "needs", "workspace"),
 		},
 		{
 			name:            "a non-code input type is rejected",
 			specAttributes:  workspaceLevel,
 			inputAttributes: `type = "STRING"`,
-			expectError:     regexp.MustCompile(`A Payment Method input must be a code input`),
+			expectError:     expectErrorWords("Payment", "code"),
 		},
 		{
 			name:            "a default value is rejected",
 			specAttributes:  workspaceLevel,
 			inputAttributes: codeType + "\n        default_value = jsonencode(\"my-payment-method\")",
-			expectError:     regexp.MustCompile(`A Payment Method input cannot set default_value`),
+			expectError:     expectErrorWords("Payment", "default_value"),
 		},
 		{
 			name:            "a sensitive input is rejected",
 			specAttributes:  workspaceLevel,
 			inputAttributes: codeType + "\n        sensitive = {}",
-			expectError:     regexp.MustCompile(`A Payment Method input cannot set sensitive`),
+			expectError:     expectErrorWords("Payment", "sensitive"),
 		},
 		{
 			name:            "selectable values are rejected",
 			specAttributes:  workspaceLevel,
 			inputAttributes: codeType + "\n        selectable_values = [\"my-payment-method\"]",
-			expectError:     regexp.MustCompile(`A Payment Method input cannot set selectable_values`),
+			expectError:     expectErrorWords("Payment", "selectable_values"),
 		},
 		{
 			name:            "an optional input is rejected",
 			specAttributes:  workspaceLevel,
 			inputAttributes: codeType + "\n        is_optional = true",
-			expectError:     regexp.MustCompile(`A Payment Method input cannot be optional`),
+			expectError:     expectErrorWords("Payment", "optional"),
 		},
 		{
 			name:            "a validation regex is rejected",
 			specAttributes:  workspaceLevel,
 			inputAttributes: codeType + "\n        value_validation_regex = \".*\"",
-			expectError:     regexp.MustCompile(`A Payment Method input cannot set value_validation_regex`),
+			expectError:     expectErrorWords("Payment", "value_validation_regex"),
 		},
 	}
 
@@ -2054,17 +2054,17 @@ resource "meshstack_building_block_definition" "test" {
 		{
 			name:        "plain string is rejected",
 			symbol:      "not-a-url-or-data-uri",
-			expectError: regexp.MustCompile(`Invalid Symbol Format`),
+			expectError: expectErrorWords("Invalid", "Symbol", "Format"),
 		},
 		{
 			name:        "disallowed image type is rejected",
 			symbol:      "data:image/bmp;base64," + base64.StdEncoding.EncodeToString([]byte(strings.Repeat("x", 50))),
-			expectError: regexp.MustCompile(`Invalid Symbol Format`),
+			expectError: expectErrorWords("Invalid", "Symbol", "Format"),
 		},
 		{
 			name:        "invalid base64 is rejected",
 			symbol:      "data:image/png;base64,!!!not-valid-base64!!!",
-			expectError: regexp.MustCompile(`Invalid Base64 in Symbol Data URI`),
+			expectError: expectErrorWords("Base64", "Symbol"),
 		},
 		{
 			name:   "data URI decoded size exactly at 100 KiB limit",
@@ -2073,7 +2073,7 @@ resource "meshstack_building_block_definition" "test" {
 		{
 			name:        "data URI decoded size exceeds 100 KiB limit",
 			symbol:      "data:image/png;base64," + base64.StdEncoding.EncodeToString([]byte(strings.Repeat("x", 100*1024+1))),
-			expectError: regexp.MustCompile(`Symbol Image Too Large`),
+			expectError: expectErrorWords("Symbol", "Large"),
 		},
 		{
 			name:   "raw (no-padding) base64",
@@ -2222,22 +2222,22 @@ resource "meshstack_building_block_definition" "test" {
 		{
 			name:               "an unknown kind is rejected",
 			supportedPlatforms: fmt.Sprintf(`[{ kind = "meshPlatformInstance", uuid = %q }]`, platformUuid),
-			expectError:        regexp.MustCompile(`value must be one of: \["meshPlatformType" "meshPlatform"\]`),
+			expectError:        expectErrorWords("one", "meshPlatformType", "meshPlatform"),
 		},
 		{
 			name:               "a platform identified by name is rejected",
 			supportedPlatforms: `[{ kind = "meshPlatform", name = "my-azure.eu-de" }]`,
-			expectError:        regexp.MustCompile(`Invalid Attribute Combination`),
+			expectError:        expectErrorWords("Invalid", "Attribute", "Combination"),
 		},
 		{
 			name:               "a platform type identified by uuid is rejected",
 			supportedPlatforms: fmt.Sprintf(`[{ kind = "meshPlatformType", uuid = %q }]`, platformUuid),
-			expectError:        regexp.MustCompile(`Invalid Attribute Combination`),
+			expectError:        expectErrorWords("Invalid", "Attribute", "Combination"),
 		},
 		{
 			name:               "an entry with both identifiers is rejected",
 			supportedPlatforms: fmt.Sprintf(`[{ kind = "meshPlatform", name = "my-azure.eu-de", uuid = %q }]`, platformUuid),
-			expectError:        regexp.MustCompile(`Invalid Attribute Combination`),
+			expectError:        expectErrorWords("Invalid", "Attribute", "Combination"),
 		},
 	}
 
@@ -2289,32 +2289,32 @@ resource "meshstack_building_block_definition" "test" {
 			name:           "optional input rejected on manual implementation",
 			implementation: manualImplementation,
 			input:          `{ display_name = "Candidate", type = "STRING", assignment_type = "USER_INPUT", is_optional = true }`,
-			expectError:    regexp.MustCompile(`cannot be optional on a manual building block`),
+			expectError:    expectErrorWords("optional", "manual"),
 		},
 		{
 			// A STATIC value is always there, so there is nothing for the implementation to fall back from.
 			name:           "optional input rejected for a STATIC assignment type",
 			implementation: terraformImplementation,
 			input:          `{ display_name = "Candidate", type = "STRING", assignment_type = "STATIC", argument = jsonencode("c"), is_optional = true }`,
-			expectError:    regexp.MustCompile(`cannot be optional with this assignment_type`),
+			expectError:    expectErrorWords("optional", "assignment_type"),
 		},
 		{
 			name:           "optional BOOLEAN input rejected",
 			implementation: terraformImplementation,
 			input:          `{ display_name = "Candidate", type = "BOOLEAN", assignment_type = "USER_INPUT", is_optional = true }`,
-			expectError:    regexp.MustCompile(`type BOOLEAN cannot be optional`),
+			expectError:    expectErrorWords("BOOLEAN", "optional"),
 		},
 		{
 			name:           "optional input with default_value rejected",
 			implementation: terraformImplementation,
 			input:          `{ display_name = "Candidate", type = "STRING", assignment_type = "USER_INPUT", is_optional = true, default_value = jsonencode("c") }`,
-			expectError:    regexp.MustCompile(`must not have a default value`),
+			expectError:    expectErrorWords("default", "value"),
 		},
 		{
 			name:           "optional input with sensitive default_value rejected",
 			implementation: terraformImplementation,
 			input:          `{ display_name = "Candidate", type = "STRING", assignment_type = "USER_INPUT", is_optional = true, sensitive = { default_value = { secret_value = "c" } } }`,
-			expectError:    regexp.MustCompile(`must not have a default value`),
+			expectError:    expectErrorWords("default", "value"),
 		},
 		{
 			name:           "optional USER_INPUT accepted",
@@ -2390,12 +2390,12 @@ resource "meshstack_building_block_definition" "test" {
 		{
 			name:        "JSON input without a schema rejected",
 			input:       `type = "JSON", assignment_type = "USER_INPUT"`,
-			expectError: regexp.MustCompile(`json_schema is required`),
+			expectError: expectErrorWords("json_schema", "required"),
 		},
 		{
 			name:        "schema on an input of another type rejected",
 			input:       `type = "STRING", assignment_type = "USER_INPUT", ` + schema,
-			expectError: regexp.MustCompile(`json_schema must not be set`),
+			expectError: expectErrorWords("json_schema", "not", "set"),
 		},
 		{
 			name:  "input of another type without a schema accepted",
@@ -2454,25 +2454,25 @@ resource "meshstack_building_block_definition" "test" {
 			name:           "condition rejected on manual implementation",
 			implementation: manualImplementation,
 			input:          `{ display_name = "Candidate", type = "STRING", assignment_type = "USER_INPUT", condition = "input.cloud_provider == \"aws\"" }`,
-			expectError:    regexp.MustCompile(`cannot have a condition on a manual building block`),
+			expectError:    expectErrorWords("condition", "manual"),
 		},
 		{
 			name:           "condition rejected for a non-user assignment type",
 			implementation: terraformImplementation,
 			input:          `{ display_name = "Candidate", type = "STRING", assignment_type = "STATIC", argument = jsonencode("c"), condition = "input.cloud_provider == \"aws\"" }`,
-			expectError:    regexp.MustCompile(`cannot have a condition with this assignment_type`),
+			expectError:    expectErrorWords("condition", "assignment_type"),
 		},
 		{
 			name:           "blank condition rejected",
 			implementation: terraformImplementation,
 			input:          `{ display_name = "Candidate", type = "STRING", assignment_type = "USER_INPUT", condition = "  " }`,
-			expectError:    regexp.MustCompile(`must not be blank`),
+			expectError:    expectErrorWords("not", "blank"),
 		},
 		{
 			name:           "overlong condition rejected",
 			implementation: terraformImplementation,
 			input:          `{ display_name = "Candidate", type = "STRING", assignment_type = "USER_INPUT", condition = "input.cloud_provider == \"` + strings.Repeat("x", 600) + `\"" }`,
-			expectError:    regexp.MustCompile(`string length must be at\s+most 512`),
+			expectError:    expectErrorWords("length", "most", "512"),
 		},
 		{
 			name:           "conditional USER_INPUT accepted",
@@ -2536,36 +2536,36 @@ resource "meshstack_building_block_definition" "test" {
 			// Outputs are keyed by input; a key with no matching input is rejected (mirrors the backend 400).
 			name:        "output without a matching input rejected",
 			outputs:     `outputs = { tenant = { assignment_type = "SUMMARY" }, surplus = { assignment_type = "SUMMARY" } }`,
-			expectError: regexp.MustCompile(`no matching input`),
+			expectError: expectErrorWords("no", "matching", "input"),
 		},
 		{
 			// type is always derived for manual outputs, so declaring it is rejected.
 			name:        "declared type rejected on manual output",
 			outputs:     `outputs = { tenant = { type = "STRING", assignment_type = "SUMMARY" } }`,
-			expectError: regexp.MustCompile(`type must not be set`),
+			expectError: expectErrorWords("type", "not", "set"),
 		},
 		{
 			// A no-op override (NONE assignment and no display_name) cannot be reconstructed by the diff rule.
 			name:        "no-op override rejected (NONE assignment, no display_name)",
 			outputs:     `outputs = { tenant = { assignment_type = "NONE" } }`,
-			expectError: regexp.MustCompile(`no effect`),
+			expectError: expectErrorWords("no", "effect"),
 		},
 		{
 			name:        "no-op override rejected (empty object)",
 			outputs:     `outputs = { tenant = {} }`,
-			expectError: regexp.MustCompile(`no effect`),
+			expectError: expectErrorWords("no", "effect"),
 		},
 		{
 			// display_order alone is not a supported override (deliberately not a membership signal).
 			name:        "display_order-only override rejected",
 			outputs:     `outputs = { tenant = { display_order = 5 } }`,
-			expectError: regexp.MustCompile(`no effect`),
+			expectError: expectErrorWords("no", "effect"),
 		},
 		{
 			// A display_name equal to the input's is not a real override.
 			name:        "display_name equal to input rejected as no-op",
 			outputs:     `outputs = { tenant = { display_name = "Tenant" } }`,
-			expectError: regexp.MustCompile(`no effect`),
+			expectError: expectErrorWords("no", "effect"),
 		},
 		// Accepted: a sparse subset, an empty map (no overrides), and a display_name override.
 		{

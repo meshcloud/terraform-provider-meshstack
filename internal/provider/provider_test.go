@@ -6,6 +6,7 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 	"sync"
@@ -376,4 +377,13 @@ func sanitizeTestName(name string) string {
 			return '_'
 		}
 	}, name)
+}
+
+// expectErrorWords matches an error that contains the words in this order, across Terraform's line breaks.
+func expectErrorWords(words ...string) *regexp.Regexp {
+	quoted := make([]string, len(words))
+	for i, word := range words {
+		quoted[i] = regexp.QuoteMeta(word)
+	}
+	return regexp.MustCompile(`(?s)` + strings.Join(quoted, `.*`))
 }

@@ -1,7 +1,6 @@
 package provider
 
 import (
-	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -40,7 +39,7 @@ func TestAccTagDefinitionDataSource(t *testing.T) {
 			{Config: byTargetKindAndKey.String(), ConfigStateChecks: expectFound},
 			{
 				Config:      otherTargetKind.String(),
-				ExpectError: regexp.MustCompile(`(?s)No tag definition matches.*spec.target_kind\s+=\s+"meshWorkspace"`),
+				ExpectError: expectErrorWords("matches", "spec.target_kind", "meshWorkspace"),
 			},
 		},
 	})

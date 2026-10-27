@@ -2,7 +2,6 @@ package provider
 
 import (
 	_ "embed"
-	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -197,7 +196,7 @@ func TestAccBuildingBlockRunnerResource(t *testing.T) {
 							issuer = "https://oidc.example.com"
 						}`)),
 					).String(),
-					ExpectError: regexp.MustCompile("At least one provider configuration must be set"),
+					ExpectError: expectErrorWords("provider", "configuration", "set"),
 				},
 				{
 					Config: config.WithFirstBlock(
@@ -209,7 +208,7 @@ func TestAccBuildingBlockRunnerResource(t *testing.T) {
 							}
 						}`)),
 					).String(),
-					ExpectError: regexp.MustCompile(`(?s)attribute "subject_template" is required`),
+					ExpectError: expectErrorWords("subject_template", "required"),
 				},
 				{
 					Config: config.WithFirstBlock(
@@ -222,7 +221,7 @@ func TestAccBuildingBlockRunnerResource(t *testing.T) {
 							}
 						}`)),
 					).String(),
-					ExpectError: regexp.MustCompile(`(?s)subject_template.*must not\s+be empty\s+or whitespace`),
+					ExpectError: expectErrorWords("subject_template", "empty", "whitespace"),
 				},
 			},
 		})

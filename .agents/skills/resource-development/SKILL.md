@@ -125,6 +125,12 @@ A good test is multi-step (create → update → import), uses the builder, and 
 `xknownvalue` helpers (`NotEmptyString`, `Ref`, `MapExact`) over raw `knownvalue` where they fit.
 See `REFERENCE.md` for the full `TestAccProject` example.
 
+One `TestAcc*` test per resource or data source covers it, since it runs the real Terraform flow in
+both modes. Add a unit test only for provider logic an acceptance test cannot reach. Leave
+meshStack's own validation errors to its API tests (*meshcloud-internal*: meshfed-release); assert an
+error only when provider code produces or handles it, and match it with `expectErrorWords` and a few
+key words.
+
 ## Data source test
 
 Reference a **resource attribute** (so Terraform infers the dependency — never `depends_on`) and

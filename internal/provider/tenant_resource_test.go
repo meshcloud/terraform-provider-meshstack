@@ -2,7 +2,6 @@ package provider
 
 import (
 	"fmt"
-	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/compare"
@@ -191,26 +190,7 @@ func TestAccTenant(t *testing.T) {
 				},
 				{
 					Config:      changedConfig.String(),
-					ExpectError: regexp.MustCompile("Tenants can't be updated"),
-				},
-			},
-		})
-	})
-
-	// quotas_out_of_range asserts the backend's create-time guardrail surfaces as a clear error: a
-	// requested quota above the platform's max is rejected with HTTP 400, and the provider bubbles up the
-	// descriptive API message. The mock does not enforce bounds, so this is acceptance-only.
-	t.Run("quotas_out_of_range", func(t *testing.T) {
-		if IsMockClientTest() {
-			t.Skip("quota bounds are enforced by the backend; requires a real meshStack")
-		}
-		config, _ := tenantQuotaConfig(t, tenantQuotaOptions{maxCpu: 100, threshold: 100, requestedCpu: 101})
-
-		ApplyAndTest(t, resource.TestCase{
-			Steps: []resource.TestStep{
-				{
-					Config:      config.String(),
-					ExpectError: regexp.MustCompile(`is\s+out\s+of\s+range`),
+					ExpectError: expectErrorWords("Tenants", "updated"),
 				},
 			},
 		})

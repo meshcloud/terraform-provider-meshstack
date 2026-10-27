@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"net/http"
-	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -85,7 +84,7 @@ func TestAccBuildingBlockDefinitionDataSource(t *testing.T) {
 		ApplyAndTest(t, resource.TestCase{Steps: []resource.TestStep{
 			{
 				Config:      noFilter.String(),
-				ExpectError: regexp.MustCompile(`(?s)At\s+least\s+one\s+of\s+these\s+attributes\s+must\s+be\s+configured.*metadata.uuid`),
+				ExpectError: expectErrorWords("least", "attributes", "configured", "metadata.uuid"),
 			},
 			{
 				Config: byDisplayName.String(),
@@ -96,11 +95,11 @@ func TestAccBuildingBlockDefinitionDataSource(t *testing.T) {
 			},
 			{
 				Config:      unknownName.String(),
-				ExpectError: regexp.MustCompile(`(?s)No building block definition that you can see matches.*spec.display_name\s+=\s+"No\s+Such\s+Building\s+Block"`),
+				ExpectError: expectErrorWords("definition", "matches", "spec.display_name", "Such"),
 			},
 			{
 				Config:      uuidWithOtherTargetType.String(),
-				ExpectError: regexp.MustCompile(`No building block definition that you can see matches\s+metadata.uuid`),
+				ExpectError: expectErrorWords("definition", "matches", "metadata.uuid"),
 			},
 		}})
 	})
