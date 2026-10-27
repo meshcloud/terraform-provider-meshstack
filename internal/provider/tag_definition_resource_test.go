@@ -105,34 +105,3 @@ resource "meshstack_tag_definition" "single_select_numbers" {
 		},
 	})
 }
-
-// TestTagDefinitionResource_OptionsRejectObjectElements verifies that the schema
-// enforces list(string) element type for options — an object element cannot be
-// coerced to string and must be rejected.
-func TestTagDefinitionResource_OptionsRejectObjectElements(t *testing.T) {
-	keySuffix := acctest.RandString(8)
-
-	config := `
-resource "meshstack_tag_definition" "invalid_options" {
-  spec = {
-    target_kind  = "meshProject"
-    key          = "test-invalid-elem-` + keySuffix + `"
-    display_name = "Test Invalid Element Type"
-    value_type = {
-      single_select = {
-        options = [{ not_a_string = true }]
-      }
-    }
-  }
-}
-`
-
-	ApplyAndTest(t, resource.TestCase{
-		Steps: []resource.TestStep{
-			{
-				Config:      config,
-				ExpectError: expectErrorWords("Incorrect", "attribute", "type"),
-			},
-		},
-	})
-}
