@@ -1031,7 +1031,7 @@ func TestAccBuildingBlock(t *testing.T) {
 					{
 						// Assigning the STATIC input as a customer input must be rejected.
 						Config:      invalidInputAssignment.String(),
-						ExpectError: regexp.MustCompile("is not defined as a customer or platform-operator input"),
+						ExpectError: regexp.MustCompile(`is\s+not\s+defined\s+as\s+a\s+customer\s+or\s+platform-operator\s+input`),
 					},
 				},
 			})

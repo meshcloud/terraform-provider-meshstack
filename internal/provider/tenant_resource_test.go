@@ -210,7 +210,7 @@ func TestAccTenant(t *testing.T) {
 			Steps: []resource.TestStep{
 				{
 					Config:      config.String(),
-					ExpectError: regexp.MustCompile(`is out of range`),
+					ExpectError: regexp.MustCompile(`is\s+out\s+of\s+range`),
 				},
 			},
 		})
