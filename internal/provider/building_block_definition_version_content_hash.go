@@ -24,7 +24,7 @@ const (
 	// v3: display_order folded into the hash. v4: dependencies hashed as dependencyDefinitionRefs.
 	// v5: manual building block outputs are hashed as the tracked-override subset (sparse), not the full
 	// backend-derived one-per-input set, matching the sparse config/state model.
-	currentHashVersion = 5
+	currentHashVersion = 6
 )
 
 // represents a content hash of a building block definition version, which is used to detect changes in the version_spec.

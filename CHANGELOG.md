@@ -15,6 +15,8 @@ BREAKING CHANGES:
   version is gone. Write `versions["v1"]` in place of `versions[0]`, or use `version_latest` and
   `version_latest_release`. A `for` expression over `versions` visits the keys in lexical order, so `v10` comes before
   `v2`. Existing state upgrades on its own.
+- `meshstack_building_block_definition`: `implementation.terraform.async` is removed, because Terraform runs are
+  always synchronous. Remove the argument from your configuration.
 
 FEATURES:
 - `meshstack_building_block` resource and data source, and `meshstack_building_blocks`: new `status.health_status`,
