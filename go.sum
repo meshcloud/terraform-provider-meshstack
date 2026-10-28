@@ -443,8 +443,8 @@ github.com/mattn/go-isatty v0.0.20 h1:xfD0iDuEKnDkl03q4limB+vH+GxLEtL/jb4xVJSWWE
 github.com/mattn/go-isatty v0.0.20/go.mod h1:W+V8PltTTMOvKvAeJH7IuucS94S2C6jfK/D7dTCTo3Y=
 github.com/mattn/go-runewidth v0.0.30 h1:+KUuiDA4fF0R1p5FeueHefjDm+GIM+kWfFnDjybOPgk=
 github.com/mattn/go-runewidth v0.0.30/go.mod h1:3qAiGCV4Koz/yuveO58qUefmUTRm8r0IGEXZ9jeHp/8=
-github.com/meshcloud/meshstack-cli v0.7.1-0.20261028104409-57f18674fa7e h1:pPC1KWHxvjN0ukBbHz5iM9jST/Zu9qm2DgD4F1YoT6o=
-github.com/meshcloud/meshstack-cli v0.7.1-0.20261028104409-57f18674fa7e/go.mod h1:KG28iE+4ZADV84NVjwnko0X+JGSosmlx5hw38OUXuec=
+github.com/meshcloud/meshstack-cli v0.8.0 h1:DfDvxISEyZn3GbmnMdvma0lkkttw3fSlrepcM+tBS7Y=
+github.com/meshcloud/meshstack-cli v0.8.0/go.mod h1:KG28iE+4ZADV84NVjwnko0X+JGSosmlx5hw38OUXuec=
 github.com/mgechev/revive v1.15.0 h1:vJ0HzSBzfNyPbHKolgiFjHxLek9KUijhqh42yGoqZ8Q=
 github.com/mgechev/revive v1.15.0/go.mod h1:LlAKO3QQe9OJ0pVZzI2GPa8CbXGZ/9lNpCGvK4T/a8A=
 github.com/mitchellh/copystructure v1.0.0/go.mod h1:SNtv71yrdKgLRyLFxmLdkAbkKEFWgYaq1OVrnRcwhnw=

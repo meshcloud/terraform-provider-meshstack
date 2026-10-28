@@ -128,7 +128,6 @@ resource "meshstack_building_block_definition" "example_01_terraform" {
       terraform = {
         terraform_version              = "1.9.0"
         repository_url                 = "https://github.com/example/building-block.git"
-        async                          = true                        # Optional: defaults to false
         repository_path                = "terraform/modules/example" # Optional
         ref_name                       = "v1.0.0"                    # Optional - git ref (branch, tag, commit)
         use_mesh_http_backend_fallback = true                        # Optional: defaults to false

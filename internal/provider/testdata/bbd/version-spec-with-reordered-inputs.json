@@ -34,7 +34,6 @@
     "terraform" : {
       "terraformVersion" : "1.9.0",
       "repositoryUrl" : "https://github.com/example/building-block.git",
-      "async" : false,
       "repositoryPath" : "terraform/modules/example",
       "refName" : "v1.0.0",
       "sshKnownHost" : {
