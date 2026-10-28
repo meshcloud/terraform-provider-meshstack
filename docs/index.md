@@ -11,6 +11,10 @@ The meshStack terraform provider is an open-source tool, licensed under the Apac
 
 **Note:** This provider version requires meshStack version 2026.36.0 or higher. The provider automatically validates version compatibility during initialization.
 
+## For AI agents
+
+AI agents that manage meshStack with this provider get the [`terraform-provider-meshstack` skill](https://github.com/meshcloud/terraform-provider-meshstack/blob/main/skills/terraform-provider-meshstack/SKILL.md): link it from your repository's agent instructions. For everything else about meshStack, point them at [docs.meshcloud.io/llms.txt](https://docs.meshcloud.io/llms.txt).
+
 ## Authentication
 
 ~> **Preview:** The `profile` and `workspace` arguments may change without prior notice while the meshStack CLI is under active development.

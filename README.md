@@ -32,6 +32,13 @@ written to Terraform state.
 See the [registry documentation](https://registry.terraform.io/providers/meshcloud/meshstack/latest/docs)
 for the full list of resources, data sources, and example configurations.
 
+## For AI agents
+
+AI agents that manage meshStack with this provider get the
+[`terraform-provider-meshstack` skill](skills/terraform-provider-meshstack/SKILL.md): link it from your
+repository's agent instructions. For everything else about meshStack, point them at
+[docs.meshcloud.io/llms.txt](https://docs.meshcloud.io/llms.txt).
+
 ## Support, bugs, feature requests
 
 - **Support questions**: email support@meshcloud.io. Questions filed as GitHub issues are handled on a
