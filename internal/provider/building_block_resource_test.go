@@ -104,8 +104,10 @@ func TestAccBuildingBlock(t *testing.T) {
 		renamedConfig := config.WithFirstBlock(
 			testconfig.Descend("spec", "display_name")(testconfig.SetRawExpr(`"my-workspace-building-block-renamed"`)),
 		)
+		// jsonencode escapes `&` as `\u0026`, while meshStack returns the value unescaped.
 		updatedInputsConfig := renamedConfig.WithFirstBlock(
 			testconfig.Descend("spec", "inputs", "environment", "value")(testconfig.SetRawExpr(`jsonencode("staging")`)),
+			testconfig.Descend("spec", "inputs", "name", "value")(testconfig.SetRawExpr(`jsonencode("R&D")`)),
 		)
 		// content_hash tracks the BBD version's content; setting it, then changing it, simulates the
 		// BBD being updated and must trigger a rerun even though the version uuid is unchanged.
@@ -187,6 +189,7 @@ func TestAccBuildingBlock(t *testing.T) {
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("spec").AtMapKey("inputs").AtMapKey("environment").AtMapKey("value"), knownvalue.StringExact(`"staging"`)),
+						statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("spec").AtMapKey("inputs").AtMapKey("name").AtMapKey("value"), knownvalue.StringExact(`"R\u0026D"`)),
 					},
 				},
 				{

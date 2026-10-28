@@ -232,6 +232,7 @@ func (r *buildingBlockResource) Schema(ctx context.Context, req resource.SchemaR
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
 								"value": schema.StringAttribute{
+									CustomType: jsontypes.NormalizedType{},
 									MarkdownDescription: "Non-sensitive input value, always `jsonencode(...)`'d — including strings " +
 										"(e.g. `jsonencode(\"my-name\")`, `jsonencode(16)`) — to match the type the BBD declares, " +
 										"the same convention as a BBD input's `argument`/`default_value`.",

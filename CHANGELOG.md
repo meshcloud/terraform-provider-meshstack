@@ -3,6 +3,11 @@
 FEATURES:
 - `meshstack_building_block`: changing the parents of a block on a draft definition version updates it in place.
 
+FIXES:
+- `meshstack_building_block`: an input `value` that contains `&`, `<` or `>` no longer shows a change in every plan and
+  no longer fails the apply with an inconsistent result. `jsonencode` escapes these characters and meshStack returns
+  them unescaped, so the provider now compares input values as JSON.
+
 # v0.27.0
 
 BREAKING CHANGES:
