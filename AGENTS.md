@@ -76,6 +76,11 @@ opens a browser.
   `CHANGELOG.md` entry under the concrete anticipated next version — never an "Unreleased" heading,
   because `main` is always ready to tag. See **`changelog-management`**.
 - **Conventional Commits** for messages (`feat:`, `fix:`, `docs:`, `chore:`, `feat!:` for breaking).
+- **The user skill changes with the resources.** `skills/terraform-provider-meshstack/` is for those
+  who **use** the provider, not for developing it. A change to a resource or data source that the
+  skill shows updates the skill in the same pull request. docs.meshcloud.io links to its headings, so
+  rename a heading only together with the docs. It links only public pages: never
+  `../meshfed-release`, an `AGENTS.md` or an `.agents/` folder.
 
 </rules>
 
