@@ -267,7 +267,7 @@ func checkPlatformConfigState(resourceAddress, exampleSuffix string) []statechec
 			tfjsonpath.New("spec").AtMapKey("config").AtMapKey(platformType),
 			configCheck,
 		),
-		checkPlatformQuotas(resourceAddress, exampleSuffix),
+		checkPlatformQuotas(resourceAddress),
 	}
 	return append(checks, checkPlatformRoleMappings(resourceAddress, exampleSuffix)...)
 }
@@ -323,22 +323,12 @@ func checkPlatformRoleMappings(resourceAddress, exampleSuffix string) []stateche
 	}
 }
 
-func checkPlatformQuotas(resourceAddress, exampleSuffix string) statecheck.StateCheck {
-	switch exampleSuffix {
-	case "01_azure":
-		// Azure example defines 2 quota entries (vcpu, storage)
-		return statecheck.ExpectKnownValue(
-			resourceAddress,
-			tfjsonpath.New("spec").AtMapKey("quota_definitions"),
-			knownvalue.SetSizeExact(2),
-		)
-	default:
-		return statecheck.ExpectKnownValue(
-			resourceAddress,
-			tfjsonpath.New("spec").AtMapKey("quota_definitions"),
-			knownvalue.SetSizeExact(0),
-		)
-	}
+func checkPlatformQuotas(resourceAddress string) statecheck.StateCheck {
+	return statecheck.ExpectKnownValue(
+		resourceAddress,
+		tfjsonpath.New("spec").AtMapKey("quota_definitions"),
+		knownvalue.SetSizeExact(0),
+	)
 }
 
 // checkAzurePlatformConfig verifies the azure config block is present and non-null.

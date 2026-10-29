@@ -1,5 +1,10 @@
 # v0.27.1
 
+FIXES:
+- `meshstack_platform`: the Azure example no longer defines `quota_definitions`. meshStack accepts quota definitions
+  only on platforms that apply quotas (OpenStack, Cloud Foundry, OpenShift, Kubernetes, AKS) and rejects them on
+  others.
+
 FEATURES:
 - `meshstack_building_block`: changing the parents of a block on a draft definition version updates it in place.
 

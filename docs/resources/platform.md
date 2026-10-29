@@ -40,26 +40,7 @@ resource "meshstack_platform" "example_azure" {
       restricted_to_workspaces = []
     }
 
-    quota_definitions = [
-      {
-        quota_key               = "vcpu"
-        label                   = "Virtual CPUs"
-        description             = "Number of virtual CPUs available"
-        unit                    = "cores"
-        min_value               = 0
-        max_value               = 100
-        auto_approval_threshold = 50
-      },
-      {
-        quota_key               = "storage"
-        label                   = "Storage"
-        description             = "Storage capacity in GB"
-        unit                    = "GB"
-        min_value               = 0
-        max_value               = 1000
-        auto_approval_threshold = 500
-      }
-    ]
+    quota_definitions = []
 
     config = {
       azure = {

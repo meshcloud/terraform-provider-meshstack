@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/compare"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
@@ -337,7 +338,13 @@ func tenantQuotaConfig(t *testing.T, opts tenantQuotaOptions) (testconfig.Config
 	t.Helper()
 	workspaceConfig, workspaceAddr := testconfig.Workspace(t)
 	projectConfig, projectAddr := testconfig.Project(t, workspaceAddr)
-	platformConfig, platformAddr, platformTypeAddr := testconfig.CustomPlatform(t, workspaceAddr)
+	var platformAddr testconfig.Traversal
+	platformConfig := testconfig.Resource{Name: "platform", Suffix: "_04_kubernetes"}.Config(t).WithFirstBlock(
+		testconfig.ExtractAddress(&platformAddr),
+		testconfig.OwnedByWorkspace(workspaceAddr),
+		testconfig.Descend("metadata", "name")(testconfig.SetString("k8s-"+acctest.RandString(8))),
+		testconfig.Descend("spec", "config")(testconfig.SetRawExpr(`{ kubernetes = { base_url = "https://k8s.example.com:6443" } }`)),
+	)
 
 	quotaDefinitions := fmt.Sprintf(
 		`{ quota_key = "limits.cpu", min_value = 1, max_value = %d, unit = "cores", auto_approval_threshold = %d, description = "vCPU limit", label = "CPU" }`,
@@ -353,7 +360,10 @@ func tenantQuotaConfig(t *testing.T, opts tenantQuotaOptions) (testconfig.Config
 		testconfig.Descend("spec", "quota_definitions")(testconfig.SetRawExpr("[%s]", quotaDefinitions)),
 	)
 
-	landingZoneConfig, landingZoneAddr := testconfig.LandingZone(t, workspaceAddr, platformAddr, platformTypeAddr)
+	landingZoneConfig, landingZoneAddr := testconfig.SimpleLandingZone(t, workspaceAddr, platformAddr)
+	landingZoneConfig = landingZoneConfig.WithFirstBlock(
+		testconfig.Descend("spec", "platform_properties")(testconfig.SetRawExpr(`{ kubernetes = { kubernetes_role_mappings = [] } }`)),
+	)
 	if opts.landingZoneMemoryDefault != 0 {
 		landingZoneConfig = landingZoneConfig.WithFirstBlock(
 			testconfig.Descend("spec", "quotas")(testconfig.SetRawExpr(
