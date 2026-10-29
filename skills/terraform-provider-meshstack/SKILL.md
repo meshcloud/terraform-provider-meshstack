@@ -33,6 +33,22 @@ To build a definition from a ready-made module, start with the
 `meshstack_building_block`, and move old ones as [Import existing objects](#import-existing-objects)
 shows. The commands below use `tofu`; `terraform` takes the same arguments.
 
+## Get a working config
+
+This skill holds no full configurations, because copies here would fall behind the provider. Two
+sources are tested against a real meshStack, so start from them and replace the names and values
+with the user's:
+
+- **The examples of the provider.** The acceptance tests apply them, and the registry shows them as
+  "Example Usage". Each section below links the ones it needs. The links point to `main`. When the
+  user runs an older provider version, replace `main` with its tag, such as `v0.27.0`.
+- **The configurations of the acceptance tests**, when you work in a clone of this repository.
+  `MESHSTACK_SCRATCH_DUMP=1 go test -run 'TestAccBuildingBlock$' ./internal/provider/` writes the
+  HCL of every step of that test to `scratch/<test>/stepNN/`, without running it and without a
+  meshStack.
+
+An example sets many optional attributes to show them. Keep only what the user needs.
+
 ## Log in
 
 Act as the user, through their own meshStack CLI browser login. meshStack then records the user as
@@ -41,20 +57,8 @@ the author of every change. The CLI skill shows
 The provider uses the stored login, renews it, and never opens a browser. When the login has
 expired, the provider fails, and the user has to log in again.
 
-```hcl
-terraform {
-  required_providers {
-    meshstack = {
-      source = "meshcloud/meshstack"
-    }
-  }
-}
-
-provider "meshstack" {
-  profile   = "<profile>"
-  workspace = "<workspace>"
-}
-```
+Declare the provider with `source = "meshcloud/meshstack"` in `required_providers`. The provider
+block takes the CLI profile and the workspace, as [provider.tf](https://raw.githubusercontent.com/meshcloud/terraform-provider-meshstack/main/examples/provider/provider.tf) shows.
 
 - A browser login needs `workspace`, or `MESHSTACK_WORKSPACE`. The provider ignores the default
   workspace of the profile, so the configuration acts in the same workspace for everyone who
@@ -62,7 +66,8 @@ provider "meshstack" {
 - The login acts with the user's role in that workspace. Set it to the workspace the objects belong
   to: the platform team's workspace for a definition, the building block's workspace for a block.
 - For several workspaces, write one provider block per workspace with an `alias`, and set
-  `provider = meshstack.<alias>` on each resource.
+  `provider = meshstack.<alias>` on each resource, as
+  [provider_workspaces.tf](https://raw.githubusercontent.com/meshcloud/terraform-provider-meshstack/main/examples/provider/provider_workspaces.tf) shows.
 - A credential in the environment wins over the profile. Unset `MESHSTACK_API_KEY`,
   `MESHSTACK_API_SECRET` and `MESHSTACK_API_TOKEN` to act as the user.
 
@@ -76,42 +81,16 @@ workspace.
 ## Find existing objects
 
 Read what exists with data sources and pass their `ref` and version outputs on, rather than copying
-uuids into the configuration:
+uuids into the configuration. Examples:
+[workspace](https://raw.githubusercontent.com/meshcloud/terraform-provider-meshstack/main/examples/data-sources/meshstack_workspace/data-source.tf),
+[definition](https://raw.githubusercontent.com/meshcloud/terraform-provider-meshstack/main/examples/data-sources/meshstack_building_block_definition/data-source.tf),
+[tenants](https://raw.githubusercontent.com/meshcloud/terraform-provider-meshstack/main/examples/data-sources/meshstack_tenants/data-source.tf),
+[payment method](https://raw.githubusercontent.com/meshcloud/terraform-provider-meshstack/main/examples/data-sources/meshstack_payment_method/data-source.tf) and
+[building blocks](https://raw.githubusercontent.com/meshcloud/terraform-provider-meshstack/main/examples/data-sources/meshstack_building_blocks/data-source.tf).
 
-```hcl
-data "meshstack_workspace" "team" {
-  metadata = {
-    name = "<workspace>"
-  }
-}
-
-data "meshstack_building_block_definition" "repo" {
-  spec = {
-    display_name = "<definition name as the meshPanel marketplace shows it>"
-  }
-}
-
-data "meshstack_tenants" "dev" {
-  workspace = "<workspace>"
-  project   = "<project>"
-  platform  = "<platform>.<location>"
-}
-
-data "meshstack_payment_method" "team" {
-  metadata = {
-    name               = "<payment method>"
-    owned_by_workspace = "<workspace>"
-  }
-}
-
-data "meshstack_building_blocks" "failed" {
-  workspace_identifier = "<workspace>"
-  health_status        = ["FAILED"]
-}
-```
-
-- `data.meshstack_workspace.team.ref` is the `target_ref` of a workspace-level building block, and
-  `one(data.meshstack_tenants.dev.tenants).ref` the one of a tenant-level block.
+- The `ref` of a workspace is the `target_ref` of a workspace-level building block. For a
+  tenant-level block, filter `meshstack_tenants` by `platform = "<platform>.<location>"` and take
+  `one(data.meshstack_tenants.<name>.tenants).ref`.
 - The definition data source fails unless exactly one definition matches. Add
   `metadata.owned_by_workspace` when two workspaces offer a definition of the same name.
 - `version_latest_release` of a definition is its newest released version, `version_latest` the
@@ -126,68 +105,26 @@ describes.
 
 ## Create a building block definition
 
-A definition belongs to the platform team's workspace. It starts as a draft:
-
-```hcl
-resource "meshstack_building_block_definition" "repo" {
-  metadata = {
-    owned_by_workspace = "<platform team workspace>"
-  }
-
-  spec = {
-    display_name = "GitHub Repository"
-    description  = "A GitHub repository for one application team."
-    target_type  = "WORKSPACE_LEVEL"
-  }
-
-  version_spec = {
-    draft = true
-
-    implementation = {
-      terraform = {
-        terraform_version = "1.9.0"
-        repository_url    = "https://github.com/<org>/<repo>.git"
-        repository_path   = "modules/github-repository"
-        ref_name          = "v1.0.0"
-      }
-    }
-
-    inputs = {
-      repo_name = {
-        display_name    = "Repository name"
-        type            = "STRING"
-        assignment_type = "USER_INPUT"
-      }
-      visibility = {
-        display_name           = "Visibility"
-        type                   = "SINGLE_SELECT"
-        assignment_type        = "USER_INPUT"
-        selectable_values      = ["private", "internal"]
-        default_value          = jsonencode("private")
-        updateable_by_consumer = true
-      }
-    }
-
-    outputs = {
-      repo_url = {
-        display_name    = "Repository"
-        type            = "STRING"
-        assignment_type = "RESOURCE_URL"
-      }
-    }
-  }
-}
-```
+A definition belongs to the platform team's workspace. It starts as a draft, with
+`version_spec.draft = true`. Start from the example of its implementation:
+[terraform](https://raw.githubusercontent.com/meshcloud/terraform-provider-meshstack/main/examples/resources/meshstack_building_block_definition/resource_01_terraform.tf),
+[github_workflows](https://raw.githubusercontent.com/meshcloud/terraform-provider-meshstack/main/examples/resources/meshstack_building_block_definition/resource_02_github_workflows.tf),
+[manual](https://raw.githubusercontent.com/meshcloud/terraform-provider-meshstack/main/examples/resources/meshstack_building_block_definition/resource_03_manual.tf),
+[azure_devops_pipeline](https://raw.githubusercontent.com/meshcloud/terraform-provider-meshstack/main/examples/resources/meshstack_building_block_definition/resource_04_azure_devops_pipeline.tf) or
+[gitlab_pipeline](https://raw.githubusercontent.com/meshcloud/terraform-provider-meshstack/main/examples/resources/meshstack_building_block_definition/resource_05_gitlab_pipeline.tf).
 
 - `default_value` and `argument` are `jsonencode`d to match `type`, also for a string.
 - A `TENANT_LEVEL` definition also needs `spec.supported_platforms`. `target_type` cannot change:
   a changed `target_type` replaces the definition.
-- `manual`, `github_workflows`, `gitlab_pipeline` and `azure_devops_pipeline` are the other
-  implementations. Approval gates (`spec.approval_policies`) and drift detection need `terraform`.
-  See the [registry page](https://registry.terraform.io/providers/meshcloud/meshstack/latest/docs/resources/building_block_definition)
+- Approval gates (`spec.approval_policies`) and drift detection need the `terraform`
+  implementation. See the
+  [registry page](https://registry.terraform.io/providers/meshcloud/meshstack/latest/docs/resources/building_block_definition)
   for every input and output attribute.
+- The example writes secrets such as `ssh_private_key.secret_value` and a sensitive `argument` as
+  literals. Feed them from an ephemeral variable instead, as for a sensitive input of a building
+  block.
 - Only the owning workspace can order a draft. Test the draft there with a building block whose
-  `building_block_definition_version_ref` is `meshstack_building_block_definition.repo.version_latest`.
+  `building_block_definition_version_ref` is the definition's `version_latest`.
   The `content_hash` in `version_latest` changes with every edit of the draft, so the next apply
   runs the test block again.
 
@@ -211,66 +148,29 @@ Set `version_spec.draft = false`, then plan and apply. The latest version is rel
 
 ## Add a building block
 
-```hcl
-resource "meshstack_building_block" "repo" {
-  spec = {
-    building_block_definition_version_ref = data.meshstack_building_block_definition.repo.version_latest_release
-    display_name                          = "checkout-service repository"
-    target_ref                            = data.meshstack_workspace.team.ref
+Start from the example for a
+[workspace](https://raw.githubusercontent.com/meshcloud/terraform-provider-meshstack/main/examples/resources/meshstack_building_block/resource_01_workspace.tf)
+or a
+[tenant](https://raw.githubusercontent.com/meshcloud/terraform-provider-meshstack/main/examples/resources/meshstack_building_block/resource_02_tenant.tf).
+Keep its postcondition on `self.status.succeeded`: without it, a failed run is only a warning, and
+the apply looks successful.
 
-    inputs = {
-      repo_name = {
-        value = jsonencode("checkout-service")
-      }
-    }
-  }
-
-  lifecycle {
-    postcondition {
-      condition     = self.status.succeeded
-      error_message = "Building block ${self.metadata.uuid} did not succeed: health status ${self.status.health_status}, action ${self.status.action}."
-    }
-  }
-}
-```
-
+- Order a released version with the definition's `version_latest_release`. The examples use
+  `version_latest`, which is a draft while the definition has one.
+- The examples set `timeouts` of 2 minutes for the tests. Leave `timeouts` out for the default of
+  30 minutes, or raise them for slow runs.
 - Set the inputs the version declares as `USER_INPUT` or `PAYMENT_METHOD`. meshStack and the
   platform team fill in the others. `inputs` is required, so write `inputs = {}` when you set none.
-- Every `value` is `jsonencode`d, also a string. A `PAYMENT_METHOD` value is
-  `jsonencode(data.meshstack_payment_method.team.ref)`.
-- Keep the postcondition. Without it, a failed run is only a warning, and the apply looks
-  successful.
+- Every `value` is `jsonencode`d, also a string. A `PAYMENT_METHOD` value is the `jsonencode`d
+  `ref` of a `meshstack_payment_method` data source.
 - `version_latest_release` is null until the definition has a released version.
 
-A sensitive input takes `sensitive` instead of `value`. Feed it from an ephemeral variable, so the
-value is neither in the code nor in state, and change `secret_version` to send a new value. Set
-`TF_VAR_deploy_token` for the plan and again for the apply, because a saved plan does not keep an
-ephemeral value. This needs Terraform or OpenTofu 1.11 or later.
-
-```hcl
-variable "deploy_token" {
-  type      = string
-  sensitive = true
-  ephemeral = true
-}
-
-resource "meshstack_building_block" "pipeline" {
-  spec = {
-    building_block_definition_version_ref = data.meshstack_building_block_definition.repo.version_latest_release
-    display_name                          = "checkout-service pipeline"
-    target_ref                            = data.meshstack_workspace.team.ref
-
-    inputs = {
-      deploy_token = {
-        sensitive = {
-          secret_value   = var.deploy_token
-          secret_version = "1"
-        }
-      }
-    }
-  }
-}
-```
+A sensitive input takes `sensitive = { secret_value = var.<name>, secret_version = "1" }` instead of
+`value`. The tenant example writes a literal there; declare the variable with `sensitive = true` and
+`ephemeral = true` instead, so the value is neither in the code nor in state. Change
+`secret_version` to send a new value. Set `TF_VAR_<name>` for the plan and again for the apply,
+because a saved plan does not keep an ephemeral value. This needs Terraform or OpenTofu 1.11 or
+later.
 
 ## Change the inputs of a building block
 
@@ -335,14 +235,9 @@ needs next, such as `APPROVE_RUN`, `PROVIDE_INPUT` or `REVIEW_ERRORS`.
 
 ## Import existing objects
 
-Import a building block or a definition by its uuid:
-
-```hcl
-import {
-  id = "<building block uuid>"
-  to = meshstack_building_block.repo
-}
-```
+Import a building block or a definition by its uuid with an `import` block, as
+[import-by-string-id.tf](https://raw.githubusercontent.com/meshcloud/terraform-provider-meshstack/main/examples/resources/meshstack_building_block/import-by-string-id.tf)
+shows, and let the plan write the resource:
 
 ```sh
 tofu plan -generate-config-out=generated.tf

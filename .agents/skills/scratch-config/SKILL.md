@@ -11,7 +11,8 @@ locally-built provider against **any meshStack you hold API credentials for**. T
 - **Debug** — turn an acceptance test's generated HCL (or hand-written HCL) into a config you can
   `plan`/`apply` yourself to reproduce a provider bug or a failing test.
 - **Scaffold** — grow a working example from an acceptance test (or from scratch) into a demo or a
-  starting point for real platform-engineering work.
+  starting point for real platform-engineering work. The workflow for users of the released
+  provider, from login to release, is in `skills/terraform-provider-meshstack/SKILL.md`.
 
 Complements the **acceptance-testing** skill, which runs the suite against a local backend. The
 `testconfig` builders make a dumped config self-contained: applied to an empty meshStack it creates
