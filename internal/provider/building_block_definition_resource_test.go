@@ -1620,6 +1620,7 @@ func checkTerraformImplementation() knownvalue.Check {
 	return xknownvalue.MapExact(map[string]knownvalue.Check{
 		"terraform_version":              knownvalue.StringExact("1.9.0"),
 		"repository_url":                 knownvalue.StringExact("https://github.com/example/building-block.git"),
+		"async":                          knownvalue.Bool(false),
 		"repository_path":                knownvalue.StringExact("terraform/modules/example"),
 		"ref_name":                       knownvalue.StringExact("v1.0.0"),
 		"use_mesh_http_backend_fallback": knownvalue.Bool(true),

@@ -23,8 +23,9 @@ import (
 const (
 	// v3: display_order folded into the hash. v4: dependencies hashed as dependencyDefinitionRefs.
 	// v5: manual building block outputs are hashed as the tracked-override subset (sparse), not the full
-	// backend-derived one-per-input set, matching the sparse config/state model.
-	currentHashVersion = 6
+	// backend-derived one-per-input set, matching the sparse config/state model. v6: Terraform async dropped.
+	// v7: Terraform async hashed again.
+	currentHashVersion = 7
 )
 
 // represents a content hash of a building block definition version, which is used to detect changes in the version_spec.
