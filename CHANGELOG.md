@@ -1,10 +1,5 @@
 # v0.27.1
 
-FIXES:
-- `meshstack_platform`: the Azure example no longer defines `quota_definitions`. meshStack accepts quota definitions
-  only on platforms that apply quotas (OpenStack, Cloud Foundry, OpenShift, Kubernetes, AKS) and rejects them on
-  others.
-
 FEATURES:
 - `meshstack_building_block_definition`: `implementation.terraform.async` is back, as v0.26 had it. v0.27.0 sent no
   `async`, so a version written with v0.27.0 got `async = false`. Asynchronous Terraform is an advanced option for
@@ -16,6 +11,9 @@ FIXES:
 - `meshstack_building_block`: an input `value` that contains `&`, `<` or `>` no longer shows a change in every plan and
   no longer fails the apply with an inconsistent result. `jsonencode` escapes these characters and meshStack returns
   them unescaped, so the provider now compares input values as JSON.
+- `meshstack_platform`: the Azure example no longer defines `quota_definitions`. meshStack accepts quota definitions
+  only on platforms that apply quotas (OpenStack, Cloud Foundry, OpenShift, Kubernetes, AKS) and rejects them on
+  others.
 
 # v0.27.0
 
