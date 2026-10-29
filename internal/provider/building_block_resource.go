@@ -62,6 +62,38 @@ var (
 
 var noPreviousRun *client.MeshBuildingBlockV2Status
 
+// runStartFailedOnPrivateKey keeps status.runStartFailedOn, which has no schema attribute, for the "before" of a delete.
+const runStartFailedOnPrivateKey = "run_start_failed_on"
+
+type privateState interface {
+	GetKey(context.Context, string) ([]byte, diag.Diagnostics)
+	SetKey(context.Context, string, []byte) diag.Diagnostics
+}
+
+func setRunStartFailedOn(ctx context.Context, private privateState, dto *client.MeshBuildingBlockV2) diag.Diagnostics {
+	var failedOn string
+	if dto.Status != nil {
+		failedOn = dto.Status.RunStartFailedOn
+	}
+	value, err := json.Marshal(failedOn)
+	if err != nil {
+		return diag.Diagnostics{diag.NewErrorDiagnostic("Could not store when meshStack last failed to start a run", err.Error())}
+	}
+	return private.SetKey(ctx, runStartFailedOnPrivateKey, value)
+}
+
+func getRunStartFailedOn(ctx context.Context, private privateState, diags *diag.Diagnostics) (failedOn string) {
+	value, getDiags := private.GetKey(ctx, runStartFailedOnPrivateKey)
+	diags.Append(getDiags...)
+	if len(value) == 0 {
+		return ""
+	}
+	if err := json.Unmarshal(value, &failedOn); err != nil {
+		diags.AddError("Could not read when meshStack last failed to start a run", err.Error())
+	}
+	return failedOn
+}
+
 func NewBuildingBlockResource() resource.Resource {
 	return &buildingBlockResource{}
 }
@@ -791,6 +823,7 @@ func (r *buildingBlockResource) Create(ctx context.Context, req resource.CreateR
 	plan.SetFromClientDto(created, false, &resp.Diagnostics)
 	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, plan, converterOptions...)...)
 	resp.Diagnostics.Append(resp.Private.SetKey(ctx, basedOnDraftVersionPrivateKey, basedOnDraftVersion(created))...)
+	resp.Diagnostics.Append(setRunStartFailedOn(ctx, resp.Private, created)...)
 	if resp.Diagnostics.HasError() || !plan.WaitForCompletion {
 		return
 	}
@@ -803,6 +836,7 @@ func (r *buildingBlockResource) Create(ctx context.Context, req resource.CreateR
 		plan.SetFromClientDto(final, false, &resp.Diagnostics)
 		resp.Diagnostics.Append(generic.Set(ctx, &resp.State, plan, converterOptions...)...)
 		resp.Diagnostics.Append(resp.Private.SetKey(ctx, basedOnDraftVersionPrivateKey, basedOnDraftVersion(final))...)
+		resp.Diagnostics.Append(setRunStartFailedOn(ctx, resp.Private, final)...)
 	}
 }
 
@@ -845,6 +879,7 @@ func (r *buildingBlockResource) Read(ctx context.Context, req resource.ReadReque
 	state.PurgeOnDelete = purgeOnDelete
 	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, state, converterOptions...)...)
 	resp.Diagnostics.Append(resp.Private.SetKey(ctx, basedOnDraftVersionPrivateKey, basedOnDraftVersion(readDto))...)
+	resp.Diagnostics.Append(setRunStartFailedOn(ctx, resp.Private, readDto)...)
 }
 
 // requiresReplaceParentsWhenVersionUnchanged forces replacement when parent_building_block_refs changes
@@ -1149,6 +1184,7 @@ func (r *buildingBlockResource) Update(ctx context.Context, req resource.UpdateR
 	// secret_version resolves consistently with Read without rebuilding the converters.
 	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, plan, converterOptions...)...)
 	resp.Diagnostics.Append(resp.Private.SetKey(ctx, basedOnDraftVersionPrivateKey, basedOnDraftVersion(effective))...)
+	resp.Diagnostics.Append(setRunStartFailedOn(ctx, resp.Private, effective)...)
 }
 
 // requestDeletion waits out the conflict meshStack answers while the block's run has not reached a
@@ -1181,6 +1217,7 @@ func (r *buildingBlockResource) Delete(ctx context.Context, req resource.DeleteR
 	if inState := generic.GetAttribute[*client.MeshBuildingBlockV2Status](ctx, req.State, path.Root("status"), &resp.Diagnostics, withBuildingBlockStatusValueToConverter()); inState != nil {
 		before = *inState
 	}
+	before.RunStartFailedOn = getRunStartFailedOn(ctx, req.Private, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
