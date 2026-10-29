@@ -610,6 +610,7 @@ Required:
 
 Optional:
 
+- `async` (Boolean) Asynchronous Terraform is an advanced option for custom runners and workarounds. Prefer synchronous runs. For an asynchronous pipeline, use a GitHub workflow, Azure DevOps pipeline or GitLab pipeline implementation.
 - `pre_run_script` (String) Shell script executed after `tofu init` and before `tofu apply`/`tofu destroy` in the runner container.
 - `ref_name` (String) Git reference (branch, tag, or commit) to use.
 - `repository_path` (String) Path within the repository to the Terraform module.

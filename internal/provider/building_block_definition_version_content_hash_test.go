@@ -53,12 +53,12 @@ var (
 // So: change a digest below only alongside a deliberate hash-version bump, never on its own.
 func Test_versionContentHash(t *testing.T) {
 	const (
-		digestExample      = "c2f68242734ea4b2e5d7345cf3b51f9936058a796ddb7f2c9643ef88f6604700"
-		digestRelevant     = "14036fd88ac7a70543f09ffbf757168e50101e2b0362e35a7b64c0b5877cab94"
-		digestNullOutputs  = "c021411d01a9b7e79ec9717527bd7193039230560f2bdff598a89b4e5685fcdf"
-		digestDisplayOrder = "b4fb1cbb0e63335b4afbf0728dcb6ca580dda23fbc4ff44a2a767ff7f44122d7"
-		digestIsOptional   = "755a23356ee5dafaf0100d3404147668e6d2c7f4cbef2930538bcd5834341ee4"
-		digestCondition    = "437ab836717cace694cc72636ba06326677691270a52cd182f280f3b1034ae9c"
+		digestExample      = "814c7b4eb579d555f4f1589bd34c4f913d250fe1d5fda7b2fdffe05e75fcd910"
+		digestRelevant     = "6ddbadbe5eb3baa76e7a2488f22ce62bd0e94eb380cbfbd55724231f704264dc"
+		digestNullOutputs  = "1a24f70de617e64fc258ceca4a4b7159ecebd9a95acd4ea40851e443c080038e"
+		digestDisplayOrder = "a7cba4239e3d448387d188d1457bd3e00aa66694244dd6e26e8d7a055c9c4075"
+		digestIsOptional   = "8543e0869e73f8a72779e4cb5a80a0363ecf763d53da46878b41234d7efe18d8"
+		digestCondition    = "099b5ea48b4b29edb8399dac513e3093f7dbd7477206d09f5f836d9caa92d8f4"
 	)
 	require.NotEqual(t, digestExample, digestRelevant)
 
@@ -90,7 +90,7 @@ func Test_versionContentHash(t *testing.T) {
 // version instead of a spurious "changed" — see Test_contentHash_compareToStored_acrossVersions), so it must
 // be paired with an intentional edit here.
 func Test_contentHash_currentVersion(t *testing.T) {
-	require.Equal(t, 6, currentHashVersion)
+	require.Equal(t, 7, currentHashVersion)
 
 	h := forTestCalculateContentHash(t, versionSpecJson)
 	require.Equal(t, currentHashVersion, h.hashVersion)

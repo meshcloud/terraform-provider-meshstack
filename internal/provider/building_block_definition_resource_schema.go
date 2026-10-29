@@ -743,6 +743,14 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 										MarkdownDescription: "Git repository URL containing the Terraform code.",
 										Required:            true,
 									},
+									"async": schema.BoolAttribute{
+										MarkdownDescription: "Asynchronous Terraform is an advanced option for custom runners and workarounds. " +
+											"Prefer synchronous runs. For an asynchronous pipeline, use a GitHub workflow, Azure DevOps pipeline " +
+											"or GitLab pipeline implementation.",
+										Optional: true,
+										Computed: true,
+										Default:  booldefault.StaticBool(false),
+									},
 									"repository_path": schema.StringAttribute{
 										MarkdownDescription: "Path within the repository to the Terraform module.",
 										Optional:            true,

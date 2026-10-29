@@ -6,6 +6,10 @@ FIXES:
   others.
 
 FEATURES:
+- `meshstack_building_block_definition`: `implementation.terraform.async` is back, as v0.26 had it. v0.27.0 sent no
+  `async`, so a version written with v0.27.0 got `async = false`. Asynchronous Terraform is an advanced option for
+  custom runners and workarounds; prefer synchronous runs, and for an asynchronous pipeline use a GitHub workflow,
+  Azure DevOps pipeline or GitLab pipeline implementation.
 - `meshstack_building_block`: changing the parents of a block on a draft definition version updates it in place.
 
 FIXES:
