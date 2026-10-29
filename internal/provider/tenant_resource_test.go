@@ -374,6 +374,7 @@ func tenantQuotaConfig(t *testing.T, opts tenantQuotaOptions) (testconfig.Config
 
 	tenantConfig, tenantAddr := testconfig.Tenant(t, projectAddr, platformAddr, landingZoneAddr)
 	tenantConfig = tenantConfig.WithFirstBlock(
+		testconfig.Descend("wait_for_completion")(testconfig.SetBool(false)),
 		testconfig.Descend("spec", "requested_quotas")(testconfig.SetRawExpr(
 			`{ "limits.cpu" = { value = %d } }`, opts.requestedCpu,
 		)),
