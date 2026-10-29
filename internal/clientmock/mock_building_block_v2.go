@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json/v2"
 	"fmt"
-	"reflect"
 	"slices"
 
 	"github.com/google/uuid"
@@ -162,7 +161,6 @@ func mockBuildingBlockMatchesFilter(bb *client.MeshBuildingBlockV2, filter clien
 
 func (m MeshBuildingBlockV2Client) Create(_ context.Context, bb *client.MeshBuildingBlockV2) (*client.MeshBuildingBlockV2, error) {
 	id := uuid.NewString()
-	runUuid := uuid.NewString()
 
 	ownedByWorkspace := ""
 	if bb.Spec.TargetRef.Name != nil {
@@ -189,15 +187,9 @@ func (m MeshBuildingBlockV2Client) Create(_ context.Context, bb *client.MeshBuil
 		Uuid:             &id,
 		OwnedByWorkspace: ownedByWorkspace,
 	}
-	stored.Status = &client.MeshBuildingBlockV2Status{
-		Status:        client.BuildingBlockStatusSucceeded,
-		HealthStatus:  client.BuildingBlockHealthStatusSucceeded,
-		Action:        client.BuildingBlockActionNoAction,
-		LatestRunUuid: &runUuid,
-		Lifecycle: client.MeshBuildingBlockV2Lifecycle{
-			State: client.BuildingBlockLifecycleStateActive,
-		},
-	}
+	stored.Status = finishedRun(client.MeshBuildingBlockV2Status{
+		Lifecycle: client.MeshBuildingBlockV2Lifecycle{State: client.BuildingBlockLifecycleStateActive},
+	})
 
 	m.Store.Set(id, stored)
 	// Return a fresh deep copy so SetFromClientDto cannot mutate the store via the returned pointer.
@@ -220,22 +212,21 @@ func (m MeshBuildingBlockV2Client) Update(_ context.Context, bb *client.MeshBuil
 	// Validate/hash secrets against the stored block: an unchanged secret is sent hash-only and must
 	// match the stored hash, while a rotated secret arrives as plaintext and is re-hashed. Pointer-valued
 	// inputs let the shared walker reach each addressable secret directly.
-	var existing *client.MeshBuildingBlockV2
-	if prior, ok := m.Store.Get(*stored.Metadata.Uuid); ok {
-		existing = deepCopyBB(prior)
+	prior, ok := m.Store.Get(*stored.Metadata.Uuid)
+	if !ok {
+		return nil, fmt.Errorf("building block %q not found", *stored.Metadata.Uuid)
 	}
+	existing := deepCopyBB(prior)
 
 	// Mirror the backend: a PUT patches only the inputs it carries, so inputs omitted from the request
 	// keep their existing values. Without this the mock would null out the other party's inputs when a
 	// configuration manages only a subset (e.g. a platform operator sending only operator inputs).
-	if existing != nil {
-		if stored.Spec.Inputs == nil {
-			stored.Spec.Inputs = map[string]*client.MeshBuildingBlockInput{}
-		}
-		for key, prior := range existing.Spec.Inputs {
-			if _, sent := stored.Spec.Inputs[key]; !sent {
-				stored.Spec.Inputs[key] = prior
-			}
+	if stored.Spec.Inputs == nil {
+		stored.Spec.Inputs = map[string]*client.MeshBuildingBlockInput{}
+	}
+	for key, prior := range existing.Spec.Inputs {
+		if _, sent := stored.Spec.Inputs[key]; !sent {
+			stored.Spec.Inputs[key] = prior
 		}
 	}
 
@@ -243,44 +234,13 @@ func (m MeshBuildingBlockV2Client) Update(_ context.Context, bb *client.MeshBuil
 
 	materializeNullRows(stored.Spec.Inputs, m.BbdVersionStore, stored.Spec.BuildingBlockDefinitionVersionRef.Uuid) // see Create
 
-	answered := stored
-	if stored.Status == nil {
-		// A PUT carries only Metadata+Spec (Status is read-only and not sent by the provider).
-		// Mirror the real backend: the PUT triggers an apply run only on a real provisioning change
-		// (version upgrade or an actual input/parent change); a rename / no-op carries the prior status
-		// unchanged. (A content_hash-only change PUTs an identical spec → no run here; the provider forces
-		// it via a separate TriggerRun.)
-		switch {
-		case existing == nil || existing.Status == nil:
-			runUuid := uuid.NewString()
-			stored.Status = &client.MeshBuildingBlockV2Status{
-				Status:        client.BuildingBlockStatusSucceeded,
-				HealthStatus:  client.BuildingBlockHealthStatusSucceeded,
-				Action:        client.BuildingBlockActionNoAction,
-				LatestRunUuid: &runUuid,
-				Lifecycle: client.MeshBuildingBlockV2Lifecycle{
-					State: client.BuildingBlockLifecycleStateActive,
-				},
-			}
-		case provisioningChanged(existing, stored):
-			answered = deepCopyBB(stored)
-			answered.Status = existing.Status
-			status := *existing.Status
-			runUuid := uuid.NewString()
-			status.Status = client.BuildingBlockStatusSucceeded
-			status.HealthStatus = client.BuildingBlockHealthStatusSucceeded
-			status.Action = client.BuildingBlockActionNoAction
-			status.LatestRunUuid = &runUuid
-			status.LatestDryRunUuid = nil
-			stored.Status = &status
-		default:
-			stored.Status = existing.Status
-		}
-	}
+	// The provider waits for a run that differs from the answer, so the answer keeps the run before.
+	answered := deepCopyBB(stored)
+	answered.Status = existing.Status
+	stored.Status = finishedRun(*existing.Status)
 
 	m.Store.Set(*stored.Metadata.Uuid, stored)
-	// Like the backend, the answer still reports the run before, which the backend creates only after it answered.
-	return m.withDerivedParents(deepCopyBB(answered)), nil
+	return m.withDerivedParents(answered), nil
 }
 
 func (m MeshBuildingBlockV2Client) Delete(_ context.Context, bbUuid string, purge bool) error {
@@ -293,35 +253,18 @@ func (m MeshBuildingBlockV2Client) TriggerRun(_ context.Context, bbUuid string) 
 	if !ok {
 		return nil, fmt.Errorf("building block %q not found", bbUuid)
 	}
-	cp := deepCopyBB(bb)
-	if cp.Status == nil {
-		cp.Status = &client.MeshBuildingBlockV2Status{
-			Lifecycle: client.MeshBuildingBlockV2Lifecycle{
-				State: client.BuildingBlockLifecycleStateActive,
-			},
-		}
-	}
-	// Like the backend, the answer still reports the run before. The store skips ahead to the run having succeeded.
-	accepted := deepCopyBB(cp)
-	accepted.Status.Status = client.BuildingBlockStatusPending
-	cp.Status.Status = client.BuildingBlockStatusSucceeded
-	cp.Status.HealthStatus = client.BuildingBlockHealthStatusSucceeded
-	cp.Status.Action = client.BuildingBlockActionNoAction
-	cp.Status.LatestRunUuid = new(uuid.NewString())
-	cp.Status.LatestDryRunUuid = nil
-	m.Store.Set(bbUuid, cp)
-	return m.withDerivedParents(accepted), nil
+	stored := deepCopyBB(bb)
+	stored.Status = finishedRun(*bb.Status)
+	m.Store.Set(bbUuid, stored)
+	// The answer keeps the run before, see Update.
+	return m.withDerivedParents(deepCopyBB(bb)), nil
 }
 
-// provisioningChanged reports whether a PUT made a backend-visible change that triggers an apply run:
-// a definition-version upgrade, an actual input change, or a parent change. A displayName-only rename or
-// an identical re-PUT returns false (no run), mirroring the backend.
-func provisioningChanged(existing, stored *client.MeshBuildingBlockV2) bool {
-	if existing.Spec.BuildingBlockDefinitionVersionRef.Uuid != stored.Spec.BuildingBlockDefinitionVersionRef.Uuid {
-		return true
-	}
-	if !reflect.DeepEqual(existing.Spec.Inputs, stored.Spec.Inputs) {
-		return true
-	}
-	return !reflect.DeepEqual(existing.Spec.ParentBuildingBlockRefs, stored.Spec.ParentBuildingBlockRefs)
+func finishedRun(status client.MeshBuildingBlockV2Status) *client.MeshBuildingBlockV2Status {
+	status.Status = client.BuildingBlockStatusSucceeded
+	status.HealthStatus = client.BuildingBlockHealthStatusSucceeded
+	status.Action = client.BuildingBlockActionNoAction
+	status.LatestRunUuid = new(uuid.NewString())
+	status.LatestDryRunUuid = nil
+	return &status
 }

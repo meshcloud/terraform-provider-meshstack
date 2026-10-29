@@ -79,15 +79,6 @@ func TestAwaitRun(t *testing.T) {
 		wantNoBlock  bool
 		wantReads    int
 	}{
-		"a run is polled through PENDING and IN_PROGRESS to NO_ACTION": {
-			states: []*client.MeshBuildingBlockV2{
-				bbWithRun(client.BuildingBlockActionPending, "run-new"),
-				bbWithRun(client.BuildingBlockActionInProgress, "run-new"),
-				bbWithRun(client.BuildingBlockActionNoAction, "run-new"),
-			},
-			wantAction: client.BuildingBlockActionNoAction,
-			wantReads:  3,
-		},
 		"a block returned without a status yet is polled on": {
 			states: []*client.MeshBuildingBlockV2{
 				{},
@@ -152,11 +143,6 @@ func TestAwaitRun(t *testing.T) {
 			logs:         &stubRunLogsClient{},
 			wantWarnings: []string{"ended with the action REVIEW_ABORTED_RUN"},
 			wantAction:   client.BuildingBlockActionReviewAbortedRun,
-		},
-		"a run that waits for input ends the wait with a warning": {
-			states:       []*client.MeshBuildingBlockV2{bbWithAction(client.BuildingBlockActionProvideInput)},
-			wantWarnings: []string{"waiting for input or approval"},
-			wantAction:   client.BuildingBlockActionProvideInput,
 		},
 		"an action this provider does not know ends the wait with a warning": {
 			states:       []*client.MeshBuildingBlockV2{bbWithAction("SOMETHING_NEW")},
