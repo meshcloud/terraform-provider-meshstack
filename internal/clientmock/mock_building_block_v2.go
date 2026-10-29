@@ -93,7 +93,7 @@ func (m MeshBuildingBlockV2Client) withDerivedParents(bb *client.MeshBuildingBlo
 	bb.Spec.ParentBuildingBlocks = parents
 	if bb.Status != nil {
 		version, ok := m.BbdVersionStore.Get(bb.Spec.BuildingBlockDefinitionVersionRef.Uuid)
-		bb.Status.BasedOnDraftVersion = new(ok && version.Spec.State != nil && *version.Spec.State == client.MeshBuildingBlockDefinitionVersionStateDraft.Unwrap())
+		bb.Status.BasedOnDraftVersion = ok && version.Spec.State != nil && *version.Spec.State == client.MeshBuildingBlockDefinitionVersionStateDraft.Unwrap()
 	}
 	return bb
 }
@@ -243,6 +243,7 @@ func (m MeshBuildingBlockV2Client) Update(_ context.Context, bb *client.MeshBuil
 
 	materializeNullRows(stored.Spec.Inputs, m.BbdVersionStore, stored.Spec.BuildingBlockDefinitionVersionRef.Uuid) // see Create
 
+	answered := stored
 	if stored.Status == nil {
 		// A PUT carries only Metadata+Spec (Status is read-only and not sent by the provider).
 		// Mirror the real backend: the PUT triggers an apply run only on a real provisioning change
@@ -262,6 +263,8 @@ func (m MeshBuildingBlockV2Client) Update(_ context.Context, bb *client.MeshBuil
 				},
 			}
 		case provisioningChanged(existing, stored):
+			answered = deepCopyBB(stored)
+			answered.Status = existing.Status
 			status := *existing.Status
 			runUuid := uuid.NewString()
 			status.Status = client.BuildingBlockStatusSucceeded
@@ -276,7 +279,8 @@ func (m MeshBuildingBlockV2Client) Update(_ context.Context, bb *client.MeshBuil
 	}
 
 	m.Store.Set(*stored.Metadata.Uuid, stored)
-	return m.withDerivedParents(deepCopyBB(stored)), nil // fresh copy out (see Create)
+	// Like the backend, the answer still reports the run before, which the backend creates only after it answered.
+	return m.withDerivedParents(deepCopyBB(answered)), nil
 }
 
 func (m MeshBuildingBlockV2Client) Delete(_ context.Context, bbUuid string, purge bool) error {
@@ -297,11 +301,9 @@ func (m MeshBuildingBlockV2Client) TriggerRun(_ context.Context, bbUuid string) 
 			},
 		}
 	}
-	// Like the backend, the answer reports the run PENDING but still names the run before it, which the
-	// backend creates only after it answered. The store skips ahead to the run having succeeded.
+	// Like the backend, the answer still reports the run before. The store skips ahead to the run having succeeded.
 	accepted := deepCopyBB(cp)
 	accepted.Status.Status = client.BuildingBlockStatusPending
-	accepted.Status.Action = client.BuildingBlockActionPending
 	cp.Status.Status = client.BuildingBlockStatusSucceeded
 	cp.Status.HealthStatus = client.BuildingBlockHealthStatusSucceeded
 	cp.Status.Action = client.BuildingBlockActionNoAction

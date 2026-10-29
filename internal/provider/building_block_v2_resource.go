@@ -392,10 +392,15 @@ func (r *buildingBlockV2Resource) Create(ctx context.Context, req resource.Creat
 	if waitForCompletion {
 		var lastPollOutput *client.MeshBuildingBlockV2
 		err := poll.AtMostFor(30*time.Minute, r.meshBuildingBlockV2Client.ReadFunc(*created.Metadata.Uuid), poll.WithLastResultTo(&lastPollOutput)).
-			Until(ctx, (*client.MeshBuildingBlockV2).CreateSuccessful)
+			Until(ctx, func(bb *client.MeshBuildingBlockV2) (bool, error) {
+				return bb.RunEndedSince(client.MeshBuildingBlockV2Status{})
+			})
 		if lastPollOutput != nil {
 			// Always set last known building block state, no matter what error!
 			resp.Diagnostics.Append(setStateFromResponseV2(ctx, &resp.State, lastPollOutput)...)
+		}
+		if err == nil && lastPollOutput.Status.RunFailed() {
+			err = fmt.Errorf("the run of building block %s ended with action %s, check run logs in meshStack", *created.Metadata.Uuid, lastPollOutput.Status.Action)
 		}
 		if err != nil {
 			resp.Diagnostics.AddError("Failed to await building block creation", err.Error())
@@ -404,7 +409,7 @@ func (r *buildingBlockV2Resource) Create(ctx context.Context, req resource.Creat
 		if lastPollOutput.IsWaitingForInput() {
 			resp.Diagnostics.AddWarning(
 				"Building block run is waiting for input",
-				fmt.Sprintf("Building block %s is in status %s. Provide the required inputs in meshPanel to complete the run.", *created.Metadata.Uuid, lastPollOutput.Status.Status),
+				fmt.Sprintf("Building block %s has the action %s. Provide the required inputs in meshPanel to complete the run.", *created.Metadata.Uuid, lastPollOutput.Status.Action),
 			)
 		}
 	}
@@ -461,7 +466,9 @@ func (r *buildingBlockV2Resource) Delete(ctx context.Context, req resource.Delet
 
 	// Always poll for deletion completion so dependent resources (e.g. the BBD) can be cleaned up safely.
 	if err := poll.AtMostFor(30*time.Minute, r.meshBuildingBlockV2Client.ReadFunc(uuid)).
-		Until(ctx, (*client.MeshBuildingBlockV2).DeletionSuccessful); err != nil {
+		Until(ctx, func(bb *client.MeshBuildingBlockV2) (bool, error) {
+			return bb.DeletionSuccessful(client.MeshBuildingBlockV2Status{})
+		}); err != nil {
 		resp.Diagnostics.AddError("Failed to await building block deletion", err.Error())
 	}
 }

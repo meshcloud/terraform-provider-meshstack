@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"cmp"
 	"context"
 	nethttp "net/http"
 	"testing"
@@ -43,30 +44,23 @@ func (c *sequencedBBClient) ReadFunc(uuid string) func(context.Context) (*client
 	return func(ctx context.Context) (*client.MeshBuildingBlockV2, error) { return c.Read(ctx, uuid) }
 }
 
-func bbWithRun(status enum.Entry[client.BuildingBlockStatus], runUuid string) *client.MeshBuildingBlockV2 {
+func bbWithRun(action enum.Entry[client.BuildingBlockAction], runUuid string) *client.MeshBuildingBlockV2 {
 	return &client.MeshBuildingBlockV2{
+		Metadata: client.MeshBuildingBlockV2Metadata{Uuid: new("bb-uuid")},
 		Status: &client.MeshBuildingBlockV2Status{
-			Status:        status,
+			Action:        action,
 			LatestRunUuid: &runUuid,
 		},
 	}
 }
 
-// bbWithStatus builds a building block carrying only a status and no run uuid — the backend leaves the run
-// uuids null while no modifying run exists, and awaitRun must still work.
-func bbWithStatus(status enum.Entry[client.BuildingBlockStatus]) *client.MeshBuildingBlockV2 {
+func bbWithAction(action enum.Entry[client.BuildingBlockAction]) *client.MeshBuildingBlockV2 {
 	return &client.MeshBuildingBlockV2{
-		Status: &client.MeshBuildingBlockV2Status{Status: status},
+		Metadata: client.MeshBuildingBlockV2Metadata{Uuid: new("bb-uuid")},
+		Status:   &client.MeshBuildingBlockV2Status{Action: action},
 	}
 }
 
-// TestAwaitRun pins how awaitRun reports each terminal building block status. Every case is the
-// create path, which has no earlier run and keys off the status alone; waiting for the run an
-// update triggers is covered by TestAccBuildingBlock/05_operator_inputs against a real meshStack.
-//
-// Every terminal status that is not SUCCEEDED is a warning: failing the apply is the configuration's
-// decision, taken with a postcondition. Only a run whose outcome could not be established at all — a
-// timeout, an unknown status, a block that vanished — is an error.
 func TestAwaitRun(t *testing.T) {
 	t.Parallel()
 
@@ -75,92 +69,96 @@ func TestAwaitRun(t *testing.T) {
 	}}
 
 	tests := map[string]struct {
+		before       *client.MeshBuildingBlockV2Status
 		states       []*client.MeshBuildingBlockV2
+		timeout      time.Duration
 		logs         *stubRunLogsClient
 		wantErrors   []string // one substring per expected error diagnostic, in order
 		wantWarnings []string // one substring per expected warning diagnostic, in order
-		wantStatus   enum.Entry[client.BuildingBlockStatus]
+		wantAction   enum.Entry[client.BuildingBlockAction]
 		wantNoBlock  bool
 		wantReads    int
 	}{
-		"a run is polled through PENDING and IN_PROGRESS to SUCCEEDED": {
+		"a run is polled through PENDING and IN_PROGRESS to NO_ACTION": {
 			states: []*client.MeshBuildingBlockV2{
-				bbWithRun(client.BuildingBlockStatusPending, "run-new"),
-				bbWithRun(client.BuildingBlockStatusInProgress, "run-new"),
-				bbWithRun(client.BuildingBlockStatusSucceeded, "run-new"),
+				bbWithRun(client.BuildingBlockActionPending, "run-new"),
+				bbWithRun(client.BuildingBlockActionInProgress, "run-new"),
+				bbWithRun(client.BuildingBlockActionNoAction, "run-new"),
 			},
-			wantStatus: client.BuildingBlockStatusSucceeded,
+			wantAction: client.BuildingBlockActionNoAction,
 			wantReads:  3,
 		},
 		"a block returned without a status yet is polled on": {
 			states: []*client.MeshBuildingBlockV2{
-				{}, // the backend has not attached a status yet
-				bbWithStatus(client.BuildingBlockStatusSucceeded),
+				{},
+				bbWithAction(client.BuildingBlockActionNoAction),
 			},
-			wantStatus: client.BuildingBlockStatusSucceeded,
+			wantAction: client.BuildingBlockActionNoAction,
 			wantReads:  2,
 		},
-		"a run without a run uuid is awaited all the same": {
-			states: []*client.MeshBuildingBlockV2{
-				bbWithStatus(client.BuildingBlockStatusPending),
-				bbWithStatus(client.BuildingBlockStatusSucceeded),
-			},
-			wantStatus: client.BuildingBlockStatusSucceeded,
-			wantReads:  2,
+		"an update whose run meshStack does not start errors": {
+			before:     bbWithRun(client.BuildingBlockActionNoAction, "run-before").Status,
+			states:     []*client.MeshBuildingBlockV2{bbWithRun(client.BuildingBlockActionNoAction, "run-before")},
+			timeout:    time.Second,
+			wantErrors: []string{"did not start a run"},
+			wantAction: client.BuildingBlockActionNoAction,
 		},
 		"a failed run and its failing step are warned about": {
 			states: []*client.MeshBuildingBlockV2{
-				bbWithRun(client.BuildingBlockStatusInProgress, "run-broken"),
-				bbWithRun(client.BuildingBlockStatusFailed, "run-broken"),
+				bbWithRun(client.BuildingBlockActionInProgress, "run-broken"),
+				bbWithRun(client.BuildingBlockActionReviewErrors, "run-broken"),
 			},
 			logs:         &stubRunLogsClient{logs: failedStep},
-			wantWarnings: []string{"ended in status FAILED", "intentionally broken BBD version"},
-			wantStatus:   client.BuildingBlockStatusFailed,
+			wantWarnings: []string{"ended with the action REVIEW_ERRORS", "intentionally broken BBD version"},
+			wantAction:   client.BuildingBlockActionReviewErrors,
 		},
 		"a failed run whose logs are not exposed reports the failure alone": {
 			states: []*client.MeshBuildingBlockV2{
-				bbWithStatus(client.BuildingBlockStatusInProgress),
-				bbWithStatus(client.BuildingBlockStatusFailed), // no run uuid: logs not exposed
+				bbWithAction(client.BuildingBlockActionInProgress),
+				bbWithAction(client.BuildingBlockActionReviewErrors),
 			},
-			wantWarnings: []string{"ended in status FAILED"},
-			wantStatus:   client.BuildingBlockStatusFailed,
+			wantWarnings: []string{"ended with the action REVIEW_ERRORS"},
+			wantAction:   client.BuildingBlockActionReviewErrors,
 		},
 		"a failed run whose logs cannot be read warns about the logs": {
 			states: []*client.MeshBuildingBlockV2{
-				bbWithRun(client.BuildingBlockStatusFailed, "run-broken"),
+				bbWithRun(client.BuildingBlockActionReviewErrors, "run-broken"),
 			},
 			logs:         &stubRunLogsClient{err: context.DeadlineExceeded},
-			wantWarnings: []string{"ended in status FAILED", "Could not fetch run logs"},
-			wantStatus:   client.BuildingBlockStatusFailed,
+			wantWarnings: []string{"ended with the action REVIEW_ERRORS", "Could not fetch run logs"},
+			wantAction:   client.BuildingBlockActionReviewErrors,
 		},
-		// An aborted run is reported exactly like a failed one: the building block is off its
-		// configuration either way, and the next plan runs it again either way.
 		"an aborted run is warned about like a failed one": {
 			states: []*client.MeshBuildingBlockV2{
-				bbWithRun(client.BuildingBlockStatusInProgress, "run-stopped"),
-				bbWithRun(client.BuildingBlockStatusAborted, "run-stopped"),
+				bbWithRun(client.BuildingBlockActionInProgress, "run-stopped"),
+				bbWithRun(client.BuildingBlockActionReviewAbortedRun, "run-stopped"),
 			},
-			logs:         &stubRunLogsClient{}, // an aborted run has no failed step to report
-			wantWarnings: []string{"ended in status ABORTED"},
-			wantStatus:   client.BuildingBlockStatusAborted,
+			logs:         &stubRunLogsClient{},
+			wantWarnings: []string{"ended with the action REVIEW_ABORTED_RUN"},
+			wantAction:   client.BuildingBlockActionReviewAbortedRun,
 		},
-		"a block parked for input warns instead of polling to the timeout": {
-			states:       []*client.MeshBuildingBlockV2{bbWithStatus(client.BuildingBlockStatusWaitingForOperatorInput)},
+		"a run that waits for input ends the wait with a warning": {
+			states:       []*client.MeshBuildingBlockV2{bbWithAction(client.BuildingBlockActionProvideInput)},
 			wantWarnings: []string{"waiting for input or approval"},
-			wantStatus:   client.BuildingBlockStatusWaitingForOperatorInput,
+			wantAction:   client.BuildingBlockActionProvideInput,
 		},
-		"a status this provider does not know errors instead of polling to the timeout": {
-			states:     []*client.MeshBuildingBlockV2{bbWithStatus("SOMETHING_NEW")},
-			wantErrors: []string{"unknown building block status"},
-			wantStatus: "SOMETHING_NEW",
+		"an action this provider does not know ends the wait with a warning": {
+			states:       []*client.MeshBuildingBlockV2{bbWithAction("SOMETHING_NEW")},
+			wantWarnings: []string{"does not know"},
+			wantAction:   "SOMETHING_NEW",
 		},
-		// A block that vanished left no status for a postcondition to decide on, so it stays an error.
-		"a block that disappears mid-run errors": {
+		"a run that does not finish in time is warned about": {
+			states:       []*client.MeshBuildingBlockV2{bbWithAction(client.BuildingBlockActionInProgress)},
+			timeout:      time.Second,
+			wantWarnings: []string{"has not finished"},
+			wantAction:   client.BuildingBlockActionInProgress,
+		},
+		"a block that disappears during the run errors": {
 			states: []*client.MeshBuildingBlockV2{
-				bbWithStatus(client.BuildingBlockStatusInProgress),
-				nil, // the block 404'd mid-run
+				bbWithAction(client.BuildingBlockActionInProgress),
+				nil,
 			},
-			wantErrors:  []string{"disappeared while waiting"},
+			wantErrors:  []string{"disappeared"},
 			wantNoBlock: true,
 		},
 	}
@@ -182,8 +180,9 @@ func TestAwaitRun(t *testing.T) {
 			if tt.logs != nil {
 				r.BuildingBlockRunClient = *tt.logs
 			}
+			timeout := cmp.Or(tt.timeout, 30*time.Second)
 			var diags diag.Diagnostics
-			final := r.awaitRun(context.Background(), &diags, "bb-uuid", noPreviousRun, true, 30*time.Second)
+			final := r.awaitRun(context.Background(), &diags, "bb-uuid", tt.before, timeout)
 
 			requireDiagnostics(t, diags.Errors(), tt.wantErrors, "error")
 			requireDiagnostics(t, diags.Warnings(), tt.wantWarnings, "warning")
@@ -192,10 +191,8 @@ func TestAwaitRun(t *testing.T) {
 				return
 			}
 			require.NotNil(t, final)
-			require.Equal(t, tt.wantStatus, final.Status.Status)
-			if tt.wantReads > 0 {
-				require.GreaterOrEqual(t, stub.reads, tt.wantReads, "must poll to the terminal state")
-			}
+			require.Equal(t, tt.wantAction, final.Status.Action)
+			require.GreaterOrEqual(t, stub.reads, tt.wantReads, "must poll until the run ended")
 		})
 	}
 }

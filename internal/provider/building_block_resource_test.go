@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"testing"
 	"time"
 
@@ -455,13 +456,12 @@ func TestAccBuildingBlock(t *testing.T) {
 	})
 
 	// 05_operator_inputs walks a platform-operator input (`size`, PLATFORM_OPERATOR_MANUAL_INPUT) through
-	// its lifecycle on a cross-workspace BB: create without it (parks WAITING_FOR_OPERATOR_INPUT), resume
-	// via a PUT that supplies it (provider must poll THROUGH the transient WAITING — see
-	// TestAwaitRunPollsThroughWaiting), update a consumer input, then upgrade to a v2 BBD that adds a
-	// defaulted operator input. All steps run in both modes; only two assertions are backend-gated (the
-	// mock has no WAITING state, and does not materialize the v2 default `tier`). A
-	// MANAGED_BUILDINGBLOCK_SAVE key is minted to prove the provider accepts that authority; its
-	// cross-workspace authorization is covered on the backend by MeshBuildingBlockManagedSaveScenarios.
+	// its lifecycle on a cross-workspace BB: create without it (parks with the action PROVIDE_INPUT), resume
+	// via a PUT that supplies it (the provider must wait past the PROVIDE_INPUT the PUT answers with), update
+	// a consumer input, then upgrade to a v2 BBD that adds a defaulted operator input. All steps run in
+	// both modes; only two assertions are backend-gated (the mock never waits for input, and does not
+	// materialize the v2 default `tier`). A MANAGED_BUILDINGBLOCK_SAVE key is minted to prove the provider
+	// accepts that authority; its cross-workspace authorization is covered on the backend by MeshBuildingBlockManagedSaveScenarios.
 	t.Run("05_operator_inputs", func(t *testing.T) {
 		// Workspace A owns the BBD (which declares `size` as PLATFORM_OPERATOR_MANUAL_INPUT) and
 		// the API key used to set the operator input.
@@ -556,17 +556,15 @@ func TestAccBuildingBlock(t *testing.T) {
 		redraftConfig := buildBB(bbdV2Draft, inputsRenamed)
 		upgradedConfig := buildBB(bbdV2Released, inputsRenamed)
 
-		// On a real backend the operator-input-less create parks WAITING_FOR_OPERATOR_INPUT; the mock has
-		// no such state and short-circuits the create to a terminal status.
+		// The mock never waits for input, so its create finishes the run at once.
 		createStatusChecks := []statecheck.StateCheck{
-			statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("status").AtMapKey("status"), knownvalue.StringExact("WAITING_FOR_OPERATOR_INPUT")),
 			statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("status").AtMapKey("health_status"), knownvalue.StringExact("NONE")),
 			statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("status").AtMapKey("action"), knownvalue.StringExact("PROVIDE_INPUT")),
 			statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("status").AtMapKey("succeeded"), knownvalue.Bool(false)),
 		}
 		if IsMockClientTest() {
 			createStatusChecks = []statecheck.StateCheck{
-				statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("status").AtMapKey("status"), xknownvalue.NotEmptyString()),
+				statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("status").AtMapKey("action"), xknownvalue.NotEmptyString()),
 			}
 		}
 
@@ -574,7 +572,7 @@ func TestAccBuildingBlock(t *testing.T) {
 		// acceptance-only — applying a defaulted operator input on upgrade is backend behaviour the
 		// mock does not reproduce (it neither runs the block nor materializes the added default).
 		upgradedChecks := []statecheck.StateCheck{
-			statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("status").AtMapKey("status"), knownvalue.StringExact("SUCCEEDED")),
+			statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("status").AtMapKey("succeeded"), knownvalue.Bool(true)),
 		}
 		if !IsMockClientTest() {
 			upgradedChecks = append(upgradedChecks,
@@ -604,8 +602,8 @@ func TestAccBuildingBlock(t *testing.T) {
 					},
 				},
 				{
-					// Create without the operator input → on a real backend the block parks
-					// WAITING_FOR_OPERATOR_INPUT (the provider surfaces a warning, not an error).
+					// Create without the operator input: on a real backend the block parks with the action
+					// PROVIDE_INPUT (the provider surfaces a warning, not an error).
 					Config:          createConfig.String(),
 					ConfigVariables: creds,
 					ConfigPlanChecks: resource.ConfigPlanChecks{
@@ -629,7 +627,6 @@ func TestAccBuildingBlock(t *testing.T) {
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("all_inputs").AtMapKey("size").AtMapKey("value"), knownvalue.StringExact("16")),
-						statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("status").AtMapKey("status"), knownvalue.StringExact("SUCCEEDED")),
 						statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("status").AtMapKey("health_status"), knownvalue.StringExact("SUCCEEDED")),
 						statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("status").AtMapKey("action"), knownvalue.StringExact("NO_ACTION")),
 						statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("status").AtMapKey("succeeded"), knownvalue.Bool(true)),
@@ -648,7 +645,7 @@ func TestAccBuildingBlock(t *testing.T) {
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("spec").AtMapKey("inputs").AtMapKey("name").AtMapKey("value"), knownvalue.StringExact(`"updated-name"`)),
 						statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("all_inputs").AtMapKey("size").AtMapKey("value"), knownvalue.StringExact("16")),
-						statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("status").AtMapKey("status"), knownvalue.StringExact("SUCCEEDED")),
+						statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("status").AtMapKey("succeeded"), knownvalue.Bool(true)),
 					},
 				},
 				{
@@ -758,10 +755,10 @@ func TestAccBuildingBlock(t *testing.T) {
 				statecheck.ExpectKnownValue(bbAddr.String(),
 					tfjsonpath.New("all_inputs").AtMapKey("static_secret").AtMapKey("sensitive").AtMapKey("secret_hash"),
 					xknownvalue.NotEmptyString()),
-				// SUCCEEDED proves the runner cloned the fixture and ran OpenTofu.
+				// A succeeded run proves the runner cloned the fixture and ran OpenTofu.
 				statecheck.ExpectKnownValue(bbAddr.String(),
-					tfjsonpath.New("status").AtMapKey("status"),
-					knownvalue.StringExact("SUCCEEDED")),
+					tfjsonpath.New("status").AtMapKey("succeeded"),
+					knownvalue.Bool(true)),
 			)
 		}
 
@@ -1344,6 +1341,52 @@ func TestAccBuildingBlock(t *testing.T) {
 		})
 	})
 
+	t.Run("15_delete_after_a_failed_run", func(t *testing.T) {
+		if IsMockClientTest() {
+			t.Skip("the mock neither fails a run nor runs a delete")
+		}
+
+		workspaceConfig, workspaceAddr := testconfig.Workspace(t)
+		repoURL := terraformTestdataRepoURL(t)
+		bbdResource := testconfig.Resource{Name: "building_block", Suffix: "_04_sensitive_user_input"}
+		var bbdAddr testconfig.Traversal
+		bbdConfig := bbdResource.TestSupportConfig(t, "_bbd").WithFirstBlock(
+			testconfig.ExtractAddress(&bbdAddr),
+			testconfig.OwnedByWorkspace(workspaceAddr),
+			testconfig.Descend("version_spec", "implementation", "terraform", "repository_url")(testconfig.SetRawExpr("%q", repoURL)),
+			testconfig.Descend("version_spec", "implementation", "terraform", "ref_name")(testconfig.SetRawExpr("%q", "broken")),
+		).Join(workspaceConfig)
+
+		var buildingBlockAddr testconfig.Traversal
+		buildingBlockConfig := bbdResource.TestSupportConfig(t, "").WithFirstBlock(
+			testconfig.ExtractAddress(&buildingBlockAddr),
+			testconfig.Descend("spec", "building_block_definition_version_ref")(testconfig.SetRawExpr(`{ uuid = %s }`, bbdAddr.Join("version_latest_release", "uuid"))),
+			testconfig.Descend("spec", "target_ref")(testconfig.SetAddr(workspaceAddr, "ref")),
+		).Join(bbdConfig)
+
+		ApplyAndTest(t, resource.TestCase{
+			Steps: []resource.TestStep{
+				{
+					Config:      buildingBlockConfig.String(),
+					ExpectError: expectErrorWords("succeed", "health", "status"),
+				},
+				{
+					// The delete run gets a module that destroys cleanly, so only the failed run before
+					// could fail this destroy.
+					PreConfig: func() {
+						out, err := exec.Command("git", "-C", strings.TrimPrefix(repoURL, "file://"), "branch", "-f", "broken", "main").CombinedOutput()
+						require.NoError(t, err, "%s", out)
+					},
+					Config: bbdConfig.String(),
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PreApply: []plancheck.PlanCheck{
+							plancheck.ExpectResourceAction(buildingBlockAddr.String(), plancheck.ResourceActionDestroy),
+						},
+					},
+				},
+			},
+		})
+	})
 }
 
 // bbv3StateChecks returns the baseline state checks shared by every BB v3 create and move step.
@@ -1353,7 +1396,6 @@ func bbv3StateChecks(buildingBlockAddr testconfig.Traversal, displayName string,
 		xknownvalue.Ref(buildingBlockAddr, client.MeshObjectKind.BuildingBlock, nil),
 		statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact(displayName)),
 		statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("spec").AtMapKey("inputs").AtMapKey("name").AtMapKey("value"), knownvalue.StringExact(`"my-name"`)),
-		statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("status").AtMapKey("status"), xknownvalue.NotEmptyString()),
 		statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("status").AtMapKey("health_status"), xknownvalue.NotEmptyString()),
 		statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("status").AtMapKey("action"), xknownvalue.NotEmptyString()),
 		statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("status").AtMapKey("latest_run_uuid"), xknownvalue.NotEmptyString()),
