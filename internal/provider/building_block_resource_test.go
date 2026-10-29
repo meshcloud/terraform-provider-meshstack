@@ -1170,9 +1170,9 @@ func TestAccBuildingBlock(t *testing.T) {
 			runCase(t, true, nil)
 		})
 		// Run transparency OFF: meshStack refuses a workspace-scoped key's trigger-run on an opaque
-		// definition, so the repair cannot start at all and the apply says so.
+		// definition, so the repair cannot start at all, and the error links the block in meshPanel.
 		t.Run("transparency_off_refuses_the_repair", func(t *testing.T) {
-			runCase(t, false, expectErrorWords("refused", "run", "again"))
+			runCase(t, false, expectErrorWords("refused", "run", "again", "Open", "meshPanel:", "http"))
 		})
 	})
 

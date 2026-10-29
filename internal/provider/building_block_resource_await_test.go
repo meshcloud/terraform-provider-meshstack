@@ -112,6 +112,22 @@ func TestAwaitRun(t *testing.T) {
 			wantWarnings: []string{"ended with the action REVIEW_ERRORS", "intentionally broken BBD version"},
 			wantAction:   client.BuildingBlockActionReviewErrors,
 		},
+		"a run that meshStack could not start is warned about with the reason": {
+			states: []*client.MeshBuildingBlockV2{
+				{
+					Metadata: client.MeshBuildingBlockV2Metadata{Uuid: new("bb-uuid")},
+					Status: &client.MeshBuildingBlockV2Status{
+						Action:           client.BuildingBlockActionReviewErrors,
+						LatestRunUuid:    new("run-before"),
+						RunStartFailure:  "The building block definition version has no runner.",
+						RunStartFailedOn: "2026-10-29T08:00:00Z",
+					},
+				},
+			},
+			logs:         &stubRunLogsClient{logs: failedStep},
+			wantWarnings: []string{"The building block definition version has no runner."},
+			wantAction:   client.BuildingBlockActionReviewErrors,
+		},
 		"a failed run whose logs are not exposed reports the failure alone": {
 			states: []*client.MeshBuildingBlockV2{
 				bbWithAction(client.BuildingBlockActionInProgress),

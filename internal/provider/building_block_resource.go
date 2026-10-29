@@ -94,6 +94,23 @@ func getRunStartFailedOn(ctx context.Context, private privateState, diags *diag.
 	return failedOn
 }
 
+func withBuildingBlockDetails(detail string, bb *client.MeshBuildingBlockV2) string {
+	if reason := runStartFailureOf(bb); reason != "" {
+		detail += "\n\nmeshStack could not start the run: " + reason
+	}
+	if link := bb.MeshPanelLink(); link != "" {
+		detail += "\n\nOpen the building block in meshPanel: " + link
+	}
+	return detail
+}
+
+func runStartFailureOf(bb *client.MeshBuildingBlockV2) string {
+	if bb == nil || bb.Status == nil || !bb.Status.RunFailed() {
+		return ""
+	}
+	return bb.Status.RunStartFailure
+}
+
 func NewBuildingBlockResource() resource.Resource {
 	return &buildingBlockResource{}
 }
@@ -662,9 +679,9 @@ func (r *buildingBlockResource) addRunFailureDiagnostics(
 		add = diags.AddWarning
 	}
 	if detail != "" {
-		add(summary, detail)
+		add(summary, withBuildingBlockDetails(detail, bb))
 	}
-	if bb == nil || bb.Status == nil || bb.Status.LatestRunUuid == nil {
+	if bb == nil || bb.Status == nil || bb.Status.LatestRunUuid == nil || runStartFailureOf(bb) != "" {
 		return
 	}
 	logs, err := r.BuildingBlockRunClient.GetLogs(ctx, *bb.Status.LatestRunUuid)
@@ -716,8 +733,8 @@ func (r *buildingBlockResource) addRunFailureDiagnostics(
 func addWaitingForInputWarning(diags *diag.Diagnostics, bb *client.MeshBuildingBlockV2) {
 	diags.AddWarning(
 		"Building block run is waiting for input or approval",
-		fmt.Sprintf("Building block %s has the action %s, so its outputs are not available yet. Provide the "+
-			"input, approve the run or wait for the dependency in meshPanel, then run the apply again.", *bb.Metadata.Uuid, bb.Status.Action),
+		withBuildingBlockDetails(fmt.Sprintf("Building block %s has the action %s, so its outputs are not available yet. Provide the "+
+			"input, approve the run or wait for the dependency in meshPanel, then run the apply again.", *bb.Metadata.Uuid, bb.Status.Action), bb),
 	)
 }
 
@@ -761,11 +778,11 @@ func (r *buildingBlockResource) awaitRun(
 		}
 		diags.AddError(
 			"meshStack did not start a run for the updated building block",
-			fmt.Sprintf("meshStack accepted the update of building block %s but did not start a run for it "+
+			withBuildingBlockDetails(fmt.Sprintf("meshStack accepted the update of building block %s but did not start a run for it "+
 				"within %s: the block still reports what it reported before the update, %s. A meshStack under load can be "+
 				"slow to start a run, so check the building block in meshPanel and run the apply again once its run has "+
 				"finished. If no new run appears there at all, report the uuid of this building block as a meshStack issue.",
-				uuid, min(timeout, runStartTimeout), unchanged),
+				uuid, min(timeout, runStartTimeout), unchanged), final),
 		)
 	case errors.Is(err, errBuildingBlockVanished):
 		diags.AddError(
@@ -775,8 +792,8 @@ func (r *buildingBlockResource) awaitRun(
 	case errors.Is(err, poll.ErrTimedOut):
 		diags.AddWarning(
 			"Building block run has not finished",
-			fmt.Sprintf("The run of building block %s still has the action %s after %s. Check the run in "+
-				"meshPanel, or raise timeouts to wait longer.", uuid, actionOf(final), timeout),
+			withBuildingBlockDetails(fmt.Sprintf("The run of building block %s still has the action %s after %s. Check the run in "+
+				"meshPanel, or raise timeouts to wait longer.", uuid, actionOf(final), timeout), final),
 		)
 	case err != nil:
 		r.addRunFailureDiagnostics(ctx, diags, diag.SeverityError, "Building block run could not be awaited", err.Error(), final)
@@ -791,9 +808,9 @@ func (r *buildingBlockResource) awaitRun(
 	case !slices.Contains(client.BuildingBlockActions, final.Status.Action):
 		diags.AddWarning(
 			"Building block has an action this provider does not know",
-			fmt.Sprintf("The run of building block %s ended with the action %s, which this provider version "+
+			withBuildingBlockDetails(fmt.Sprintf("The run of building block %s ended with the action %s, which this provider version "+
 				"does not know. status.succeeded reads it as not succeeded. Check the building block in meshPanel, and "+
-				"upgrade the provider.", uuid, final.Status.Action),
+				"upgrade the provider.", uuid, final.Status.Action), final),
 		)
 	}
 	return final
@@ -1154,12 +1171,12 @@ func (r *buildingBlockResource) Update(ctx context.Context, req resource.UpdateR
 			if httpErr, ok := errors.AsType[client.HttpError](err); ok && httpErr.IsForbidden() && repairNeeded {
 				resp.Diagnostics.AddError(
 					"Building block run did not succeed and meshStack refused to run it again",
-					fmt.Sprintf("The last run of building block %s ended with the action %s, so this apply tried "+
+					withBuildingBlockDetails(fmt.Sprintf("The last run of building block %s ended with the action %s, so this apply tried "+
 						"to run it again, and meshStack rejected that with a 403. A workspace-scoped API key may only trigger runs on a "+
 						"building block definition that has run transparency enabled. Ask the platform team owning the "+
 						"definition to enable run transparency, use an API key with admin or platform operator permissions, "+
 						"or run the building block in meshPanel. Underlying error: %s",
-						*updated.Metadata.Uuid, state.Status.Action, err.Error()),
+						*updated.Metadata.Uuid, state.Status.Action, err.Error()), updated),
 				)
 				return
 			}
