@@ -11,6 +11,12 @@ FIXES:
 - `meshstack_building_block`: an input `value` that contains `&`, `<` or `>` no longer shows a change in every plan and
   no longer fails the apply with an inconsistent result. `jsonencode` escapes these characters and meshStack returns
   them unescaped, so the provider now compares input values as JSON.
+- `meshstack_building_block`: the provider waits for a run through `status.action` and no longer reads the deprecated
+  `status.status`. See [waiting for a run](https://docs.meshcloud.io/concepts/building-block/#waiting-for-a-run).
+- `meshstack_building_block`: every run outcome is a warning; add a postcondition on `self.status.succeeded` to fail
+  the apply. A run that waits for input, an approval or a dependency ends the wait at once, and a run that meshStack
+  could not start says why and runs again on the next apply.
+- `meshstack_building_block`: diagnostics link to the building block in meshPanel.
 - `meshstack_platform`: the Azure example no longer defines `quota_definitions`. meshStack accepts quota definitions
   only on platforms that apply quotas (OpenStack, Cloud Foundry, OpenShift, Kubernetes, AKS) and rejects them on
   others.

@@ -62,6 +62,8 @@ var (
 
 var noPreviousRun *client.MeshBuildingBlockV2Status
 
+const waitingForARunDocs = "https://docs.meshcloud.io/concepts/building-block/#waiting-for-a-run"
+
 // runStartFailedOnPrivateKey keeps status.runStartFailedOn, which has no schema attribute, for the "before" of a delete.
 const runStartFailedOnPrivateKey = "run_start_failed_on"
 
@@ -379,10 +381,20 @@ func (r *buildingBlockResource) Schema(ctx context.Context, req resource.SchemaR
 				},
 			},
 			"wait_for_completion": schema.BoolAttribute{
-				MarkdownDescription: "Whether to wait for the building block to reach a terminal state (SUCCEEDED or FAILED) before completing create/update operations. The provider emits actionable warnings if the run is blocked in `WAITING_FOR_OPERATOR_INPUT`. Deletion always waits for the block to be fully removed (lifecycle DELETED, or gone after a purge) regardless of this flag, so dependent resources such as the building block definition can be deleted safely afterward. Each wait is bounded by `timeouts` (see `timeouts.delete` for deprovisioning).",
-				Optional:            true,
-				Computed:            true,
-				Default:             booldefault.StaticBool(true),
+				MarkdownDescription: "Whether create and update wait for the run of the building block to end. The wait ends at once " +
+					"with a warning when the run waits for input, an approval or a dependency (`action` `PROVIDE_INPUT`, `APPROVE_RUN` or " +
+					"`WAITING_FOR_DEPENDENCY`); run the apply again once that is resolved. Every outcome of the run is a warning, and " +
+					"the state holds the status meshStack reported last. To fail the apply when the run did not succeed, add a " +
+					"postcondition on `self.status.succeeded`. It only makes sense with `true`: with `false` the state holds the status " +
+					"meshStack answered the change with, before the run. After the repair of a failed run, that status still shows " +
+					"the failed run until the next refresh, so a plan with `-refresh=false` would run the repair again. Deletion always waits for the block to be fully removed " +
+					"(lifecycle DELETED, or gone after a purge) regardless of this flag, so dependent resources such as the building " +
+					"block definition can be deleted safely afterward; it fails at once when its run waits for a person or a " +
+					"dependency. Each wait is bounded by `timeouts` (see `timeouts.delete` for deprovisioning). See " +
+					"[waiting for a run](" + waitingForARunDocs + ") for how meshStack reports a run.",
+				Optional: true,
+				Computed: true,
+				Default:  booldefault.StaticBool(true),
 			},
 			"purge_on_delete": schema.BoolAttribute{
 				MarkdownDescription: "When true, deletes via the `DELETE /{uuid}/purge` sub-path, which requires admin authority (`ADM_BUILDINGBLOCK_DELETE`). This is a last resort option for stuck deletions.",

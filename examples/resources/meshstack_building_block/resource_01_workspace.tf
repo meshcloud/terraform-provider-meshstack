@@ -29,7 +29,7 @@ resource "meshstack_building_block" "example_workspace" {
   # Purging is a last resort option for stuck deletions. Prefer regular delete behavior.
   # purge_on_delete = true
 
-  # create/update wait for the building block run to reach a terminal state; delete waits for
+  # create/update wait for the run of the building block to end; delete waits for
   # deprovisioning. Tune to your runner's typical run duration (defaults to 30m if unset).
   timeouts = {
     create = "2m"

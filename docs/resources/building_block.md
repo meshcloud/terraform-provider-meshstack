@@ -50,7 +50,7 @@ resource "meshstack_building_block" "example_workspace" {
   # Purging is a last resort option for stuck deletions. Prefer regular delete behavior.
   # purge_on_delete = true
 
-  # create/update wait for the building block run to reach a terminal state; delete waits for
+  # create/update wait for the run of the building block to end; delete waits for
   # deprovisioning. Tune to your runner's typical run duration (defaults to 30m if unset).
   timeouts = {
     create = "2m"
@@ -97,7 +97,7 @@ resource "meshstack_building_block" "example_tenant" {
     }
   }
 
-  # create/update wait for the building block run to reach a terminal state; delete waits for
+  # create/update wait for the run of the building block to end; delete waits for
   # deprovisioning. Tune to your runner's typical run duration (defaults to 30m if unset).
   timeouts = {
     create = "2m"
@@ -118,7 +118,7 @@ resource "meshstack_building_block" "example_tenant" {
 
 - `purge_on_delete` (Boolean) When true, deletes via the `DELETE /{uuid}/purge` sub-path, which requires admin authority (`ADM_BUILDINGBLOCK_DELETE`). This is a last resort option for stuck deletions.
 - `timeouts` (Attributes) (see [below for nested schema](#nestedatt--timeouts))
-- `wait_for_completion` (Boolean) Whether to wait for the building block to reach a terminal state (SUCCEEDED or FAILED) before completing create/update operations. The provider emits actionable warnings if the run is blocked in `WAITING_FOR_OPERATOR_INPUT`. Deletion always waits for the block to be fully removed (lifecycle DELETED, or gone after a purge) regardless of this flag, so dependent resources such as the building block definition can be deleted safely afterward. Each wait is bounded by `timeouts` (see `timeouts.delete` for deprovisioning).
+- `wait_for_completion` (Boolean) Whether create and update wait for the run of the building block to end. The wait ends at once with a warning when the run waits for input, an approval or a dependency (`action` `PROVIDE_INPUT`, `APPROVE_RUN` or `WAITING_FOR_DEPENDENCY`); run the apply again once that is resolved. Every outcome of the run is a warning, and the state holds the status meshStack reported last. To fail the apply when the run did not succeed, add a postcondition on `self.status.succeeded`. It only makes sense with `true`: with `false` the state holds the status meshStack answered the change with, before the run. After the repair of a failed run, that status still shows the failed run until the next refresh, so a plan with `-refresh=false` would run the repair again. Deletion always waits for the block to be fully removed (lifecycle DELETED, or gone after a purge) regardless of this flag, so dependent resources such as the building block definition can be deleted safely afterward; it fails at once when its run waits for a person or a dependency. Each wait is bounded by `timeouts` (see `timeouts.delete` for deprovisioning). See [waiting for a run](https://docs.meshcloud.io/concepts/building-block/#waiting-for-a-run) for how meshStack reports a run.
 
 ### Read-Only
 

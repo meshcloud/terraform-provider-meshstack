@@ -26,7 +26,7 @@ resource "meshstack_building_block" "example_tenant" {
     }
   }
 
-  # create/update wait for the building block run to reach a terminal state; delete waits for
+  # create/update wait for the run of the building block to end; delete waits for
   # deprovisioning. Tune to your runner's typical run duration (defaults to 30m if unset).
   timeouts = {
     create = "2m"
