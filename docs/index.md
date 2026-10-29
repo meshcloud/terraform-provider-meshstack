@@ -9,7 +9,7 @@ description: |-
 
 The meshStack terraform provider is an open-source tool, licensed under the Apache-2.0, and is actively maintained by meshcloud GmbH. The provider exposes APIs of meshStack to manage resources as code.
 
-**Note:** This provider version requires meshStack version 2026.36.0 or higher. The provider automatically validates version compatibility during initialization.
+**Note:** This provider version requires meshStack version 2026.42.0 or higher. The provider automatically validates version compatibility during initialization.
 
 ## Authentication
 

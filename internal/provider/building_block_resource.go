@@ -8,7 +8,6 @@ import (
 	"maps"
 	"reflect"
 	"slices"
-	"sync"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-jsontypes/jsontypes"
@@ -44,7 +43,6 @@ var (
 	_ resource.ResourceWithConfigure    = &buildingBlockResource{}
 	_ resource.ResourceWithImportState  = &buildingBlockResource{}
 	_ resource.ResourceWithModifyPlan   = &buildingBlockResource{}
-	_ resource.ResourceWithMoveState    = &buildingBlockResource{}
 	_ resource.ResourceWithUpgradeState = &buildingBlockResource{}
 )
 
@@ -133,13 +131,6 @@ func (r *buildingBlockResource) Configure(_ context.Context, req resource.Config
 	})...)
 }
 
-// parentBuildingBlockRefsNestedObject is defined once so the Default and the NestedObject field of
-// parent_building_block_refs share one element type.
-var parentBuildingBlockRefsNestedObject = func() schema.NestedAttributeObject {
-	ref := meshRefByUuid(meshRefOptions{Kind: client.MeshObjectKind.BuildingBlock, InSet: true})
-	return schema.NestedAttributeObject{Attributes: ref.Attributes, Validators: ref.Validators}
-}()
-
 // basedOnDraftVersionPrivateKey hands meshStack's status.basedOnDraftVersion to the parent plan modifier without a schema attribute.
 const basedOnDraftVersionPrivateKey = "based_on_draft_version"
 
@@ -148,6 +139,7 @@ func basedOnDraftVersion(dto *client.MeshBuildingBlockV2) []byte {
 }
 
 func (r *buildingBlockResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+	parentRef := meshRefByUuid(meshRefOptions{Kind: client.MeshObjectKind.BuildingBlock, InSet: true})
 	resp.Schema = schema.Schema{
 		Version: 1,
 		MarkdownDescription: "Manage a workspace or tenant building block created from a building block definition (BBD).\n\n" +
@@ -155,7 +147,7 @@ func (r *buildingBlockResource) Schema(ctx context.Context, req resource.SchemaR
 			"typically only creates one directly to test a draft BBD in the operator's own workspace. " +
 			"Building blocks can depend on each other via `parent_building_block_refs`, forming a dependency hierarchy " +
 			"in which a child's inputs draw their values from a parent's outputs " +
-			"(see [building block concepts](https://docs.meshcloud.io/concepts/building-block/))." + previewDisclaimer(),
+			"(see [building block concepts](https://docs.meshcloud.io/concepts/building-block/)).",
 		Attributes: map[string]schema.Attribute{
 			"ref": meshRefByUuid(meshRefOptions{Kind: client.MeshObjectKind.BuildingBlock, Description: "Reference to this building block, can be used in another building block's `spec.parent_building_block_refs`.", Output: true}),
 
@@ -272,8 +264,8 @@ func (r *buildingBlockResource) Schema(ctx context.Context, req resource.SchemaR
 							"operator sets them either on a block it creates from its own BBD (e.g. testing a draft), or by importing an " +
 							"app-team block created from its BBD to supply the operator inputs that block is awaiting. This shared " +
 							"ownership of a block (app team and operator) is experimental and will be documented more fully later; " +
-							"supplying an operator input with a non-operator/non-owner key is rejected.",
-						Required: true,
+							"supplying an operator input with a non-operator/non-owner key is rejected. Omit it to manage no inputs.",
+						Optional: true,
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
 								"value": schema.StringAttribute{
@@ -298,15 +290,13 @@ func (r *buildingBlockResource) Schema(ctx context.Context, req resource.SchemaR
 					},
 					"parent_building_block_refs": schema.SetNestedAttribute{
 						Optional: true,
-						Computed: true,
 						MarkdownDescription: "Set of refs to the parent building blocks this block depends on, forming a dependency hierarchy: " +
 							"a parent's outputs can feed this block's inputs, so the parents listed here should align with the " +
 							"inputs that consume them (see [building block concepts](https://docs.meshcloud.io/concepts/building-block/)). " +
 							"Prefer reusable refs from `meshstack_building_block.<name>.ref`.<br>" +
 							"Parent building blocks can only change as part of a version upgrade or while the block is on a draft version " +
 							"of its definition; changing them otherwise forces the building block to be replaced (destroyed and recreated).",
-						Default:      emptySetDefault(parentBuildingBlockRefsNestedObject),
-						NestedObject: parentBuildingBlockRefsNestedObject,
+						NestedObject: schema.NestedAttributeObject{Attributes: parentRef.Attributes, Validators: parentRef.Validators},
 						PlanModifiers: []planmodifier.Set{
 							setplanmodifier.RequiresReplaceIf(
 								requiresReplaceParentsWhenVersionUnchanged,
@@ -322,11 +312,6 @@ func (r *buildingBlockResource) Schema(ctx context.Context, req resource.SchemaR
 				Computed:            true,
 				PlanModifiers:       []planmodifier.Object{objectplanmodifier.UseStateForUnknown()},
 				Attributes: map[string]schema.Attribute{
-					"status": schema.StringAttribute{
-						MarkdownDescription: "Execution status. One of " + client.BuildingBlockStatuses.Markdown() + ". " + buildingBlockStatusDeprecation,
-						Computed:            true,
-						DeprecationMessage:  buildingBlockStatusDeprecation,
-					},
 					"succeeded": schema.BoolAttribute{
 						MarkdownDescription: buildingBlockSucceededDescription,
 						Computed:            true,
@@ -653,6 +638,15 @@ func buildingBlockConverterOptions(ctx context.Context, config, plan, state gene
 	}
 }
 
+// withBuildingBlockContainersAsIn keeps these attributes null or empty as configured, because meshStack
+// returns an empty collection for both.
+func withBuildingBlockContainersAsIn(ctx context.Context, prior generic.AttributeGetter) generic.ConverterOption {
+	return generic.WithEmptyContainersAsIn(ctx, prior,
+		path.Root("spec").AtName("inputs"),
+		path.Root("spec").AtName("parent_building_block_refs"),
+	)
+}
+
 // resolveTimeout reads the configured timeout for the given operation ("create"/"update"/"delete")
 // from the resource's timeouts block, falling back to defaultBuildingBlockTimeout when unset. The
 // getter is the plan for create/update and the state for delete.
@@ -727,7 +721,7 @@ func (r *buildingBlockResource) addRunFailureDiagnostics(
 	// listing them all just adds noise. It shares the caller's severity because it is the actionable
 	// detail behind the run failure reported above.
 	for _, step := range logs.Steps {
-		if step.Status != string(client.BuildingBlockStatusFailed) {
+		if step.Status != "FAILED" {
 			continue
 		}
 		stepDetail := fmt.Sprintf("Step %q is in status %s.", step.DisplayName, step.Status)
@@ -836,7 +830,7 @@ func actionOf(bb *client.MeshBuildingBlockV2) string {
 }
 
 func (r *buildingBlockResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	converterOptions := buildingBlockConverterOptions(ctx, req.Config, req.Plan, nil)
+	converterOptions := buildingBlockConverterOptions(ctx, req.Config, req.Plan, nil).Append(withBuildingBlockContainersAsIn(ctx, req.Plan))
 
 	plan := generic.Get[buildingBlockModel](ctx, req.Plan, &resp.Diagnostics, converterOptions.Append(generic.WithSetUnknownValueToZero())...)
 	if resp.Diagnostics.HasError() {
@@ -870,7 +864,7 @@ func (r *buildingBlockResource) Create(ctx context.Context, req resource.CreateR
 }
 
 func (r *buildingBlockResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	converterOptions := buildingBlockConverterOptions(ctx, nil, nil, req.State)
+	converterOptions := buildingBlockConverterOptions(ctx, nil, nil, req.State).Append(withBuildingBlockContainersAsIn(ctx, req.State))
 	state := generic.Get[buildingBlockModel](ctx, req.State, &resp.Diagnostics, converterOptions.Append(generic.WithSetUnknownValueToZero())...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -918,6 +912,10 @@ func (r *buildingBlockResource) Read(ctx context.Context, req resource.ReadReque
 func requiresReplaceParentsWhenVersionUnchanged(ctx context.Context, req planmodifier.SetRequest, resp *setplanmodifier.RequiresReplaceIfFuncResponse) {
 	// Not applicable on create (no prior state) or destroy (no plan).
 	if req.State.Raw.IsNull() || req.Plan.Raw.IsNull() {
+		return
+	}
+	// meshStack stores null as an empty set, so a change between the two changes no parents.
+	if !req.PlanValue.IsUnknown() && len(req.PlanValue.Elements()) == 0 && len(req.StateValue.Elements()) == 0 {
 		return
 	}
 
@@ -970,12 +968,7 @@ func rerunNeeded(plan, state client.MeshBuildingBlockV2Spec) bool {
 		return true
 	}
 
-	// parent building blocks change detection
-	if !reflect.DeepEqual(plan.ParentBuildingBlockRefs, state.ParentBuildingBlockRefs) {
-		return true
-	}
-
-	return false
+	return !slices.Equal(plan.ParentBuildingBlockRefs, state.ParentBuildingBlockRefs)
 }
 
 func compareContentHashes(planHash, stateHash string) hashComparison {
@@ -1021,7 +1014,6 @@ func (r *buildingBlockResource) ModifyPlan(ctx context.Context, req resource.Mod
 	// Mark the run-derived read-only attributes (status, outputs, all_inputs) unknown so the apply can
 	// resolve them after the triggered run.
 	triggerRun := func() {
-		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("status").AtName("status"), types.StringUnknown())...)
 		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("status").AtName("succeeded"), types.BoolUnknown())...)
 		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("status").AtName("health_status"), types.StringUnknown())...)
 		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("status").AtName("action"), types.StringUnknown())...)
@@ -1120,7 +1112,7 @@ func planInputsChanged(plan, state map[string]*client.MeshBuildingBlockInput) bo
 }
 
 func (r *buildingBlockResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	converterOptions := buildingBlockConverterOptions(ctx, req.Config, req.Plan, req.State)
+	converterOptions := buildingBlockConverterOptions(ctx, req.Config, req.Plan, req.State).Append(withBuildingBlockContainersAsIn(ctx, req.Plan))
 	plan := generic.Get[buildingBlockModel](ctx, req.Plan, &resp.Diagnostics, converterOptions.Append(generic.WithSetUnknownValueToZero())...)
 	state := generic.Get[buildingBlockModel](ctx, req.State, &resp.Diagnostics, converterOptions.Append(generic.WithSetUnknownValueToZero())...)
 	if resp.Diagnostics.HasError() {
@@ -1174,7 +1166,7 @@ func (r *buildingBlockResource) Update(ctx context.Context, req resource.UpdateR
 	// content_hash never reaches meshStack, so a rerun for it alone needs a trigger-run.
 	backendWillRun := versionChanging ||
 		planInputsChanged(plan.Spec.Inputs, state.Spec.Inputs) ||
-		!reflect.DeepEqual(plan.Spec.ParentBuildingBlockRefs, state.Spec.ParentBuildingBlockRefs) ||
+		!slices.Equal(plan.Spec.ParentBuildingBlockRefs, state.Spec.ParentBuildingBlockRefs) ||
 		secretRotated
 	effective := updated
 	if needsRun && !backendWillRun {
@@ -1285,196 +1277,4 @@ func (r *buildingBlockResource) ImportState(ctx context.Context, req resource.Im
 	// API key can use a building block whose definition lives elsewhere. Recomputing would therefore
 	// work for some keys and fail for others, and the imported state would depend on who imported it.
 	// A null hash costs one extra run, but it behaves the same for everyone.
-}
-
-// moveStateSchemasOnce caches the v1 and v2 source schemas so MoveState only
-// initialises them once per resource lifecycle.
-var moveStateSchemasOnce = sync.OnceValues(func() (v2Schema, v1Schema schema.Schema) {
-	ctx := context.Background()
-
-	v2Res, ok := NewBuildingBlockV2Resource().(*buildingBlockV2Resource)
-	if !ok {
-		panic("unexpected type for BuildingBlockV2Resource")
-	}
-	var v2SchemaResp resource.SchemaResponse
-	v2Res.Schema(ctx, resource.SchemaRequest{}, &v2SchemaResp)
-
-	v1Res, ok2 := NewBuildingblockResource().(*buildingblockResource)
-	if !ok2 {
-		panic("unexpected type for BuildingblockResource")
-	}
-	var v1SchemaResp resource.SchemaResponse
-	v1Res.Schema(ctx, resource.SchemaRequest{}, &v1SchemaResp)
-
-	return v2SchemaResp.Schema, v1SchemaResp.Schema
-})
-
-func (r *buildingBlockResource) MoveState(_ context.Context) []resource.StateMover {
-	v2Schema, v1Schema := moveStateSchemasOnce()
-	return []resource.StateMover{
-		{
-			SourceSchema: &v2Schema,
-			StateMover:   r.moveFromV2,
-		},
-		{
-			SourceSchema: &v1Schema,
-			StateMover:   r.moveFromV1,
-		},
-	}
-}
-
-// userInputModelToJsonValue converts a typed v1/v2 user input model to a JSON-encoded string value.
-// It uses extractIoValue() so future value kinds can't be silently missed.
-func userInputModelToJsonValue(input buildingBlockUserInputModel) (*string, error) {
-	raw, _ := input.extractIoValue()
-	if raw == nil {
-		return nil, nil
-	}
-	marshalled, err := json.Marshal(raw, wireCompatibility)
-	if err != nil {
-		return nil, err
-	}
-	s := string(marshalled)
-	return &s, nil
-}
-
-func (r *buildingBlockResource) moveFromV2(ctx context.Context, req resource.MoveStateRequest, resp *resource.MoveStateResponse) {
-	if req.SourceTypeName != "meshstack_building_block_v2" {
-		return
-	}
-
-	var uuid string
-	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("metadata").AtName("uuid"), &uuid)...)
-
-	var displayName string
-	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("spec").AtName("display_name"), &displayName)...)
-
-	var versionRefUuid string
-	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("spec").AtName("building_block_definition_version_ref").AtName("uuid"), &versionRefUuid)...)
-
-	var targetKind string
-	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("spec").AtName("target_ref").AtName("kind"), &targetKind)...)
-
-	var targetUuid types.String
-	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("spec").AtName("target_ref").AtName("uuid"), &targetUuid)...)
-
-	var targetName types.String
-	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("spec").AtName("target_ref").AtName("name"), &targetName)...)
-
-	var flatParents []client.MeshBuildingBlockParent
-	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("spec").AtName("parent_building_blocks"), &flatParents)...)
-
-	// Read source inputs — use the v2 model to tolerate value_string_sensitive/value_code_sensitive
-	// that were added after the v2 resource's initial release.
-	var userInputs map[string]buildingBlockV2UserInputModel
-	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("spec").AtName("inputs"), &userInputs)...)
-
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	resp.Diagnostics.Append(resp.TargetState.SetAttribute(ctx, path.Root("metadata").AtName("uuid"), &uuid)...)
-	resp.Diagnostics.Append(resp.TargetState.SetAttribute(ctx, path.Root("spec").AtName("display_name"), displayName)...)
-	resp.Diagnostics.Append(resp.TargetState.SetAttribute(ctx, path.Root("spec").AtName("building_block_definition_version_ref").AtName("uuid"), versionRefUuid)...)
-	resp.Diagnostics.Append(resp.TargetState.SetAttribute(ctx, path.Root("spec").AtName("target_ref").AtName("kind"), targetKind)...)
-	if !targetUuid.IsNull() {
-		resp.Diagnostics.Append(resp.TargetState.SetAttribute(ctx, path.Root("spec").AtName("target_ref").AtName("uuid"), targetUuid.ValueStringPointer())...)
-	}
-	if !targetName.IsNull() {
-		resp.Diagnostics.Append(resp.TargetState.SetAttribute(ctx, path.Root("spec").AtName("target_ref").AtName("name"), targetName.ValueStringPointer())...)
-	}
-	resp.Diagnostics.Append(resp.TargetState.SetAttribute(ctx, path.Root("spec").AtName("parent_building_block_refs"), parentRefsFromFlatParents(flatParents))...)
-
-	// Carry inputs over. A sensitive input's value cannot ride through state (secret_value is
-	// write-only). It must not be lost either: seed the sensitive block so the input stays MANAGED
-	// (present in spec.inputs, so the post-move refresh's SetFromClientDto keeps it instead of dropping
-	// it to all_inputs only). The refresh (Read — which, unlike MoveState, has backend access)
-	// overwrites secret_hash/secret_version with the real values from the backend; the next apply then
-	// echoes the stored hash (secret_version stays null in config → unchanged), so the backend
-	// preserves the existing secret. The operator re-declares the input with any placeholder
-	// secret_value and no secret_version. The seeded secret_hash is only a non-null marker the secret
-	// converter requires when it first reads the moved state during refresh — it is never persisted.
-	for key, input := range userInputs {
-		jsonVal, err := userInputModelToJsonValue(input.buildingBlockUserInputModel)
-		if err != nil {
-			resp.Diagnostics.AddError("Error converting input", fmt.Sprintf("Could not convert input '%s': %s", key, err.Error()))
-			return
-		}
-		if jsonVal != nil {
-			resp.Diagnostics.Append(resp.TargetState.SetAttribute(ctx, path.Root("spec").AtName("inputs").AtMapKey(key).AtName("value"), jsonVal)...)
-			continue
-		}
-		hasSensitiveValue := (!input.ValueStringSensitive.IsNull() && !input.ValueStringSensitive.IsUnknown()) ||
-			(!input.ValueCodeSensitive.IsNull() && !input.ValueCodeSensitive.IsUnknown())
-		if !hasSensitiveValue {
-			resp.Diagnostics.AddWarning(
-				"Input dropped during migration",
-				fmt.Sprintf("Input '%s' could not be mapped from meshstack_building_block_v2 to meshstack_building_block: no non-null value found.", key),
-			)
-			continue
-		}
-		// secret_version stays null so the refresh's ValueFromConverter adopts the backend hash as the
-		// version (no spurious rotation); secret_value stays null (write-only).
-		resp.Diagnostics.Append(resp.TargetState.SetAttribute(ctx,
-			path.Root("spec").AtName("inputs").AtMapKey(key).AtName("sensitive"),
-			secret.Secret{Value: nil, Version: nil, Hash: new("recovered-from-backend-on-refresh")})...)
-	}
-
-	resp.Diagnostics.Append(resp.TargetState.SetAttribute(ctx, path.Root("wait_for_completion"), true)...)
-	resp.Diagnostics.Append(resp.TargetState.SetAttribute(ctx, path.Root("purge_on_delete"), false)...)
-}
-
-func (r *buildingBlockResource) moveFromV1(ctx context.Context, req resource.MoveStateRequest, resp *resource.MoveStateResponse) {
-	if req.SourceTypeName != "meshstack_buildingblock" {
-		return
-	}
-
-	var uuid string
-	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("metadata").AtName("uuid"), &uuid)...)
-
-	var displayName string
-	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("spec").AtName("display_name"), &displayName)...)
-
-	// v1 has definition_uuid in metadata, no target_ref (uses tenant_identifier).
-	// Do NOT write the definition UUID into the version ref — the definition UUID
-	// is different from the definition VERSION UUID, so it would be a guaranteed mismatch.
-	// Instead, leave version_ref uuid unset so the post-move Read/refresh populates it
-	// from the live backend (SetFromClientDto fills Spec from the DTO).
-
-	// v1 building blocks are always tenant-scoped.
-	// Do NOT write a name-based tenant target_ref. The backend requires uuid for
-	// meshTenant, and target_ref is RequiresReplace — writing a
-	// name-based ref would force destroy+recreate on first post-move plan.
-	// Leave target_ref unset so the post-move Read/refresh fills it from the live DTO.
-
-	var flatParents []client.MeshBuildingBlockParent
-	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("spec").AtName("parent_building_blocks"), &flatParents)...)
-
-	var userInputs map[string]buildingBlockUserInputModel
-	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("spec").AtName("inputs"), &userInputs)...)
-
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	resp.Diagnostics.Append(resp.TargetState.SetAttribute(ctx, path.Root("metadata").AtName("uuid"), &uuid)...)
-	resp.Diagnostics.Append(resp.TargetState.SetAttribute(ctx, path.Root("spec").AtName("display_name"), displayName)...)
-	// Leave building_block_definition_version_ref.uuid and target_ref unset — the post-move
-	// refresh (Read) will populate them from the live backend. This avoids the v1 definition uuid
-	// mismatch and the name-based tenant target_ref incompatibility.
-	resp.Diagnostics.Append(resp.TargetState.SetAttribute(ctx, path.Root("spec").AtName("parent_building_block_refs"), parentRefsFromFlatParents(flatParents))...)
-
-	for key, input := range userInputs {
-		jsonVal, err := userInputModelToJsonValue(input)
-		if err != nil {
-			resp.Diagnostics.AddError("Error converting input", fmt.Sprintf("Could not convert input '%s': %s", key, err.Error()))
-			return
-		}
-		if jsonVal != nil {
-			resp.Diagnostics.Append(resp.TargetState.SetAttribute(ctx, path.Root("spec").AtName("inputs").AtMapKey(key).AtName("value"), jsonVal)...)
-		}
-	}
-
-	resp.Diagnostics.Append(resp.TargetState.SetAttribute(ctx, path.Root("wait_for_completion"), true)...)
-	resp.Diagnostics.Append(resp.TargetState.SetAttribute(ctx, path.Root("purge_on_delete"), false)...)
 }

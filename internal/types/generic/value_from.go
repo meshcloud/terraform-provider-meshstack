@@ -1,11 +1,13 @@
 package generic
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"slices"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 
@@ -25,6 +27,27 @@ func ValueFrom[T any](in T, opts ...ConverterOption) (tftypes.Value, error) {
 func WithSliceTypeAsSet(sliceTypeAsSet func(p reflect.Type) bool) ConverterOption {
 	return func(c *converter) {
 		c.SliceTypeAsSet = sliceTypeAsSet
+	}
+}
+
+// WithEmptyContainersAsIn gives an empty or nil slice or map at one of attributePaths the form that prior
+// holds there: null when prior is null, empty otherwise. A nil prior, or one that cannot be read at the path,
+// counts as null, because an import has no prior value.
+func WithEmptyContainersAsIn(ctx context.Context, prior AttributeGetter, attributePaths ...path.Path) ConverterOption {
+	return func(c *converter) {
+		c.EmptyContainerIsNull = func(attributePath path.Path) (isNull, matched bool) {
+			if !slices.ContainsFunc(attributePaths, attributePath.Equal) {
+				return false, false
+			}
+			if prior == nil {
+				return true, true
+			}
+			var priorValue attr.Value
+			if diags := prior.GetAttribute(ctx, attributePath, &priorValue); diags.HasError() || priorValue == nil {
+				return true, true
+			}
+			return priorValue.IsNull(), true
+		}
 	}
 }
 
@@ -139,7 +162,7 @@ dereference:
 	case reflect.Int64:
 		return newValueFrom(tftypes.Number, in.Int()), nil
 	case reflect.Slice:
-		haveNil = haveNil || in.IsNil()
+		haveNil = conv.containerIsNull(in, path, haveNil, haveUnknown)
 		values := make([]tftypes.Value, 0)
 		var elemType tftypes.Type
 		if err := path.WalkSlice(in, func(path reflectwalk.WalkPath, idx *reflectwalk.SliceIndex, in reflect.Value) error {
@@ -164,7 +187,7 @@ dereference:
 		}
 		return newValueFrom(tftypes.List{ElementType: elemType}, values), nil
 	case reflect.Map:
-		haveNil = haveNil || in.IsNil()
+		haveNil = conv.containerIsNull(in, path, haveNil, haveUnknown)
 		values := map[string]tftypes.Value{}
 		var elemType tftypes.Type
 		if err := path.WalkMap(in, func(path reflectwalk.WalkPath, mapKey *reflectwalk.MapKey, in reflect.Value) error {
@@ -214,6 +237,16 @@ dereference:
 	default:
 		panic(fmt.Sprintf("kind %s not supported", kind))
 	}
+}
+
+func (conv converter) containerIsNull(in reflect.Value, walkPath reflectwalk.WalkPath, haveNil, haveUnknown bool) bool {
+	if haveNil || haveUnknown || in.Len() > 0 || conv.EmptyContainerIsNull == nil {
+		return haveNil || in.IsNil()
+	}
+	if isNull, matched := conv.EmptyContainerIsNull(conv.walkPathToAttributePath(walkPath)); matched {
+		return isNull
+	}
+	return in.IsNil()
 }
 
 type ValueFromFunc[T any] func(attributePath path.Path, in T) (tftypes.Value, error)

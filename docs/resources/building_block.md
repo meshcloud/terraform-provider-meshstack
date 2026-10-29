@@ -5,7 +5,6 @@ subcategory: ""
 description: |-
   Manage a workspace or tenant building block created from a building block definition (BBD).
   A building block is usually managed by the app team that owns its workspace; a platform operator typically only creates one directly to test a draft BBD in the operator's own workspace. Building blocks can depend on each other via parent_building_block_refs, forming a dependency hierarchy in which a child's inputs draw their values from a parent's outputs (see building block concepts https://docs.meshcloud.io/concepts/building-block/).
-  ~> Preview: This resource is in preview. Breaking changes are possible without prior notice due to changes in the underlying meshStack preview API https://docs.meshcloud.io/api/technical-specifications#preview-endpoints or due to changes in this provider. Please ensure you are running the latest version of the provider and report any bugs via GitHub issues https://github.com/meshcloud/terraform-provider-meshstack/issues or via support@meshcloud.io.
 ---
 
 # meshstack_building_block (Resource)
@@ -13,8 +12,6 @@ description: |-
 Manage a workspace or tenant building block created from a building block definition (BBD).
 
 A building block is usually managed by the app team that owns its workspace; a platform operator typically only creates one directly to test a draft BBD in the operator's own workspace. Building blocks can depend on each other via `parent_building_block_refs`, forming a dependency hierarchy in which a child's inputs draw their values from a parent's outputs (see [building block concepts](https://docs.meshcloud.io/concepts/building-block/)).
-
-~> **Preview:** This resource is in preview. Breaking changes are possible without prior notice due to changes in the underlying [meshStack preview API](https://docs.meshcloud.io/api/technical-specifications#preview-endpoints) or due to changes in this provider. Please ensure you are running the latest version of the provider and report any bugs via [GitHub issues](https://github.com/meshcloud/terraform-provider-meshstack/issues) or via support@meshcloud.io.
 
 ## Example Usage
 
@@ -134,11 +131,11 @@ Required:
 
 - `building_block_definition_version_ref` (Attributes) References the building block definition version this building block is based on. Changing the `uuid` upgrades the building block in place. Only upgrades to the **latest released version** of the same definition are supported; pointing at an older or non-released version is rejected by the backend. (see [below for nested schema](#nestedatt--spec--building_block_definition_version_ref))
 - `display_name` (String) Display name for the building block as shown in meshPanel. Changing it is applied in place (a rename) and does not trigger a building block run.
-- `inputs` (Attributes Map) Input values this resource manages, keyed by input name. Defined much like a BBD's inputs (which are richer, e.g. defaults).<br>Set either `value` (always `jsonencode(...)`'d, including strings) or `sensitive = { secret_value = ... }`. The `sensitive` block must be used if and only if the BBD declares the input as sensitive.<br>App teams normally set only `USER_INPUT` and `PAYMENT_METHOD` inputs; a `PAYMENT_METHOD` value is `jsonencode(meshstack_payment_method.mypay.ref)`. `PLATFORM_OPERATOR_MANUAL_INPUT` inputs require a platform-operator key (admin, or `MANAGED_BUILDINGBLOCK_SAVE` for the definition's owning workspace): an operator sets them either on a block it creates from its own BBD (e.g. testing a draft), or by importing an app-team block created from its BBD to supply the operator inputs that block is awaiting. This shared ownership of a block (app team and operator) is experimental and will be documented more fully later; supplying an operator input with a non-operator/non-owner key is rejected. (see [below for nested schema](#nestedatt--spec--inputs))
 - `target_ref` (Attributes) References the building block target. For `meshTenant` targets, `uuid` is required and `name` must be omitted. For `meshWorkspace` targets, `name` is required and `uuid` must be omitted. (see [below for nested schema](#nestedatt--spec--target_ref))
 
 Optional:
 
+- `inputs` (Attributes Map) Input values this resource manages, keyed by input name. Defined much like a BBD's inputs (which are richer, e.g. defaults).<br>Set either `value` (always `jsonencode(...)`'d, including strings) or `sensitive = { secret_value = ... }`. The `sensitive` block must be used if and only if the BBD declares the input as sensitive.<br>App teams normally set only `USER_INPUT` and `PAYMENT_METHOD` inputs; a `PAYMENT_METHOD` value is `jsonencode(meshstack_payment_method.mypay.ref)`. `PLATFORM_OPERATOR_MANUAL_INPUT` inputs require a platform-operator key (admin, or `MANAGED_BUILDINGBLOCK_SAVE` for the definition's owning workspace): an operator sets them either on a block it creates from its own BBD (e.g. testing a draft), or by importing an app-team block created from its BBD to supply the operator inputs that block is awaiting. This shared ownership of a block (app team and operator) is experimental and will be documented more fully later; supplying an operator input with a non-operator/non-owner key is rejected. Omit it to manage no inputs. (see [below for nested schema](#nestedatt--spec--inputs))
 - `parent_building_block_refs` (Attributes Set) Set of refs to the parent building blocks this block depends on, forming a dependency hierarchy: a parent's outputs can feed this block's inputs, so the parents listed here should align with the inputs that consume them (see [building block concepts](https://docs.meshcloud.io/concepts/building-block/)). Prefer reusable refs from `meshstack_building_block.<name>.ref`.<br>Parent building blocks can only change as part of a version upgrade or while the block is on a draft version of its definition; changing them otherwise forces the building block to be replaced (destroyed and recreated). (see [below for nested schema](#nestedatt--spec--parent_building_block_refs))
 
 <a id="nestedatt--spec--building_block_definition_version_ref"></a>
@@ -152,6 +149,19 @@ Optional:
 
 - `content_hash` (String) Content hash of the building block definition version. Its purpose is to detect content changes of a **draft** BBD (whose version `uuid` stays the same) and conveniently re-run the building block when it changes.<br>When wired from a definition's computed `content_hash`, a change caused *only* by a hash-algorithm version upgrade (e.g. after upgrading the provider) does **not** trigger a re-run.<br>It is provider-only and never sent to the backend, so changing it can also be used to force a manual re-run — use with care; with a plain workspace key (`BUILDINGBLOCK_SAVE`) this requires the definition to have run transparency enabled (admins and the definition's platform operator are exempt).<br>After import it is left null in state, so the first apply triggers a run if `content_hash` is set in config. To avoid that, omit `content_hash` until after the first post-import apply, or set it only then.
 - `kind` (String) meshObject type, always `meshBuildingBlockDefinitionVersion`.
+
+
+<a id="nestedatt--spec--target_ref"></a>
+### Nested Schema for `spec.target_ref`
+
+Required:
+
+- `kind` (String) Target kind for this building block, one of `meshTenant`, `meshWorkspace`.
+
+Optional:
+
+- `name` (String) Identifier of the target workspace. Required when `kind = "meshWorkspace"`, must be omitted for `kind = "meshTenant"`.
+- `uuid` (String) UUID of the target tenant. Required when `kind = "meshTenant"`, must be omitted for `kind = "meshWorkspace"`.
 
 
 <a id="nestedatt--spec--inputs"></a>
@@ -177,19 +187,6 @@ Read-Only:
 
 - `secret_hash` (String) Hash value of the secret stored in the backend. If this hash has changed without changes in the version attribute, the secret value was updated externally.
 
-
-
-<a id="nestedatt--spec--target_ref"></a>
-### Nested Schema for `spec.target_ref`
-
-Required:
-
-- `kind` (String) Target kind for this building block, one of `meshTenant`, `meshWorkspace`.
-
-Optional:
-
-- `name` (String) Identifier of the target workspace. Required when `kind = "meshWorkspace"`, must be omitted for `kind = "meshTenant"`.
-- `uuid` (String) UUID of the target tenant. Required when `kind = "meshTenant"`, must be omitted for `kind = "meshWorkspace"`.
 
 
 <a id="nestedatt--spec--parent_building_block_refs"></a>
@@ -260,7 +257,6 @@ Read-Only:
 - `latest_dry_run_uuid` (String) UUID of the latest dry (DETECT) run for this Building Block, but only when it is the newest run; null otherwise.
 - `latest_run_uuid` (String) UUID of the latest modifying (apply/destroy) run for this Building Block. Excludes dry runs (see `latest_dry_run_uuid`). Null when no modifying run exists.
 - `outputs` (Attributes Map) Outputs of building block, available after a successful run. (see [below for nested schema](#nestedatt--status--outputs))
-- `status` (String, Deprecated) Execution status. One of `WAITING_FOR_DEPENDENT_INPUT`, `WAITING_FOR_OPERATOR_INPUT`, `WAITING_FOR_USER_INPUT`, `WAITING_FOR_APPROVAL`, `PENDING`, `IN_PROGRESS`, `SUCCEEDED`, `FAILED`, `ABORTED`. Use `succeeded`, or `health_status` and `action` for finer checks.
 - `succeeded` (Boolean) True when the latest run succeeded and the building block needs no attention: `health_status` is `SUCCEEDED` and `action` is one of `NO_ACTION`, `UPGRADE_AVAILABLE`, `REVIEW_DRIFT`. On meshStack versions before the `REVIEW_ABORTED_RUN` action an aborted run reads as succeeded.
 
 <a id="nestedatt--status--outputs"></a>
