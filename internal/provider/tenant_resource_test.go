@@ -336,6 +336,9 @@ type tenantQuotaOptions struct {
 // quotas and spec.requested_quotas are layered onto the standard builders via SetRawExpr.
 func tenantQuotaConfig(t *testing.T, opts tenantQuotaOptions) (testconfig.Config, testconfig.Traversal) {
 	t.Helper()
+	if !IsMockClientTest() {
+		t.Skip("quotas are applied only on platforms with a quota provider, and a tenant on one never completes or deletes without a real cluster")
+	}
 	workspaceConfig, workspaceAddr := testconfig.Workspace(t)
 	projectConfig, projectAddr := testconfig.Project(t, workspaceAddr)
 	var platformAddr testconfig.Traversal
@@ -374,7 +377,6 @@ func tenantQuotaConfig(t *testing.T, opts tenantQuotaOptions) (testconfig.Config
 
 	tenantConfig, tenantAddr := testconfig.Tenant(t, projectAddr, platformAddr, landingZoneAddr)
 	tenantConfig = tenantConfig.WithFirstBlock(
-		testconfig.Descend("wait_for_completion")(testconfig.SetBool(false)),
 		testconfig.Descend("spec", "requested_quotas")(testconfig.SetRawExpr(
 			`{ "limits.cpu" = { value = %d } }`, opts.requestedCpu,
 		)),
