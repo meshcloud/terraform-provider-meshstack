@@ -6,13 +6,17 @@ description: >
   definition, adding, changing, upgrading and deleting a building block, waiting for runs and
   approvals, and importing what exists. Use when asked to write or change `meshstack_*` HCL, to
   order or update a building block through Terraform, to publish a definition version, or to bring
-  meshStack objects under Terraform.
+  meshStack objects under Terraform. In a clone of the provider repository, also use it to dump an
+  acceptance test's HCL and to run a config against a dev build, to reproduce a provider bug or to
+  prototype a demo.
 ---
 
 # meshStack Terraform provider
 
-This skill is for agents and people who **use** the provider. It lives in the provider repository,
-so it changes together with the resources.
+This skill is for agents and people who **use** the provider. Its last section,
+[Run a config against a dev build](#run-a-config-against-a-dev-build), is for contributors who
+change the provider. It lives in the provider repository, so it changes together with the
+resources.
 
 New to meshStack? Start at the [meshStack agent context](https://docs.meshcloud.io/agent-context/index.md).
 It explains what meshStack is, the concepts, and the tasks, and it links back here for the HCL.
@@ -42,10 +46,18 @@ with the user's:
 - **The examples of the provider.** The acceptance tests apply them, and the registry shows them as
   "Example Usage". Each section below links the ones it needs. The links point to `main`. When the
   user runs an older provider version, replace `main` with its tag, such as `v0.27.0`.
-- **The configurations of the acceptance tests**, when you work in a clone of this repository.
-  `MESHSTACK_SCRATCH_DUMP=1 go test -run 'TestAccBuildingBlock$' ./internal/provider/` writes the
-  HCL of every step of that test to `scratch/<test>/stepNN/`, without running it and without a
-  meshStack.
+- **The configurations of the acceptance tests**, when you work in a clone of this repository:
+
+  ```sh
+  MESHSTACK_SCRATCH_DUMP=1 go test -run 'TestAccBuildingBlock$' ./internal/provider/
+  ```
+
+  This writes the HCL of every step of that test to `scratch/<test>/stepNN/main.tf` and
+  `provider.tf`, without running the test and without a meshStack. `stepNN` counts from 1 in the
+  order of the test's steps and skips steps that only import. A subtest gets a folder of its own,
+  such as `scratch/TestAccBuildingBlock/02_tenant/step01/`. Set the variable to a path instead
+  of `1` to write there. Each step is complete: applied to an empty meshStack, it creates everything
+  it needs, starting with the workspace.
 
 An example sets many optional attributes to show them. Keep only what the user needs.
 
@@ -280,3 +292,57 @@ tofu apply tfplan
 - A human approves gated runs and definition releases in meshPanel.
 - Keep secrets out of the code and the state: the API key secret in `MESHSTACK_API_SECRET`, a
   sensitive input from an ephemeral variable. Never commit a state file or a plan file.
+
+## Run a config against a dev build
+
+This section is for contributors. Run a config with the provider you built, to reproduce a
+provider bug or a failing acceptance test, or to grow a test's config into a demo. It needs a clone
+of this repository and an API key for a meshStack: a local dev stack, or a dev or sandbox
+meshStack. The config makes real changes there, so never point it at a production meshStack.
+[DEVELOPMENT.md](https://raw.githubusercontent.com/meshcloud/terraform-provider-meshstack/main/DEVELOPMENT.md#backends--authentication)
+says where the endpoint and the key come from.
+
+Build the provider into the repository root once, and point a CLI config of its own at it, so that
+your global `~/.terraformrc` stays unchanged:
+
+```sh
+task build
+cat > "$HOME/.terraformrc.dev" <<EOF
+provider_installation {
+  dev_overrides {
+    "meshcloud/meshstack" = "$PWD"
+  }
+  direct {}
+}
+EOF
+```
+
+Then, in every shell that runs the config:
+
+```sh
+export TF_CLI_CONFIG_FILE=$HOME/.terraformrc.dev
+set -a && source .env && set +a
+cd scratch/TestAccBuildingBlock/01_workspace_lifecycle/step01
+tofu plan
+tofu apply
+tofu destroy
+```
+
+- `.env` sets `MESHSTACK_ENDPOINT`, `MESHSTACK_API_KEY` and `MESHSTACK_API_SECRET`. `tofu destroy`
+  removes the meshStack objects again when you are done.
+- With a dev override, `tofu` warns and needs no `init`. Run `task build` again after every change
+  to the provider.
+- Take the config from a test, as [Get a working config](#get-a-working-config) shows, or write a
+  `main.tf` into a folder such as `scratch/repro/` and add the `provider.tf` the dump writes.
+- `TF_LOG_PROVIDER=debug tofu apply` prints the provider's log. To use a debugger, build with
+  `go build -gcflags="all=-N -l"` and attach delve to the running provider process.
+- `TF_ACC_PERSIST_WORKING_DIR=1` keeps the working folder of a test, but the test runs the provider
+  inside its own process, so that folder does not run on its own. The dump does.
+- To test a `terraform` definition without real infrastructure, point its implementation at the
+  NoOp module: repository `https://github.com/meshcloud/meshstack-hub.git`, path
+  `modules/meshstack/noop/buildingblock`. It declares every input and output type and creates
+  nothing. Keep `draft = true` while you change it, as [Release a version](#release-a-version)
+  explains.
+- `scratch/` is ignored by git, and the state lives there too, so both are lost with the folder. Move
+  a config that is worth keeping out of `scratch/`, for example into `examples/`, and give it a
+  remote state backend.

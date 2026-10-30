@@ -28,7 +28,8 @@ Iterating on the provider means driving real Terraform against a real meshStack:
 
 1. **Change** the resource/data source and its client — **`resource-development`**.
 2. **Build** the dev provider and point Terraform at it via `dev_overrides` — [`DEVELOPMENT.md`](DEVELOPMENT.md).
-3. **Reproduce, verify, or prototype** as a standalone config with the **`scratch-config`** skill,
+3. **Reproduce, verify, or prototype** as a standalone config, as the **`terraform-provider-meshstack`**
+   skill's "Run a config against a dev build" shows,
    against **any meshStack you hold API credentials for** — a local dev stack *or* a remote
    dev/sandbox. Beyond debugging, it scaffolds demos and working starting points; a config that
    graduates out of git-ignored `scratch/` should be moved out, documented, and committed.
@@ -77,7 +78,8 @@ opens a browser.
   because `main` is always ready to tag. See **`changelog-management`**.
 - **Conventional Commits** for messages (`feat:`, `fix:`, `docs:`, `chore:`, `feat!:` for breaking).
 - **The user skill changes with the resources.** `skills/terraform-provider-meshstack/` is for those
-  who **use** the provider, not for developing it. A change to a resource or data source that the
+  who **use** the provider; only its last section, on running a config against a dev build, is for
+  contributors. A change to a resource or data source that the
   skill shows updates the skill in the same pull request. The skill holds no resource HCL: it links
   the examples in `examples/`, which the acceptance tests apply, so new or changed HCL goes into an
   example. docs.meshcloud.io links to its headings, so rename a heading only together with the docs. It links only public pages: never
@@ -106,7 +108,7 @@ require them.
 | `resource-development` | Add/rework a resource or data source + tests; schema/client design conventions |
 | `modern-go` | Modern Go idioms (`new(expr)`, generics), the `encoding/json/v2` tag rules, the `go fix` sweep |
 | `acceptance-testing` | Run & debug the acceptance suite against a local backend |
-| `scratch-config` | Standalone repro/debug/prototype against any meshStack you own |
+| `terraform-provider-meshstack` | Use the provider; its last section runs a standalone repro/debug/prototype config against a dev build. It lives in `skills/` for users, and `.agents/skills/` links it |
 | `changelog-management` | Pick the next version, maintain `CHANGELOG.md` |
 
 ## Key directories
