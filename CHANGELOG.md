@@ -1,3 +1,9 @@
+# v0.27.2
+
+FIXES:
+- `meshstack_building_block`: an update waits for every run meshStack starts or queues for it, also after a content
+  hash version change, and `timeouts.run_start` (default 5m) bounds the wait for that run to start.
+
 # v0.27.1
 
 FEATURES:

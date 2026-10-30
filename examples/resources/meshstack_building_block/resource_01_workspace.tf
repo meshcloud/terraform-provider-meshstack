@@ -31,10 +31,12 @@ resource "meshstack_building_block" "example_workspace" {
 
   # create/update wait for the run of the building block to end; delete waits for
   # deprovisioning. Tune to your runner's typical run duration (defaults to 30m if unset).
+  # run_start bounds how long an update waits for meshStack to start its run (defaults to 5m).
   timeouts = {
-    create = "2m"
-    update = "2m"
-    delete = "2m"
+    create    = "2m"
+    update    = "2m"
+    delete    = "2m"
+    run_start = "1m"
   }
 
   # The provider only warns about a run that does not succeed; this fails the apply without tainting the block.

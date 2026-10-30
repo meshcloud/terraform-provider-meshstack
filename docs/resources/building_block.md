@@ -52,10 +52,12 @@ resource "meshstack_building_block" "example_workspace" {
 
   # create/update wait for the run of the building block to end; delete waits for
   # deprovisioning. Tune to your runner's typical run duration (defaults to 30m if unset).
+  # run_start bounds how long an update waits for meshStack to start its run (defaults to 5m).
   timeouts = {
-    create = "2m"
-    update = "2m"
-    delete = "2m"
+    create    = "2m"
+    update    = "2m"
+    delete    = "2m"
+    run_start = "1m"
   }
 
   # The provider only warns about a run that does not succeed; this fails the apply without tainting the block.
@@ -209,6 +211,7 @@ Optional:
 
 - `create` (String) A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
 - `delete` (String) Maximum time to wait for the building block to finish deprovisioning after delete (the async destroy run, or removal after a purge). On timeout the apply errors and the resource is kept in state so the delete can be retried; it is not silently dropped. A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration), e.g. "30s" or "2h45m".
+- `run_start` (String) Maximum time an update waits for meshStack to start the run of the building block, within `update`. meshStack starts it only after a run of the block that is still in progress has ended. Defaults to 5m0s. A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration), e.g. "30s" or "2h45m".
 - `update` (String) A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
 
 
