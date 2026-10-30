@@ -43,7 +43,8 @@ provider_installation {
 Replace `<GOBIN>` with `go env GOBIN` (or `go env GOPATH` + `/bin`). Run `task install` after each
 change. With a dev override Terraform prints a warning and **skips `terraform init`** — run
 `plan`/`apply` directly. For a scoped, git-ignored playground that keeps this override out of your
-global `~/.terraformrc`, use the **`scratch-config`** skill — note it wires up a *different* target
+global `~/.terraformrc`, see "Run a config against a dev build" in the
+**`terraform-provider-meshstack`** skill — note it wires up a *different* target
 (the repo-root binary via `task build`, through a scoped `TF_CLI_CONFIG_FILE`), so don't mix the two:
 this global setup points at `$GOBIN` and rebuilds with `task install`.
 
@@ -107,7 +108,8 @@ task testacc -- -run=BuildingBlock # filter by name
 - Running and debugging the acceptance suite (backend bring-up, log correlation, common failures)
   is the **`acceptance-testing`** skill.
 - Reproducing a bug or a single failing test as a standalone config — or scaffolding a demo /
-  working starting point — is the **`scratch-config`** skill.
+  working starting point — is "Run a config against a dev build" in the
+  **`terraform-provider-meshstack`** skill.
 
 ### Building against sibling meshcloud modules (*meshcloud-internal*)
 

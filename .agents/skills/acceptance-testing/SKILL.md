@@ -66,6 +66,8 @@ grep -E -- '--- (PASS|FAIL|SKIP)' /tmp/acc-tests.log
 - **Grep for `panic:` first.** A panic aborts the test binary before Go prints any `--- FAIL`.
 - Correlate provider errors with `/tmp/meshstack-api.log`: note its line count before a run, then
   `tail -n +<mark>` after it.
+- To run one test's config outside the suite, dump it and apply it with your build, as
+  "Run a config against a dev build" in the `terraform-provider-meshstack` skill shows.
 
 | Symptom                               | Likely cause                                            |
 |---------------------------------------|---------------------------------------------------------|
