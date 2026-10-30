@@ -52,11 +52,10 @@ var (
 // the configuration does not set an explicit value in the `timeouts` block.
 const defaultBuildingBlockTimeout = 30 * time.Minute
 
-// runStartTimeout has no `timeouts` setting: starting a run is a meshStack write, and takes no time of the run itself.
-const runStartTimeout = time.Minute
+const defaultRunStartTimeout = 5 * time.Minute
 
 var (
-	errRunNotStarted         = errors.New("meshStack did not start a run within " + runStartTimeout.String())
+	errRunNotStarted         = errors.New("meshStack did not start a run")
 	errBuildingBlockVanished = errors.New("building block disappeared while waiting for its run")
 )
 
@@ -402,15 +401,7 @@ func (r *buildingBlockResource) Schema(ctx context.Context, req resource.SchemaR
 				Computed:            true,
 				Default:             booldefault.StaticBool(false),
 			},
-			"timeouts": timeouts.Attributes(ctx, timeouts.Opts{
-				Create: true,
-				Update: true,
-				Delete: true,
-				DeleteDescription: "Maximum time to wait for the building block to finish deprovisioning after delete " +
-					"(the async destroy run, or removal after a purge). On timeout the apply errors and the resource is " +
-					"kept in state so the delete can be retried; it is not silently dropped. " +
-					"A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration), e.g. \"30s\" or \"2h45m\".",
-			}),
+			"timeouts": buildingBlockTimeoutsAttribute(ctx),
 			"all_inputs": schema.MapNestedAttribute{
 				MarkdownDescription: "Computed read-only view of **all** inputs resolved by the backend — platform-operator, " +
 					"user, and static inputs (the latter derived from the BBD) — regardless of who set them.<br>" +
@@ -454,16 +445,14 @@ type buildingBlockModel struct {
 	PurgeOnDelete     bool           `tfsdk:"purge_on_delete"`
 
 	AllInputs map[string]buildingBlockAllInput `tfsdk:"all_inputs"`
-	// Timeouts mirrors the schema's timeouts block so it round-trips through state via the generic
-	// conversion layer (nil ↔ a null block). The effective durations are resolved separately with the
-	// terraform-plugin-framework-timeouts helper in resolveTimeout.
-	Timeouts *buildingBlockTimeouts `tfsdk:"timeouts"`
+	Timeouts  *buildingBlockTimeouts           `tfsdk:"timeouts"`
 }
 
 type buildingBlockTimeouts struct {
-	Create *string `tfsdk:"create"`
-	Update *string `tfsdk:"update"`
-	Delete *string `tfsdk:"delete"`
+	Create   *string `tfsdk:"create"`
+	Update   *string `tfsdk:"update"`
+	Delete   *string `tfsdk:"delete"`
+	RunStart *string `tfsdk:"run_start"`
 }
 
 type buildingBlockAllInput struct {
@@ -653,28 +642,49 @@ func buildingBlockConverterOptions(ctx context.Context, config, plan, state gene
 	}
 }
 
-// resolveTimeout reads the configured timeout for the given operation ("create"/"update"/"delete")
-// from the resource's timeouts block, falling back to defaultBuildingBlockTimeout when unset. The
-// getter is the plan for create/update and the state for delete.
-func resolveTimeout(ctx context.Context, getter generic.AttributeGetter, op string, diags *diag.Diagnostics) time.Duration {
-	var configured timeouts.Value
-	diags.Append(getter.GetAttribute(ctx, path.Root("timeouts"), &configured)...)
+func buildingBlockTimeoutsAttribute(ctx context.Context) schema.SingleNestedAttribute {
+	attribute, _ := timeouts.Attributes(ctx, timeouts.Opts{
+		Create: true,
+		Update: true,
+		Delete: true,
+		DeleteDescription: "Maximum time to wait for the building block to finish deprovisioning after delete " +
+			"(the async destroy run, or removal after a purge). On timeout the apply errors and the resource is " +
+			"kept in state so the delete can be retried; it is not silently dropped. " +
+			"A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration), e.g. \"30s\" or \"2h45m\".",
+	}).(schema.SingleNestedAttribute)
+	runStart, _ := attribute.Attributes["update"].(schema.StringAttribute)
+	runStart.Description = "Maximum time an update waits for meshStack to start the run of the building block, within " +
+		"`update`. meshStack starts it only after a run of the block that is still in progress has ended. Defaults to " +
+		defaultRunStartTimeout.String() + ". A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration), e.g. \"30s\" or \"2h45m\"."
+	attribute.Attributes["run_start"] = runStart
+	// The framework's timeouts type knows only create, read, update and delete.
+	attribute.CustomType = nil
+	return attribute
+}
 
-	var (
-		timeout time.Duration
-		tdiags  diag.Diagnostics
-	)
-	switch op {
-	case "create":
-		timeout, tdiags = configured.Create(ctx, defaultBuildingBlockTimeout)
-	case "update":
-		timeout, tdiags = configured.Update(ctx, defaultBuildingBlockTimeout)
-	case "delete":
-		timeout, tdiags = configured.Delete(ctx, defaultBuildingBlockTimeout)
+// resolveTimeout reads the plan for create and update, and the state for delete.
+func resolveTimeout(
+	ctx context.Context,
+	getter generic.AttributeGetter,
+	configured func(buildingBlockTimeouts) *string,
+	fallback time.Duration,
+	diags *diag.Diagnostics,
+) time.Duration {
+	all := generic.GetAttribute[*buildingBlockTimeouts](ctx, getter, path.Root("timeouts"), diags)
+	if all == nil || configured(*all) == nil {
+		return fallback
 	}
-	diags.Append(tdiags...)
+	timeout, err := time.ParseDuration(*configured(*all))
+	if err != nil {
+		diags.AddAttributeError(path.Root("timeouts"), "Invalid timeout", err.Error())
+	}
 	return timeout
 }
+
+func (t buildingBlockTimeouts) create() *string   { return t.Create }
+func (t buildingBlockTimeouts) update() *string   { return t.Update }
+func (t buildingBlockTimeouts) delete() *string   { return t.Delete }
+func (t buildingBlockTimeouts) runStart() *string { return t.RunStart }
 
 // severity separates a run the provider only reports on — a status a postcondition can decide about,
 // always a warning — from one it could not even establish, such as a deletion that never finished.
@@ -757,13 +767,9 @@ func (r *buildingBlockResource) awaitRun(
 	diags *diag.Diagnostics,
 	uuid string,
 	before *client.MeshBuildingBlockV2Status,
-	timeout time.Duration,
+	timeout, runStartTimeout time.Duration,
 ) *client.MeshBuildingBlockV2 {
-	var since client.MeshBuildingBlockV2Status
-	if before != nil {
-		since = *before
-	}
-	runStarted := before == nil
+	since, runStarted := waitBaseline(before)
 	runStartDeadline := time.Now().Add(runStartTimeout)
 	var final *client.MeshBuildingBlockV2
 	err := poll.AtMostFor(timeout, r.BuildingBlockClient.ReadFunc(uuid), poll.WithLastResultTo(&final)).
@@ -782,6 +788,27 @@ func (r *buildingBlockResource) awaitRun(
 	if errors.Is(err, poll.ErrTimedOut) && !runStarted {
 		err = errRunNotStarted
 	}
+	r.reportRunOutcome(ctx, diags, uuid, before, final, err, timeout, runStartTimeout)
+	return final
+}
+
+// waitBaseline treats a queued run as started: meshStack hands it the update and keeps its uuid.
+func waitBaseline(before *client.MeshBuildingBlockV2Status) (since client.MeshBuildingBlockV2Status, runStarted bool) {
+	if before == nil || before.Action == client.BuildingBlockActionPending {
+		return client.MeshBuildingBlockV2Status{}, true
+	}
+	return *before, false
+}
+
+func (r *buildingBlockResource) reportRunOutcome(
+	ctx context.Context,
+	diags *diag.Diagnostics,
+	uuid string,
+	before *client.MeshBuildingBlockV2Status,
+	final *client.MeshBuildingBlockV2,
+	err error,
+	timeout, runStartTimeout time.Duration,
+) {
 	switch {
 	case errors.Is(err, errRunNotStarted):
 		unchanged := fmt.Sprintf("action %s", before.Action)
@@ -791,9 +818,10 @@ func (r *buildingBlockResource) awaitRun(
 		diags.AddError(
 			"meshStack did not start a run for the updated building block",
 			withBuildingBlockDetails(fmt.Sprintf("meshStack accepted the update of building block %s but did not start a run for it "+
-				"within %s: the block still reports what it reported before the update, %s. A meshStack under load can be "+
-				"slow to start a run, so check the building block in meshPanel and run the apply again once its run has "+
-				"finished. If no new run appears there at all, report the uuid of this building block as a meshStack issue.",
+				"within %s: the block still reports what it reported before the update, %s. meshStack starts the run only after a "+
+				"run of the block that may still be in progress has ended, so check the building block in meshPanel and run "+
+				"the apply again once its runs have finished, or raise timeouts.run_start. If no new run appears there at all, "+
+				"report the uuid of this building block as a meshStack issue.",
 				uuid, min(timeout, runStartTimeout), unchanged), final),
 		)
 	case errors.Is(err, errBuildingBlockVanished):
@@ -825,7 +853,6 @@ func (r *buildingBlockResource) awaitRun(
 				"upgrade the provider.", uuid, final.Status.Action), final),
 		)
 	}
-	return final
 }
 
 func actionOf(bb *client.MeshBuildingBlockV2) string {
@@ -857,11 +884,11 @@ func (r *buildingBlockResource) Create(ctx context.Context, req resource.CreateR
 		return
 	}
 
-	timeout := resolveTimeout(ctx, req.Plan, "create", &resp.Diagnostics)
+	timeout := resolveTimeout(ctx, req.Plan, buildingBlockTimeouts.create, defaultBuildingBlockTimeout, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	if final := r.awaitRun(ctx, &resp.Diagnostics, *created.Metadata.Uuid, noPreviousRun, timeout); final != nil {
+	if final := r.awaitRun(ctx, &resp.Diagnostics, *created.Metadata.Uuid, noPreviousRun, timeout, defaultRunStartTimeout); final != nil {
 		plan.SetFromClientDto(final, false, &resp.Diagnostics)
 		resp.Diagnostics.Append(generic.Set(ctx, &resp.State, plan, converterOptions...)...)
 		resp.Diagnostics.Append(resp.Private.SetKey(ctx, basedOnDraftVersionPrivateKey, basedOnDraftVersion(final))...)
@@ -1018,9 +1045,7 @@ func (r *buildingBlockResource) ModifyPlan(ctx context.Context, req resource.Mod
 	// Past the guards above only Update reaches here.
 	converterOptions := buildingBlockConverterOptions(ctx, req.Config, req.Plan, req.State)
 
-	// Mark the run-derived read-only attributes (status, outputs, all_inputs) unknown so the apply can
-	// resolve them after the triggered run.
-	triggerRun := func() {
+	markRunDerivedUnknown := func() {
 		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("status").AtName("status"), types.StringUnknown())...)
 		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("status").AtName("succeeded"), types.BoolUnknown())...)
 		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("status").AtName("health_status"), types.StringUnknown())...)
@@ -1050,7 +1075,7 @@ func (r *buildingBlockResource) ModifyPlan(ctx context.Context, req resource.Mod
 		return
 	}
 	if planSpecUnknown {
-		triggerRun()
+		markRunDerivedUnknown()
 		return
 	}
 
@@ -1071,9 +1096,11 @@ func (r *buildingBlockResource) ModifyPlan(ctx context.Context, req resource.Mod
 	// When plan and state content_hash differ only by their hash-algorithm version (see
 	// classifyContentHash), the building block is deliberately NOT re-run. Warn so the user knows a
 	// genuine content change - if any - was not picked up, and how to force a re-run.
+	hashVersionChanged := false
 	if planHash := planSpec.BuildingBlockDefinitionVersionRef.ContentHash; planHash != nil {
 		if stateHash := stateSpec.BuildingBlockDefinitionVersionRef.ContentHash; stateHash != nil {
 			if compareContentHashes(*planHash, *stateHash) == hashIncomparable {
+				hashVersionChanged = true
 				resp.Diagnostics.AddAttributeWarning(
 					path.Root("spec").AtName("building_block_definition_version_ref").AtName("content_hash"),
 					"Building block definition version content hash version changed; not re-running",
@@ -1097,8 +1124,9 @@ func (r *buildingBlockResource) ModifyPlan(ctx context.Context, req resource.Mod
 	}
 	repairNeeded := stateStatus.RunFailed()
 
-	if rerunNeeded(planSpec, stateSpec) || secretRotated || repairNeeded {
-		triggerRun()
+	// meshStack may run a block whose definition changed together with the hash version.
+	if rerunNeeded(planSpec, stateSpec) || secretRotated || repairNeeded || hashVersionChanged {
+		markRunDerivedUnknown()
 	}
 }
 
@@ -1198,12 +1226,19 @@ func (r *buildingBlockResource) Update(ctx context.Context, req resource.UpdateR
 		effective = triggered
 	}
 
-	if needsRun && plan.WaitForCompletion {
-		timeout := resolveTimeout(ctx, req.Plan, "update", &resp.Diagnostics)
+	if state.Status != nil {
+		state.Status.RunStartFailedOn = getRunStartFailedOn(ctx, req.Private, &resp.Diagnostics)
+	}
+	var plannedAction types.String
+	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("status").AtName("action"), &plannedAction)...)
+	before, runFollows := runFollowingUpdate(state.Status, effective.Status, plannedAction.IsUnknown())
+	if (needsRun || runFollows) && plan.WaitForCompletion {
+		timeout := resolveTimeout(ctx, req.Plan, buildingBlockTimeouts.update, defaultBuildingBlockTimeout, &resp.Diagnostics)
+		runStart := resolveTimeout(ctx, req.Plan, buildingBlockTimeouts.runStart, defaultRunStartTimeout, &resp.Diagnostics)
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		if final := r.awaitRun(ctx, &resp.Diagnostics, *updated.Metadata.Uuid, effective.Status, timeout); final != nil {
+		if final := r.awaitRun(ctx, &resp.Diagnostics, *updated.Metadata.Uuid, before, timeout, runStart); final != nil {
 			effective = final
 		}
 	}
@@ -1214,6 +1249,18 @@ func (r *buildingBlockResource) Update(ctx context.Context, req resource.UpdateR
 	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, plan, converterOptions...)...)
 	resp.Diagnostics.Append(resp.Private.SetKey(ctx, basedOnDraftVersionPrivateKey, basedOnDraftVersion(effective))...)
 	resp.Diagnostics.Append(setRunStartFailedOn(ctx, resp.Private, effective)...)
+}
+
+// runFollowingUpdate finds a run that meshStack started or queued for an update, also when the plan expected none.
+// A plan that kept the status known cannot wait for it: the new status would be an inconsistent result.
+func runFollowingUpdate(prior, answer *client.MeshBuildingBlockV2Status, statusPlannedUnknown bool) (before *client.MeshBuildingBlockV2Status, found bool) {
+	if prior == nil || answer == nil {
+		return answer, false
+	}
+	if answer.RunChangedSince(*prior) {
+		return prior, true
+	}
+	return answer, statusPlannedUnknown && answer.Action == client.BuildingBlockActionPending
 }
 
 // requestDeletion waits out the conflict meshStack answers while the block's run has not reached a
@@ -1238,7 +1285,7 @@ func (r *buildingBlockResource) Delete(ctx context.Context, req resource.DeleteR
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	timeout := resolveTimeout(ctx, req.State, "delete", &resp.Diagnostics)
+	timeout := resolveTimeout(ctx, req.State, buildingBlockTimeouts.delete, defaultBuildingBlockTimeout, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}

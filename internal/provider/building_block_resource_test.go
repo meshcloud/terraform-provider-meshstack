@@ -118,15 +118,22 @@ func TestAccBuildingBlock(t *testing.T) {
 				buildingBlockDefinitionAddr,
 			)),
 		)
-		contentHashV2Config := contentHashV1Config.WithFirstBlock(
-			testconfig.Descend("spec", "building_block_definition_version_ref")(testconfig.SetRawExpr(
-				`merge(%s.version_latest, {content_hash = "v2"})`,
-				buildingBlockDefinitionAddr,
-			)),
-		)
+		withContentHash := func(contentHash string) testconfig.Config {
+			return contentHashV1Config.WithFirstBlock(
+				testconfig.Descend("spec", "building_block_definition_version_ref")(testconfig.SetRawExpr(
+					`merge(%s.version_latest, {content_hash = %q})`,
+					buildingBlockDefinitionAddr, contentHash,
+				)),
+			)
+		}
+		contentHashV2 := BuildingBlockDefinitionVersionContentHash{hashVersion: currentHashVersion - 1, hashValue: "aaa"}.toBase64()
+		contentHashV2Config := withContentHash(contentHashV2)
+		// A changed hash version alone triggers no run, but the plan leaves the run's results open.
+		otherHashVersion := BuildingBlockDefinitionVersionContentHash{hashVersion: currentHashVersion, hashValue: "aaa"}.toBase64()
+		otherHashVersionConfig := withContentHash(otherHashVersion)
 		// Adding a parent without a version upgrade must force a replacement (RequiresReplaceIf →
 		// DestroyBeforeCreate). Derived from the last config so only parent_building_block_refs changes.
-		withParentsConfig := contentHashV2Config.WithFirstBlock(
+		withParentsConfig := otherHashVersionConfig.WithFirstBlock(
 			testconfig.Descend("spec", "parent_building_block_refs")(testconfig.SetRawExpr(
 				`[{ uuid = "11111111-1111-1111-1111-111111111111" }]`,
 			)),
@@ -150,7 +157,7 @@ func TestAccBuildingBlock(t *testing.T) {
 					ImportState:                          true,
 					ImportStateVerify:                    true,
 					ImportStateVerifyIdentifierAttribute: "metadata.uuid",
-					ImportStateVerifyIgnore:              []string{"spec.building_block_definition_version_ref.content_hash", "wait_for_completion", "purge_on_delete", "timeouts.create", "timeouts.update", "timeouts.delete"},
+					ImportStateVerifyIgnore:              []string{"spec.building_block_definition_version_ref.content_hash", "wait_for_completion", "purge_on_delete", "timeouts.create", "timeouts.update", "timeouts.delete", "timeouts.run_start"},
 					ImportStateIdFunc: func(s *terraform.State) (string, error) {
 						rs := s.RootModule().Resources[buildingBlockAddr.String()]
 						if rs == nil {
@@ -206,7 +213,7 @@ func TestAccBuildingBlock(t *testing.T) {
 					},
 				},
 				{
-					// Bumping content_hash "v1"→"v2" simulates a BBD content update and triggers a rerun.
+					// Changing content_hash simulates a BBD content update and triggers a rerun.
 					Config: contentHashV2Config.String(),
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
@@ -214,7 +221,20 @@ func TestAccBuildingBlock(t *testing.T) {
 						},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("spec").AtMapKey("building_block_definition_version_ref").AtMapKey("content_hash"), knownvalue.StringExact("v2")),
+						statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("spec").AtMapKey("building_block_definition_version_ref").AtMapKey("content_hash"), knownvalue.StringExact(contentHashV2)),
+					},
+				},
+				{
+					Config: otherHashVersionConfig.String(),
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PreApply: []plancheck.PlanCheck{
+							plancheck.ExpectResourceAction(buildingBlockAddr.String(), plancheck.ResourceActionUpdate),
+							plancheck.ExpectUnknownValue(buildingBlockAddr.String(), tfjsonpath.New("status").AtMapKey("action")),
+						},
+					},
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("status").AtMapKey("action"),
+							knownvalue.StringExact(client.BuildingBlockActionNoAction.String())),
 					},
 				},
 				{
