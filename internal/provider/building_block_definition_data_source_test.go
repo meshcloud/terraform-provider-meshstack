@@ -110,7 +110,7 @@ func TestAccBuildingBlockDefinitionDataSource(t *testing.T) {
 		}
 
 		buildingBlockDefinitionConfig, buildingBlockDefinitionAddr := testconfig.BBDManual(t)
-		readerConfig, captureReaderKey, readerKey := otherWorkspaceReader(t)
+		readerConfig, captureReaderKey, readerKey := otherWorkspaceReader(t, "BUILDINGBLOCKDEFINITION_LIST")
 
 		supportConfig := buildingBlockDefinitionConfig.WithFirstBlock(
 			testconfig.Descend("version_spec", "draft")(testconfig.SetValue(cty.False)),

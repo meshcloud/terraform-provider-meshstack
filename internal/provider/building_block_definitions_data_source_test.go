@@ -77,7 +77,7 @@ func TestAccBuildingBlockDefinitionsDataSource(t *testing.T) {
 		}
 
 		buildingBlockDefinitionConfig, buildingBlockDefinitionAddr := testconfig.BBDManual(t)
-		readerConfig, captureReaderKey, readerKey := otherWorkspaceReader(t)
+		readerConfig, captureReaderKey, readerKey := otherWorkspaceReader(t, "BUILDINGBLOCKDEFINITION_LIST")
 
 		supportConfig := buildingBlockDefinitionConfig.WithFirstBlock(
 			testconfig.Descend("version_spec", "draft")(testconfig.SetValue(cty.False)),
@@ -166,7 +166,7 @@ func TestAccBuildingBlockDefinitionsDataSource(t *testing.T) {
 		}
 
 		bbdConfig, bbdAddr, _, _ := testconfig.BBDTerraformWithWifRunners(t, runnerPublicKey)
-		readerConfig, captureReaderKey, readerKey := otherWorkspaceReader(t)
+		readerConfig, captureReaderKey, readerKey := otherWorkspaceReader(t, "BUILDINGBLOCKDEFINITION_LIST")
 
 		// Another workspace only sees released versions, through the redacted status of the definition.
 		supportConfig := bbdConfig.WithFirstBlock(
@@ -209,7 +209,7 @@ func TestAccBuildingBlockDefinitionsDataSource(t *testing.T) {
 // definition builders create, holding an API key that may only list definitions. It returns that config,
 // the state checks that capture the key once it exists, and the variables that hand the key to the
 // meshstack-other provider of testconfig.OtherProviderConfig.
-func otherWorkspaceReader(t *testing.T) (config testconfig.Config, captureKey []statecheck.StateCheck, keyVariables tfconfig.Variables) {
+func otherWorkspaceReader(t *testing.T, permission string) (config testconfig.Config, captureKey []statecheck.StateCheck, keyVariables tfconfig.Variables) {
 	t.Helper()
 	var otherWorkspaceAddr testconfig.Traversal
 	otherWorkspaceConfig, _ := testconfig.Workspace(t)
@@ -219,7 +219,7 @@ func otherWorkspaceReader(t *testing.T) (config testconfig.Config, captureKey []
 	)
 	apiKeyConfig, apiKeyAddr := testconfig.ApiKey(t, otherWorkspaceAddr)
 	apiKeyConfig = apiKeyConfig.WithFirstBlock(
-		testconfig.Descend("spec", "permissions")(testconfig.SetRawExpr(`["BUILDINGBLOCKDEFINITION_LIST"]`)),
+		testconfig.Descend("spec", "permissions")(testconfig.SetRawExpr(`[%q]`, permission)),
 	)
 
 	clientId, clientSecret := new(lazyVariable), new(lazyVariable)

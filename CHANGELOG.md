@@ -1,7 +1,8 @@
 # v0.27.2
 
 FEATURES:
-- New `meshstack_building_block_runner` data source. It reads a runner by UUID.
+- New `meshstack_building_block_runner` data source. It reads the one runner that matches a UUID, a display name or
+  an owning workspace, and the runner meshStack hosts when none of them is set.
 
 # v0.27.1
 
