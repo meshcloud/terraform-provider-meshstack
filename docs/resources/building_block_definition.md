@@ -435,7 +435,7 @@ Optional:
 - `supported_platforms` (Attributes Set) Set of platforms that this building block supports, each of them a whole platform type, one individual platform or one landing zone. An individual platform or a landing zone is best written as its own `ref`, for example `meshstack_platform.my_azure.ref` or `meshstack_landingzone.dev.ref`. Required and must be non-empty if target_type is `TENANT_LEVEL`. (see [below for nested schema](#nestedatt--spec--supported_platforms))
 - `symbol` (String) Symbol/icon of the building block definition as shown in meshPanel. This can either be an URL starting with `http[s]://` or a base64 encoded data blob. The function `provider::meshstack::load_image_file(<filepath>)` produces such a data blob from a local file.
 - `target_type` (String) Type of building block definition. Determines where building blocks can be attached. Cannot be changed after initial creation. One of `TENANT_LEVEL`, `WORKSPACE_LEVEL`.
-- `use_in_landing_zones_only` (Boolean) Whether this building block can only be used in landing zones.
+- `use_in_landing_zones_only` (Boolean) Whether this building block definition is for use in platform team automation only. Such a definition is hidden from the marketplace. Only a landing zone, as a mandatory or recommended building block, or a building block run, as a composition building block using the run's ephemeral API key, can add a building block of it.
 
 <a id="nestedatt--spec--approval_policies"></a>
 ### Nested Schema for `spec.approval_policies`

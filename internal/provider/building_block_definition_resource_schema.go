@@ -599,10 +599,11 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 					"approval_policies": approvalPoliciesAttribute,
 					"schedule":          scheduleAttribute,
 					"use_in_landing_zones_only": schema.BoolAttribute{
-						MarkdownDescription: "Whether this building block can only be used in landing zones.",
-						Optional:            true,
-						Computed:            true,
-						Default:             booldefault.StaticBool(false),
+						MarkdownDescription: "Whether this building block definition is for use in platform team automation only. Such a definition is hidden from the marketplace. " +
+							"Only a landing zone, as a mandatory or recommended building block, or a building block run, as a composition building block using the run's ephemeral API key, can add a building block of it.",
+						Optional: true,
+						Computed: true,
+						Default:  booldefault.StaticBool(false),
 					},
 					"target_type": schema.StringAttribute{
 						MarkdownDescription: fmt.Sprintf("Type of building block definition. Determines where building blocks can be attached. Cannot be changed after initial creation. One of %s.", client.MeshBuildingBlockTypes.Markdown()),
