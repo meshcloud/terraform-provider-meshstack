@@ -140,29 +140,10 @@ func (d *buildingBlockDefinitionDataSource) candidates(ctx context.Context, filt
 
 // only checks owned_by_workspace on listed definitions too, because the list always holds all
 // published definitions next to the workspace's own.
-func (filter buildingBlockDefinitionFilter) only(candidates []client.MeshBuildingBlockDefinition, diags *diag.Diagnostics) (definition client.MeshBuildingBlockDefinition) {
-	var matches []client.MeshBuildingBlockDefinition
-	for _, candidate := range candidates {
-		if filter.matches(candidate) {
-			matches = append(matches, candidate)
-		}
-	}
-	switch len(matches) {
-	case 1:
-		return matches[0]
-	case 0:
-		diags.AddError("Building block definition not found",
-			fmt.Sprintf("No building block definition that you can see matches %s.", filter))
-	default:
-		found := make([]string, len(matches))
-		for i, match := range matches {
-			found[i] = fmt.Sprintf("%s (%q in workspace %s)", *match.Metadata.Uuid, match.Spec.DisplayName, match.Metadata.OwnedByWorkspace)
-		}
-		diags.AddError("Building block definition is ambiguous",
-			fmt.Sprintf("%d building block definitions match %s: %s. Set `metadata.uuid` to pick exactly one.",
-				len(matches), filter, strings.Join(found, ", ")))
-	}
-	return
+func (filter buildingBlockDefinitionFilter) only(candidates []client.MeshBuildingBlockDefinition, diags *diag.Diagnostics) client.MeshBuildingBlockDefinition {
+	return onlyMatch("building block definition", filter, candidates, filter.matches, func(definition client.MeshBuildingBlockDefinition) string {
+		return fmt.Sprintf("%s (%q in workspace %s)", *definition.Metadata.Uuid, definition.Spec.DisplayName, definition.Metadata.OwnedByWorkspace)
+	}, diags)
 }
 
 func (filter buildingBlockDefinitionFilter) matches(definition client.MeshBuildingBlockDefinition) bool {
