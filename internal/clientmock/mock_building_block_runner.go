@@ -80,6 +80,16 @@ func (m MeshBuildingBlockRunnerClient) Read(_ context.Context, uuid string) (*cl
 	return nil, nil
 }
 
+func (m MeshBuildingBlockRunnerClient) List(_ context.Context, filter client.MeshBuildingBlockRunnerFilter) ([]client.MeshBuildingBlockRunner, error) {
+	var result []client.MeshBuildingBlockRunner
+	for _, runner := range m.Store.Values() {
+		if filter.WorkspaceIdentifier == nil || runner.Metadata.OwnedByWorkspace == *filter.WorkspaceIdentifier {
+			result = append(result, *runner)
+		}
+	}
+	return result, nil
+}
+
 func (m MeshBuildingBlockRunnerClient) Update(_ context.Context, runner client.MeshBuildingBlockRunner) (*client.MeshBuildingBlockRunner, error) {
 	if runner.Metadata.Uuid == nil || *runner.Metadata.Uuid == "" {
 		return nil, fmt.Errorf("building block runner uuid is required for update")
