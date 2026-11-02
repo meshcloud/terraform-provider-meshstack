@@ -20,6 +20,7 @@ Mid-complexity, clean, and complete — prefer these over the large `building_bl
 | Resource (CRUD + Schema + ImportState) | `internal/provider/project_resource.go` |
 | Resource with validators/defaults/refs | `internal/provider/workspace_resource.go` |
 | Data source | `internal/provider/project_data_source.go` |
+| Data source that looks up by filters | `internal/provider/building_block_definition_data_source.go` |
 | Example `.tf` (simple) | `examples/resources/meshstack_project/` (`resource.tf`, `import-by-string-id.tf`) |
 | Example `.tf` (complex, multi-file + `test-support_*`) | `examples/resources/meshstack_building_block_definition/` |
 | testconfig builder | `internal/provider/acctest/testconfig/build_project.go` |
@@ -101,6 +102,12 @@ Cross-cutting rules for the schema and its backing client, beyond the ref/DTO sh
   must still be transmitted (e.g. `page=0` in the paginator), which a struct would omit.
 - **Pointer + `,omitzero` = actually-nullable only.** The `modern-go` skill is the single home for
   this rule — value-typed fields take neither, and a pointer never takes `,omitempty`.
+- **A singular data source for a meshObject with a UUID looks it up by filters.** Users know such
+  an object by its display name and workspace, not by its UUID. Wrap `metadata` and `spec` with
+  `asFilter` (`data_source_filter.go`), so the identifying attributes become optional filters. Read
+  by UUID when it is set, otherwise list, and fail unless exactly one object matches. When several
+  match, the error names each of them and asks for `metadata.uuid`, because a lookup that picks one
+  silently reads the wrong object. Copy `building_block_definition_data_source.go`.
 - **Preview-API resources carry the shared disclaimer.** When a resource/data source's HTTP client
   uses an `apiVersion` ending in `-preview`, append `previewDisclaimer()` (`schema_utils.go`) to its
   `MarkdownDescription` — never inline a custom string. A **breaking** change to a `-preview`
