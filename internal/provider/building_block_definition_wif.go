@@ -53,12 +53,14 @@ func dataSourceVersionWifAttribute(description string) datasourceschema.Attribut
 	return computedDataSourceAttribute(versionWifAttribute(description))
 }
 
-// computedDataSourceAttribute converts a computed-only resource attribute built from strings and nested
-// objects into its data source counterpart.
+// computedDataSourceAttribute converts a resource attribute built from strings, bools and nested objects into
+// its computed data source counterpart.
 func computedDataSourceAttribute(attribute resourceschema.Attribute) datasourceschema.Attribute {
 	switch a := attribute.(type) {
 	case resourceschema.StringAttribute:
 		return datasourceschema.StringAttribute{MarkdownDescription: a.MarkdownDescription, Computed: true}
+	case resourceschema.BoolAttribute:
+		return datasourceschema.BoolAttribute{MarkdownDescription: a.MarkdownDescription, Computed: true}
 	case resourceschema.SingleNestedAttribute:
 		attributes := make(map[string]datasourceschema.Attribute, len(a.Attributes))
 		for name, nested := range a.Attributes {
