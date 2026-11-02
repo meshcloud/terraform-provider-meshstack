@@ -1,3 +1,8 @@
+# v0.27.2
+
+FEATURES:
+- New `meshstack_building_block_runner` data source. It reads a runner by UUID.
+
 # v0.27.1
 
 FEATURES:
