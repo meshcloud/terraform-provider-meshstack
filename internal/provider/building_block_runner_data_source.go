@@ -123,29 +123,10 @@ func (d *buildingBlockRunnerDataSource) candidates(ctx context.Context, filter b
 	return []client.MeshBuildingBlockRunner{*runner}
 }
 
-func (filter buildingBlockRunnerFilter) only(candidates []client.MeshBuildingBlockRunner, diags *diag.Diagnostics) (runner client.MeshBuildingBlockRunner) {
-	var matches []client.MeshBuildingBlockRunner
-	for _, candidate := range candidates {
-		if filter.matches(candidate) {
-			matches = append(matches, candidate)
-		}
-	}
-	switch len(matches) {
-	case 1:
-		return matches[0]
-	case 0:
-		diags.AddError("Building block runner not found",
-			fmt.Sprintf("No building block runner that you can see matches %s.", filter))
-	default:
-		found := make([]string, len(matches))
-		for i, match := range matches {
-			found[i] = fmt.Sprintf("%s (%q in workspace %s)", *match.Metadata.Uuid, match.Spec.DisplayName, match.Metadata.OwnedByWorkspace)
-		}
-		diags.AddError("Building block runner is ambiguous",
-			fmt.Sprintf("%d building block runners match %s: %s. Set `metadata.uuid` to pick exactly one.",
-				len(matches), filter, strings.Join(found, ", ")))
-	}
-	return
+func (filter buildingBlockRunnerFilter) only(candidates []client.MeshBuildingBlockRunner, diags *diag.Diagnostics) client.MeshBuildingBlockRunner {
+	return onlyMatch("building block runner", filter, candidates, filter.matches, func(runner client.MeshBuildingBlockRunner) string {
+		return fmt.Sprintf("%s (%q in workspace %s)", *runner.Metadata.Uuid, runner.Spec.DisplayName, runner.Metadata.OwnedByWorkspace)
+	}, diags)
 }
 
 func (filter buildingBlockRunnerFilter) matches(runner client.MeshBuildingBlockRunner) bool {
