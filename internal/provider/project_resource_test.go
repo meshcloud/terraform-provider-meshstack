@@ -22,7 +22,7 @@ func TestAccProject(t *testing.T) {
 		}
 
 		suffix := acctest.RandString(8)
-		vars := map[string]string{"suffix": suffix}
+		vars := hclStepVars{"suffix": suffix}
 		resourceAddress := "meshstack_project.test"
 
 		ApplyAndTest(t, resource.TestCase{
@@ -45,7 +45,7 @@ func TestAccProject(t *testing.T) {
 	})
 
 	suffix := acctest.RandString(8)
-	vars := map[string]string{"suffix": suffix}
+	vars := hclStepVars{"suffix": suffix}
 	resourceAddress := "meshstack_project.example"
 
 	ApplyAndTest(t, resource.TestCase{

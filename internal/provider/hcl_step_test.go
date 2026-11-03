@@ -13,7 +13,9 @@ import (
 	"github.com/meshcloud/terraform-provider-meshstack/examples"
 )
 
-func hclStep(t *testing.T, name string, step int, vars map[string]string) string {
+type hclStepVars map[string]string
+
+func hclStep(t *testing.T, name string, step int, vars hclStepVars) string {
 	t.Helper()
 
 	fileName := fmt.Sprintf("%s_step%d.tf", name, step)

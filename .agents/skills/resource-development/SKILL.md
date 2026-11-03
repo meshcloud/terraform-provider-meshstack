@@ -126,8 +126,8 @@ Each config step of a TestAcc test is one file in `internal/provider/testdata/hc
 position in `Steps`, from 1. An import step has no file. `hclStep(t, name, N, vars)` renders the file
 with `text/template`, so a reviewer reads the HCL that runs instead of Go that rewrites it.
 
-- **Placeholders** are `{{.key}}`, filled from the `vars` map the test passes to every step. A key
-  missing from the map fails the test. `vars["suffix"]` holds `acctest.RandString(8)`, and every
+- **Placeholders** are `{{.key}}`, filled from the `hclStepVars` the test passes to every step. The
+  type exists only to feed step files. A key missing from it fails the test. `vars["suffix"]` holds `acctest.RandString(8)`, and every
   name a step file picks carries it (`"test-ws-{{.suffix}}"`), so tests never collide.
 - **`{{ example "resources/meshstack_project/resource.tf" }}`** inserts an example verbatim. It
   joins its arguments, so a variant can pick its example:
@@ -182,7 +182,7 @@ When a resource has several suffixed example files (`resource_01_github.tf`,
 func TestAccIntegrationResource(t *testing.T) {
     t.Parallel()
     t.Run("01_github", func(t *testing.T) {
-        vars := map[string]string{"suffix": acctest.RandString(8)}
+        vars := hclStepVars{"suffix": acctest.RandString(8)}
         ApplyAndTest(t, resource.TestCase{Steps: []resource.TestStep{
             {Config: hclStep(t, "resource_integration_01_github", 1, vars), ...},
         }})

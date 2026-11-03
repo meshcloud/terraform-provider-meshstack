@@ -22,7 +22,7 @@ func TestAccProjectGroupBinding(t *testing.T) {
 func testAccProjectBinding(t *testing.T, subjectKind, subjectName string, subjectChecks ...subjectStateCheck) {
 	t.Helper()
 	suffix := acctest.RandString(8)
-	vars := map[string]string{"suffix": suffix, "subject_kind": subjectKind, "subject_name": subjectName}
+	vars := hclStepVars{"suffix": suffix, "subject_kind": subjectKind, "subject_name": subjectName}
 	bindingAddress := "meshstack_project_" + subjectKind + "_binding.example"
 
 	ApplyAndTest(t, resource.TestCase{

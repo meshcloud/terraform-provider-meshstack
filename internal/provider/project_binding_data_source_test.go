@@ -21,7 +21,7 @@ func TestAccProjectGroupBindingDataSource(t *testing.T) {
 
 func testAccProjectBindingDataSource(t *testing.T, subjectKind, subjectName string, subjectChecks ...subjectStateCheck) {
 	t.Helper()
-	vars := map[string]string{"suffix": acctest.RandString(8), "subject_kind": subjectKind, "subject_name": subjectName}
+	vars := hclStepVars{"suffix": acctest.RandString(8), "subject_kind": subjectKind, "subject_name": subjectName}
 	bindingAddress := "meshstack_project_" + subjectKind + "_binding.test"
 	dataSourceAddress := "data.meshstack_project_" + subjectKind + "_binding.example"
 

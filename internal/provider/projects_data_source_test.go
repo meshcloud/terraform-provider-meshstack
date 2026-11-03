@@ -12,7 +12,7 @@ import (
 
 func TestAccProjectsDatasource(t *testing.T) {
 	suffix := acctest.RandString(8)
-	vars := map[string]string{"suffix": suffix}
+	vars := hclStepVars{"suffix": suffix}
 
 	project := func(name string, paymentMethod knownvalue.Check) knownvalue.Check {
 		return knownvalue.ObjectPartial(map[string]knownvalue.Check{
