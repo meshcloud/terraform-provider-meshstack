@@ -75,7 +75,7 @@ grep -E -- '--- (PASS|FAIL|SKIP)' /tmp/acc-tests.log
 | Tenant delete `400`                   | replicator not running, or mandatory BBs still pending  |
 | `409 BuildingBlockConflict` on delete | BB not in a final state                                 |
 | `409 Conflict` (other)                | stale data from a previous run (tag definitions, etc.)  |
-| `422` on bindings                     | groups/users referenced in examples don't exist locally |
+| `422` on bindings                     | groups/users the step files bind don't exist locally    |
 | `400` on a request                    | request body / serialization mismatch                   |
 
 ## Mock and acceptance run the same steps

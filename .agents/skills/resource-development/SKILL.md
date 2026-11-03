@@ -1,15 +1,15 @@
 ---
 name: resource-development
-description: How to develop meshStack Terraform resources and data sources — the implementation, example .tf files, the testconfig builder, a good create→update→import TestAcc test (plancheck/statecheck, xknownvalue), and the cross-cutting schema/client design conventions (meshObject refs, DTOs, Id/Uuid naming, value receivers, list-query structs, preview API, computed-only outputs). Use when adding or reworking a resource/data source, writing its acceptance test, or applying the provider's schema/client conventions. Cites the cleanest existing examples to copy from.
+description: How to develop meshStack Terraform resources and data sources — the implementation, example .tf files, the golden HCL step files a TestAcc test applies, a good create→update→import TestAcc test (plancheck/statecheck, xknownvalue), and the cross-cutting schema/client design conventions (meshObject refs, DTOs, Id/Uuid naming, value receivers, list-query structs, preview API, computed-only outputs). Use when adding or reworking a resource/data source, writing its acceptance test, or applying the provider's schema/client conventions. Cites the cleanest existing examples to copy from.
 ---
 
 # Developing resources & data sources
 
 The end-to-end procedure for adding or reworking a meshStack resource or data source, plus the
 schema/client design conventions that apply to all of them. This file is the walkthrough; load the
-companion **`REFERENCE.md`** for the full `testconfig` `Config` API, builder rules, the
-builder-chain table, the `xknownvalue` state-check helpers, and complete worked code examples
-(builder, TestAcc test, data source test, computed-only field).
+companion **`REFERENCE.md`** for the step-file rules, the `xknownvalue` state-check helpers,
+complete worked code examples (TestAcc test, data source test, computed-only field), and the legacy
+`testconfig` builder that tests not yet migrated still use.
 
 ## Golden-path exemplars (copy these)
 
@@ -22,10 +22,11 @@ Mid-complexity, clean, and complete — prefer these over the large `building_bl
 | Data source | `internal/provider/project_data_source.go` |
 | Data source that looks up by filters | `internal/provider/building_block_definition_data_source.go` |
 | Example `.tf` (simple) | `examples/resources/meshstack_project/` (`resource.tf`, `import-by-string-id.tf`) |
-| Example `.tf` (complex, multi-file + `test-support_*`) | `examples/resources/meshstack_building_block_definition/` |
-| testconfig builder | `internal/provider/acctest/testconfig/build_project.go` |
+| Example `.tf` (complex, multi-file) | `examples/resources/meshstack_building_block_definition/` |
+| Step files | `internal/provider/testdata/hcl/resource_project_step{1,2,3}.tf` |
 | Resource test (create→update→import) | `internal/provider/project_resource_test.go` |
 | Data source test | `internal/provider/project_data_source_test.go` |
+| One step file for several variants | `internal/provider/project_binding_resource_test.go` + `testdata/hcl/resource_project_binding_step1.tf` |
 | Named subtests for multiple examples | `internal/provider/integration_resource_test.go` |
 | State-check helpers | `internal/provider/acctest/xknownvalue/{not_empty_string,ref,map}.go` |
 
@@ -39,10 +40,11 @@ Mid-complexity, clean, and complete — prefer these over the large `building_bl
    `MeshObjectClient[M]`), in the [meshstack-cli](https://github.com/meshcloud/meshstack-cli)
    repository, which ships them before the provider can use them.
 3. **`provider.go`** — register the resource/data source in the provider's lists.
-4. **`examples/resources/meshstack_<name>/resource.tf`** — only the single resource block; put
-   any dependencies (data sources, providers) in `test-support_*.tf`. Never hardcode
-   identifiers — reference data sources / resources (see `REFERENCE.md` → Dependency-first).
-5. **`internal/provider/acctest/testconfig/build_<name>.go`** — a public builder (see below).
+4. **`examples/resources/meshstack_<name>/resource.tf`** — only the single resource block. It
+   reaches its workspace by reference, such as `data.meshstack_workspace.example`, and declares
+   none of its prerequisites (see `REFERENCE.md` → Example conventions).
+5. **`internal/provider/testdata/hcl/resource_<name>_step<N>.tf`** — one HCL file per test step
+   (see below).
 6. **`internal/provider/<name>_resource_test.go`** — a `TestAcc<Name>` test (see below).
 7. `task generate` (docs) and update `CHANGELOG.md`.
 
@@ -116,20 +118,44 @@ Cross-cutting rules for the schema and its backing client, beyond the ref/DTO sh
   minimum-provider-version entry, so meshStack can surface "needs provider ≥ vX.Y.Z" instead of a
   cryptic failure.
 
-## The builder
+## Step files
 
-A public function in `testconfig`, named without `Build`/`Config`, `t` first, named returns
-(`config` first), with the resource-under-test as the `.Join` receiver and dependencies as
-arguments. Modifier preference: `SetString`/`SetValue` → `SetAddr` → `SetRawExpr` (last resort).
-`Descend` nests only when a parent has multiple children — flatten single-child chains. Provide a
-`*AndWorkspace` wrapper when a single resource + its workspace is commonly needed. Full rules and
-a worked `build_project.go` are in `REFERENCE.md`.
+Each config step of a TestAcc test is one file in `internal/provider/testdata/hcl/`, named
+`<resource|datasource>_<name>[_<case>]_step<N>.tf`. `<name>` is the Terraform type without
+`meshstack_`, `<case>` names a second test case of the same resource, and `<N>` is the step's
+position in `Steps`, from 1. An import step has no file. `hclStep(t, name, N, vars)` renders the file
+with `text/template`, so a reviewer reads the HCL that runs instead of Go that rewrites it.
+
+- **Placeholders** are `{{.key}}`, filled from the `vars` map the test passes to every step. A key
+  missing from the map fails the test. `vars["suffix"]` holds `acctest.RandString(8)`, and every
+  name a step file picks carries it (`"test-ws-{{.suffix}}"`), so tests never collide.
+- **`{{ example "resources/meshstack_project/resource.tf" }}`** inserts an example verbatim. It
+  joins its arguments, so a variant can pick its example:
+  `{{ example "resources/meshstack_project_" .subject_kind "_binding/resource.tf" }}`.
+- **Nothing else.** No conditionals, no loops. A variant that would need one gets its own file.
+- **Each file is complete.** It declares every prerequisite inline, and only those its test needs.
+  An update step is a copy of the step before it with the change, so a `diff` of the two files is
+  the change.
+
+One step applies the example, so the examples stay tested against a real meshStack. An example
+carries fixed names, which a test must not collide on:
+
+- An example reaches its workspace only by reference, and the step file points that reference at a
+  workspace with a random name. Names below the workspace (a project, a project's binding target)
+  stay literal.
+- A globally unique literal (a tag key, a binding name) is unique across all examples, and exactly
+  one test applies each example.
+- When the example depends on something it cannot reference, such as a literal tag key or a data
+  source looking up a literal name, an earlier step creates it. `resource_project_step1.tf` creates
+  the tag definition `tag-key`, and step 2 adds the project example.
 
 ## The TestAcc test
 
-A good test is multi-step (create → update → import), uses the builder, and asserts with
+A good test is multi-step (create → update → import), applies one step file per step, and asserts with
 `plancheck` (the planned action) + `statecheck`/`xknownvalue` (resulting state). Prefer the
-`xknownvalue` helpers (`NotEmptyString`, `Ref`, `MapExact`) over raw `knownvalue` where they fit.
+`xknownvalue` helpers (`Ref`, `MapExact`) over raw `knownvalue` where they fit. Assert the exact
+value whenever the test knows it (a literal from the step file, `"test-ws-" + suffix`); keep
+`xknownvalue.NotEmptyString()` for values meshStack generates.
 See `REFERENCE.md` for the full `TestAccProject` example.
 
 One `TestAcc*` test per resource or data source covers it, since it runs the real Terraform flow in
@@ -140,30 +166,42 @@ key words.
 
 ## Data source test
 
-Reference a **resource attribute** (so Terraform infers the dependency — never `depends_on`) and
-fluent-chain `.Config(t).WithFirstBlock(...).Join(...)` in one expression. Full example in
-`REFERENCE.md`.
+A data source example looks its object up by a literal name, so step 1 creates the object and step 2
+adds the example (`datasource_project_step{1,2}.tf`). A lookup the example does not show goes into a
+later step that references the resource's attributes, so Terraform infers the dependency — never
+`depends_on`. Full example in `REFERENCE.md`.
 
 ## Multiple example files → named subtests
 
 When a resource has several suffixed example files (`resource_01_github.tf`,
-`resource_02_azure_devops.tf`), give **each** its own named `t.Run()` — never a generic loop. The
-top-level function calls `t.Parallel()`; each `ApplyAndTest` also parallelizes. See
-`integration_resource_test.go`.
+`resource_02_azure_devops.tf`), give **each** its own named `t.Run()` and its own step files
+(`resource_integration_01_github_step1.tf`) — never a generic loop. The top-level function calls
+`t.Parallel()`; each `ApplyAndTest` also parallelizes.
 
 ```go
 func TestAccIntegrationResource(t *testing.T) {
     t.Parallel()
     t.Run("01_github", func(t *testing.T) {
-        config, addr := testconfig.Integration(t, "_01_github")
-        ApplyAndTest(t, resource.TestCase{...})
+        vars := map[string]string{"suffix": acctest.RandString(8)}
+        ApplyAndTest(t, resource.TestCase{Steps: []resource.TestStep{
+            {Config: hclStep(t, "resource_integration_01_github", 1, vars), ...},
+        }})
     })
     t.Run("02_azure_devops", func(t *testing.T) {
-        config, addr := testconfig.Integration(t, "_02_azure_devops")
-        ApplyAndTest(t, resource.TestCase{...})
+        ...
     })
 }
 ```
+
+Variants that differ only in a few values share one step file instead: the binding tests pass
+`subject_kind` and `subject_name` in `vars` (`project_binding_resource_test.go`).
+
+## Legacy: the testconfig builder
+
+Tests not yet migrated build their configs with `internal/provider/acctest/testconfig`, which loads
+an example and rewrites it. Write step files for any new test, and migrate a resource's tests when
+you rework it. Delete a builder once no test calls it. `REFERENCE.md` → Legacy keeps its API for the
+tests that still use it.
 
 ## Computed-only output fields
 

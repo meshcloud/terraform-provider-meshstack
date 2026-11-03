@@ -1,19 +1,15 @@
 package provider
 
 import (
-	"fmt"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
-	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 	"github.com/meshcloud/meshstack-cli/client"
-
-	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
-	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/xknownvalue"
 )
 
 func TestAccProject(t *testing.T) {
@@ -25,20 +21,17 @@ func TestAccProject(t *testing.T) {
 			t.Skip("relies on the backend injecting a restricted tag's default value on create")
 		}
 
-		tagConfig, tagAddr, tagKey := testconfig.TagDefinition(t, client.MeshObjectKind.Project)
-		restrictedTagConfig, _, _ := testconfig.RestrictedTagDefinitionWithDefault(t, client.MeshObjectKind.Project, "injected-default")
-		config, resourceAddress, _ := testconfig.ProjectAndWorkspace(t)
-		config = config.Join(tagConfig, restrictedTagConfig).WithFirstBlock(
-			testconfig.Descend("spec", "tags")(testconfig.SetRawExpr(`{ (%s) = ["blue"] }`, tagAddr.Join("spec", "key"))),
-		)
+		suffix := acctest.RandString(8)
+		vars := map[string]string{"suffix": suffix}
+		resourceAddress := "meshstack_project.test"
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
-					Config: config.String(),
+					Config: hclStep(t, "resource_project_restricted_default_tag", 1, vars),
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("spec").AtMapKey("tags"), knownvalue.MapExact(map[string]knownvalue.Check{
-							tagKey: knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("blue")}),
+						statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("spec").AtMapKey("tags"), knownvalue.MapExact(map[string]knownvalue.Check{
+							"test-key-" + suffix: knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("blue")}),
 						})),
 					},
 					// Refresh reads back the injected superset; reconcileTrackedTags must reconcile it
@@ -51,53 +44,44 @@ func TestAccProject(t *testing.T) {
 		}, TouchesExclusively(client.MeshObjectKind.Project))
 	})
 
-	config, resourceAddress, workspaceAddr := testconfig.ProjectAndWorkspace(t)
-
-	updateConfig := config.WithFirstBlock(
-		testconfig.Descend("spec", "display_name")(testconfig.SetString("Updated Display Name")),
-	)
+	suffix := acctest.RandString(8)
+	vars := map[string]string{"suffix": suffix}
+	resourceAddress := "meshstack_project.example"
 
 	ApplyAndTest(t, resource.TestCase{
 		Steps: []resource.TestStep{
 			{
-				Config: config.String(),
+				Config: hclStep(t, "resource_project", 1, vars),
+			},
+			{
+				Config: hclStep(t, "resource_project", 2, vars),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectResourceAction(resourceAddress.String(), plancheck.ResourceActionCreate),
+						plancheck.ExpectResourceAction(resourceAddress, plancheck.ResourceActionCreate),
 					},
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("metadata").AtMapKey("name"), xknownvalue.NotEmptyString()),
-					statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("metadata").AtMapKey("owned_by_workspace"), xknownvalue.NotEmptyString()),
-					statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("My Project's Display Name")),
+					statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("metadata").AtMapKey("name"), knownvalue.StringExact("my-project")),
+					statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("metadata").AtMapKey("owned_by_workspace"), knownvalue.StringExact("test-ws-"+suffix)),
+					statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("My Project's Display Name")),
 				},
 			},
 			{
-				Config: updateConfig.String(),
+				Config: hclStep(t, "resource_project", 3, vars),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectResourceAction(resourceAddress.String(), plancheck.ResourceActionUpdate),
+						plancheck.ExpectResourceAction(resourceAddress, plancheck.ResourceActionUpdate),
 					},
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("Updated Display Name")),
+					statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("Updated Display Name")),
 				},
 			},
 			{
-				ResourceName:    resourceAddress.String(),
+				ResourceName:    resourceAddress,
 				ImportState:     true,
 				ImportStateKind: resource.ImportBlockWithID,
-				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					rs := s.RootModule().Resources[resourceAddress.String()]
-					if rs == nil {
-						return "", fmt.Errorf("resource not found: %s", resourceAddress.String())
-					}
-					ws := s.RootModule().Resources[workspaceAddr.String()]
-					if ws == nil {
-						return "", fmt.Errorf("workspace resource not found: %s", workspaceAddr.String())
-					}
-					return ws.Primary.Attributes["metadata.name"] + "." + rs.Primary.Attributes["metadata.name"], nil
-				},
+				ImportStateId:   "test-ws-" + suffix + ".my-project",
 			},
 		},
 	})
