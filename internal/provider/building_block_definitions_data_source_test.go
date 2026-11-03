@@ -171,6 +171,7 @@ func TestAccBuildingBlockDefinitionsDataSource(t *testing.T) {
 		// Another workspace only sees released versions, through the redacted status of the definition.
 		supportConfig := bbdConfig.WithFirstBlock(
 			testconfig.Descend("version_spec", "draft")(testconfig.SetValue(cty.False)),
+			testconfig.Descend("spec", "use_in_landing_zones_only")(testconfig.SetValue(cty.False)),
 		).Join(readerConfig)
 
 		var dataSourceAddress testconfig.Traversal
