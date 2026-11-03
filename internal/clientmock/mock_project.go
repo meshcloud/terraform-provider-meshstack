@@ -20,9 +20,19 @@ func (m MeshProjectClient) Read(_ context.Context, workspace string, name string
 func (m MeshProjectClient) List(_ context.Context, workspaceIdentifier string, paymentMethodIdentifier *string) ([]client.MeshProject, error) {
 	var result []client.MeshProject
 	for _, p := range m.Store.Values() {
-		if p.Metadata.OwnedByWorkspace == workspaceIdentifier {
-			result = append(result, *p)
+		if p.Metadata.OwnedByWorkspace != workspaceIdentifier {
+			continue
 		}
+		if paymentMethodIdentifier != nil {
+			projectPaymentMethod := ""
+			if p.Spec.PaymentMethodIdentifier != nil {
+				projectPaymentMethod = *p.Spec.PaymentMethodIdentifier
+			}
+			if projectPaymentMethod != *paymentMethodIdentifier {
+				continue
+			}
+		}
+		result = append(result, *p)
 	}
 	return result, nil
 }

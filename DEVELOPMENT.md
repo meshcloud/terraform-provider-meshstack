@@ -135,7 +135,7 @@ the command that repins.
 ### Adding a resource / data source (and its tests)
 
 Adding or reworking a resource or data source — the implementation, example `.tf` files, the
-`testconfig` builder, and a good create→update→import `TestAcc` test — is the
+HCL step files its test applies, and a good create→update→import `TestAcc` test — is the
 **`resource-development`** skill. It also owns the schema/client design conventions (meshObject
 refs, DTOs, `Id`/`Uuid` naming, receivers, preview API, computed-only outputs). In short:
 
@@ -144,7 +144,7 @@ refs, DTOs, `Id`/`Uuid` naming, receivers, preview API, computed-only outputs). 
    [meshstack-cli](https://github.com/meshcloud/meshstack-cli) repository.
 3. `provider.go` — register it.
 4. `examples/resources/meshstack_<name>/` — example `.tf`.
-5. `internal/provider/acctest/testconfig/build_<name>.go` — a builder.
+5. `internal/provider/testdata/hcl/resource_<name>_step<N>.tf` — one HCL file per test step.
 6. `task generate` — regenerate `docs/`.
 7. Update `CHANGELOG.md`.
 

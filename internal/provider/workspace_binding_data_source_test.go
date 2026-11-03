@@ -60,7 +60,7 @@ func testAccBindingDataSource(t *testing.T, name string, bindingConfig testconfi
 		statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("expiry_date"), knownvalue.StringExact("2099-12-31")),
 		statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("expired"), knownvalue.Bool(false)),
 	}
-	expectFound = append(expectFound, subjectStateChecks(dataSourceAddress, subjectChecks)...)
+	expectFound = append(expectFound, subjectStateChecks(dataSourceAddress.String(), subjectChecks)...)
 	for _, attribute := range []string{"metadata", "target_ref", "subject"} {
 		expectFound = append(expectFound, statecheck.CompareValuePairs(
 			dataSourceAddress.String(), tfjsonpath.New(attribute), bindingAddr.String(), tfjsonpath.New(attribute), compare.ValuesSame()))

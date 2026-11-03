@@ -2,6 +2,7 @@ package examples
 
 import (
 	"embed"
+	"fmt"
 	"io/fs"
 	"path"
 	"strings"
@@ -58,4 +59,17 @@ func (e Example) Read(t *testing.T, name string, fileNameParts ...string) []byte
 	content, err := fsys.ReadFile(filePath)
 	require.NoErrorf(t, err, "cannot read examples config file %s:", filePath)
 	return content
+}
+
+// ReadFile reads the embedded example at a path relative to examples/, such as
+// resources/meshstack_project/resource.tf.
+func ReadFile(filePath string) ([]byte, error) {
+	switch {
+	case strings.HasPrefix(filePath, string(DataSource)+"s/"):
+		return dataSources.ReadFile(filePath)
+	case strings.HasPrefix(filePath, string(Resource)+"s/"):
+		return resources.ReadFile(filePath)
+	default:
+		return nil, fmt.Errorf("example %s is neither under data-sources/ nor under resources/", filePath)
+	}
 }

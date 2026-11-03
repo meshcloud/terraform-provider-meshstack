@@ -3,15 +3,12 @@ package provider
 import (
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-testing/compare"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
-
-	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
-	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/xknownvalue"
 )
 
 func TestAccProjectUserBinding(t *testing.T) {
@@ -24,30 +21,32 @@ func TestAccProjectGroupBinding(t *testing.T) {
 
 func testAccProjectBinding(t *testing.T, subjectKind, subjectName string, subjectChecks ...subjectStateCheck) {
 	t.Helper()
-	config, bindingAddr, workspaceAddr, bindingName := testconfig.ProjectBinding(t, subjectKind, subjectName)
+	suffix := acctest.RandString(8)
+	vars := map[string]string{"suffix": suffix, "subject_kind": subjectKind, "subject_name": subjectName}
+	bindingAddress := "meshstack_project_" + subjectKind + "_binding.example"
 
 	ApplyAndTest(t, resource.TestCase{
 		Steps: []resource.TestStep{
 			{
-				Config: config.String(),
+				Config: hclStep(t, "resource_project_binding", 1, vars),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectResourceAction(bindingAddr.String(), plancheck.ResourceActionCreate),
+						plancheck.ExpectResourceAction(bindingAddress, plancheck.ResourceActionCreate),
 					},
 				},
 				ConfigStateChecks: append([]statecheck.StateCheck{
-					statecheck.ExpectKnownValue(bindingAddr.String(), tfjsonpath.New("metadata").AtMapKey("name"), knownvalue.StringExact(bindingName)),
-					statecheck.ExpectKnownValue(bindingAddr.String(), tfjsonpath.New("role_ref").AtMapKey("name"), knownvalue.StringExact("Project Reader")),
-					statecheck.ExpectKnownValue(bindingAddr.String(), tfjsonpath.New("target_ref").AtMapKey("name"), xknownvalue.NotEmptyString()),
-					statecheck.CompareValuePairs(bindingAddr.String(), tfjsonpath.New("target_ref").AtMapKey("owned_by_workspace"), workspaceAddr.String(), tfjsonpath.New("metadata").AtMapKey("name"), compare.ValuesSame()),
-					statecheck.ExpectKnownValue(bindingAddr.String(), tfjsonpath.New("subject").AtMapKey("name"), knownvalue.StringExact(subjectName)),
-					statecheck.ExpectKnownValue(bindingAddr.String(), tfjsonpath.New("expiry_date"), knownvalue.StringExact("2099-12-31")),
-				}, subjectStateChecks(bindingAddr, subjectChecks)...),
+					statecheck.ExpectKnownValue(bindingAddress, tfjsonpath.New("metadata").AtMapKey("name"), knownvalue.StringExact("this-is-an-example")),
+					statecheck.ExpectKnownValue(bindingAddress, tfjsonpath.New("role_ref").AtMapKey("name"), knownvalue.StringExact("Project Reader")),
+					statecheck.ExpectKnownValue(bindingAddress, tfjsonpath.New("target_ref").AtMapKey("name"), knownvalue.StringExact("test-proj-"+suffix)),
+					statecheck.ExpectKnownValue(bindingAddress, tfjsonpath.New("target_ref").AtMapKey("owned_by_workspace"), knownvalue.StringExact("test-ws-"+suffix)),
+					statecheck.ExpectKnownValue(bindingAddress, tfjsonpath.New("subject").AtMapKey("name"), knownvalue.StringExact(subjectName)),
+					statecheck.ExpectKnownValue(bindingAddress, tfjsonpath.New("expiry_date"), knownvalue.StringExact("2099-12-31")),
+				}, subjectStateChecks(bindingAddress, subjectChecks)...),
 			},
 			{
-				ResourceName:    bindingAddr.String(),
+				ResourceName:    bindingAddress,
 				ImportState:     true,
-				ImportStateId:   bindingName,
+				ImportStateId:   "this-is-an-example",
 				ImportStateKind: resource.ImportBlockWithID,
 			},
 		},
