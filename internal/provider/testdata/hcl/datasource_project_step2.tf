@@ -1,6 +1,6 @@
 resource "meshstack_workspace" "test" {
   metadata = {
-    name = "test-ws-{{.suffix}}"
+    name = "test-ws-[[.suffix]]"
   }
   spec = {
     display_name = "Test Workspace"
@@ -23,4 +23,4 @@ resource "meshstack_project" "test" {
   }
 }
 
-{{ example "data-sources/meshstack_project/data-source.tf" }}
+[[ example "data-sources/meshstack_project/data-source.tf" ]]

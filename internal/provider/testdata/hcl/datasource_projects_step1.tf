@@ -1,6 +1,6 @@
 resource "meshstack_workspace" "test" {
   metadata = {
-    name = "test-ws-{{.suffix}}"
+    name = "test-ws-[[.suffix]]"
   }
   spec = {
     display_name = "Test Workspace"
@@ -15,7 +15,7 @@ data "meshstack_workspace" "example" {
 
 resource "meshstack_payment_method" "test" {
   metadata = {
-    name               = "test-pm-{{.suffix}}"
+    name               = "test-pm-[[.suffix]]"
     owned_by_workspace = meshstack_workspace.test.metadata.name
   }
   spec = {
@@ -33,7 +33,7 @@ data "meshstack_payment_method" "example" {
 
 resource "meshstack_project" "with_payment_method" {
   metadata = {
-    name               = "test-proj-pm-{{.suffix}}"
+    name               = "test-proj-pm-[[.suffix]]"
     owned_by_workspace = meshstack_workspace.test.metadata.name
   }
   spec = {
@@ -44,7 +44,7 @@ resource "meshstack_project" "with_payment_method" {
 
 resource "meshstack_project" "without_payment_method" {
   metadata = {
-    name               = "test-proj-{{.suffix}}"
+    name               = "test-proj-[[.suffix]]"
     owned_by_workspace = meshstack_workspace.test.metadata.name
   }
   spec = {

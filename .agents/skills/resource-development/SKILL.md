@@ -126,12 +126,17 @@ Each config step of a TestAcc test is one file in `internal/provider/testdata/hc
 position in `Steps`, from 1. An import step has no file. `hclStep(t, name, N, vars)` renders the file
 with `text/template`, so a reviewer reads the HCL that runs instead of Go that rewrites it.
 
-- **Placeholders** are `{{.key}}`, filled from the `hclStepVars` the test passes to every step. The
-  type exists only to feed step files. A key missing from it fails the test. `vars["suffix"]` holds `acctest.RandString(8)`, and every
-  name a step file picks carries it (`"test-ws-{{.suffix}}"`), so tests never collide.
-- **`{{ example "resources/meshstack_project/resource.tf" }}`** inserts an example verbatim. It
+- **Placeholders** are `[[.key]]`, filled from the `hclStepVars` the test passes to every step. The
+  type exists only to feed step files. A key missing from it fails the test. `vars["suffix"]` holds
+  `acctest.RandString(8)`, and every name a step file picks carries it (`"test-ws-[[.suffix]]"`),
+  so tests never collide.
+- **`[[ ]]`, not `{{ }}`.** meshStack's own templates use `{{ }}` (`display_name_template`, the
+  runner's `subject_template`), and a step file passes them to meshStack as literal text. Under
+  `{{ }}`, `text/template` would parse `{{ resource_name }}` as a call and fail, and any `{{ }}`
+  renderer would consume it, so each one would need escaping.
+- **`[[ example "resources/meshstack_project/resource.tf" ]]`** inserts an example verbatim. It
   joins its arguments, so a variant can pick its example:
-  `{{ example "resources/meshstack_project_" .subject_kind "_binding/resource.tf" }}`.
+  `[[ example "resources/meshstack_project_" .subject_kind "_binding/resource.tf" ]]`.
 - **Nothing else.** No conditionals, no loops. A variant that would need one gets its own file.
 - **Each file is complete.** It declares every prerequisite inline, and only those its test needs.
   An update step is a copy of the step before it with the change, so a `diff` of the two files is

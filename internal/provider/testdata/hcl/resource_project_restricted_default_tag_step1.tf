@@ -1,6 +1,6 @@
 resource "meshstack_workspace" "test" {
   metadata = {
-    name = "test-ws-{{.suffix}}"
+    name = "test-ws-[[.suffix]]"
   }
   spec = {
     display_name = "Test Workspace"
@@ -10,7 +10,7 @@ resource "meshstack_workspace" "test" {
 resource "meshstack_tag_definition" "tag" {
   spec = {
     target_kind  = "meshProject"
-    key          = "test-key-{{.suffix}}"
+    key          = "test-key-[[.suffix]]"
     display_name = "Test Tag"
     value_type = {
       string = {}
@@ -21,7 +21,7 @@ resource "meshstack_tag_definition" "tag" {
 resource "meshstack_tag_definition" "restricted_tag" {
   spec = {
     target_kind  = "meshProject"
-    key          = "test-restricted-key-{{.suffix}}"
+    key          = "test-restricted-key-[[.suffix]]"
     display_name = "Restricted Test Tag"
     restricted   = true
     value_type = {
@@ -34,7 +34,7 @@ resource "meshstack_tag_definition" "restricted_tag" {
 
 resource "meshstack_project" "test" {
   metadata = {
-    name               = "test-proj-{{.suffix}}"
+    name               = "test-proj-[[.suffix]]"
     owned_by_workspace = meshstack_workspace.test.metadata.name
   }
   spec = {

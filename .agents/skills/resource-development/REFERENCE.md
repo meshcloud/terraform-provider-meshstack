@@ -18,9 +18,9 @@ it with `text/template` (`missingkey=error`), and returns the HCL for `TestStep.
 
 | In the step file | Renders as |
 |---|---|
-| `{{.suffix}}` | `vars["suffix"]`; any key of `vars` works the same way |
-| `{{ example "resources/meshstack_project/resource.tf" }}` | that file under `examples/`, verbatim |
-| `{{ example "resources/meshstack_project_" .subject_kind "_binding/resource.tf" }}` | the arguments joined into one path |
+| `[[.suffix]]` | `vars["suffix"]`; any key of `vars` works the same way |
+| `[[ example "resources/meshstack_project/resource.tf" ]]` | that file under `examples/`, verbatim |
+| `[[ example "resources/meshstack_project_" .subject_kind "_binding/resource.tf" ]]` | the arguments joined into one path |
 
 A step file of the project test: the prerequisites, then the example. The data sources are what the
 example references; they point at objects with random names.
@@ -29,7 +29,7 @@ example references; they point at objects with random names.
 # testdata/hcl/resource_project_step2.tf
 resource "meshstack_workspace" "test" {
   metadata = {
-    name = "test-ws-{{.suffix}}"
+    name = "test-ws-[[.suffix]]"
   }
   spec = {
     display_name = "Test Workspace"
@@ -44,7 +44,7 @@ data "meshstack_workspace" "example" {
 
 # ... payment method, its data source, the tag definition "tag-key" ...
 
-{{ example "resources/meshstack_project/resource.tf" }}
+[[ example "resources/meshstack_project/resource.tf" ]]
 ```
 
 `resource_project_step1.tf` is the same without the example line, because the example's literal tag
@@ -175,7 +175,7 @@ func myResourceModelFromDto(p *client.MeshFoo) myResourceModel {
   which isolates every literal name below it.
 - **A globally unique literal stays unique across all examples** (tag keys, binding names), and only
   one test applies each example. A test that needs the same kind of object creates its own with
-  `{{.suffix}}` in the name.
+  `[[.suffix]]` in the name.
 - An example that must wait for another object references it, so Terraform orders the two: the
   project binding examples take their subject from `meshstack_workspace_user_binding.example`,
   because meshStack binds only workspace members to a project.

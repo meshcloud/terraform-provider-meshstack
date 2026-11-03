@@ -23,6 +23,7 @@ func hclStep(t *testing.T, name string, step int, vars hclStepVars) string {
 	require.NoError(t, err)
 
 	stepTemplate, err := template.New(fileName).
+		Delims("[[", "]]").
 		Option("missingkey=error").
 		Funcs(template.FuncMap{"example": includeExample}).
 		Parse(string(src))

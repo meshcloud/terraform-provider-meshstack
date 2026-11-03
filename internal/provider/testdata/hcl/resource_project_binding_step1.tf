@@ -1,6 +1,6 @@
 resource "meshstack_workspace" "test" {
   metadata = {
-    name = "test-ws-{{.suffix}}"
+    name = "test-ws-[[.suffix]]"
   }
   spec = {
     display_name = "Test Workspace"
@@ -9,7 +9,7 @@ resource "meshstack_workspace" "test" {
 
 resource "meshstack_project" "example" {
   metadata = {
-    name               = "test-proj-{{.suffix}}"
+    name               = "test-proj-[[.suffix]]"
     owned_by_workspace = meshstack_workspace.test.metadata.name
   }
   spec = {
@@ -17,9 +17,9 @@ resource "meshstack_project" "example" {
   }
 }
 
-resource "meshstack_workspace_{{.subject_kind}}_binding" "example" {
+resource "meshstack_workspace_[[.subject_kind]]_binding" "example" {
   metadata = {
-    name = "test-wb-{{.suffix}}"
+    name = "test-wb-[[.suffix]]"
   }
   role_ref = {
     name = "Workspace Member"
@@ -28,8 +28,8 @@ resource "meshstack_workspace_{{.subject_kind}}_binding" "example" {
     name = meshstack_workspace.test.metadata.name
   }
   subject = {
-    name = "{{.subject_name}}"
+    name = "[[.subject_name]]"
   }
 }
 
-{{ example "resources/meshstack_project_" .subject_kind "_binding/resource.tf" }}
+[[ example "resources/meshstack_project_" .subject_kind "_binding/resource.tf" ]]
