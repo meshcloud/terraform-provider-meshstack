@@ -128,6 +128,8 @@ A definition belongs to the platform team's workspace. It starts as a draft, wit
 - `default_value` and `argument` are `jsonencode`d to match `type`, also for a string.
 - A `TENANT_LEVEL` definition also needs `spec.supported_platforms`. `target_type` cannot change:
   a changed `target_type` replaces the definition.
+- To offer a definition only in some landing zones, list their `ref`s in `spec.supported_platforms`
+  instead of their platform or platform type.
 - Approval gates (`spec.approval_policies`) and drift detection need the `terraform`
   implementation. See the
   [registry page](https://registry.terraform.io/providers/meshcloud/meshstack/latest/docs/resources/building_block_definition)

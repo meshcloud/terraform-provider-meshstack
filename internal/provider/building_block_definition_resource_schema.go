@@ -547,7 +547,7 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 						},
 					},
 					"supported_platforms": schema.SetNestedAttribute{
-						MarkdownDescription: fmt.Sprintf("Set of platforms that this building block supports, each of them either a whole platform type or one individual platform. An individual platform is best written as that platform's own `ref`, for example `meshstack_platform.my_azure.ref`. Required and must be non-empty if target_type is `%s`.", client.MeshBuildingBlockTypeTenantLevel),
+						MarkdownDescription: fmt.Sprintf("Set of platforms that this building block supports, each of them a whole platform type, one individual platform or one landing zone. An individual platform or a landing zone is best written as its own `ref`, for example `meshstack_platform.my_azure.ref` or `meshstack_landingzone.dev.ref`. Required and must be non-empty if target_type is `%s`.", client.MeshBuildingBlockTypeTenantLevel),
 						Optional:            true,
 						Validators: []validator.Set{
 							validators.SupportedPlatforms{},
@@ -559,21 +559,22 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 									RequiredFor: map[string]string{
 										client.MeshObjectKind.PlatformType: "name",
 										client.MeshObjectKind.Platform:     "uuid",
+										client.MeshObjectKind.LandingZone:  "name",
 									},
 								},
 							},
 							Attributes: map[string]schema.Attribute{
 								"kind": schema.StringAttribute{
-									MarkdownDescription: "Kind of the platform ref, one of `" + client.MeshObjectKind.PlatformType + "` and `" + client.MeshObjectKind.Platform + "`. An entry with a platform type supports every platform of that type, so narrow a definition by using an individual platform instead of the type rather than next to it. Using an individual platform requires meshStack 2026.40.0 or later.",
+									MarkdownDescription: "Kind of the platform ref, one of `" + client.MeshObjectKind.PlatformType + "`, `" + client.MeshObjectKind.Platform + "` and `" + client.MeshObjectKind.LandingZone + "`. An entry with a platform type supports every platform of that type, and an entry with a platform supports every landing zone of that platform, also the ones added later. So narrow a definition by using individual platforms or landing zones instead of the type or platform rather than next to it. Using an individual platform requires meshStack 2026.40.0 or later, using a landing zone requires meshStack 2026.45.0 or later.",
 									Optional:            true,
 									Computed:            true,
 									Default:             stringdefault.StaticString(client.MeshObjectKind.PlatformType),
 									Validators: []validator.String{
-										stringvalidator.OneOf(client.MeshObjectKind.PlatformType, client.MeshObjectKind.Platform),
+										stringvalidator.OneOf(client.MeshObjectKind.PlatformType, client.MeshObjectKind.Platform, client.MeshObjectKind.LandingZone),
 									},
 								},
 								"name": schema.StringAttribute{
-									MarkdownDescription: "Identifier (`metadata.name`) of the platform type, for example `AZURE`. Required when `kind = \"" + client.MeshObjectKind.PlatformType + "\"`, must be omitted for `kind = \"" + client.MeshObjectKind.Platform + "\"`.",
+									MarkdownDescription: "Identifier (`metadata.name`) of the platform type, for example `AZURE`, or of the landing zone. Required when `kind = \"" + client.MeshObjectKind.PlatformType + "\"` or `kind = \"" + client.MeshObjectKind.LandingZone + "\"`, must be omitted for `kind = \"" + client.MeshObjectKind.Platform + "\"`.",
 									Optional:            true,
 									Validators: []validator.String{
 										stringvalidator.ExactlyOneOf(
@@ -583,7 +584,7 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 									},
 								},
 								"uuid": schema.StringAttribute{
-									MarkdownDescription: "UUID (`metadata.uuid`) of the platform. Required when `kind = \"" + client.MeshObjectKind.Platform + "\"`, must be omitted for `kind = \"" + client.MeshObjectKind.PlatformType + "\"`. Assigning the platform's whole `ref` sets this and `kind` together.",
+									MarkdownDescription: "UUID (`metadata.uuid`) of the platform. Required when `kind = \"" + client.MeshObjectKind.Platform + "\"`, must be omitted for `kind = \"" + client.MeshObjectKind.PlatformType + "\"` and `kind = \"" + client.MeshObjectKind.LandingZone + "\"`. Assigning the platform's whole `ref` sets this and `kind` together.",
 									Optional:            true,
 								},
 							},
