@@ -1,6 +1,6 @@
 resource "meshstack_workspace" "test" {
   metadata = {
-    name = "test-ws-{{.suffix}}"
+    name = "test-ws-[[.suffix]]"
   }
   spec = {
     display_name = "Test Workspace"
@@ -9,7 +9,7 @@ resource "meshstack_workspace" "test" {
 
 resource "meshstack_project" "test" {
   metadata = {
-    name               = "test-proj-{{.suffix}}"
+    name               = "test-proj-[[.suffix]]"
     owned_by_workspace = meshstack_workspace.test.metadata.name
   }
   spec = {
@@ -17,9 +17,9 @@ resource "meshstack_project" "test" {
   }
 }
 
-resource "meshstack_workspace_{{.subject_kind}}_binding" "test" {
+resource "meshstack_workspace_[[.subject_kind]]_binding" "test" {
   metadata = {
-    name = "test-wb-{{.suffix}}"
+    name = "test-wb-[[.suffix]]"
   }
   role_ref = {
     name = "Workspace Member"
@@ -28,13 +28,13 @@ resource "meshstack_workspace_{{.subject_kind}}_binding" "test" {
     name = meshstack_workspace.test.metadata.name
   }
   subject = {
-    name = "{{.subject_name}}"
+    name = "[[.subject_name]]"
   }
 }
 
-resource "meshstack_project_{{.subject_kind}}_binding" "test" {
+resource "meshstack_project_[[.subject_kind]]_binding" "test" {
   metadata = {
-    name = "my-project-{{.subject_kind}}-binding"
+    name = "my-project-[[.subject_kind]]-binding"
   }
   role_ref = {
     name = "Project Reader"
@@ -44,7 +44,7 @@ resource "meshstack_project_{{.subject_kind}}_binding" "test" {
     name               = meshstack_project.test.metadata.name
   }
   subject = {
-    name = meshstack_workspace_{{.subject_kind}}_binding.test.subject.name
+    name = meshstack_workspace_[[.subject_kind]]_binding.test.subject.name
   }
   expiry_date = "2099-12-31"
 }

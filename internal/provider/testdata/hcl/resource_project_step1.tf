@@ -1,6 +1,6 @@
 resource "meshstack_workspace" "test" {
   metadata = {
-    name = "test-ws-{{.suffix}}"
+    name = "test-ws-[[.suffix]]"
   }
   spec = {
     display_name = "Test Workspace"
@@ -15,7 +15,7 @@ data "meshstack_workspace" "example" {
 
 resource "meshstack_payment_method" "test" {
   metadata = {
-    name               = "test-pm-{{.suffix}}"
+    name               = "test-pm-[[.suffix]]"
     owned_by_workspace = meshstack_workspace.test.metadata.name
   }
   spec = {
