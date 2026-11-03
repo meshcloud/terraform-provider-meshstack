@@ -7,7 +7,9 @@ is the end-to-end walkthrough; this file is the API surface plus full worked exa
 ## Step files (`internal/provider/testdata/hcl`)
 
 ```go
-func hclStep(t *testing.T, name string, step int, vars map[string]string) string
+type hclStepVars map[string]string
+
+func hclStep(t *testing.T, name string, step int, vars hclStepVars) string
 ```
 
 `hclStep(t, "resource_project", 2, vars)` reads `testdata/hcl/resource_project_step2.tf`, renders
@@ -70,7 +72,7 @@ the step files name them:
 ```go
 func TestAccProject(t *testing.T) {
     suffix := acctest.RandString(8)
-    vars := map[string]string{"suffix": suffix}
+    vars := hclStepVars{"suffix": suffix}
     resourceAddress := "meshstack_project.example"
 
     ApplyAndTest(t, resource.TestCase{
@@ -119,7 +121,7 @@ example. Both files point `data.meshstack_workspace.example` at the test's works
 ```go
 func TestAccProjectDataSource(t *testing.T) {
     suffix := acctest.RandString(8)
-    vars := map[string]string{"suffix": suffix}
+    vars := hclStepVars{"suffix": suffix}
     dataSourceAddress := "data.meshstack_project.example"
     ApplyAndTest(t, resource.TestCase{Steps: []resource.TestStep{
         {Config: hclStep(t, "datasource_project", 1, vars)},

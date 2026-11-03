@@ -12,7 +12,7 @@ import (
 
 func TestAccProjectDataSource(t *testing.T) {
 	suffix := acctest.RandString(8)
-	vars := map[string]string{"suffix": suffix}
+	vars := hclStepVars{"suffix": suffix}
 	dataSourceAddress := "data.meshstack_project.example"
 
 	ApplyAndTest(t, resource.TestCase{
