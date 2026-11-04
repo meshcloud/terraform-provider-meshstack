@@ -499,19 +499,11 @@ func rejectVersionSpecChangeOnReleasedVersion(
 		return
 	}
 
-	cmp := versionSpecDtoContentHash.compareToStored(state.VersionLatest.ContentHash.Get())
-	if cmp == hashIncomparable {
-		// The stored hash was produced by a different/legacy algorithm version (state written by an
-		// older provider and never refreshed, imported, or planned with -refresh=false), so its value
-		// cannot be compared against the current-version hash. Recompute the released version's hash
-		// from the authoritative spec in state AT THE CURRENT version so we compare.
-		// We build the DTO straight from state.VersionSpec.
-		stateSpecDto := state.VersionSpec.ToClientDto(bbdUuid)
-		authoritative := calculateBuildingBlockDefinitionVersionContentHash(stateSpecDto, diags)
-		if diags.HasError() {
-			return
-		}
-		cmp = versionSpecDtoContentHash.compareToStored(authoritative.toBase64())
+	cmp := compareToStoredVersionSpec(versionSpecDtoContentHash, state.VersionLatest.ContentHash.Get(), func() client.MeshBuildingBlockDefinitionVersionSpec {
+		return state.VersionSpec.ToClientDto(bbdUuid)
+	}, diags)
+	if diags.HasError() {
+		return
 	}
 
 	switch cmp {
@@ -665,6 +657,7 @@ func (r *buildingBlockDefinitionResource) ModifyPlan(ctx context.Context, req re
 	inputsPath := path.Root("version_spec").AtName("inputs")
 	manualPath := path.Root("version_spec").AtName("implementation").AtName("manual")
 	versionSpecOutputsUncertain := false
+	versionSpecInputsChanged := false
 	var manual types.Object
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, manualPath, &manual)...)
 	if !manual.IsNull() && !manual.IsUnknown() {
@@ -676,18 +669,18 @@ func (r *buildingBlockDefinitionResource) ModifyPlan(ctx context.Context, req re
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		inputsChanged := !planInputs.Equal(stateInputs)
+		versionSpecInputsChanged = !planInputs.Equal(stateInputs)
 		switch {
 		case configOutputs.IsNull():
 			// Outputs omitted: the whole set is derived. Leave it unknown when the derived result cannot be
 			// predicted - the inputs changed, or overrides are being dropped (state still holds some) - so apply
 			// reconciles. When nothing changed, leaving the state value avoids a perpetual "known after apply".
 			stateEmpty := stateOutputs.IsNull() || len(stateOutputs.Elements()) == 0
-			if inputsChanged || !stateEmpty {
+			if versionSpecInputsChanged || !stateEmpty {
 				versionSpecOutputsUncertain = true
 				resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, outputsPath, types.MapUnknown(stateOutputs.ElementType(ctx)))...)
 			}
-		case inputsChanged:
+		case versionSpecInputsChanged:
 			// Overrides are declared and the inputs changed, so the backend re-derives each output's type and
 			// positional display_order. The whole configured map cannot be planned unknown, so null only the
 			// Computed fields held from state that a re-derivation can shift - type (never configured for
@@ -747,6 +740,25 @@ func (r *buildingBlockDefinitionResource) ModifyPlan(ctx context.Context, req re
 		return
 	}()
 	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	storedVersionSpec := func() client.MeshBuildingBlockDefinitionVersionSpec {
+		return generic.GetAttribute[client.MeshBuildingBlockDefinitionVersionSpec](ctx, req.State, path.Root("version_spec"), &resp.Diagnostics,
+			buildingBlockDefinitionVersionConverterOptions(ctx, req.Config, req.Plan, req.State)...)
+	}
+	releaseChangesDraft := state.VersionSpec.Draft.Get() && planDraftKnownReleased && draftContentChanges(versionSpecSecretsChanged,
+		versionSpecInputsChanged, versionSpecContentHash, state.VersionLatest.ContentHash, storedVersionSpec, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if releaseChangesDraft {
+		resp.Diagnostics.AddAttributeError(path.Root("version_spec").AtName("draft"), "Cannot release a draft version that changes", fmt.Sprintf(
+			"version_spec.draft changes to false, and the content of draft version %d changes in the same apply. "+
+				"meshStack releases a version only as it is saved. Apply the change with draft = true first, "+
+				"then set draft = false in a later apply.",
+			state.VersionLatest.Number.Get(),
+		))
 		return
 	}
 
@@ -810,6 +822,45 @@ func (r *buildingBlockDefinitionResource) ModifyPlan(ctx context.Context, req re
 			latestVersionRef.WorkloadIdentityFederation = generic.NullIsUnknown[*client.MeshBuildingBlockDefinitionWif]{}
 		}
 	}
+}
+
+// compareToStoredVersionSpec recomputes a stored hash of another hash version from the spec it was stored for,
+// such as a state written by an older provider and planned with -refresh=false.
+func compareToStoredVersionSpec(
+	hash BuildingBlockDefinitionVersionContentHash,
+	storedHash string,
+	storedSpec func() client.MeshBuildingBlockDefinitionVersionSpec,
+	diags *diag.Diagnostics,
+) hashComparison {
+	if cmp := hash.compareToStored(storedHash); cmp != hashIncomparable {
+		return cmp
+	}
+	recomputed := calculateBuildingBlockDefinitionVersionContentHash(storedSpec(), diags)
+	if diags.HasError() {
+		return hashIncomparable
+	}
+	return hash.compareToStored(recomputed.toBase64())
+}
+
+// draftContentChanges stays false when the planned content hash is unknown for another reason than changed
+// inputs, because only meshStack can tell then.
+func draftContentChanges(
+	secretsChanged, inputsChanged bool,
+	planHash, storedHash generic.NullIsUnknown[string],
+	storedSpec func() client.MeshBuildingBlockDefinitionVersionSpec,
+	diags *diag.Diagnostics,
+) bool {
+	if secretsChanged || inputsChanged {
+		return true
+	}
+	if planHash.Value == nil || storedHash.Value == nil {
+		return false
+	}
+	hash, err := getVersionedHashFromString(*planHash.Value)
+	if err != nil {
+		return false
+	}
+	return compareToStoredVersionSpec(hash, *storedHash.Value, storedSpec, diags) == hashDifferent
 }
 
 func (r *buildingBlockDefinitionResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
