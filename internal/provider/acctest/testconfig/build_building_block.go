@@ -130,6 +130,6 @@ func BBTenant(t *testing.T, terraformRepoUrl string) (config Config, buildingBlo
 		// ImportBlockWithID remains a no-op.
 		Descend("spec", "building_block_definition_version_ref")(SetRawExpr(`{ uuid = %s }`, buildingBlockDefinitionAddr.Join("version_latest", "uuid"))),
 		Descend("spec", "target_ref")(SetAddr(tenantAddr, "ref")),
-		Descend("timeouts")(SetRawExpr(`{ create = "2m", update = "2m", delete = "2m" }`)),
+		Descend("timeouts")(SetRawExpr(`{ create = "5m", update = "5m", delete = "5m" }`)),
 	).Join(workspaceConfig, projectConfig, platformConfig, landingZoneConfig, tenantConfig, buildingBlockDefinitionConfig), buildingBlockAddr, workspaceAddr
 }

@@ -171,7 +171,7 @@ the apply looks successful.
 
 - Order a released version with the definition's `version_latest_release`. The examples use
   `version_latest`, which is a draft while the definition has one.
-- The workspace example sets `timeouts` of 2 minutes for the tests. Leave `timeouts` out for the
+- The workspace example sets `timeouts` of 5 minutes for the tests. Leave `timeouts` out for the
   default of 30 minutes, or raise them for slow runs.
 - Set the inputs the version declares as `USER_INPUT` or `PAYMENT_METHOD`. meshStack and the
   platform team fill in the others. `inputs` is required, so write `inputs = {}` when you set none.
