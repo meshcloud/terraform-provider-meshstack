@@ -1,0 +1,23 @@
+{
+  "ref": {"uuid": "8f1c2d3e-4a5b-6c7d-8e9f-0a1b2c3d4e5f", "kind": "meshTenant"},
+  "metadata": {
+    "uuid": "8f1c2d3e-4a5b-6c7d-8e9f-0a1b2c3d4e5f",
+    "owned_by_workspace": "my-workspace",
+    "owned_by_project": "my-project"
+  },
+  "spec": {
+    "platform_ref": {"uuid": "a2b7cf9c-8e2a-4b0d-9e6f-1c4b9de3a111", "kind": "meshPlatform"},
+    "landing_zone_ref": {"name": "example-default", "kind": "meshLandingZone"},
+    "platform_tenant_id": "cloud-tenant-4763-4526189",
+    "requested_quotas": null,
+    "quotas": [{"key": "limits.cpu", "value": 4}, {"key": "limits.memory", "value": 8}]
+  },
+  "status": {
+    "tenant_name": "my-workspace.my-project.azure.germanywestcentral",
+    "platform_type_identifier": "azure",
+    "platform_workspace_id": null,
+    "tags": {},
+    "applied_quotas": {"limits.cpu": {"value": 4}, "limits.memory": {"value": 8}}
+  },
+  "wait_for_completion": true
+}

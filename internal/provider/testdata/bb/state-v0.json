@@ -1,0 +1,33 @@
+{
+  "metadata": {
+    "uuid": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+    "owned_by_workspace": "my-workspace"
+  },
+  "spec": {
+    "display_name": "my-workspace-building-block",
+    "building_block_definition_version_ref": {
+      "uuid": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+      "kind": "meshBuildingBlockDefinitionVersion",
+      "content_hash": null
+    },
+    "target_ref": {"kind": "meshWorkspace", "uuid": null, "name": "my-workspace"},
+    "inputs": {},
+    "parent_building_blocks": [
+      {
+        "buildingblock_uuid": "cccccccc-cccc-cccc-cccc-cccccccccccc",
+        "definition_uuid": "dddddddd-dddd-dddd-dddd-dddddddddddd"
+      }
+    ]
+  },
+  "status": {
+    "status": "SUCCEEDED",
+    "force_purge": false,
+    "outputs": {},
+    "latest_run_uuid": "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee",
+    "latest_dry_run_uuid": null
+  },
+  "all_inputs": {},
+  "wait_for_completion": true,
+  "purge_on_delete": false,
+  "timeouts": null
+}

@@ -1,0 +1,26 @@
+{
+  "metadata": {
+    "name": "example-default",
+    "owned_by_workspace": "my-workspace",
+    "tags": {"env": ["prod"]}
+  },
+  "spec": {
+    "display_name": "Example Default",
+    "description": "Default landing zone for example projects.",
+    "automate_deletion_approval": true,
+    "automate_deletion_replication": true,
+    "info_link": null,
+    "platform_ref": {"uuid": "a2b7cf9c-8e2a-4b0d-9e6f-1c4b9de3a111", "kind": "meshPlatform"},
+    "platform_properties": {
+      "type": "custom",
+      "aws": null, "aks": null, "azure": null, "azurerg": null,
+      "custom": {}, "gcp": null, "kubernetes": null, "openshift": null
+    },
+    "quotas": [],
+    "mandatory_building_block_refs": [
+      {"uuid": "6d1f0b3e-5a44-4d1c-90a2-7b8e2f0c5d22", "kind": "meshBuildingBlockDefinition"}
+    ],
+    "recommended_building_block_refs": []
+  },
+  "status": {"disabled": false, "restricted": false}
+}
