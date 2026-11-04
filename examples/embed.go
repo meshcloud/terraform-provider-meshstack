@@ -3,7 +3,6 @@ package examples
 import (
 	"embed"
 	"fmt"
-	"io/fs"
 	"path"
 	"strings"
 	"testing"
@@ -33,15 +32,6 @@ const (
 // The case of one part adds a suffix to the .tf files.
 func (e Example) Read(t *testing.T, name string, fileNameParts ...string) []byte {
 	t.Helper()
-	var fsys fs.ReadFileFS
-	switch e {
-	case DataSource:
-		fsys = dataSources
-	case Resource:
-		fsys = resources
-	default:
-		t.Fatalf("unknown example type: %s", e)
-	}
 	switch len(fileNameParts) {
 	case 0:
 		fileNameParts = []string{string(e)}
@@ -56,7 +46,7 @@ func (e Example) Read(t *testing.T, name string, fileNameParts ...string) []byte
 		"meshstack_"+name,
 		strings.Join(append(fileNameParts, ".tf"), ""),
 	)
-	content, err := fsys.ReadFile(filePath)
+	content, err := ReadFile(filePath)
 	require.NoErrorf(t, err, "cannot read examples config file %s:", filePath)
 	return content
 }

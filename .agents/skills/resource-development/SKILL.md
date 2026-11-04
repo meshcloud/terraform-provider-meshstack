@@ -27,7 +27,7 @@ Mid-complexity, clean, and complete — prefer these over the large `building_bl
 | Resource test (create→update→import) | `internal/provider/project_resource_test.go` |
 | Data source test | `internal/provider/project_data_source_test.go` |
 | One step file for several variants | `internal/provider/project_binding_resource_test.go` + `testdata/hcl/resource_project_binding_step1.tf` |
-| Named subtests for multiple examples | `internal/provider/integration_resource_test.go` |
+| Named subtests, one set of step files each | `internal/provider/project_resource_test.go` (`restricted_default_tag` → `resource_project_restricted_default_tag_step1.tf`) |
 | State-check helpers | `internal/provider/acctest/xknownvalue/{not_empty_string,ref,map}.go` |
 
 ## Steps
@@ -129,7 +129,8 @@ with `text/template`, so a reviewer reads the HCL that runs instead of Go that r
 - **Placeholders** are `[[.key]]`, filled from the `hclStepVars` the test passes to every step. The
   type exists only to feed step files. A key missing from it fails the test. `vars["suffix"]` holds
   `acctest.RandString(8)`, and every name a step file picks carries it (`"test-ws-[[.suffix]]"`),
-  so tests never collide.
+  so tests never collide. Values are inserted as raw text, unescaped, so keep them to names and
+  kinds: a quote, a backslash or `${` in a value changes the HCL around it.
 - **`[[ ]]`, not `{{ }}`.** meshStack's own templates use `{{ }}` (`display_name_template`, the
   runner's `subject_template`), and a step file passes them to meshStack as literal text. Under
   `{{ }}`, `text/template` would parse `{{ resource_name }}` as a call and fail, and any `{{ }}`
