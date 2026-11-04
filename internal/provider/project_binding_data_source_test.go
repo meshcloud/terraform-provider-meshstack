@@ -12,11 +12,11 @@ import (
 )
 
 func TestAccProjectUserBindingDataSource(t *testing.T) {
-	testAccProjectBindingDataSource(t, "user", seededUsername, expectUserEnabled)
+	testAccProjectBindingDataSource(t, "user", seededUsername, expectUserEnabled, expectApprovalAssigned)
 }
 
 func TestAccProjectGroupBindingDataSource(t *testing.T) {
-	testAccProjectBindingDataSource(t, "group", seededGroupName)
+	testAccProjectBindingDataSource(t, "group", seededGroupName, expectApprovalAssigned)
 }
 
 func testAccProjectBindingDataSource(t *testing.T, subjectKind, subjectName string, subjectChecks ...subjectStateCheck) {

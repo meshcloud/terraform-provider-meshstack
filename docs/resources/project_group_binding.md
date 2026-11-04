@@ -51,6 +51,10 @@ resource "meshstack_project_group_binding" "example" {
 
 - `expiry_date` (String) Last day the binding is effective (`YYYY-MM-DD`); null if it never expires. Changing it replaces the binding.
 
+### Read-Only
+
+- `status` (Attributes) Read-only status of the binding. (see [below for nested schema](#nestedatt--status))
+
 <a id="nestedatt--metadata"></a>
 ### Nested Schema for `metadata`
 
@@ -82,6 +86,14 @@ Required:
 
 - `name` (String) Project identifier.
 - `owned_by_workspace` (String) Identifier of workspace containing the target project.
+
+
+<a id="nestedatt--status"></a>
+### Nested Schema for `status`
+
+Read-Only:
+
+- `approval` (String) `ASSIGNED` when the role is in effect. `PENDING` while the binding waits for approval in meshPanel, because your meshStack requires four-eyes approval for role assignments. A pending binding gives no access yet.
 
 ## Import
 

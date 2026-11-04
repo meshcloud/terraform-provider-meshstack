@@ -1,5 +1,11 @@
 # v0.28.1
 
+FEATURES:
+- `meshstack_workspace_user_binding`, `meshstack_workspace_group_binding`, `meshstack_project_user_binding`,
+  `meshstack_project_group_binding` and their data sources: the new `status.approval` is `PENDING` while the binding
+  waits for four-eyes approval in meshPanel, and `ASSIGNED` once the role is in effect. A pending binding gives no access
+  yet, so the provider warns about it on create and on every refresh until a person approves it.
+
 FIXES:
 - `meshstack_project`: `spec.substitute_payment_method_identifier` is sent to meshStack. Before, it was never sent, and
   it replaced `spec.payment_method_identifier` when it was set.
