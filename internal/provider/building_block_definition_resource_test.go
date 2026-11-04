@@ -2491,7 +2491,7 @@ resource "meshstack_building_block_definition" "test" {
 			name:           "overlong condition rejected",
 			implementation: terraformImplementation,
 			input:          `{ display_name = "Candidate", type = "STRING", assignment_type = "USER_INPUT", condition = "input.cloud_provider == \"` + strings.Repeat("x", 600) + `\"" }`,
-			expectError:    expectErrorWords("length", "most", "512"),
+			expectError:    expectErrorWords("character", "count", "most", "512"),
 		},
 		{
 			name:           "conditional USER_INPUT accepted",

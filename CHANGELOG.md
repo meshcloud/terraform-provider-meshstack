@@ -1,3 +1,12 @@
+# v0.27.3
+
+FIXES:
+- `meshstack_building_block_definition`: the length limits on text attributes count characters, as meshStack does.
+  The provider counted UTF-8 bytes and rejected a text with umlauts or emoji that meshStack accepts.
+- `meshstack_building_block_definition`: `spec.readme` (at most 65535 bytes), `version_spec.inputs[*].selectable_values`
+  (at most 255 characters each) and `version_spec.implementation.terraform.pre_run_script` (at most 16 KiB) fail the
+  plan when too long. meshStack checks a readme and a selectable value only when it stores them, and fails the apply with an internal error.
+
 # v0.27.2
 
 FEATURES:

@@ -30,7 +30,7 @@ import (
 	"github.com/meshcloud/terraform-provider-meshstack/internal/validators"
 )
 
-// The widths meshStack stores these texts in.
+// The widths meshStack stores these texts in, in characters.
 const (
 	maxLengthDefinitionDisplayName = 128
 	maxLengthText                  = 255
@@ -38,10 +38,20 @@ const (
 	maxLengthValidationRegex       = 1000
 )
 
+// The sizes meshStack stores these texts in, in UTF-8 bytes.
+const (
+	maxBytesPreRunScript = 16 * 1024
+	maxBytesReadme       = 65535
+)
+
 // An attribute states its limit through this, so what a user reads cannot drift away from what the
 // validator on the same attribute enforces.
 func maxLengthNote(maxLength int) string {
 	return fmt.Sprintf("At most %d characters.", maxLength)
+}
+
+func maxBytesNote(maxBytes int) string {
+	return fmt.Sprintf("At most %d bytes in UTF-8.", maxBytes)
 }
 
 func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
@@ -87,7 +97,7 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 		Validators: []validator.Map{
 			validators.BuildingBlockDefinitionTagInputs{},
 			validators.BuildingBlockDefinitionPaymentMethodInputs{},
-			mapvalidator.KeysAre(stringvalidator.LengthAtMost(maxLengthText)),
+			mapvalidator.KeysAre(stringvalidator.UTF8LengthAtMost(maxLengthText)),
 		},
 		NestedObject: schema.NestedAttributeObject{
 			Attributes: map[string]schema.Attribute{
@@ -95,14 +105,14 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 					MarkdownDescription: "Human-readable display name for the input. " + maxLengthNote(maxLengthText),
 					Required:            true,
 					Validators: []validator.String{
-						stringvalidator.LengthAtMost(maxLengthText),
+						stringvalidator.UTF8LengthAtMost(maxLengthText),
 					},
 				},
 				"description": schema.StringAttribute{
 					MarkdownDescription: "Description explaining the purpose and usage of the input. " + maxLengthNote(maxLengthText),
 					Optional:            true,
 					Validators: []validator.String{
-						stringvalidator.LengthAtMost(maxLengthText),
+						stringvalidator.UTF8LengthAtMost(maxLengthText),
 					},
 				},
 				"type": schema.StringAttribute{
@@ -222,26 +232,28 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 					Default:  booldefault.StaticBool(false),
 				},
 				"selectable_values": schema.SetAttribute{
-					MarkdownDescription: "Set of allowed values for the input. **Required** to be non-empty when `type` is " + client.MeshBuildingBlockIOTypeSingleSelect.Markdown() + " or " + client.MeshBuildingBlockIOTypeMultiSelect.Markdown() + ".",
-					ElementType:         types.StringType,
-					Optional:            true,
+					MarkdownDescription: "Set of allowed values for the input. **Required** to be non-empty when `type` is " + client.MeshBuildingBlockIOTypeSingleSelect.Markdown() + " or " + client.MeshBuildingBlockIOTypeMultiSelect.Markdown() + ". " +
+						fmt.Sprintf("Each value has at most %d characters.", maxLengthText),
+					ElementType: types.StringType,
+					Optional:    true,
 					Validators: []validator.Set{
 						setvalidator.NoNullValues(),
 						setvalidator.SizeAtLeast(1),
+						setvalidator.ValueStringsAre(stringvalidator.UTF8LengthAtMost(maxLengthText)),
 					},
 				},
 				"value_validation_regex": schema.StringAttribute{
 					MarkdownDescription: "Regular expression pattern to validate input values. " + maxLengthNote(maxLengthValidationRegex),
 					Optional:            true,
 					Validators: []validator.String{
-						stringvalidator.LengthAtMost(maxLengthValidationRegex),
+						stringvalidator.UTF8LengthAtMost(maxLengthValidationRegex),
 					},
 				},
 				"validation_regex_error_message": schema.StringAttribute{
 					MarkdownDescription: "Error message to display when regex validation fails. " + maxLengthNote(maxLengthText),
 					Optional:            true,
 					Validators: []validator.String{
-						stringvalidator.LengthAtMost(maxLengthText),
+						stringvalidator.UTF8LengthAtMost(maxLengthText),
 					},
 				},
 				"json_schema": schema.StringAttribute{
@@ -274,7 +286,7 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 						maxLengthNote(maxLengthCondition) + " Requires meshStack 2026.37.0 or later.",
 					Optional: true,
 					Validators: []validator.String{
-						stringvalidator.LengthAtMost(maxLengthCondition),
+						stringvalidator.UTF8LengthAtMost(maxLengthCondition),
 						stringvalidator.RegexMatches(regexp.MustCompile(`\S`), "must not be blank"),
 					},
 				},
@@ -303,7 +315,7 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 				stringplanmodifier.UseNonNullStateForUnknown(),
 			},
 			Validators: []validator.String{
-				stringvalidator.LengthAtMost(maxLengthText),
+				stringvalidator.UTF8LengthAtMost(maxLengthText),
 			},
 		},
 		"assignment_type": schema.StringAttribute{
@@ -492,7 +504,7 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 						MarkdownDescription: "Display name of the building block definition as shown in meshPanel. " + maxLengthNote(maxLengthDefinitionDisplayName),
 						Required:            true,
 						Validators: []validator.String{
-							stringvalidator.LengthAtMost(maxLengthDefinitionDisplayName),
+							stringvalidator.UTF8LengthAtMost(maxLengthDefinitionDisplayName),
 						},
 					},
 					"display_name_template": schema.StringAttribute{
@@ -505,7 +517,7 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 							maxLengthNote(maxLengthText),
 						Optional: true,
 						Validators: []validator.String{
-							stringvalidator.LengthAtMost(maxLengthText),
+							stringvalidator.UTF8LengthAtMost(maxLengthText),
 						},
 					},
 					"symbol": schema.StringAttribute{
@@ -525,25 +537,28 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 						MarkdownDescription: "Description of the building block definition as shown in meshPanel. " + maxLengthNote(maxLengthText),
 						Required:            true,
 						Validators: []validator.String{
-							stringvalidator.LengthAtMost(maxLengthText),
+							stringvalidator.UTF8LengthAtMost(maxLengthText),
 						},
 					},
 					"readme": schema.StringAttribute{
-						MarkdownDescription: "Detailed readme/documentation in markdown format.",
+						MarkdownDescription: "Detailed readme/documentation in markdown format. " + maxBytesNote(maxBytesReadme),
 						Optional:            true,
+						Validators: []validator.String{
+							stringvalidator.LengthAtMost(maxBytesReadme),
+						},
 					},
 					"support_url": schema.StringAttribute{
 						MarkdownDescription: "URL pointing to support resources for the building block definition. " + maxLengthNote(maxLengthText),
 						Optional:            true,
 						Validators: []validator.String{
-							stringvalidator.LengthAtMost(maxLengthText),
+							stringvalidator.UTF8LengthAtMost(maxLengthText),
 						},
 					},
 					"documentation_url": schema.StringAttribute{
 						MarkdownDescription: "URL pointing to documentation for the building block definition. " + maxLengthNote(maxLengthText),
 						Optional:            true,
 						Validators: []validator.String{
-							stringvalidator.LengthAtMost(maxLengthText),
+							stringvalidator.UTF8LengthAtMost(maxLengthText),
 						},
 					},
 					"supported_platforms": schema.SetNestedAttribute{
@@ -714,7 +729,7 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 						Computed:     true,
 						NestedObject: outputs,
 						Validators: []validator.Map{
-							mapvalidator.KeysAre(stringvalidator.LengthAtMost(maxLengthText)),
+							mapvalidator.KeysAre(stringvalidator.UTF8LengthAtMost(maxLengthText)),
 						},
 						PlanModifiers: []planmodifier.Map{
 							mapplanmodifier.UseStateForUnknown(),
@@ -790,8 +805,11 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 										},
 									},
 									"pre_run_script": schema.StringAttribute{
-										MarkdownDescription: "Shell script executed after `tofu init` and before `tofu apply`/`tofu destroy` in the runner container. ",
+										MarkdownDescription: "Shell script executed after `tofu init` and before `tofu apply`/`tofu destroy` in the runner container. " + maxBytesNote(maxBytesPreRunScript),
 										Optional:            true,
+										Validators: []validator.String{
+											stringvalidator.LengthAtMost(maxBytesPreRunScript),
+										},
 									},
 								},
 							},
