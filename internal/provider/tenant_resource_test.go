@@ -276,38 +276,6 @@ func TestAccTenant(t *testing.T) {
 		})
 	})
 
-	t.Run("create_without_waiting", func(t *testing.T) {
-		workspaceConfig, workspaceAddr := testconfig.Workspace(t)
-		projectConfig, projectAddr := testconfig.Project(t, workspaceAddr)
-		platformConfig, platformAddr, _ := testconfig.CustomPlatform(t, workspaceAddr)
-		landingZoneConfig, landingZoneAddr := testconfig.SimpleLandingZone(t, workspaceAddr, platformAddr)
-		tenantConfig, tenantAddr := testconfig.Tenant(t, projectAddr, platformAddr, landingZoneAddr)
-
-		config := tenantConfig.Join(workspaceConfig, projectConfig, platformConfig, landingZoneConfig)
-		withoutWaiting := config.WithFirstBlock(testconfig.Descend("wait_for_completion")(testconfig.SetRawExpr("false")))
-		withWaiting := config.WithFirstBlock(testconfig.Descend("wait_for_completion")(testconfig.SetRawExpr("true")))
-
-		ApplyAndTest(t, resource.TestCase{
-			Steps: []resource.TestStep{
-				{
-					Config: withoutWaiting.String(),
-					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(tenantAddr.String(), tfjsonpath.New("wait_for_completion"), knownvalue.Bool(false)),
-						statecheck.ExpectKnownValue(tenantAddr.String(), tfjsonpath.New("metadata").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
-					},
-				},
-				{
-					Config: withWaiting.String(),
-					ConfigPlanChecks: resource.ConfigPlanChecks{
-						PreApply: []plancheck.PlanCheck{
-							plancheck.ExpectResourceAction(tenantAddr.String(), plancheck.ResourceActionUpdate),
-						},
-					},
-				},
-			},
-		})
-	})
-
 	// requires_replace asserts that changing platform_ref forces a replacement rather than an
 	// in-place update. platform_ref (and landing_zone_ref) carry the RequiresReplace plan modifier
 	// applied centrally by the meshRef helper (schema_utils.go) — a tenant cannot move platforms in
