@@ -113,6 +113,8 @@ func (r *workspaceGroupBindingResource) Schema(_ context.Context, _ resource.Sch
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
+
+			"status": groupBindingStatusResourceAttribute(),
 		},
 	}
 }
@@ -136,6 +138,7 @@ func (r *workspaceGroupBindingResource) Create(ctx context.Context, req resource
 		return
 	}
 
+	warnIfWaitingForApproval(&resp.Diagnostics, binding.Metadata.Name, binding.Status)
 	resp.Diagnostics.Append(resp.State.Set(ctx, binding)...)
 }
 
@@ -157,6 +160,7 @@ func (r *workspaceGroupBindingResource) Read(ctx context.Context, req resource.R
 		return
 	}
 
+	warnIfWaitingForApproval(&resp.Diagnostics, binding.Metadata.Name, binding.Status)
 	resp.Diagnostics.Append(resp.State.Set(ctx, binding)...)
 }
 

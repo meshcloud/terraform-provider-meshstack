@@ -14,11 +14,11 @@ import (
 )
 
 func TestAccWorkspaceGroupBindingDataSource(t *testing.T) {
-	testAccWorkspaceBindingDataSource(t, "workspace_group_binding", seededGroupName)
+	testAccWorkspaceBindingDataSource(t, "workspace_group_binding", seededGroupName, expectApprovalAssigned)
 }
 
 func TestAccWorkspaceUserBindingDataSource(t *testing.T) {
-	testAccWorkspaceBindingDataSource(t, "workspace_user_binding", seededUsername, expectUserEnabled)
+	testAccWorkspaceBindingDataSource(t, "workspace_user_binding", seededUsername, expectUserEnabled, expectApprovalAssigned)
 }
 
 func testAccWorkspaceBindingDataSource(t *testing.T, name, subjectName string, subjectChecks ...subjectStateCheck) {

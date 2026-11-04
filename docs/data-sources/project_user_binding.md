@@ -78,4 +78,5 @@ Optional:
 
 Read-Only:
 
+- `approval` (String) `ASSIGNED` when the role is in effect. `PENDING` while the binding waits for approval in meshPanel, because your meshStack requires four-eyes approval for role assignments. A pending binding gives no access yet.
 - `user_disabled` (Boolean) Whether the bound user is disabled, for example through SCIM. A disabled user keeps the binding but has no access until the user is enabled again.

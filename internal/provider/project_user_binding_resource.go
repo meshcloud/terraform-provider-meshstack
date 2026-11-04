@@ -129,6 +129,7 @@ func (r *projectUserBindingResource) Create(ctx context.Context, req resource.Cr
 		return
 	}
 
+	warnIfWaitingForApproval(&resp.Diagnostics, binding.Metadata.Name, binding.Status)
 	resp.Diagnostics.Append(resp.State.Set(ctx, binding)...)
 }
 
@@ -150,6 +151,7 @@ func (r *projectUserBindingResource) Read(ctx context.Context, req resource.Read
 		return
 	}
 
+	warnIfWaitingForApproval(&resp.Diagnostics, binding.Metadata.Name, binding.Status)
 	resp.Diagnostics.Append(resp.State.Set(ctx, binding)...)
 }
 
