@@ -25,12 +25,4 @@ resource "meshstack_building_block" "example_tenant" {
       }
     }
   }
-
-  # create/update wait for the run of the building block to end; delete waits for
-  # deprovisioning. Tune to your runner's typical run duration (defaults to 30m if unset).
-  timeouts = {
-    create = "2m"
-    update = "2m"
-    delete = "2m"
-  }
 }
