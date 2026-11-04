@@ -152,12 +152,11 @@ func TestAccBuildingBlock(t *testing.T) {
 						append(bbv3SizeEnvInputChecks(buildingBlockAddr), bbv3PaymentMethodInputChecks(buildingBlockAddr)...)...),
 				},
 				{
-					// Import with verify. content_hash is json:"-" and never returned by the API;
-					// wait_for_completion and purge_on_delete are config-only defaults — all excluded.
+					// content_hash never comes back from the API; purge_on_delete and timeouts exist only in config.
 					ImportState:                          true,
 					ImportStateVerify:                    true,
 					ImportStateVerifyIdentifierAttribute: "metadata.uuid",
-					ImportStateVerifyIgnore:              []string{"spec.building_block_definition_version_ref.content_hash", "wait_for_completion", "purge_on_delete", "timeouts.create", "timeouts.update", "timeouts.delete"},
+					ImportStateVerifyIgnore:              []string{"spec.building_block_definition_version_ref.content_hash", "purge_on_delete", "timeouts.create", "timeouts.update", "timeouts.delete"},
 					ImportStateIdFunc: func(s *terraform.State) (string, error) {
 						rs := s.RootModule().Resources[buildingBlockAddr.String()]
 						if rs == nil {
@@ -239,6 +238,12 @@ func TestAccBuildingBlock(t *testing.T) {
 					},
 				},
 				{
+					Config: rehashedContentHashConfig.WithFirstBlock(testconfig.Descend("wait_for_completion")(testconfig.SetRawExpr("false"))).String(),
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+					},
+				},
+				{
 					// Adding a parent while the version is unchanged must force a replacement. This is a
 					// provider-side plan decision (RequiresReplaceIf → DestroyBeforeCreate); it runs
 					// mock-only because the real backend rejects the synthetic parent-BB UUID before the
@@ -297,7 +302,6 @@ func TestAccBuildingBlock(t *testing.T) {
 					ImportStateVerifyIgnore: []string{
 						"spec.building_block_definition_version_ref.content_hash",
 						"spec.inputs.api_key.sensitive.secret_version",
-						"wait_for_completion",
 						"purge_on_delete",
 						"timeouts.create",
 						"timeouts.update",
@@ -806,7 +810,6 @@ func TestAccBuildingBlock(t *testing.T) {
 					ImportStateVerifyIgnore: []string{
 						"spec.building_block_definition_version_ref.content_hash",
 						"spec.inputs.api_key.sensitive.secret_version",
-						"wait_for_completion",
 						"purge_on_delete",
 						"timeouts.create",
 						"timeouts.update",
@@ -1138,9 +1141,7 @@ func TestAccBuildingBlock(t *testing.T) {
 					},
 				},
 				{
-					// The consumer creates the BB; its run fails on the broken ref. wait_for_completion is
-					// set in the support file, so the create waits for that run, keeps the building block
-					// with a warning, and the postcondition is what turns that into a failed apply.
+					// The run fails on the broken ref, and only the postcondition turns its warning into a failed apply.
 					Config:          consumerConfig.String(),
 					ConfigVariables: consumerVariables,
 					ConfigPlanChecks: resource.ConfigPlanChecks{

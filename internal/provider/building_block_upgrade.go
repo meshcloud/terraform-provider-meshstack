@@ -23,14 +23,21 @@ func parentRefsFromFlatParents(parents []client.MeshBuildingBlockParent) []clien
 	return refs
 }
 
-// buildingBlockSchemaV0Once derives the prior schema from the current one. That is safe because v0
-// and v1 state differ in only two attributes: v0 held the parents in spec.parent_building_blocks as
-// a flat {buildingblock_uuid, definition_uuid} pair, which v1 renames to
-// spec.parent_building_block_refs and reshapes into refs; and `ref` did not exist yet.
-var buildingBlockSchemaV0Once = sync.OnceValue(func() schema.Schema {
+// v1 stored wait_for_completion, which v2 makes write-only.
+var buildingBlockSchemaV1Once = sync.OnceValue(func() schema.Schema {
 	var schemaResp resource.SchemaResponse
 	(&buildingBlockResource{}).Schema(context.Background(), resource.SchemaRequest{}, &schemaResp)
 	s := schemaResp.Schema
+	s.Version = 1
+	s.Attributes = maps.Clone(s.Attributes)
+	s.Attributes["wait_for_completion"] = schema.BoolAttribute{Optional: true, Computed: true}
+	return s
+})
+
+// v0 held the parents in spec.parent_building_blocks as a flat {buildingblock_uuid, definition_uuid}
+// pair, which v1 renames to spec.parent_building_block_refs and reshapes into refs; and `ref` did not exist yet.
+var buildingBlockSchemaV0Once = sync.OnceValue(func() schema.Schema {
+	s := buildingBlockSchemaV1Once()
 	s.Version = 0
 
 	spec, ok := s.Attributes["spec"].(schema.SingleNestedAttribute)
@@ -58,9 +65,11 @@ var buildingBlockSchemaV0Once = sync.OnceValue(func() schema.Schema {
 })
 
 func (r *buildingBlockResource) UpgradeState(_ context.Context) map[int64]resource.StateUpgrader {
-	prior := buildingBlockSchemaV0Once()
+	v0 := buildingBlockSchemaV0Once()
+	v1 := buildingBlockSchemaV1Once()
 	return map[int64]resource.StateUpgrader{
-		0: {PriorSchema: &prior, StateUpgrader: r.upgradeParentsToRefs},
+		0: {PriorSchema: &v0, StateUpgrader: r.upgradeParentsToRefs},
+		1: {PriorSchema: &v1, StateUpgrader: r.upgradeToWriteOnlyWaitForCompletion},
 	}
 }
 
@@ -123,6 +132,26 @@ func (r *buildingBlockResource) upgradeParentsToRefs(ctx context.Context, req re
 		"uuid": tftypes.NewValue(tftypes.String, uuid),
 	})
 
+	setWithWaitForCompletionNull(resp, schemaType, attributes)
+}
+
+func (r *buildingBlockResource) upgradeToWriteOnlyWaitForCompletion(ctx context.Context, req resource.UpgradeStateRequest, resp *resource.UpgradeStateResponse) {
+	schemaType, ok := resp.State.Schema.Type().TerraformType(ctx).(tftypes.Object)
+	if !ok {
+		resp.Diagnostics.AddError("Unexpected building block schema type", "the resource schema is not an object type")
+		return
+	}
+	var attributes map[string]tftypes.Value
+	if err := req.State.Raw.As(&attributes); err != nil {
+		resp.Diagnostics.AddError("Could not read prior building block state", err.Error())
+		return
+	}
+	setWithWaitForCompletionNull(resp, schemaType, attributes)
+}
+
+// State must never hold a value for a write-only attribute.
+func setWithWaitForCompletionNull(resp *resource.UpgradeStateResponse, schemaType tftypes.Object, attributes map[string]tftypes.Value) {
+	attributes["wait_for_completion"] = tftypes.NewValue(tftypes.Bool, nil)
 	if err := tftypes.ValidateValue(schemaType, attributes); err != nil {
 		resp.Diagnostics.AddError("Could not upgrade building block state", fmt.Sprintf("upgraded state does not match the current schema: %s", err))
 		return

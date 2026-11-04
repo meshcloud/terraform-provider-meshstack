@@ -26,6 +26,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
@@ -155,7 +156,7 @@ func getBasedOnDraftVersion(ctx context.Context, private privateState, diags *di
 
 func (r *buildingBlockResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Version: 1,
+		Version: 2,
 		MarkdownDescription: "Manage a workspace or tenant building block created from a building block definition (BBD).\n\n" +
 			"A building block is usually managed by the app team that owns its workspace; a platform operator " +
 			"typically only creates one directly to test a draft BBD in the operator's own workspace. " +
@@ -388,7 +389,7 @@ func (r *buildingBlockResource) Schema(ctx context.Context, req resource.SchemaR
 				},
 			},
 			"wait_for_completion": schema.BoolAttribute{
-				MarkdownDescription: "Whether create and update wait for the run of the building block to end. The wait ends at once " +
+				MarkdownDescription: "Whether create and update wait for the run of the building block to end. Defaults to `true`. The wait ends at once " +
 					"with a warning when the run waits for input, an approval or a dependency (`action` `PROVIDE_INPUT`, `APPROVE_RUN` or " +
 					"`WAITING_FOR_DEPENDENCY`); run the apply again once that is resolved. Every outcome of the run is a warning, and " +
 					"the state holds the status meshStack reported last. To fail the apply when the run did not succeed, add a " +
@@ -398,10 +399,10 @@ func (r *buildingBlockResource) Schema(ctx context.Context, req resource.SchemaR
 					"(lifecycle DELETED, or gone after a purge) regardless of this flag, so dependent resources such as the building " +
 					"block definition can be deleted safely afterward; it fails at once when its run waits for a person or a " +
 					"dependency. Each wait is bounded by `timeouts` (see `timeouts.delete` for deprovisioning). See " +
-					"[waiting for a run](" + waitingForARunDocs + ") for how meshStack reports a run.",
-				Optional: true,
-				Computed: true,
-				Default:  booldefault.StaticBool(true),
+					"[waiting for a run](" + waitingForARunDocs + ") for how meshStack reports a run. The value is write-only: it is " +
+					"never stored in state, so changing only this attribute plans no change.",
+				Optional:  true,
+				WriteOnly: true,
 			},
 			"purge_on_delete": schema.BoolAttribute{
 				MarkdownDescription: "When true, deletes via the `DELETE /{uuid}/purge` sub-path, which requires admin authority (`ADM_BUILDINGBLOCK_DELETE`). This is a last resort option for stuck deletions.",
@@ -456,9 +457,10 @@ func (r *buildingBlockResource) Schema(ctx context.Context, req resource.SchemaR
 
 type buildingBlockModel struct {
 	client.MeshBuildingBlockV2
-	Ref               client.UuidRef `tfsdk:"ref"`
-	WaitForCompletion bool           `tfsdk:"wait_for_completion"`
-	PurgeOnDelete     bool           `tfsdk:"purge_on_delete"`
+	Ref           client.UuidRef `tfsdk:"ref"`
+	PurgeOnDelete bool           `tfsdk:"purge_on_delete"`
+	// Write-only, so always null here; read it from the config.
+	WaitForCompletion *bool `tfsdk:"wait_for_completion"`
 
 	AllInputs map[string]buildingBlockAllInput `tfsdk:"all_inputs"`
 	// Timeouts mirrors the schema's timeouts block so it round-trips through state via the generic
@@ -869,7 +871,7 @@ func (r *buildingBlockResource) Create(ctx context.Context, req resource.CreateR
 	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, plan, converterOptions...)...)
 	resp.Diagnostics.Append(resp.Private.SetKey(ctx, basedOnDraftVersionPrivateKey, basedOnDraftVersion(created))...)
 	resp.Diagnostics.Append(setRunStartFailedOn(ctx, resp.Private, created)...)
-	if resp.Diagnostics.HasError() || !plan.WaitForCompletion {
+	if resp.Diagnostics.HasError() || !waitForCompletion(ctx, req.Config, &resp.Diagnostics) {
 		return
 	}
 
@@ -903,24 +905,14 @@ func (r *buildingBlockResource) Read(ctx context.Context, req resource.ReadReque
 		return
 	}
 
-	// Preserve config-only flags from prior state; on import apply schema defaults.
-	waitForCompletion := generic.GetAttribute[*bool](ctx, req.State, path.Root("wait_for_completion"), &resp.Diagnostics)
+	// Only an import reads a state without spec.
+	var spec types.Object
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("spec"), &spec)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	var waitForCompletionBool bool
-	if waitForCompletion == nil {
-		// Import context: no prior state value, apply schema default (true).
-		waitForCompletionBool = true
-	} else {
-		waitForCompletionBool = *waitForCompletion
-	}
 	purgeOnDelete := state.PurgeOnDelete
-
-	// waitForCompletion == nil signals an import (no prior state); see the SetFromClientDto USER_INPUT
-	// handling, which keeps set user inputs on import but drops un-declared ones on a normal refresh.
-	state.SetFromClientDto(readDto, waitForCompletion == nil, &resp.Diagnostics)
-	state.WaitForCompletion = waitForCompletionBool
+	state.SetFromClientDto(readDto, spec.IsNull(), &resp.Diagnostics)
 	state.PurgeOnDelete = purgeOnDelete
 	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, state, converterOptions...)...)
 	resp.Diagnostics.Append(resp.Private.SetKey(ctx, basedOnDraftVersionPrivateKey, basedOnDraftVersion(readDto))...)
@@ -1107,6 +1099,12 @@ func (r *buildingBlockResource) ModifyPlan(ctx context.Context, req resource.Mod
 	}
 }
 
+func waitForCompletion(ctx context.Context, config tfsdk.Config, diags *diag.Diagnostics) bool {
+	var wait types.Bool
+	diags.Append(config.GetAttribute(ctx, path.Root("wait_for_completion"), &wait)...)
+	return wait.IsNull() || wait.ValueBool()
+}
+
 // planInputsChanged reports whether the inputs DECLARED in the plan differ from state — an input added
 // to the plan, or one whose value changed. Inputs present in state but ABSENT from the plan are ignored:
 // the backend preserves inputs omitted from a PUT, so dropping an input from configuration is not a
@@ -1210,7 +1208,7 @@ func (r *buildingBlockResource) Update(ctx context.Context, req resource.UpdateR
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("status").AtName("action"), &plannedAction)...)
 	statusPlannedUnknown := plannedAction.IsUnknown()
 	before, runFollows := runFollowingUpdate(state.Status, effective.Status, statusPlannedUnknown)
-	if (needsRun || runFollows) && plan.WaitForCompletion {
+	if (needsRun || runFollows) && waitForCompletion(ctx, req.Config, &resp.Diagnostics) {
 		timeout := resolveTimeout(ctx, req.Plan, "update", &resp.Diagnostics)
 		if resp.Diagnostics.HasError() {
 			return
@@ -1450,7 +1448,6 @@ func (r *buildingBlockResource) moveFromV2(ctx context.Context, req resource.Mov
 			secret.Secret{Value: nil, Version: nil, Hash: new("recovered-from-backend-on-refresh")})...)
 	}
 
-	resp.Diagnostics.Append(resp.TargetState.SetAttribute(ctx, path.Root("wait_for_completion"), true)...)
 	resp.Diagnostics.Append(resp.TargetState.SetAttribute(ctx, path.Root("purge_on_delete"), false)...)
 }
 
@@ -1505,6 +1502,5 @@ func (r *buildingBlockResource) moveFromV1(ctx context.Context, req resource.Mov
 		}
 	}
 
-	resp.Diagnostics.Append(resp.TargetState.SetAttribute(ctx, path.Root("wait_for_completion"), true)...)
 	resp.Diagnostics.Append(resp.TargetState.SetAttribute(ctx, path.Root("purge_on_delete"), false)...)
 }
