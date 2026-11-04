@@ -38,11 +38,11 @@ func testAccProjectBindingDataSource(t *testing.T, subjectKind, subjectName stri
 
 	ApplyAndTest(t, resource.TestCase{
 		Steps: []resource.TestStep{
-			{Config: hclStep(t, "datasource_project_binding", 1, vars)},
-			{Config: hclStep(t, "datasource_project_binding", 2, vars), ConfigStateChecks: expectFound},
-			{Config: hclStep(t, "datasource_project_binding", 3, vars), ConfigStateChecks: expectFound},
+			{Config: hclStep(t, "data-sources/project_binding", 1, vars)},
+			{Config: hclStep(t, "data-sources/project_binding", 2, vars), ConfigStateChecks: expectFound},
+			{Config: hclStep(t, "data-sources/project_binding", 3, vars), ConfigStateChecks: expectFound},
 			{
-				Config:      hclStep(t, "datasource_project_binding", 4, vars),
+				Config:      hclStep(t, "data-sources/project_binding", 4, vars),
 				ExpectError: expectErrorWords("binding", "matches"),
 			},
 		},

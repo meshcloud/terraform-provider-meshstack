@@ -18,10 +18,10 @@ func TestAccProjectDataSource(t *testing.T) {
 	ApplyAndTest(t, resource.TestCase{
 		Steps: []resource.TestStep{
 			{
-				Config: hclStep(t, "datasource_project", 1, vars),
+				Config: hclStep(t, "data-sources/project", 1, vars),
 			},
 			{
-				Config: hclStep(t, "datasource_project", 2, vars),
+				Config: hclStep(t, "data-sources/project", 2, vars),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(dataSourceAddress, tfjsonpath.New("metadata").AtMapKey("name"), knownvalue.StringExact("my-project")),
 					statecheck.ExpectKnownValue(dataSourceAddress, tfjsonpath.New("metadata").AtMapKey("owned_by_workspace"), knownvalue.StringExact("test-ws-"+suffix)),
