@@ -16,16 +16,20 @@ func NewWorkspaceUserBindingResource() resource.Resource {
 			return c.WorkspaceUserBinding
 		})
 	binding.attributes["status"] = userBindingStatusResourceAttribute()
+	binding.approvalStatus = func(b *client.MeshWorkspaceUserBinding) bindingApprovalStatus { return b.Status }
 	return binding
 }
 
 func NewWorkspaceGroupBindingResource() resource.Resource {
-	return newWorkspaceBindingResource("group",
+	binding := newWorkspaceBindingResource("group",
 		"Name of the workspace role to assign, for example `Workspace Manager` or `Workspace Member`. meshStack looks the role up by this name and rejects one it does not know. `Workspace Owner` can only be assigned to a user, not to a group.",
 		"Identifier of the workspace user group.",
 		func(c client.Client) bindingResourceClient[client.MeshWorkspaceGroupBinding] {
 			return c.WorkspaceGroupBinding
 		})
+	binding.attributes["status"] = groupBindingStatusResourceAttribute()
+	binding.approvalStatus = func(b *client.MeshWorkspaceGroupBinding) bindingApprovalStatus { return b.Status }
+	return binding
 }
 
 func newWorkspaceBindingResource[B any](

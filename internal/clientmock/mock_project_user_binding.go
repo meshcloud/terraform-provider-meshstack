@@ -26,7 +26,7 @@ func (m MeshProjectUserBindingClient) List(_ context.Context, filter client.Mesh
 }
 
 func (m MeshProjectUserBindingClient) Create(_ context.Context, binding *client.MeshProjectUserBinding) (*client.MeshProjectUserBinding, error) {
-	binding.Status = &client.MeshUserBindingStatus{UserDisabled: false}
+	binding.Status = &client.MeshUserBindingStatus{UserDisabled: false, Approval: client.MeshBindingApprovalAssigned}
 	m.Store.Set(binding.Metadata.Name, binding)
 	return binding, nil
 }

@@ -12,11 +12,11 @@ import (
 )
 
 func TestAccWorkspaceGroupBindingDataSource(t *testing.T) {
-	testAccWorkspaceBindingDataSource(t, "group", seededGroupName)
+	testAccWorkspaceBindingDataSource(t, "group", seededGroupName, expectApprovalAssigned)
 }
 
 func TestAccWorkspaceUserBindingDataSource(t *testing.T) {
-	testAccWorkspaceBindingDataSource(t, "user", seededUsername, expectUserEnabled)
+	testAccWorkspaceBindingDataSource(t, "user", seededUsername, expectUserEnabled, expectApprovalAssigned)
 }
 
 func testAccWorkspaceBindingDataSource(t *testing.T, subjectKind, subjectName string, subjectChecks ...subjectStateCheck) {
