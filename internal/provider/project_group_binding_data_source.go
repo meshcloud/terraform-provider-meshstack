@@ -5,12 +5,19 @@ import (
 	"github.com/meshcloud/meshstack-cli/client"
 )
 
+type projectGroupBindingModel struct {
+	projectBindingModel
+	Status *client.MeshGroupBindingStatus `tfsdk:"status"`
+}
+
 func NewProjectGroupBindingDataSource() datasource.DataSource {
-	return newProjectBindingDataSource("group", "Identifier of the workspace user group.",
+	dataSource := newProjectBindingDataSource("group", "Identifier of the workspace user group.",
 		func(c client.Client) projectBindingClient[client.MeshProjectGroupBinding] {
 			return c.ProjectGroupBinding
 		},
-		func(binding client.MeshProjectGroupBinding) projectBindingModel {
-			return newProjectBindingModel(binding.MeshProjectBinding)
+		func(binding client.MeshProjectGroupBinding) projectGroupBindingModel {
+			return projectGroupBindingModel{newProjectBindingModel(binding.MeshProjectBinding), binding.Status}
 		})
+	dataSource.attributes["status"] = groupBindingStatusDataSourceAttribute()
+	return dataSource
 }

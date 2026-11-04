@@ -13,12 +13,12 @@ import (
 
 func TestAccWorkspaceUserBinding(t *testing.T) {
 	t.Parallel()
-	testAccWorkspaceBinding(t, "user", seededUsername, expectUserEnabled)
+	testAccWorkspaceBinding(t, "user", seededUsername, expectUserEnabled, expectApprovalAssigned)
 }
 
 func TestAccWorkspaceGroupBinding(t *testing.T) {
 	t.Parallel()
-	testAccWorkspaceBinding(t, "group", seededGroupName)
+	testAccWorkspaceBinding(t, "group", seededGroupName, expectApprovalAssigned)
 }
 
 func testAccWorkspaceBinding(t *testing.T, subjectKind, subjectName string, subjectChecks ...subjectStateCheck) {
