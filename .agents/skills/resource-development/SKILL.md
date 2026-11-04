@@ -172,6 +172,15 @@ stored on the client struct), use a local model struct holding the client's `tfs
 fields plus the derived field — do **not** modify client types or call `SetAttribute` after
 `generic.Set`. Full pattern and example in `REFERENCE.md`.
 
+## State upgrade tests
+
+Test a resource's state upgraders in one top-level `Test<Resource>UpgradeState` with one subtest per
+upgrade path, named after it (`v0_to_v2`, `v1_to_v2`). Keep each prior state as a JSON file under
+`internal/provider/testdata/<resource>/state-v<N>.json` (`state-v<N>-<case>.json` for several) and
+load it with `//go:embed`, noting the provider version that wrote it. A new schema version then adds
+a file and a subtest. Short inline JSON is fine for table cases that each vary one field.
+Exemplars: `building_block_state_upgrade_test.go`, `tenant_state_upgrade_test.go`.
+
 ## Conventions worth flagging in review
 
 - **Any new `Computed` attribute: is an ancestor written by configuration?** If yes, it belongs in

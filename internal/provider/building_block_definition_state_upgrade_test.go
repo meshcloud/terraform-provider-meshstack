@@ -1,6 +1,7 @@
 package provider
 
 import (
+	_ "embed"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -8,45 +9,43 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// v0.26.7 wrote building block definition state at schema version 0, with versions as a list.
-const buildingBlockDefinitionStateWithVersionsList = `{
-  "metadata": {"uuid": "bbd-uuid", "owned_by_workspace": "my-workspace"},
-  "versions": [
-    {"uuid": "uuid-1", "number": 1, "state": "RELEASED", "content_hash": "hash-1", "kind": "meshBuildingBlockDefinitionVersion", "workload_identity_federation": null},
-    {"uuid": "uuid-2", "number": 2, "state": "DRAFT", "content_hash": "hash-2", "kind": "meshBuildingBlockDefinitionVersion", "workload_identity_federation": null}
-  ]
-}`
+// As provider v0.26.7 wrote it, with versions as a list.
+//
+//go:embed testdata/bbd/state-v0.json
+var buildingBlockDefinitionStateV0 string
 
 func TestBuildingBlockDefinitionUpgradeState(t *testing.T) {
-	upgraded, diags := UpgradeResourceState(t, &buildingBlockDefinitionResource{}, 0, buildingBlockDefinitionStateWithVersionsList)
-	require.False(t, diags.HasError(), "upgrade produced errors: %s", diags)
+	t.Run("v0_to_v1", func(t *testing.T) {
+		upgraded, diags := UpgradeResourceState(t, &buildingBlockDefinitionResource{}, 0, buildingBlockDefinitionStateV0)
+		require.False(t, diags.HasError(), "upgrade produced errors: %s", diags)
 
-	var versions map[string]types.Object
-	upgraded.Attribute("versions", &versions)
+		var versions map[string]types.Object
+		upgraded.Attribute("versions", &versions)
 
-	uuids := map[string]string{}
-	for key, version := range versions {
-		uuid, ok := version.Attributes()["uuid"].(types.String)
-		require.True(t, ok)
-		uuids[key] = uuid.ValueString()
-	}
-	assert.Equal(t, map[string]string{"v1": "uuid-1", "v2": "uuid-2"}, uuids)
+		uuids := map[string]string{}
+		for key, version := range versions {
+			uuid, ok := version.Attributes()["uuid"].(types.String)
+			require.True(t, ok)
+			uuids[key] = uuid.ValueString()
+		}
+		assert.Equal(t, map[string]string{"v1": "uuid-1", "v2": "uuid-2"}, uuids)
 
-	var metadataUuid string
-	upgraded.Attribute("metadata.uuid", &metadataUuid)
-	assert.Equal(t, "bbd-uuid", metadataUuid)
-}
+		var metadataUuid string
+		upgraded.Attribute("metadata.uuid", &metadataUuid)
+		assert.Equal(t, "bbd-uuid", metadataUuid)
+	})
 
-func TestBuildingBlockDefinitionUpgradeStateRejectsVersionsWithoutUniqueNumber(t *testing.T) {
-	for name, versions := range map[string]string{
-		"no number":         `[{"uuid": "uuid-1", "number": null}]`,
-		"fractional number": `[{"uuid": "uuid-1", "number": 1.5}]`,
-		"duplicate number":  `[{"uuid": "uuid-1", "number": 1}, {"uuid": "uuid-2", "number": 1}]`,
-	} {
-		t.Run(name, func(t *testing.T) {
-			_, diags := UpgradeResourceState(t, &buildingBlockDefinitionResource{}, 0, `{"versions": `+versions+`}`)
-			require.True(t, diags.HasError())
-			assert.Equal(t, "Cannot read a version number from the prior building block definition state", diags[0].Summary())
-		})
-	}
+	t.Run("v0_to_v1_rejects_versions_without_unique_number", func(t *testing.T) {
+		for name, versions := range map[string]string{
+			"no number":         `[{"uuid": "uuid-1", "number": null}]`,
+			"fractional number": `[{"uuid": "uuid-1", "number": 1.5}]`,
+			"duplicate number":  `[{"uuid": "uuid-1", "number": 1}, {"uuid": "uuid-2", "number": 1}]`,
+		} {
+			t.Run(name, func(t *testing.T) {
+				_, diags := UpgradeResourceState(t, &buildingBlockDefinitionResource{}, 0, `{"versions": `+versions+`}`)
+				require.True(t, diags.HasError())
+				assert.Equal(t, "Cannot read a version number from the prior building block definition state", diags[0].Summary())
+			})
+		}
+	})
 }
