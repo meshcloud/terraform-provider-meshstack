@@ -15,16 +15,37 @@ import (
 func TestAccBuildingBlockRunnerDataSource(t *testing.T) {
 	t.Parallel()
 
+	byName := testconfig.DataSource{Name: "building_block_runner"}
+	hosted := testconfig.DataSource{Name: "building_block_runner", Suffix: "_hosted"}
+	withPublicKey := testconfig.Descend("spec", "public_key")(testconfig.SetString(runnerPublicKey))
+	inWorkspaceOf := func(runnerAddr testconfig.Traversal) testconfig.ExpressionConsumer {
+		return testconfig.Descend("metadata")(testconfig.SetRawExpr("{ owned_by_workspace = %s }", runnerAddr.Join("metadata", "owned_by_workspace")))
+	}
+	withUuidOf := func(runnerAddr testconfig.Traversal) testconfig.ExpressionConsumer {
+		return testconfig.Descend("metadata")(testconfig.SetRawExpr("{ uuid = %s }", runnerAddr.Join("metadata", "uuid")))
+	}
+
+	t.Run("hosted", func(t *testing.T) {
+		var dataSourceAddr testconfig.Traversal
+		config := hosted.Config(t).WithFirstBlock(testconfig.ExtractAddress(&dataSourceAddr))
+
+		ApplyAndTest(t, resource.TestCase{Steps: []resource.TestStep{
+			{
+				Config: config.String(),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(dataSourceAddr.String(), tfjsonpath.New("ref").AtMapKey("uuid"), knownvalue.StringExact(SharedBuildingBlockRunnerUuid)),
+					statecheck.ExpectKnownValue(dataSourceAddr.String(), tfjsonpath.New("spec").AtMapKey("restriction"), knownvalue.StringExact("PUBLIC")),
+				},
+			},
+		}})
+	})
+
 	t.Run("by_uuid", func(t *testing.T) {
 		runnerConfig, runnerAddr, _ := testconfig.BuildingBlockRunnerWifAndWorkspace(t)
-		runnerConfig = runnerConfig.WithFirstBlock(testconfig.Descend("spec", "public_key")(testconfig.SetString(runnerPublicKey)))
+		runnerConfig = runnerConfig.WithFirstBlock(withPublicKey)
 
 		var dataSourceAddr testconfig.Traversal
-		config := testconfig.DataSource{Name: "building_block_runner"}.Config(t).WithFirstBlock(
-			testconfig.ExtractAddress(&dataSourceAddr),
-			testconfig.Descend("spec")(testconfig.RemoveKey()),
-			testconfig.Descend("metadata")(testconfig.SetRawExpr("{ uuid = %s }", runnerAddr.Join("metadata", "uuid"))),
-		).Join(runnerConfig)
+		config := hosted.Config(t).WithFirstBlock(testconfig.ExtractAddress(&dataSourceAddr), withUuidOf(runnerAddr)).Join(runnerConfig)
 
 		ApplyAndTest(t, resource.TestCase{Steps: []resource.TestStep{
 			{
@@ -38,61 +59,40 @@ func TestAccBuildingBlockRunnerDataSource(t *testing.T) {
 		}})
 	})
 
-	t.Run("filters", func(t *testing.T) {
-		runnerConfig, runnerAddr, workspaceAddr := testconfig.BuildingBlockRunnerWifAndWorkspace(t)
-		runnerConfig = runnerConfig.WithFirstBlock(testconfig.Descend("spec", "public_key")(testconfig.SetString(runnerPublicKey)))
-		otherRunnerConfig, _ := testconfig.BuildingBlockRunner(t, workspaceAddr)
-		otherRunnerConfig = otherRunnerConfig.WithFirstBlock(
-			testconfig.Descend("spec", "public_key")(testconfig.SetString(runnerPublicKey)),
-			testconfig.Descend("spec", "display_name")(testconfig.SetString("Other Runner")),
-		)
-		supportConfig := runnerConfig.Join(otherRunnerConfig)
+	t.Run("by_display_name", func(t *testing.T) {
+		runnerConfig, runnerAddr, workspaceAddr := testconfig.BuildingBlockRunnerAndWorkspace(t)
+		runnerConfig = runnerConfig.WithFirstBlock(withPublicKey)
+		wifRunnerConfig, _ := testconfig.BuildingBlockRunnerWif(t, workspaceAddr)
+		supportConfig := runnerConfig.Join(wifRunnerConfig.WithFirstBlock(withPublicKey))
 
-		dataSourceAddr := testconfig.Traversal{"data.meshstack_building_block_runner", "example"}
-		example := testconfig.DataSource{Name: "building_block_runner"}.Config(t)
+		var dataSourceAddr testconfig.Traversal
 		// Parallel tests create runners of the same display name, so the workspace keeps the lookup unique.
-		byDisplayName := func(displayName string) testconfig.Config {
-			return example.WithFirstBlock(
-				testconfig.Descend("spec")(testconfig.SetRawExpr("{ display_name = %s }", displayName)),
-				testconfig.Descend("metadata")(testconfig.SetRawExpr("{ owned_by_workspace = %s }", runnerAddr.Join("metadata", "owned_by_workspace"))),
-			).Join(supportConfig)
-		}
-		noFilter := example.WithFirstBlock(testconfig.Descend("spec")(testconfig.RemoveKey())).Join(supportConfig)
+		config := byName.Config(t).WithFirstBlock(testconfig.ExtractAddress(&dataSourceAddr), inWorkspaceOf(runnerAddr)).Join(supportConfig)
+		unknownName := byName.Config(t).WithFirstBlock(
+			inWorkspaceOf(runnerAddr),
+			testconfig.Descend("spec", "display_name")(testconfig.SetString("No Such Runner")),
+		).Join(supportConfig)
 
 		ApplyAndTest(t, resource.TestCase{Steps: []resource.TestStep{
 			{
-				Config: noFilter.String(),
-				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(dataSourceAddr.String(), tfjsonpath.New("ref").AtMapKey("uuid"), knownvalue.StringExact(SharedBuildingBlockRunnerUuid)),
-					statecheck.ExpectKnownValue(dataSourceAddr.String(), tfjsonpath.New("spec").AtMapKey("restriction"), knownvalue.StringExact("PUBLIC")),
-				},
-			},
-			{
-				Config: byDisplayName(runnerAddr.Join("spec", "display_name").String()).String(),
+				Config: config.String(),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.CompareValuePairs(dataSourceAddr.String(), tfjsonpath.New("ref"), runnerAddr.String(), tfjsonpath.New("ref"), compare.ValuesSame()),
 				},
 			},
 			{
-				Config:      byDisplayName(`"No Such Runner"`).String(),
+				Config:      unknownName.String(),
 				ExpectError: expectErrorWords("runner", "matches", "spec.display_name", "Such"),
 			},
 		}})
 	})
 
 	t.Run("ambiguous", func(t *testing.T) {
-		runnerConfig, runnerAddr, workspaceAddr := testconfig.BuildingBlockRunnerWifAndWorkspace(t)
-		runnerConfig = runnerConfig.WithFirstBlock(testconfig.Descend("spec", "public_key")(testconfig.SetString(runnerPublicKey)))
+		runnerConfig, runnerAddr, workspaceAddr := testconfig.BuildingBlockRunnerAndWorkspace(t)
 		twinConfig, _ := testconfig.BuildingBlockRunner(t, workspaceAddr)
-		twinConfig = twinConfig.WithFirstBlock(
-			testconfig.Descend("spec", "public_key")(testconfig.SetString(runnerPublicKey)),
-			testconfig.Descend("spec", "display_name")(testconfig.SetRawExpr("%s", runnerAddr.Join("spec", "display_name"))),
-		)
+		supportConfig := runnerConfig.WithFirstBlock(withPublicKey).Join(twinConfig.WithFirstBlock(testconfig.RenameKey("twin"), withPublicKey))
 
-		config := testconfig.DataSource{Name: "building_block_runner"}.Config(t).WithFirstBlock(
-			testconfig.Descend("spec")(testconfig.SetRawExpr("{ display_name = %s }", runnerAddr.Join("spec", "display_name"))),
-			testconfig.Descend("metadata")(testconfig.SetRawExpr("{ owned_by_workspace = %s }", runnerAddr.Join("metadata", "owned_by_workspace"))),
-		).Join(runnerConfig, twinConfig)
+		config := byName.Config(t).WithFirstBlock(inWorkspaceOf(runnerAddr)).Join(supportConfig)
 
 		ApplyAndTest(t, resource.TestCase{Steps: []resource.TestStep{
 			{
@@ -107,26 +107,19 @@ func TestAccBuildingBlockRunnerDataSource(t *testing.T) {
 			t.Skip("cross-workspace test requires real permission boundaries")
 		}
 
-		runnerConfig, runnerAddr, _ := testconfig.BuildingBlockRunnerWifAndWorkspace(t)
-		runnerConfig = runnerConfig.WithFirstBlock(testconfig.Descend("spec", "public_key")(testconfig.SetString(runnerPublicKey)))
+		runnerConfig, runnerAddr, _ := testconfig.BuildingBlockRunnerAndWorkspace(t)
 		readerConfig, captureReaderKey, readerKey := otherWorkspaceReader(t, "BUILDINGBLOCKRUNNER_LIST")
-		supportConfig := runnerConfig.Join(readerConfig)
+		supportConfig := runnerConfig.WithFirstBlock(withPublicKey).Join(readerConfig)
 
-		dataSourceAddr := testconfig.Traversal{"data.meshstack_building_block_runner", "example"}
-		asReader := func(modifiers ...testconfig.ExpressionConsumer) testconfig.Config {
-			return testconfig.DataSource{Name: "building_block_runner"}.Config(t).WithFirstBlock(
+		asReader := func(example testconfig.DataSource, modifiers ...testconfig.ExpressionConsumer) testconfig.Config {
+			return example.Config(t).WithFirstBlock(
 				append(modifiers, testconfig.Descend("provider")(testconfig.SetRawExpr("meshstack-other")))...,
 			).Join(supportConfig, testconfig.OtherProviderConfig(t))
 		}
-		hosted := asReader(testconfig.Descend("spec")(testconfig.RemoveKey()))
-		privateByUuid := asReader(
-			testconfig.Descend("spec")(testconfig.RemoveKey()),
-			testconfig.Descend("metadata")(testconfig.SetRawExpr("{ uuid = %s }", runnerAddr.Join("metadata", "uuid"))),
-		)
-		privateByName := asReader(
-			testconfig.Descend("spec")(testconfig.SetRawExpr("{ display_name = %s }", runnerAddr.Join("spec", "display_name"))),
-			testconfig.Descend("metadata")(testconfig.SetRawExpr("{ owned_by_workspace = %s }", runnerAddr.Join("metadata", "owned_by_workspace"))),
-		)
+		var hostedAddr testconfig.Traversal
+		hostedAsReader := asReader(hosted, testconfig.ExtractAddress(&hostedAddr))
+		privateByUuid := asReader(hosted, withUuidOf(runnerAddr))
+		privateByName := asReader(byName, inWorkspaceOf(runnerAddr))
 
 		ApplyAndTest(t, resource.TestCase{Steps: []resource.TestStep{
 			{
@@ -134,10 +127,10 @@ func TestAccBuildingBlockRunnerDataSource(t *testing.T) {
 				ConfigStateChecks: captureReaderKey,
 			},
 			{
-				Config:          hosted.String(),
+				Config:          hostedAsReader.String(),
 				ConfigVariables: readerKey,
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(dataSourceAddr.String(), tfjsonpath.New("ref").AtMapKey("uuid"), knownvalue.StringExact(SharedBuildingBlockRunnerUuid)),
+					statecheck.ExpectKnownValue(hostedAddr.String(), tfjsonpath.New("ref").AtMapKey("uuid"), knownvalue.StringExact(SharedBuildingBlockRunnerUuid)),
 				},
 			},
 			{
