@@ -10,10 +10,9 @@ BREAKING CHANGES:
 
 FEATURES:
 - `meshstack_building_block_definition`: `spec.supported_platforms` accepts a landing zone, so you can offer a
-  definition only in single landing zones. Write it as the landing zone's `ref`, for example
-  `meshstack_landingzone.dev.ref`. A platform type or a platform still supports every landing zone of it, also the ones
-  added later. Needs meshStack 2026.45.0 or later. An older provider reads a landing zone entry that was set elsewhere
-  into state, but the only change it can plan for it is removal.
+  definition only in single landing zones. A platform type or a platform still supports every landing zone of it, also
+  the ones added later. Needs meshStack 2026.45.0 or later. An older provider reads a landing zone entry that was set
+  elsewhere into state, but the only change it can plan for it is removal.
 
 # v0.27.2
 
