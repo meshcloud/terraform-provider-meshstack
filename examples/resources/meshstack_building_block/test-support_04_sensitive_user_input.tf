@@ -20,9 +20,9 @@ resource "meshstack_building_block" "sensitive_user_input" {
 
   # Bounded waits so tests fail reasonably fast (vs the 30m default) while tolerating a busy runner.
   timeouts = {
-    create = "2m"
-    update = "2m"
-    delete = "2m"
+    create = "5m"
+    update = "5m"
+    delete = "5m"
   }
 
   # 11_run_transparency_failed_run relies on this to fail an apply on a run the provider only warns about.

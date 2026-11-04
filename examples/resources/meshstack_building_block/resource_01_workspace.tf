@@ -30,9 +30,9 @@ resource "meshstack_building_block" "example_workspace" {
   # purge_on_delete = true
 
   timeouts = {
-    create = "2m" # default 30m
-    update = "2m" # default 30m
-    delete = "2m" # default 30m
+    create = "5m" # default 30m
+    update = "5m" # default 30m
+    delete = "5m" # default 30m
   }
 
   # The provider only warns about a run that does not succeed; this fails the apply without tainting the block.

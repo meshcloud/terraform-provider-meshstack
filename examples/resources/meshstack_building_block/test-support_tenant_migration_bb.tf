@@ -23,8 +23,8 @@ resource "meshstack_building_block" "example_tenant" {
 
   # Bounded waits so tests fail reasonably fast (vs the 30m default) while tolerating a busy runner.
   timeouts = {
-    create = "2m"
-    update = "2m"
-    delete = "2m"
+    create = "5m"
+    update = "5m"
+    delete = "5m"
   }
 }
