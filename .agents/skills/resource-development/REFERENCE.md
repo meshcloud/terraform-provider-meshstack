@@ -174,8 +174,9 @@ func myResourceModelFromDto(p *client.MeshFoo) myResourceModel {
   a literal such as `"my-workspace"`. The step file points the reference at a random workspace,
   which isolates every literal name below it.
 - **A globally unique literal stays unique across all examples** (tag keys, binding names), and only
-  one test applies each example. A test that needs the same kind of object creates its own with
-  `[[.suffix]]` in the name.
+  one test applies each example. Some kinds share one namespace: meshStack rejects a project user
+  binding whose name a project group binding already has, and the reverse. A test that needs the
+  same kind of object creates its own with `[[.suffix]]` in the name.
 - An example that must wait for another object references it, so Terraform orders the two: the
   project binding examples take their subject from `meshstack_workspace_user_binding.example`,
   because meshStack binds only workspace members to a project.

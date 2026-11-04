@@ -1,6 +1,6 @@
 resource "meshstack_project_group_binding" "example" {
   metadata = {
-    name = "this-is-an-example"
+    name = "example-project-group-binding"
   }
 
   role_ref = {

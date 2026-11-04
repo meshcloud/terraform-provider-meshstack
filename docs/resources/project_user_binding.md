@@ -15,7 +15,7 @@ Project user binding assigns a user with a specific role to a project.
 ```terraform
 resource "meshstack_project_user_binding" "example" {
   metadata = {
-    name = "this-is-an-example"
+    name = "example-project-user-binding"
   }
 
   role_ref = {
