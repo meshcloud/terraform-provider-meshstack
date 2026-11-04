@@ -9,10 +9,10 @@ is the end-to-end walkthrough; this file is the API surface plus full worked exa
 ```go
 type hclStepVars map[string]string
 
-func hclStep(t *testing.T, name string, step int, vars hclStepVars) string
+func hclStep(t *testing.T, dir string, step int, vars hclStepVars) string
 ```
 
-`hclStep(t, "resource_project", 2, vars)` reads `testdata/hcl/resource_project_step2.tf`, renders
+`hclStep(t, "resources/project", 2, vars)` reads `testdata/hcl/resources/project/step2.tf`, renders
 it with `text/template` (`missingkey=error`), and returns the HCL for `TestStep.Config`. It lives in
 `internal/provider/hcl_step_test.go`. The template sees `vars` as `.` and one function:
 
@@ -26,7 +26,7 @@ A step file of the project test: the prerequisites, then the example. The data s
 example references; they point at objects with random names.
 
 ```hcl
-# testdata/hcl/resource_project_step2.tf
+# testdata/hcl/resources/project/step2.tf
 resource "meshstack_workspace" "test" {
   metadata = {
     name = "test-ws-[[.suffix]]"
@@ -47,9 +47,9 @@ data "meshstack_workspace" "example" {
 [[ example "resources/meshstack_project/resource.tf" ]]
 ```
 
-`resource_project_step1.tf` is the same without the example line, because the example's literal tag
+`resources/project/step1.tf` is the same without the example line, because the example's literal tag
 key `tag-key` has no reference that would order the project after its tag definition.
-`resource_project_step3.tf` replaces the example line with a copy of the project block whose
+`resources/project/step3.tf` replaces the example line with a copy of the project block whose
 `display_name` changed.
 
 ## State check helpers (`xknownvalue`)
@@ -78,10 +78,10 @@ func TestAccProject(t *testing.T) {
     ApplyAndTest(t, resource.TestCase{
         Steps: []resource.TestStep{
             { // prerequisites
-                Config: hclStep(t, "resource_project", 1, vars),
+                Config: hclStep(t, "resources/project", 1, vars),
             },
             { // create, from the example
-                Config: hclStep(t, "resource_project", 2, vars),
+                Config: hclStep(t, "resources/project", 2, vars),
                 ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
                     plancheck.ExpectResourceAction(resourceAddress, plancheck.ResourceActionCreate)}},
                 ConfigStateChecks: []statecheck.StateCheck{
@@ -91,7 +91,7 @@ func TestAccProject(t *testing.T) {
                 },
             },
             { // update
-                Config: hclStep(t, "resource_project", 3, vars),
+                Config: hclStep(t, "resources/project", 3, vars),
                 ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
                     plancheck.ExpectResourceAction(resourceAddress, plancheck.ResourceActionUpdate)}},
                 ConfigStateChecks: []statecheck.StateCheck{
@@ -124,9 +124,9 @@ func TestAccProjectDataSource(t *testing.T) {
     vars := hclStepVars{"suffix": suffix}
     dataSourceAddress := "data.meshstack_project.example"
     ApplyAndTest(t, resource.TestCase{Steps: []resource.TestStep{
-        {Config: hclStep(t, "datasource_project", 1, vars)},
+        {Config: hclStep(t, "data-sources/project", 1, vars)},
         {
-            Config: hclStep(t, "datasource_project", 2, vars),
+            Config: hclStep(t, "data-sources/project", 2, vars),
             ConfigStateChecks: []statecheck.StateCheck{
                 statecheck.ExpectKnownValue(dataSourceAddress, tfjsonpath.New("metadata").AtMapKey("owned_by_workspace"), knownvalue.StringExact("test-ws-"+suffix)),
                 statecheck.ExpectKnownValue(dataSourceAddress, tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("My Project's Display Name"))},
@@ -137,7 +137,7 @@ func TestAccProjectDataSource(t *testing.T) {
 
 A lookup the example does not show goes into a later step that references the resource's
 attributes, so Terraform infers the dependency — never `depends_on`
-(`datasource_project_binding_step3.tf`).
+(`data-sources/project_binding/step3.tf`).
 
 ## Worked computed-only output field (TF model struct embedding)
 

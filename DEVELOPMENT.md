@@ -144,7 +144,7 @@ refs, DTOs, `Id`/`Uuid` naming, receivers, preview API, computed-only outputs). 
    [meshstack-cli](https://github.com/meshcloud/meshstack-cli) repository.
 3. `provider.go` — register it.
 4. `examples/resources/meshstack_<name>/` — example `.tf`.
-5. `internal/provider/testdata/hcl/resource_<name>_step<N>.tf` — one HCL file per test step.
+5. `internal/provider/testdata/hcl/resources/<name>/step<N>.tf` — one HCL file per test step.
 6. `task generate` — regenerate `docs/`.
 7. Update `CHANGELOG.md`.
 

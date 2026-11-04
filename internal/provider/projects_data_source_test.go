@@ -31,17 +31,17 @@ func TestAccProjectsDatasource(t *testing.T) {
 	ApplyAndTest(t, resource.TestCase{
 		Steps: []resource.TestStep{
 			{
-				Config: hclStep(t, "datasource_projects", 1, vars),
+				Config: hclStep(t, "data-sources/projects", 1, vars),
 			},
 			{
-				Config: hclStep(t, "datasource_projects", 2, vars),
+				Config: hclStep(t, "data-sources/projects", 2, vars),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue("data.meshstack_projects.example_all_projects_in_workspace", tfjsonpath.New("projects"),
 						knownvalue.SetExact([]knownvalue.Check{withPaymentMethod, withoutPaymentMethod})),
 				},
 			},
 			{
-				Config: hclStep(t, "datasource_projects", 3, vars),
+				Config: hclStep(t, "data-sources/projects", 3, vars),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue("data.meshstack_projects.example_all_projects_in_workspace_with_payment_method", tfjsonpath.New("projects"),
 						knownvalue.ListExact([]knownvalue.Check{withPaymentMethod})),

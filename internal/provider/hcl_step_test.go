@@ -1,9 +1,9 @@
 package provider
 
 import (
+	"embed"
 	"fmt"
-	"os"
-	"path/filepath"
+	"path"
 	"strings"
 	"testing"
 	"text/template"
@@ -13,16 +13,19 @@ import (
 	"github.com/meshcloud/terraform-provider-meshstack/examples"
 )
 
+//go:embed testdata/hcl
+var hclSteps embed.FS
+
 type hclStepVars map[string]string
 
-func hclStep(t *testing.T, name string, step int, vars hclStepVars) string {
+func hclStep(t *testing.T, dir string, step int, vars hclStepVars) string {
 	t.Helper()
 
-	fileName := fmt.Sprintf("%s_step%d.tf", name, step)
-	src, err := os.ReadFile(filepath.Join("testdata", "hcl", fileName))
+	filePath := path.Join("testdata", "hcl", dir, fmt.Sprintf("step%d.tf", step))
+	src, err := hclSteps.ReadFile(filePath)
 	require.NoError(t, err)
 
-	stepTemplate, err := template.New(fileName).
+	stepTemplate, err := template.New(filePath).
 		Delims("[[", "]]").
 		Option("missingkey=error").
 		Funcs(template.FuncMap{"example": includeExample}).

@@ -28,7 +28,7 @@ func TestAccProject(t *testing.T) {
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
-					Config: hclStep(t, "resource_project_restricted_default_tag", 1, vars),
+					Config: hclStep(t, "resources/project/restricted_default_tag", 1, vars),
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("spec").AtMapKey("tags"), knownvalue.MapExact(map[string]knownvalue.Check{
 							"test-key-" + suffix: knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("blue")}),
@@ -51,10 +51,10 @@ func TestAccProject(t *testing.T) {
 	ApplyAndTest(t, resource.TestCase{
 		Steps: []resource.TestStep{
 			{
-				Config: hclStep(t, "resource_project", 1, vars),
+				Config: hclStep(t, "resources/project", 1, vars),
 			},
 			{
-				Config: hclStep(t, "resource_project", 2, vars),
+				Config: hclStep(t, "resources/project", 2, vars),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectResourceAction(resourceAddress, plancheck.ResourceActionCreate),
@@ -67,7 +67,7 @@ func TestAccProject(t *testing.T) {
 				},
 			},
 			{
-				Config: hclStep(t, "resource_project", 3, vars),
+				Config: hclStep(t, "resources/project", 3, vars),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectResourceAction(resourceAddress, plancheck.ResourceActionUpdate),

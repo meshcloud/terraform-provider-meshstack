@@ -23,11 +23,11 @@ Mid-complexity, clean, and complete — prefer these over the large `building_bl
 | Data source that looks up by filters | `internal/provider/building_block_definition_data_source.go` |
 | Example `.tf` (simple) | `examples/resources/meshstack_project/` (`resource.tf`, `import-by-string-id.tf`) |
 | Example `.tf` (complex, multi-file) | `examples/resources/meshstack_building_block_definition/` |
-| Step files | `internal/provider/testdata/hcl/resource_project_step{1,2,3}.tf` |
+| Step files | `internal/provider/testdata/hcl/resources/project/step{1,2,3}.tf` |
 | Resource test (create→update→import) | `internal/provider/project_resource_test.go` |
 | Data source test | `internal/provider/project_data_source_test.go` |
-| One step file for several variants | `internal/provider/project_binding_resource_test.go` + `testdata/hcl/resource_project_binding_step1.tf` |
-| Named subtests, one set of step files each | `internal/provider/project_resource_test.go` (`restricted_default_tag` → `resource_project_restricted_default_tag_step1.tf`) |
+| One step file for several variants | `internal/provider/project_binding_resource_test.go` + `testdata/hcl/resources/project_binding/step1.tf` |
+| Named subtests, one set of step files each | `internal/provider/project_resource_test.go` (`restricted_default_tag` → `resources/project/restricted_default_tag/step1.tf`) |
 | State-check helpers | `internal/provider/acctest/xknownvalue/{not_empty_string,ref,map}.go` |
 
 ## Steps
@@ -43,7 +43,7 @@ Mid-complexity, clean, and complete — prefer these over the large `building_bl
 4. **`examples/resources/meshstack_<name>/resource.tf`** — only the single resource block. It
    reaches its workspace by reference, such as `data.meshstack_workspace.example`, and declares
    none of its prerequisites (see `REFERENCE.md` → Example conventions).
-5. **`internal/provider/testdata/hcl/resource_<name>_step<N>.tf`** — one HCL file per test step
+5. **`internal/provider/testdata/hcl/resources/<name>/step<N>.tf`** — one HCL file per test step
    (see below).
 6. **`internal/provider/<name>_resource_test.go`** — a `TestAcc<Name>` test (see below).
 7. `task generate` (docs) and update `CHANGELOG.md`.
@@ -120,11 +120,13 @@ Cross-cutting rules for the schema and its backing client, beyond the ref/DTO sh
 
 ## Step files
 
-Each config step of a TestAcc test is one file in `internal/provider/testdata/hcl/`, named
-`<resource|datasource>_<name>[_<case>]_step<N>.tf`. `<name>` is the Terraform type without
-`meshstack_`, `<case>` names a second test case of the same resource, and `<N>` is the step's
-position in `Steps`, from 1. An import step has no file. `hclStep(t, name, N, vars)` renders the file
-with `text/template`, so a reviewer reads the HCL that runs instead of Go that rewrites it.
+Each config step of a TestAcc test is one file under `internal/provider/testdata/hcl/`, laid out
+like `docs/`: `<resources|data-sources>/<name>/[<case>/]step<N>.tf`. `<name>` is the Terraform type
+without `meshstack_`, or the common part of the types one templated set serves (`project_binding`).
+`<case>` is a directory for a second test case of the same resource, and `<N>` is the step's
+position in `Steps`, from 1. An import step has no file. `hclStep(t, dir, N, vars)` renders
+`<dir>/step<N>.tf` with `text/template`, so a reviewer reads the HCL that runs instead of Go that
+rewrites it.
 
 - **Placeholders** are `[[.key]]`, filled from the `hclStepVars` the test passes to every step. The
   type exists only to feed step files. A key missing from it fails the test. `vars["suffix"]` holds
@@ -152,7 +154,7 @@ carries fixed names, which a test must not collide on:
 - A globally unique literal (a tag key, a binding name) is unique across all examples, and exactly
   one test applies each example.
 - When the example depends on something it cannot reference, such as a literal tag key or a data
-  source looking up a literal name, an earlier step creates it. `resource_project_step1.tf` creates
+  source looking up a literal name, an earlier step creates it. `resources/project/step1.tf` creates
   the tag definition `tag-key`, and step 2 adds the project example.
 
 ## The TestAcc test
@@ -173,7 +175,7 @@ key words.
 ## Data source test
 
 A data source example looks its object up by a literal name, so step 1 creates the object and step 2
-adds the example (`datasource_project_step{1,2}.tf`). A lookup the example does not show goes into a
+adds the example (`data-sources/project/step{1,2}.tf`). A lookup the example does not show goes into a
 later step that references the resource's attributes, so Terraform infers the dependency — never
 `depends_on`. Full example in `REFERENCE.md`.
 
@@ -181,7 +183,7 @@ later step that references the resource's attributes, so Terraform infers the de
 
 When a resource has several suffixed example files (`resource_01_github.tf`,
 `resource_02_azure_devops.tf`), give **each** its own named `t.Run()` and its own step files
-(`resource_integration_01_github_step1.tf`) — never a generic loop. The top-level function calls
+(`resources/integration/01_github/step1.tf`) — never a generic loop. The top-level function calls
 `t.Parallel()`; each `ApplyAndTest` also parallelizes.
 
 ```go
@@ -190,7 +192,7 @@ func TestAccIntegrationResource(t *testing.T) {
     t.Run("01_github", func(t *testing.T) {
         vars := hclStepVars{"suffix": acctest.RandString(8)}
         ApplyAndTest(t, resource.TestCase{Steps: []resource.TestStep{
-            {Config: hclStep(t, "resource_integration_01_github", 1, vars), ...},
+            {Config: hclStep(t, "resources/integration/01_github", 1, vars), ...},
         }})
     })
     t.Run("02_azure_devops", func(t *testing.T) {

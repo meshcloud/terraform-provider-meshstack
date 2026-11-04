@@ -28,7 +28,7 @@ func testAccProjectBinding(t *testing.T, subjectKind, subjectName string, subjec
 	ApplyAndTest(t, resource.TestCase{
 		Steps: []resource.TestStep{
 			{
-				Config: hclStep(t, "resource_project_binding", 1, vars),
+				Config: hclStep(t, "resources/project_binding", 1, vars),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectResourceAction(bindingAddress, plancheck.ResourceActionCreate),
