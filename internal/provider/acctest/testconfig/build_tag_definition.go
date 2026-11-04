@@ -14,7 +14,7 @@ func TagDefinition(t *testing.T, targetKind string) (config Config, tagDefinitio
 	tagKey = "test-key-" + suffix
 	config = Resource{Name: "tag_definition"}.TestSupportConfig(t, "_tag").WithFirstBlock(
 		// Rename the block per run so several tag definitions can coexist in one config (e.g. one a
-		// builder like ProjectAndWorkspace already contributes plus a test's own).
+		// builder like Project already contributes plus a test's own).
 		RenameKey("tag_"+suffix),
 		ExtractAddress(&tagDefinitionAddr),
 		Descend("spec", "target_kind")(SetString(targetKind)),

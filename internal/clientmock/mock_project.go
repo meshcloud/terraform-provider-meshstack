@@ -3,6 +3,7 @@ package clientmock
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/meshcloud/meshstack-cli/client"
@@ -18,17 +19,24 @@ func (m MeshProjectClient) Read(_ context.Context, workspace string, name string
 }
 
 func (m MeshProjectClient) List(_ context.Context, workspaceIdentifier string, paymentMethodIdentifier *string) ([]client.MeshProject, error) {
+	var wantedPaymentMethod *string
+	if paymentMethodIdentifier != nil {
+		wantedPaymentMethod = new(*paymentMethodIdentifier)
+		if strings.TrimSpace(*wantedPaymentMethod) == "" {
+			*wantedPaymentMethod = ""
+		}
+	}
 	var result []client.MeshProject
 	for _, p := range m.Store.Values() {
 		if p.Metadata.OwnedByWorkspace != workspaceIdentifier {
 			continue
 		}
-		if paymentMethodIdentifier != nil {
+		if wantedPaymentMethod != nil {
 			projectPaymentMethod := ""
 			if p.Spec.PaymentMethodIdentifier != nil {
 				projectPaymentMethod = *p.Spec.PaymentMethodIdentifier
 			}
-			if projectPaymentMethod != *paymentMethodIdentifier {
+			if projectPaymentMethod != *wantedPaymentMethod {
 				continue
 			}
 		}

@@ -170,9 +170,11 @@ func myResourceModelFromDto(p *client.MeshFoo) myResourceModel {
   declaring them** — by design; the step file that includes the example declares them. Do **not**
   flag missing blocks in example files or generated docs as issues. Older examples still keep
   such declarations in `test-support_*.tf` files for the legacy builder.
-- **Reach the workspace by reference** (`data.meshstack_workspace.example.metadata.name`), never by
-  a literal such as `"my-workspace"`. The step file points the reference at a random workspace,
-  which isolates every literal name below it.
+- **The HCL a step file applies reaches the workspace by reference**
+  (`data.meshstack_workspace.example.metadata.name`), never by a literal such as `"my-workspace"`.
+  The step file points the reference at a random workspace, which isolates every literal name below
+  it. A commented-out alternative, such as a lookup by literal names in a data source example, is
+  never applied and may keep the literals a user would write.
 - **A globally unique literal stays unique across all examples** (tag keys, binding names), and only
   one test applies each example. Some kinds share one namespace: meshStack rejects a project user
   binding whose name a project group binding already has, and the reverse. A test that needs the
