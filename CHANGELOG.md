@@ -11,6 +11,8 @@ FIXES:
 - `meshstack_building_block`: a content hash of another hash version reruns a block on a draft definition version,
   because the draft can have changed as well. On a released version it still plans no run.
 - `meshstack_building_block`: `wait_for_completion` is write-only, so changing only it plans no change.
+- `meshstack_building_block_definition`: the plan fails when `version_spec.draft` changes to false and the draft
+  changes in the same apply. meshStack rejected that with 409 during the apply.
 
 # v0.27.1
 

@@ -633,8 +633,10 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 				Required:            true,
 				Attributes: map[string]schema.Attribute{
 					"draft": schema.BoolAttribute{
-						MarkdownDescription: "Whether the current version is a draft. Set to false to release the version.",
-						Required:            true,
+						MarkdownDescription: "Whether the current version is a draft. Set to false to release the version. " +
+							"Release it in an apply that does not change its content: apply a change with `true` first, " +
+							"then set `false` in a later apply.",
+						Required: true,
 					},
 					"state": schema.StringAttribute{
 						MarkdownDescription: "State of the current version. One of " + client.MeshBuildingBlockDefinitionVersionStates.Markdown() + ".",

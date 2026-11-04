@@ -143,7 +143,9 @@ A definition belongs to the platform team's workspace. It starts as a draft, wit
 ## Release a version
 
 Set `version_spec.draft = false`, then plan and apply. The latest version is released, and
-`version_latest_release` points to it.
+`version_latest_release` points to it. Release it in an apply that changes nothing else in
+`version_spec`: a release that also changes the draft fails the plan with
+`Cannot release a draft version that changes`. Apply the change first, then release.
 
 - When the release needs the approval of a meshStack admin, the apply warns
   `Building Block Definition release needs admin approval`. Tell the user. After an admin approved

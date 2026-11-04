@@ -472,7 +472,7 @@ Optional:
 
 Required:
 
-- `draft` (Boolean) Whether the current version is a draft. Set to false to release the version.
+- `draft` (Boolean) Whether the current version is a draft. Set to false to release the version. Release it in an apply that does not change its content: apply a change with `true` first, then set `false` in a later apply.
 - `implementation` (Attributes) Implementation configuration for the building block. Must contain exactly one of `manual`, `terraform`, `github_workflows`, `gitlab_pipeline`, or `azure_devops_pipeline`. (see [below for nested schema](#nestedatt--version_spec--implementation))
 
 Optional:

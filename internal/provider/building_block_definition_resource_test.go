@@ -1142,6 +1142,25 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 			},
 		})
 	})
+
+	t.Run("18_release_with_change_rejected", func(t *testing.T) {
+		config, _ := testconfig.BBDTerraform(t)
+		released := releaseBBDVersion(t, config)
+		releasedWithChange := released.WithFirstBlock(
+			testconfig.Descend("version_spec", "implementation", "terraform", "ref_name")(testconfig.SetValue(cty.StringVal("v2.0.0"))),
+		)
+
+		ApplyAndTest(t, resource.TestCase{
+			Steps: []resource.TestStep{
+				{Config: config.String()},
+				{
+					Config:      releasedWithChange.String(),
+					ExpectError: expectErrorWords("release", "draft", "changes"),
+				},
+				{Config: released.String()},
+			},
+		})
+	})
 }
 
 // checkBBDMetadataFull checks metadata for the 01_terraform example (tags with 2 entries).
