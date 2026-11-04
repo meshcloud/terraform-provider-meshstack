@@ -118,15 +118,22 @@ func TestAccBuildingBlock(t *testing.T) {
 				buildingBlockDefinitionAddr,
 			)),
 		)
-		contentHashV2Config := contentHashV1Config.WithFirstBlock(
-			testconfig.Descend("spec", "building_block_definition_version_ref")(testconfig.SetRawExpr(
-				`merge(%s.version_latest, {content_hash = "v2"})`,
-				buildingBlockDefinitionAddr,
-			)),
-		)
+		withContentHash := func(contentHash string) testconfig.Config {
+			return contentHashV1Config.WithFirstBlock(
+				testconfig.Descend("spec", "building_block_definition_version_ref")(testconfig.SetRawExpr(
+					`merge(%s.version_latest, {content_hash = %q})`,
+					buildingBlockDefinitionAddr, contentHash,
+				)),
+			)
+		}
+		changedContentHash := BuildingBlockDefinitionVersionContentHash{hashVersion: currentHashVersion - 1, hashValue: "aaa"}.toBase64()
+		changedContentHashConfig := withContentHash(changedContentHash)
+		// A hash version change alone plans no run on a released version.
+		rehashedContentHash := BuildingBlockDefinitionVersionContentHash{hashVersion: currentHashVersion, hashValue: "aaa"}.toBase64()
+		rehashedContentHashConfig := withContentHash(rehashedContentHash)
 		// Adding a parent without a version upgrade must force a replacement (RequiresReplaceIf →
 		// DestroyBeforeCreate). Derived from the last config so only parent_building_block_refs changes.
-		withParentsConfig := contentHashV2Config.WithFirstBlock(
+		withParentsConfig := rehashedContentHashConfig.WithFirstBlock(
 			testconfig.Descend("spec", "parent_building_block_refs")(testconfig.SetRawExpr(
 				`[{ uuid = "11111111-1111-1111-1111-111111111111" }]`,
 			)),
@@ -206,15 +213,29 @@ func TestAccBuildingBlock(t *testing.T) {
 					},
 				},
 				{
-					// Bumping content_hash "v1"→"v2" simulates a BBD content update and triggers a rerun.
-					Config: contentHashV2Config.String(),
+					// Changing content_hash simulates a BBD content update and triggers a rerun.
+					Config: changedContentHashConfig.String(),
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectResourceAction(buildingBlockAddr.String(), plancheck.ResourceActionUpdate),
 						},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("spec").AtMapKey("building_block_definition_version_ref").AtMapKey("content_hash"), knownvalue.StringExact("v2")),
+						statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("spec").AtMapKey("building_block_definition_version_ref").AtMapKey("content_hash"), knownvalue.StringExact(changedContentHash)),
+					},
+				},
+				{
+					Config: rehashedContentHashConfig.String(),
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PreApply: []plancheck.PlanCheck{
+							plancheck.ExpectResourceAction(buildingBlockAddr.String(), plancheck.ResourceActionUpdate),
+							plancheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("status").AtMapKey("action"),
+								knownvalue.StringExact(client.BuildingBlockActionNoAction.String())),
+						},
+					},
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("status").AtMapKey("action"),
+							knownvalue.StringExact(client.BuildingBlockActionNoAction.String())),
 					},
 				},
 				{
@@ -1387,6 +1408,62 @@ func TestAccBuildingBlock(t *testing.T) {
 			},
 		})
 	})
+
+	t.Run("16_hash_version_change_on_a_draft", func(t *testing.T) {
+		workspaceConfig, workspaceAddr := testconfig.Workspace(t)
+		paymentMethodConfig, setPaymentMethodInput := testconfig.PaymentMethodInput(t, workspaceAddr)
+
+		var definitionAddr testconfig.Traversal
+		definition := func(deletionMode string) testconfig.Config {
+			return testconfig.Resource{Name: "building_block", Suffix: "_01_workspace"}.TestSupportConfig(t, "").WithFirstBlock(
+				testconfig.ExtractAddress(&definitionAddr),
+				testconfig.OwnedByWorkspace(workspaceAddr),
+				testconfig.Descend("version_spec")(
+					testconfig.Descend("draft")(testconfig.SetBool(true)),
+					testconfig.Descend("deletion_mode")(testconfig.SetString(deletionMode)),
+				),
+			)
+		}
+		draftConfig := definition(client.BuildingBlockDeletionModeDelete.String())
+		changedDraftConfig := definition(client.BuildingBlockDeletionModePurge.String())
+
+		var buildingBlockAddr testconfig.Traversal
+		buildingBlock := func(versionRef testconfig.ExpressionConsumer) testconfig.Config {
+			return testconfig.Resource{Name: "building_block", Suffix: "_01_workspace"}.Config(t).WithFirstBlock(
+				testconfig.ExtractAddress(&buildingBlockAddr),
+				testconfig.Descend("spec", "building_block_definition_version_ref")(versionRef),
+				testconfig.Descend("spec", "target_ref")(testconfig.SetAddr(workspaceAddr, "ref")),
+				setPaymentMethodInput,
+			).Join(workspaceConfig, paymentMethodConfig)
+		}
+		olderHashVersion := BuildingBlockDefinitionVersionContentHash{hashVersion: currentHashVersion - 1, hashValue: "aaa"}.toBase64()
+		olderHashVersionConfig := buildingBlock(testconfig.SetRawExpr(`merge(%s.version_latest, {content_hash = %q})`, definitionAddr, olderHashVersion)).Join(draftConfig)
+		changedConfig := buildingBlock(testconfig.SetAddr(definitionAddr, "version_latest")).Join(changedDraftConfig)
+
+		latestRun := statecheck.CompareValue(compare.ValuesDiffer())
+		latestRunPath := tfjsonpath.New("status").AtMapKey("latest_run_uuid")
+		ApplyAndTest(t, resource.TestCase{
+			Steps: []resource.TestStep{
+				{
+					Config:            olderHashVersionConfig.String(),
+					ConfigStateChecks: []statecheck.StateCheck{latestRun.AddStateValue(buildingBlockAddr.String(), latestRunPath)},
+				},
+				{
+					Config: changedConfig.String(),
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PreApply: []plancheck.PlanCheck{
+							plancheck.ExpectResourceAction(buildingBlockAddr.String(), plancheck.ResourceActionUpdate),
+							plancheck.ExpectUnknownValue(buildingBlockAddr.String(), latestRunPath),
+						},
+					},
+					ConfigStateChecks: []statecheck.StateCheck{
+						latestRun.AddStateValue(buildingBlockAddr.String(), latestRunPath),
+						statecheck.ExpectKnownValue(buildingBlockAddr.String(), tfjsonpath.New("status").AtMapKey("succeeded"), knownvalue.Bool(true)),
+					},
+				},
+			},
+		})
+	})
 }
 
 // bbv3StateChecks returns the baseline state checks shared by every BB v3 create and move step.
@@ -1497,7 +1574,7 @@ func Test_rerunNeeded(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(t, tt.want, rerunNeeded(tt.plan, tt.state))
+			require.Equal(t, tt.want, rerunNeeded(tt.plan, tt.state, false))
 		})
 	}
 }

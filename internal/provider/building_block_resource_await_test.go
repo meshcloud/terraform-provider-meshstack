@@ -94,6 +94,16 @@ func TestAwaitRun(t *testing.T) {
 			wantErrors: []string{"did not start a run"},
 			wantAction: client.BuildingBlockActionNoAction,
 		},
+		"a queued run that takes the update along is awaited to its end": {
+			before: bbWithRun(client.BuildingBlockActionPending, "run-queued").Status,
+			states: []*client.MeshBuildingBlockV2{
+				bbWithRun(client.BuildingBlockActionInProgress, "run-queued"),
+				bbWithRun(client.BuildingBlockActionNoAction, "run-queued"),
+			},
+			timeout:    time.Second,
+			wantAction: client.BuildingBlockActionNoAction,
+			wantReads:  2,
+		},
 		"a failed run and its failing step are warned about": {
 			states: []*client.MeshBuildingBlockV2{
 				bbWithRun(client.BuildingBlockActionInProgress, "run-broken"),

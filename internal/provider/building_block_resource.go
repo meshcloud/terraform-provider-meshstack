@@ -52,11 +52,11 @@ var (
 // the configuration does not set an explicit value in the `timeouts` block.
 const defaultBuildingBlockTimeout = 30 * time.Minute
 
-// runStartTimeout has no `timeouts` setting: starting a run is a meshStack write, and takes no time of the run itself.
-const runStartTimeout = time.Minute
+// runStartTimeout covers a meshStack redeploy, which can delay the start of a run by minutes.
+const runStartTimeout = 5 * time.Minute
 
 var (
-	errRunNotStarted         = errors.New("meshStack did not start a run within " + runStartTimeout.String())
+	errRunNotStarted         = errors.New("meshStack did not start a run")
 	errBuildingBlockVanished = errors.New("building block disappeared while waiting for its run")
 )
 
@@ -147,6 +147,12 @@ func basedOnDraftVersion(dto *client.MeshBuildingBlockV2) []byte {
 	return fmt.Appendf(nil, "%t", dto.Status != nil && dto.Status.BasedOnDraftVersion)
 }
 
+func getBasedOnDraftVersion(ctx context.Context, private privateState, diags *diag.Diagnostics) bool {
+	value, getDiags := private.GetKey(ctx, basedOnDraftVersionPrivateKey)
+	diags.Append(getDiags...)
+	return string(value) == "true"
+}
+
 func (r *buildingBlockResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Version: 1,
@@ -206,7 +212,8 @@ func (r *buildingBlockResource) Schema(ctx context.Context, req resource.SchemaR
 									"Its purpose is to detect content changes of a **draft** BBD (whose version `uuid` stays the same) " +
 									"and conveniently re-run the building block when it changes.<br>" +
 									"When wired from a definition's computed `content_hash`, a change caused *only* by a hash-algorithm " +
-									"version upgrade (e.g. after upgrading the provider) does **not** trigger a re-run.<br>" +
+									"version upgrade (e.g. after upgrading the provider) does **not** trigger a re-run on a released version. " +
+									"On a draft version it does, because the content may have changed as well.<br>" +
 									"It is provider-only and never sent to the backend, so changing it can also be used to force a " +
 									"manual re-run — use with care; with a plain workspace key (`BUILDINGBLOCK_SAVE`) this requires the " +
 									"definition to have run transparency enabled (admins and the definition's platform operator are exempt).<br>" +
@@ -759,11 +766,7 @@ func (r *buildingBlockResource) awaitRun(
 	before *client.MeshBuildingBlockV2Status,
 	timeout time.Duration,
 ) *client.MeshBuildingBlockV2 {
-	var since client.MeshBuildingBlockV2Status
-	if before != nil {
-		since = *before
-	}
-	runStarted := before == nil
+	since, runStarted := waitBaseline(before)
 	runStartDeadline := time.Now().Add(runStartTimeout)
 	var final *client.MeshBuildingBlockV2
 	err := poll.AtMostFor(timeout, r.BuildingBlockClient.ReadFunc(uuid), poll.WithLastResultTo(&final)).
@@ -773,6 +776,10 @@ func (r *buildingBlockResource) awaitRun(
 			}
 			if !runStarted && bb.Status != nil {
 				runStarted = bb.Status.RunChangedSince(since)
+				if !runStarted && bb.Status.IsRunning() {
+					// meshStack starts the update's run only after the current run has ended.
+					runStartDeadline = time.Now().Add(runStartTimeout)
+				}
 			}
 			if !runStarted && time.Now().After(runStartDeadline) {
 				return false, errRunNotStarted
@@ -790,11 +797,12 @@ func (r *buildingBlockResource) awaitRun(
 		}
 		diags.AddError(
 			"meshStack did not start a run for the updated building block",
-			withBuildingBlockDetails(fmt.Sprintf("meshStack accepted the update of building block %s but did not start a run for it "+
-				"within %s: the block still reports what it reported before the update, %s. A meshStack under load can be "+
-				"slow to start a run, so check the building block in meshPanel and run the apply again once its run has "+
-				"finished. If no new run appears there at all, report the uuid of this building block as a meshStack issue.",
-				uuid, min(timeout, runStartTimeout), unchanged), final),
+			withBuildingBlockDetails(fmt.Sprintf("meshStack accepted the update of building block %s but did not start a run for it: "+
+				"the block still reports what it reported before the update, %s. The apply waits for that run until %.0f minutes after the "+
+				"previous run of the block has ended, and at most until timeouts.update runs out. Check the building block in "+
+				"meshPanel and run the apply again once its runs have finished. If no new run appears there at all, report the "+
+				"uuid of this building block as a meshStack issue.",
+				uuid, unchanged, runStartTimeout.Minutes()), final),
 		)
 	case errors.Is(err, errBuildingBlockVanished):
 		diags.AddError(
@@ -826,6 +834,14 @@ func (r *buildingBlockResource) awaitRun(
 		)
 	}
 	return final
+}
+
+// waitBaseline treats a queued run as started: meshStack hands it the update and keeps its uuid.
+func waitBaseline(before *client.MeshBuildingBlockV2Status) (since client.MeshBuildingBlockV2Status, runStarted bool) {
+	if before == nil || before.Action == client.BuildingBlockActionPending {
+		return client.MeshBuildingBlockV2Status{}, true
+	}
+	return *before, false
 }
 
 func actionOf(bb *client.MeshBuildingBlockV2) string {
@@ -934,9 +950,7 @@ func requiresReplaceParentsWhenVersionUnchanged(ctx context.Context, req planmod
 	if planVersion.IsUnknown() {
 		return
 	}
-	basedOnDraft, diags := req.Private.GetKey(ctx, basedOnDraftVersionPrivateKey)
-	resp.Diagnostics.Append(diags...)
-	resp.RequiresReplace = planVersion.Equal(stateVersion) && string(basedOnDraft) != "true"
+	resp.RequiresReplace = planVersion.Equal(stateVersion) && !getBasedOnDraftVersion(ctx, req.Private, &resp.Diagnostics)
 }
 
 // rerunNeeded is the single shared predicate determining whether an Update should trigger a run.
@@ -948,9 +962,10 @@ func requiresReplaceParentsWhenVersionUnchanged(ctx context.Context, req planmod
 //     - both non-nil and hashes are different → rerun.
 //     - plan nil + state non-nil (user removed content_hash) → NOT a rerun.
 //     - an arbitrary (non-versioned) content_hash value the user sets to force a manual rerun → rerun.
+//     - hashes of different hash versions → rerun only on a draft version, because a released version cannot change.
 //  3. inputs differ → rerun.
 //  4. parent set differs → rerun.
-func rerunNeeded(plan, state client.MeshBuildingBlockV2Spec) bool {
+func rerunNeeded(plan, state client.MeshBuildingBlockV2Spec, basedOnDraft bool) bool {
 	// uuid change detection
 	if plan.BuildingBlockDefinitionVersionRef.Uuid != state.BuildingBlockDefinitionVersionRef.Uuid {
 		return true
@@ -960,8 +975,16 @@ func rerunNeeded(plan, state client.MeshBuildingBlockV2Spec) bool {
 	planHash := plan.BuildingBlockDefinitionVersionRef.ContentHash
 	stateHash := state.BuildingBlockDefinitionVersionRef.ContentHash
 	if planHash != nil {
-		if stateHash == nil || compareContentHashes(*planHash, *stateHash) == hashDifferent {
+		if stateHash == nil {
 			return true
+		}
+		switch compareContentHashes(*planHash, *stateHash) {
+		case hashDifferent:
+			return true
+		case hashIncomparable:
+			if basedOnDraft {
+				return true
+			}
 		}
 	}
 
@@ -1068,24 +1091,6 @@ func (r *buildingBlockResource) ModifyPlan(ctx context.Context, req resource.Mod
 		return
 	}
 
-	// When plan and state content_hash differ only by their hash-algorithm version (see
-	// classifyContentHash), the building block is deliberately NOT re-run. Warn so the user knows a
-	// genuine content change - if any - was not picked up, and how to force a re-run.
-	if planHash := planSpec.BuildingBlockDefinitionVersionRef.ContentHash; planHash != nil {
-		if stateHash := stateSpec.BuildingBlockDefinitionVersionRef.ContentHash; stateHash != nil {
-			if compareContentHashes(*planHash, *stateHash) == hashIncomparable {
-				resp.Diagnostics.AddAttributeWarning(
-					path.Root("spec").AtName("building_block_definition_version_ref").AtName("content_hash"),
-					"Building block definition version content hash version changed; not re-running",
-					"The referenced version's content_hash changed only because it was produced by a different "+
-						"hash-algorithm version (for example after upgrading the provider), so the building block was "+
-						"not re-run. If the version's content actually changed and you want to force a re-run, set "+
-						"spec.building_block_definition_version_ref.content_hash to an arbitrary new value.",
-				)
-			}
-		}
-	}
-
 	// A run that failed or was aborted leaves the building block off its configuration, and running it
 	// again is the repair — an in-place update, never a replacement. Update evaluates the same actions,
 	// so the plan and the apply agree on whether a run follows.
@@ -1097,7 +1102,7 @@ func (r *buildingBlockResource) ModifyPlan(ctx context.Context, req resource.Mod
 	}
 	repairNeeded := stateStatus.RunFailed()
 
-	if rerunNeeded(planSpec, stateSpec) || secretRotated || repairNeeded {
+	if rerunNeeded(planSpec, stateSpec, getBasedOnDraftVersion(ctx, req.Private, &resp.Diagnostics)) || secretRotated || repairNeeded {
 		triggerRun()
 	}
 }
@@ -1139,7 +1144,7 @@ func (r *buildingBlockResource) Update(ctx context.Context, req resource.UpdateR
 	// A building block whose run failed or was aborted is repaired by running it again, and that repair
 	// is the in-place update the plan showed. Same actions as ModifyPlan, so plan and apply agree.
 	repairNeeded := state.Status != nil && state.Status.RunFailed()
-	needsRun := rerunNeeded(plan.Spec, state.Spec) || secretRotated || repairNeeded
+	needsRun := rerunNeeded(plan.Spec, state.Spec, getBasedOnDraftVersion(ctx, req.Private, &resp.Diagnostics)) || secretRotated || repairNeeded
 
 	// The backend answers a version-change PUT with a 409 while the run has not finished. Fail fast with a
 	// clear message so that no raw 409 reaches the user.
@@ -1198,22 +1203,47 @@ func (r *buildingBlockResource) Update(ctx context.Context, req resource.UpdateR
 		effective = triggered
 	}
 
-	if needsRun && plan.WaitForCompletion {
+	if state.Status != nil {
+		state.Status.RunStartFailedOn = getRunStartFailedOn(ctx, req.Private, &resp.Diagnostics)
+	}
+	var plannedAction types.String
+	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("status").AtName("action"), &plannedAction)...)
+	statusPlannedUnknown := plannedAction.IsUnknown()
+	before, runFollows := runFollowingUpdate(state.Status, effective.Status, statusPlannedUnknown)
+	if (needsRun || runFollows) && plan.WaitForCompletion {
 		timeout := resolveTimeout(ctx, req.Plan, "update", &resp.Diagnostics)
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		if final := r.awaitRun(ctx, &resp.Diagnostics, *updated.Metadata.Uuid, effective.Status, timeout); final != nil {
+		if final := r.awaitRun(ctx, &resp.Diagnostics, *updated.Metadata.Uuid, before, timeout); final != nil {
 			effective = final
 		}
 	}
 
 	plan.SetFromClientDto(effective, false, &resp.Diagnostics)
-	// Reuse the converter options built at the top of Update (same config/plan/state getters), so
-	// secret_version resolves consistently with Read without rebuilding the converters.
+	if !statusPlannedUnknown {
+		// The plan promised the prior status, whatever meshStack answered; the next refresh reads the new one.
+		plan.Status, plan.AllInputs = state.Status, state.AllInputs
+	}
 	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, plan, converterOptions...)...)
 	resp.Diagnostics.Append(resp.Private.SetKey(ctx, basedOnDraftVersionPrivateKey, basedOnDraftVersion(effective))...)
 	resp.Diagnostics.Append(setRunStartFailedOn(ctx, resp.Private, effective)...)
+}
+
+// runFollowingUpdate finds a run that meshStack started or queued for an update, also when the plan expected none.
+// A plan that kept the status known cannot wait for it: the new status would be an inconsistent result.
+func runFollowingUpdate(prior, answer *client.MeshBuildingBlockV2Status, statusPlannedUnknown bool) (before *client.MeshBuildingBlockV2Status, found bool) {
+	if prior == nil || answer == nil || !statusPlannedUnknown {
+		return answer, false
+	}
+	if answer.RunChangedSince(*prior) {
+		if answer.Action == client.BuildingBlockActionInProgress {
+			// meshStack answers the PUT before it starts the update's run, so a run in progress cannot carry the update.
+			return answer, true
+		}
+		return prior, true
+	}
+	return answer, answer.Action == client.BuildingBlockActionPending
 }
 
 // requestDeletion waits out the conflict meshStack answers while the block's run has not reached a

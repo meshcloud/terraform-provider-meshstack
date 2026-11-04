@@ -4,6 +4,13 @@ FEATURES:
 - New `meshstack_building_block_runner` data source. It reads the one runner that matches a UUID, a display name or
   an owning workspace, and the runner meshStack hosts when none of them is set.
 
+FIXES:
+- `meshstack_building_block`: an update waits for every run meshStack starts or queues for it. meshStack starts the
+  run of an update only after a run in progress has ended, and the apply fails when the run has not started 5 minutes
+  after that.
+- `meshstack_building_block`: a content hash of another hash version reruns a block on a draft definition version,
+  because the draft can have changed as well. On a released version it still plans no run.
+
 # v0.27.1
 
 FEATURES:
