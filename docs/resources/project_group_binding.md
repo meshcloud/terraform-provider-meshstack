@@ -15,7 +15,7 @@ Project group binding assigns a group with a specific role to a project.
 ```terraform
 resource "meshstack_project_group_binding" "example" {
   metadata = {
-    name = "this-is-an-example"
+    name = "example-project-group-binding"
   }
 
   role_ref = {

@@ -35,7 +35,7 @@ func testAccProjectBinding(t *testing.T, subjectKind, subjectName string, subjec
 					},
 				},
 				ConfigStateChecks: append([]statecheck.StateCheck{
-					statecheck.ExpectKnownValue(bindingAddress, tfjsonpath.New("metadata").AtMapKey("name"), knownvalue.StringExact("this-is-an-example")),
+					statecheck.ExpectKnownValue(bindingAddress, tfjsonpath.New("metadata").AtMapKey("name"), knownvalue.StringExact("example-project-"+subjectKind+"-binding")),
 					statecheck.ExpectKnownValue(bindingAddress, tfjsonpath.New("role_ref").AtMapKey("name"), knownvalue.StringExact("Project Reader")),
 					statecheck.ExpectKnownValue(bindingAddress, tfjsonpath.New("target_ref").AtMapKey("name"), knownvalue.StringExact("test-proj-"+suffix)),
 					statecheck.ExpectKnownValue(bindingAddress, tfjsonpath.New("target_ref").AtMapKey("owned_by_workspace"), knownvalue.StringExact("test-ws-"+suffix)),
@@ -46,7 +46,7 @@ func testAccProjectBinding(t *testing.T, subjectKind, subjectName string, subjec
 			{
 				ResourceName:    bindingAddress,
 				ImportState:     true,
-				ImportStateId:   "this-is-an-example",
+				ImportStateId:   "example-project-" + subjectKind + "-binding",
 				ImportStateKind: resource.ImportBlockWithID,
 			},
 		},
