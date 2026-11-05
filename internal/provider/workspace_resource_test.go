@@ -45,15 +45,17 @@ func TestAccWorkspace(t *testing.T) {
 		})
 	})
 
+	suffix := acctest.RandString(8)
+	vars := hclStepVars{"suffix": suffix}
 	resourceAddress := "meshstack_workspace.example"
 
 	ApplyAndTest(t, resource.TestCase{
 		Steps: []resource.TestStep{
 			{
-				Config: hclStep(t, "resources/workspace", 1, nil),
+				Config: hclStep(t, "resources/workspace", 1, vars),
 			},
 			{
-				Config: hclStep(t, "resources/workspace", 2, nil),
+				Config: hclStep(t, "resources/workspace", 2, vars),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectResourceAction(resourceAddress, plancheck.ResourceActionCreate),
@@ -65,7 +67,7 @@ func TestAccWorkspace(t *testing.T) {
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
 					// Metadata
-					statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("metadata").AtMapKey("name"), knownvalue.StringExact("my-new-workspace")),
+					statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("metadata").AtMapKey("name"), knownvalue.StringExact("test-ws-"+suffix)),
 					statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("metadata").AtMapKey("created_on"), xknownvalue.NotEmptyString()),
 
 					// Spec
@@ -73,11 +75,11 @@ func TestAccWorkspace(t *testing.T) {
 
 					// Ref
 					statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("ref").AtMapKey("kind"), knownvalue.StringExact("meshWorkspace")),
-					statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("ref").AtMapKey("name"), knownvalue.StringExact("my-new-workspace")),
+					statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("ref").AtMapKey("name"), knownvalue.StringExact("test-ws-"+suffix)),
 				},
 			},
 			{
-				Config: hclStep(t, "resources/workspace", 3, nil),
+				Config: hclStep(t, "resources/workspace", 3, vars),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectResourceAction(resourceAddress, plancheck.ResourceActionUpdate),
@@ -90,7 +92,7 @@ func TestAccWorkspace(t *testing.T) {
 			{
 				ImportState:     true,
 				ImportStateKind: resource.ImportBlockWithID,
-				ImportStateId:   "my-new-workspace",
+				ImportStateId:   "test-ws-" + suffix,
 				ResourceName:    resourceAddress,
 			},
 		},

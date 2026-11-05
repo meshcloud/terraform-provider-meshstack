@@ -28,7 +28,7 @@ func hclStep(t *testing.T, dir string, step int, vars hclStepVars) string {
 	stepTemplate, err := template.New(filePath).
 		Delims("[[", "]]").
 		Option("missingkey=error").
-		Funcs(template.FuncMap{"example": includeExample}).
+		Funcs(template.FuncMap{"example": includeExample, "replace": replaceLiteral}).
 		Parse(string(src))
 	require.NoError(t, err)
 
@@ -40,4 +40,11 @@ func hclStep(t *testing.T, dir string, step int, vars hclStepVars) string {
 func includeExample(pathParts ...string) (string, error) {
 	content, err := examples.ReadFile(strings.Join(pathParts, ""))
 	return string(content), err
+}
+
+func replaceLiteral(literal, replacement, config string) (string, error) {
+	if !strings.Contains(config, literal) {
+		return "", fmt.Errorf("%q does not occur in the config it should replace", literal)
+	}
+	return strings.ReplaceAll(config, literal, replacement), nil
 }
