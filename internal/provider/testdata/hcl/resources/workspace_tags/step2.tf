@@ -13,15 +13,15 @@ data "meshstack_workspace" "example" {
   }
 }
 
-resource "meshstack_tag_definition" "budget_code" {
+resource "meshstack_tag_definition" "cost_center" {
   spec = {
     target_kind  = "meshWorkspace"
-    key          = "budget-code"
-    display_name = "Budget Code"
+    key          = "cost-center-[[.suffix]]"
+    display_name = "Cost Center"
     value_type = {
       string = {}
     }
   }
 }
 
-[[ example "resources/meshstack_workspace_tags/resource.tf" ]]
+[[ example "resources/meshstack_workspace_tags/resource.tf" | replace "cost-center" (print "cost-center-" .suffix) ]]

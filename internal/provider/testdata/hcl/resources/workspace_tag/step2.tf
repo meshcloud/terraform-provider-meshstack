@@ -13,15 +13,15 @@ data "meshstack_workspace" "example" {
   }
 }
 
-resource "meshstack_tag_definition" "billing_account" {
+resource "meshstack_tag_definition" "cost_center" {
   spec = {
     target_kind  = "meshWorkspace"
-    key          = "billing-account"
-    display_name = "Billing Account"
+    key          = "cost-center-[[.suffix]]"
+    display_name = "Cost Center"
     value_type = {
       string = {}
     }
   }
 }
 
-[[ example "resources/meshstack_workspace_tag/resource.tf" ]]
+[[ example "resources/meshstack_workspace_tag/resource.tf" | replace "cost-center" (print "cost-center-" .suffix) ]]

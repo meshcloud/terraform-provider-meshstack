@@ -1,7 +1,7 @@
 resource "meshstack_tag_definition" "cost_center" {
   spec = {
     target_kind  = "meshWorkspace"
-    key          = "cost-center"
+    key          = "cost-center-[[.suffix]]"
     display_name = "Cost Center"
     value_type = {
       string = {}
@@ -11,9 +11,9 @@ resource "meshstack_tag_definition" "cost_center" {
 
 resource "meshstack_workspace" "example" {
   metadata = {
-    name = "my-new-workspace"
+    name = "test-ws-[[.suffix]]"
     tags = {
-      "cost-center" = ["12345"]
+      "cost-center-[[.suffix]]" = ["12345"]
     }
   }
   spec = {

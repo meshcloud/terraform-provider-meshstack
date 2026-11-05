@@ -13,4 +13,4 @@ data "meshstack_workspace" "example" {
   }
 }
 
-[[ example "resources/meshstack_workspace_" .subject_kind "_binding/resource.tf" ]]
+[[ example "resources/meshstack_workspace_" .subject_kind "_binding/resource.tf" | replace "this-is-an-example" (print "test-wb-" .suffix) | replace .example_subject_name .subject_name ]]
