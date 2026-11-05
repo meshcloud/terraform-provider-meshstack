@@ -7,9 +7,8 @@ description: How to develop meshStack Terraform resources and data sources — t
 
 The end-to-end procedure for adding or reworking a meshStack resource or data source, plus the
 schema/client design conventions that apply to all of them. This file is the walkthrough; load the
-companion **`REFERENCE.md`** for the step-file rules, the `xknownvalue` state-check helpers,
-complete worked code examples (TestAcc test, data source test, computed-only field), and the legacy
-`testconfig` builder that tests not yet migrated still use.
+companion **`REFERENCE.md`** for the step-file rules, the `xknownvalue` state-check helpers and
+complete worked code examples (TestAcc test, data source test, computed-only field).
 
 ## Golden-path exemplars (copy these)
 
@@ -205,13 +204,6 @@ func TestAccIntegrationResource(t *testing.T) {
 
 Variants that differ only in a few values share one step file instead: the binding tests pass
 `subject_kind` and `subject_name` in `vars` (`project_binding_resource_test.go`).
-
-## Legacy: the testconfig builder
-
-Tests not yet migrated build their configs with `internal/provider/acctest/testconfig`, which loads
-an example and rewrites it. Write step files for any new test, and migrate a resource's tests when
-you rework it. Delete a builder once no test calls it. `REFERENCE.md` → Legacy keeps its API for the
-tests that still use it.
 
 ## Computed-only output fields
 

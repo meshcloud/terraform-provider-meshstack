@@ -1,65 +1,12 @@
 package examples
 
-import (
-	"embed"
-	"fmt"
-	"path"
-	"strings"
-	"testing"
+import "embed"
 
-	"github.com/stretchr/testify/require"
-)
-
-var (
-	//go:embed data-sources
-	dataSources embed.FS
-	//go:embed resources
-	resources embed.FS
-)
-
-type Example string
-
-const (
-	DataSource Example = "data-source"
-	Resource   Example = "resource"
-)
-
-// Read reads the embedded example Terraform code for the named resource/datasource,
-// If file name parts are empty or only one is provided, the parts are prefixed with the Example value as string:
-// The empty case reflects the simple case of
-// examples/resources/meshstack_<name>/resource.tf or
-// examples/data-sources/meshstack_<name>/data-source.tf, respectively.
-// The case of one part adds a suffix to the .tf files.
-func (e Example) Read(t *testing.T, name string, fileNameParts ...string) []byte {
-	t.Helper()
-	switch len(fileNameParts) {
-	case 0:
-		fileNameParts = []string{string(e)}
-	case 1:
-		fileNameParts = []string{string(e), fileNameParts[0]}
-	default:
-		// do nothing for custom filePrefix+fileSuffixes... (such as test-support*.tf files),
-		// just join them below.
-	}
-	filePath := path.Join(
-		string(e)+"s",
-		"meshstack_"+name,
-		strings.Join(append(fileNameParts, ".tf"), ""),
-	)
-	content, err := ReadFile(filePath)
-	require.NoErrorf(t, err, "cannot read examples config file %s:", filePath)
-	return content
-}
+//go:embed data-sources resources
+var examples embed.FS
 
 // ReadFile reads the embedded example at a path relative to examples/, such as
 // resources/meshstack_project/resource.tf.
 func ReadFile(filePath string) ([]byte, error) {
-	switch {
-	case strings.HasPrefix(filePath, string(DataSource)+"s/"):
-		return dataSources.ReadFile(filePath)
-	case strings.HasPrefix(filePath, string(Resource)+"s/"):
-		return resources.ReadFile(filePath)
-	default:
-		return nil, fmt.Errorf("example %s is neither under data-sources/ nor under resources/", filePath)
-	}
+	return examples.ReadFile(filePath)
 }
