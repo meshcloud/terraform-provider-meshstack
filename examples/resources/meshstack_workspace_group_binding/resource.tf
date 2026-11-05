@@ -4,7 +4,7 @@ resource "meshstack_workspace_group_binding" "example" {
   }
 
   role_ref   = { name = "Workspace Member" }
-  target_ref = { name = data.meshstack_workspace.example.metadata.name }
+  target_ref = { name = "my-workspace" }
   subject    = { name = "my-user-group" }
 
   # Optional. If omitted, the binding never expires. If recertification is enabled
