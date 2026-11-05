@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-testing/compare"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
@@ -14,22 +15,16 @@ import (
 	"github.com/meshcloud/meshstack-cli/client"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/zclconf/go-cty/cty"
 
-	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/xknownvalue"
 )
 
 func TestAccBuildingBlockDefinitionDataSource(t *testing.T) {
 	t.Run("simple state check", func(t *testing.T) {
-		buildingBlockDefinitionConfig, buildingBlockDefinitionAddr := testconfig.BBDManual(t)
-
-		var dataSourceAddress testconfig.Traversal
-		config := testconfig.DataSource{Name: "building_block_definition"}.Config(t).WithFirstBlock(
-			testconfig.ExtractAddress(&dataSourceAddress),
-			testconfig.Descend("spec")(testconfig.RemoveKey()),
-			testconfig.Descend("metadata")(testconfig.SetRawExpr("{ uuid = %s }", buildingBlockDefinitionAddr.Join("metadata", "uuid"))),
-		).Join(buildingBlockDefinitionConfig)
+		suffix := acctest.RandString(8)
+		vars := hclStepVars{"suffix": suffix}
+		buildingBlockDefinitionAddr := "meshstack_building_block_definition.example_03_manual"
+		dataSourceAddress := "data.meshstack_building_block_definition.example"
 
 		versionRef := knownvalue.ObjectPartial(map[string]knownvalue.Check{
 			"uuid":         xknownvalue.NotEmptyString(),
@@ -39,66 +34,53 @@ func TestAccBuildingBlockDefinitionDataSource(t *testing.T) {
 		})
 		ApplyAndTest(t, resource.TestCase{Steps: []resource.TestStep{
 			{
-				Config: config.String(),
+				Config: hclStep(t, "data-sources/building_block_definition/simple_state_check", 1, vars),
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("metadata"), knownvalue.ObjectExact(map[string]knownvalue.Check{
+					statecheck.ExpectKnownValue(dataSourceAddress, tfjsonpath.New("metadata"), knownvalue.ObjectExact(map[string]knownvalue.Check{
 						"uuid":               xknownvalue.NotEmptyString(),
-						"owned_by_workspace": xknownvalue.NotEmptyString(),
+						"owned_by_workspace": knownvalue.StringExact("test-ws-" + suffix),
 					})),
-					statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("spec"), knownvalue.ObjectExact(map[string]knownvalue.Check{
+					statecheck.ExpectKnownValue(dataSourceAddress, tfjsonpath.New("spec"), knownvalue.ObjectExact(map[string]knownvalue.Check{
 						"display_name": knownvalue.StringExact("Example Building Block"),
 						"target_type":  knownvalue.StringExact("WORKSPACE_LEVEL"),
 					})),
-					statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("version_latest"), versionRef),
-					statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("versions"), ascendingVersionsExact(versionRef)),
-					statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("version_latest_release"), knownvalue.Null()),
-					statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("ref").AtMapKey("kind"), knownvalue.StringExact("meshBuildingBlockDefinition")),
-					statecheck.CompareValuePairs(dataSourceAddress.String(), tfjsonpath.New("ref"), buildingBlockDefinitionAddr.String(), tfjsonpath.New("ref"), compare.ValuesSame()),
+					statecheck.ExpectKnownValue(dataSourceAddress, tfjsonpath.New("version_latest"), versionRef),
+					statecheck.ExpectKnownValue(dataSourceAddress, tfjsonpath.New("versions"), ascendingVersionsExact(versionRef)),
+					statecheck.ExpectKnownValue(dataSourceAddress, tfjsonpath.New("version_latest_release"), knownvalue.Null()),
+					statecheck.ExpectKnownValue(dataSourceAddress, tfjsonpath.New("ref").AtMapKey("kind"), knownvalue.StringExact("meshBuildingBlockDefinition")),
+					statecheck.CompareValuePairs(dataSourceAddress, tfjsonpath.New("ref"), buildingBlockDefinitionAddr, tfjsonpath.New("ref"), compare.ValuesSame()),
 				},
 			},
 		}})
 	})
 
 	t.Run("filters", func(t *testing.T) {
-		definitionConfig, definitionAddr := testconfig.BBDManual(t)
-		dataSourceAddr := testconfig.Traversal{"data.meshstack_building_block_definition", "example"}
-		example := testconfig.DataSource{Name: "building_block_definition"}.Config(t)
-
-		// Parallel tests create definitions of the same display name, so the workspace keeps the lookup unique.
-		byDisplayName := example.WithFirstBlock(
-			testconfig.Descend("spec")(testconfig.SetRawExpr("{ display_name = %s }", definitionAddr.Join("spec", "display_name"))),
-			testconfig.Descend("metadata")(testconfig.SetRawExpr("{ owned_by_workspace = %s }", definitionAddr.Join("metadata", "owned_by_workspace"))),
-		).Join(definitionConfig)
-		unknownName := example.WithFirstBlock(
-			testconfig.Descend("spec")(testconfig.SetRawExpr(`{ display_name = "No Such Building Block" }`)),
-			testconfig.Descend("metadata")(testconfig.SetRawExpr("{ owned_by_workspace = %s }", definitionAddr.Join("metadata", "owned_by_workspace"))),
-		).Join(definitionConfig)
-		uuidWithOtherTargetType := example.WithFirstBlock(
-			testconfig.Descend("spec")(testconfig.SetRawExpr(`{ target_type = "TENANT_LEVEL" }`)),
-			testconfig.Descend("metadata")(testconfig.SetRawExpr("{ uuid = %s }", definitionAddr.Join("metadata", "uuid"))),
-		).Join(definitionConfig)
-		noFilter := example.WithFirstBlock(
-			testconfig.Descend("spec")(testconfig.RemoveKey()),
-		).Join(definitionConfig)
+		vars := hclStepVars{"suffix": acctest.RandString(8)}
+		definitionAddr := "meshstack_building_block_definition.example_03_manual"
+		dataSourceAddr := "data.meshstack_building_block_definition.example"
 
 		ApplyAndTest(t, resource.TestCase{Steps: []resource.TestStep{
 			{
-				Config:      noFilter.String(),
+				Config: hclStep(t, "data-sources/building_block_definition/filters", 1, vars),
+			},
+			{
+				Config:      hclStep(t, "data-sources/building_block_definition/filters", 2, vars),
 				ExpectError: expectErrorWords("least", "attributes", "configured", "metadata.uuid"),
 			},
 			{
-				Config: byDisplayName.String(),
+				// Parallel tests create definitions of the same display name, so the workspace keeps the lookup unique.
+				Config: hclStep(t, "data-sources/building_block_definition/filters", 3, vars),
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.CompareValuePairs(dataSourceAddr.String(), tfjsonpath.New("ref"), definitionAddr.String(), tfjsonpath.New("ref"), compare.ValuesSame()),
-					statecheck.ExpectKnownValue(dataSourceAddr.String(), tfjsonpath.New("spec").AtMapKey("target_type"), knownvalue.StringExact("WORKSPACE_LEVEL")),
+					statecheck.CompareValuePairs(dataSourceAddr, tfjsonpath.New("ref"), definitionAddr, tfjsonpath.New("ref"), compare.ValuesSame()),
+					statecheck.ExpectKnownValue(dataSourceAddr, tfjsonpath.New("spec").AtMapKey("target_type"), knownvalue.StringExact("WORKSPACE_LEVEL")),
 				},
 			},
 			{
-				Config:      unknownName.String(),
+				Config:      hclStep(t, "data-sources/building_block_definition/filters", 4, vars),
 				ExpectError: expectErrorWords("definition", "matches", "spec.display_name", "Such"),
 			},
 			{
-				Config:      uuidWithOtherTargetType.String(),
+				Config:      hclStep(t, "data-sources/building_block_definition/filters", 5, vars),
 				ExpectError: expectErrorWords("definition", "matches", "metadata.uuid"),
 			},
 		}})
@@ -109,20 +91,10 @@ func TestAccBuildingBlockDefinitionDataSource(t *testing.T) {
 			t.Skip("cross-workspace test requires real permission boundaries")
 		}
 
-		buildingBlockDefinitionConfig, buildingBlockDefinitionAddr := testconfig.BBDManual(t)
-		readerConfig, captureReaderKey, readerKey := otherWorkspaceReader(t, "BUILDINGBLOCKDEFINITION_LIST")
-
-		supportConfig := buildingBlockDefinitionConfig.WithFirstBlock(
-			testconfig.Descend("version_spec", "draft")(testconfig.SetValue(cty.False)),
-		).Join(readerConfig)
-
-		var dataSourceAddress testconfig.Traversal
-		config := testconfig.DataSource{Name: "building_block_definition"}.Config(t).WithFirstBlock(
-			testconfig.ExtractAddress(&dataSourceAddress),
-			testconfig.Descend("spec")(testconfig.RemoveKey()),
-			testconfig.Descend("metadata")(testconfig.SetRawExpr("{ uuid = %s }", buildingBlockDefinitionAddr.Join("metadata", "uuid"))),
-			testconfig.Descend("provider")(testconfig.SetRawExpr("meshstack-other")),
-		).Join(supportConfig, testconfig.OtherProviderConfig(t))
+		vars := hclStepVars{"suffix": acctest.RandString(8)}
+		buildingBlockDefinitionAddr := "meshstack_building_block_definition.example_03_manual"
+		dataSourceAddress := "data.meshstack_building_block_definition.example"
+		captureReaderKey, readerKey := otherWorkspaceReader()
 
 		versionRef := knownvalue.ObjectPartial(map[string]knownvalue.Check{
 			"uuid":         xknownvalue.NotEmptyString(),
@@ -131,19 +103,19 @@ func TestAccBuildingBlockDefinitionDataSource(t *testing.T) {
 		})
 		ApplyAndTest(t, resource.TestCase{Steps: []resource.TestStep{
 			{
-				Config: supportConfig.String(),
+				Config: hclStep(t, "data-sources/building_block_definition/cross_workspace_read", 1, vars),
 				ConfigStateChecks: append([]statecheck.StateCheck{
-					statecheck.ExpectKnownValue(buildingBlockDefinitionAddr.String(), tfjsonpath.New("version_latest_release").AtMapKey("state"), knownvalue.StringExact("RELEASED")),
+					statecheck.ExpectKnownValue(buildingBlockDefinitionAddr, tfjsonpath.New("version_latest_release").AtMapKey("state"), knownvalue.StringExact("RELEASED")),
 				}, captureReaderKey...),
 			},
 			{
-				Config:          config.String(),
+				Config:          hclStep(t, "data-sources/building_block_definition/cross_workspace_read", 2, vars),
 				ConfigVariables: readerKey,
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("version_latest"), versionRef),
-					statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("version_latest_release"), versionRef),
-					statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("versions"), ascendingVersionsExact(versionRef)),
-					statecheck.CompareValuePairs(dataSourceAddress.String(), tfjsonpath.New("ref"), buildingBlockDefinitionAddr.String(), tfjsonpath.New("ref"), compare.ValuesSame()),
+					statecheck.ExpectKnownValue(dataSourceAddress, tfjsonpath.New("version_latest"), versionRef),
+					statecheck.ExpectKnownValue(dataSourceAddress, tfjsonpath.New("version_latest_release"), versionRef),
+					statecheck.ExpectKnownValue(dataSourceAddress, tfjsonpath.New("versions"), ascendingVersionsExact(versionRef)),
+					statecheck.CompareValuePairs(dataSourceAddress, tfjsonpath.New("ref"), buildingBlockDefinitionAddr, tfjsonpath.New("ref"), compare.ValuesSame()),
 				},
 			},
 		}})
