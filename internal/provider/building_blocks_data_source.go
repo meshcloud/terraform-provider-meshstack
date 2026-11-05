@@ -39,7 +39,6 @@ type buildingBlocksDataSourceModel struct {
 	VersionNumber                *string                 `tfsdk:"version_number"`
 	TenantUuid                   *string                 `tfsdk:"tenant_uuid"`
 	TargetKind                   *string                 `tfsdk:"target_kind"`
-	Status                       *string                 `tfsdk:"status"`
 	HealthStatus                 clientTypes.Set[string] `tfsdk:"health_status"`
 	Action                       clientTypes.Set[string] `tfsdk:"action"`
 	ManagedByWorkspaceIdentifier *string                 `tfsdk:"managed_by_workspace_identifier"`
@@ -91,15 +90,6 @@ func (d *buildingBlocksDataSource) Schema(_ context.Context, _ datasource.Schema
 				Validators: []validator.String{
 					stringvalidator.OneOf(client.MeshObjectKind.Tenant, client.MeshObjectKind.Workspace),
 				},
-			},
-			"status": schema.StringAttribute{
-				MarkdownDescription: "Only return building blocks in this execution status. One of " + client.BuildingBlockStatuses.Markdown() + ". " +
-					"Use the `health_status` and `action` filters instead.",
-				Optional: true,
-				Validators: []validator.String{
-					stringvalidator.OneOf(client.BuildingBlockStatuses.Strings()...),
-				},
-				DeprecationMessage: "Use the `health_status` and `action` filters instead.",
 			},
 			"health_status": schema.SetAttribute{
 				MarkdownDescription: "Only return building blocks with one of these health statuses (see `status.health_status`). One of " +
@@ -159,7 +149,6 @@ func (d *buildingBlocksDataSource) Read(ctx context.Context, req datasource.Read
 		VersionNumber:                config.VersionNumber,
 		TenantUuid:                   config.TenantUuid,
 		TargetKind:                   config.TargetKind,
-		Status:                       config.Status,
 		HealthStatus:                 config.HealthStatus,
 		Action:                       config.Action,
 		ManagedByWorkspaceIdentifier: config.ManagedByWorkspaceIdentifier,

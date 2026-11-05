@@ -328,11 +328,6 @@ func (r *buildingBlockResource) Schema(ctx context.Context, req resource.SchemaR
 				Computed:            true,
 				PlanModifiers:       []planmodifier.Object{objectplanmodifier.UseStateForUnknown()},
 				Attributes: map[string]schema.Attribute{
-					"status": schema.StringAttribute{
-						MarkdownDescription: "Execution status. One of " + client.BuildingBlockStatuses.Markdown() + ". " + buildingBlockStatusDeprecation,
-						Computed:            true,
-						DeprecationMessage:  buildingBlockStatusDeprecation,
-					},
 					"succeeded": schema.BoolAttribute{
 						MarkdownDescription: buildingBlockSucceededDescription,
 						Computed:            true,
@@ -1034,7 +1029,6 @@ func (r *buildingBlockResource) ModifyPlan(ctx context.Context, req resource.Mod
 	// Mark the run-derived read-only attributes (status, outputs, all_inputs) unknown so the apply can
 	// resolve them after the triggered run.
 	triggerRun := func() {
-		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("status").AtName("status"), types.StringUnknown())...)
 		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("status").AtName("succeeded"), types.BoolUnknown())...)
 		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("status").AtName("health_status"), types.StringUnknown())...)
 		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("status").AtName("action"), types.StringUnknown())...)

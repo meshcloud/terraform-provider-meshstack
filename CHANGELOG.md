@@ -4,6 +4,9 @@ BREAKING CHANGES:
 - `meshstack_building_block_v2` and `meshstack_buildingblock` (v1): the deprecated resources and data sources are removed.
   Replace them with `meshstack_building_block`, or with `meshstack_building_blocks` to read building blocks by filter.
   A `moved` block needs a provider that knows both types, so add and apply it on v0.24.x to v0.27.x before you upgrade.
+- `meshstack_building_block` resource and data source, `meshstack_building_blocks`: the deprecated `status.status`
+  attribute and the deprecated `status` filter are removed. Read `status.succeeded`, or `status.health_status` and
+  `status.action`, and filter by `health_status` and `action`.
 
 # v0.27.2
 

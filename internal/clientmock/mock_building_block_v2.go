@@ -147,9 +147,6 @@ func mockBuildingBlockMatchesFilter(bb *client.MeshBuildingBlockV2, filter clien
 	if filter.TenantUuid != nil && (bb.Spec.TargetRef.Uuid == nil || *bb.Spec.TargetRef.Uuid != *filter.TenantUuid) {
 		return false
 	}
-	if filter.Status != nil && (bb.Status == nil || string(bb.Status.Status) != *filter.Status) {
-		return false
-	}
 	if filter.HealthStatus != nil && (bb.Status == nil || !slices.Contains(filter.HealthStatus, bb.Status.HealthStatus.String())) {
 		return false
 	}
@@ -261,7 +258,6 @@ func (m MeshBuildingBlockV2Client) TriggerRun(_ context.Context, bbUuid string) 
 }
 
 func finishedRun(status client.MeshBuildingBlockV2Status) *client.MeshBuildingBlockV2Status {
-	status.Status = client.BuildingBlockStatusSucceeded
 	status.HealthStatus = client.BuildingBlockHealthStatusSucceeded
 	status.Action = client.BuildingBlockActionNoAction
 	status.LatestRunUuid = new(uuid.NewString())
