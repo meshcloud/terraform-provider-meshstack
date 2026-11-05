@@ -15,7 +15,7 @@ Workspace group binding assigns a group with a specific role to a workspace.
 ```terraform
 resource "meshstack_workspace_group_binding" "example" {
   metadata = {
-    name = "this-is-an-example"
+    name = "example-workspace-group-binding"
   }
 
   role_ref = {
@@ -23,11 +23,11 @@ resource "meshstack_workspace_group_binding" "example" {
   }
 
   target_ref = {
-    name = "my-workspace"
+    name = data.meshstack_workspace.example.metadata.name
   }
 
   subject = {
-    name = "my-user-group"
+    name = "global-group"
   }
 
   # Optional. If omitted, the binding never expires. If recertification is enabled

@@ -15,7 +15,7 @@ Workspace user binding assigns a user with a specific role to a workspace.
 ```terraform
 resource "meshstack_workspace_user_binding" "example" {
   metadata = {
-    name = "this-is-an-example"
+    name = "example-workspace-user-binding"
   }
 
   role_ref = {
@@ -23,11 +23,11 @@ resource "meshstack_workspace_user_binding" "example" {
   }
 
   target_ref = {
-    name = "my-workspace"
+    name = data.meshstack_workspace.example.metadata.name
   }
 
   subject = {
-    name = "user@meshcloud.io"
+    name = "customer@meshcloud.io"
   }
 
   # Optional. If omitted, the binding never expires. If recertification is enabled

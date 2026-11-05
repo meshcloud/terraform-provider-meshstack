@@ -40,7 +40,7 @@ resource "meshstack_workspace_tags" "example" {
   }
   spec = {
     tags = {
-      "cost-center" = ["12345"]
+      "budget-code" = ["12345"]
     }
   }
 }

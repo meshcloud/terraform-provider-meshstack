@@ -1,6 +1,6 @@
 resource "meshstack_workspace" "example" {
   metadata = {
-    name = "my-workspace"
+    name = "my-new-workspace"
     tags = {
       "cost-center" = ["12345"]
     }
