@@ -1,7 +1,7 @@
 package provider
 
 import (
-	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/compare"
@@ -12,7 +12,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 
-	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/xknownvalue"
 )
 
@@ -21,41 +20,40 @@ func TestAccTenant(t *testing.T) {
 
 	// create covers the plain create path of the unsuffixed meshstack_tenant on the v4 body.
 	t.Run("create", func(t *testing.T) {
-		workspaceConfig, workspaceAddr := testconfig.Workspace(t)
-		projectConfig, projectAddr := testconfig.Project(t, workspaceAddr)
-		platformConfig, platformAddr, platformTypeAddr := testconfig.CustomPlatform(t, workspaceAddr)
-		landingZoneConfig, landingZoneAddr := testconfig.LandingZone(t, workspaceAddr, platformAddr, platformTypeAddr)
-		tenantConfig, tenantAddr := testconfig.Tenant(t, projectAddr, platformAddr, landingZoneAddr)
-
-		config := tenantConfig.Join(workspaceConfig, projectConfig, platformConfig, landingZoneConfig)
+		suffix := acctest.RandString(8)
+		vars := hclStepVars{"suffix": suffix}
+		tenantAddress := "meshstack_tenant.example"
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
-					Config: config.String(),
+					Config: hclStep(t, "resources/tenant/create", 1, vars),
+				},
+				{
+					Config: hclStep(t, "resources/tenant/create", 2, vars),
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
-							plancheck.ExpectResourceAction(tenantAddr.String(), plancheck.ResourceActionCreate),
+							plancheck.ExpectResourceAction(tenantAddress, plancheck.ResourceActionCreate),
 						},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
 						// Ref
-						statecheck.ExpectKnownValue(tenantAddr.String(), tfjsonpath.New("ref").AtMapKey("kind"), knownvalue.StringExact("meshTenant")),
-						statecheck.ExpectKnownValue(tenantAddr.String(), tfjsonpath.New("ref").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
+						statecheck.ExpectKnownValue(tenantAddress, tfjsonpath.New("ref").AtMapKey("kind"), knownvalue.StringExact("meshTenant")),
+						statecheck.ExpectKnownValue(tenantAddress, tfjsonpath.New("ref").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
 
 						// Metadata
-						statecheck.ExpectKnownValue(tenantAddr.String(), tfjsonpath.New("metadata").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
-						statecheck.ExpectKnownValue(tenantAddr.String(), tfjsonpath.New("metadata").AtMapKey("owned_by_workspace"), xknownvalue.NotEmptyString()),
-						statecheck.ExpectKnownValue(tenantAddr.String(), tfjsonpath.New("metadata").AtMapKey("owned_by_project"), xknownvalue.NotEmptyString()),
+						statecheck.ExpectKnownValue(tenantAddress, tfjsonpath.New("metadata").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
+						statecheck.ExpectKnownValue(tenantAddress, tfjsonpath.New("metadata").AtMapKey("owned_by_workspace"), knownvalue.StringExact("test-ws-"+suffix)),
+						statecheck.ExpectKnownValue(tenantAddress, tfjsonpath.New("metadata").AtMapKey("owned_by_project"), knownvalue.StringExact("test-proj-"+suffix)),
 
 						// Spec
-						statecheck.ExpectKnownValue(tenantAddr.String(), tfjsonpath.New("spec").AtMapKey("platform_ref").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
-						statecheck.ExpectKnownValue(tenantAddr.String(), tfjsonpath.New("spec").AtMapKey("platform_ref").AtMapKey("kind"), knownvalue.StringExact("meshPlatform")),
-						statecheck.ExpectKnownValue(tenantAddr.String(), tfjsonpath.New("spec").AtMapKey("landing_zone_ref").AtMapKey("name"), xknownvalue.NotEmptyString()),
+						statecheck.ExpectKnownValue(tenantAddress, tfjsonpath.New("spec").AtMapKey("platform_ref").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
+						statecheck.ExpectKnownValue(tenantAddress, tfjsonpath.New("spec").AtMapKey("platform_ref").AtMapKey("kind"), knownvalue.StringExact("meshPlatform")),
+						statecheck.ExpectKnownValue(tenantAddress, tfjsonpath.New("spec").AtMapKey("landing_zone_ref").AtMapKey("name"), knownvalue.StringExact("test-lz-"+suffix)),
 
 						// Status
-						statecheck.ExpectKnownValue(tenantAddr.String(), tfjsonpath.New("status").AtMapKey("tenant_name"), xknownvalue.NotEmptyString()),
-						statecheck.ExpectKnownValue(tenantAddr.String(), tfjsonpath.New("status").AtMapKey("platform_type_identifier"), xknownvalue.NotEmptyString()),
+						statecheck.ExpectKnownValue(tenantAddress, tfjsonpath.New("status").AtMapKey("tenant_name"), knownvalue.StringExact("test-ws-"+suffix+".test-proj-"+suffix+".custom-"+suffix+".global")),
+						statecheck.ExpectKnownValue(tenantAddress, tfjsonpath.New("status").AtMapKey("platform_type_identifier"), knownvalue.StringExact("CUSTOM-PT-"+strings.ToUpper(suffix))),
 					},
 				},
 			},
@@ -72,70 +70,29 @@ func TestAccTenant(t *testing.T) {
 	// ({kind, uuid} for the platform, {kind, name} for the landing zone). The fresh workspace holds
 	// exactly one platform and one landing zone, so the plural lists have a single element at index 0.
 	t.Run("create_via_data_sources", func(t *testing.T) {
-		workspaceConfig, workspaceAddr := testconfig.Workspace(t)
-		projectConfig, projectAddr := testconfig.Project(t, workspaceAddr)
-		platformConfig, platformAddr, platformTypeAddr := testconfig.CustomPlatform(t, workspaceAddr)
-		landingZoneConfig, landingZoneAddr := testconfig.LandingZone(t, workspaceAddr, platformAddr, platformTypeAddr)
-
-		var singularPlatformAddr, pluralPlatformsAddr, singularLandingZoneAddr, pluralLandingZonesAddr testconfig.Traversal
-
-		// Singular data sources read by uuid / name — the resource references make them depend on the
-		// platform / landing zone implicitly, so no explicit depends_on is needed.
-		singularPlatform := testconfig.DataSource{Name: "platform"}.Config(t).WithFirstBlock(
-			testconfig.ExtractAddress(&singularPlatformAddr),
-			testconfig.Descend("metadata", "uuid")(testconfig.SetAddr(platformAddr, "metadata", "uuid")),
-		)
-		singularLandingZone := testconfig.DataSource{Name: "landingzone"}.Config(t).WithFirstBlock(
-			testconfig.ExtractAddress(&singularLandingZoneAddr),
-			testconfig.Descend("metadata", "name")(testconfig.SetAddr(landingZoneAddr, "metadata", "name")),
-		)
-
-		// Plural data sources filter by workspace / platform, which does not depend on the object rows
-		// themselves, so they need an explicit depends_on to list after those rows exist.
-		pluralPlatforms := testconfig.DataSource{Name: "platforms"}.Config(t).WithFirstBlock(
-			testconfig.ExtractAddress(&pluralPlatformsAddr),
-			testconfig.Descend("owned_by_workspace")(testconfig.SetAddr(workspaceAddr, "metadata", "name")),
-			testconfig.Descend("depends_on")(testconfig.SetRawExpr("[%s]", platformAddr)),
-		)
-		pluralLandingZones := testconfig.DataSource{Name: "landingzones"}.Config(t).WithFirstBlock(
-			testconfig.ExtractAddress(&pluralLandingZonesAddr),
-			testconfig.Descend("platform_uuid")(testconfig.SetAddr(platformAddr, "metadata", "uuid")),
-			testconfig.Descend("depends_on")(testconfig.SetRawExpr("[%s]", landingZoneAddr)),
-		)
-
-		tenantConfig, tenantAddr := testconfig.Tenant(t, projectAddr, platformAddr, landingZoneAddr)
-		tenantConfig = tenantConfig.WithFirstBlock(
-			testconfig.Descend("spec", "platform_ref")(testconfig.SetRawExpr(
-				"one([for p in %s.platforms : p if p.metadata.uuid == %s]).ref",
-				pluralPlatformsAddr, platformAddr.Join("metadata", "uuid"))),
-			testconfig.Descend("spec", "landing_zone_ref")(testconfig.SetRawExpr(
-				"%s.ref", singularLandingZoneAddr)),
-		)
-
-		config := tenantConfig.Join(
-			singularPlatform, pluralPlatforms, singularLandingZone, pluralLandingZones,
-			workspaceConfig, projectConfig, platformConfig, landingZoneConfig,
-		)
+		suffix := acctest.RandString(8)
+		vars := hclStepVars{"suffix": suffix}
+		tenantAddress := "meshstack_tenant.test"
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
-					Config: config.String(),
+					Config: hclStep(t, "resources/tenant/create_via_data_sources", 1, vars),
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(tenantAddr.String(), tfjsonpath.New("spec").AtMapKey("platform_ref").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
-						statecheck.ExpectKnownValue(tenantAddr.String(), tfjsonpath.New("spec").AtMapKey("platform_ref").AtMapKey("kind"), knownvalue.StringExact("meshPlatform")),
-						statecheck.ExpectKnownValue(tenantAddr.String(), tfjsonpath.New("spec").AtMapKey("landing_zone_ref").AtMapKey("name"), xknownvalue.NotEmptyString()),
-						statecheck.ExpectKnownValue(tenantAddr.String(), tfjsonpath.New("ref").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
+						statecheck.ExpectKnownValue(tenantAddress, tfjsonpath.New("spec").AtMapKey("platform_ref").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
+						statecheck.ExpectKnownValue(tenantAddress, tfjsonpath.New("spec").AtMapKey("platform_ref").AtMapKey("kind"), knownvalue.StringExact("meshPlatform")),
+						statecheck.ExpectKnownValue(tenantAddress, tfjsonpath.New("spec").AtMapKey("landing_zone_ref").AtMapKey("name"), knownvalue.StringExact("test-lz-"+suffix)),
+						statecheck.ExpectKnownValue(tenantAddress, tfjsonpath.New("ref").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
 
 						// singular and plural data sources resolve to the same platform / landing zone.
 						statecheck.CompareValuePairs(
-							singularPlatformAddr.String(), tfjsonpath.New("ref").AtMapKey("uuid"),
-							pluralPlatformsAddr.String(), tfjsonpath.New("platforms").AtSliceIndex(0).AtMapKey("ref").AtMapKey("uuid"),
+							"data.meshstack_platform.test", tfjsonpath.New("ref").AtMapKey("uuid"),
+							"data.meshstack_platforms.test", tfjsonpath.New("platforms").AtSliceIndex(0).AtMapKey("ref").AtMapKey("uuid"),
 							compare.ValuesSame(),
 						),
 						statecheck.CompareValuePairs(
-							singularLandingZoneAddr.String(), tfjsonpath.New("ref").AtMapKey("name"),
-							pluralLandingZonesAddr.String(), tfjsonpath.New("landing_zones").AtSliceIndex(0).AtMapKey("ref").AtMapKey("name"),
+							"data.meshstack_landingzone.test", tfjsonpath.New("ref").AtMapKey("name"),
+							"data.meshstack_landingzones.test", tfjsonpath.New("landing_zones").AtSliceIndex(0).AtMapKey("ref").AtMapKey("name"),
 							compare.ValuesSame(),
 						),
 					},
@@ -149,7 +106,9 @@ func TestAccTenant(t *testing.T) {
 	// spec.requested_quotas). Runs in both modes — the mock echoes the requested quota into status, the
 	// real backend validates it against the platform quota definition and applies it.
 	t.Run("quotas", func(t *testing.T) {
-		config, tenantAddr := tenantQuotaConfig(t, tenantQuotaOptions{maxCpu: 4000, threshold: 4000, requestedCpu: 2000})
+		skipTenantQuotasUnlessMock(t)
+		vars := hclStepVars{"suffix": acctest.RandString(8)}
+		tenantAddress := "meshstack_tenant.test"
 
 		quotaMap := knownvalue.MapExact(map[string]knownvalue.Check{
 			"limits.cpu": knownvalue.ObjectExact(map[string]knownvalue.Check{
@@ -160,12 +119,12 @@ func TestAccTenant(t *testing.T) {
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
-					Config: config.String(),
+					Config: hclStep(t, "resources/tenant/quotas", 1, vars),
 					ConfigStateChecks: []statecheck.StateCheck{
 						// Requested quotas echo the config verbatim (spec.requested_quotas is create-only, Optional).
-						statecheck.ExpectKnownValue(tenantAddr.String(), tfjsonpath.New("spec").AtMapKey("requested_quotas"), quotaMap),
+						statecheck.ExpectKnownValue(tenantAddress, tfjsonpath.New("spec").AtMapKey("requested_quotas"), quotaMap),
 						// Effective quotas come from status.applied_quotas, populated by the backend.
-						statecheck.ExpectKnownValue(tenantAddr.String(), tfjsonpath.New("status").AtMapKey("applied_quotas"), quotaMap),
+						statecheck.ExpectKnownValue(tenantAddress, tfjsonpath.New("status").AtMapKey("applied_quotas"), quotaMap),
 					},
 				},
 			},
@@ -177,20 +136,16 @@ func TestAccTenant(t *testing.T) {
 	// clear plan-time error rather than silently no-op. This is a provider-side decision, so it runs in
 	// both modes.
 	t.Run("quotas_change_rejected", func(t *testing.T) {
-		// Reuse the same base config (same prerequisite resources) and change only the tenant's requested
-		// quota value, so step 2 is an in-place update of the existing tenant rather than a full replace.
-		config, _ := tenantQuotaConfig(t, tenantQuotaOptions{maxCpu: 4000, threshold: 4000, requestedCpu: 2000})
-		changedConfig := config.WithFirstBlock(
-			testconfig.Descend("spec", "requested_quotas")(testconfig.SetRawExpr(`{ "limits.cpu" = { value = %d } }`, 3000)),
-		)
+		skipTenantQuotasUnlessMock(t)
+		vars := hclStepVars{"suffix": acctest.RandString(8)}
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
-					Config: config.String(),
+					Config: hclStep(t, "resources/tenant/quotas_change_rejected", 1, vars),
 				},
 				{
-					Config:      changedConfig.String(),
+					Config:      hclStep(t, "resources/tenant/quotas_change_rejected", 2, vars),
 					ExpectError: expectErrorWords("Tenants", "updated"),
 				},
 			},
@@ -210,14 +165,16 @@ func TestAccTenant(t *testing.T) {
 		if IsMockClientTest() {
 			t.Skip("the auto-approval threshold is enforced by the backend; requires a real meshStack")
 		}
-		config, tenantAddr := tenantQuotaConfig(t, tenantQuotaOptions{maxCpu: 8000, threshold: 2000, requestedCpu: 4000})
+		skipTenantQuotasUnlessMock(t)
+		vars := hclStepVars{"suffix": acctest.RandString(8)}
+		tenantAddress := "meshstack_tenant.test"
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
-					Config: config.String(),
+					Config: hclStep(t, "resources/tenant/quotas_above_auto_approval_threshold_admin_key", 1, vars),
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(tenantAddr.String(), tfjsonpath.New("status").AtMapKey("applied_quotas"),
+						statecheck.ExpectKnownValue(tenantAddress, tfjsonpath.New("status").AtMapKey("applied_quotas"),
 							knownvalue.MapExact(map[string]knownvalue.Check{
 								"limits.cpu": knownvalue.ObjectExact(map[string]knownvalue.Check{
 									"value": knownvalue.Int64Exact(4000),
@@ -237,9 +194,9 @@ func TestAccTenant(t *testing.T) {
 	// truth, and the plan is empty. Runs in both modes — the mock overlays landing-zone defaults as the
 	// backend does.
 	t.Run("quotas_landing_zone_defaults", func(t *testing.T) {
-		config, tenantAddr := tenantQuotaConfig(t, tenantQuotaOptions{
-			maxCpu: 4000, threshold: 4000, requestedCpu: 2000, landingZoneMemoryDefault: 8192,
-		})
+		skipTenantQuotasUnlessMock(t)
+		vars := hclStepVars{"suffix": acctest.RandString(8)}
+		tenantAddress := "meshstack_tenant.test"
 
 		requestedQuotas := knownvalue.MapExact(map[string]knownvalue.Check{
 			"limits.cpu": knownvalue.ObjectExact(map[string]knownvalue.Check{
@@ -256,19 +213,19 @@ func TestAccTenant(t *testing.T) {
 		})
 
 		quotaStateChecks := []statecheck.StateCheck{
-			statecheck.ExpectKnownValue(tenantAddr.String(), tfjsonpath.New("spec").AtMapKey("requested_quotas"), requestedQuotas),
-			statecheck.ExpectKnownValue(tenantAddr.String(), tfjsonpath.New("status").AtMapKey("applied_quotas"), appliedQuotas),
+			statecheck.ExpectKnownValue(tenantAddress, tfjsonpath.New("spec").AtMapKey("requested_quotas"), requestedQuotas),
+			statecheck.ExpectKnownValue(tenantAddress, tfjsonpath.New("status").AtMapKey("applied_quotas"), appliedQuotas),
 		}
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
-					Config:            config.String(),
+					Config:            hclStep(t, "resources/tenant/quotas_landing_zone_defaults", 1, vars),
 					ConfigStateChecks: quotaStateChecks,
 				},
 				{
 					// Refresh reads the landing-zone-defaulted applied quotas back; the plan must stay empty.
-					Config:            config.String(),
+					Config:            hclStep(t, "resources/tenant/quotas_landing_zone_defaults", 2, vars),
 					PlanOnly:          true,
 					ConfigStateChecks: quotaStateChecks,
 				},
@@ -285,31 +242,19 @@ func TestAccTenant(t *testing.T) {
 		if !IsMockClientTest() {
 			t.Skip("asserts a provider-side plan decision (RequiresReplace); mock-only")
 		}
-		workspaceConfig, workspaceAddr := testconfig.Workspace(t)
-		projectConfig, projectAddr := testconfig.Project(t, workspaceAddr)
-		platformConfig, platformAddr, platformTypeAddr := testconfig.CustomPlatform(t, workspaceAddr)
-		landingZoneConfig, landingZoneAddr := testconfig.LandingZone(t, workspaceAddr, platformAddr, platformTypeAddr)
-		tenantConfig, tenantAddr := testconfig.Tenant(t, projectAddr, platformAddr, landingZoneAddr)
-
-		config := tenantConfig.Join(workspaceConfig, projectConfig, platformConfig, landingZoneConfig)
-
-		// Point platform_ref at a different uuid; only its value changes between steps.
-		replacedConfig := config.WithFirstBlock(
-			testconfig.Descend("spec", "platform_ref")(testconfig.SetRawExpr(
-				`{ kind = "meshPlatform", uuid = "11111111-1111-1111-1111-111111111111" }`,
-			)),
-		)
+		vars := hclStepVars{"suffix": acctest.RandString(8)}
+		tenantAddress := "meshstack_tenant.test"
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
-					Config: config.String(),
+					Config: hclStep(t, "resources/tenant/requires_replace", 1, vars),
 				},
 				{
-					Config: replacedConfig.String(),
+					Config: hclStep(t, "resources/tenant/requires_replace", 2, vars),
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
-							plancheck.ExpectResourceAction(tenantAddr.String(), plancheck.ResourceActionReplace),
+							plancheck.ExpectResourceAction(tenantAddress, plancheck.ResourceActionReplace),
 						},
 					},
 				},
@@ -318,69 +263,9 @@ func TestAccTenant(t *testing.T) {
 	})
 }
 
-// tenantQuotaOptions parameterizes tenantQuotaConfig: the platform's `limits.cpu` quota definition
-// (min is fixed at 1) and the value the tenant requests for it.
-type tenantQuotaOptions struct {
-	maxCpu       int64
-	threshold    int64
-	requestedCpu int64
-	// landingZoneMemoryDefault, when non-zero, additionally defines a `limits.memory` quota on the
-	// platform and makes it a landing zone default. The tenant never requests that key, so the backend
-	// merges it into the tenant's effective quotas and status.applied_quotas becomes a strict superset
-	// of spec.requested_quotas.
-	landingZoneMemoryDefault int64
-}
-
-// tenantQuotaConfig builds a full tenant config whose platform defines the quotas described by opts and
-// whose tenant requests opts.requestedCpu for `limits.cpu`. The bespoke quota_definitions, landing zone
-// quotas and spec.requested_quotas are layered onto the standard builders via SetRawExpr.
-func tenantQuotaConfig(t *testing.T, opts tenantQuotaOptions) (testconfig.Config, testconfig.Traversal) {
+func skipTenantQuotasUnlessMock(t *testing.T) {
 	t.Helper()
 	if !IsMockClientTest() {
 		t.Skip("quotas are applied only on platforms with a quota provider, and a tenant on one never completes or deletes without a real cluster")
 	}
-	workspaceConfig, workspaceAddr := testconfig.Workspace(t)
-	projectConfig, projectAddr := testconfig.Project(t, workspaceAddr)
-	var platformAddr testconfig.Traversal
-	platformConfig := testconfig.Resource{Name: "platform", Suffix: "_04_kubernetes"}.Config(t).WithFirstBlock(
-		testconfig.ExtractAddress(&platformAddr),
-		testconfig.OwnedByWorkspace(workspaceAddr),
-		testconfig.Descend("metadata", "name")(testconfig.SetString("k8s-"+acctest.RandString(8))),
-		testconfig.Descend("spec", "config")(testconfig.SetRawExpr(`{ kubernetes = { base_url = "https://k8s.example.com:6443" } }`)),
-	)
-
-	quotaDefinitions := fmt.Sprintf(
-		`{ quota_key = "limits.cpu", min_value = 1, max_value = %d, unit = "cores", auto_approval_threshold = %d, description = "vCPU limit", label = "CPU" }`,
-		opts.maxCpu, opts.threshold,
-	)
-	if opts.landingZoneMemoryDefault != 0 {
-		quotaDefinitions += fmt.Sprintf(
-			`, { quota_key = "limits.memory", min_value = 1, max_value = %d, unit = "MiB", auto_approval_threshold = %d, description = "Memory limit", label = "Memory" }`,
-			opts.landingZoneMemoryDefault, opts.landingZoneMemoryDefault,
-		)
-	}
-	platformConfig = platformConfig.WithFirstBlock(
-		testconfig.Descend("spec", "quota_definitions")(testconfig.SetRawExpr("[%s]", quotaDefinitions)),
-	)
-
-	landingZoneConfig, landingZoneAddr := testconfig.SimpleLandingZone(t, workspaceAddr, platformAddr)
-	landingZoneConfig = landingZoneConfig.WithFirstBlock(
-		testconfig.Descend("spec", "platform_properties")(testconfig.SetRawExpr(`{ kubernetes = { kubernetes_role_mappings = [] } }`)),
-	)
-	if opts.landingZoneMemoryDefault != 0 {
-		landingZoneConfig = landingZoneConfig.WithFirstBlock(
-			testconfig.Descend("spec", "quotas")(testconfig.SetRawExpr(
-				`[{ key = "limits.memory", value = %d }]`, opts.landingZoneMemoryDefault,
-			)),
-		)
-	}
-
-	tenantConfig, tenantAddr := testconfig.Tenant(t, projectAddr, platformAddr, landingZoneAddr)
-	tenantConfig = tenantConfig.WithFirstBlock(
-		testconfig.Descend("spec", "requested_quotas")(testconfig.SetRawExpr(
-			`{ "limits.cpu" = { value = %d } }`, opts.requestedCpu,
-		)),
-	)
-	config := tenantConfig.Join(workspaceConfig, projectConfig, platformConfig, landingZoneConfig)
-	return config, tenantAddr
 }

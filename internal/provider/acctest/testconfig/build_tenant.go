@@ -19,15 +19,3 @@ func Tenant(t *testing.T, projectAddr, platformAddr, landingZoneAddr Traversal) 
 		),
 	), tenantAddr
 }
-
-// TenantAndWorkspace builds a meshstack_tenant config with all prerequisites (workspace, project, platform, landing zone).
-func TenantAndWorkspace(t *testing.T) (config Config, tenantAddr Traversal) {
-	t.Helper()
-	workspaceConfig, workspaceAddr := Workspace(t)
-	projectConfig, projectAddr := Project(t, workspaceAddr)
-	platformConfig, platformAddr, platformTypeAddr := CustomPlatform(t, workspaceAddr)
-	landingZoneConfig, landingZoneAddr := LandingZone(t, workspaceAddr, platformAddr, platformTypeAddr)
-
-	tenantConfig, tenantAddr := Tenant(t, projectAddr, platformAddr, landingZoneAddr)
-	return tenantConfig.Join(workspaceConfig, projectConfig, platformConfig, landingZoneConfig), tenantAddr
-}
