@@ -5,12 +5,14 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 
-	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
+	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/xknownvalue"
 )
 
 func TestAccNonEphemeralSecretFunction(t *testing.T) {
@@ -19,9 +21,7 @@ func TestAccNonEphemeralSecretFunction(t *testing.T) {
 			hash := fmt.Sprintf("%x", sha256.Sum256([]byte(value)))
 			ApplyAndTest(t, resource.TestCase{
 				Steps: []resource.TestStep{{
-					Config: fmt.Sprintf(`output "secret" {
-  value = provider::meshstack::non_ephemeral_secret(%q)
-}`, value),
+					Config: hclStep(t, "functions/non_ephemeral_secret", 1, hclStepVars{"value": value}),
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownOutputValue("secret", knownvalue.ObjectExact(map[string]knownvalue.Check{
 							"secret_value":   knownvalue.StringExact(value),
@@ -37,24 +37,48 @@ func TestAccNonEphemeralSecretFunction(t *testing.T) {
 	t.Run("value unknown while planning", func(t *testing.T) {
 		const value = "token-from-another-resource"
 		hash := fmt.Sprintf("%x", sha256.Sum256([]byte(value)))
-		config, resourceAddress := testconfig.Integration(t, "_02_azure_devops")
-		config = config.
-			WithRawBlock(fmt.Sprintf(`resource "terraform_data" "token" { input = %q }`, value)).
-			WithFirstBlock(testconfig.Descend("spec", "config", "azuredevops", "personal_access_token")(
-				testconfig.SetRawExpr(`provider::meshstack::non_ephemeral_secret(terraform_data.token.output)`),
-			))
+		vars := hclStepVars{"suffix": acctest.RandString(8)}
+		resourceAddress := "meshstack_integration.test"
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{{
-				Config: config.String(),
+				Config: hclStep(t, "functions/non_ephemeral_secret/value_unknown_while_planning", 1, vars),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectUnknownValue(resourceAddress.String(), azureDevopsPatPath().AtMapKey("secret_version")),
+						plancheck.ExpectUnknownValue(resourceAddress, azureDevopsPatPath().AtMapKey("secret_version")),
 					},
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(resourceAddress.String(),
+					statecheck.ExpectKnownValue(resourceAddress,
 						azureDevopsPatPath().AtMapKey("secret_version"), knownvalue.StringExact(hash)),
+				},
+			}},
+		})
+	})
+
+	t.Run("example", func(t *testing.T) {
+		hash := fmt.Sprintf("%x", sha256.Sum256([]byte("mock-pat-token-12345")))
+		suffix := acctest.RandString(8)
+		vars := hclStepVars{"suffix": suffix}
+		resourceAddress := "meshstack_integration.example"
+
+		ApplyAndTest(t, resource.TestCase{
+			Steps: []resource.TestStep{{
+				Config: hclStep(t, "functions/non_ephemeral_secret/example", 1, vars),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(resourceAddress, plancheck.ResourceActionCreate),
+						plancheck.ExpectKnownValue(resourceAddress, azureDevopsPatPath().AtMapKey("secret_version"), knownvalue.StringExact(hash)),
+					},
+				},
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("metadata"), checkIntegrationMetadata("test-ws-"+suffix)),
+					statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("spec"), checkIntegrationSpec("02_azure_devops", "Azure DevOps Integration")),
+					statecheck.ExpectKnownValue(resourceAddress, azureDevopsPatPath(), xknownvalue.MapExact(map[string]knownvalue.Check{
+						"secret_value":   knownvalue.Null(),
+						"secret_hash":    xknownvalue.NotEmptyString(),
+						"secret_version": knownvalue.StringExact(hash),
+					})),
 				},
 			}},
 		})
@@ -67,12 +91,7 @@ func TestAccNonEphemeralSecretFunction(t *testing.T) {
 		hash := fmt.Sprintf("%x", sha256.Sum256([]byte(value)))
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{{
-				Config: fmt.Sprintf(`locals {
-  some_sensitive_value = sensitive(%q)
-}
-output "secret" {
-  value = provider::meshstack::non_ephemeral_secret(nonsensitive(local.some_sensitive_value))
-}`, value),
+				Config: hclStep(t, "functions/non_ephemeral_secret/sensitive_local_wrapped_in_nonsensitive_is_not_sensitive", 1, nil),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownOutputValue("secret", knownvalue.ObjectExact(map[string]knownvalue.Check{
 						"secret_value":   knownvalue.StringExact(value),
