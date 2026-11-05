@@ -108,7 +108,7 @@ func TestAccWorkspaceTags(t *testing.T) {
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(workspaceTagsAddress, tfjsonpath.New("metadata").AtMapKey("workspace_identifier"), knownvalue.StringExact("test-ws-"+suffix)),
 					statecheck.ExpectKnownValue(workspaceTagsAddress, tfjsonpath.New("spec").AtMapKey("tags"), knownvalue.MapExact(map[string]knownvalue.Check{
-						"budget-code": knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("12345")}),
+						"cost-center-" + suffix: knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("12345")}),
 					})),
 				},
 			},

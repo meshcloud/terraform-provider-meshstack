@@ -37,7 +37,7 @@ Manages a single dedicated tag for a meshStack workspace.
 resource "meshstack_workspace_tag" "example" {
   metadata = {
     workspace_identifier = data.meshstack_workspace.example.metadata.name
-    key                  = "billing-account"
+    key                  = "cost-center"
   }
   spec = {
     values = ["12345"]
@@ -75,7 +75,7 @@ Use the [`import` block](https://developer.hashicorp.com/terraform/language/impo
 
 ```terraform
 import {
-  id = "my-workspace.billing-account"
+  id = "my-workspace.cost-center"
   to = meshstack_workspace_tag.example
 }
 ```

@@ -90,7 +90,7 @@ func TestAccWorkspaceTag(t *testing.T) {
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(workspaceTagAddress, tfjsonpath.New("metadata").AtMapKey("workspace_identifier"), knownvalue.StringExact("test-ws-"+suffix)),
-					statecheck.ExpectKnownValue(workspaceTagAddress, tfjsonpath.New("metadata").AtMapKey("key"), knownvalue.StringExact("billing-account")),
+					statecheck.ExpectKnownValue(workspaceTagAddress, tfjsonpath.New("metadata").AtMapKey("key"), knownvalue.StringExact("cost-center-"+suffix)),
 					statecheck.ExpectKnownValue(workspaceTagAddress, tfjsonpath.New("spec").AtMapKey("values"), knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("12345")})),
 				},
 			},
@@ -108,7 +108,7 @@ func TestAccWorkspaceTag(t *testing.T) {
 			{
 				ImportState:     true,
 				ImportStateKind: resource.ImportBlockWithID,
-				ImportStateId:   "test-ws-" + suffix + ".billing-account",
+				ImportStateId:   "test-ws-" + suffix + ".cost-center-" + suffix,
 				ResourceName:    workspaceTagAddress,
 			},
 			{

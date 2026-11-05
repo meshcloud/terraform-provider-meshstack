@@ -13,11 +13,11 @@ data "meshstack_workspace" "example" {
   }
 }
 
-resource "meshstack_tag_definition" "billing_account" {
+resource "meshstack_tag_definition" "cost_center" {
   spec = {
     target_kind  = "meshWorkspace"
-    key          = "billing-account"
-    display_name = "Billing Account"
+    key          = "cost-center-[[.suffix]]"
+    display_name = "Cost Center"
     value_type = {
       string = {}
     }
@@ -27,7 +27,7 @@ resource "meshstack_tag_definition" "billing_account" {
 resource "meshstack_workspace_tag" "example" {
   metadata = {
     workspace_identifier = data.meshstack_workspace.example.metadata.name
-    key                  = "billing-account"
+    key                  = "cost-center-[[.suffix]]"
   }
   spec = {
     values = ["12345", "67890"]
