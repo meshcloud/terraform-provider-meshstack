@@ -34,10 +34,11 @@ for the full list of resources, data sources, and example configurations.
 
 ## For AI agents
 
-AI agents that manage meshStack with this provider get the
+AI agents that work with meshStack start with the
+[meshStack agent context](https://docs.meshcloud.io/agent-context/index.md). It explains which login to
+use, the guardrails and every task. Agents that manage meshStack with this provider also get the
 [`terraform-provider-meshstack` skill](skills/terraform-provider-meshstack/SKILL.md): link it from your
-repository's agent instructions. For everything else about meshStack, point them at
-[docs.meshcloud.io/llms.txt](https://docs.meshcloud.io/llms.txt).
+repository's agent instructions.
 
 ## Support, bugs, feature requests
 

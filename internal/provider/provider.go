@@ -38,7 +38,10 @@ func (p *MeshStackProvider) Metadata(_ context.Context, _ provider.MetadataReque
 }
 
 func (p *MeshStackProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp *provider.SchemaResponse) {
-	resp.Schema = schema.Schema{Attributes: map[string]schema.Attribute{}}
+	resp.Schema = schema.Schema{
+		MarkdownDescription: "Manage meshStack resources." + agentContextNote(),
+		Attributes:          map[string]schema.Attribute{},
+	}
 	for key, attribute := range modelAttributes {
 		resp.Schema.Attributes[key] = schema.StringAttribute{
 			MarkdownDescription: attribute.MarkdownDescription(),
@@ -85,7 +88,8 @@ func newProviderClient(ctx context.Context, data MeshStackProviderModel, provide
 		IgnoreDefaultWorkspace: true,
 	})
 	if err != nil {
-		diags.AddError("Failed to create meshStack client", err.Error())
+		diags.AddError("Failed to create meshStack client", err.Error()+
+			"\n\nAI agents: https://docs.meshcloud.io/agent-context/access.md explains which login to use and the roles it needs.")
 	}
 	return providerClient
 }

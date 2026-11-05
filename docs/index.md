@@ -13,7 +13,7 @@ The meshStack terraform provider is an open-source tool, licensed under the Apac
 
 ## For AI agents
 
-AI agents that manage meshStack with this provider get the [`terraform-provider-meshstack` skill](https://github.com/meshcloud/terraform-provider-meshstack/blob/main/skills/terraform-provider-meshstack/SKILL.md): link it from your repository's agent instructions. For everything else about meshStack, point them at [docs.meshcloud.io/llms.txt](https://docs.meshcloud.io/llms.txt).
+AI agents that work with meshStack start with the [meshStack agent context](https://docs.meshcloud.io/agent-context/index.md). It explains which login to use, the guardrails and every task. Agents that manage meshStack with this provider also get the [`terraform-provider-meshstack` skill](https://github.com/meshcloud/terraform-provider-meshstack/blob/main/skills/terraform-provider-meshstack/SKILL.md): link it from your repository's agent instructions.
 
 ## Authentication
 

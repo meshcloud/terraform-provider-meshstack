@@ -298,6 +298,10 @@ func tenantTagsAttribute() schema.SingleNestedAttribute {
 
 // previewDisclaimer returns a standard MarkdownDescription note for resources and data sources
 // that use a preview API. Append this to the MarkdownDescription of any preview resource.
+func agentContextNote() string {
+	return "\n\n-> **AI agents:** Read the [meshStack agent context](https://docs.meshcloud.io/agent-context/index.md) before you act, starting with its guardrails."
+}
+
 func previewDisclaimer() string {
 	return "\n\n~> **Preview:** This resource is in preview. " +
 		"Breaking changes are possible without prior notice due to changes in the underlying [meshStack preview API](https://docs.meshcloud.io/api/technical-specifications#preview-endpoints) or due to changes in this provider. " +

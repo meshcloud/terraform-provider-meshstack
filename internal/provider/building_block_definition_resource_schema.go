@@ -459,7 +459,7 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 		MarkdownDescription: "Manages a meshBuildingBlockDefinition in meshStack. " +
 			"Building Block Definitions define reusable automation components that can be executed on workspaces or tenants. " +
 			"This resource combines the building block definition metadata with version information in a single resource for simplified management." +
-			previewDisclaimer(),
+			agentContextNote() + previewDisclaimer(),
 
 		Attributes: map[string]schema.Attribute{
 			"metadata": schema.SingleNestedAttribute{
