@@ -65,7 +65,7 @@ func TestAwaitRun(t *testing.T) {
 	t.Parallel()
 
 	failedStep := client.MeshBuildingBlockRunLogs{Steps: []client.MeshBuildingBlockRunStepLog{
-		{DisplayName: "apply", Status: string(client.BuildingBlockStatusFailed), UserMessage: new("intentionally broken BBD version")},
+		{DisplayName: "apply", Status: "FAILED", UserMessage: new("intentionally broken BBD version")},
 	}}
 
 	tests := map[string]struct {

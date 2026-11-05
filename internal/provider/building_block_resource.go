@@ -729,7 +729,7 @@ func (r *buildingBlockResource) addRunFailureDiagnostics(
 	// listing them all just adds noise. It shares the caller's severity because it is the actionable
 	// detail behind the run failure reported above.
 	for _, step := range logs.Steps {
-		if step.Status != string(client.BuildingBlockStatusFailed) {
+		if step.Status != "FAILED" {
 			continue
 		}
 		stepDetail := fmt.Sprintf("Step %q is in status %s.", step.DisplayName, step.Status)
