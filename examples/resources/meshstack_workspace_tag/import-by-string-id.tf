@@ -1,4 +1,4 @@
 import {
-  id = "my-workspace.cost-center"
+  id = "my-workspace.billing-account"
   to = meshstack_workspace_tag.example
 }

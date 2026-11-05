@@ -1,18 +1,14 @@
 package provider
 
 import (
-	"fmt"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
-	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
-
-	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
-	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/xknownvalue"
 )
 
 func TestAccWorkspaceTag(t *testing.T) {
@@ -22,29 +18,22 @@ func TestAccWorkspaceTag(t *testing.T) {
 		// the second write must preserve the first tag and deleting one must leave the other alone. Each
 		// resource's Read only looks at its own key, so a clobbered tag surfaces as its resource dropping
 		// out of state — hence the empty-plan checks.
-		workspaceConfig, workspaceAddr := testconfig.WorkspaceWithoutTags(t)
-		firstConfig, firstAddr, firstKey := testconfig.WorkspaceTag(t, workspaceAddr)
-		secondConfig, secondAddr, secondKey := testconfig.WorkspaceTag(t, workspaceAddr)
-
-		// depends_on serializes the two read-modify-write cycles. Without it Terraform applies them in
-		// parallel and one tag is silently lost — the race documented in workspaceTagCaveats.
-		secondConfig = secondConfig.WithFirstBlock(
-			testconfig.Descend("spec", "values")(testconfig.SetRawExpr(`["second"]`)),
-			testconfig.Descend("depends_on")(testconfig.SetRawExpr("[%s]", firstAddr)),
-		)
-
-		bothTags := firstConfig.Join(secondConfig, workspaceConfig)
-		onlyFirstTag := firstConfig.Join(workspaceConfig)
+		suffix := acctest.RandString(8)
+		vars := hclStepVars{"suffix": suffix}
+		firstAddress := "meshstack_workspace_tag.first"
+		secondAddress := "meshstack_workspace_tag.second"
+		firstKey := "test-key-first-" + suffix
+		secondKey := "test-key-second-" + suffix
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
-					Config: bothTags.String(),
+					Config: hclStep(t, "resources/workspace_tag/two_tags_on_one_workspace", 1, vars),
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(firstAddr.String(), tfjsonpath.New("metadata").AtMapKey("key"), knownvalue.StringExact(firstKey)),
-						statecheck.ExpectKnownValue(firstAddr.String(), tfjsonpath.New("spec").AtMapKey("values"), knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("12345")})),
-						statecheck.ExpectKnownValue(secondAddr.String(), tfjsonpath.New("metadata").AtMapKey("key"), knownvalue.StringExact(secondKey)),
-						statecheck.ExpectKnownValue(secondAddr.String(), tfjsonpath.New("spec").AtMapKey("values"), knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("second")})),
+						statecheck.ExpectKnownValue(firstAddress, tfjsonpath.New("metadata").AtMapKey("key"), knownvalue.StringExact(firstKey)),
+						statecheck.ExpectKnownValue(firstAddress, tfjsonpath.New("spec").AtMapKey("values"), knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("12345")})),
+						statecheck.ExpectKnownValue(secondAddress, tfjsonpath.New("metadata").AtMapKey("key"), knownvalue.StringExact(secondKey)),
+						statecheck.ExpectKnownValue(secondAddress, tfjsonpath.New("spec").AtMapKey("values"), knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("second")})),
 					},
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
@@ -53,15 +42,15 @@ func TestAccWorkspaceTag(t *testing.T) {
 				{
 					// Removing the second tag must not take the first one with it: Delete rewrites the
 					// workspace without its own key only.
-					Config: onlyFirstTag.String(),
+					Config: hclStep(t, "resources/workspace_tag/two_tags_on_one_workspace", 2, vars),
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
-							plancheck.ExpectResourceAction(secondAddr.String(), plancheck.ResourceActionDestroy),
+							plancheck.ExpectResourceAction(secondAddress, plancheck.ResourceActionDestroy),
 						},
 						PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(firstAddr.String(), tfjsonpath.New("spec").AtMapKey("values"), knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("12345")})),
+						statecheck.ExpectKnownValue(firstAddress, tfjsonpath.New("spec").AtMapKey("values"), knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("12345")})),
 					},
 				},
 			},
@@ -71,77 +60,60 @@ func TestAccWorkspaceTag(t *testing.T) {
 	t.Run("workspace_not_found", func(t *testing.T) {
 		// This resource cannot create the workspace it tags, so a missing one must be a clear error
 		// rather than a nil-deref or a silent no-op.
-		// The workspace config is deliberately not joined: only its generated identifier is reused, so the
-		// tag resource points at a workspace that does not exist.
-		_, workspaceAddr := testconfig.WorkspaceWithoutTags(t)
-		workspaceTagConfig, _, _ := testconfig.WorkspaceTag(t, workspaceAddr)
-		config := workspaceTagConfig.WithFirstBlock(
-			testconfig.Descend("metadata", "workspace_identifier")(testconfig.SetString("does-not-exist-workspace")),
-		)
+		vars := hclStepVars{"suffix": acctest.RandString(8)}
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
-					Config:      config.String(),
+					Config:      hclStep(t, "resources/workspace_tag/workspace_not_found", 1, vars),
 					ExpectError: expectErrorWords("Workspace", "not", "found"),
 				},
 			},
 		})
 	})
 
-	workspaceConfig, workspaceAddr := testconfig.WorkspaceWithoutTags(t)
-	workspaceTagConfig, workspaceTagAddr, _ := testconfig.WorkspaceTag(t, workspaceAddr)
-	config := workspaceTagConfig.Join(workspaceConfig)
-
-	updateConfig := config.WithFirstBlock(
-		testconfig.Descend("spec", "values")(testconfig.SetRawExpr(`["12345", "67890"]`)),
-	)
+	suffix := acctest.RandString(8)
+	vars := hclStepVars{"suffix": suffix}
+	workspaceTagAddress := "meshstack_workspace_tag.example"
 
 	ApplyAndTest(t, resource.TestCase{
 		Steps: []resource.TestStep{
 			{
-				Config: config.String(),
+				Config: hclStep(t, "resources/workspace_tag", 1, vars),
+			},
+			{
+				Config: hclStep(t, "resources/workspace_tag", 2, vars),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectResourceAction(workspaceTagAddr.String(), plancheck.ResourceActionCreate),
+						plancheck.ExpectResourceAction(workspaceTagAddress, plancheck.ResourceActionCreate),
 					},
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(workspaceTagAddr.String(), tfjsonpath.New("metadata").AtMapKey("workspace_identifier"), xknownvalue.NotEmptyString()),
-					statecheck.ExpectKnownValue(workspaceTagAddr.String(), tfjsonpath.New("metadata").AtMapKey("key"), xknownvalue.NotEmptyString()),
-					statecheck.ExpectKnownValue(workspaceTagAddr.String(), tfjsonpath.New("spec").AtMapKey("values"), knownvalue.ListSizeExact(1)),
+					statecheck.ExpectKnownValue(workspaceTagAddress, tfjsonpath.New("metadata").AtMapKey("workspace_identifier"), knownvalue.StringExact("test-ws-"+suffix)),
+					statecheck.ExpectKnownValue(workspaceTagAddress, tfjsonpath.New("metadata").AtMapKey("key"), knownvalue.StringExact("billing-account")),
+					statecheck.ExpectKnownValue(workspaceTagAddress, tfjsonpath.New("spec").AtMapKey("values"), knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("12345")})),
 				},
 			},
 			{
-				Config: updateConfig.String(),
+				Config: hclStep(t, "resources/workspace_tag", 3, vars),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectResourceAction(workspaceTagAddr.String(), plancheck.ResourceActionUpdate),
+						plancheck.ExpectResourceAction(workspaceTagAddress, plancheck.ResourceActionUpdate),
 					},
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(workspaceTagAddr.String(), tfjsonpath.New("spec").AtMapKey("values"), knownvalue.ListSizeExact(2)),
+					statecheck.ExpectKnownValue(workspaceTagAddress, tfjsonpath.New("spec").AtMapKey("values"), knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("12345"), knownvalue.StringExact("67890")})),
 				},
 			},
 			{
 				ImportState:     true,
 				ImportStateKind: resource.ImportBlockWithID,
-				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					ws := s.RootModule().Resources[workspaceAddr.String()]
-					if ws == nil {
-						return "", fmt.Errorf("workspace resource not found: %s", workspaceAddr.String())
-					}
-					tag := s.RootModule().Resources[workspaceTagAddr.String()]
-					if tag == nil {
-						return "", fmt.Errorf("workspace tag resource not found: %s", workspaceTagAddr.String())
-					}
-					return ws.Primary.Attributes["metadata.name"] + "." + tag.Primary.Attributes["metadata.key"], nil
-				},
-				ResourceName: workspaceTagAddr.String(),
+				ImportStateId:   "test-ws-" + suffix + ".billing-account",
+				ResourceName:    workspaceTagAddress,
 			},
 			{
 				ImportState:   true,
-				ResourceName:  workspaceTagAddr.String(),
+				ResourceName:  workspaceTagAddress,
 				ImportStateId: "no-dot",
 				ExpectError:   expectErrorWords("Unexpected", "Import", "Identifier"),
 			},

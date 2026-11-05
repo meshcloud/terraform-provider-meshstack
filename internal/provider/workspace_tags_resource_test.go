@@ -1,19 +1,14 @@
 package provider
 
 import (
-	"fmt"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
-	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
-	"github.com/meshcloud/meshstack-cli/client"
-
-	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
-	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/xknownvalue"
 )
 
 func TestAccWorkspaceTags(t *testing.T) {
@@ -21,22 +16,17 @@ func TestAccWorkspaceTags(t *testing.T) {
 		// A declared key with no values must converge. The API returns an entry for every defined tag
 		// property — an empty list when unset — and reconcileTags mirrors tracked keys verbatim, so the
 		// key stays in state instead of being dropped on every refresh.
-		tagConfig, tagDefinitionAddr, tagKey := testconfig.TagDefinition(t, client.MeshObjectKind.Workspace)
-		workspaceConfig, workspaceAddr := testconfig.WorkspaceWithoutTags(t)
-
-		var workspaceTagsAddr testconfig.Traversal
-		config := testconfig.Resource{Name: "workspace_tags"}.Config(t).WithFirstBlock(
-			testconfig.ExtractAddress(&workspaceTagsAddr),
-			testconfig.Descend("metadata", "workspace_identifier")(testconfig.SetAddr(workspaceAddr, "metadata", "name")),
-			testconfig.Descend("spec", "tags")(testconfig.SetRawExpr(`{(%s) = []}`, tagDefinitionAddr.Join("spec", "key"))),
-		).Join(tagConfig, workspaceConfig)
+		suffix := acctest.RandString(8)
+		vars := hclStepVars{"suffix": suffix}
+		workspaceTagsAddress := "meshstack_workspace_tags.test"
+		tagKey := "test-key-" + suffix
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
-					Config: config.String(),
+					Config: hclStep(t, "resources/workspace_tags/declared_empty_value_list", 1, vars),
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(workspaceTagsAddr.String(), tfjsonpath.New("spec").AtMapKey("tags"), knownvalue.MapExact(map[string]knownvalue.Check{
+						statecheck.ExpectKnownValue(workspaceTagsAddress, tfjsonpath.New("spec").AtMapKey("tags"), knownvalue.MapExact(map[string]knownvalue.Check{
 							tagKey: knownvalue.ListSizeExact(0),
 						})),
 					},
@@ -51,46 +41,33 @@ func TestAccWorkspaceTags(t *testing.T) {
 	t.Run("removing_one_key_of_several", func(t *testing.T) {
 		// The map is authoritative per key, not just as a whole: dropping one key of two must remove that
 		// tag and leave the other untouched.
-		firstTagConfig, firstTagAddr, firstKey := testconfig.TagDefinition(t, client.MeshObjectKind.Workspace)
-		secondTagConfig, secondTagAddr, secondKey := testconfig.TagDefinition(t, client.MeshObjectKind.Workspace)
-		workspaceConfig, workspaceAddr := testconfig.WorkspaceWithoutTags(t)
-
-		var workspaceTagsAddr testconfig.Traversal
-		bothKeys := testconfig.Resource{Name: "workspace_tags"}.Config(t).WithFirstBlock(
-			testconfig.ExtractAddress(&workspaceTagsAddr),
-			testconfig.Descend("metadata", "workspace_identifier")(testconfig.SetAddr(workspaceAddr, "metadata", "name")),
-			testconfig.Descend("spec", "tags")(testconfig.SetRawExpr(
-				`{(%s) = ["first"], (%s) = ["second"]}`,
-				firstTagAddr.Join("spec", "key"),
-				secondTagAddr.Join("spec", "key"),
-			)),
-		).Join(firstTagConfig, secondTagConfig, workspaceConfig)
-
-		onlyFirstKey := bothKeys.WithFirstBlock(
-			testconfig.Descend("spec", "tags")(testconfig.SetRawExpr(`{(%s) = ["first"]}`, firstTagAddr.Join("spec", "key"))),
-		)
+		suffix := acctest.RandString(8)
+		vars := hclStepVars{"suffix": suffix}
+		workspaceTagsAddress := "meshstack_workspace_tags.test"
+		firstKey := "test-key-first-" + suffix
+		secondKey := "test-key-second-" + suffix
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
-					Config: bothKeys.String(),
+					Config: hclStep(t, "resources/workspace_tags/removing_one_key_of_several", 1, vars),
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(workspaceTagsAddr.String(), tfjsonpath.New("spec").AtMapKey("tags"), knownvalue.MapExact(map[string]knownvalue.Check{
+						statecheck.ExpectKnownValue(workspaceTagsAddress, tfjsonpath.New("spec").AtMapKey("tags"), knownvalue.MapExact(map[string]knownvalue.Check{
 							firstKey:  knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("first")}),
 							secondKey: knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("second")}),
 						})),
 					},
 				},
 				{
-					Config: onlyFirstKey.String(),
+					Config: hclStep(t, "resources/workspace_tags/removing_one_key_of_several", 2, vars),
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
-							plancheck.ExpectResourceAction(workspaceTagsAddr.String(), plancheck.ResourceActionUpdate),
+							plancheck.ExpectResourceAction(workspaceTagsAddress, plancheck.ResourceActionUpdate),
 						},
 						PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(workspaceTagsAddr.String(), tfjsonpath.New("spec").AtMapKey("tags"), knownvalue.MapExact(map[string]knownvalue.Check{
+						statecheck.ExpectKnownValue(workspaceTagsAddress, tfjsonpath.New("spec").AtMapKey("tags"), knownvalue.MapExact(map[string]knownvalue.Check{
 							firstKey: knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("first")}),
 						})),
 					},
@@ -100,63 +77,58 @@ func TestAccWorkspaceTags(t *testing.T) {
 	})
 
 	t.Run("workspace_not_found", func(t *testing.T) {
-		// The workspace config is deliberately not joined: only its generated identifier is reused, so the
-		// tag resource points at a workspace that does not exist.
-		_, workspaceAddr := testconfig.WorkspaceWithoutTags(t)
-		workspaceTagsConfig, _ := testconfig.WorkspaceTags(t, workspaceAddr)
-		config := workspaceTagsConfig.WithFirstBlock(
-			testconfig.Descend("metadata", "workspace_identifier")(testconfig.SetString("does-not-exist-workspace")),
-		)
+		vars := hclStepVars{"suffix": acctest.RandString(8)}
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
-					Config:      config.String(),
+					Config:      hclStep(t, "resources/workspace_tags/workspace_not_found", 1, vars),
 					ExpectError: expectErrorWords("Workspace", "not", "found"),
 				},
 			},
 		})
 	})
 
-	workspaceConfig, workspaceAddr := testconfig.WorkspaceWithoutTags(t)
-	workspaceTagsConfig, workspaceTagsAddr := testconfig.WorkspaceTags(t, workspaceAddr)
-	config := workspaceTagsConfig.Join(workspaceConfig)
-
-	updateConfig := config.WithFirstBlock(
-		testconfig.Descend("spec", "tags")(testconfig.SetRawExpr(`{}`)),
-	)
+	suffix := acctest.RandString(8)
+	vars := hclStepVars{"suffix": suffix}
+	workspaceTagsAddress := "meshstack_workspace_tags.example"
 
 	ApplyAndTest(t, resource.TestCase{
 		Steps: []resource.TestStep{
 			{
-				Config: config.String(),
+				Config: hclStep(t, "resources/workspace_tags", 1, vars),
+			},
+			{
+				Config: hclStep(t, "resources/workspace_tags", 2, vars),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectResourceAction(workspaceTagsAddr.String(), plancheck.ResourceActionCreate),
+						plancheck.ExpectResourceAction(workspaceTagsAddress, plancheck.ResourceActionCreate),
 					},
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(workspaceTagsAddr.String(), tfjsonpath.New("metadata").AtMapKey("workspace_identifier"), xknownvalue.NotEmptyString()),
-					statecheck.ExpectKnownValue(workspaceTagsAddr.String(), tfjsonpath.New("spec").AtMapKey("tags"), knownvalue.MapSizeExact(1)),
+					statecheck.ExpectKnownValue(workspaceTagsAddress, tfjsonpath.New("metadata").AtMapKey("workspace_identifier"), knownvalue.StringExact("test-ws-"+suffix)),
+					statecheck.ExpectKnownValue(workspaceTagsAddress, tfjsonpath.New("spec").AtMapKey("tags"), knownvalue.MapExact(map[string]knownvalue.Check{
+						"budget-code": knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("12345")}),
+					})),
 				},
 			},
 			{
-				Config: updateConfig.String(),
+				Config: hclStep(t, "resources/workspace_tags", 3, vars),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectResourceAction(workspaceTagsAddr.String(), plancheck.ResourceActionUpdate),
+						plancheck.ExpectResourceAction(workspaceTagsAddress, plancheck.ResourceActionUpdate),
 					},
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(workspaceTagsAddr.String(), tfjsonpath.New("spec").AtMapKey("tags"), knownvalue.MapSizeExact(0)),
+					statecheck.ExpectKnownValue(workspaceTagsAddress, tfjsonpath.New("spec").AtMapKey("tags"), knownvalue.MapSizeExact(0)),
 				},
 			},
 			{
 				// Restore the tag so the import below runs against a workspace that actually has tags.
-				Config: config.String(),
+				Config: hclStep(t, "resources/workspace_tags", 4, vars),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectResourceAction(workspaceTagsAddr.String(), plancheck.ResourceActionUpdate),
+						plancheck.ExpectResourceAction(workspaceTagsAddress, plancheck.ResourceActionUpdate),
 					},
 				},
 			},
@@ -165,14 +137,8 @@ func TestAccWorkspaceTags(t *testing.T) {
 				// reconcile against an empty tracked set and import nothing.
 				ImportState:     true,
 				ImportStateKind: resource.ImportBlockWithID,
-				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					ws := s.RootModule().Resources[workspaceAddr.String()]
-					if ws == nil {
-						return "", fmt.Errorf("workspace resource not found: %s", workspaceAddr.String())
-					}
-					return ws.Primary.Attributes["metadata.name"], nil
-				},
-				ResourceName: workspaceTagsAddr.String(),
+				ImportStateId:   "test-ws-" + suffix,
+				ResourceName:    workspaceTagsAddress,
 			},
 		},
 	})
