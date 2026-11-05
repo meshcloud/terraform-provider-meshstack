@@ -1,37 +1,34 @@
 package provider
 
 import (
+	"strings"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
-
-	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
-	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/xknownvalue"
 )
 
 func TestAccPlatformTypeDataSource(t *testing.T) {
-	workspaceConfig, workspaceAddr := testconfig.Workspace(t)
-	platformTypeConfig, platformTypeAddr := testconfig.PlatformType(t, workspaceAddr)
-
-	dataSourceAddress := testconfig.Traversal{"data.meshstack_platform_type", "example"}
-	config := testconfig.DataSource{Name: "platform_type"}.Config(t).WithFirstBlock(
-		testconfig.Descend("metadata")(
-			testconfig.Descend("owned_by_workspace")(testconfig.SetAddr(workspaceAddr, "metadata", "name")),
-			testconfig.Descend("name")(testconfig.SetAddr(platformTypeAddr, "metadata", "name")),
-		)).
-		Join(workspaceConfig, platformTypeConfig)
+	suffix := acctest.RandString(8)
+	vars := platformTypeStepVars(suffix)
+	dataSourceAddress := "data.meshstack_platform_type.example"
+	platformTypeName := "TEST-PT-" + strings.ToUpper(suffix)
 
 	ApplyAndTest(t, resource.TestCase{
 		Steps: []resource.TestStep{
 			{
-				Config: config.String(),
+				Config: hclStep(t, "data-sources/platform_type", 1, vars),
+			},
+			{
+				Config: hclStep(t, "data-sources/platform_type", 2, vars),
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("metadata"), checkPlatformTypeMetadata()),
-					statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("spec").AtMapKey("display_name"), xknownvalue.NotEmptyString()),
-					statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("status"), checkPlatformTypeStatus()),
-					statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("ref"), checkPlatformTypeRef()),
+					statecheck.ExpectKnownValue(dataSourceAddress, tfjsonpath.New("metadata"), checkPlatformTypeMetadata(platformTypeName, "test-ws-"+suffix)),
+					statecheck.ExpectKnownValue(dataSourceAddress, tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("My Custom Platform "+suffix)),
+					statecheck.ExpectKnownValue(dataSourceAddress, tfjsonpath.New("status"), checkPlatformTypeStatus()),
+					statecheck.ExpectKnownValue(dataSourceAddress, tfjsonpath.New("ref"), checkPlatformTypeRef(platformTypeName)),
 				},
 			},
 		},

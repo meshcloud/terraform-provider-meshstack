@@ -55,9 +55,7 @@ resource "meshstack_platform" "example_aws" {
 
             aws_role_mappings = [
               {
-                project_role_ref = {
-                  name = "admin"
-                }
+                project_role_ref    = { name = "admin" }
                 aws_role            = "admin"
                 permission_set_arns = ["arn:aws:sso:::permissionSet/ssoins-1234567890abcdef/ps-1234567890abcdef"]
               }

@@ -64,27 +64,21 @@ resource "meshstack_platform" "example_azure" {
 
           azure_role_mappings = [
             {
-              project_role_ref = {
-                name = "admin"
-              }
+              project_role_ref = { name = "admin" }
               azure_role = {
                 alias = "admin"
                 id    = "b69d42fd-1e97-47d0-958d-3ce50d18af71"
               }
             },
             {
-              project_role_ref = {
-                name = "reader"
-              }
+              project_role_ref = { name = "reader" }
               azure_role = {
                 alias = "reader"
                 id    = "9c4cbbde-f2da-479e-9709-0f9ca8fa69df"
               }
             },
             {
-              project_role_ref = {
-                name = "user"
-              }
+              project_role_ref = { name = "user" }
               azure_role = {
                 alias = "user"
                 id    = "7eeffa89-84ca-4106-9677-c9206b2fc14d"

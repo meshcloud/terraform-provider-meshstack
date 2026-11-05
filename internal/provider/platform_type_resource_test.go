@@ -1,7 +1,7 @@
 package provider
 
 import (
-	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -9,70 +9,62 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
-	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 
-	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/xknownvalue"
 )
 
 func TestAccPlatformType(t *testing.T) {
-	config, platformTypeAddr := testconfig.PlatformTypeAndWorkspace(t)
-	resourceAddress := platformTypeAddr.String()
-
-	// Use a random suffix to avoid state pollution from previous test runs.
-	updateSuffix := acctest.RandString(8)
-	updatedConfig := config.WithFirstBlock(
-		testconfig.Descend("spec", "display_name")(testconfig.SetString("My Custom Platform Updated " + updateSuffix)),
-	)
+	suffix := acctest.RandString(8)
+	vars := platformTypeStepVars(suffix)
+	resourceAddress := "meshstack_platform_type.example"
+	platformTypeName := "TEST-PT-" + strings.ToUpper(suffix)
 
 	ApplyAndTest(t, resource.TestCase{
 		Steps: []resource.TestStep{
 			{
-				Config: config.String(),
+				Config: hclStep(t, "resources/platform_type", 1, vars),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectResourceAction(resourceAddress, plancheck.ResourceActionCreate),
 					},
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("metadata"), checkPlatformTypeMetadata()),
-					statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("spec").AtMapKey("display_name"), xknownvalue.KnownStringWithPrefix("My Custom Platform ")),
+					statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("metadata"), checkPlatformTypeMetadata(platformTypeName, "test-ws-"+suffix)),
+					statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("My Custom Platform "+suffix)),
 					statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("status"), checkPlatformTypeStatus()),
-					statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("ref"), checkPlatformTypeRef()),
+					statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("ref"), checkPlatformTypeRef(platformTypeName)),
 				},
 			},
 			{
-				Config: updatedConfig.String(),
+				Config: hclStep(t, "resources/platform_type", 2, vars),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectResourceAction(resourceAddress, plancheck.ResourceActionUpdate),
 					},
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("spec").AtMapKey("display_name"), xknownvalue.KnownStringWithPrefix("My Custom Platform Updated")),
+					statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("My Custom Platform Updated "+suffix)),
 				},
 			},
 			{
 				ImportState:     true,
 				ImportStateKind: resource.ImportBlockWithID,
 				ResourceName:    resourceAddress,
-				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					rs := s.RootModule().Resources[resourceAddress]
-					if rs == nil {
-						return "", fmt.Errorf("resource not found: %s", resourceAddress)
-					}
-					return rs.Primary.Attributes["metadata.name"], nil
-				},
+				ImportStateId:   platformTypeName,
 			},
 		},
 	})
 }
 
-func checkPlatformTypeMetadata() knownvalue.Check {
+func platformTypeStepVars(suffix string) hclStepVars {
+	return hclStepVars{"suffix": suffix, "upper_suffix": strings.ToUpper(suffix)}
+}
+
+func checkPlatformTypeMetadata(name, workspace string) knownvalue.Check {
 	return xknownvalue.MapExact(map[string]knownvalue.Check{
-		"name":               xknownvalue.NotEmptyString(),
-		"owned_by_workspace": xknownvalue.NotEmptyString(),
+		"name":               knownvalue.StringExact(name),
+		"owned_by_workspace": knownvalue.StringExact(workspace),
 		"uuid":               xknownvalue.NotEmptyString(),
 	})
 }
@@ -85,9 +77,9 @@ func checkPlatformTypeStatus() knownvalue.Check {
 	})
 }
 
-func checkPlatformTypeRef() knownvalue.Check {
+func checkPlatformTypeRef(name string) knownvalue.Check {
 	return xknownvalue.MapExact(map[string]knownvalue.Check{
 		"kind": knownvalue.StringExact("meshPlatformType"),
-		"name": xknownvalue.NotEmptyString(),
+		"name": knownvalue.StringExact(name),
 	})
 }
