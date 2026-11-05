@@ -5,13 +5,13 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 
-	testconfig "github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
 	xknownvalue "github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/xknownvalue"
 )
 
@@ -53,8 +53,11 @@ func expectedVersions(wif knownvalue.Check, count int) knownvalue.Check {
 	return ascendingVersionsExact(versions...)
 }
 
+const otherWifRunnerIssuer = "https://oidc-other.example.com"
+
 func TestAccBuildingBlockDefinitionWif(t *testing.T) {
-	config, bbdAddr, _, otherRunnerAddr := testconfig.BBDTerraformWithWifRunners(t, runnerPublicKey)
+	vars := hclStepVars{"suffix": acctest.RandString(8)}
+	bbdAddr := "meshstack_building_block_definition.example_01_terraform"
 	versionsPath := tfjsonpath.New("versions")
 	latestWifPath := tfjsonpath.New("version_latest").AtMapKey("workload_identity_federation")
 	latestSubjectPath := latestWifPath.AtMapKey("subject")
@@ -65,28 +68,7 @@ func TestAccBuildingBlockDefinitionWif(t *testing.T) {
 		"token_path": knownvalue.StringExact("/var/run/secrets/workload-identity/token"),
 	})
 	otherRunnerSubject := resolvedSubject("system:serviceaccount:other-namespace:bbd.")
-	otherRunnerWif := resolvedWif(testconfig.OtherWifRunnerIssuer, otherRunnerSubject, gcp)
-
-	// meshStack stores a version's secrets encrypted for its runner, so moving the definition to another
-	// one has to re-supply every secret as plaintext - a hash is a 400. Bumping secret_version is how the
-	// provider is asked for that, same as the rotation step of TestAccBuildingBlockDefinition.
-	const movedToOtherRunner = "moved-to-other-runner"
-	otherRunnerConfig := config.WithFirstBlock(
-		testconfig.Descend("version_spec", "runner_ref")(testconfig.SetAddr(otherRunnerAddr, "ref")),
-		testconfig.Descend("version_spec", "implementation", "terraform", "ssh_private_key", "secret_version")(
-			testconfig.SetString(movedToOtherRunner),
-		),
-		testconfig.Descend("version_spec", "inputs", "SOMETHING_VERY_SECRET", "sensitive", "argument", "secret_version")(
-			testconfig.SetString(movedToOtherRunner),
-		),
-	)
-	renamedConfig := otherRunnerConfig.WithFirstBlock(
-		testconfig.Descend("spec", "display_name")(testconfig.SetString("Example Building Block, renamed")),
-	)
-	redraftedConfig := updateBBDDescription(t, renamedConfig, "An updated building block definition")
-	replacedConfig := redraftedConfig.WithFirstBlock(
-		testconfig.Descend("version_spec", "only_apply_once_per_tenant")(testconfig.SetBool(false)),
-	)
+	otherRunnerWif := resolvedWif(otherWifRunnerIssuer, otherRunnerSubject, gcp)
 
 	// The subject carries the definition's uuid, so the replacement has to present a different one.
 	var subjectBeforeReplacement string
@@ -104,92 +86,95 @@ func TestAccBuildingBlockDefinitionWif(t *testing.T) {
 	ApplyAndTest(t, resource.TestCase{
 		Steps: []resource.TestStep{
 			{
-				Config: config.String(),
+				Config: hclStep(t, "resources/building_block_definition/wif", 1, vars),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectResourceAction(bbdAddr.String(), plancheck.ResourceActionCreate),
+						plancheck.ExpectResourceAction(bbdAddr, plancheck.ResourceActionCreate),
 					},
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(bbdAddr.String(), latestWifPath,
+					statecheck.ExpectKnownValue(bbdAddr, latestWifPath,
 						resolvedWif("https://oidc.example.com", resolvedSubject("system:serviceaccount:namespace:workspace."), gcp)),
-					statecheck.ExpectKnownValue(bbdAddr.String(), versionsPath,
+					statecheck.ExpectKnownValue(bbdAddr, versionsPath,
 						expectedVersions(resolvedWif("https://oidc.example.com", resolvedSubject("system:serviceaccount:namespace:workspace."), gcp), 1)),
-					statecheck.ExpectKnownValue(bbdAddr.String(), tfjsonpath.New("version_latest_release"), knownvalue.Null()),
+					statecheck.ExpectKnownValue(bbdAddr, tfjsonpath.New("version_latest_release"), knownvalue.Null()),
 				},
 			},
 			{
 				// A changed runner changes the identity of the version it is changed on, so it is read again.
-				Config: otherRunnerConfig.String(),
+				// meshStack stores a version's secrets encrypted for its runner, so moving the definition to another
+				// one has to re-supply every secret as plaintext - a hash is a 400. Bumping secret_version is how the
+				// provider is asked for that, same as the rotation step of TestAccBuildingBlockDefinition.
+				Config: hclStep(t, "resources/building_block_definition/wif", 2, vars),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectResourceAction(bbdAddr.String(), plancheck.ResourceActionUpdate),
-						plancheck.ExpectUnknownValue(bbdAddr.String(), latestWifPath),
+						plancheck.ExpectResourceAction(bbdAddr, plancheck.ResourceActionUpdate),
+						plancheck.ExpectUnknownValue(bbdAddr, latestWifPath),
 					},
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(bbdAddr.String(), latestWifPath, otherRunnerWif),
-					statecheck.ExpectKnownValue(bbdAddr.String(), versionsPath, expectedVersions(otherRunnerWif, 1)),
+					statecheck.ExpectKnownValue(bbdAddr, latestWifPath, otherRunnerWif),
+					statecheck.ExpectKnownValue(bbdAddr, versionsPath, expectedVersions(otherRunnerWif, 1)),
 				},
 			},
 			{
 				// An unrelated change keeps it, instead of planning a pointless "known after apply".
-				Config: renamedConfig.String(),
+				Config: hclStep(t, "resources/building_block_definition/wif", 3, vars),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectResourceAction(bbdAddr.String(), plancheck.ResourceActionUpdate),
-						plancheck.ExpectKnownValue(bbdAddr.String(), latestSubjectPath, otherRunnerSubject),
+						plancheck.ExpectResourceAction(bbdAddr, plancheck.ResourceActionUpdate),
+						plancheck.ExpectKnownValue(bbdAddr, latestSubjectPath, otherRunnerSubject),
 					},
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(bbdAddr.String(), latestWifPath, otherRunnerWif),
+					statecheck.ExpectKnownValue(bbdAddr, latestWifPath, otherRunnerWif),
 				},
 			},
 			{
 				// A release changes the version in place, so the identity of the version stays as it was and
 				// becomes the identity of the latest release.
-				Config: releaseBBDVersion(t, renamedConfig).String(),
+				Config: hclStep(t, "resources/building_block_definition/wif", 4, vars),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectResourceAction(bbdAddr.String(), plancheck.ResourceActionUpdate),
-						plancheck.ExpectKnownValue(bbdAddr.String(), latestSubjectPath, otherRunnerSubject),
+						plancheck.ExpectResourceAction(bbdAddr, plancheck.ResourceActionUpdate),
+						plancheck.ExpectKnownValue(bbdAddr, latestSubjectPath, otherRunnerSubject),
 					},
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(bbdAddr.String(), latestWifPath, otherRunnerWif),
-					statecheck.ExpectKnownValue(bbdAddr.String(), latestReleaseWifPath, otherRunnerWif),
+					statecheck.ExpectKnownValue(bbdAddr, latestWifPath, otherRunnerWif),
+					statecheck.ExpectKnownValue(bbdAddr, latestReleaseWifPath, otherRunnerWif),
 				},
 			},
 			{
 				// A new draft cut from the released version adds an entry whose identity is read after it is
 				// written, while the released version keeps its own.
-				Config: redraftedConfig.String(),
+				Config: hclStep(t, "resources/building_block_definition/wif", 5, vars),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectResourceAction(bbdAddr.String(), plancheck.ResourceActionUpdate),
-						plancheck.ExpectUnknownValue(bbdAddr.String(), latestWifPath),
-						plancheck.ExpectKnownValue(bbdAddr.String(), latestReleaseWifPath, otherRunnerWif),
+						plancheck.ExpectResourceAction(bbdAddr, plancheck.ResourceActionUpdate),
+						plancheck.ExpectUnknownValue(bbdAddr, latestWifPath),
+						plancheck.ExpectKnownValue(bbdAddr, latestReleaseWifPath, otherRunnerWif),
 					},
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(bbdAddr.String(), versionsPath, expectedVersions(otherRunnerWif, 2)),
-					statecheck.ExpectKnownValue(bbdAddr.String(), latestReleaseWifPath, otherRunnerWif),
-					statecheck.ExpectKnownValue(bbdAddr.String(), latestSubjectPath, recordSubject),
+					statecheck.ExpectKnownValue(bbdAddr, versionsPath, expectedVersions(otherRunnerWif, 2)),
+					statecheck.ExpectKnownValue(bbdAddr, latestReleaseWifPath, otherRunnerWif),
+					statecheck.ExpectKnownValue(bbdAddr, latestSubjectPath, recordSubject),
 				},
 			},
 			{
 				// A replacement creates a new definition with a single version and its own subject. The create
 				// side of it plans every computed attribute unknown, the version entry included.
-				Config: replacedConfig.String(),
+				Config: hclStep(t, "resources/building_block_definition/wif", 6, vars),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectResourceAction(bbdAddr.String(), plancheck.ResourceActionReplace),
-						plancheck.ExpectUnknownValue(bbdAddr.String(), tfjsonpath.New("version_latest")),
+						plancheck.ExpectResourceAction(bbdAddr, plancheck.ResourceActionReplace),
+						plancheck.ExpectUnknownValue(bbdAddr, tfjsonpath.New("version_latest")),
 					},
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(bbdAddr.String(), versionsPath,
-						expectedVersions(resolvedWif(testconfig.OtherWifRunnerIssuer, replacementSubject, gcp), 1)),
+					statecheck.ExpectKnownValue(bbdAddr, versionsPath,
+						expectedVersions(resolvedWif(otherWifRunnerIssuer, replacementSubject, gcp), 1)),
 				},
 			},
 		},

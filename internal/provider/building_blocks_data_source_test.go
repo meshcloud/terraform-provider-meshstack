@@ -3,38 +3,29 @@ package provider
 import (
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 
-	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/xknownvalue"
 )
 
-// TestAccBuildingBlocksDataSource creates a real building block with the BBWorkspace builder and
-// lists it back through the data source. Like every other data source test in this package, it
-// reuses a testconfig builder to actually create the resources under test (rather than
-// pre-populating a mock), so it runs identically in mock mode and as a true acceptance test
-// (TF_ACC=1) against a local meshStack. Filtering by the freshly-created workspace yields exactly
-// the one block, so indexing building_blocks.0 is deterministic; referencing buildingBlockAddr in
-// the filter makes Terraform read the data source only after the block exists.
 func TestAccBuildingBlocksDataSource(t *testing.T) {
 	t.Parallel()
 
 	t.Run("01_workspace", func(t *testing.T) {
-		buildingBlockConfig, buildingBlockAddr, _, _ := testconfig.BBWorkspace(t)
-
+		vars := hclStepVars{"suffix": acctest.RandString(8)}
 		dataSourceAddr := "data.meshstack_building_blocks.all"
-		config := testconfig.DataSource{Name: "building_blocks"}.Config(t).WithFirstBlock(
-			testconfig.Descend("workspace_identifier")(testconfig.SetAddr(buildingBlockAddr, "metadata", "owned_by_workspace")),
-			testconfig.Descend("health_status")(testconfig.SetRawExpr(`["SUCCEEDED", "FAILED"]`)),
-		).Join(buildingBlockConfig)
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
-					Config: config.String(),
+					Config: hclStep(t, "data-sources/building_blocks/01_workspace", 1, vars),
+				},
+				{
+					Config: hclStep(t, "data-sources/building_blocks/01_workspace", 2, vars),
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(dataSourceAddr, tfjsonpath.New("building_blocks"), knownvalue.ListSizeExact(1)),
 						statecheck.ExpectKnownValue(dataSourceAddr, tfjsonpath.New("building_blocks").AtSliceIndex(0).AtMapKey("metadata").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
@@ -61,21 +52,14 @@ func TestAccBuildingBlocksDataSource(t *testing.T) {
 		if IsMockClientTest() {
 			t.Skip("version_number is filtered server-side; the mock store does not carry the BBD version number")
 		}
-		buildingBlockConfig, buildingBlockAddr, _, _ := testconfig.BBWorkspace(t)
+		vars := hclStepVars{"suffix": acctest.RandString(8)}
 		dataSourceAddr := "data.meshstack_building_blocks.all"
-
-		base := func(versionNumber string) testconfig.Config {
-			return testconfig.DataSource{Name: "building_blocks"}.Config(t).WithFirstBlock(
-				testconfig.Descend("workspace_identifier")(testconfig.SetAddr(buildingBlockAddr, "metadata", "owned_by_workspace")),
-				testconfig.Descend("version_number")(testconfig.SetRawExpr(`%q`, versionNumber)),
-			).Join(buildingBlockConfig)
-		}
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
 					// Lenient "v1" matches definition version 1.
-					Config: base("v1").String(),
+					Config: hclStep(t, "data-sources/building_blocks/02_version_number_filter", 1, vars),
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(dataSourceAddr, tfjsonpath.New("building_blocks"), knownvalue.ListSizeExact(1)),
 						statecheck.ExpectKnownValue(dataSourceAddr, tfjsonpath.New("building_blocks").AtSliceIndex(0).AtMapKey("spec").AtMapKey("display_name"), knownvalue.StringExact("my-workspace-building-block")),
@@ -83,7 +67,7 @@ func TestAccBuildingBlocksDataSource(t *testing.T) {
 				},
 				{
 					// Version 2 does not exist for this block → empty result (proves the param is applied).
-					Config: base("v2").String(),
+					Config: hclStep(t, "data-sources/building_blocks/02_version_number_filter", 2, vars),
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(dataSourceAddr, tfjsonpath.New("building_blocks"), knownvalue.ListSizeExact(0)),
 					},

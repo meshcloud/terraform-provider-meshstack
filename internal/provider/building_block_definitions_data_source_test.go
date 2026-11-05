@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-testing/compare"
 	tfconfig "github.com/hashicorp/terraform-plugin-testing/config"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
@@ -14,36 +15,33 @@ import (
 	"github.com/meshcloud/meshstack-cli/client"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/zclconf/go-cty/cty"
 
-	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/xknownvalue"
 )
 
 func TestAccBuildingBlockDefinitionsDataSource(t *testing.T) {
 	t.Run("simple state check", func(t *testing.T) {
-		buildingBlockDefinitionConfig, buildingBlockDefinitionAddr := testconfig.BBDManual(t)
-
-		var dataSourceAddress testconfig.Traversal
-		config := testconfig.DataSource{Name: "building_block_definitions"}.Config(t).WithFirstBlock(
-			testconfig.ExtractAddress(&dataSourceAddress),
-			testconfig.Descend("workspace_identifier")(testconfig.SetAddr(buildingBlockDefinitionAddr, "metadata", "owned_by_workspace")),
-		).Join(buildingBlockDefinitionConfig)
+		suffix := acctest.RandString(8)
+		vars := hclStepVars{"suffix": suffix}
+		dataSourceAddress := "data.meshstack_building_block_definitions.example"
 
 		ApplyAndTest(t, resource.TestCase{Steps: []resource.TestStep{
 			{
-				Config: config.String(),
+				Config: hclStep(t, "data-sources/building_block_definitions/simple_state_check", 1, vars),
+			},
+			{
+				Config: hclStep(t, "data-sources/building_block_definitions/simple_state_check", 2, vars),
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("workspace_identifier"), xknownvalue.NotEmptyString()),
-					statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("building_block_definitions"), knownvalue.ListExact([]knownvalue.Check{
+					statecheck.ExpectKnownValue(dataSourceAddress, tfjsonpath.New("workspace_identifier"), knownvalue.StringExact("test-ws-"+suffix)),
+					statecheck.ExpectKnownValue(dataSourceAddress, tfjsonpath.New("building_block_definitions"), knownvalue.ListExact([]knownvalue.Check{
 						knownvalue.ObjectPartial(map[string]knownvalue.Check{
 							"metadata": knownvalue.ObjectPartial(map[string]knownvalue.Check{
 								"uuid":               xknownvalue.NotEmptyString(),
-								"owned_by_workspace": xknownvalue.NotEmptyString(),
+								"owned_by_workspace": knownvalue.StringExact("test-ws-" + suffix),
 							}),
 							"spec": knownvalue.ObjectPartial(map[string]knownvalue.Check{
-								"display_name": xknownvalue.NotEmptyString(),
-								"target_type":  xknownvalue.NotEmptyString(),
+								"display_name": knownvalue.StringExact("Example Building Block"),
+								"target_type":  knownvalue.StringExact("WORKSPACE_LEVEL"),
 							}),
 							"ref": knownvalue.ObjectPartial(map[string]knownvalue.Check{
 								"kind": knownvalue.StringExact("meshBuildingBlockDefinition"),
@@ -76,40 +74,23 @@ func TestAccBuildingBlockDefinitionsDataSource(t *testing.T) {
 			t.Skip("cross-workspace test requires real permission boundaries")
 		}
 
-		buildingBlockDefinitionConfig, buildingBlockDefinitionAddr := testconfig.BBDManual(t)
-		readerConfig, captureReaderKey, readerKey := otherWorkspaceReader(t, "BUILDINGBLOCKDEFINITION_LIST")
-
-		supportConfig := buildingBlockDefinitionConfig.WithFirstBlock(
-			testconfig.Descend("version_spec", "draft")(testconfig.SetValue(cty.False)),
-		).Join(readerConfig)
-
-		var dataSourceAddress testconfig.Traversal
-		example := testconfig.DataSource{Name: "building_block_definitions"}
-		config := example.Config(t).WithFirstBlock(
-			testconfig.ExtractAddress(&dataSourceAddress),
-			testconfig.Descend("workspace_identifier")(testconfig.SetAddr(buildingBlockDefinitionAddr, "metadata", "owned_by_workspace")),
-			// provider alias meshstack-other has hardcoded config in _other_provider test support file with restricted apikey
-			testconfig.Descend("provider")(testconfig.SetRawExpr("meshstack-other")),
-		).Join(
-			// keep the support config as is (containing the BBD to be read)
-			supportConfig,
-			// but make the data source use a different provider using the api key from the other workspace
-			// (credentials are passed in as variables in the second step)
-			testconfig.OtherProviderConfig(t),
-		)
+		vars := hclStepVars{"suffix": acctest.RandString(8)}
+		buildingBlockDefinitionAddr := "meshstack_building_block_definition.example_03_manual"
+		dataSourceAddress := "data.meshstack_building_block_definitions.example"
+		captureReaderKey, readerKey := otherWorkspaceReader()
 
 		ApplyAndTest(t, resource.TestCase{Steps: []resource.TestStep{
 			{
-				Config: supportConfig.String(),
+				Config: hclStep(t, "data-sources/building_block_definitions/cross_workspace_listing", 1, vars),
 				ConfigStateChecks: append([]statecheck.StateCheck{
-					statecheck.ExpectKnownValue(buildingBlockDefinitionAddr.String(), tfjsonpath.New("version_latest_release").AtMapKey("state"), knownvalue.StringExact("RELEASED")),
+					statecheck.ExpectKnownValue(buildingBlockDefinitionAddr, tfjsonpath.New("version_latest_release").AtMapKey("state"), knownvalue.StringExact("RELEASED")),
 				}, captureReaderKey...),
 			},
 			{
-				Config:          config.String(),
+				Config:          hclStep(t, "data-sources/building_block_definitions/cross_workspace_listing", 2, vars),
 				ConfigVariables: readerKey,
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("building_block_definitions"), knownvalue.ListExact([]knownvalue.Check{
+					statecheck.ExpectKnownValue(dataSourceAddress, tfjsonpath.New("building_block_definitions"), knownvalue.ListExact([]knownvalue.Check{
 						knownvalue.ObjectPartial(func() map[string]knownvalue.Check {
 							versionRef := knownvalue.ObjectPartial(map[string]knownvalue.Check{
 								"uuid":         xknownvalue.NotEmptyString(),
@@ -129,30 +110,25 @@ func TestAccBuildingBlockDefinitionsDataSource(t *testing.T) {
 	})
 
 	t.Run("workload identity of each version", func(t *testing.T) {
-		bbdConfig, bbdAddr, _, _ := testconfig.BBDTerraformWithWifRunners(t, runnerPublicKey)
-
-		var dataSourceAddress testconfig.Traversal
-		config := testconfig.DataSource{Name: "building_block_definitions"}.Config(t).WithFirstBlock(
-			testconfig.ExtractAddress(&dataSourceAddress),
-			testconfig.Descend("workspace_identifier")(testconfig.SetAddr(bbdAddr, "metadata", "owned_by_workspace")),
-			// The workspace also holds the definition's dependency, which the filter leaves out.
-			testconfig.Descend("uuids")(testconfig.SetRawExpr("[%s]", bbdAddr.Join("metadata", "uuid"))),
-		).Join(bbdConfig)
+		vars := hclStepVars{"suffix": acctest.RandString(8)}
+		bbdAddr := "meshstack_building_block_definition.example_01_terraform"
+		dataSourceAddress := "data.meshstack_building_block_definitions.example"
 
 		listedPath := tfjsonpath.New("building_block_definitions").AtSliceIndex(0)
 		ApplyAndTest(t, resource.TestCase{Steps: []resource.TestStep{
 			{
-				Config: config.String(),
+				// The workspace also holds the definition's dependency, which the filter leaves out.
+				Config: hclStep(t, "data-sources/building_block_definitions/workload_identity_of_each_version", 1, vars),
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(dataSourceAddress.String(), tfjsonpath.New("building_block_definitions"), knownvalue.ListSizeExact(1)),
-					statecheck.ExpectKnownValue(dataSourceAddress.String(), listedPath.AtMapKey("version_latest").AtMapKey("workload_identity_federation"),
+					statecheck.ExpectKnownValue(dataSourceAddress, tfjsonpath.New("building_block_definitions"), knownvalue.ListSizeExact(1)),
+					statecheck.ExpectKnownValue(dataSourceAddress, listedPath.AtMapKey("version_latest").AtMapKey("workload_identity_federation"),
 						knownvalue.ObjectPartial(map[string]knownvalue.Check{
 							"issuer":  knownvalue.StringExact("https://oidc.example.com"),
 							"subject": resolvedSubject("system:serviceaccount:namespace:workspace."),
 						})),
 					statecheck.CompareValuePairs(
-						bbdAddr.String(), tfjsonpath.New("versions").AtMapKey("v1").AtMapKey("workload_identity_federation"),
-						dataSourceAddress.String(), listedPath.AtMapKey("versions").AtMapKey("v1").AtMapKey("workload_identity_federation"),
+						bbdAddr, tfjsonpath.New("versions").AtMapKey("v1").AtMapKey("workload_identity_federation"),
+						dataSourceAddress, listedPath.AtMapKey("versions").AtMapKey("v1").AtMapKey("workload_identity_federation"),
 						compare.ValuesSame(),
 					),
 				},
@@ -165,40 +141,29 @@ func TestAccBuildingBlockDefinitionsDataSource(t *testing.T) {
 			t.Skip("cross-workspace test requires real permission boundaries")
 		}
 
-		bbdConfig, bbdAddr, _, _ := testconfig.BBDTerraformWithWifRunners(t, runnerPublicKey)
-		readerConfig, captureReaderKey, readerKey := otherWorkspaceReader(t, "BUILDINGBLOCKDEFINITION_LIST")
-
-		// Another workspace only sees released versions, through the redacted status of the definition.
-		supportConfig := bbdConfig.WithFirstBlock(
-			testconfig.Descend("version_spec", "draft")(testconfig.SetValue(cty.False)),
-			testconfig.Descend("spec", "use_in_landing_zones_only")(testconfig.SetValue(cty.False)),
-		).Join(readerConfig)
-
-		var dataSourceAddress testconfig.Traversal
-		config := testconfig.DataSource{Name: "building_block_definitions"}.Config(t).WithFirstBlock(
-			testconfig.ExtractAddress(&dataSourceAddress),
-			testconfig.Descend("workspace_identifier")(testconfig.SetAddr(bbdAddr, "metadata", "owned_by_workspace")),
-			testconfig.Descend("uuids")(testconfig.SetRawExpr("[%s]", bbdAddr.Join("metadata", "uuid"))),
-			testconfig.Descend("provider")(testconfig.SetRawExpr("meshstack-other")),
-		).Join(supportConfig, testconfig.OtherProviderConfig(t))
+		vars := hclStepVars{"suffix": acctest.RandString(8)}
+		bbdAddr := "meshstack_building_block_definition.example_01_terraform"
+		dataSourceAddress := "data.meshstack_building_block_definitions.example"
+		captureReaderKey, readerKey := otherWorkspaceReader()
 
 		listedPath := tfjsonpath.New("building_block_definitions").AtSliceIndex(0)
 		ApplyAndTest(t, resource.TestCase{Steps: []resource.TestStep{
 			{
-				Config:            supportConfig.String(),
+				// Another workspace only sees released versions, through the redacted status of the definition.
+				Config:            hclStep(t, "data-sources/building_block_definitions/cross_workspace_workload_identity", 1, vars),
 				ConfigStateChecks: captureReaderKey,
 			},
 			{
-				Config:          config.String(),
+				Config:          hclStep(t, "data-sources/building_block_definitions/cross_workspace_workload_identity", 2, vars),
 				ConfigVariables: readerKey,
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(dataSourceAddress.String(), listedPath.AtMapKey("version_latest_release").AtMapKey("content_hash"), knownvalue.Null()),
+					statecheck.ExpectKnownValue(dataSourceAddress, listedPath.AtMapKey("version_latest_release").AtMapKey("content_hash"), knownvalue.Null()),
 					statecheck.CompareValuePairs(
-						bbdAddr.String(), tfjsonpath.New("version_latest_release").AtMapKey("workload_identity_federation"),
-						dataSourceAddress.String(), listedPath.AtMapKey("version_latest_release").AtMapKey("workload_identity_federation"),
+						bbdAddr, tfjsonpath.New("version_latest_release").AtMapKey("workload_identity_federation"),
+						dataSourceAddress, listedPath.AtMapKey("version_latest_release").AtMapKey("workload_identity_federation"),
 						compare.ValuesSame(),
 					),
-					statecheck.ExpectKnownValue(dataSourceAddress.String(), listedPath.AtMapKey("version_latest_release").AtMapKey("workload_identity_federation").AtMapKey("subject"),
+					statecheck.ExpectKnownValue(dataSourceAddress, listedPath.AtMapKey("version_latest_release").AtMapKey("workload_identity_federation").AtMapKey("subject"),
 						resolvedSubject("system:serviceaccount:namespace:workspace.")),
 				},
 			},
@@ -206,23 +171,8 @@ func TestAccBuildingBlockDefinitionsDataSource(t *testing.T) {
 	})
 }
 
-// otherWorkspaceReader builds a second workspace, renamed so it does not clash with the "example" one the
-// definition builders create, holding an API key that may only list definitions. It returns that config,
-// the state checks that capture the key once it exists, and the variables that hand the key to the
-// meshstack-other provider of testconfig.OtherProviderConfig.
-func otherWorkspaceReader(t *testing.T, permission string) (config testconfig.Config, captureKey []statecheck.StateCheck, keyVariables tfconfig.Variables) {
-	t.Helper()
-	var otherWorkspaceAddr testconfig.Traversal
-	otherWorkspaceConfig, _ := testconfig.Workspace(t)
-	otherWorkspaceConfig = otherWorkspaceConfig.WithFirstBlock(
-		testconfig.RenameKey("other"),
-		testconfig.ExtractAddress(&otherWorkspaceAddr),
-	)
-	apiKeyConfig, apiKeyAddr := testconfig.ApiKey(t, otherWorkspaceAddr)
-	apiKeyConfig = apiKeyConfig.WithFirstBlock(
-		testconfig.Descend("spec", "permissions")(testconfig.SetRawExpr(`[%q]`, permission)),
-	)
-
+func otherWorkspaceReader() (captureKey []statecheck.StateCheck, keyVariables tfconfig.Variables) {
+	const apiKeyAddress = "meshstack_api_key.reader"
 	clientId, clientSecret := new(lazyVariable), new(lazyVariable)
 	capture := func(target *lazyVariable) knownvalue.Check {
 		return xknownvalue.NotEmptyString(func(value string) error {
@@ -231,10 +181,10 @@ func otherWorkspaceReader(t *testing.T, permission string) (config testconfig.Co
 		})
 	}
 	captureKey = []statecheck.StateCheck{
-		statecheck.ExpectKnownValue(apiKeyAddr.String(), tfjsonpath.New("status").AtMapKey("client_id"), capture(clientId)),
-		statecheck.ExpectKnownValue(apiKeyAddr.String(), tfjsonpath.New("status").AtMapKey("client_secret"), capture(clientSecret)),
+		statecheck.ExpectKnownValue(apiKeyAddress, tfjsonpath.New("status").AtMapKey("client_id"), capture(clientId)),
+		statecheck.ExpectKnownValue(apiKeyAddress, tfjsonpath.New("status").AtMapKey("client_secret"), capture(clientSecret)),
 	}
-	return otherWorkspaceConfig.Join(apiKeyConfig), captureKey, tfconfig.Variables{
+	return captureKey, tfconfig.Variables{
 		"apikey_client_id":     clientId,
 		"apikey_client_secret": clientSecret,
 	}

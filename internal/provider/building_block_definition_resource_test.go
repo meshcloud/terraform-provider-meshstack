@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/compare"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
@@ -17,34 +18,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 	"github.com/meshcloud/meshstack-cli/client"
 	"github.com/meshcloud/meshstack-cli/client/types/enum"
-	"github.com/zclconf/go-cty/cty"
 
-	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/xknownvalue"
 )
-
-func updateBBDDescription(t *testing.T, config testconfig.Config, newDescription string) testconfig.Config {
-	t.Helper()
-	return config.WithFirstBlock(
-		testconfig.Descend("spec", "description")(testconfig.SetString(newDescription)),
-	)
-}
-
-func releaseBBDVersion(t *testing.T, config testconfig.Config) testconfig.Config {
-	t.Helper()
-	return config.WithFirstBlock(
-		testconfig.Descend("version_spec", "draft")(testconfig.SetValue(cty.False)),
-	)
-}
-
-// setBBDPolicies overrides spec.approval_policies and spec.schedule on the resource under test.
-func setBBDPolicies(t *testing.T, config testconfig.Config, approvalPolicies, schedule string) testconfig.Config {
-	t.Helper()
-	return config.WithFirstBlock(testconfig.Descend("spec")(
-		testconfig.Descend("approval_policies")(testconfig.SetRawExpr("%s", approvalPolicies)),
-		testconfig.Descend("schedule")(testconfig.SetRawExpr("%s", schedule)),
-	))
-}
 
 // ascendingVersionsExact checks the versions numbered 1, 2, … in that order.
 func ascendingVersionsExact(versions ...knownvalue.Check) knownvalue.Check {
@@ -79,38 +55,38 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 	const bbdDescription = "An example building block definition"
 
 	t.Run("01_terraform", func(t *testing.T) {
-		config, addr := testconfig.BBDTerraform(t)
+		suffix := acctest.RandString(8)
+		vars := hclStepVars{"suffix": suffix}
+		addr := "meshstack_building_block_definition.example_01_terraform"
 		var resourceUuid string
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
-					Config: config.String(),
+					Config: hclStep(t, "resources/building_block_definition/01_terraform", 1, vars),
+				},
+				{
+					Config: hclStep(t, "resources/building_block_definition/01_terraform", 2, vars),
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
-							plancheck.ExpectResourceAction(addr.String(), plancheck.ResourceActionCreate),
+							plancheck.ExpectResourceAction(addr, plancheck.ResourceActionCreate),
 						},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("metadata"), checkBBDMetadataFull()),
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("spec"), checkBBDSpecFull(bbdDescription)),
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_spec"), checkBuildingBlockVersionSpec("01_terraform", versionStateDraft, 1)),
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest_release"), knownvalue.Null()),
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest"), expectedVersion(1, versionStateDraft)),
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("versions"), ascendingVersionsExact(expectedVersion(1, versionStateDraft))),
-						xknownvalue.Ref(addr.String(), "meshBuildingBlockDefinition", &resourceUuid),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("metadata"), checkBBDMetadataFull(suffix)),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("spec"), checkBBDSpecFull(bbdDescription)),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_spec"), checkBuildingBlockVersionSpec(suffix, "01_terraform", versionStateDraft, 1)),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_latest_release"), knownvalue.Null()),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_latest"), expectedVersion(1, versionStateDraft)),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("versions"), ascendingVersionsExact(expectedVersion(1, versionStateDraft))),
+						xknownvalue.Ref(addr, "meshBuildingBlockDefinition", &resourceUuid),
 					},
 				},
-				// Step 2: Change secret input name (remove/add operation on inputs map)
 				{
-					Config: func() string {
-						u := config.WithFirstBlock(
-							testconfig.Descend("version_spec", "inputs", "SOMETHING_VERY_SECRET")(testconfig.RenameKey("SOMETHING_VERY_SECRET_RENAMED")))
-						return u.String()
-					}(),
+					Config: hclStep(t, "resources/building_block_definition/01_terraform", 3, vars),
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
-							plancheck.ExpectResourceAction(addr.String(), plancheck.ResourceActionUpdate),
+							plancheck.ExpectResourceAction(addr, plancheck.ResourceActionUpdate),
 						},
 					},
 				},
@@ -120,33 +96,35 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 					ImportStateIdFunc: func(state *terraform.State) (string, error) {
 						return resourceUuid, nil
 					},
-					ResourceName: addr.String(),
+					ResourceName: addr,
 				},
 			},
 		})
 	})
 
 	t.Run("02_github_workflows", func(t *testing.T) {
-		config, addr := testconfig.BBDWithIntegration(t, "02_github_workflows")
+		suffix := acctest.RandString(8)
+		vars := hclStepVars{"suffix": suffix}
+		addr := "meshstack_building_block_definition.example_02_github_workflows"
 		var resourceUuid string
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
-					Config: config.String(),
+					Config: hclStep(t, "resources/building_block_definition/02_github_workflows", 1, vars),
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
-							plancheck.ExpectResourceAction(addr.String(), plancheck.ResourceActionCreate),
+							plancheck.ExpectResourceAction(addr, plancheck.ResourceActionCreate),
 						},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("metadata"), checkBBDMetadataMinimal()),
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("spec"), checkBBDSpecMinimal(bbdDescription)),
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_spec"), checkBuildingBlockVersionSpec("02_github_workflows", versionStateDraft, 1)),
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest_release"), knownvalue.Null()),
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest"), expectedVersion(1, versionStateDraft)),
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("versions"), ascendingVersionsExact(expectedVersion(1, versionStateDraft))),
-						xknownvalue.Ref(addr.String(), "meshBuildingBlockDefinition", &resourceUuid),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("metadata"), checkBBDMetadataMinimal(suffix)),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("spec"), checkBBDSpecMinimal(bbdDescription)),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_spec"), checkBuildingBlockVersionSpec(suffix, "02_github_workflows", versionStateDraft, 1)),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_latest_release"), knownvalue.Null()),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_latest"), expectedVersion(1, versionStateDraft)),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("versions"), ascendingVersionsExact(expectedVersion(1, versionStateDraft))),
+						xknownvalue.Ref(addr, "meshBuildingBlockDefinition", &resourceUuid),
 					},
 				},
 				{
@@ -155,79 +133,82 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 					ImportStateIdFunc: func(state *terraform.State) (string, error) {
 						return resourceUuid, nil
 					},
-					ResourceName: addr.String(),
+					ResourceName: addr,
 				},
 			},
 		})
 	})
 
 	t.Run("03_manual", func(t *testing.T) {
-		config, addr := testconfig.BBDManual(t)
+		suffix := acctest.RandString(8)
+		vars := hclStepVars{"suffix": suffix}
+		addr := "meshstack_building_block_definition.example_03_manual"
 		var resourceUuid string
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				// Step 1: Create
 				{
-					Config: config.String(),
+					Config: hclStep(t, "resources/building_block_definition/03_manual", 1, vars),
+
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
-							plancheck.ExpectResourceAction(addr.String(), plancheck.ResourceActionCreate),
+							plancheck.ExpectResourceAction(addr, plancheck.ResourceActionCreate),
 						},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("metadata"), checkBBDMetadataMinimal()),
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("spec"), checkBBDSpecMinimal(bbdDescription)),
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_spec"), checkBuildingBlockVersionSpec("03_manual", versionStateDraft, 1)),
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest_release"), knownvalue.Null()),
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest"), expectedVersion(1, versionStateDraft)),
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("versions"), ascendingVersionsExact(expectedVersion(1, versionStateDraft))),
-						xknownvalue.Ref(addr.String(), "meshBuildingBlockDefinition", &resourceUuid),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("metadata"), checkBBDMetadataMinimal(suffix)),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("spec"), checkBBDSpecMinimal(bbdDescription)),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_spec"), checkBuildingBlockVersionSpec(suffix, "03_manual", versionStateDraft, 1)),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_latest_release"), knownvalue.Null()),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_latest"), expectedVersion(1, versionStateDraft)),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("versions"), ascendingVersionsExact(expectedVersion(1, versionStateDraft))),
+						xknownvalue.Ref(addr, "meshBuildingBlockDefinition", &resourceUuid),
 					},
 				},
 				// Step 2: Update spec (description change, no new version)
 				{
-					Config: updateBBDDescription(t, config, "An updated building block definition").String(),
+					Config: hclStep(t, "resources/building_block_definition/03_manual", 2, vars),
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
-							plancheck.ExpectResourceAction(addr.String(), plancheck.ResourceActionUpdate),
+							plancheck.ExpectResourceAction(addr, plancheck.ResourceActionUpdate),
 						},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("metadata"), checkBBDMetadataMinimal()),
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("spec"), checkBBDSpecMinimal("An updated building block definition")),
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("versions"), ascendingVersionsExact(expectedVersion(1, versionStateDraft))),
-						xknownvalue.Ref(addr.String(), "meshBuildingBlockDefinition", &resourceUuid),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("metadata"), checkBBDMetadataMinimal(suffix)),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("spec"), checkBBDSpecMinimal("An updated building block definition")),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("versions"), ascendingVersionsExact(expectedVersion(1, versionStateDraft))),
+						xknownvalue.Ref(addr, "meshBuildingBlockDefinition", &resourceUuid),
 					},
 				},
 				// Step 3: Release (draft=false)
 				{
-					Config: releaseBBDVersion(t, config).String(),
+					Config: hclStep(t, "resources/building_block_definition/03_manual", 3, vars),
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
-							plancheck.ExpectResourceAction(addr.String(), plancheck.ResourceActionUpdate),
+							plancheck.ExpectResourceAction(addr, plancheck.ResourceActionUpdate),
 						},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_spec"), checkBuildingBlockVersionSpec("03_manual", versionStateReleased, 1)),
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest_release"), expectedVersion(1, versionStateReleased)),
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest"), expectedVersion(1, versionStateReleased)),
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("versions"), ascendingVersionsExact(expectedVersion(1, versionStateReleased))),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_spec"), checkBuildingBlockVersionSpec(suffix, "03_manual", versionStateReleased, 1)),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_latest_release"), expectedVersion(1, versionStateReleased)),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_latest"), expectedVersion(1, versionStateReleased)),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("versions"), ascendingVersionsExact(expectedVersion(1, versionStateReleased))),
 					},
 				},
 				// Step 4: New draft (draft=true again, description changed)
 				{
-					Config: updateBBDDescription(t, config, "An updated building block definition").String(),
+					Config: hclStep(t, "resources/building_block_definition/03_manual", 4, vars),
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
-							plancheck.ExpectResourceAction(addr.String(), plancheck.ResourceActionUpdate),
+							plancheck.ExpectResourceAction(addr, plancheck.ResourceActionUpdate),
 						},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_spec"), checkBuildingBlockVersionSpec("03_manual", versionStateDraft, 2)),
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest_release"), expectedVersion(1, versionStateReleased)),
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest"), expectedVersion(2, versionStateDraft)),
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("versions"), ascendingVersionsExact(
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_spec"), checkBuildingBlockVersionSpec(suffix, "03_manual", versionStateDraft, 2)),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_latest_release"), expectedVersion(1, versionStateReleased)),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_latest"), expectedVersion(2, versionStateDraft)),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("versions"), ascendingVersionsExact(
 							expectedVersion(1, versionStateReleased),
 							expectedVersion(2, versionStateDraft),
 						)),
@@ -235,17 +216,17 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 				},
 				// Step 5: Release the new draft (draft=false)
 				{
-					Config: releaseBBDVersion(t, config).String(),
+					Config: hclStep(t, "resources/building_block_definition/03_manual", 5, vars),
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
-							plancheck.ExpectResourceAction(addr.String(), plancheck.ResourceActionUpdate),
+							plancheck.ExpectResourceAction(addr, plancheck.ResourceActionUpdate),
 						},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_spec"), checkBuildingBlockVersionSpec("03_manual", versionStateReleased, 2)),
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest_release"), expectedVersion(2, versionStateReleased)),
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest"), expectedVersion(2, versionStateReleased)),
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("versions"), ascendingVersionsExact(
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_spec"), checkBuildingBlockVersionSpec(suffix, "03_manual", versionStateReleased, 2)),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_latest_release"), expectedVersion(2, versionStateReleased)),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_latest"), expectedVersion(2, versionStateReleased)),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("versions"), ascendingVersionsExact(
 							expectedVersion(1, versionStateReleased),
 							expectedVersion(2, versionStateReleased),
 						)),
@@ -257,33 +238,35 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 					ImportStateIdFunc: func(state *terraform.State) (string, error) {
 						return resourceUuid, nil
 					},
-					ResourceName: addr.String(),
+					ResourceName: addr,
 				},
 			},
 		})
 	})
 
 	t.Run("04_azure_devops_pipeline", func(t *testing.T) {
-		config, addr := testconfig.BBDWithIntegration(t, "04_azure_devops_pipeline")
+		suffix := acctest.RandString(8)
+		vars := hclStepVars{"suffix": suffix}
+		addr := "meshstack_building_block_definition.example_04_azure_devops_pipeline"
 		var resourceUuid string
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
-					Config: config.String(),
+					Config: hclStep(t, "resources/building_block_definition/04_azure_devops_pipeline", 1, vars),
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
-							plancheck.ExpectResourceAction(addr.String(), plancheck.ResourceActionCreate),
+							plancheck.ExpectResourceAction(addr, plancheck.ResourceActionCreate),
 						},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("metadata"), checkBBDMetadataMinimal()),
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("spec"), checkBBDSpecMinimal(bbdDescription)),
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_spec"), checkBuildingBlockVersionSpec("04_azure_devops_pipeline", versionStateDraft, 1)),
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest_release"), knownvalue.Null()),
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest"), expectedVersion(1, versionStateDraft)),
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("versions"), ascendingVersionsExact(expectedVersion(1, versionStateDraft))),
-						xknownvalue.Ref(addr.String(), "meshBuildingBlockDefinition", &resourceUuid),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("metadata"), checkBBDMetadataMinimal(suffix)),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("spec"), checkBBDSpecMinimal(bbdDescription)),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_spec"), checkBuildingBlockVersionSpec(suffix, "04_azure_devops_pipeline", versionStateDraft, 1)),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_latest_release"), knownvalue.Null()),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_latest"), expectedVersion(1, versionStateDraft)),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("versions"), ascendingVersionsExact(expectedVersion(1, versionStateDraft))),
+						xknownvalue.Ref(addr, "meshBuildingBlockDefinition", &resourceUuid),
 					},
 				},
 				{
@@ -292,40 +275,42 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 					ImportStateIdFunc: func(state *terraform.State) (string, error) {
 						return resourceUuid, nil
 					},
-					ResourceName: addr.String(),
+					ResourceName: addr,
 				},
 			},
 		})
 	})
 
 	t.Run("05_gitlab_pipeline", func(t *testing.T) {
-		config, addr := testconfig.BBDGitlabPipeline(t)
+		suffix := acctest.RandString(8)
+		vars := hclStepVars{"suffix": suffix}
+		addr := "meshstack_building_block_definition.example_05_gitlab_pipeline"
 		var resourceUuid string
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				// Step 1: Plan-only (ensure tf plan works before apply)
 				{
-					Config:             config.String(),
+					Config:             hclStep(t, "resources/building_block_definition/05_gitlab_pipeline", 1, vars),
 					PlanOnly:           true,
 					ExpectNonEmptyPlan: true,
 				},
 				// Step 2: Create
 				{
-					Config: config.String(),
+					Config: hclStep(t, "resources/building_block_definition/05_gitlab_pipeline", 2, vars),
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
-							plancheck.ExpectResourceAction(addr.String(), plancheck.ResourceActionCreate),
+							plancheck.ExpectResourceAction(addr, plancheck.ResourceActionCreate),
 						},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("metadata"), checkBBDMetadataMinimal()),
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("spec"), checkBBDSpecMinimal(bbdDescription)),
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_spec"), checkBuildingBlockVersionSpec("05_gitlab_pipeline", versionStateDraft, 1)),
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest_release"), knownvalue.Null()),
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest"), expectedVersion(1, versionStateDraft)),
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("versions"), ascendingVersionsExact(expectedVersion(1, versionStateDraft))),
-						xknownvalue.Ref(addr.String(), "meshBuildingBlockDefinition", &resourceUuid),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("metadata"), checkBBDMetadataMinimal(suffix)),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("spec"), checkBBDSpecMinimal(bbdDescription)),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_spec"), checkBuildingBlockVersionSpec(suffix, "05_gitlab_pipeline", versionStateDraft, 1)),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_latest_release"), knownvalue.Null()),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_latest"), expectedVersion(1, versionStateDraft)),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("versions"), ascendingVersionsExact(expectedVersion(1, versionStateDraft))),
+						xknownvalue.Ref(addr, "meshBuildingBlockDefinition", &resourceUuid),
 					},
 				},
 				// Step 3: Import
@@ -335,28 +320,21 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 					ImportStateIdFunc: func(state *terraform.State) (string, error) {
 						return resourceUuid, nil
 					},
-					ResourceName: addr.String(),
+					ResourceName: addr,
 				},
 				// Step 4: Rotate secret after import
 				{
-					Config: func() string {
-						u := config.WithFirstBlock(
-							testconfig.Descend("version_spec", "implementation", "gitlab_pipeline", "pipeline_trigger_token")(
-								testconfig.Descend("secret_value")(testconfig.SetString("updated-plaintext-secret")),
-								testconfig.Descend("secret_version")(testconfig.SetString("v1")),
-							))
-						return u.String()
-					}(),
+					Config: hclStep(t, "resources/building_block_definition/05_gitlab_pipeline", 4, vars),
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
-							plancheck.ExpectResourceAction(addr.String(), plancheck.ResourceActionUpdate),
+							plancheck.ExpectResourceAction(addr, plancheck.ResourceActionUpdate),
 						},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("metadata"), checkBBDMetadataMinimal()),
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("spec"), checkBBDSpecMinimal(bbdDescription)),
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("versions"), ascendingVersionsExact(expectedVersion(1, versionStateDraft))),
-						xknownvalue.Ref(addr.String(), "meshBuildingBlockDefinition", &resourceUuid),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("metadata"), checkBBDMetadataMinimal(suffix)),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("spec"), checkBBDSpecMinimal(bbdDescription)),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("versions"), ascendingVersionsExact(expectedVersion(1, versionStateDraft))),
+						xknownvalue.Ref(addr, "meshBuildingBlockDefinition", &resourceUuid),
 					},
 				},
 			},
@@ -371,54 +349,49 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 	// implementation because its implementation carries mutable fields (e.g. pre_run_script);
 	// the manual implementation could not surface this.
 	t.Run("06_release_redraft_implementation_change", func(t *testing.T) {
-		config, addr := testconfig.BBDTerraform(t)
+		vars := hclStepVars{"suffix": acctest.RandString(8)}
+		addr := "meshstack_building_block_definition.example_01_terraform"
 
 		// The released version's content_hash must be identical before and after the new draft
 		// is created from it.
 		releasedHashStable := statecheck.CompareValue(compare.ValuesSame())
 		releasedHashPath := tfjsonpath.New("version_latest_release").AtMapKey("content_hash")
 
-		redraftWithImplChange := config.WithFirstBlock(
-			testconfig.Descend("version_spec", "implementation", "terraform", "pre_run_script")(
-				testconfig.SetString(`echo "changed for the second version"`),
-			),
-		)
-
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				// Step 1: Create draft v1
 				{
-					Config: config.String(),
+					Config: hclStep(t, "resources/building_block_definition/06_release_redraft_implementation_change", 1, vars),
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest"), expectedVersion(1, versionStateDraft)),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_latest"), expectedVersion(1, versionStateDraft)),
 					},
 				},
 				// Step 2: Release v1
 				{
-					Config: releaseBBDVersion(t, config).String(),
+					Config: hclStep(t, "resources/building_block_definition/06_release_redraft_implementation_change", 2, vars),
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest_release"), expectedVersion(1, versionStateReleased)),
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest"), expectedVersion(1, versionStateReleased)),
-						releasedHashStable.AddStateValue(addr.String(), releasedHashPath),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_latest_release"), expectedVersion(1, versionStateReleased)),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_latest"), expectedVersion(1, versionStateReleased)),
+						releasedHashStable.AddStateValue(addr, releasedHashPath),
 					},
 				},
 				// Step 3: Flip draft false->true AND change the implementation -> new draft v2.
 				// The released v1 must stay immutable (same content_hash, no inconsistent result).
 				{
-					Config: redraftWithImplChange.String(),
+					Config: hclStep(t, "resources/building_block_definition/06_release_redraft_implementation_change", 3, vars),
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
-							plancheck.ExpectResourceAction(addr.String(), plancheck.ResourceActionUpdate),
+							plancheck.ExpectResourceAction(addr, plancheck.ResourceActionUpdate),
 						},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest_release"), expectedVersion(1, versionStateReleased)),
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest"), expectedVersion(2, versionStateDraft)),
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("versions"), ascendingVersionsExact(
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_latest_release"), expectedVersion(1, versionStateReleased)),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_latest"), expectedVersion(2, versionStateDraft)),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("versions"), ascendingVersionsExact(
 							expectedVersion(1, versionStateReleased),
 							expectedVersion(2, versionStateDraft),
 						)),
-						releasedHashStable.AddStateValue(addr.String(), releasedHashPath),
+						releasedHashStable.AddStateValue(addr, releasedHashPath),
 					},
 				},
 			},
@@ -431,26 +404,8 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 	// re-drafting together with an input change must reconcile the derived outputs without "Provider produced
 	// inconsistent result after apply", and must not change the already-released version.
 	t.Run("07_manual_computed_outputs", func(t *testing.T) {
-		config, addr := testconfig.BBDManual(t)
-		withInputs := func(inputs string) testconfig.Config {
-			return config.WithFirstBlock(
-				testconfig.Descend("version_spec", "inputs")(testconfig.SetRawExpr("%s", inputs)),
-				// The shared manual example (BBDManual) declares an output override; clear it so this test
-				// exercises the "no overrides, everything derived" case regardless of the example's content.
-				testconfig.Descend("version_spec", "outputs")(testconfig.SetRawExpr("{}")),
-			)
-		}
-
-		// approval (BOOLEAN) mirrors to a BOOLEAN output; region (SINGLE_SELECT) mirrors to a STRING output.
-		base := withInputs(`{
-      approval = { display_name = "Approval", type = "BOOLEAN", assignment_type = "PLATFORM_OPERATOR_MANUAL_INPUT" }
-      region   = { display_name = "Region", type = "SINGLE_SELECT", assignment_type = "USER_INPUT", selectable_values = ["eu", "us"] }
-    }`)
-		redraft := withInputs(`{
-      approval = { display_name = "Approval", type = "BOOLEAN", assignment_type = "PLATFORM_OPERATOR_MANUAL_INPUT" }
-      region   = { display_name = "Region", type = "SINGLE_SELECT", assignment_type = "USER_INPUT", selectable_values = ["eu", "us"] }
-      ticket   = { display_name = "Ticket", type = "STRING", assignment_type = "STATIC", argument = jsonencode("T-1") }
-    }`)
+		vars := hclStepVars{"suffix": acctest.RandString(8)}
+		addr := "meshstack_building_block_definition.example_03_manual"
 
 		// Outputs are omitted, so every derived output is a non-override (assignment NONE, display_name = the
 		// input's) and prunes away: the tracked subset is the empty map, across the input change too.
@@ -464,34 +419,34 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 			Steps: []resource.TestStep{
 				// Step 1: Create draft v1 with outputs omitted -> outputs computed from inputs
 				{
-					Config: base.String(),
+					Config: hclStep(t, "resources/building_block_definition/07_manual_computed_outputs", 1, vars),
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_spec").AtMapKey("outputs"), baseOutputs),
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest"), expectedVersion(1, versionStateDraft)),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_spec").AtMapKey("outputs"), baseOutputs),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_latest"), expectedVersion(1, versionStateDraft)),
 					},
 				},
 				// Step 2: Release v1
 				{
-					Config: releaseBBDVersion(t, base).String(),
+					Config: hclStep(t, "resources/building_block_definition/07_manual_computed_outputs", 2, vars),
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest_release"), expectedVersion(1, versionStateReleased)),
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_spec").AtMapKey("outputs"), baseOutputs),
-						releasedHashStable.AddStateValue(addr.String(), releasedHashPath),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_latest_release"), expectedVersion(1, versionStateReleased)),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_spec").AtMapKey("outputs"), baseOutputs),
+						releasedHashStable.AddStateValue(addr, releasedHashPath),
 					},
 				},
 				// Step 3: Re-draft (draft false->true) AND add an input -> new draft v2 with reconciled outputs.
 				{
-					Config: redraft.String(),
+					Config: hclStep(t, "resources/building_block_definition/07_manual_computed_outputs", 3, vars),
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
-							plancheck.ExpectResourceAction(addr.String(), plancheck.ResourceActionUpdate),
+							plancheck.ExpectResourceAction(addr, plancheck.ResourceActionUpdate),
 						},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest_release"), expectedVersion(1, versionStateReleased)),
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest"), expectedVersion(2, versionStateDraft)),
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_spec").AtMapKey("outputs"), redraftOutputs),
-						releasedHashStable.AddStateValue(addr.String(), releasedHashPath),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_latest_release"), expectedVersion(1, versionStateReleased)),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_latest"), expectedVersion(2, versionStateDraft)),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_spec").AtMapKey("outputs"), redraftOutputs),
+						releasedHashStable.AddStateValue(addr, releasedHashPath),
 					},
 				},
 			},
@@ -505,25 +460,12 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 	// or a content_hash flip, and state must hold only the tracked keys. A declared output must not set type
 	// (always derived) - covered by the validation subtest.
 	t.Run("12_manual_declared_outputs", func(t *testing.T) {
-		config, addr := testconfig.BBDManual(t)
 		// Three inputs, two overrides: rename approval (display_name differs from the input's) and mark region
 		// SUMMARY. ticket is not overridden, so its derived output (NONE, display_name = "Ticket") is pruned,
 		// proving the subset semantics. No output sets type (always derived) or display_order (the derived
 		// positional order flows: inputs sorted by (display_order, key) -> approval=0, region=1, ticket=2).
-		withDeclaredOutputs := func(c testconfig.Config) testconfig.Config {
-			return c.WithFirstBlock(
-				testconfig.Descend("version_spec", "inputs")(testconfig.SetRawExpr("%s", `{
-      approval = { display_name = "Approval", type = "BOOLEAN", assignment_type = "PLATFORM_OPERATOR_MANUAL_INPUT" }
-      region   = { display_name = "Region", type = "SINGLE_SELECT", assignment_type = "USER_INPUT", selectable_values = ["eu", "us"] }
-      ticket   = { display_name = "Ticket", type = "STRING", assignment_type = "USER_INPUT" }
-    }`)),
-				testconfig.Descend("version_spec", "outputs")(testconfig.SetRawExpr("%s", `{
-      approval = { display_name = "Approval Output" }
-      region   = { assignment_type = "SUMMARY" }
-    }`)),
-			)
-		}
-		base := withDeclaredOutputs(config)
+		vars := hclStepVars{"suffix": acctest.RandString(8)}
+		addr := "meshstack_building_block_definition.example_03_manual"
 
 		expectedOutputs := knownvalue.MapExact(map[string]knownvalue.Check{
 			"approval": xknownvalue.MapExact(map[string]knownvalue.Check{
@@ -546,35 +488,35 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 			Steps: []resource.TestStep{
 				// Step 1: Create draft v1 with a full declared output set (bug 1: create reconciliation).
 				{
-					Config: base.String(),
+					Config: hclStep(t, "resources/building_block_definition/12_manual_declared_outputs", 1, vars),
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_spec").AtMapKey("outputs"), expectedOutputs),
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest"), expectedVersion(1, versionStateDraft)),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_spec").AtMapKey("outputs"), expectedOutputs),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_latest"), expectedVersion(1, versionStateDraft)),
 					},
 				},
 				// Step 2: Release v1 (bug 2: content_hash must not flip during apply).
 				{
-					Config: releaseBBDVersion(t, base).String(),
+					Config: hclStep(t, "resources/building_block_definition/12_manual_declared_outputs", 2, vars),
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest_release"), expectedVersion(1, versionStateReleased)),
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_spec").AtMapKey("outputs"), expectedOutputs),
-						releasedHashStable.AddStateValue(addr.String(), releasedHashPath),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_latest_release"), expectedVersion(1, versionStateReleased)),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_spec").AtMapKey("outputs"), expectedOutputs),
+						releasedHashStable.AddStateValue(addr, releasedHashPath),
 					},
 				},
 				// Step 3: Re-draft (draft false->true) with no change -> new draft v2 (bug 2: create new
 				// version content_hash must not flip); released v1 stays immutable.
 				{
-					Config: base.String(),
+					Config: hclStep(t, "resources/building_block_definition/12_manual_declared_outputs", 3, vars),
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
-							plancheck.ExpectResourceAction(addr.String(), plancheck.ResourceActionUpdate),
+							plancheck.ExpectResourceAction(addr, plancheck.ResourceActionUpdate),
 						},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest_release"), expectedVersion(1, versionStateReleased)),
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest"), expectedVersion(2, versionStateDraft)),
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_spec").AtMapKey("outputs"), expectedOutputs),
-						releasedHashStable.AddStateValue(addr.String(), releasedHashPath),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_latest_release"), expectedVersion(1, versionStateReleased)),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_latest"), expectedVersion(2, versionStateDraft)),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_spec").AtMapKey("outputs"), expectedOutputs),
+						releasedHashStable.AddStateValue(addr, releasedHashPath),
 					},
 				},
 			},
@@ -587,27 +529,8 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 	// a new override key on an existing resource, whose backend-derived display_name/type/display_order must
 	// be planned unknown rather than null (no prior state for that key).
 	t.Run("13_manual_output_override_update", func(t *testing.T) {
-		config, addr := testconfig.BBDManual(t)
-		withOutputs := func(outputs string) testconfig.Config {
-			return config.WithFirstBlock(
-				testconfig.Descend("version_spec", "inputs")(testconfig.SetRawExpr("%s", `{
-      approval = { display_name = "Approval", type = "BOOLEAN", assignment_type = "PLATFORM_OPERATOR_MANUAL_INPUT" }
-      region   = { display_name = "Region", type = "SINGLE_SELECT", assignment_type = "USER_INPUT", selectable_values = ["eu", "us"] }
-    }`)),
-				testconfig.Descend("version_spec", "outputs")(testconfig.SetRawExpr("%s", outputs)),
-			)
-		}
-		initial := withOutputs(`{
-      approval = { assignment_type = "SUMMARY" }
-      region   = { display_name = "Region Output" }
-    }`)
-		updated := withOutputs(`{
-      region = { display_name = "Region Renamed" }
-    }`)
-		readded := withOutputs(`{
-      approval = { assignment_type = "SUMMARY" }
-      region   = { display_name = "Region Renamed" }
-    }`)
+		vars := hclStepVars{"suffix": acctest.RandString(8)}
+		addr := "meshstack_building_block_definition.example_03_manual"
 
 		initialOutputs := knownvalue.MapExact(map[string]knownvalue.Check{
 			"approval": xknownvalue.MapExact(map[string]knownvalue.Check{
@@ -649,34 +572,34 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
-					Config: initial.String(),
+					Config: hclStep(t, "resources/building_block_definition/13_manual_output_override_update", 1, vars),
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_spec").AtMapKey("outputs"), initialOutputs),
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest"), expectedVersion(1, versionStateDraft)),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_spec").AtMapKey("outputs"), initialOutputs),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_latest"), expectedVersion(1, versionStateDraft)),
 					},
 				},
 				{
-					Config: updated.String(),
+					Config: hclStep(t, "resources/building_block_definition/13_manual_output_override_update", 2, vars),
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
-							plancheck.ExpectResourceAction(addr.String(), plancheck.ResourceActionUpdate),
+							plancheck.ExpectResourceAction(addr, plancheck.ResourceActionUpdate),
 						},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_spec").AtMapKey("outputs"), updatedOutputs),
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest"), expectedVersion(1, versionStateDraft)),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_spec").AtMapKey("outputs"), updatedOutputs),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_latest"), expectedVersion(1, versionStateDraft)),
 					},
 				},
 				{
-					Config: readded.String(),
+					Config: hclStep(t, "resources/building_block_definition/13_manual_output_override_update", 3, vars),
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
-							plancheck.ExpectResourceAction(addr.String(), plancheck.ResourceActionUpdate),
+							plancheck.ExpectResourceAction(addr, plancheck.ResourceActionUpdate),
 						},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_spec").AtMapKey("outputs"), readdedOutputs),
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest"), expectedVersion(1, versionStateDraft)),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_spec").AtMapKey("outputs"), readdedOutputs),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_latest"), expectedVersion(1, versionStateDraft)),
 					},
 				},
 			},
@@ -686,17 +609,9 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 	// Import must materialize exactly the diff-rule subset: with no prior state, the read-back prunes the
 	// backend's full one-per-input set to the tracked overrides, so the imported state equals the applied one.
 	t.Run("14_manual_output_import", func(t *testing.T) {
-		config, addr := testconfig.BBDManual(t)
+		vars := hclStepVars{"suffix": acctest.RandString(8)}
+		addr := "meshstack_building_block_definition.example_03_manual"
 		var resourceUuid string
-		base := config.WithFirstBlock(
-			testconfig.Descend("version_spec", "inputs")(testconfig.SetRawExpr("%s", `{
-      approval = { display_name = "Approval", type = "BOOLEAN", assignment_type = "PLATFORM_OPERATOR_MANUAL_INPUT" }
-      region   = { display_name = "Region", type = "SINGLE_SELECT", assignment_type = "USER_INPUT", selectable_values = ["eu", "us"] }
-    }`)),
-			testconfig.Descend("version_spec", "outputs")(testconfig.SetRawExpr("%s", `{
-      region = { assignment_type = "SUMMARY" }
-    }`)),
-		)
 
 		// Only region is a tracked override (assignment != NONE); approval is derived (NONE, display_name equal
 		// to the input's) and pruned. The imported state must reproduce exactly this subset.
@@ -712,17 +627,17 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
-					Config: base.String(),
+					Config: hclStep(t, "resources/building_block_definition/14_manual_output_import", 1, vars),
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_spec").AtMapKey("outputs"), expectedOutputs),
-						xknownvalue.Ref(addr.String(), "meshBuildingBlockDefinition", &resourceUuid),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_spec").AtMapKey("outputs"), expectedOutputs),
+						xknownvalue.Ref(addr, "meshBuildingBlockDefinition", &resourceUuid),
 					},
 				},
 				{
 					// Command-style import (not a plannable import block, which does not support ImportStateVerify).
 					ImportState:                          true,
 					ImportStateIdFunc:                    func(_ *terraform.State) (string, error) { return resourceUuid, nil },
-					ResourceName:                         addr.String(),
+					ResourceName:                         addr,
 					ImportStateVerify:                    true,
 					ImportStateVerifyIdentifierAttribute: "metadata.uuid",
 				},
@@ -734,55 +649,51 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 	// attribute mean the same thing to meshStack - name the building block after the definition - but
 	// Terraform tells them apart, so each has to survive a refresh without leaving a diff behind.
 	t.Run("15_display_name_template_lifecycle", func(t *testing.T) {
-		config, addr := testconfig.BBDManual(t)
-		withNameTemplate := func(template string) testconfig.Config {
-			return config.WithFirstBlock(
-				testconfig.Descend("spec", "display_name_template")(testconfig.SetString(template)),
-			)
-		}
+		vars := hclStepVars{"suffix": acctest.RandString(8)}
+		addr := "meshstack_building_block_definition.example_03_manual"
 		nameTemplatePath := tfjsonpath.New("spec").AtMapKey("display_name_template")
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
-					Config: withNameTemplate("Block for {{ region }}").String(),
+					Config: hclStep(t, "resources/building_block_definition/15_display_name_template_lifecycle", 1, vars),
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(addr.String(), nameTemplatePath, knownvalue.StringExact("Block for {{ region }}")),
+						statecheck.ExpectKnownValue(addr, nameTemplatePath, knownvalue.StringExact("Block for {{ region }}")),
 					},
 				},
 				{
-					Config: withNameTemplate("Block for {{ region }} v2").String(),
+					Config: hclStep(t, "resources/building_block_definition/15_display_name_template_lifecycle", 2, vars),
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
-							plancheck.ExpectResourceAction(addr.String(), plancheck.ResourceActionUpdate),
+							plancheck.ExpectResourceAction(addr, plancheck.ResourceActionUpdate),
 						},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(addr.String(), nameTemplatePath, knownvalue.StringExact("Block for {{ region }} v2")),
+						statecheck.ExpectKnownValue(addr, nameTemplatePath, knownvalue.StringExact("Block for {{ region }} v2")),
 					},
 				},
 				{
-					Config: withNameTemplate("").String(),
+					Config: hclStep(t, "resources/building_block_definition/15_display_name_template_lifecycle", 3, vars),
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PostApplyPostRefresh: []plancheck.PlanCheck{
 							plancheck.ExpectEmptyPlan(),
 						},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(addr.String(), nameTemplatePath, knownvalue.StringExact("")),
+						statecheck.ExpectKnownValue(addr, nameTemplatePath, knownvalue.StringExact("")),
 					},
 				},
 				{
 					// Dropping the attribute removes the template, and the refresh has to agree: a state that
 					// still held the old value would leave the same diff on every later plan.
-					Config: config.String(),
+					Config: hclStep(t, "resources/building_block_definition/15_display_name_template_lifecycle", 4, vars),
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PostApplyPostRefresh: []plancheck.PlanCheck{
 							plancheck.ExpectEmptyPlan(),
 						},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(addr.String(), nameTemplatePath, knownvalue.Null()),
+						statecheck.ExpectKnownValue(addr, nameTemplatePath, knownvalue.Null()),
 					},
 				},
 			},
@@ -795,34 +706,17 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 	// disallows plaintext keys. Released versions are immutable, so the rotation must be rejected with
 	// a clear, actionable error instead.
 	t.Run("08_release_secret_rotation_rejected", func(t *testing.T) {
-		config, _ := testconfig.BBDTerraform(t)
-		sensitiveInputs := func(version, value string) testconfig.Config {
-			return config.WithFirstBlock(testconfig.Descend("version_spec", "inputs")(testconfig.SetRawExpr("%s", fmt.Sprintf(`{
-      CONNECTOR_SECRET = {
-        display_name    = "Connector Secret"
-        type            = "STRING"
-        assignment_type = "STATIC"
-        sensitive = {
-          argument = {
-            secret_value   = %q
-            secret_version = %q
-          }
-        }
-      }
-    }`, value, version))))
-		}
-		base := sensitiveInputs("v1", "plaintext-secret-v1")
-		rotated := sensitiveInputs("v2", "plaintext-secret-v2")
+		vars := hclStepVars{"suffix": acctest.RandString(8)}
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				// Step 1: Create draft v1 with a sensitive input
-				{Config: base.String()},
+				{Config: hclStep(t, "resources/building_block_definition/08_release_secret_rotation_rejected", 1, vars)},
 				// Step 2: Release v1 (now immutable)
-				{Config: releaseBBDVersion(t, base).String()},
+				{Config: hclStep(t, "resources/building_block_definition/08_release_secret_rotation_rejected", 2, vars)},
 				// Step 3: Rotate the secret on the released version -> clear error, not an opaque hash failure
 				{
-					Config:      releaseBBDVersion(t, rotated).String(),
+					Config:      hclStep(t, "resources/building_block_definition/08_release_secret_rotation_rejected", 3, vars),
 					ExpectError: expectErrorWords("version_spec", "non-draft", "allowed"),
 				},
 			},
@@ -835,28 +729,22 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 	// non-version_spec field (the description) on a released version that contains such an input must NOT be
 	// rejected as a secret rotation.
 	t.Run("09_released_plaintext_named_input_is_not_a_secret", func(t *testing.T) {
-		config, addr := testconfig.BBDTerraform(t)
-		withPlaintextInput := func(c testconfig.Config) testconfig.Config {
-			return c.WithFirstBlock(testconfig.Descend("version_spec", "inputs")(testconfig.SetRawExpr("%s", `{
-      plaintext = { display_name = "Plaintext", type = "STRING", assignment_type = "STATIC", argument = jsonencode("hello") }
-    }`)))
-		}
-		base := withPlaintextInput(config)
-		released := releaseBBDVersion(t, base)
+		vars := hclStepVars{"suffix": acctest.RandString(8)}
+		addr := "meshstack_building_block_definition.example_01_terraform"
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				// Step 1: Create draft v1 with a non-sensitive input named "plaintext"
-				{Config: base.String()},
+				{Config: hclStep(t, "resources/building_block_definition/09_released_plaintext_named_input_is_not_a_secret", 1, vars)},
 				// Step 2: Release v1 (now immutable)
-				{Config: released.String()},
+				{Config: hclStep(t, "resources/building_block_definition/09_released_plaintext_named_input_is_not_a_secret", 2, vars)},
 				// Step 3: Change only the description on the released version. version_spec is unchanged and
 				// carries no secret, so this must succeed - the old "plaintext" key match wrongly rejected it.
 				{
-					Config: updateBBDDescription(t, released, "updated description, version_spec untouched").String(),
+					Config: hclStep(t, "resources/building_block_definition/09_released_plaintext_named_input_is_not_a_secret", 3, vars),
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest"), expectedVersion(1, versionStateReleased)),
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("spec").AtMapKey("description"), knownvalue.StringExact("updated description, version_spec untouched")),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_latest"), expectedVersion(1, versionStateReleased)),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("spec").AtMapKey("description"), knownvalue.StringExact("updated description, version_spec untouched")),
 					},
 				},
 			},
@@ -868,45 +756,27 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 	// step - must succeed, creating a new draft version that carries the rotated secret while the released
 	// version stays immutable. Guards the ModifyPlan rejection from over-triggering on the draft-flip path.
 	t.Run("10_redraft_with_secret_rotation_allowed", func(t *testing.T) {
-		config, addr := testconfig.BBDTerraform(t)
-		sensitiveInputs := func(version, value string) testconfig.Config {
-			return config.WithFirstBlock(testconfig.Descend("version_spec", "inputs")(testconfig.SetRawExpr("%s", fmt.Sprintf(`{
-      CONNECTOR_SECRET = {
-        display_name    = "Connector Secret"
-        type            = "STRING"
-        assignment_type = "STATIC"
-        sensitive = {
-          argument = {
-            secret_value   = %q
-            secret_version = %q
-          }
-        }
-      }
-    }`, value, version))))
-		}
-		base := sensitiveInputs("v1", "plaintext-secret-v1")
-		// base defaults to draft=true; after releasing v1 this same config (draft=true) flips back to draft
-		// while also rotating the secret to v2 -> a new draft version v2.
-		redraftRotated := sensitiveInputs("v2", "plaintext-secret-v2")
+		vars := hclStepVars{"suffix": acctest.RandString(8)}
+		addr := "meshstack_building_block_definition.example_01_terraform"
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				// Step 1: Create draft v1 with a sensitive input
-				{Config: base.String()},
+				{Config: hclStep(t, "resources/building_block_definition/10_redraft_with_secret_rotation_allowed", 1, vars)},
 				// Step 2: Release v1 (now immutable)
-				{Config: releaseBBDVersion(t, base).String()},
+				{Config: hclStep(t, "resources/building_block_definition/10_redraft_with_secret_rotation_allowed", 2, vars)},
 				// Step 3: Flip back to draft AND rotate the secret in one step -> new draft v2, v1 untouched
 				{
-					Config: redraftRotated.String(),
+					Config: hclStep(t, "resources/building_block_definition/10_redraft_with_secret_rotation_allowed", 3, vars),
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
-							plancheck.ExpectResourceAction(addr.String(), plancheck.ResourceActionUpdate),
+							plancheck.ExpectResourceAction(addr, plancheck.ResourceActionUpdate),
 						},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest_release"), expectedVersion(1, versionStateReleased)),
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest"), expectedVersion(2, versionStateDraft)),
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("versions"), ascendingVersionsExact(
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_latest_release"), expectedVersion(1, versionStateReleased)),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_latest"), expectedVersion(2, versionStateDraft)),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("versions"), ascendingVersionsExact(
 							expectedVersion(1, versionStateReleased),
 							expectedVersion(2, versionStateDraft),
 						)),
@@ -924,7 +794,8 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 	// apply"). The backend keeps this safe by deep-copying the implementation binding when deriving the
 	// draft, so changing the draft's integration reference does not retroactively repoint the released one.
 	t.Run("11_github_release_redraft_integration_change", func(t *testing.T) {
-		config, addr, integrationBAddr := testconfig.BBDGithubTwoIntegrations(t)
+		vars := hclStepVars{"suffix": acctest.RandString(8)}
+		addr := "meshstack_building_block_definition.example_02_github_workflows"
 
 		// The released version's content_hash (which includes integration_ref) must stay identical
 		// across the re-draft, proving the released version was not retroactively repointed.
@@ -937,51 +808,43 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 		integrationUuidPath := tfjsonpath.New("version_spec").AtMapKey("implementation").
 			AtMapKey("github_workflows").AtMapKey("integration_ref").AtMapKey("uuid")
 
-		// base defaults to draft=true with integration A; this same config (draft=true) flips back to
-		// draft while switching to integration B -> a new draft version v2.
-		redraftWithIntegrationChange := config.WithFirstBlock(
-			testconfig.Descend("version_spec", "implementation", "github_workflows", "integration_ref")(
-				testconfig.SetAddr(integrationBAddr, "ref"),
-			),
-		)
-
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				// Step 1: Create draft v1 with integration A
 				{
-					Config: config.String(),
+					Config: hclStep(t, "resources/building_block_definition/11_github_release_redraft_integration_change", 1, vars),
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest"), expectedVersion(1, versionStateDraft)),
-						integrationSwitched.AddStateValue(addr.String(), integrationUuidPath),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_latest"), expectedVersion(1, versionStateDraft)),
+						integrationSwitched.AddStateValue(addr, integrationUuidPath),
 					},
 				},
 				// Step 2: Release v1 (now immutable)
 				{
-					Config: releaseBBDVersion(t, config).String(),
+					Config: hclStep(t, "resources/building_block_definition/11_github_release_redraft_integration_change", 2, vars),
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest_release"), expectedVersion(1, versionStateReleased)),
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest"), expectedVersion(1, versionStateReleased)),
-						releasedHashStable.AddStateValue(addr.String(), releasedHashPath),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_latest_release"), expectedVersion(1, versionStateReleased)),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_latest"), expectedVersion(1, versionStateReleased)),
+						releasedHashStable.AddStateValue(addr, releasedHashPath),
 					},
 				},
 				// Step 3: Flip draft false->true AND switch integration A->B -> new draft v2.
 				// Released v1 must keep integration A and stay immutable (same content_hash).
 				{
-					Config: redraftWithIntegrationChange.String(),
+					Config: hclStep(t, "resources/building_block_definition/11_github_release_redraft_integration_change", 3, vars),
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
-							plancheck.ExpectResourceAction(addr.String(), plancheck.ResourceActionUpdate),
+							plancheck.ExpectResourceAction(addr, plancheck.ResourceActionUpdate),
 						},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest_release"), expectedVersion(1, versionStateReleased)),
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("version_latest"), expectedVersion(2, versionStateDraft)),
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("versions"), ascendingVersionsExact(
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_latest_release"), expectedVersion(1, versionStateReleased)),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_latest"), expectedVersion(2, versionStateDraft)),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("versions"), ascendingVersionsExact(
 							expectedVersion(1, versionStateReleased),
 							expectedVersion(2, versionStateDraft),
 						)),
-						releasedHashStable.AddStateValue(addr.String(), releasedHashPath),
-						integrationSwitched.AddStateValue(addr.String(), integrationUuidPath),
+						releasedHashStable.AddStateValue(addr, releasedHashPath),
+						integrationSwitched.AddStateValue(addr, integrationUuidPath),
 					},
 				},
 			},
@@ -996,29 +859,25 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 			t.Skip("relies on the backend injecting a restricted tag's default value on create")
 		}
 
-		config, addr := testconfig.BBDManual(t)
 		// One tag the BBD declares (needs a real definition or the backend rejects it) ...
-		declaredTag, declaredTagAddr, declaredKey := testconfig.TagDefinition(t, client.MeshObjectKind.BuildingBlockDefinition)
 		// ... and a restricted tag with a default the BBD does not declare: the backend injects it on
 		// create, so the fix must keep it out of the managed tags instead of crashing / drifting.
-		restrictedTag, restrictedTagAddr, _ := testconfig.RestrictedTagDefinitionWithDefault(t, client.MeshObjectKind.BuildingBlockDefinition, "injected-default")
-		config = config.Join(declaredTag, restrictedTag).WithFirstBlock(
-			testconfig.Descend("metadata", "tags")(testconfig.SetRawExpr(`{ (%s) = ["blue"] }`, declaredTagAddr.Join("spec", "key"))),
-			// depends_on forces the tag definitions to be created before the BBD (so the restricted
-			// default is actually injected) and destroyed after it. The latter avoids a backend bug:
-			// deleting a restricted BBD tag definition while any BBD still exists hits a
-			// BuildingBlockDefinitionTag foreign-key violation (500) during the server-side tag recompute.
-			testconfig.Descend("depends_on")(testconfig.SetRawExpr(`[%s, %s]`, declaredTagAddr, restrictedTagAddr)),
-		)
+		// depends_on forces the tag definitions to be created before the BBD (so the restricted
+		// default is actually injected) and destroyed after it. The latter avoids a backend bug:
+		// deleting a restricted BBD tag definition while any BBD still exists hits a
+		// BuildingBlockDefinitionTag foreign-key violation (500) during the server-side tag recompute.
+		suffix := acctest.RandString(8)
+		vars := hclStepVars{"suffix": suffix}
+		addr := "meshstack_building_block_definition.example_03_manual"
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
-					Config: config.String(),
+					Config: hclStep(t, "resources/building_block_definition/12_restricted_default_tag", 1, vars),
 					ConfigStateChecks: []statecheck.StateCheck{
 						// Only the declared tag remains; the injected restricted default is not tracked.
-						statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("metadata").AtMapKey("tags"), knownvalue.MapExact(map[string]knownvalue.Check{
-							declaredKey: knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("blue")}),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("metadata").AtMapKey("tags"), knownvalue.MapExact(map[string]knownvalue.Check{
+							"test-key-" + suffix: knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("blue")}),
 						})),
 					},
 					ConfigPlanChecks: resource.ConfigPlanChecks{
@@ -1039,24 +898,13 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 	t.Run("16_policies_across_implementation_change", func(t *testing.T) {
 		// github_workflows has no dry run, so it supports drift reconciliation only with automatic
 		// approval, and no approval gate at all. terraform supports every policy.
-		config, addr := testconfig.BBDWithIntegration(t, "02_github_workflows")
-		githubWorkflowsConfig := setBBDPolicies(t, config,
-			`{}`,
-			`{ mode = "DRIFT_RECONCILIATION", frequency = "DAILY", automatic_approval = true }`,
-		)
-		terraformConfig := setBBDPolicies(t, githubWorkflowsConfig,
-			`{ manual_triggers = true, version_upgrade = true }`,
-			`{ mode = "DRIFT_DETECTION", frequency = "DAILY" }`,
-		).WithFirstBlock(
-			testconfig.Descend("version_spec", "implementation")(testconfig.SetRawExpr(
-				`{ terraform = { terraform_version = "1.9.0", repository_url = "https://github.com/example/building-block.git" } }`,
-			)),
-		)
+		vars := hclStepVars{"suffix": acctest.RandString(8)}
+		addr := "meshstack_building_block_definition.example_02_github_workflows"
 
 		checkPolicies := func(approvalPolicies map[string]bool, mode enum.Entry[client.MeshBuildingBlockScheduleMode], automaticApproval bool) []statecheck.StateCheck {
 			return []statecheck.StateCheck{
-				statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("spec").AtMapKey("approval_policies"), checkBBDApprovalPolicies(approvalPolicies)),
-				statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("spec").AtMapKey("schedule"),
+				statecheck.ExpectKnownValue(addr, tfjsonpath.New("spec").AtMapKey("approval_policies"), checkBBDApprovalPolicies(approvalPolicies)),
+				statecheck.ExpectKnownValue(addr, tfjsonpath.New("spec").AtMapKey("schedule"),
 					checkBBDSchedule(mode, client.MeshBuildingBlockScheduleFrequencyDaily, automaticApproval)),
 			}
 		}
@@ -1066,10 +914,10 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 				// Create with a schedule enabled: the definition is created with neutral policies, and the
 				// schedule follows once the initial version carries the github_workflows implementation.
 				{
-					Config: githubWorkflowsConfig.String(),
+					Config: hclStep(t, "resources/building_block_definition/16_policies_across_implementation_change", 1, vars),
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
-							plancheck.ExpectResourceAction(addr.String(), plancheck.ResourceActionCreate),
+							plancheck.ExpectResourceAction(addr, plancheck.ResourceActionCreate),
 						},
 					},
 					ConfigStateChecks: checkPolicies(nil, client.MeshBuildingBlockScheduleModeDriftReconciliation, true),
@@ -1077,10 +925,10 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 				// Tighten across an implementation change: approval gates and drift detection need terraform,
 				// so the policies can only be written after the version switched to it.
 				{
-					Config: terraformConfig.String(),
+					Config: hclStep(t, "resources/building_block_definition/16_policies_across_implementation_change", 2, vars),
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
-							plancheck.ExpectResourceAction(addr.String(), plancheck.ResourceActionUpdate),
+							plancheck.ExpectResourceAction(addr, plancheck.ResourceActionUpdate),
 						},
 					},
 					ConfigStateChecks: checkPolicies(
@@ -1090,10 +938,10 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 				// Relax across an implementation change: github_workflows supports neither the approval gates
 				// nor drift detection, so they have to be gone before the version switches back to it.
 				{
-					Config: githubWorkflowsConfig.String(),
+					Config: hclStep(t, "resources/building_block_definition/16_policies_across_implementation_change", 3, vars),
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
-							plancheck.ExpectResourceAction(addr.String(), plancheck.ResourceActionUpdate),
+							plancheck.ExpectResourceAction(addr, plancheck.ResourceActionUpdate),
 						},
 					},
 					ConfigStateChecks: checkPolicies(nil, client.MeshBuildingBlockScheduleModeDriftReconciliation, true),
@@ -1109,74 +957,63 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 	// therefore report meshStack's policy rejection rather than the immutability error, and would store
 	// an approval gate for a version that stays as it is.
 	t.Run("17_released_version_rejected_before_policy_write", func(t *testing.T) {
-		config, _ := testconfig.BBDManual(t)
-		released := releaseBBDVersion(t, config)
-		releasedWithTerraformAndApprovalPolicies := setBBDPolicies(t, released,
-			`{ manual_triggers = true }`,
-			`{}`,
-		).WithFirstBlock(
-			testconfig.Descend("version_spec", "implementation")(testconfig.SetRawExpr(
-				`{ terraform = { terraform_version = "1.9.0", repository_url = "https://github.com/example/building-block.git" } }`,
-			)),
-			// outputs on the manual example are its manual-only sparse overrides, which terraform has no use for.
-			testconfig.Descend("version_spec", "outputs")(testconfig.SetRawExpr(`{}`)),
-		)
+		vars := hclStepVars{"suffix": acctest.RandString(8)}
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				// Create draft v1 on manual, which accepts no policy at all.
-				{Config: config.String()},
+				{Config: hclStep(t, "resources/building_block_definition/17_released_version_rejected_before_policy_write", 1, vars)},
 				// Release v1, which makes its version_spec immutable.
-				{Config: released.String()},
+				{Config: hclStep(t, "resources/building_block_definition/17_released_version_rejected_before_policy_write", 2, vars)},
 				// Switch the implementation to terraform and enable an approval gate on the released version.
 				// terraform supports the gate, so the plan-time validators pass and this reaches Update, where
 				// the immutable version_spec is what must be reported.
+				// outputs on the manual example are its manual-only sparse overrides, which terraform has no use for.
 				{
-					Config:      releasedWithTerraformAndApprovalPolicies.String(),
+					Config:      hclStep(t, "resources/building_block_definition/17_released_version_rejected_before_policy_write", 3, vars),
 					ExpectError: expectErrorWords("version_spec", "non-draft", "released", "allowed"),
 				},
 				// The rejected apply must not have written the approval gate. Re-planning the configuration
 				// that was last applied refreshes from meshStack, so a stored policy change shows up here as a
 				// non-empty plan.
-				{Config: released.String(), PlanOnly: true},
+				{Config: hclStep(t, "resources/building_block_definition/17_released_version_rejected_before_policy_write", 4, vars), PlanOnly: true},
 			},
 		})
 	})
 
 	t.Run("18_release_with_change_rejected", func(t *testing.T) {
-		config, _ := testconfig.BBDTerraform(t)
-		released := releaseBBDVersion(t, config)
-		releasedWithChange := released.WithFirstBlock(
-			testconfig.Descend("version_spec", "implementation", "terraform", "ref_name")(testconfig.SetValue(cty.StringVal("v2.0.0"))),
-		)
+		vars := hclStepVars{"suffix": acctest.RandString(8)}
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
-				{Config: config.String()},
+				{Config: hclStep(t, "resources/building_block_definition/18_release_with_change_rejected", 1, vars)},
 				{
-					Config:      releasedWithChange.String(),
+					Config:      hclStep(t, "resources/building_block_definition/18_release_with_change_rejected", 2, vars),
 					ExpectError: expectErrorWords("release", "draft", "changes"),
 				},
-				{Config: released.String()},
+				{Config: hclStep(t, "resources/building_block_definition/18_release_with_change_rejected", 3, vars)},
 			},
 		})
 	})
 }
 
 // checkBBDMetadataFull checks metadata for the 01_terraform example (tags with 2 entries).
-func checkBBDMetadataFull() knownvalue.Check {
+func checkBBDMetadataFull(suffix string) knownvalue.Check {
 	return xknownvalue.MapExact(map[string]knownvalue.Check{
 		"uuid":               xknownvalue.NotEmptyString(),
-		"owned_by_workspace": xknownvalue.NotEmptyString(),
-		"tags":               knownvalue.MapSizeExact(2),
+		"owned_by_workspace": knownvalue.StringExact("test-ws-" + suffix),
+		"tags": knownvalue.MapExact(map[string]knownvalue.Check{
+			"environment-" + suffix: knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("dev"), knownvalue.StringExact("prod")}),
+			"cost-center-" + suffix: knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("cc-123")}),
+		}),
 	})
 }
 
 // checkBBDMetadataMinimal checks metadata for examples without tags.
-func checkBBDMetadataMinimal() knownvalue.Check {
+func checkBBDMetadataMinimal(suffix string) knownvalue.Check {
 	return xknownvalue.MapExact(map[string]knownvalue.Check{
 		"uuid":               xknownvalue.NotEmptyString(),
-		"owned_by_workspace": xknownvalue.NotEmptyString(),
+		"owned_by_workspace": knownvalue.StringExact("test-ws-" + suffix),
 		"tags":               knownvalue.MapSizeExact(0),
 	})
 }
@@ -1184,12 +1021,7 @@ func checkBBDMetadataMinimal() knownvalue.Check {
 // checkBBDSpecFull checks spec for the 01_terraform example (all optional attributes set).
 func checkBBDSpecFull(expectedDescription string) knownvalue.Check {
 	return xknownvalue.MapExact(map[string]knownvalue.Check{
-		"display_name": knownvalue.StringFunc(func(v string) error {
-			if !strings.HasPrefix(v, "Example Building Block") {
-				return fmt.Errorf("expected %s to start with %s", v, "Example Building Block")
-			}
-			return nil
-		}),
+		"display_name": knownvalue.StringExact("Example Building Block"),
 		"symbol": knownvalue.StringFunc(func(v string) error {
 			if !strings.HasPrefix(v, "data:image/png;base64,") {
 				return fmt.Errorf("value does not start with %s", "data:image/png;base64,")
@@ -1198,7 +1030,7 @@ func checkBBDSpecFull(expectedDescription string) knownvalue.Check {
 		}),
 		"display_name_template": knownvalue.StringExact("Example Building Block {{ resource_name }}"),
 		"description":           knownvalue.StringExact(expectedDescription),
-		"readme":                xknownvalue.NotEmptyString(),
+		"readme":                knownvalue.StringExact("# Example Building Block\n\nThis is a comprehensive example showcasing all available attributes."),
 		"support_url":           knownvalue.StringExact("https://support.example.com/building-blocks"),
 		"documentation_url":     knownvalue.StringExact("https://docs.example.com/building-blocks"),
 		"target_type":           knownvalue.StringExact("TENANT_LEVEL"),
@@ -1254,12 +1086,7 @@ func checkBBDSchedule(
 // checkBBDSpecMinimal checks spec for examples with only required attributes (workspace-level, no extras).
 func checkBBDSpecMinimal(expectedDescription string) knownvalue.Check {
 	return xknownvalue.MapExact(map[string]knownvalue.Check{
-		"display_name": knownvalue.StringFunc(func(v string) error {
-			if !strings.HasPrefix(v, "Example Building Block") {
-				return fmt.Errorf("expected %s to start with %s", v, "Example Building Block")
-			}
-			return nil
-		}),
+		"display_name":              knownvalue.StringExact("Example Building Block"),
 		"symbol":                    xknownvalue.NotEmptyString(),
 		"display_name_template":     knownvalue.Null(),
 		"description":               knownvalue.StringExact(expectedDescription),
@@ -1281,8 +1108,8 @@ func checkBBDSpecMinimal(expectedDescription string) knownvalue.Check {
 	})
 }
 
-func checkBuildingBlockVersionSpec(exampleSuffix string, expectedState enum.Entry[client.MeshBuildingBlockDefinitionVersionState], expectedNumber int64) knownvalue.Check {
-	checkInputs, checkImplementation, checkOutputs := checksForImplementation(exampleSuffix)
+func checkBuildingBlockVersionSpec(suffix, exampleSuffix string, expectedState enum.Entry[client.MeshBuildingBlockDefinitionVersionState], expectedNumber int64) knownvalue.Check {
+	checkInputs, checkImplementation, checkOutputs := checksForImplementation(suffix, exampleSuffix)
 	expectedDeletionMode := "DELETE"
 	if exampleSuffix == "02_github_workflows" {
 		expectedDeletionMode = "PURGE"
@@ -1319,7 +1146,7 @@ func checkBuildingBlockVersionSpec(exampleSuffix string, expectedState enum.Entr
 	return xknownvalue.MapExact(expected)
 }
 
-func checksForImplementation(exampleSuffix string) (checkInputs, checkImplementation, checkOutputs knownvalue.Check) {
+func checksForImplementation(suffix, exampleSuffix string) (checkInputs, checkImplementation, checkOutputs knownvalue.Check) {
 	switch exampleSuffix {
 	case "01_terraform":
 		return xknownvalue.MapExact(map[string]knownvalue.Check{
@@ -1408,15 +1235,14 @@ func checksForImplementation(exampleSuffix string) (checkInputs, checkImplementa
 					"display_order":                  knownvalue.Int64Exact(0),
 				}),
 				"business_unit": xknownvalue.MapExact(map[string]knownvalue.Check{
-					"display_name":           knownvalue.StringExact("Business Unit"),
-					"type":                   knownvalue.StringExact("CODE"),
-					"assignment_type":        knownvalue.StringExact("TAG"),
-					"is_environment":         knownvalue.Bool(false),
-					"is_optional":            knownvalue.Bool(true),
-					"updateable_by_consumer": knownvalue.Bool(false),
-					"description":            knownvalue.StringExact("The business unit tag of the workspace this building block belongs to"),
-					// The argument is the `<target>.<tagKey>` reference; the key carries a per-run random suffix.
-					"argument":                       xknownvalue.NotEmptyString(),
+					"display_name":                   knownvalue.StringExact("Business Unit"),
+					"type":                           knownvalue.StringExact("CODE"),
+					"assignment_type":                knownvalue.StringExact("TAG"),
+					"is_environment":                 knownvalue.Bool(false),
+					"is_optional":                    knownvalue.Bool(true),
+					"updateable_by_consumer":         knownvalue.Bool(false),
+					"description":                    knownvalue.StringExact("The business unit tag of the workspace this building block belongs to"),
+					"argument":                       knownvalue.StringExact(`"WORKSPACE.business-unit-` + suffix + `"`),
 					"default_value":                  knownvalue.Null(),
 					"value_validation_regex":         knownvalue.Null(),
 					"validation_regex_error_message": knownvalue.Null(),
@@ -1646,7 +1472,7 @@ func checkTerraformImplementation() knownvalue.Check {
 		"ssh_known_host": xknownvalue.MapExact(map[string]knownvalue.Check{
 			"host":      knownvalue.StringExact("github.com"),
 			"key_type":  knownvalue.StringExact("ssh-rsa"),
-			"key_value": xknownvalue.NotEmptyString(),
+			"key_value": knownvalue.StringExact("AAAAB3NzaC1yc2EAAAABIwAAAQEAq2A7hRGmdnm9tUDbO9IDSwBK6TbQa+..."),
 		}),
 		"ssh_private_key": xknownvalue.MapExact(map[string]knownvalue.Check{
 			"secret_value":   knownvalue.Null(),
@@ -1714,81 +1540,43 @@ func TestAccBuildingBlockDefinitionPolicyValidation(t *testing.T) {
 
 	t.Parallel()
 
-	policyConfig := func(implementation, approvalPolicies, schedule string) string {
-		return fmt.Sprintf(`
-resource "meshstack_building_block_definition" "test" {
-  metadata = { owned_by_workspace = "my-workspace" }
-  spec = {
-    display_name    = "Test"
-    description     = "Test"
-    approval_policies = %s
-    schedule          = %s
-  }
-  version_spec = {
-    draft = true
-    implementation = %s
-  }
-}`, approvalPolicies, schedule, implementation)
-	}
-
-	const (
-		manualImpl    = `{ manual = {} }`
-		terraformImpl = `{ terraform = { terraform_version = "1.9.0", repository_url = "https://example.com/bb.git" } }`
-	)
-
 	tests := []struct {
-		name             string
-		implementation   string
-		approvalPolicies string
-		schedule         string
-		expectError      *regexp.Regexp
+		name        string
+		dir         string
+		expectError *regexp.Regexp
 	}{
 		{
-			name:             "approval policies and drift detection on terraform",
-			implementation:   terraformImpl,
-			approvalPolicies: `{ manual_triggers = true }`,
-			schedule:         `{ mode = "DRIFT_DETECTION", frequency = "WEEKLY" }`,
+			name: "approval policies and drift detection on terraform",
+			dir:  "approval_policies_and_drift_detection_on_terraform",
 		},
 		{
-			name:             "no policy at all on manual",
-			implementation:   manualImpl,
-			approvalPolicies: `{}`,
-			schedule:         `{}`,
+			name: "no policy at all on manual",
+			dir:  "no_policy_at_all_on_manual",
 		},
 		{
-			name:             "approval gate on manual is rejected",
-			implementation:   manualImpl,
-			approvalPolicies: `{ manual_triggers = true }`,
-			schedule:         `{}`,
-			expectError:      expectErrorWords("Approvals", "dry"),
+			name:        "approval gate on manual is rejected",
+			dir:         "approval_gate_on_manual_is_rejected",
+			expectError: expectErrorWords("Approvals", "dry"),
 		},
 		{
-			name:             "drift detection on manual is rejected",
-			implementation:   manualImpl,
-			approvalPolicies: `{}`,
-			schedule:         `{ mode = "DRIFT_DETECTION", frequency = "DAILY" }`,
-			expectError:      expectErrorWords("Scheduling", "supported", "manual"),
+			name:        "drift detection on manual is rejected",
+			dir:         "drift_detection_on_manual_is_rejected",
+			expectError: expectErrorWords("Scheduling", "supported", "manual"),
 		},
 		{
-			name:             "frequency without a schedule is rejected",
-			implementation:   terraformImpl,
-			approvalPolicies: `{}`,
-			schedule:         `{ mode = "DISABLED", frequency = "DAILY" }`,
-			expectError:      expectErrorWords("frequency", "without", "schedule"),
+			name:        "frequency without a schedule is rejected",
+			dir:         "frequency_without_a_schedule_is_rejected",
+			expectError: expectErrorWords("frequency", "without", "schedule"),
 		},
 		{
-			name:             "schedule without a frequency is rejected",
-			implementation:   terraformImpl,
-			approvalPolicies: `{}`,
-			schedule:         `{ mode = "DRIFT_DETECTION" }`,
-			expectError:      expectErrorWords("frequency", "required"),
+			name:        "schedule without a frequency is rejected",
+			dir:         "schedule_without_a_frequency_is_rejected",
+			expectError: expectErrorWords("frequency", "required"),
 		},
 		{
-			name:             "automatic approval without reconciliation is rejected",
-			implementation:   terraformImpl,
-			approvalPolicies: `{}`,
-			schedule:         `{ mode = "DRIFT_DETECTION", frequency = "DAILY", automatic_approval = true }`,
-			expectError:      expectErrorWords("Automatic", "approval", "drift"),
+			name:        "automatic approval without reconciliation is rejected",
+			dir:         "automatic_approval_without_reconciliation_is_rejected",
+			expectError: expectErrorWords("Automatic", "approval", "drift"),
 		},
 	}
 
@@ -1796,7 +1584,7 @@ resource "meshstack_building_block_definition" "test" {
 		t.Run(test.name, func(t *testing.T) {
 			ApplyAndTest(t, resource.TestCase{
 				Steps: []resource.TestStep{{
-					Config:      policyConfig(test.implementation, test.approvalPolicies, test.schedule),
+					Config:      hclStep(t, "resources/building_block_definition/policy_validation/"+test.dir, 1, hclStepVars{"suffix": acctest.RandString(8)}),
 					ExpectError: test.expectError,
 				}},
 			})
@@ -1813,101 +1601,58 @@ func TestAccBuildingBlockDefinitionTagInputValidation(t *testing.T) {
 
 	t.Parallel()
 
-	// tagInputConfig wraps the spec attributes that decide which tags are readable, plus the attributes of
-	// a single tag input, into a minimal valid BBD config.
-	tagInputConfig := func(specAttributes, inputAttributes string) string {
-		return fmt.Sprintf(`
-resource "meshstack_building_block_definition" "test" {
-  metadata = { owned_by_workspace = "my-workspace" }
-  spec = {
-    display_name = "Test"
-    description  = "Test"
-    %s
-  }
-  version_spec = {
-    draft          = true
-    implementation = { terraform = { terraform_version = "1.9.0", repository_url = "https://example.com/bb.git" } }
-    inputs = {
-      cost_center = {
-        display_name    = "Cost Center"
-        assignment_type = "TAG"
-        %s
-      }
-    }
-  }
-}`, specAttributes, inputAttributes)
-	}
-
-	const (
-		workspaceLevel = `target_type = "WORKSPACE_LEVEL"`
-		tenantLevel    = `target_type         = "TENANT_LEVEL"
-    supported_platforms = [{ name = "AZURE" }]`
-		codeType = `type = "CODE"`
-	)
-
 	tests := []struct {
-		name            string
-		specAttributes  string
-		inputAttributes string
-		expectError     *regexp.Regexp
+		name        string
+		dir         string
+		expectError *regexp.Regexp
 	}{
 		{
-			name:            "a workspace tag on a workspace building block",
-			specAttributes:  workspaceLevel,
-			inputAttributes: codeType + "\n        argument = jsonencode(\"WORKSPACE.costCenter\")",
+			name: "a workspace tag on a workspace building block",
+			dir:  "a_workspace_tag_on_a_workspace_building_block",
 		},
 		{
-			name:            "a project tag on a tenant building block",
-			specAttributes:  tenantLevel,
-			inputAttributes: codeType + "\n        argument = jsonencode(\"PROJECT.costCenter\")",
+			name: "a project tag on a tenant building block",
+			dir:  "a_project_tag_on_a_tenant_building_block",
 		},
 		{
 			// Only the first separator splits the reference, so a tag key may contain a dot itself.
-			name:            "a tag key containing a dot",
-			specAttributes:  workspaceLevel,
-			inputAttributes: codeType + "\n        argument = jsonencode(\"WORKSPACE.cost.center\")",
+			name: "a tag key containing a dot",
+			dir:  "a_tag_key_containing_a_dot",
 		},
 		{
-			name:            "a project tag on a workspace building block is rejected",
-			specAttributes:  workspaceLevel,
-			inputAttributes: codeType + "\n        argument = jsonencode(\"PROJECT.costCenter\")",
-			expectError:     expectErrorWords("tag", "read", "target"),
+			name:        "a project tag on a workspace building block is rejected",
+			dir:         "a_project_tag_on_a_workspace_building_block_is_rejected",
+			expectError: expectErrorWords("tag", "read", "target"),
 		},
 		{
-			name:            "a non-code input type is rejected",
-			specAttributes:  workspaceLevel,
-			inputAttributes: "type = \"STRING\"\n        argument = jsonencode(\"WORKSPACE.costCenter\")",
-			expectError:     expectErrorWords("tag", "code"),
+			name:        "a non-code input type is rejected",
+			dir:         "a_non-code_input_type_is_rejected",
+			expectError: expectErrorWords("tag", "code"),
 		},
 		{
-			name:            "a sensitive tag input is rejected",
-			specAttributes:  workspaceLevel,
-			inputAttributes: codeType + "\n        sensitive = { argument = { secret_value = \"WORKSPACE.costCenter\" } }",
-			expectError:     expectErrorWords("tag", "sensitive"),
+			name:        "a sensitive tag input is rejected",
+			dir:         "a_sensitive_tag_input_is_rejected",
+			expectError: expectErrorWords("tag", "sensitive"),
 		},
 		{
-			name:            "a missing argument is rejected",
-			specAttributes:  workspaceLevel,
-			inputAttributes: codeType,
-			expectError:     expectErrorWords("tag", "requires", "argument"),
+			name:        "a missing argument is rejected",
+			dir:         "a_missing_argument_is_rejected",
+			expectError: expectErrorWords("tag", "requires", "argument"),
 		},
 		{
-			name:            "an argument without a tag key is rejected",
-			specAttributes:  workspaceLevel,
-			inputAttributes: codeType + "\n        argument = jsonencode(\"WORKSPACE\")",
-			expectError:     expectErrorWords("tag", "argument", "target", "key"),
+			name:        "an argument without a tag key is rejected",
+			dir:         "an_argument_without_a_tag_key_is_rejected",
+			expectError: expectErrorWords("tag", "argument", "target", "key"),
 		},
 		{
-			name:            "an unknown target is rejected",
-			specAttributes:  workspaceLevel,
-			inputAttributes: codeType + "\n        argument = jsonencode(\"TENANT.costCenter\")",
-			expectError:     expectErrorWords("tag", "argument", "known", "target"),
+			name:        "an unknown target is rejected",
+			dir:         "an_unknown_target_is_rejected",
+			expectError: expectErrorWords("tag", "argument", "known", "target"),
 		},
 		{
-			name:            "an argument that is not a string is rejected",
-			specAttributes:  workspaceLevel,
-			inputAttributes: codeType + "\n        argument = jsonencode([\"WORKSPACE.costCenter\"])",
-			expectError:     expectErrorWords("tag", "argument", "encoded"),
+			name:        "an argument that is not a string is rejected",
+			dir:         "an_argument_that_is_not_a_string_is_rejected",
+			expectError: expectErrorWords("tag", "argument", "encoded"),
 		},
 	}
 
@@ -1915,7 +1660,7 @@ resource "meshstack_building_block_definition" "test" {
 		t.Run(test.name, func(t *testing.T) {
 			ApplyAndTest(t, resource.TestCase{
 				Steps: []resource.TestStep{{
-					Config:      tagInputConfig(test.specAttributes, test.inputAttributes),
+					Config:      hclStep(t, "resources/building_block_definition/tag_input_validation/"+test.dir, 1, hclStepVars{"suffix": acctest.RandString(8)}),
 					ExpectError: test.expectError,
 				}},
 			})
@@ -1931,92 +1676,53 @@ func TestAccBuildingBlockDefinitionPaymentMethodInputValidation(t *testing.T) {
 
 	t.Parallel()
 
-	paymentMethodInputConfig := func(specAttributes, inputAttributes string) string {
-		return fmt.Sprintf(`
-resource "meshstack_building_block_definition" "test" {
-  metadata = { owned_by_workspace = "my-workspace" }
-  spec = {
-    display_name = "Test"
-    description  = "Test"
-    %s
-  }
-  version_spec = {
-    draft          = true
-    implementation = { terraform = { terraform_version = "1.9.0", repository_url = "https://example.com/bb.git" } }
-    inputs = {
-      payment_method = {
-        display_name    = "Payment Method"
-        assignment_type = "PAYMENT_METHOD"
-        %s
-      }
-    }
-  }
-}`, specAttributes, inputAttributes)
-	}
-
-	const (
-		workspaceLevel = `target_type = "WORKSPACE_LEVEL"`
-		tenantLevel    = `target_type         = "TENANT_LEVEL"
-    supported_platforms = [{ name = "AZURE" }]`
-		codeType = `type = "CODE"`
-	)
-
 	tests := []struct {
-		name            string
-		specAttributes  string
-		inputAttributes string
-		expectError     *regexp.Regexp
+		name        string
+		dir         string
+		expectError *regexp.Regexp
 	}{
 		{
-			name:            "a code input on a workspace building block",
-			specAttributes:  workspaceLevel,
-			inputAttributes: codeType + "\n        updateable_by_consumer = true",
+			name: "a code input on a workspace building block",
+			dir:  "a_code_input_on_a_workspace_building_block",
 		},
 		{
-			name:            "the default target type is a workspace building block",
-			inputAttributes: codeType,
+			name: "the default target type is a workspace building block",
+			dir:  "the_default_target_type_is_a_workspace_building_block",
 		},
 		{
-			name:            "a tenant building block is rejected",
-			specAttributes:  tenantLevel,
-			inputAttributes: codeType,
-			expectError:     expectErrorWords("Payment", "needs", "workspace"),
+			name:        "a tenant building block is rejected",
+			dir:         "a_tenant_building_block_is_rejected",
+			expectError: expectErrorWords("Payment", "needs", "workspace"),
 		},
 		{
-			name:            "a non-code input type is rejected",
-			specAttributes:  workspaceLevel,
-			inputAttributes: `type = "STRING"`,
-			expectError:     expectErrorWords("Payment", "code"),
+			name:        "a non-code input type is rejected",
+			dir:         "a_non-code_input_type_is_rejected",
+			expectError: expectErrorWords("Payment", "code"),
 		},
 		{
-			name:            "a default value is rejected",
-			specAttributes:  workspaceLevel,
-			inputAttributes: codeType + "\n        default_value = jsonencode(\"my-payment-method\")",
-			expectError:     expectErrorWords("Payment", "default_value"),
+			name:        "a default value is rejected",
+			dir:         "a_default_value_is_rejected",
+			expectError: expectErrorWords("Payment", "default_value"),
 		},
 		{
-			name:            "a sensitive input is rejected",
-			specAttributes:  workspaceLevel,
-			inputAttributes: codeType + "\n        sensitive = {}",
-			expectError:     expectErrorWords("Payment", "sensitive"),
+			name:        "a sensitive input is rejected",
+			dir:         "a_sensitive_input_is_rejected",
+			expectError: expectErrorWords("Payment", "sensitive"),
 		},
 		{
-			name:            "selectable values are rejected",
-			specAttributes:  workspaceLevel,
-			inputAttributes: codeType + "\n        selectable_values = [\"my-payment-method\"]",
-			expectError:     expectErrorWords("Payment", "selectable_values"),
+			name:        "selectable values are rejected",
+			dir:         "selectable_values_are_rejected",
+			expectError: expectErrorWords("Payment", "selectable_values"),
 		},
 		{
-			name:            "an optional input is rejected",
-			specAttributes:  workspaceLevel,
-			inputAttributes: codeType + "\n        is_optional = true",
-			expectError:     expectErrorWords("Payment", "optional"),
+			name:        "an optional input is rejected",
+			dir:         "an_optional_input_is_rejected",
+			expectError: expectErrorWords("Payment", "optional"),
 		},
 		{
-			name:            "a validation regex is rejected",
-			specAttributes:  workspaceLevel,
-			inputAttributes: codeType + "\n        value_validation_regex = \".*\"",
-			expectError:     expectErrorWords("Payment", "value_validation_regex"),
+			name:        "a validation regex is rejected",
+			dir:         "a_validation_regex_is_rejected",
+			expectError: expectErrorWords("Payment", "value_validation_regex"),
 		},
 	}
 
@@ -2024,7 +1730,7 @@ resource "meshstack_building_block_definition" "test" {
 		t.Run(test.name, func(t *testing.T) {
 			ApplyAndTest(t, resource.TestCase{
 				Steps: []resource.TestStep{{
-					Config:      paymentMethodInputConfig(test.specAttributes, test.inputAttributes),
+					Config:      hclStep(t, "resources/building_block_definition/payment_method_input_validation/"+test.dir, 1, hclStepVars{"suffix": acctest.RandString(8)}),
 					ExpectError: test.expectError,
 				}},
 			})
@@ -2039,23 +1745,6 @@ func TestAccBuildingBlockDefinitionSymbolValidation(t *testing.T) {
 	}
 
 	t.Parallel()
-
-	// symbolConfig wraps a symbol value into a minimal valid BBD config.
-	symbolConfig := func(symbol string) string {
-		return fmt.Sprintf(`
-resource "meshstack_building_block_definition" "test" {
-  metadata = { owned_by_workspace = "my-workspace" }
-  spec = {
-    display_name = "Test"
-    description  = "Test"
-    symbol       = %q
-  }
-  version_spec = {
-    draft = true
-    implementation = { manual = {} }
-  }
-}`, symbol)
-	}
 
 	tests := []struct {
 		name        string
@@ -2107,7 +1796,7 @@ resource "meshstack_building_block_definition" "test" {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			step := resource.TestStep{
-				Config: symbolConfig(tt.symbol),
+				Config: hclStep(t, "resources/building_block_definition/symbol_validation", 1, hclStepVars{"suffix": acctest.RandString(8), "symbol": tt.symbol}),
 			}
 			if tt.expectError != nil {
 				step.ExpectError = tt.expectError
@@ -2120,10 +1809,8 @@ resource "meshstack_building_block_definition" "test" {
 }
 
 func TestAccBuildingBlockDefinitionSupportedPlatformKinds(t *testing.T) {
-	workspaceConfig, workspaceAddr := testconfig.Workspace(t)
-	platformConfig, platformAddr, platformTypeAddr := testconfig.CustomPlatform(t, workspaceAddr)
-	landingZoneConfig, landingZoneAddr := testconfig.SimpleLandingZone(t, workspaceAddr, platformAddr)
-	prerequisites := workspaceConfig.Join(platformConfig, landingZoneConfig)
+	vars := hclStepVars{"suffix": acctest.RandString(8)}
+	platformAddr := "meshstack_platform.test"
 
 	platformTypeRef := func(name knownvalue.Check) knownvalue.Check {
 		return xknownvalue.MapExact(map[string]knownvalue.Check{
@@ -2135,7 +1822,7 @@ func TestAccBuildingBlockDefinitionSupportedPlatformKinds(t *testing.T) {
 
 	var appliedPlatformUuid string
 	capturePlatformUuid := statecheck.ExpectKnownValue(
-		platformAddr.String(),
+		platformAddr,
 		tfjsonpath.New("metadata").AtMapKey("uuid"),
 		xknownvalue.NotEmptyString(func(actualValue string) error {
 			appliedPlatformUuid = actualValue
@@ -2153,90 +1840,38 @@ func TestAccBuildingBlockDefinitionSupportedPlatformKinds(t *testing.T) {
 		}),
 	})
 
-	var appliedLandingZoneName string
-	captureLandingZoneName := statecheck.ExpectKnownValue(
-		landingZoneAddr.String(),
-		tfjsonpath.New("metadata").AtMapKey("name"),
-		xknownvalue.NotEmptyString(func(actualValue string) error {
-			appliedLandingZoneName = actualValue
-			return nil
-		}),
-	)
 	landingZoneRef := xknownvalue.MapExact(map[string]knownvalue.Check{
 		"kind": knownvalue.StringExact(client.MeshObjectKind.LandingZone),
-		"name": xknownvalue.NotEmptyString(func(actualValue string) error {
-			if actualValue != appliedLandingZoneName {
-				return fmt.Errorf("expected the landing zone's name %q, got %q", appliedLandingZoneName, actualValue)
-			}
-			return nil
-		}),
+		"name": knownvalue.StringExact("test-lz-" + vars["suffix"]),
 		"uuid": knownvalue.Null(),
 	})
 
-	platformUuidExpr := platformAddr.Join("metadata", "uuid").String()
-	platformTypeNameExpr := platformTypeAddr.Join("metadata", "name").String()
-
-	transitions := []struct {
-		supportedPlatforms string
-		expectStored       []knownvalue.Check
-	}{
+	transitions := [][]knownvalue.Check{
+		{platformRef},
+		{landingZoneRef},
 		{
-			supportedPlatforms: fmt.Sprintf("[%s]", platformAddr.Join("ref")),
-			expectStored:       []knownvalue.Check{platformRef},
+			platformTypeRef(knownvalue.StringExact("AZURE")),
+			platformRef,
+			landingZoneRef,
 		},
 		{
-			supportedPlatforms: fmt.Sprintf("[%s]", landingZoneAddr.Join("ref")),
-			expectStored:       []knownvalue.Check{landingZoneRef},
+			platformTypeRef(knownvalue.StringExact("AZURE")),
+			platformRef,
 		},
-		{
-			supportedPlatforms: fmt.Sprintf(`[{ name = "AZURE" }, %s, %s]`, platformAddr.Join("ref"), landingZoneAddr.Join("ref")),
-			expectStored: []knownvalue.Check{
-				platformTypeRef(knownvalue.StringExact("AZURE")),
-				platformRef,
-				landingZoneRef,
-			},
-		},
-		{
-			supportedPlatforms: fmt.Sprintf(`[{ name = "AZURE" }, { kind = "meshPlatform", uuid = %s }]`, platformUuidExpr),
-			expectStored: []knownvalue.Check{
-				platformTypeRef(knownvalue.StringExact("AZURE")),
-				platformRef,
-			},
-		},
-		{
-			supportedPlatforms: fmt.Sprintf(`[{ name = %s }]`, platformTypeNameExpr),
-			expectStored:       []knownvalue.Check{platformTypeRef(xknownvalue.NotEmptyString())},
-		},
-		{
-			supportedPlatforms: fmt.Sprintf(`[{ kind = "meshPlatform", uuid = %s }]`, platformUuidExpr),
-			expectStored:       []knownvalue.Check{platformRef},
-		},
+		{platformTypeRef(knownvalue.StringExact(strings.ToUpper("test-pt-" + vars["suffix"])))},
+		{platformRef},
 	}
 
 	steps := make([]resource.TestStep, 0, len(transitions))
-	for _, transition := range transitions {
+	for position, expectStored := range transitions {
 		steps = append(steps, resource.TestStep{
-			Config: prerequisites.WithRawBlock(fmt.Sprintf(`
-resource "meshstack_building_block_definition" "test" {
-  metadata = { owned_by_workspace = %s }
-  spec = {
-    display_name        = "Test"
-    description         = "Test"
-    target_type         = "TENANT_LEVEL"
-    supported_platforms = %s
-  }
-  version_spec = {
-    draft = true
-    implementation = { manual = {} }
-  }
-}`, workspaceAddr.Join("metadata", "name"), transition.supportedPlatforms)).String(),
+			Config: hclStep(t, "resources/building_block_definition/supported_platform_kinds", position+1, vars),
 			ConfigStateChecks: []statecheck.StateCheck{
 				capturePlatformUuid,
-				captureLandingZoneName,
 				statecheck.ExpectKnownValue(
 					"meshstack_building_block_definition.test",
 					tfjsonpath.New("spec").AtMapKey("supported_platforms"),
-					knownvalue.SetExact(transition.expectStored),
+					knownvalue.SetExact(expectStored),
 				),
 			},
 		})
@@ -2248,54 +1883,35 @@ resource "meshstack_building_block_definition" "test" {
 func TestAccBuildingBlockDefinitionSupportedPlatformValidation(t *testing.T) {
 	t.Parallel()
 
-	const platformUuid = "3f1c0f2e-1a2b-4c3d-8e9f-0a1b2c3d4e5f"
-
-	supportedPlatformsConfig := func(supportedPlatforms string) string {
-		return fmt.Sprintf(`
-resource "meshstack_building_block_definition" "test" {
-  metadata = { owned_by_workspace = "my-workspace" }
-  spec = {
-    display_name        = "Test"
-    description         = "Test"
-    target_type         = "TENANT_LEVEL"
-    supported_platforms = %s
-  }
-  version_spec = {
-    draft = true
-    implementation = { manual = {} }
-  }
-}`, supportedPlatforms)
-	}
-
 	tests := []struct {
-		name               string
-		supportedPlatforms string
-		expectError        *regexp.Regexp
+		name        string
+		dir         string
+		expectError *regexp.Regexp
 	}{
 		{
-			name:               "an unknown kind is rejected",
-			supportedPlatforms: fmt.Sprintf(`[{ kind = "meshPlatformInstance", uuid = %q }]`, platformUuid),
-			expectError:        expectErrorWords("one", "meshPlatformType", "meshPlatform", "meshLandingZone"),
+			name:        "an unknown kind is rejected",
+			dir:         "an_unknown_kind_is_rejected",
+			expectError: expectErrorWords("one", "meshPlatformType", "meshPlatform", "meshLandingZone"),
 		},
 		{
-			name:               "a landing zone identified by uuid is rejected",
-			supportedPlatforms: fmt.Sprintf(`[{ kind = "meshLandingZone", uuid = %q }]`, platformUuid),
-			expectError:        expectErrorWords("Invalid", "Attribute", "Combination"),
+			name:        "a landing zone identified by uuid is rejected",
+			dir:         "a_landing_zone_identified_by_uuid_is_rejected",
+			expectError: expectErrorWords("Invalid", "Attribute", "Combination"),
 		},
 		{
-			name:               "a platform identified by name is rejected",
-			supportedPlatforms: `[{ kind = "meshPlatform", name = "my-azure.eu-de" }]`,
-			expectError:        expectErrorWords("Invalid", "Attribute", "Combination"),
+			name:        "a platform identified by name is rejected",
+			dir:         "a_platform_identified_by_name_is_rejected",
+			expectError: expectErrorWords("Invalid", "Attribute", "Combination"),
 		},
 		{
-			name:               "a platform type identified by uuid is rejected",
-			supportedPlatforms: fmt.Sprintf(`[{ kind = "meshPlatformType", uuid = %q }]`, platformUuid),
-			expectError:        expectErrorWords("Invalid", "Attribute", "Combination"),
+			name:        "a platform type identified by uuid is rejected",
+			dir:         "a_platform_type_identified_by_uuid_is_rejected",
+			expectError: expectErrorWords("Invalid", "Attribute", "Combination"),
 		},
 		{
-			name:               "an entry with both identifiers is rejected",
-			supportedPlatforms: fmt.Sprintf(`[{ kind = "meshPlatform", name = "my-azure.eu-de", uuid = %q }]`, platformUuid),
-			expectError:        expectErrorWords("Invalid", "Attribute", "Combination"),
+			name:        "an entry with both identifiers is rejected",
+			dir:         "an_entry_with_both_identifiers_is_rejected",
+			expectError: expectErrorWords("Invalid", "Attribute", "Combination"),
 		},
 	}
 
@@ -2303,7 +1919,7 @@ resource "meshstack_building_block_definition" "test" {
 		t.Run(test.name, func(t *testing.T) {
 			ApplyAndTest(t, resource.TestCase{
 				Steps: []resource.TestStep{{
-					Config:      supportedPlatformsConfig(test.supportedPlatforms),
+					Config:      hclStep(t, "resources/building_block_definition/supported_platform_validation/"+test.dir, 1, hclStepVars{"suffix": acctest.RandString(8)}),
 					ExpectError: test.expectError,
 				}},
 			})
@@ -2320,86 +1936,60 @@ func TestAccBuildingBlockDefinitionOptionalInputValidation(t *testing.T) {
 
 	t.Parallel()
 
-	const terraformImplementation = `{ terraform = { terraform_version = "1.9.0", repository_url = "https://github.com/example/bb.git" } }`
-	const manualImplementation = `{ manual = {} }`
-
-	config := func(implementation, input string) string {
-		return fmt.Sprintf(`
-resource "meshstack_building_block_definition" "test" {
-  metadata = { owned_by_workspace = "my-workspace" }
-  spec     = { display_name = "Test", description = "Test" }
-  version_spec = {
-    draft          = true
-    inputs         = { candidate = %s }
-    implementation = %s
-  }
-}`, input, implementation)
-	}
-
 	tests := []struct {
-		name           string
-		implementation string
-		input          string
-		expectError    *regexp.Regexp
+		name        string
+		dir         string
+		expectError *regexp.Regexp
 	}{
 		{
 			// A manual building block is carried out by a person, so there is no code to fall back to.
-			name:           "optional input rejected on manual implementation",
-			implementation: manualImplementation,
-			input:          `{ display_name = "Candidate", type = "STRING", assignment_type = "USER_INPUT", is_optional = true }`,
-			expectError:    expectErrorWords("optional", "manual"),
+			name:        "optional input rejected on manual implementation",
+			dir:         "optional_input_rejected_on_manual_implementation",
+			expectError: expectErrorWords("optional", "manual"),
 		},
 		{
 			// A STATIC value is always there, so there is nothing for the implementation to fall back from.
-			name:           "optional input rejected for a STATIC assignment type",
-			implementation: terraformImplementation,
-			input:          `{ display_name = "Candidate", type = "STRING", assignment_type = "STATIC", argument = jsonencode("c"), is_optional = true }`,
-			expectError:    expectErrorWords("optional", "assignment_type"),
+			name:        "optional input rejected for a STATIC assignment type",
+			dir:         "optional_input_rejected_for_a_static_assignment_type",
+			expectError: expectErrorWords("optional", "assignment_type"),
 		},
 		{
-			name:           "optional BOOLEAN input rejected",
-			implementation: terraformImplementation,
-			input:          `{ display_name = "Candidate", type = "BOOLEAN", assignment_type = "USER_INPUT", is_optional = true }`,
-			expectError:    expectErrorWords("BOOLEAN", "optional"),
+			name:        "optional BOOLEAN input rejected",
+			dir:         "optional_boolean_input_rejected",
+			expectError: expectErrorWords("BOOLEAN", "optional"),
 		},
 		{
-			name:           "optional input with default_value rejected",
-			implementation: terraformImplementation,
-			input:          `{ display_name = "Candidate", type = "STRING", assignment_type = "USER_INPUT", is_optional = true, default_value = jsonencode("c") }`,
-			expectError:    expectErrorWords("default", "value"),
+			name:        "optional input with default_value rejected",
+			dir:         "optional_input_with_default_value_rejected",
+			expectError: expectErrorWords("default", "value"),
 		},
 		{
-			name:           "optional input with sensitive default_value rejected",
-			implementation: terraformImplementation,
-			input:          `{ display_name = "Candidate", type = "STRING", assignment_type = "USER_INPUT", is_optional = true, sensitive = { default_value = { secret_value = "c" } } }`,
-			expectError:    expectErrorWords("default", "value"),
+			name:        "optional input with sensitive default_value rejected",
+			dir:         "optional_input_with_sensitive_default_value_rejected",
+			expectError: expectErrorWords("default", "value"),
 		},
 		{
-			name:           "optional USER_INPUT accepted",
-			implementation: terraformImplementation,
-			input:          `{ display_name = "Candidate", type = "STRING", assignment_type = "USER_INPUT", is_optional = true }`,
+			name: "optional USER_INPUT accepted",
+			dir:  "optional_user_input_accepted",
 		},
 		{
-			name:           "optional PLATFORM_OPERATOR_MANUAL_INPUT accepted",
-			implementation: terraformImplementation,
-			input:          `{ display_name = "Candidate", type = "STRING", assignment_type = "PLATFORM_OPERATOR_MANUAL_INPUT", is_optional = true }`,
+			name: "optional PLATFORM_OPERATOR_MANUAL_INPUT accepted",
+			dir:  "optional_platform_operator_manual_input_accepted",
 		},
 		{
-			name:           "optional TAG accepted",
-			implementation: terraformImplementation,
-			input:          `{ display_name = "Candidate", type = "CODE", assignment_type = "TAG", argument = jsonencode("WORKSPACE.costCenter"), is_optional = true }`,
+			name: "optional TAG accepted",
+			dir:  "optional_tag_accepted",
 		},
 		{
 			// None of the rules applies to an input that is not optional.
-			name:           "non-optional BOOLEAN with default_value accepted",
-			implementation: terraformImplementation,
-			input:          `{ display_name = "Candidate", type = "BOOLEAN", assignment_type = "USER_INPUT", default_value = jsonencode(true) }`,
+			name: "non-optional BOOLEAN with default_value accepted",
+			dir:  "non-optional_boolean_with_default_value_accepted",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			step := resource.TestStep{Config: config(tt.implementation, tt.input)}
+			step := resource.TestStep{Config: hclStep(t, "resources/building_block_definition/optional_input_validation/"+tt.dir, 1, hclStepVars{"suffix": acctest.RandString(8)})}
 			if tt.expectError != nil {
 				step.ExpectError = tt.expectError
 			}
@@ -2419,51 +2009,34 @@ func TestAccBuildingBlockDefinitionJsonSchemaValidation(t *testing.T) {
 
 	t.Parallel()
 
-	inputConfig := func(input string) string {
-		return fmt.Sprintf(`
-resource "meshstack_building_block_definition" "test" {
-  metadata = { owned_by_workspace = "my-workspace" }
-  spec     = { display_name = "Test", description = "Test" }
-  version_spec = {
-    draft = true
-    inputs = {
-      settings = { display_name = "Settings", %s }
-    }
-    implementation = { manual = {} }
-  }
-}`, input)
-	}
-
-	schema := `json_schema = jsonencode({ type = "object", properties = { region = { type = "string" } } })`
-
 	tests := []struct {
 		name        string
-		input       string
+		dir         string
 		expectError *regexp.Regexp
 	}{
 		{
-			name:  "JSON input with a schema accepted",
-			input: `type = "JSON", assignment_type = "USER_INPUT", ` + schema,
+			name: "JSON input with a schema accepted",
+			dir:  "json_input_with_a_schema_accepted",
 		},
 		{
 			name:        "JSON input without a schema rejected",
-			input:       `type = "JSON", assignment_type = "USER_INPUT"`,
+			dir:         "json_input_without_a_schema_rejected",
 			expectError: expectErrorWords("json_schema", "required"),
 		},
 		{
 			name:        "schema on an input of another type rejected",
-			input:       `type = "STRING", assignment_type = "USER_INPUT", ` + schema,
+			dir:         "schema_on_an_input_of_another_type_rejected",
 			expectError: expectErrorWords("json_schema", "not", "set"),
 		},
 		{
-			name:  "input of another type without a schema accepted",
-			input: `type = "STRING", assignment_type = "USER_INPUT"`,
+			name: "input of another type without a schema accepted",
+			dir:  "input_of_another_type_without_a_schema_accepted",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			step := resource.TestStep{Config: inputConfig(tt.input)}
+			step := resource.TestStep{Config: hclStep(t, "resources/building_block_definition/json_schema_validation/"+tt.dir, 1, hclStepVars{"suffix": acctest.RandString(8)})}
 			if tt.expectError != nil {
 				step.ExpectError = tt.expectError
 			}
@@ -2483,70 +2056,44 @@ func TestAccBuildingBlockDefinitionConditionValidation(t *testing.T) {
 
 	t.Parallel()
 
-	const terraformImplementation = `{ terraform = { terraform_version = "1.9.0", repository_url = "https://github.com/example/bb.git" } }`
-	const manualImplementation = `{ manual = {} }`
-
-	config := func(implementation, input string) string {
-		return fmt.Sprintf(`
-resource "meshstack_building_block_definition" "test" {
-  metadata = { owned_by_workspace = "my-workspace" }
-  spec     = { display_name = "Test", description = "Test" }
-  version_spec = {
-    draft          = true
-    inputs         = {
-      cloud_provider = { display_name = "Cloud", type = "STRING", assignment_type = "USER_INPUT" }
-      candidate      = %s
-    }
-    implementation = %s
-  }
-}`, input, implementation)
-	}
-
 	tests := []struct {
-		name           string
-		implementation string
-		input          string
-		expectError    *regexp.Regexp
+		name        string
+		dir         string
+		expectError *regexp.Regexp
 	}{
 		{
-			name:           "condition rejected on manual implementation",
-			implementation: manualImplementation,
-			input:          `{ display_name = "Candidate", type = "STRING", assignment_type = "USER_INPUT", condition = "input.cloud_provider == \"aws\"" }`,
-			expectError:    expectErrorWords("condition", "manual"),
+			name:        "condition rejected on manual implementation",
+			dir:         "condition_rejected_on_manual_implementation",
+			expectError: expectErrorWords("condition", "manual"),
 		},
 		{
-			name:           "condition rejected for a non-user assignment type",
-			implementation: terraformImplementation,
-			input:          `{ display_name = "Candidate", type = "STRING", assignment_type = "STATIC", argument = jsonencode("c"), condition = "input.cloud_provider == \"aws\"" }`,
-			expectError:    expectErrorWords("condition", "assignment_type"),
+			name:        "condition rejected for a non-user assignment type",
+			dir:         "condition_rejected_for_a_non-user_assignment_type",
+			expectError: expectErrorWords("condition", "assignment_type"),
 		},
 		{
-			name:           "blank condition rejected",
-			implementation: terraformImplementation,
-			input:          `{ display_name = "Candidate", type = "STRING", assignment_type = "USER_INPUT", condition = "  " }`,
-			expectError:    expectErrorWords("not", "blank"),
+			name:        "blank condition rejected",
+			dir:         "blank_condition_rejected",
+			expectError: expectErrorWords("not", "blank"),
 		},
 		{
-			name:           "overlong condition rejected",
-			implementation: terraformImplementation,
-			input:          `{ display_name = "Candidate", type = "STRING", assignment_type = "USER_INPUT", condition = "input.cloud_provider == \"` + strings.Repeat("x", 600) + `\"" }`,
-			expectError:    expectErrorWords("length", "most", "512"),
+			name:        "overlong condition rejected",
+			dir:         "overlong_condition_rejected",
+			expectError: expectErrorWords("length", "most", "512"),
 		},
 		{
-			name:           "conditional USER_INPUT accepted",
-			implementation: terraformImplementation,
-			input:          `{ display_name = "Candidate", type = "STRING", assignment_type = "USER_INPUT", condition = "input.cloud_provider == \"aws\"" }`,
+			name: "conditional USER_INPUT accepted",
+			dir:  "conditional_user_input_accepted",
 		},
 		{
-			name:           "conditional PLATFORM_OPERATOR_MANUAL_INPUT accepted",
-			implementation: terraformImplementation,
-			input:          `{ display_name = "Candidate", type = "STRING", assignment_type = "PLATFORM_OPERATOR_MANUAL_INPUT", condition = "input.cloud_provider == \"aws\"" }`,
+			name: "conditional PLATFORM_OPERATOR_MANUAL_INPUT accepted",
+			dir:  "conditional_platform_operator_manual_input_accepted",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			step := resource.TestStep{Config: config(tt.implementation, tt.input)}
+			step := resource.TestStep{Config: hclStep(t, "resources/building_block_definition/condition_validation/"+tt.dir, 1, hclStepVars{"suffix": acctest.RandString(8)})}
 			if tt.expectError != nil {
 				step.ExpectError = tt.expectError
 			}
@@ -2567,72 +2114,56 @@ func TestAccBuildingBlockDefinitionManualOutputsValidation(t *testing.T) {
 
 	// Two inputs so a partial declaration can be exercised. STRING/STATIC inputs derive STRING outputs
 	// (STRING passes through the manual IO type translation unchanged).
-	manualConfig := func(outputs string) string {
-		return fmt.Sprintf(`
-resource "meshstack_building_block_definition" "test" {
-  metadata = { owned_by_workspace = "my-workspace" }
-  spec     = { display_name = "Test", description = "Test" }
-  version_spec = {
-    draft = true
-    inputs = {
-      tenant = { display_name = "Tenant", type = "STRING", assignment_type = "STATIC", argument = jsonencode("t") }
-      region = { display_name = "Region", type = "STRING", assignment_type = "STATIC", argument = jsonencode("r") }
-    }
-    implementation = { manual = {} }
-    %s
-  }
-}`, outputs)
-	}
-
 	type testCase struct {
-		name        string
-		outputs     string
-		expectError *regexp.Regexp
+		name           string
+		dir            string
+		assignmentType string
+		expectError    *regexp.Regexp
 	}
 	tests := []testCase{
 		{
 			// Outputs are keyed by input; a key with no matching input is rejected (mirrors the backend 400).
 			name:        "output without a matching input rejected",
-			outputs:     `outputs = { tenant = { assignment_type = "SUMMARY" }, surplus = { assignment_type = "SUMMARY" } }`,
+			dir:         "output_without_a_matching_input_rejected",
 			expectError: expectErrorWords("no", "matching", "input"),
 		},
 		{
 			// type is always derived for manual outputs, so declaring it is rejected.
 			name:        "declared type rejected on manual output",
-			outputs:     `outputs = { tenant = { type = "STRING", assignment_type = "SUMMARY" } }`,
+			dir:         "declared_type_rejected_on_manual_output",
 			expectError: expectErrorWords("type", "not", "set"),
 		},
 		{
 			// A no-op override (NONE assignment and no display_name) cannot be reconstructed by the diff rule.
 			name:        "no-op override rejected (NONE assignment, no display_name)",
-			outputs:     `outputs = { tenant = { assignment_type = "NONE" } }`,
+			dir:         "no-op_override_rejected_none_assignment_no_display_name",
 			expectError: expectErrorWords("no", "effect"),
 		},
 		{
 			name:        "no-op override rejected (empty object)",
-			outputs:     `outputs = { tenant = {} }`,
+			dir:         "no-op_override_rejected_empty_object",
 			expectError: expectErrorWords("no", "effect"),
 		},
 		{
 			// display_order alone is not a supported override (deliberately not a membership signal).
 			name:        "display_order-only override rejected",
-			outputs:     `outputs = { tenant = { display_order = 5 } }`,
+			dir:         "display_order-only_override_rejected",
 			expectError: expectErrorWords("no", "effect"),
 		},
 		{
 			// A display_name equal to the input's is not a real override.
 			name:        "display_name equal to input rejected as no-op",
-			outputs:     `outputs = { tenant = { display_name = "Tenant" } }`,
+			dir:         "display_name_equal_to_input_rejected_as_no-op",
 			expectError: expectErrorWords("no", "effect"),
 		},
 		// Accepted: a sparse subset, an empty map (no overrides), and a display_name override.
 		{
-			name:    "empty outputs map accepted (no overrides)",
-			outputs: `outputs = {}`,
+			name: "empty outputs map accepted (no overrides)",
+			dir:  "empty_outputs_map_accepted_no_overrides",
 		},
 		{
-			name:    "subset override via display_name accepted",
-			outputs: `outputs = { tenant = { display_name = "Custom Tenant" } }`,
+			name: "subset override via display_name accepted",
+			dir:  "subset_override_via_display_name_accepted",
 		},
 	}
 
@@ -2644,14 +2175,16 @@ resource "meshstack_building_block_definition" "test" {
 			continue
 		}
 		tests = append(tests, testCase{
-			name:    fmt.Sprintf("subset override with %s accepted", assignmentType),
-			outputs: fmt.Sprintf(`outputs = { tenant = { assignment_type = %q } }`, assignmentType),
+			name:           fmt.Sprintf("subset override with %s accepted", assignmentType),
+			dir:            "subset_override_with_assignment_type_accepted",
+			assignmentType: assignmentType.String(),
 		})
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			step := resource.TestStep{Config: manualConfig(tt.outputs)}
+			vars := hclStepVars{"suffix": acctest.RandString(8), "assignment_type": tt.assignmentType}
+			step := resource.TestStep{Config: hclStep(t, "resources/building_block_definition/manual_outputs_validation/"+tt.dir, 1, vars)}
 			if tt.expectError != nil {
 				step.ExpectError = tt.expectError
 			}
