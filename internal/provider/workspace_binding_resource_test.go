@@ -13,20 +13,20 @@ import (
 
 func TestAccWorkspaceUserBinding(t *testing.T) {
 	t.Parallel()
-	testAccWorkspaceBinding(t, "user", "user@meshcloud.io", seededUsername, expectUserEnabled)
+	testAccWorkspaceBinding(t, "user", seededUsername, expectUserEnabled)
 }
 
 func TestAccWorkspaceGroupBinding(t *testing.T) {
 	t.Parallel()
-	testAccWorkspaceBinding(t, "group", "my-user-group", seededGroupName)
+	testAccWorkspaceBinding(t, "group", seededGroupName)
 }
 
-func testAccWorkspaceBinding(t *testing.T, subjectKind, exampleSubjectName, subjectName string, subjectChecks ...subjectStateCheck) {
+func testAccWorkspaceBinding(t *testing.T, subjectKind, subjectName string, subjectChecks ...subjectStateCheck) {
 	t.Helper()
 
 	t.Run("with_expiry_date", func(t *testing.T) {
 		suffix := acctest.RandString(8)
-		vars := hclStepVars{"suffix": suffix, "subject_kind": subjectKind, "example_subject_name": exampleSubjectName, "subject_name": subjectName}
+		vars := hclStepVars{"suffix": suffix, "subject_kind": subjectKind, "subject_name": subjectName}
 		bindingName := "test-wb-" + suffix
 		resourceAddress := "meshstack_workspace_" + subjectKind + "_binding.example"
 

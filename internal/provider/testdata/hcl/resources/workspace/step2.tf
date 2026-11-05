@@ -9,4 +9,14 @@ resource "meshstack_tag_definition" "cost_center" {
   }
 }
 
-[[ example "resources/meshstack_workspace/resource.tf" | replace "my-workspace" (print "test-ws-" .suffix) | replace "cost-center" (print "cost-center-" .suffix) ]]
+resource "meshstack_workspace" "example" {
+  metadata = {
+    name = "test-ws-[[.suffix]]"
+    tags = {
+      "cost-center-[[.suffix]]" = ["12345"]
+    }
+  }
+  spec = {
+    display_name = "My Workspace's Display Name"
+  }
+}

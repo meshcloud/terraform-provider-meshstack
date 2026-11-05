@@ -7,10 +7,12 @@ resource "meshstack_workspace" "test" {
   }
 }
 
-data "meshstack_workspace" "example" {
+resource "meshstack_workspace_[[.subject_kind]]_binding" "example" {
   metadata = {
-    name = meshstack_workspace.test.metadata.name
+    name = "test-wb-[[.suffix]]"
   }
+  role_ref    = { name = "Workspace Member" }
+  target_ref  = { name = meshstack_workspace.test.metadata.name }
+  subject     = { name = "[[.subject_name]]" }
+  expiry_date = "2099-12-31"
 }
-
-[[ example "resources/meshstack_workspace_" .subject_kind "_binding/resource.tf" | replace "this-is-an-example" (print "test-wb-" .suffix) | replace .example_subject_name .subject_name ]]
