@@ -1,4 +1,4 @@
 import {
-  id = "my-workspace" # workspace identifier
+  id = "my-new-workspace" # workspace identifier
   to = meshstack_workspace.example
 }
