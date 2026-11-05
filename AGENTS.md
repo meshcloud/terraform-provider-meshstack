@@ -114,8 +114,8 @@ require them.
 ## Key directories
 
 - `internal/provider/` — provider implementation (`provider.go`, `*_resource.go`, `*_data_source.go`).
-- `internal/provider/testdata/hcl/` — one HCL file per acceptance-test step; `internal/provider/acctest/` —
-  the legacy HCL builders (`testconfig/`) and state-check helpers (`xknownvalue/`).
+- `internal/provider/testdata/hcl/` — one HCL file per acceptance-test step;
+  `internal/provider/acctest/xknownvalue/` — state-check helpers.
 - `github.com/meshcloud/meshstack-cli/client` — the meshStack API client (JWT auth, RESTful CRUD;
   shared ref DTOs in `refs.go`), shared with the meshStack CLI and maintained in
   [meshstack-cli](https://github.com/meshcloud/meshstack-cli). A new client method ships there first.
