@@ -3,43 +3,30 @@ package provider
 import (
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
-
-	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
 )
 
 func TestAccTagDefinitionDataSource(t *testing.T) {
-	resourceConfig, tagDefinitionAddr, tagKey := testconfig.TagDefinition(t, "meshProject")
-	dataSourceAddr := testconfig.Traversal{"data.meshstack_tag_definition", "example"}
-	example := testconfig.DataSource{Name: "tag_definition"}.Config(t)
-
-	byName := example.WithFirstBlock(
-		testconfig.Descend("metadata")(testconfig.SetRawExpr("{ name = %s }", tagDefinitionAddr.Join("metadata", "name"))),
-	).Join(resourceConfig)
-	byTargetKindAndKey := example.WithFirstBlock(
-		testconfig.Descend("metadata")(testconfig.RemoveKey()),
-		testconfig.Descend("spec")(testconfig.SetRawExpr("{ target_kind = %s, key = %s }",
-			tagDefinitionAddr.Join("spec", "target_kind"), tagDefinitionAddr.Join("spec", "key"))),
-	).Join(resourceConfig)
-	otherTargetKind := example.WithFirstBlock(
-		testconfig.Descend("metadata")(testconfig.SetRawExpr("{ name = %s }", tagDefinitionAddr.Join("metadata", "name"))),
-		testconfig.Descend("spec")(testconfig.SetRawExpr(`{ target_kind = "meshWorkspace" }`)),
-	).Join(resourceConfig)
+	suffix := acctest.RandString(8)
+	vars := hclStepVars{"suffix": suffix}
+	dataSourceAddr := "data.meshstack_tag_definition.example"
 
 	expectFound := []statecheck.StateCheck{
-		statecheck.ExpectKnownValue(dataSourceAddr.String(), tfjsonpath.New("metadata").AtMapKey("name"), knownvalue.StringExact("meshProject."+tagKey)),
-		statecheck.ExpectKnownValue(dataSourceAddr.String(), tfjsonpath.New("spec").AtMapKey("key"), knownvalue.StringExact(tagKey)),
+		statecheck.ExpectKnownValue(dataSourceAddr, tfjsonpath.New("metadata").AtMapKey("name"), knownvalue.StringExact("meshWorkspace.costCenter-"+suffix)),
+		statecheck.ExpectKnownValue(dataSourceAddr, tfjsonpath.New("spec").AtMapKey("key"), knownvalue.StringExact("costCenter-"+suffix)),
 	}
 	ApplyAndTest(t, resource.TestCase{
 		Steps: []resource.TestStep{
-			{Config: byName.String(), ConfigStateChecks: expectFound},
-			{Config: byTargetKindAndKey.String(), ConfigStateChecks: expectFound},
+			{Config: hclStep(t, "data-sources/tag_definition", 1, vars)},
+			{Config: hclStep(t, "data-sources/tag_definition", 2, vars), ConfigStateChecks: expectFound},
+			{Config: hclStep(t, "data-sources/tag_definition", 3, vars), ConfigStateChecks: expectFound},
 			{
-				Config:      otherTargetKind.String(),
-				ExpectError: expectErrorWords("matches", "spec.target_kind", "meshWorkspace"),
+				Config:      hclStep(t, "data-sources/tag_definition", 4, vars),
+				ExpectError: expectErrorWords("matches", "spec.target_kind", "meshProject"),
 			},
 		},
 	})

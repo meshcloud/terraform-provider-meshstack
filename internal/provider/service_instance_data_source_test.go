@@ -1,7 +1,6 @@
 package provider
 
 import (
-	_ "embed"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -9,7 +8,6 @@ import (
 	clientTypes "github.com/meshcloud/meshstack-cli/client/types"
 
 	"github.com/meshcloud/terraform-provider-meshstack/internal/clientmock"
-	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
 )
 
 func TestServiceInstanceDataSource(t *testing.T) {
@@ -20,14 +18,12 @@ func TestServiceInstanceDataSource(t *testing.T) {
 			t.Skip("no Terraform resource creates a service instance, so a real meshStack has none to read")
 		}
 
-		instanceId := "test-instance-id"
-		config := testconfig.DataSource{Name: "service_instance"}.Config(t).WithFirstBlock(
-			testconfig.Descend("metadata", "instance_id")(testconfig.SetString(instanceId)))
+		instanceId := "my-service-instance-id"
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
-					Config: config.String(),
+					Config: hclStep(t, "data-sources/service_instance/reads_the_parameters_the_instance_was_ordered_with", 1, nil),
 					Check: resource.ComposeAggregateTestCheckFunc(
 						resource.TestCheckResourceAttr("data.meshstack_service_instance.example", "metadata.instance_id", instanceId),
 						resource.TestCheckResourceAttr("data.meshstack_service_instance.example", "spec.display_name", "Test Service Instance"),

@@ -8,19 +8,18 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
-
-	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
 )
 
 func TestAccTagDefinitionResource(t *testing.T) {
-	config, tagDefinitionAddr, _ := testconfig.TagDefinition(t, "meshProject")
+	vars := hclStepVars{"suffix": acctest.RandString(8)}
+	tagDefinitionAddr := "meshstack_tag_definition.example"
 
 	ApplyAndTest(t, resource.TestCase{
 		Steps: []resource.TestStep{
 			{
-				Config: config.String(),
+				Config: hclStep(t, "resources/tag_definition", 1, vars),
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(tagDefinitionAddr.String(), tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("Test Tag")),
+					statecheck.ExpectKnownValue(tagDefinitionAddr, tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("Example")),
 				},
 			},
 		},
@@ -28,32 +27,13 @@ func TestAccTagDefinitionResource(t *testing.T) {
 }
 
 func TestAccTagDefinitionResource_SingleSelectWithLocalOptions(t *testing.T) {
-	keySuffix := acctest.RandString(8)
+	vars := hclStepVars{"suffix": acctest.RandString(8)}
 	addr := "meshstack_tag_definition.single_select_local"
-
-	config := `
-locals {
-  tag_options = ["option_a", "option_b", "option_c"]
-}
-
-resource "meshstack_tag_definition" "single_select_local" {
-  spec = {
-    target_kind  = "meshProject"
-    key          = "test-ss-local-` + keySuffix + `"
-    display_name = "Test Single Select Local"
-    value_type = {
-      single_select = {
-        options = local.tag_options
-      }
-    }
-  }
-}
-`
 
 	ApplyAndTest(t, resource.TestCase{
 		Steps: []resource.TestStep{
 			{
-				Config: config,
+				Config: hclStep(t, "resources/tag_definition/single_select_with_local_options", 1, vars),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(addr, tfjsonpath.New("spec").AtMapKey("value_type").AtMapKey("single_select").AtMapKey("options"), knownvalue.ListExact([]knownvalue.Check{
 						knownvalue.StringExact("option_a"),
@@ -72,28 +52,13 @@ resource "meshstack_tag_definition" "single_select_local" {
 // This coercion happens at the HCL evaluation layer before provider code is reached
 // There's nothing we can do about it, but we pin this (undesired) behavior here in the test.
 func TestTagDefinitionResource_OptionsCoerceNumbersToStrings(t *testing.T) {
-	keySuffix := acctest.RandString(8)
+	vars := hclStepVars{"suffix": acctest.RandString(8)}
 	addr := "meshstack_tag_definition.single_select_numbers"
-
-	config := `
-resource "meshstack_tag_definition" "single_select_numbers" {
-  spec = {
-    target_kind  = "meshProject"
-    key          = "test-ss-numbers-` + keySuffix + `"
-    display_name = "Test Single Select Numbers"
-    value_type = {
-      single_select = {
-        options = [1, 2, 3]
-      }
-    }
-  }
-}
-`
 
 	ApplyAndTest(t, resource.TestCase{
 		Steps: []resource.TestStep{
 			{
-				Config: config,
+				Config: hclStep(t, "resources/tag_definition/options_coerce_numbers_to_strings", 1, vars),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(addr, tfjsonpath.New("spec").AtMapKey("value_type").AtMapKey("single_select").AtMapKey("options"), knownvalue.ListExact([]knownvalue.Check{
 						knownvalue.StringExact("1"),
