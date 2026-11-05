@@ -1,45 +1,33 @@
 package provider
 
 import (
-	"fmt"
-	"strings"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 
-	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/xknownvalue"
 )
-
-func platformDataSourceConfig(t *testing.T, suffix string) testconfig.Config {
-	t.Helper()
-	platformConfig, platformAddr := testconfig.PlatformAndWorkspace(t, suffix)
-	return testconfig.DataSource{Name: "platform"}.Config(t).
-		WithFirstBlock(testconfig.Descend("metadata", "uuid")(testconfig.SetAddr(platformAddr, "metadata", "uuid"))).
-		Join(platformConfig)
-}
 
 func TestAccPlatformDataSource(t *testing.T) {
 	t.Parallel()
 
 	t.Run("01_azure", func(t *testing.T) {
-		config := platformDataSourceConfig(t, "_01_azure")
+		suffix := acctest.RandString(8)
+		vars := hclStepVars{"suffix": suffix}
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
-					Config: config.String(),
+					Config: hclStep(t, "data-sources/platform/01_azure", 1, vars),
+				},
+				{
+					Config: hclStep(t, "data-sources/platform/01_azure", 2, vars),
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue("data.meshstack_platform.example", tfjsonpath.New("identifier"), knownvalue.StringFunc(func(value string) error {
-							parts := strings.SplitN(value, ".", 2)
-							if len(parts) != 2 || !strings.HasPrefix(parts[0], "my-platform-") || parts[1] == "" {
-								return fmt.Errorf("expected identifier format <platform>.<location>, got %q", value)
-							}
-							return nil
-						})),
+						statecheck.ExpectKnownValue("data.meshstack_platform.example", tfjsonpath.New("identifier"), knownvalue.StringExact("test-platform-"+suffix+".meshcloud-azure-dev")),
 						statecheck.ExpectKnownValue("data.meshstack_platform.example", tfjsonpath.New("spec").AtMapKey("access_information"), knownvalue.StringExact("Login via [Azure Portal](https://portal.azure.com) using your corporate credentials.")),
 					},
 				},
@@ -52,12 +40,12 @@ func TestAccPlatformDataSource(t *testing.T) {
 	// resolves to its {name, kind} on the data source (the read-only fix that motivated this: the
 	// reference used to be wrongly declared Required on the data source schema).
 	t.Run("02_aws", func(t *testing.T) {
-		config := platformDataSourceConfig(t, "_02_aws")
+		vars := hclStepVars{"suffix": acctest.RandString(8)}
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
-					Config: config.String(),
+					Config: hclStep(t, "data-sources/platform/02_aws", 1, vars),
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(
 							"data.meshstack_platform.example",

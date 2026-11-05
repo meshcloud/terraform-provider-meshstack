@@ -33,15 +33,6 @@ func LandingZone(t *testing.T, workspaceAddr, platformAddr, platformTypeAddr Tra
 	).Join(buildingBlockDefinitionConfig), landingZoneAddr
 }
 
-// LandingZoneAndWorkspace builds a landing zone with all prerequisites (workspace, platform, platform type).
-func LandingZoneAndWorkspace(t *testing.T) (config Config, landingZoneAddr Traversal) {
-	t.Helper()
-	workspaceConfig, workspaceAddr := Workspace(t)
-	platformConfig, platformAddr, platformTypeAddr := CustomPlatform(t, workspaceAddr)
-	landingZoneConfig, landingZoneAddr := LandingZone(t, workspaceAddr, platformAddr, platformTypeAddr)
-	return landingZoneConfig.Join(workspaceConfig, platformConfig), landingZoneAddr
-}
-
 // SimpleLandingZone builds a landing zone with minimal config, without creating a platform type.
 func SimpleLandingZone(t *testing.T, workspaceAddr, platformAddr Traversal) (config Config, landingZoneAddr Traversal) {
 	t.Helper()

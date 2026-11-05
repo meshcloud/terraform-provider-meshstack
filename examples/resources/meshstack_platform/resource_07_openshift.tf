@@ -37,16 +37,12 @@ resource "meshstack_platform" "example_openshift" {
 
           openshift_role_mappings = [
             {
-              project_role_ref = {
-                name = "admin"
-              }
-              openshift_role = "admin"
+              project_role_ref = { name = "admin" }
+              openshift_role   = "admin"
             },
             {
-              project_role_ref = {
-                name = "user"
-              }
-              openshift_role = "edit"
+              project_role_ref = { name = "user" }
+              openshift_role   = "edit"
             }
           ]
 
