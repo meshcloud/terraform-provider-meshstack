@@ -1,14 +1,12 @@
 package provider
 
 import (
-	_ "embed"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	clientTypes "github.com/meshcloud/meshstack-cli/client/types"
 
 	"github.com/meshcloud/terraform-provider-meshstack/internal/clientmock"
-	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
 )
 
 func TestServiceInstancesDataSource(t *testing.T) {
@@ -19,12 +17,10 @@ func TestServiceInstancesDataSource(t *testing.T) {
 			t.Skip("no Terraform resource creates a service instance, so a real meshStack has none to list")
 		}
 
-		config := testconfig.DataSource{Name: "service_instances"}.Config(t)
-
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
-					Config: config.String(),
+					Config: hclStep(t, "data-sources/service_instances/lists_every_marketplace_instance", 1, nil),
 					Check: resource.ComposeAggregateTestCheckFunc(
 						resource.TestCheckResourceAttr("data.meshstack_service_instances.all", "service_instances.#", "2"),
 					),
@@ -41,12 +37,10 @@ func TestServiceInstancesDataSource(t *testing.T) {
 			t.Skip("no Terraform resource creates a service instance, so a real meshStack has none to list")
 		}
 
-		config := testconfig.DataSource{Name: "service_instances"}.Config(t)
-
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
-					Config: config.String(),
+					Config: hclStep(t, "data-sources/service_instances/lists_the_parameters_of_an_instance", 1, nil),
 					Check: resource.ComposeAggregateTestCheckFunc(
 						resource.TestCheckResourceAttr("data.meshstack_service_instances.all", "service_instances.#", "1"),
 						resource.TestCheckResourceAttr("data.meshstack_service_instances.all", "service_instances.0.metadata.instance_id", "instance-1"),

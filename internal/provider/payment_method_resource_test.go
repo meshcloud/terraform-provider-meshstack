@@ -1,20 +1,16 @@
 package provider
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/compare"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
-	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 	"github.com/meshcloud/meshstack-cli/client"
-
-	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
-	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/xknownvalue"
 )
 
 func TestAccPaymentMethod(t *testing.T) {
@@ -26,20 +22,17 @@ func TestAccPaymentMethod(t *testing.T) {
 			t.Skip("relies on the backend returning an entry for every defined tag property")
 		}
 
-		config, pmAddr, _ := testconfig.PaymentMethodAndWorkspace(t)
-		// A second tag definition the payment method does not declare: the backend still returns it as
-		// an empty list, so the fix must reconcile it away instead of surfacing it as drift.
-		undeclaredTag, _, _ := testconfig.TagDefinition(t, client.MeshObjectKind.PaymentMethod)
-		config = config.Join(undeclaredTag)
+		vars := hclStepVars{"suffix": acctest.RandString(8)}
+		pmAddr := "meshstack_payment_method.test"
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
-					Config: config.String(),
+					Config: hclStep(t, "resources/payment_method/superset_tag_reconciliation", 1, vars),
 					ConfigStateChecks: []statecheck.StateCheck{
 						// Only the single declared tag remains; the undeclared property's empty-list
 						// superset entry was reconciled away.
-						statecheck.ExpectKnownValue(pmAddr.String(), tfjsonpath.New("spec").AtMapKey("tags"), knownvalue.MapSizeExact(1)),
+						statecheck.ExpectKnownValue(pmAddr, tfjsonpath.New("spec").AtMapKey("tags"), knownvalue.MapSizeExact(1)),
 					},
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
@@ -49,53 +42,45 @@ func TestAccPaymentMethod(t *testing.T) {
 		})
 	})
 
-	config, resourceAddress, workspaceAddr := testconfig.PaymentMethodAndWorkspace(t)
-
-	updateConfig := config.WithFirstBlock(
-		testconfig.Descend("spec", "display_name")(testconfig.SetString("Updated Payment Method")))
+	suffix := acctest.RandString(8)
+	vars := hclStepVars{"suffix": suffix}
+	resourceAddress := "meshstack_payment_method.example"
 
 	ApplyAndTest(t, resource.TestCase{
 		Steps: []resource.TestStep{
 			{
-				Config: config.String(),
+				Config: hclStep(t, "resources/payment_method", 1, vars),
+			},
+			{
+				Config: hclStep(t, "resources/payment_method", 2, vars),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectResourceAction(resourceAddress.String(), plancheck.ResourceActionCreate),
+						plancheck.ExpectResourceAction(resourceAddress, plancheck.ResourceActionCreate),
 					},
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("metadata").AtMapKey("name"), xknownvalue.NotEmptyString()),
-					statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("My Payment Method")),
-					statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("ref").AtMapKey("kind"), knownvalue.StringExact(client.MeshObjectKind.PaymentMethod)),
-					statecheck.CompareValuePairs(resourceAddress.String(), tfjsonpath.New("ref").AtMapKey("name"), resourceAddress.String(), tfjsonpath.New("metadata").AtMapKey("name"), compare.ValuesSame()),
+					statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("metadata").AtMapKey("name"), knownvalue.StringExact("test-pm-"+suffix)),
+					statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("My Payment Method")),
+					statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("ref").AtMapKey("kind"), knownvalue.StringExact(client.MeshObjectKind.PaymentMethod)),
+					statecheck.CompareValuePairs(resourceAddress, tfjsonpath.New("ref").AtMapKey("name"), resourceAddress, tfjsonpath.New("metadata").AtMapKey("name"), compare.ValuesSame()),
 				},
 			},
 			{
-				Config: updateConfig.String(),
+				Config: hclStep(t, "resources/payment_method", 3, vars),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectResourceAction(resourceAddress.String(), plancheck.ResourceActionUpdate),
+						plancheck.ExpectResourceAction(resourceAddress, plancheck.ResourceActionUpdate),
 					},
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(resourceAddress.String(), tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("Updated Payment Method")),
+					statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("Updated Payment Method")),
 				},
 			},
 			{
-				ResourceName:    resourceAddress.String(),
+				ResourceName:    resourceAddress,
 				ImportState:     true,
 				ImportStateKind: resource.ImportBlockWithID,
-				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					rs := s.RootModule().Resources[resourceAddress.String()]
-					if rs == nil {
-						return "", fmt.Errorf("resource not found: %s", resourceAddress.String())
-					}
-					ws := s.RootModule().Resources[workspaceAddr.String()]
-					if ws == nil {
-						return "", fmt.Errorf("workspace resource not found: %s", workspaceAddr.String())
-					}
-					return ws.Primary.Attributes["metadata.name"] + "." + rs.Primary.Attributes["metadata.name"], nil
-				},
+				ImportStateId:   "test-ws-" + suffix + ".test-pm-" + suffix,
 			},
 		},
 	})
