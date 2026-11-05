@@ -140,9 +140,6 @@ rewrites it.
 - **`[[ example "resources/meshstack_project/resource.tf" ]]`** inserts an example verbatim. It
   joins its arguments, so a variant can pick its example:
   `[[ example "resources/meshstack_project_" .subject_kind "_binding/resource.tf" ]]`.
-- **`[[ example "…" | replace "my-workspace" (print "test-ws-" .suffix) ]]`** swaps a literal of
-  the example for the test's own value. It fails when the literal does not occur, so an example
-  that changes its names cannot slip through unreplaced.
 - **Nothing else.** No conditionals, no loops. A variant that would need one gets its own file.
 - **Each file is complete.** It declares every prerequisite inline, and only those its test needs.
   An update step is a copy of the step before it with the change, so a `diff` of the two files is
@@ -151,13 +148,13 @@ rewrites it.
 One step applies the example, so the examples stay tested against a real meshStack. An example
 carries fixed names, which a test must not collide on:
 
-- An example reaches its workspace only by reference, and the step file points that reference at a
-  workspace with a random name. Names below the workspace (a project, a project's binding target)
-  stay literal.
+- An example a step includes reaches its workspace by reference, and the step file points that
+  reference at a workspace with a random name. Names below the workspace (a project, a project's
+  binding target) stay literal.
 - An example keeps the names a user would write (`my-workspace`, `this-is-an-example`,
-  `cost-center`), even when meshStack treats them as globally unique, and a test never renames
-  them in the example. The step file `replace`s each such literal, and a subject the backend may
-  not have (`user@meshcloud.io`), when it includes the example.
+  `cost-center`), and so do the docs generated from it. When such a name is global in meshStack, or
+  names a subject the backend may not have (`user@meshcloud.io`), the step does not include the
+  example: it writes the resource itself under its own names, `"test-wb-[[.suffix]]"`.
 - When the example depends on something it cannot reference, such as a literal tag key or a data
   source looking up a literal name, an earlier step creates it. `resources/project/step1.tf` creates
   the tag definition `tag-key`, and step 2 adds the project example.

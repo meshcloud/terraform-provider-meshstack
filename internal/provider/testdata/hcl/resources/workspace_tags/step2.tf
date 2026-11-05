@@ -24,4 +24,13 @@ resource "meshstack_tag_definition" "cost_center" {
   }
 }
 
-[[ example "resources/meshstack_workspace_tags/resource.tf" | replace "cost-center" (print "cost-center-" .suffix) ]]
+resource "meshstack_workspace_tags" "example" {
+  metadata = {
+    workspace_identifier = data.meshstack_workspace.example.metadata.name
+  }
+  spec = {
+    tags = {
+      "cost-center-[[.suffix]]" = ["12345"]
+    }
+  }
+}

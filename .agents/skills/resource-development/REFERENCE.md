@@ -176,14 +176,15 @@ func myResourceModelFromDto(p *client.MeshFoo) myResourceModel {
   it. A commented-out alternative, such as a lookup by literal names in a data source example, is
   never applied and may keep the literals a user would write.
 - **An example keeps the literal names a user would write**, including globally unique ones (tag
-  keys, binding names, a workspace's own name) and subjects such as `user@meshcloud.io`. The step
-  file that applies it `replace`s each of them with a suffixed name or a seeded subject, so tests
-  never collide. Some kinds share one namespace: meshStack rejects a project user binding whose
-  name a project group binding already has, and the reverse.
-- **Write a ref inline**, `target_ref = { name = data.meshstack_workspace.example.metadata.name }`,
-  and leave out its `kind`: a ref built with `meshRefByName`/`meshRefByUuid` defaults it to the one
-  valid value. Only a ref whose kind is a real choice, such as a building block's `target_ref`,
-  sets it.
+  keys, binding names, a workspace's own name) and subjects such as `user@meshcloud.io`, so the
+  generated docs show names users know. A test whose example names such an object writes the
+  resource in its step file instead, with `[[.suffix]]` in each global name. Some kinds share one
+  namespace: meshStack rejects a project user binding whose name a project group binding already
+  has, and the reverse.
+- **Write a ref inline**, `target_ref = { name = "my-workspace" }`, and leave out its `kind`
+  whenever the schema defaults it: a ref built with `meshRefByName`/`meshRefByUuid` defaults it to
+  the one valid value, and a definition's `supported_platforms` entry to `meshPlatformType`. Only a
+  ref whose kind is required, such as a building block's `target_ref`, sets it.
 - An example that must wait for another object references it, so Terraform orders the two: the
   project binding examples take their subject from `meshstack_workspace_user_binding.example`,
   because meshStack binds only workspace members to a project.
