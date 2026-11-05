@@ -20,11 +20,3 @@ func PlatformType(t *testing.T, workspaceAddr Traversal) (config Config, platfor
 	)
 	return config, platformTypeAddr
 }
-
-// PlatformTypeAndWorkspace builds a platform type with a new workspace.
-func PlatformTypeAndWorkspace(t *testing.T) (config Config, platformTypeAddr Traversal) {
-	t.Helper()
-	workspaceConfig, workspaceAddr := Workspace(t)
-	platformTypeConfig, platformTypeAddr := PlatformType(t, workspaceAddr)
-	return platformTypeConfig.Join(workspaceConfig), platformTypeAddr
-}

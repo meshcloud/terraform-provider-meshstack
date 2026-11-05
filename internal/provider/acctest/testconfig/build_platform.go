@@ -1,7 +1,6 @@
 package testconfig
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -18,24 +17,4 @@ func CustomPlatform(t *testing.T, workspaceAddr Traversal) (config Config, platf
 		Descend("metadata", "name")(SetString("custom-"+platformSuffix)),
 		Descend("spec", "config", "custom", "platform_type_ref")(SetAddr(platformTypeAddr, "ref")),
 	).Join(platformTypeConfig), platformAddr, platformTypeAddr
-}
-
-// CustomPlatformAndWorkspace builds a custom platform with all prerequisites (workspace, platform type).
-func CustomPlatformAndWorkspace(t *testing.T) (config Config, platformAddr, workspaceAddr Traversal) {
-	t.Helper()
-	workspaceConfig, workspaceAddr := Workspace(t)
-	platformConfig, platformAddr, _ := CustomPlatform(t, workspaceAddr)
-	return platformConfig.Join(workspaceConfig), platformAddr, workspaceAddr
-}
-
-// PlatformAndWorkspace builds a platform config from the example resource with the given suffix and with workspace config.
-func PlatformAndWorkspace(t *testing.T, suffix string) (config Config, platformAddr Traversal) {
-	t.Helper()
-	workspaceConfig, workspaceAddr := Workspace(t)
-	platformSuffix := acctest.RandString(8)
-	return Resource{Name: "platform", Suffix: suffix}.Config(t).WithFirstBlock(
-		ExtractAddress(&platformAddr),
-		OwnedByWorkspace(workspaceAddr),
-		Descend("metadata", "name")(SetString(fmt.Sprintf("my-platform-%s", platformSuffix))),
-	).Join(workspaceConfig), platformAddr
 }

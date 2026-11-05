@@ -1,18 +1,16 @@
 package provider
 
 import (
-	"fmt"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
-	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 	"github.com/meshcloud/meshstack-cli/client"
 
-	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/xknownvalue"
 )
 
@@ -20,16 +18,12 @@ import (
 // building block ref object that is provided without a uuid (an assigned computed `.ref`, whose
 // uuid is unknown at plan time, stays allowed).
 func TestAccLandingZoneBuildingBlockRefRequiresUuid(t *testing.T) {
-	config, _ := testconfig.LandingZoneAndWorkspace(t)
-
-	badConfig := config.WithFirstBlock(
-		testconfig.Descend("spec", "mandatory_building_block_refs")(
-			testconfig.SetRawExpr(`[{ kind = "meshBuildingBlockDefinition" }]`)))
+	vars := platformTypeStepVars(acctest.RandString(8))
 
 	ApplyAndTest(t, resource.TestCase{
 		Steps: []resource.TestStep{
 			{
-				Config:      badConfig.String(),
+				Config:      hclStep(t, "resources/landingzone/building_block_ref_requires_uuid", 1, vars),
 				PlanOnly:    true,
 				ExpectError: expectErrorWords("uuid", "specified"),
 			},
@@ -46,20 +40,17 @@ func TestAccLandingZone(t *testing.T) {
 			t.Skip("relies on the backend injecting a restricted tag's default value on create")
 		}
 
-		tagConfig, tagAddr, tagKey := testconfig.TagDefinition(t, client.MeshObjectKind.LandingZone)
-		restrictedTagConfig, _, _ := testconfig.RestrictedTagDefinitionWithDefault(t, client.MeshObjectKind.LandingZone, "injected-default")
-		config, landingZoneAddr := testconfig.LandingZoneAndWorkspace(t)
-		config = config.Join(tagConfig, restrictedTagConfig).WithFirstBlock(
-			testconfig.Descend("metadata", "tags")(testconfig.SetRawExpr(`{ (%s) = ["blue"] }`, tagAddr.Join("spec", "key"))),
-		)
+		suffix := acctest.RandString(8)
+		vars := platformTypeStepVars(suffix)
+		landingZoneAddr := "meshstack_landingzone.test"
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
-					Config: config.String(),
+					Config: hclStep(t, "resources/landingzone/restricted_default_tag", 1, vars),
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(landingZoneAddr.String(), tfjsonpath.New("metadata").AtMapKey("tags"), knownvalue.MapExact(map[string]knownvalue.Check{
-							tagKey: knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("blue")}),
+						statecheck.ExpectKnownValue(landingZoneAddr, tfjsonpath.New("metadata").AtMapKey("tags"), knownvalue.MapExact(map[string]knownvalue.Check{
+							"test-key-" + suffix: knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("blue")}),
 						})),
 					},
 					// Refresh reads back the injected superset; reconcileTrackedTags must reconcile it
@@ -79,20 +70,18 @@ func TestAccLandingZone(t *testing.T) {
 			t.Skip("relies on the backend injecting a restricted tag's default value on create")
 		}
 
-		restrictedTag, restrictedAddr, _ := testconfig.RestrictedTagDefinitionWithDefault(t, client.MeshObjectKind.LandingZone, "injected-default")
-		config, landingZoneAddr := testconfig.LandingZoneAndWorkspace(t)
-		// depends_on forces the tag definition to exist before the landing zone (so the restricted
-		// default is actually injected on create) and to be torn down after it.
-		config = config.Join(restrictedTag).WithFirstBlock(
-			testconfig.Descend("depends_on")(testconfig.SetRawExpr("[%s]", restrictedAddr)),
-		)
+		vars := platformTypeStepVars(acctest.RandString(8))
+		landingZoneAddr := "meshstack_landingzone.test"
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
-					Config: config.String(),
+					Config: hclStep(t, "resources/landingzone/only_restricted_injected_no_declared_tags", 1, vars),
+				},
+				{
+					Config: hclStep(t, "resources/landingzone/only_restricted_injected_no_declared_tags", 2, vars),
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(landingZoneAddr.String(), tfjsonpath.New("metadata").AtMapKey("tags"), knownvalue.MapSizeExact(0)),
+						statecheck.ExpectKnownValue(landingZoneAddr, tfjsonpath.New("metadata").AtMapKey("tags"), knownvalue.MapSizeExact(0)),
 					},
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
@@ -110,28 +99,22 @@ func TestAccLandingZone(t *testing.T) {
 			t.Skip("relies on the backend injecting a restricted tag's default value on create")
 		}
 
-		nonRestrictedTag, nonRestrictedAddr, nonRestrictedKey := testconfig.TagDefinition(t, client.MeshObjectKind.LandingZone)
-		declaredRestrictedTag, declaredRestrictedAddr, declaredRestrictedKey := testconfig.RestrictedTagDefinitionWithDefault(t, client.MeshObjectKind.LandingZone, "default-value")
-		injectedRestrictedTag, injectedRestrictedAddr, _ := testconfig.RestrictedTagDefinitionWithDefault(t, client.MeshObjectKind.LandingZone, "injected-default")
-		config, landingZoneAddr := testconfig.LandingZoneAndWorkspace(t)
-		config = config.Join(nonRestrictedTag, declaredRestrictedTag, injectedRestrictedTag).WithFirstBlock(
-			testconfig.Descend("metadata", "tags")(testconfig.SetRawExpr(
-				`{ (%s) = ["blue"], (%s) = ["set-by-caller"] }`,
-				nonRestrictedAddr.Join("spec", "key"),
-				declaredRestrictedAddr.Join("spec", "key"),
-			)),
-			testconfig.Descend("depends_on")(testconfig.SetRawExpr("[%s, %s, %s]", nonRestrictedAddr, declaredRestrictedAddr, injectedRestrictedAddr)),
-		)
+		suffix := acctest.RandString(8)
+		vars := platformTypeStepVars(suffix)
+		landingZoneAddr := "meshstack_landingzone.test"
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
-					Config: config.String(),
+					Config: hclStep(t, "resources/landingzone/declared_restricted_tag_kept", 1, vars),
+				},
+				{
+					Config: hclStep(t, "resources/landingzone/declared_restricted_tag_kept", 2, vars),
 					ConfigStateChecks: []statecheck.StateCheck{
 						// Both declared tags survive; only the undeclared injected restricted default is dropped.
-						statecheck.ExpectKnownValue(landingZoneAddr.String(), tfjsonpath.New("metadata").AtMapKey("tags"), knownvalue.MapExact(map[string]knownvalue.Check{
-							nonRestrictedKey:      knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("blue")}),
-							declaredRestrictedKey: knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("set-by-caller")}),
+						statecheck.ExpectKnownValue(landingZoneAddr, tfjsonpath.New("metadata").AtMapKey("tags"), knownvalue.MapExact(map[string]knownvalue.Check{
+							"test-key-" + suffix:          knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("blue")}),
+							"test-declared-key-" + suffix: knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("set-by-caller")}),
 						})),
 					},
 					ConfigPlanChecks: resource.ConfigPlanChecks{
@@ -143,13 +126,8 @@ func TestAccLandingZone(t *testing.T) {
 	})
 
 	t.Run("restricted", func(t *testing.T) {
-		configWithRestrictedAbsent, landingZoneAddr := testconfig.LandingZoneAndWorkspace(t)
-		addr := landingZoneAddr.String()
-
-		configWithRestrictedTrue := configWithRestrictedAbsent.WithFirstBlock(
-			testconfig.Descend("spec", "restricted")(testconfig.SetBool(true)))
-		configWithRestrictedFalse := configWithRestrictedAbsent.WithFirstBlock(
-			testconfig.Descend("spec", "restricted")(testconfig.SetBool(false)))
+		vars := platformTypeStepVars(acctest.RandString(8))
+		addr := "meshstack_landingzone.test"
 
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
@@ -157,14 +135,14 @@ func TestAccLandingZone(t *testing.T) {
 					// If no `spec.restricted` is specified, we expect the tf provider to use `false` by default
 					// and the backend to return that same value in `status.restricted`. Note that the assertion on `status.restricted`
 					// only has teeth if this test runs as an acceptance test against a real backend.
-					Config: configWithRestrictedAbsent.String(),
+					Config: hclStep(t, "resources/landingzone/restricted", 1, vars),
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(addr, tfjsonpath.New("spec").AtMapKey("restricted"), knownvalue.Bool(false)),
 						statecheck.ExpectKnownValue(addr, tfjsonpath.New("status").AtMapKey("restricted"), knownvalue.Bool(false)),
 					},
 				},
 				{
-					Config: configWithRestrictedTrue.String(),
+					Config: hclStep(t, "resources/landingzone/restricted", 2, vars),
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{
 							// Changing from restricted = false to restricted = true does an update-in-place (as opposed to replacing the resource):
@@ -177,7 +155,7 @@ func TestAccLandingZone(t *testing.T) {
 					},
 				},
 				{
-					Config: configWithRestrictedFalse.String(),
+					Config: hclStep(t, "resources/landingzone/restricted", 3, vars),
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(addr, tfjsonpath.New("spec").AtMapKey("restricted"), knownvalue.Bool(false)),
 						statecheck.ExpectKnownValue(addr, tfjsonpath.New("status").AtMapKey("restricted"), knownvalue.Bool(false)),
@@ -187,51 +165,89 @@ func TestAccLandingZone(t *testing.T) {
 		})
 	})
 
-	config, landingZoneAddr := testconfig.LandingZoneAndWorkspace(t)
-	resourceAddress := landingZoneAddr.String()
+	t.Run("01_aws", func(t *testing.T) {
+		suffix := acctest.RandString(8)
+		vars := hclStepVars{"suffix": suffix}
+		resourceAddress := "meshstack_landingzone.example"
+		landingZoneName := "test-lz-" + suffix
 
-	updateConfig := config.WithFirstBlock(
-		testconfig.Descend("spec", "display_name")(testconfig.SetString("Updated Landing Zone")))
-
-	ApplyAndTest(t, resource.TestCase{
-		Steps: []resource.TestStep{
-			{
-				Config: config.String(),
-				ConfigPlanChecks: resource.ConfigPlanChecks{
-					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectResourceAction(resourceAddress, plancheck.ResourceActionCreate),
+		ApplyAndTest(t, resource.TestCase{
+			Steps: []resource.TestStep{
+				{
+					Config: hclStep(t, "resources/landingzone/01_aws", 1, vars),
+				},
+				{
+					Config: hclStep(t, "resources/landingzone/01_aws", 2, vars),
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PreApply: []plancheck.PlanCheck{
+							plancheck.ExpectResourceAction(resourceAddress, plancheck.ResourceActionCreate),
+						},
+					},
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("metadata").AtMapKey("name"), knownvalue.StringExact(landingZoneName)),
+						statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("metadata").AtMapKey("owned_by_workspace"), knownvalue.StringExact("test-ws-"+suffix)),
+						statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("metadata").AtMapKey("tags"), knownvalue.MapExact(map[string]knownvalue.Check{
+							"confidentiality-" + suffix: knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("internal")}),
+							"environment-" + suffix:     knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("dev"), knownvalue.StringExact("qa"), knownvalue.StringExact("test")}),
+						})),
+						statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("My Landing Zone's Display Name")),
+						statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("spec").AtMapKey("platform_properties").AtMapKey("aws").AtMapKey("aws_target_org_unit_id"), knownvalue.StringExact("ou-lpzq-kmf17bec")),
+						statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("ref"), xknownvalue.MapExact(map[string]knownvalue.Check{
+							"kind": knownvalue.StringExact("meshLandingZone"),
+							"name": knownvalue.StringExact(landingZoneName),
+						})),
 					},
 				},
-				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("metadata").AtMapKey("owned_by_workspace"), xknownvalue.NotEmptyString()),
-					statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("My Custom Landing Zone")),
-					statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("ref").AtMapKey("kind"), knownvalue.StringExact("meshLandingZone")),
-					statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("ref").AtMapKey("name"), xknownvalue.NotEmptyString()),
+				{
+					ResourceName:    resourceAddress,
+					ImportState:     true,
+					ImportStateKind: resource.ImportBlockWithID,
+					ImportStateId:   landingZoneName,
 				},
 			},
-			{
-				Config: updateConfig.String(),
-				ConfigPlanChecks: resource.ConfigPlanChecks{
-					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectResourceAction(resourceAddress, plancheck.ResourceActionUpdate),
+		})
+	})
+
+	t.Run("02_custom", func(t *testing.T) {
+		suffix := acctest.RandString(8)
+		vars := platformTypeStepVars(suffix)
+		resourceAddress := "meshstack_landingzone.example"
+		landingZoneName := "test-lz-" + suffix
+
+		ApplyAndTest(t, resource.TestCase{
+			Steps: []resource.TestStep{
+				{
+					Config: hclStep(t, "resources/landingzone/02_custom", 1, vars),
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PreApply: []plancheck.PlanCheck{
+							plancheck.ExpectResourceAction(resourceAddress, plancheck.ResourceActionCreate),
+						},
+					},
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("metadata").AtMapKey("owned_by_workspace"), knownvalue.StringExact("test-ws-"+suffix)),
+						statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("My Custom Landing Zone")),
+						statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("ref").AtMapKey("kind"), knownvalue.StringExact("meshLandingZone")),
+						statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("ref").AtMapKey("name"), knownvalue.StringExact(landingZoneName)),
 					},
 				},
-				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("Updated Landing Zone")),
+				{
+					Config: hclStep(t, "resources/landingzone/02_custom", 2, vars),
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PreApply: []plancheck.PlanCheck{
+							plancheck.ExpectResourceAction(resourceAddress, plancheck.ResourceActionUpdate),
+						},
+					},
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("Updated Landing Zone")),
+					},
+				},
+				{
+					ResourceName:    resourceAddress,
+					ImportState:     true,
+					ImportStateKind: resource.ImportBlockWithID,
+					ImportStateId:   landingZoneName,
 				},
 			},
-			{
-				ResourceName:    resourceAddress,
-				ImportState:     true,
-				ImportStateKind: resource.ImportBlockWithID,
-				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					rs := s.RootModule().Resources[resourceAddress]
-					if rs == nil {
-						return "", fmt.Errorf("resource not found: %s", resourceAddress)
-					}
-					return rs.Primary.Attributes["metadata.name"], nil
-				},
-			},
-		},
+		})
 	})
 }

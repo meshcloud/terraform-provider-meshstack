@@ -85,27 +85,21 @@ resource "meshstack_platform" "example_azure" {
 
           azure_role_mappings = [
             {
-              project_role_ref = {
-                name = "admin"
-              }
+              project_role_ref = { name = "admin" }
               azure_role = {
                 alias = "admin"
                 id    = "b69d42fd-1e97-47d0-958d-3ce50d18af71"
               }
             },
             {
-              project_role_ref = {
-                name = "reader"
-              }
+              project_role_ref = { name = "reader" }
               azure_role = {
                 alias = "reader"
                 id    = "9c4cbbde-f2da-479e-9709-0f9ca8fa69df"
               }
             },
             {
-              project_role_ref = {
-                name = "user"
-              }
+              project_role_ref = { name = "user" }
               azure_role = {
                 alias = "user"
                 id    = "7eeffa89-84ca-4106-9677-c9206b2fc14d"
@@ -218,9 +212,7 @@ resource "meshstack_platform" "example_aws" {
 
             aws_role_mappings = [
               {
-                project_role_ref = {
-                  name = "admin"
-                }
+                project_role_ref    = { name = "admin" }
                 aws_role            = "admin"
                 permission_set_arns = ["arn:aws:sso:::permissionSet/ssoins-1234567890abcdef/ps-1234567890abcdef"]
               }
@@ -316,16 +308,12 @@ resource "meshstack_platform" "example_gcp" {
 
           gcp_role_mappings = [
             {
-              project_role_ref = {
-                name = "admin"
-              }
-              gcp_role = "roles/editor"
+              project_role_ref = { name = "admin" }
+              gcp_role         = "roles/editor"
             },
             {
-              project_role_ref = {
-                name = "reader"
-              }
-              gcp_role = "roles/viewer"
+              project_role_ref = { name = "reader" }
+              gcp_role         = "roles/viewer"
             }
           ]
 
@@ -614,16 +602,12 @@ resource "meshstack_platform" "example_openshift" {
 
           openshift_role_mappings = [
             {
-              project_role_ref = {
-                name = "admin"
-              }
-              openshift_role = "admin"
+              project_role_ref = { name = "admin" }
+              openshift_role   = "admin"
             },
             {
-              project_role_ref = {
-                name = "user"
-              }
-              openshift_role = "edit"
+              project_role_ref = { name = "user" }
+              openshift_role   = "edit"
             }
           ]
 
