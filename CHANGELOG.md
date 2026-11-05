@@ -1,3 +1,10 @@
+# v0.28.0
+
+BREAKING CHANGES:
+- `meshstack_building_block_v2` and `meshstack_buildingblock` (v1): the deprecated resources and data sources are removed.
+  Replace them with `meshstack_building_block`, or with `meshstack_building_blocks` to read building blocks by filter.
+  A `moved` block needs a provider that knows both types, so add and apply it on v0.24.x to v0.27.x before you upgrade.
+
 # v0.27.2
 
 FEATURES:

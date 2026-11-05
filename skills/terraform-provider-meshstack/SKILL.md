@@ -33,7 +33,7 @@ To build a definition from a ready-made module, start with the
 | [`meshstack_building_block_definition`](https://registry.terraform.io/providers/meshcloud/meshstack/latest/docs/resources/building_block_definition) | a definition and all its versions, in one resource |
 | [`meshstack_building_block`](https://registry.terraform.io/providers/meshcloud/meshstack/latest/docs/resources/building_block) | one building block on a workspace or a tenant |
 
-`meshstack_building_block_v2` and `meshstack_buildingblock` are deprecated. Write
+v0.28.0 removed `meshstack_building_block_v2` and `meshstack_buildingblock`. Write
 `meshstack_building_block`, and move old ones as [Import existing objects](#import-existing-objects)
 shows. The commands below use `tofu`; `terraform` takes the same arguments.
 
@@ -268,8 +268,9 @@ only the import, then apply.
 - Only the workspace that owns a definition can manage it.
 - The registry page of each resource names its import id.
 
-To move a deprecated `meshstack_building_block_v2` or `meshstack_buildingblock` to
-`meshstack_building_block`, rewrite the resource block for the new schema and add:
+To move a `meshstack_building_block_v2` or `meshstack_buildingblock` to `meshstack_building_block`,
+rewrite the resource block for the new schema and add the block below. Plan and apply it with a
+v0.27.x provider before you upgrade to v0.28.0, which no longer knows the old types.
 
 ```hcl
 moved {
