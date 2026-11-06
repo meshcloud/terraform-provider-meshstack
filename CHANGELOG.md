@@ -1,3 +1,12 @@
+# v0.28.1
+
+FIXES:
+- `meshstack_building_block`: create, update and delete wait while `status.action` is `PENDING` or `IN_PROGRESS`, and
+  then report the action. meshStack shows `PENDING` from the change until it has started the run, so the provider no
+  longer guesses whether a run started, and the error `meshStack did not start a run for the updated building block`
+  is gone. A run that meshStack could not start, or did not start within 90 seconds, is reported as a run that did not
+  succeed, with the reason.
+
 # v0.28.0
 
 BREAKING CHANGES:
