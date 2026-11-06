@@ -99,7 +99,7 @@ require them.
 
 - [`DEVELOPMENT.md`](DEVELOPMENT.md) — the contributor how-to: build, `dev_overrides`, auth, unit +
   acceptance testing, lint, docs, CI.
-- `meshstack-satellite.gradle` — how CI runs this repo's acceptance suite; the
+- `.github/meshstack-satellite.gradle` — how CI runs this repo's acceptance suite; the
   **`acceptance-testing`** skill explains it.
 - `.agents/skills/` — on-demand procedures loaded by name:
 

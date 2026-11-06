@@ -12,7 +12,7 @@ The suite runs against a local meshStack backend. Run every command here from th
 A pull request here does not run the suite itself. `.github/workflows/test-acceptance.yml` asks the
 *meshcloud-internal* `meshfed-release` repo for the run, which reports back as the required check
 `Acceptance Tests (meshStack backend)` on the pull request's merge state. That run reads only
-`meshstack-satellite.gradle` from this repo: the `TestAcc` filter, the services the suite needs and
+`.github/meshstack-satellite.gradle` from this repo: the `TestAcc` filter, the services the suite needs and
 its environment. To change what CI runs, change that file. The rest of the lane is documented in
 `meshfed-release`'s `AGENTS.md` → "Satellite Acceptance Tests".
 
