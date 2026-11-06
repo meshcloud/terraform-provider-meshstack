@@ -64,10 +64,7 @@ resource "meshstack_building_block_definition" "example_01_terraform" {
     draft = true
 
     # Optional: Specify runner if necessary (otherwise, shared runner is used)
-    runner_ref = {
-      kind = "meshBuildingBlockRunner"
-      uuid = "98520496-627d-43e6-82da-ce499179ff3f"
-    }
+    runner_ref = { uuid = "98520496-627d-43e6-82da-ce499179ff3f" }
 
     only_apply_once_per_tenant = true     # Optional: defaults to false
     deletion_mode              = "DELETE" # Optional: defaults to "DELETE"
