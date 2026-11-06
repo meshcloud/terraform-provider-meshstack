@@ -11,8 +11,8 @@ import (
 // Ref returns a StateCheck asserting that the resource at resourceAddress has a `ref` attribute
 // with the expected kind and a non-empty uuid. If uuidOut is non-nil, captures the uuid for
 // subsequent steps to verify it doesn't change.
-func Ref[Address ~string | ~[]string](resourceAddress Address, expectedKind string, uuidOut *string) statecheck.StateCheck {
-	return statecheck.ExpectKnownValue(fmt.Sprint(resourceAddress), tfjsonpath.New("ref"), knownvalue.MapExact(map[string]knownvalue.Check{
+func Ref(resourceAddress string, expectedKind string, uuidOut *string) statecheck.StateCheck {
+	return statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("ref"), knownvalue.MapExact(map[string]knownvalue.Check{
 		"kind": knownvalue.StringExact(expectedKind),
 		"uuid": NotEmptyString(func(actualValue string) error {
 			if uuidOut == nil {
