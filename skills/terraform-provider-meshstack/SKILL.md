@@ -201,6 +201,9 @@ apply starts a run and waits for it.
   `version_latest_release`. The block is upgraded in place, and a run follows. meshStack accepts
   only the latest released version, and only while the block is not running or waiting. Only a
   login of the platform team that owns the definition, or of an admin, may change the version.
+- To upgrade without a run, also set `skip_run_on = ["VERSION_UPGRADE"]`. The apply saves the new
+  version and every other change of the same apply, such as the inputs the new version adds, and
+  does not wait. The next run of the block applies the change.
 - A changed `target_ref`, or a changed `parent_building_block_refs` without an upgrade, replaces
   the block (`-/+`): its destroy run removes what it created. Ask the user before you apply that.
 - A block whose last run failed shows an in-place update on every plan, also without a change. That

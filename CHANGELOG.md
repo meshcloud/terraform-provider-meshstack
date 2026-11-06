@@ -1,3 +1,10 @@
+# v0.28.1
+
+FEATURES:
+- `meshstack_building_block`: the new write-only attribute `skip_run_on` takes `VERSION_UPGRADE`. An update that
+  changes the definition version then saves the new version, and every other change of the same apply, without
+  starting a run, and the apply does not wait for one. Needs a meshStack that knows the `skipRunOn` parameter.
+
 # v0.28.0
 
 BREAKING CHANGES:

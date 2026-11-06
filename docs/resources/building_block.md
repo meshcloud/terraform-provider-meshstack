@@ -53,6 +53,9 @@ resource "meshstack_building_block" "example_workspace" {
   # Purging is a last resort option for stuck deletions. Prefer regular delete behavior.
   # purge_on_delete = true
 
+  # Upgrade to a new definition version without a run. The next run of the block applies it.
+  # skip_run_on = ["VERSION_UPGRADE"]
+
   timeouts = {
     create = "5m" # default 30m
     update = "5m" # default 30m
@@ -112,6 +115,7 @@ resource "meshstack_building_block" "example_tenant" {
 > **NOTE**: [Write-only arguments](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments) are supported in Terraform 1.11 and later.
 
 - `purge_on_delete` (Boolean) When true, deletes via the `DELETE /{uuid}/purge` sub-path, which requires admin authority (`ADM_BUILDINGBLOCK_DELETE`). This is a last resort option for stuck deletions.
+- `skip_run_on` (List of String, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Changes for which an update saves the building block without starting a run. The only value is `VERSION_UPGRADE`: an update that changes `spec.building_block_definition_version_ref.uuid` saves the new version together with every other change of the same apply, such as new inputs, and starts no run. The apply then does not wait, and `status` keeps the run before the upgrade until the next run applies the change. An update without a version change runs as usual. The plan shows whether a run follows only when the version is known at plan time. Needs a meshStack that knows the `skipRunOn` parameter. The value is write-only: it is never stored in state, so changing only this attribute plans no change.
 - `timeouts` (Attributes) (see [below for nested schema](#nestedatt--timeouts))
 - `wait_for_completion` (Boolean, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Whether create and update wait for the run of the building block to end. Defaults to `true`. The wait ends at once with a warning when the run waits for input, an approval or a dependency (`action` `PROVIDE_INPUT`, `APPROVE_RUN` or `WAITING_FOR_DEPENDENCY`); run the apply again once that is resolved. Every outcome of the run is a warning, and the state holds the status meshStack reported last. To fail the apply when the run did not succeed, add a postcondition on `self.status.succeeded`. It only makes sense with `true`: with `false` the state holds the status meshStack answered the change with, before the run. After the repair of a failed run, that status still shows the failed run until the next refresh, so a plan with `-refresh=false` would run the repair again. Deletion always waits for the block to be fully removed (lifecycle DELETED, or gone after a purge) regardless of this flag, so dependent resources such as the building block definition can be deleted safely afterward; it fails at once when its run waits for a person or a dependency. Each wait is bounded by `timeouts` (see `timeouts.delete` for deprovisioning). See [waiting for a run](https://docs.meshcloud.io/concepts/building-block/#waiting-for-a-run) for how meshStack reports a run. The value is write-only: it is never stored in state, so changing only this attribute plans no change.
 
