@@ -1,3 +1,13 @@
+# v0.28.1
+
+FEATURES:
+- `meshstack_building_block`: the new write-only attribute `skip_run_on` takes `VERSION_UPGRADE`. An update that
+  changes the definition version then saves the new version, and every other change of the same apply, without
+  starting a run, and locks the building block: meshStack does not run it until it is unlocked in meshPanel or with
+  `meshstack bb unlock <uuid>`. The provider never unlocks. On a locked building block, `status.action` is
+  `UNLOCK_RUNS`, an update plans no run, the apply does not wait and warns about the lock, and `status.succeeded`
+  stays true when the latest run succeeded. Needs a meshStack that knows the `skipRunOn` parameter.
+
 # v0.28.0
 
 BREAKING CHANGES:

@@ -159,6 +159,13 @@ func TestAwaitRun(t *testing.T) {
 			wantWarnings: []string{"does not know"},
 			wantAction:   "SOMETHING_NEW",
 		},
+		"a block that is locked while the apply waits ends the wait with a warning": {
+			before:       bbWithRun(client.BuildingBlockActionNoAction, "run-before").Status,
+			states:       []*client.MeshBuildingBlockV2{bbWithRun(client.BuildingBlockActionUnlockRuns, "run-before")},
+			timeout:      time.Second,
+			wantWarnings: []string{"unlocked in meshPanel or with `meshstack bb unlock bb-uuid`"},
+			wantAction:   client.BuildingBlockActionUnlockRuns,
+		},
 		"a run that does not finish in time is warned about": {
 			states:       []*client.MeshBuildingBlockV2{bbWithAction(client.BuildingBlockActionInProgress)},
 			timeout:      time.Second,

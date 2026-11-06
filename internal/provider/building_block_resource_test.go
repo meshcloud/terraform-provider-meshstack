@@ -1181,6 +1181,108 @@ func TestAccBuildingBlock(t *testing.T) {
 			},
 		})
 	})
+
+	// 17_upgrade_without_a_run: with skip_run_on, a version upgrade known at plan time plans no run, and the
+	// apply saves the new version without waiting and locks the block, whose next update plans no run either.
+	// The block is held on v1 while v2 is released, so that the upgrade step reads a known version.
+	t.Run("17_upgrade_without_a_run", func(t *testing.T) {
+		workspaceConfig, workspaceAddr := testconfig.Workspace(t)
+		paymentMethodConfig, setPaymentMethodInput := testconfig.PaymentMethodInput(t, workspaceAddr)
+
+		var definitionAddr testconfig.Traversal
+		definition := func(draft bool) testconfig.Config {
+			return testconfig.Resource{Name: "building_block", Suffix: "_01_workspace"}.TestSupportConfig(t, "").WithFirstBlock(
+				testconfig.ExtractAddress(&definitionAddr),
+				testconfig.OwnedByWorkspace(workspaceAddr),
+				testconfig.Descend("version_spec", "draft")(testconfig.SetBool(draft)),
+			)
+		}
+
+		var buildingBlockAddr testconfig.Traversal
+		buildingBlock := func(definitionConfig testconfig.Config, consumers ...testconfig.ExpressionConsumer) testconfig.Config {
+			return testconfig.Resource{Name: "building_block", Suffix: "_01_workspace"}.Config(t).WithFirstBlock(append([]testconfig.ExpressionConsumer{
+				testconfig.ExtractAddress(&buildingBlockAddr),
+				testconfig.Descend("spec", "building_block_definition_version_ref")(testconfig.SetRawExpr(`{ uuid = %s }`, definitionAddr.Join("version_latest_release", "uuid"))),
+				testconfig.Descend("spec", "target_ref")(testconfig.SetAddr(workspaceAddr, "ref")),
+				setPaymentMethodInput,
+			}, consumers...)...).Join(workspaceConfig, paymentMethodConfig, definitionConfig)
+		}
+		v1Config := buildingBlock(definition(false))
+		redraftConfig := buildingBlock(definition(true))
+		heldOnV1Config := buildingBlock(definition(false),
+			testconfig.Descend("spec", "building_block_definition_version_ref")(testconfig.SetRawExpr(`{ uuid = var.v1_uuid }`)),
+		).WithRawBlock(`variable "v1_uuid" { type = string }`)
+		upgradeConfig := buildingBlock(definition(false), testconfig.Descend("skip_run_on")(testconfig.SetRawExpr(`["VERSION_UPGRADE"]`)))
+		lockedUpdateConfig := buildingBlock(definition(false), testconfig.Descend("spec", "inputs", "name", "value")(testconfig.SetRawExpr(`jsonencode("renamed")`)))
+
+		var v1Uuid lazyVariable
+		versionPath := tfjsonpath.New("spec").AtMapKey("building_block_definition_version_ref").AtMapKey("uuid")
+		latestRunPath := tfjsonpath.New("status").AtMapKey("latest_run_uuid")
+		actionPath := tfjsonpath.New("status").AtMapKey("action")
+		latestRun := statecheck.CompareValue(compare.ValuesSame())
+		ApplyAndTest(t, resource.TestCase{
+			Steps: []resource.TestStep{
+				{
+					Config: v1Config.String(),
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(buildingBlockAddr.String(), versionPath, xknownvalue.NotEmptyString(func(uuid string) error {
+							v1Uuid = lazyVariable(uuid)
+							return nil
+						})),
+						latestRun.AddStateValue(buildingBlockAddr.String(), latestRunPath),
+					},
+				},
+				{
+					Config: redraftConfig.String(),
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PreApply: []plancheck.PlanCheck{plancheck.ExpectResourceAction(buildingBlockAddr.String(), plancheck.ResourceActionNoop)},
+					},
+				},
+				{
+					Config:          heldOnV1Config.String(),
+					ConfigVariables: tfconfig.Variables{"v1_uuid": &v1Uuid},
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PreApply: []plancheck.PlanCheck{plancheck.ExpectResourceAction(buildingBlockAddr.String(), plancheck.ResourceActionNoop)},
+					},
+				},
+				{
+					Config: upgradeConfig.String(),
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PreApply: []plancheck.PlanCheck{
+							plancheck.ExpectResourceAction(buildingBlockAddr.String(), plancheck.ResourceActionUpdate),
+							plancheck.ExpectKnownValue(buildingBlockAddr.String(), latestRunPath, xknownvalue.NotEmptyString()),
+						},
+					},
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(buildingBlockAddr.String(), versionPath, xknownvalue.NotEmptyString(func(uuid string) error {
+							if uuid == string(v1Uuid) {
+								return fmt.Errorf("expected the upgrade to v2, but the block is still on v1 %q", uuid)
+							}
+							return nil
+						})),
+						latestRun.AddStateValue(buildingBlockAddr.String(), latestRunPath),
+					},
+				},
+				{
+					Config:   upgradeConfig.String(),
+					PlanOnly: true,
+				},
+				{
+					Config: lockedUpdateConfig.String(),
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PreApply: []plancheck.PlanCheck{
+							plancheck.ExpectResourceAction(buildingBlockAddr.String(), plancheck.ResourceActionUpdate),
+							plancheck.ExpectKnownValue(buildingBlockAddr.String(), actionPath, knownvalue.StringExact(client.BuildingBlockActionUnlockRuns.String())),
+						},
+					},
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(buildingBlockAddr.String(), actionPath, knownvalue.StringExact(client.BuildingBlockActionUnlockRuns.String())),
+						latestRun.AddStateValue(buildingBlockAddr.String(), latestRunPath),
+					},
+				},
+			},
+		})
+	})
 }
 
 // bbv3StateChecks returns the baseline state checks shared by every BB v3 create and move step.
