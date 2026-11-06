@@ -1183,8 +1183,8 @@ func TestAccBuildingBlock(t *testing.T) {
 	})
 
 	// 17_upgrade_without_a_run: with skip_run_on, a version upgrade known at plan time plans no run, and the
-	// apply saves the new version without waiting. The block is held on v1 while v2 is released, so that
-	// the upgrade step reads a known version.
+	// apply saves the new version without waiting and locks the block, whose next update plans no run either.
+	// The block is held on v1 while v2 is released, so that the upgrade step reads a known version.
 	t.Run("17_upgrade_without_a_run", func(t *testing.T) {
 		workspaceConfig, workspaceAddr := testconfig.Workspace(t)
 		paymentMethodConfig, setPaymentMethodInput := testconfig.PaymentMethodInput(t, workspaceAddr)
@@ -1213,10 +1213,12 @@ func TestAccBuildingBlock(t *testing.T) {
 			testconfig.Descend("spec", "building_block_definition_version_ref")(testconfig.SetRawExpr(`{ uuid = var.v1_uuid }`)),
 		).WithRawBlock(`variable "v1_uuid" { type = string }`)
 		upgradeConfig := buildingBlock(definition(false), testconfig.Descend("skip_run_on")(testconfig.SetRawExpr(`["VERSION_UPGRADE"]`)))
+		lockedUpdateConfig := buildingBlock(definition(false), testconfig.Descend("spec", "inputs", "name", "value")(testconfig.SetRawExpr(`jsonencode("renamed")`)))
 
 		var v1Uuid lazyVariable
 		versionPath := tfjsonpath.New("spec").AtMapKey("building_block_definition_version_ref").AtMapKey("uuid")
 		latestRunPath := tfjsonpath.New("status").AtMapKey("latest_run_uuid")
+		actionPath := tfjsonpath.New("status").AtMapKey("action")
 		latestRun := statecheck.CompareValue(compare.ValuesSame())
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
@@ -1264,6 +1266,19 @@ func TestAccBuildingBlock(t *testing.T) {
 				{
 					Config:   upgradeConfig.String(),
 					PlanOnly: true,
+				},
+				{
+					Config: lockedUpdateConfig.String(),
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PreApply: []plancheck.PlanCheck{
+							plancheck.ExpectResourceAction(buildingBlockAddr.String(), plancheck.ResourceActionUpdate),
+							plancheck.ExpectKnownValue(buildingBlockAddr.String(), actionPath, knownvalue.StringExact(client.BuildingBlockActionUnlockRuns.String())),
+						},
+					},
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(buildingBlockAddr.String(), actionPath, knownvalue.StringExact(client.BuildingBlockActionUnlockRuns.String())),
+						latestRun.AddStateValue(buildingBlockAddr.String(), latestRunPath),
+					},
 				},
 			},
 		})

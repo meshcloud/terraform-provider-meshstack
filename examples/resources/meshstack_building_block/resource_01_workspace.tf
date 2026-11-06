@@ -29,7 +29,7 @@ resource "meshstack_building_block" "example_workspace" {
   # Purging is a last resort option for stuck deletions. Prefer regular delete behavior.
   # purge_on_delete = true
 
-  # Upgrade to a new definition version without a run. The next run of the block applies it.
+  # Upgrade to a new definition version without a run. This locks the block until it is unlocked in meshPanel.
   # skip_run_on = ["VERSION_UPGRADE"]
 
   timeouts = {
