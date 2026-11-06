@@ -148,11 +148,13 @@ rewrites it.
 One step applies the example, so the examples stay tested against a real meshStack. An example
 carries fixed names, which a test must not collide on:
 
-- An example reaches its workspace only by reference, and the step file points that reference at a
-  workspace with a random name. Names below the workspace (a project, a project's binding target)
-  stay literal.
-- A globally unique literal (a tag key, a binding name) is unique across all examples, and exactly
-  one test applies each example.
+- An example a step includes reaches its workspace by reference, and the step file points that
+  reference at a workspace with a random name. Names below the workspace (a project, a project's
+  binding target) stay literal.
+- An example keeps the names a user would write (`my-workspace`, `this-is-an-example`,
+  `cost-center`), and so do the docs generated from it. When such a name is global in meshStack, or
+  names a subject the backend may not have (`user@meshcloud.io`), the step does not include the
+  example: it writes the resource itself under its own names, `"test-wb-[[.suffix]]"`.
 - When the example depends on something it cannot reference, such as a literal tag key or a data
   source looking up a literal name, an earlier step creates it. `resources/project/step1.tf` creates
   the tag definition `tag-key`, and step 2 adds the project example.

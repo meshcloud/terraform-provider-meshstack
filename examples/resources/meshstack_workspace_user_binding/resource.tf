@@ -3,17 +3,9 @@ resource "meshstack_workspace_user_binding" "example" {
     name = "this-is-an-example"
   }
 
-  role_ref = {
-    name = "Workspace Member"
-  }
-
-  target_ref = {
-    name = "my-workspace"
-  }
-
-  subject = {
-    name = "user@meshcloud.io"
-  }
+  role_ref   = { name = "Workspace Member" }
+  target_ref = { name = "my-workspace" }
+  subject    = { name = "user@meshcloud.io" }
 
   # Optional. If omitted, the binding never expires. If recertification is enabled
   # for the role, meshStack assigns the maximum allowed expiry date instead.
