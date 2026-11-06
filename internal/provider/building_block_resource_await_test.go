@@ -69,7 +69,7 @@ func TestAwaitRun(t *testing.T) {
 	}}
 
 	tests := map[string]struct {
-		before       *client.MeshBuildingBlockV2Status
+		answer       *client.MeshBuildingBlockV2
 		states       []*client.MeshBuildingBlockV2
 		timeout      time.Duration
 		logs         *stubRunLogsClient
@@ -78,6 +78,7 @@ func TestAwaitRun(t *testing.T) {
 		wantAction   enum.Entry[client.BuildingBlockAction]
 		wantNoBlock  bool
 		wantReads    int
+		wantNoRead   bool
 	}{
 		"a block returned without a status yet is polled on": {
 			states: []*client.MeshBuildingBlockV2{
@@ -87,22 +88,20 @@ func TestAwaitRun(t *testing.T) {
 			wantAction: client.BuildingBlockActionNoAction,
 			wantReads:  2,
 		},
-		"an update whose run meshStack does not start errors": {
-			before:     bbWithRun(client.BuildingBlockActionNoAction, "run-before").Status,
-			states:     []*client.MeshBuildingBlockV2{bbWithRun(client.BuildingBlockActionNoAction, "run-before")},
-			timeout:    time.Second,
-			wantErrors: []string{"did not start a run"},
-			wantAction: client.BuildingBlockActionNoAction,
-		},
-		"a queued run that takes the update along is awaited to its end": {
-			before: bbWithRun(client.BuildingBlockActionPending, "run-queued").Status,
+		"a run is awaited through PENDING and IN_PROGRESS to its end": {
 			states: []*client.MeshBuildingBlockV2{
-				bbWithRun(client.BuildingBlockActionInProgress, "run-queued"),
-				bbWithRun(client.BuildingBlockActionNoAction, "run-queued"),
+				bbWithRun(client.BuildingBlockActionPending, "run-before"),
+				bbWithRun(client.BuildingBlockActionInProgress, "run-new"),
+				bbWithRun(client.BuildingBlockActionNoAction, "run-new"),
 			},
-			timeout:    time.Second,
 			wantAction: client.BuildingBlockActionNoAction,
-			wantReads:  2,
+			wantReads:  3,
+		},
+		"an answer that is not running is judged without a read": {
+			answer:     bbWithRun(client.BuildingBlockActionNoAction, "run-before"),
+			states:     []*client.MeshBuildingBlockV2{bbWithAction(client.BuildingBlockActionInProgress)},
+			wantAction: client.BuildingBlockActionNoAction,
+			wantNoRead: true,
 		},
 		"a failed run and its failing step are warned about": {
 			states: []*client.MeshBuildingBlockV2{
@@ -194,7 +193,8 @@ func TestAwaitRun(t *testing.T) {
 			}
 			timeout := cmp.Or(tt.timeout, 30*time.Second)
 			var diags diag.Diagnostics
-			final := r.awaitRun(context.Background(), &diags, "bb-uuid", tt.before, timeout)
+			answer := cmp.Or(tt.answer, bbWithAction(client.BuildingBlockActionPending))
+			final := r.awaitRun(context.Background(), &diags, "bb-uuid", answer, timeout)
 
 			requireDiagnostics(t, diags.Errors(), tt.wantErrors, "error")
 			requireDiagnostics(t, diags.Warnings(), tt.wantWarnings, "warning")
@@ -205,6 +205,9 @@ func TestAwaitRun(t *testing.T) {
 			require.NotNil(t, final)
 			require.Equal(t, tt.wantAction, final.Status.Action)
 			require.GreaterOrEqual(t, stub.reads, tt.wantReads, "must poll until the run ended")
+			if tt.wantNoRead {
+				require.Zero(t, stub.reads)
+			}
 		})
 	}
 }
