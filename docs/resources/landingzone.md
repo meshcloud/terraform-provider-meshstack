@@ -37,10 +37,8 @@ resource "meshstack_landingzone" "example" {
         aws_lambda_arn         = "arn:aws:lambda:us-east-1:123456789012:function:MyLambdaFunction"
         aws_role_mappings = [
           {
-            project_role_ref = {
-              name = "reader"
-            }
-            platform_role = "project-reader"
+            project_role_ref = { name = "reader" }
+            platform_role    = "project-reader"
             policies = [
               "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess",
             ]

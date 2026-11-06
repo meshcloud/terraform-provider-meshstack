@@ -41,16 +41,12 @@ resource "meshstack_platform" "example_gcp" {
 
           gcp_role_mappings = [
             {
-              project_role_ref = {
-                name = "admin"
-              }
-              gcp_role = "roles/editor"
+              project_role_ref = { name = "admin" }
+              gcp_role         = "roles/editor"
             },
             {
-              project_role_ref = {
-                name = "reader"
-              }
-              gcp_role = "roles/viewer"
+              project_role_ref = { name = "reader" }
+              gcp_role         = "roles/viewer"
             }
           ]
 
