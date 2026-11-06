@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json/v2"
 	"fmt"
+	"net/http"
 	"slices"
 
 	"github.com/google/uuid"
@@ -216,8 +217,9 @@ func (m MeshBuildingBlockV2Client) Update(_ context.Context, bb *client.MeshBuil
 	answered.Status = existing.Status
 	stored.Status = finishedRun(*existing.Status)
 	versionUpgrade := stored.Spec.BuildingBlockDefinitionVersionRef.Uuid != existing.Spec.BuildingBlockDefinitionVersionRef.Uuid
-	if versionUpgrade && slices.Contains(options.SkipRunOn, client.BuildingBlockSkipRunOnVersionUpgrade) {
-		stored.Status = existing.Status
+	if existing.Status.IsLocked() || (versionUpgrade && slices.Contains(options.SkipRunOn, client.BuildingBlockSkipRunOnVersionUpgrade)) {
+		stored.Status = locked(*existing.Status)
+		answered.Status = stored.Status
 	}
 
 	m.Store.Set(*stored.Metadata.Uuid, stored)
@@ -234,11 +236,44 @@ func (m MeshBuildingBlockV2Client) TriggerRun(_ context.Context, bbUuid string) 
 	if !ok {
 		return nil, fmt.Errorf("building block %q not found", bbUuid)
 	}
+	if bb.Status.IsLocked() {
+		return nil, client.HttpError{StatusCode: http.StatusConflict, ResponseBody: []byte(`{"errorCode":"BuildingBlockLocked"}`)}
+	}
 	stored := deepCopyBB(bb)
 	stored.Status = finishedRun(*bb.Status)
 	m.Store.Set(bbUuid, stored)
 	// The answer keeps the run before, see Update.
 	return m.withBasedOnDraftVersion(deepCopyBB(bb)), nil
+}
+
+func (m MeshBuildingBlockV2Client) Lock(_ context.Context, bbUuid string) (*client.MeshBuildingBlockV2, error) {
+	bb, ok := m.Store.Get(bbUuid)
+	if !ok {
+		return nil, fmt.Errorf("building block %q not found", bbUuid)
+	}
+	stored := deepCopyBB(bb)
+	stored.Status = locked(*bb.Status)
+	m.Store.Set(bbUuid, stored)
+	return m.withBasedOnDraftVersion(deepCopyBB(stored)), nil
+}
+
+func (m MeshBuildingBlockV2Client) Unlock(_ context.Context, bbUuid string) (*client.MeshBuildingBlockV2, error) {
+	bb, ok := m.Store.Get(bbUuid)
+	if !ok {
+		return nil, fmt.Errorf("building block %q not found", bbUuid)
+	}
+	if !bb.Status.IsLocked() {
+		return m.withBasedOnDraftVersion(deepCopyBB(bb)), nil
+	}
+	stored := deepCopyBB(bb)
+	stored.Status = finishedRun(*bb.Status)
+	m.Store.Set(bbUuid, stored)
+	return m.withBasedOnDraftVersion(deepCopyBB(stored)), nil
+}
+
+func locked(status client.MeshBuildingBlockV2Status) *client.MeshBuildingBlockV2Status {
+	status.Action = client.BuildingBlockActionUnlockRuns
+	return &status
 }
 
 func finishedRun(status client.MeshBuildingBlockV2Status) *client.MeshBuildingBlockV2Status {

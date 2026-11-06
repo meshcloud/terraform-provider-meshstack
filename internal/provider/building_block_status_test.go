@@ -17,6 +17,8 @@ func TestNewBuildingBlockStatusModel_Succeeded(t *testing.T) {
 		{client.BuildingBlockHealthStatusSucceeded, client.BuildingBlockActionNoAction, true},
 		{client.BuildingBlockHealthStatusSucceeded, client.BuildingBlockActionUpgradeAvailable, true},
 		{client.BuildingBlockHealthStatusSucceeded, client.BuildingBlockActionReviewDrift, true},
+		{client.BuildingBlockHealthStatusSucceeded, client.BuildingBlockActionUnlockRuns, true},
+		{client.BuildingBlockHealthStatusFailed, client.BuildingBlockActionUnlockRuns, false},
 		// health_status keeps the previous outcome while a new run waits or runs.
 		{client.BuildingBlockHealthStatusSucceeded, client.BuildingBlockActionApproveRun, false},
 		{client.BuildingBlockHealthStatusSucceeded, client.BuildingBlockActionPending, false},
