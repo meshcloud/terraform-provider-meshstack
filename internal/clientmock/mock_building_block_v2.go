@@ -173,7 +173,7 @@ func (m MeshBuildingBlockV2Client) Create(_ context.Context, bb *client.MeshBuil
 	return m.withBasedOnDraftVersion(deepCopyBB(stored)), nil
 }
 
-func (m MeshBuildingBlockV2Client) Update(_ context.Context, bb *client.MeshBuildingBlockV2) (*client.MeshBuildingBlockV2, error) {
+func (m MeshBuildingBlockV2Client) Update(_ context.Context, bb *client.MeshBuildingBlockV2, options client.MeshBuildingBlockV2UpdateOptions) (*client.MeshBuildingBlockV2, error) {
 	if bb.Metadata.Uuid == nil {
 		return nil, fmt.Errorf("cannot update building block without UUID")
 	}
@@ -215,6 +215,10 @@ func (m MeshBuildingBlockV2Client) Update(_ context.Context, bb *client.MeshBuil
 	answered := deepCopyBB(stored)
 	answered.Status = existing.Status
 	stored.Status = finishedRun(*existing.Status)
+	versionUpgrade := stored.Spec.BuildingBlockDefinitionVersionRef.Uuid != existing.Spec.BuildingBlockDefinitionVersionRef.Uuid
+	if versionUpgrade && slices.Contains(options.SkipRunOn, client.BuildingBlockSkipRunOnVersionUpgrade) {
+		stored.Status = existing.Status
+	}
 
 	m.Store.Set(*stored.Metadata.Uuid, stored)
 	return m.withBasedOnDraftVersion(answered), nil
