@@ -3,36 +3,31 @@ package provider
 import (
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
-
-	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/testconfig"
-	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/xknownvalue"
 )
 
 func TestAccTenantsDataSource(t *testing.T) {
-	tenantConfig, tenantAddr := testconfig.TenantAndWorkspace(t)
-
-	config := testconfig.DataSource{Name: "tenants"}.Config(t).WithFirstBlock(
-		testconfig.Descend("workspace")(testconfig.SetAddr(tenantAddr, "metadata", "owned_by_workspace")),
-		testconfig.Descend("project")(testconfig.SetAddr(tenantAddr, "metadata", "owned_by_project"))).
-		Join(tenantConfig)
-
-	addr := testconfig.Traversal{"data.meshstack_tenants", "example"}
+	suffix := acctest.RandString(8)
+	vars := hclStepVars{"suffix": suffix}
 
 	ApplyAndTest(t, resource.TestCase{
 		Steps: []resource.TestStep{
 			{
-				Config: config.String(),
+				Config: hclStep(t, "data-sources/tenants", 1, vars),
+			},
+			{
+				Config: hclStep(t, "data-sources/tenants", 2, vars),
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(addr.String(), tfjsonpath.New("tenants"),
+					statecheck.ExpectKnownValue("data.meshstack_tenants.example", tfjsonpath.New("tenants"),
 						knownvalue.SetPartial([]knownvalue.Check{
 							knownvalue.ObjectPartial(map[string]knownvalue.Check{
 								"metadata": knownvalue.ObjectPartial(map[string]knownvalue.Check{
-									"owned_by_workspace": xknownvalue.NotEmptyString(),
-									"owned_by_project":   xknownvalue.NotEmptyString(),
+									"owned_by_workspace": knownvalue.StringExact("test-ws-" + suffix),
+									"owned_by_project":   knownvalue.StringExact("test-proj-" + suffix),
 								}),
 							}),
 						}),
