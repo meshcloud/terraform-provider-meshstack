@@ -33,7 +33,7 @@ To build a definition from a ready-made module, start with the
 | [`meshstack_building_block_definition`](https://registry.terraform.io/providers/meshcloud/meshstack/latest/docs/resources/building_block_definition) | a definition and all its versions, in one resource |
 | [`meshstack_building_block`](https://registry.terraform.io/providers/meshcloud/meshstack/latest/docs/resources/building_block) | one building block on a workspace or a tenant |
 
-`meshstack_building_block_v2` and `meshstack_buildingblock` are deprecated. Write
+v0.28.0 removed `meshstack_building_block_v2` and `meshstack_buildingblock`. Write
 `meshstack_building_block`, and move old ones as [Import existing objects](#import-existing-objects)
 shows. The commands below use `tofu`; `terraform` takes the same arguments.
 
@@ -128,6 +128,8 @@ A definition belongs to the platform team's workspace. It starts as a draft, wit
 - `default_value` and `argument` are `jsonencode`d to match `type`, also for a string.
 - A `TENANT_LEVEL` definition also needs `spec.supported_platforms`. `target_type` cannot change:
   a changed `target_type` replaces the definition.
+- To offer a definition only in some landing zones, list their `ref`s in `spec.supported_platforms`
+  instead of their platform or platform type.
 - Approval gates (`spec.approval_policies`) and drift detection need the `terraform`
   implementation. See the
   [registry page](https://registry.terraform.io/providers/meshcloud/meshstack/latest/docs/resources/building_block_definition)
@@ -268,8 +270,9 @@ only the import, then apply.
 - Only the workspace that owns a definition can manage it.
 - The registry page of each resource names its import id.
 
-To move a deprecated `meshstack_building_block_v2` or `meshstack_buildingblock` to
-`meshstack_building_block`, rewrite the resource block for the new schema and add:
+To move a `meshstack_building_block_v2` or `meshstack_buildingblock` to `meshstack_building_block`,
+rewrite the resource block for the new schema and add the block below. Plan and apply it with a
+v0.27.x provider before you upgrade to v0.28.0, which no longer knows the old types.
 
 ```hcl
 moved {

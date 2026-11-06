@@ -10,8 +10,6 @@ import (
 	"github.com/meshcloud/terraform-provider-meshstack/internal/types/generic"
 )
 
-const buildingBlockStatusDeprecation = "Use `succeeded`, or `health_status` and `action` for finer checks."
-
 var (
 	buildingBlockSucceededDescription = "True when the latest run succeeded and the building block needs no attention: " +
 		"`health_status` is `SUCCEEDED` and `action` is one of `NO_ACTION`, `UPGRADE_AVAILABLE`, `REVIEW_DRIFT`. " +

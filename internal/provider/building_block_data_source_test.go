@@ -34,7 +34,6 @@ func TestAccBuildingBlockDataSource(t *testing.T) {
 						statecheck.ExpectKnownValue(dataSourceAddr.String(), tfjsonpath.New("metadata").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
 						statecheck.ExpectKnownValue(dataSourceAddr.String(), tfjsonpath.New("metadata").AtMapKey("owned_by_workspace"), xknownvalue.NotEmptyString()),
 						statecheck.ExpectKnownValue(dataSourceAddr.String(), tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("my-workspace-building-block")),
-						statecheck.ExpectKnownValue(dataSourceAddr.String(), tfjsonpath.New("status").AtMapKey("status"), xknownvalue.NotEmptyString()),
 						statecheck.ExpectKnownValue(dataSourceAddr.String(), tfjsonpath.New("status").AtMapKey("health_status"), knownvalue.StringExact("SUCCEEDED")),
 						statecheck.ExpectKnownValue(dataSourceAddr.String(), tfjsonpath.New("status").AtMapKey("action"), knownvalue.StringExact("NO_ACTION")),
 						statecheck.ExpectKnownValue(dataSourceAddr.String(), tfjsonpath.New("status").AtMapKey("succeeded"), knownvalue.Bool(true)),

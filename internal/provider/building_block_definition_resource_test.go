@@ -2122,7 +2122,8 @@ resource "meshstack_building_block_definition" "test" {
 func TestAccBuildingBlockDefinitionSupportedPlatformKinds(t *testing.T) {
 	workspaceConfig, workspaceAddr := testconfig.Workspace(t)
 	platformConfig, platformAddr, platformTypeAddr := testconfig.CustomPlatform(t, workspaceAddr)
-	prerequisites := workspaceConfig.Join(platformConfig)
+	landingZoneConfig, landingZoneAddr := testconfig.SimpleLandingZone(t, workspaceAddr, platformAddr)
+	prerequisites := workspaceConfig.Join(platformConfig, landingZoneConfig)
 
 	platformTypeRef := func(name knownvalue.Check) knownvalue.Check {
 		return xknownvalue.MapExact(map[string]knownvalue.Check{
@@ -2152,6 +2153,26 @@ func TestAccBuildingBlockDefinitionSupportedPlatformKinds(t *testing.T) {
 		}),
 	})
 
+	var appliedLandingZoneName string
+	captureLandingZoneName := statecheck.ExpectKnownValue(
+		landingZoneAddr.String(),
+		tfjsonpath.New("metadata").AtMapKey("name"),
+		xknownvalue.NotEmptyString(func(actualValue string) error {
+			appliedLandingZoneName = actualValue
+			return nil
+		}),
+	)
+	landingZoneRef := xknownvalue.MapExact(map[string]knownvalue.Check{
+		"kind": knownvalue.StringExact(client.MeshObjectKind.LandingZone),
+		"name": xknownvalue.NotEmptyString(func(actualValue string) error {
+			if actualValue != appliedLandingZoneName {
+				return fmt.Errorf("expected the landing zone's name %q, got %q", appliedLandingZoneName, actualValue)
+			}
+			return nil
+		}),
+		"uuid": knownvalue.Null(),
+	})
+
 	platformUuidExpr := platformAddr.Join("metadata", "uuid").String()
 	platformTypeNameExpr := platformTypeAddr.Join("metadata", "name").String()
 
@@ -2162,6 +2183,18 @@ func TestAccBuildingBlockDefinitionSupportedPlatformKinds(t *testing.T) {
 		{
 			supportedPlatforms: fmt.Sprintf("[%s]", platformAddr.Join("ref")),
 			expectStored:       []knownvalue.Check{platformRef},
+		},
+		{
+			supportedPlatforms: fmt.Sprintf("[%s]", landingZoneAddr.Join("ref")),
+			expectStored:       []knownvalue.Check{landingZoneRef},
+		},
+		{
+			supportedPlatforms: fmt.Sprintf(`[{ name = "AZURE" }, %s, %s]`, platformAddr.Join("ref"), landingZoneAddr.Join("ref")),
+			expectStored: []knownvalue.Check{
+				platformTypeRef(knownvalue.StringExact("AZURE")),
+				platformRef,
+				landingZoneRef,
+			},
 		},
 		{
 			supportedPlatforms: fmt.Sprintf(`[{ name = "AZURE" }, { kind = "meshPlatform", uuid = %s }]`, platformUuidExpr),
@@ -2199,6 +2232,7 @@ resource "meshstack_building_block_definition" "test" {
 }`, workspaceAddr.Join("metadata", "name"), transition.supportedPlatforms)).String(),
 			ConfigStateChecks: []statecheck.StateCheck{
 				capturePlatformUuid,
+				captureLandingZoneName,
 				statecheck.ExpectKnownValue(
 					"meshstack_building_block_definition.test",
 					tfjsonpath.New("spec").AtMapKey("supported_platforms"),
@@ -2241,7 +2275,12 @@ resource "meshstack_building_block_definition" "test" {
 		{
 			name:               "an unknown kind is rejected",
 			supportedPlatforms: fmt.Sprintf(`[{ kind = "meshPlatformInstance", uuid = %q }]`, platformUuid),
-			expectError:        expectErrorWords("one", "meshPlatformType", "meshPlatform"),
+			expectError:        expectErrorWords("one", "meshPlatformType", "meshPlatform", "meshLandingZone"),
+		},
+		{
+			name:               "a landing zone identified by uuid is rejected",
+			supportedPlatforms: fmt.Sprintf(`[{ kind = "meshLandingZone", uuid = %q }]`, platformUuid),
+			expectError:        expectErrorWords("Invalid", "Attribute", "Combination"),
 		},
 		{
 			name:               "a platform identified by name is rejected",

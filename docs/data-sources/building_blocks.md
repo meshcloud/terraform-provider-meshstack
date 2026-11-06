@@ -59,7 +59,6 @@ data "meshstack_building_blocks" "all" {
 - `name` (String) Only return building blocks with this exact name.
 - `platform_identifier` (String) Only return building blocks on this platform (`<platformInstance>.<location>`).
 - `project_identifier` (String) Only return building blocks in this project.
-- `status` (String, Deprecated) Only return building blocks in this execution status. One of `WAITING_FOR_DEPENDENT_INPUT`, `WAITING_FOR_OPERATOR_INPUT`, `WAITING_FOR_USER_INPUT`, `WAITING_FOR_APPROVAL`, `PENDING`, `IN_PROGRESS`, `SUCCEEDED`, `FAILED`, `ABORTED`. Use the `health_status` and `action` filters instead.
 - `target_kind` (String) Only return building blocks with this target kind. One of `meshTenant`, `meshWorkspace`.
 - `tenant_uuid` (String) Only return building blocks targeting the tenant with this UUID.
 - `version_number` (String) Only return building blocks created from this building block definition version number. Accepts a plain number (`1`) or a `v`-prefixed string (`v1`); the `v` is stripped server-side.
@@ -158,7 +157,6 @@ Read-Only:
 - `latest_dry_run_uuid` (String) UUID of the latest dry (DETECT) run, but only when it is the newest run; null otherwise.
 - `latest_run_uuid` (String) UUID of the latest modifying (apply/destroy) run. Null when none exists.
 - `outputs` (Attributes Map) Outputs of the building block, available after a successful run. (see [below for nested schema](#nestedatt--building_blocks--status--outputs))
-- `status` (String, Deprecated) Execution status. One of `WAITING_FOR_DEPENDENT_INPUT`, `WAITING_FOR_OPERATOR_INPUT`, `WAITING_FOR_USER_INPUT`, `WAITING_FOR_APPROVAL`, `PENDING`, `IN_PROGRESS`, `SUCCEEDED`, `FAILED`, `ABORTED`. Use `succeeded`, or `health_status` and `action` for finer checks.
 - `succeeded` (Boolean) True when the latest run succeeded and the building block needs no attention: `health_status` is `SUCCEEDED` and `action` is one of `NO_ACTION`, `UPGRADE_AVAILABLE`, `REVIEW_DRIFT`. On meshStack versions before the `REVIEW_ABORTED_RUN` action an aborted run reads as succeeded.
 
 <a id="nestedatt--building_blocks--status--outputs"></a>

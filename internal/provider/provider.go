@@ -105,8 +105,6 @@ func (p *MeshStackProvider) Resources(_ context.Context) []func() resource.Resou
 		NewWorkspaceResource,
 		NewWorkspaceTagsResource,
 		NewWorkspaceTagResource,
-		NewBuildingblockResource,
-		NewBuildingBlockV2Resource,
 		NewBuildingBlockResource,
 		NewBuildingBlockDefinitionResource,
 		NewTagDefinitionResource,
@@ -123,8 +121,6 @@ func (p *MeshStackProvider) Resources(_ context.Context) []func() resource.Resou
 
 func (p *MeshStackProvider) DataSources(_ context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
-		NewBuildingblockDataSource,
-		NewBuildingBlockV2DataSource,
 		NewBuildingBlockDataSource,
 		NewBuildingBlocksDataSource,
 		NewBuildingBlockDefinitionDataSource,

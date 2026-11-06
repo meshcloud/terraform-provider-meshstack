@@ -201,11 +201,6 @@ func buildingBlockReadStatusAttribute() schema.SingleNestedAttribute {
 		MarkdownDescription: "Current building block status.",
 		Computed:            true,
 		Attributes: map[string]schema.Attribute{
-			"status": schema.StringAttribute{
-				MarkdownDescription: "Execution status. One of " + client.BuildingBlockStatuses.Markdown() + ". " + buildingBlockStatusDeprecation,
-				Computed:            true,
-				DeprecationMessage:  buildingBlockStatusDeprecation,
-			},
 			"succeeded":     schema.BoolAttribute{MarkdownDescription: buildingBlockSucceededDescription, Computed: true},
 			"health_status": computedString(buildingBlockHealthStatusDescription),
 			"action":        computedString(buildingBlockActionDescription),
