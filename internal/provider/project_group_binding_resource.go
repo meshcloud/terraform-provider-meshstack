@@ -106,6 +106,8 @@ func (r *projectGroupBindingResource) Schema(_ context.Context, _ resource.Schem
 			},
 
 			"expiry_date": projectBindingExpiryDateAttribute,
+
+			"status": groupBindingStatusResourceAttribute(),
 		},
 	}
 }
@@ -127,6 +129,7 @@ func (r *projectGroupBindingResource) Create(ctx context.Context, req resource.C
 		return
 	}
 
+	warnIfWaitingForApproval(&resp.Diagnostics, binding.Metadata.Name, binding.Status)
 	resp.Diagnostics.Append(resp.State.Set(ctx, binding)...)
 }
 
@@ -148,6 +151,7 @@ func (r *projectGroupBindingResource) Read(ctx context.Context, req resource.Rea
 		return
 	}
 
+	warnIfWaitingForApproval(&resp.Diagnostics, binding.Metadata.Name, binding.Status)
 	resp.Diagnostics.Append(resp.State.Set(ctx, binding)...)
 }
 

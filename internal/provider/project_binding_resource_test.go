@@ -12,11 +12,11 @@ import (
 )
 
 func TestAccProjectUserBinding(t *testing.T) {
-	testAccProjectBinding(t, "user", seededUsername, expectUserEnabled)
+	testAccProjectBinding(t, "user", seededUsername, expectUserEnabled, expectApprovalAssigned)
 }
 
 func TestAccProjectGroupBinding(t *testing.T) {
-	testAccProjectBinding(t, "group", seededGroupName)
+	testAccProjectBinding(t, "group", seededGroupName, expectApprovalAssigned)
 }
 
 func testAccProjectBinding(t *testing.T, subjectKind, subjectName string, subjectChecks ...subjectStateCheck) {
