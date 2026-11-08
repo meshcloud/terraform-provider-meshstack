@@ -44,14 +44,8 @@
             # Explicitly set GOROOT to Nix-installed Go
             export GOROOT="${pkgs.go_1_27}/share/go"
             
-            # Isolate Go environment from system
-            export GOPATH="$PWD/.nix-go"
-            export GOCACHE="$PWD/.nix-go/cache"
-            export GOMODCACHE="$PWD/.nix-go/mod"
-            export GOBIN="$PWD/.nix-go/bin"
-            export PATH="$GOBIN:$PATH"
-            
-            mkdir -p "$GOPATH" "$GOCACHE" "$GOMODCACHE" "$GOBIN"
+            # With auto, a newer go line in go.mod would download and run another Go than this one.
+            export GOTOOLCHAIN=local
           '';
         };
       });
