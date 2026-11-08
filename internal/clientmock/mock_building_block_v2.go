@@ -164,13 +164,16 @@ func (m MeshBuildingBlockV2Client) Create(_ context.Context, bb *client.MeshBuil
 		Uuid:             &id,
 		OwnedByWorkspace: ownedByWorkspace,
 	}
-	stored.Status = finishedRun(client.MeshBuildingBlockV2Status{
+	created := client.MeshBuildingBlockV2Status{
 		Lifecycle: client.MeshBuildingBlockV2Lifecycle{State: client.BuildingBlockLifecycleStateActive},
-	})
+	}
+	stored.Status = finishedRun(created)
 
 	m.Store.Set(id, stored)
 	// Return a fresh deep copy so SetFromClientDto cannot mutate the store via the returned pointer.
-	return m.withBasedOnDraftVersion(deepCopyBB(stored)), nil
+	answered := deepCopyBB(stored)
+	answered.Status = pendingRun(created)
+	return m.withBasedOnDraftVersion(answered), nil
 }
 
 func (m MeshBuildingBlockV2Client) Update(_ context.Context, bb *client.MeshBuildingBlockV2) (*client.MeshBuildingBlockV2, error) {
@@ -211,9 +214,8 @@ func (m MeshBuildingBlockV2Client) Update(_ context.Context, bb *client.MeshBuil
 
 	materializeNullRows(stored.Spec.Inputs, m.BbdVersionStore, stored.Spec.BuildingBlockDefinitionVersionRef.Uuid) // see Create
 
-	// The provider waits for a run that differs from the answer, so the answer keeps the run before.
 	answered := deepCopyBB(stored)
-	answered.Status = existing.Status
+	answered.Status = pendingRun(*existing.Status)
 	stored.Status = finishedRun(*existing.Status)
 
 	m.Store.Set(*stored.Metadata.Uuid, stored)
@@ -233,8 +235,14 @@ func (m MeshBuildingBlockV2Client) TriggerRun(_ context.Context, bbUuid string) 
 	stored := deepCopyBB(bb)
 	stored.Status = finishedRun(*bb.Status)
 	m.Store.Set(bbUuid, stored)
-	// The answer keeps the run before, see Update.
-	return m.withBasedOnDraftVersion(deepCopyBB(bb)), nil
+	answered := deepCopyBB(bb)
+	answered.Status = pendingRun(*bb.Status)
+	return m.withBasedOnDraftVersion(answered), nil
+}
+
+func pendingRun(status client.MeshBuildingBlockV2Status) *client.MeshBuildingBlockV2Status {
+	status.Action = client.BuildingBlockActionPending
+	return &status
 }
 
 func finishedRun(status client.MeshBuildingBlockV2Status) *client.MeshBuildingBlockV2Status {
