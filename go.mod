@@ -23,7 +23,7 @@ require (
 	github.com/hashicorp/terraform-plugin-testing v1.16.0
 	github.com/meshcloud/meshstack-cli v0.9.1-0.20261105100217-9bcaa5ff2713
 	github.com/stretchr/testify v1.12.1
-	github.com/zclconf/go-cty v1.19.0
+	github.com/zclconf/go-cty v1.20.0
 )
 
 require (
