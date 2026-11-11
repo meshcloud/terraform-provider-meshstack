@@ -142,4 +142,5 @@ resource "meshstack_landingzone" "test" {
     }
     mandatory_building_block_refs = [meshstack_building_block_definition.test.ref]
   }
+  depends_on = [meshstack_tag_definition.restricted_tag]
 }

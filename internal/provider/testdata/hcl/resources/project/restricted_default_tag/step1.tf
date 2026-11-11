@@ -43,4 +43,5 @@ resource "meshstack_project" "test" {
       (meshstack_tag_definition.tag.spec.key) = ["blue"]
     }
   }
+  depends_on = [meshstack_tag_definition.restricted_tag]
 }
