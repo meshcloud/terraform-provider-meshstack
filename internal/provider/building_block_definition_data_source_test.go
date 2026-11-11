@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"iter"
 	"net/http"
 	"testing"
 
@@ -128,8 +129,14 @@ type stubBuildingBlockDefinitionClient struct {
 	readErr error
 }
 
-func (s stubBuildingBlockDefinitionClient) List(context.Context, *string) ([]client.MeshBuildingBlockDefinition, error) {
-	return s.listed, nil
+func (s stubBuildingBlockDefinitionClient) List(context.Context, client.MeshBuildingBlockDefinitionFilter, ...client.ListOption) iter.Seq2[client.MeshBuildingBlockDefinition, error] {
+	return func(yield func(client.MeshBuildingBlockDefinition, error) bool) {
+		for _, definition := range s.listed {
+			if !yield(definition, nil) {
+				return
+			}
+		}
+	}
 }
 
 func (s stubBuildingBlockDefinitionClient) Read(context.Context, string) (*client.MeshBuildingBlockDefinition, error) {

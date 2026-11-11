@@ -41,7 +41,7 @@ func TestTenantUpgradeState(t *testing.T) {
 				}
 			}
 
-			if upgraded.Metadata.Uuid != "8f1c2d3e-4a5b-6c7d-8e9f-0a1b2c3d4e5f" {
+			if *upgraded.Metadata.Uuid != "8f1c2d3e-4a5b-6c7d-8e9f-0a1b2c3d4e5f" {
 				t.Errorf("metadata not carried over, got %+v", upgraded.Metadata)
 			}
 			if upgraded.Spec.PlatformRef.Uuid != "a2b7cf9c-8e2a-4b0d-9e6f-1c4b9de3a111" {

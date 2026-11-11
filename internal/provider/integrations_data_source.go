@@ -11,6 +11,7 @@ import (
 
 	"github.com/meshcloud/terraform-provider-meshstack/internal/types/generic"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/types/secret"
+	"github.com/meshcloud/terraform-provider-meshstack/internal/util/iter"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -198,7 +199,7 @@ func (d *integrationsDataSource) Configure(_ context.Context, req datasource.Con
 
 // Read refreshes the Terraform state with the latest data.
 func (d *integrationsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	integrationDtos, err := d.meshIntegrationClient.List(ctx)
+	integrationDtos, err := iter.Collect(d.meshIntegrationClient.List(ctx, client.NoFilter{}))
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read integrations, got error: %s", err))
 		return

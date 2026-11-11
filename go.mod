@@ -1,6 +1,6 @@
 module github.com/meshcloud/terraform-provider-meshstack
 
-go 1.27 // keep flake.nix's pinned Go (go_1_27 + GOROOT) in lock-step when bumping
+go 1.27.0 // keep flake.nix's pinned Go (go_1_27 + GOROOT) in lock-step when bumping
 
 tool (
 	github.com/golangci/golangci-lint/v2/cmd/golangci-lint
@@ -20,7 +20,7 @@ require (
 	github.com/hashicorp/terraform-plugin-log v0.11.0
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.40.1
 	github.com/hashicorp/terraform-plugin-testing v1.16.0
-	github.com/meshcloud/meshstack-cli v0.9.1-0.20261111115329-c03306e146f3
+	github.com/meshcloud/meshstack-cli v0.9.1-0.20261113081751-f74c92629375
 	github.com/stretchr/testify v1.12.1
 )
 
@@ -207,10 +207,10 @@ require (
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.4.3 // indirect
 	github.com/posener/complete v1.2.3 // indirect
-	github.com/prometheus/client_golang v1.21.1 // indirect
+	github.com/prometheus/client_golang v1.24.1 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
-	github.com/prometheus/common v0.63.0 // indirect
-	github.com/prometheus/procfs v0.16.0 // indirect
+	github.com/prometheus/common v0.70.1 // indirect
+	github.com/prometheus/procfs v0.21.1 // indirect
 	github.com/quasilyte/go-ruleguard v0.4.5 // indirect
 	github.com/quasilyte/go-ruleguard/dsl v0.3.23 // indirect
 	github.com/quasilyte/gogrep v0.5.0 // indirect

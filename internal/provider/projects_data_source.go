@@ -7,6 +7,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/meshcloud/meshstack-cli/client"
+
+	"github.com/meshcloud/terraform-provider-meshstack/internal/util/iter"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
@@ -110,7 +112,7 @@ func (d *projectsDataSource) Read(ctx context.Context, req datasource.ReadReques
 		return
 	}
 
-	projects, err := d.meshProjectClient.List(ctx, workspaceIdentifier, paymentMethodIdentifier)
+	projects, err := iter.Collect(d.meshProjectClient.List(ctx, client.MeshProjectFilter{WorkspaceIdentifier: workspaceIdentifier, PaymentIdentifier: paymentMethodIdentifier}))
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read projects", err.Error())
 		return

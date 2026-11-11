@@ -458,7 +458,7 @@ func customPlatformConfigSchema() schema.Attribute {
 }
 
 func (r *landingZoneResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	landingZone := client.MeshLandingZoneCreate{
+	landingZone := client.MeshLandingZone{
 		Metadata: client.MeshLandingZoneMetadata{},
 	}
 
@@ -470,7 +470,7 @@ func (r *landingZoneResource) Create(ctx context.Context, req resource.CreateReq
 		return
 	}
 
-	createdLandingZone, err := r.meshLandingZoneClient.Create(ctx, &landingZone)
+	createdLandingZone, err := r.meshLandingZoneClient.Create(ctx, landingZone)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Creating Landing Zone",
@@ -483,7 +483,7 @@ func (r *landingZoneResource) Create(ctx context.Context, req resource.CreateReq
 	// plus injected restricted-tag defaults), which would break plan/apply consistency.
 	createdLandingZone.Metadata.Tags = landingZone.Metadata.Tags
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, landingZoneModelFrom(createdLandingZone))...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, landingZoneModelFrom(&createdLandingZone))...)
 }
 
 func (r *landingZoneResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -524,7 +524,7 @@ func (r *landingZoneResource) Read(ctx context.Context, req resource.ReadRequest
 }
 
 func (r *landingZoneResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	landingZone := client.MeshLandingZoneCreate{
+	landingZone := client.MeshLandingZone{
 		Metadata: client.MeshLandingZoneMetadata{},
 	}
 
@@ -536,7 +536,7 @@ func (r *landingZoneResource) Update(ctx context.Context, req resource.UpdateReq
 		return
 	}
 
-	updatedLandingZone, err := r.meshLandingZoneClient.Update(ctx, landingZone.Metadata.Name, &landingZone)
+	updatedLandingZone, err := r.meshLandingZoneClient.Update(ctx, landingZone)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Updating Landing Zone",
@@ -548,7 +548,7 @@ func (r *landingZoneResource) Update(ctx context.Context, req resource.UpdateReq
 	// Keep the tags the user declared rather than the superset the API returns, mirroring Create.
 	updatedLandingZone.Metadata.Tags = landingZone.Metadata.Tags
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, landingZoneModelFrom(updatedLandingZone))...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, landingZoneModelFrom(&updatedLandingZone))...)
 }
 
 func (r *landingZoneResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {

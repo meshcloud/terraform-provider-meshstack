@@ -7,6 +7,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/meshcloud/meshstack-cli/client"
+
+	"github.com/meshcloud/terraform-provider-meshstack/internal/util/iter"
 )
 
 var (
@@ -82,7 +84,7 @@ func (d *landingZonesDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 }
 
 func (d *landingZonesDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var query client.MeshLandingZoneListQuery
+	var query client.MeshLandingZoneFilter
 
 	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("platform_uuid"), &query.PlatformUuid)...)
 	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("identifier"), &query.Identifier)...)
@@ -94,7 +96,7 @@ func (d *landingZonesDataSource) Read(ctx context.Context, req datasource.ReadRe
 		return
 	}
 
-	landingZones, err := d.meshLandingZoneClient.List(ctx, query)
+	landingZones, err := iter.Collect(d.meshLandingZoneClient.List(ctx, query))
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to list meshLandingZones", err.Error())
 		return

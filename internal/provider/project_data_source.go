@@ -75,7 +75,7 @@ func (d *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		return
 	}
 
-	project, err := d.meshProjectClient.Read(ctx, workspace, name)
+	project, err := d.meshProjectClient.Read(ctx, client.NewMeshProjectId(workspace, name))
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read project", err.Error())
 		return

@@ -9,6 +9,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/meshcloud/meshstack-cli/client"
+
+	"github.com/meshcloud/terraform-provider-meshstack/internal/util/iter"
 )
 
 var platformTypeCategories = []string{
@@ -84,7 +86,7 @@ func (d *platformTypesDataSource) Read(ctx context.Context, req datasource.ReadR
 		return
 	}
 
-	platformTypes, err := d.meshPlatformTypeClient.List(ctx, data.Category, data.LifecycleStatus)
+	platformTypes, err := iter.Collect(d.meshPlatformTypeClient.List(ctx, client.MeshPlatformTypeFilter{Category: data.Category, LifecycleStatus: data.LifecycleStatus}))
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read meshPlatformTypes", err.Error())
 		return

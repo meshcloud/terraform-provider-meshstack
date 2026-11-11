@@ -6,6 +6,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/meshcloud/meshstack-cli/client"
+
+	"github.com/meshcloud/terraform-provider-meshstack/internal/util/iter"
 )
 
 type projectBindingModel struct {
@@ -26,10 +28,7 @@ func (m projectBindingModel) projectBinding() client.MeshProjectBinding {
 	return m.MeshProjectBinding
 }
 
-type projectBindingClient[B any] interface {
-	Read(ctx context.Context, name string) (*B, error)
-	List(ctx context.Context, filter client.MeshProjectBindingListFilter) ([]B, error)
-}
+type projectBindingClient[B any] = client.MeshObjectClient[B, client.MeshProjectBindingFilter]
 
 func newProjectBindingDataSource[B any, M projectBindingView](
 	subject, subjectNameDescription string,
@@ -59,10 +58,10 @@ func newProjectBindingDataSource[B any, M projectBindingView](
 			bindings := selectClient(c)
 			// The API filters by project only, so subject and role are matched on the listed bindings.
 			list := func(ctx context.Context, filter bindingFilter) ([]B, error) {
-				return bindings.List(ctx, client.MeshProjectBindingListFilter{
+				return iter.Collect(bindings.List(ctx, client.MeshProjectBindingFilter{
 					WorkspaceIdentifier: filter["target_ref.owned_by_workspace"],
 					ProjectIdentifier:   filter["target_ref.name"],
-				})
+				}))
 			}
 			return newBindingClient(bindings.Read, list, model)
 		},

@@ -3,6 +3,7 @@ package clientmock
 import (
 	"context"
 	"fmt"
+	"iter"
 
 	"github.com/meshcloud/meshstack-cli/client"
 )
@@ -19,7 +20,7 @@ func (m MeshLandingZoneClient) Read(_ context.Context, name string) (*client.Mes
 // List applies only the plain attribute filters from the query; it does not simulate marketplace
 // visibility or permissions. The mock stores the landing zone's platform as a uuid ref, so
 // platform_uuid filters against that ref uuid.
-func (m MeshLandingZoneClient) List(_ context.Context, query client.MeshLandingZoneListQuery) ([]client.MeshLandingZone, error) {
+func (m MeshLandingZoneClient) List(_ context.Context, query client.MeshLandingZoneFilter, _ ...client.ListOption) iter.Seq2[client.MeshLandingZone, error] {
 	var result []client.MeshLandingZone
 	for _, landingZone := range m.Store.Values() {
 		if query.PlatformUuid != nil && landingZone.Spec.PlatformRef.Uuid != *query.PlatformUuid {
@@ -39,10 +40,10 @@ func (m MeshLandingZoneClient) List(_ context.Context, query client.MeshLandingZ
 		}
 		result = append(result, *landingZone)
 	}
-	return result, nil
+	return listOf(result, nil)
 }
 
-func (m MeshLandingZoneClient) Create(_ context.Context, landingZone *client.MeshLandingZoneCreate) (*client.MeshLandingZone, error) {
+func (m MeshLandingZoneClient) Create(_ context.Context, landingZone client.MeshLandingZone) (client.MeshLandingZone, error) {
 	created := &client.MeshLandingZone{
 		Metadata: landingZone.Metadata,
 		Spec:     landingZone.Spec,
@@ -52,19 +53,20 @@ func (m MeshLandingZoneClient) Create(_ context.Context, landingZone *client.Mes
 		},
 	}
 	m.Store.Set(landingZone.Metadata.Name, created)
-	return created, nil
+	return *created, nil
 }
 
-func (m MeshLandingZoneClient) Update(_ context.Context, name string, landingZone *client.MeshLandingZoneCreate) (*client.MeshLandingZone, error) {
+func (m MeshLandingZoneClient) Update(_ context.Context, landingZone client.MeshLandingZone) (client.MeshLandingZone, error) {
+	name := landingZone.Metadata.Name
 	existing, _ := m.Store.Get(name)
 	if existing == nil {
-		return nil, fmt.Errorf("landing zone not found: %s", name)
+		return client.MeshLandingZone{}, fmt.Errorf("landing zone not found: %s", name)
 	}
 
 	existing.Metadata = landingZone.Metadata
 	existing.Spec = landingZone.Spec
 	existing.Status.Restricted = landingZone.Spec.Restricted
-	return existing, nil
+	return *existing, nil
 }
 
 func (m MeshLandingZoneClient) Delete(_ context.Context, name string) error {

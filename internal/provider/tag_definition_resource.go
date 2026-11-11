@@ -335,7 +335,7 @@ func (r *tagDefinitionResource) Create(ctx context.Context, req resource.CreateR
 		return
 	}
 
-	tagDefinition, err := r.meshTagDefinitionClient.Create(ctx, &create)
+	tagDefinition, err := r.meshTagDefinitionClient.Create(ctx, create)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating tag definition",
@@ -473,7 +473,7 @@ func (r *tagDefinitionResource) Update(ctx context.Context, req resource.UpdateR
 		return
 	}
 
-	tagDefinition, err := r.meshTagDefinitionClient.Update(ctx, &update)
+	tagDefinition, err := r.meshTagDefinitionClient.Update(ctx, update)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error updating tag definition",

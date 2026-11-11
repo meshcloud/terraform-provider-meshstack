@@ -9,10 +9,12 @@ import (
 )
 
 type MeshApiKeyClient struct {
+	client.MeshApiKeyClient
+
 	Store *Store[client.MeshApiKey]
 }
 
-func (m MeshApiKeyClient) Create(_ context.Context, apiKey *client.MeshApiKey) (*client.MeshApiKey, error) {
+func (m MeshApiKeyClient) Create(_ context.Context, apiKey client.MeshApiKey) (client.MeshApiKey, error) {
 	apiKeyUuid := uuid.NewString()
 	stored := &client.MeshApiKey{
 		Metadata: client.MeshApiKeyMetadata{
@@ -26,7 +28,7 @@ func (m MeshApiKeyClient) Create(_ context.Context, apiKey *client.MeshApiKey) (
 
 	created := *stored
 	created.Status = &client.MeshApiKeyStatus{ClientId: apiKeyUuid, ClientSecret: new("secret-" + uuid.NewString())}
-	return &created, nil
+	return created, nil
 }
 
 func (m MeshApiKeyClient) Read(_ context.Context, uuid string) (*client.MeshApiKey, error) {
@@ -38,10 +40,11 @@ func (m MeshApiKeyClient) Read(_ context.Context, uuid string) (*client.MeshApiK
 	return nil, nil
 }
 
-func (m MeshApiKeyClient) Update(_ context.Context, uuid string, apiKey *client.MeshApiKey) (*client.MeshApiKey, error) {
+func (m MeshApiKeyClient) Update(_ context.Context, apiKey client.MeshApiKey) (client.MeshApiKey, error) {
+	uuid := *apiKey.Metadata.Uuid
 	existing, ok := m.Store.Get(uuid)
 	if !ok {
-		return nil, fmt.Errorf("api key not found: %s", uuid)
+		return client.MeshApiKey{}, fmt.Errorf("api key not found: %s", uuid)
 	}
 
 	expiresAtChanged := (existing.Spec.ExpiresAt == nil) != (apiKey.Spec.ExpiresAt == nil) ||
@@ -57,7 +60,7 @@ func (m MeshApiKeyClient) Update(_ context.Context, uuid string, apiKey *client.
 		result.Status.ClientSecret = &clientSecret
 	}
 
-	return &result, nil
+	return result, nil
 }
 
 func (m MeshApiKeyClient) Delete(_ context.Context, uuid string) error {

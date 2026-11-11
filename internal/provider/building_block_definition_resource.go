@@ -73,7 +73,7 @@ func (r *buildingBlockDefinitionResource) Create(ctx context.Context, req resour
 	// restricted-tag defaults), which would break plan/apply consistency. SetFromClientDto overwrites
 	// Metadata wholesale, so capture the planned tags first and restore them afterwards.
 	plannedTags := plan.Metadata.Tags
-	plan.SetFromClientDto(createdDto, &resp.Diagnostics)
+	plan.SetFromClientDto(&createdDto, &resp.Diagnostics)
 	plan.Metadata.Tags = plannedTags
 	resp.Diagnostics.Append(generic.SetAttributeTo(ctx, &resp.State, path.Root("metadata"), plan.Metadata, buildingBlockDefinitionConverterOptions()...)...)
 	resp.Diagnostics.Append(generic.SetAttributeTo(ctx, &resp.State, path.Root("spec"), plan.Spec, buildingBlockDefinitionConverterOptions()...)...)
@@ -82,7 +82,7 @@ func (r *buildingBlockDefinitionResource) Create(ctx context.Context, req resour
 	}
 
 	bbdUuid := *createdDto.Metadata.Uuid
-	versions, err := r.buildingBlockDefinitionVersionClient.List(ctx, bbdUuid)
+	versions, err := listVersions(ctx, r.buildingBlockDefinitionVersionClient, bbdUuid)
 	if err != nil {
 		resp.Diagnostics.AddError("Error listing versions after creating definition", err.Error())
 		return
@@ -104,19 +104,22 @@ func (r *buildingBlockDefinitionResource) Create(ctx context.Context, req resour
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	createdVersionDto, err := r.buildingBlockDefinitionVersionClient.Update(ctx, versionUuid, createdDto.Metadata.OwnedByWorkspace, createVersionSpecDto)
+	createdVersionDto, err := r.buildingBlockDefinitionVersionClient.Update(ctx, client.MeshBuildingBlockDefinitionVersion{
+		Metadata: client.MeshBuildingBlockDefinitionVersionMetadata{Uuid: versionUuid, OwnedByWorkspace: createdDto.Metadata.OwnedByWorkspace},
+		Spec:     createVersionSpecDto,
+	})
 	if err != nil {
 		resp.Diagnostics.AddError("Error updating initial version", fmt.Sprintf(
 			"Building block '%s', uuid=%s was just created, and the initial version '%s' failed to update with given version_spec configuration. "+
 				"Most likely schema validation is insufficient and the API received an invalid or incomplete JSON payload.\n"+
 				"Error: %s",
-			createdDto.Spec.DisplayName, bbdUuid, versionUuid, err.Error(),
+			createdDto.Spec.DisplayName, bbdUuid, *versionUuid, err.Error(),
 		))
 		return
 	}
 
 	identities := r.readWorkloadIdentities(ctx, bbdUuid, &resp.Diagnostics)
-	plan.SetFromVersionClientDtos(&resp.Diagnostics, generic.KnownValue(plan.VersionSpec.Draft), bbdUuid, identities, *createdVersionDto)
+	plan.SetFromVersionClientDtos(&resp.Diagnostics, generic.KnownValue(plan.VersionSpec.Draft), bbdUuid, identities, createdVersionDto)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -165,7 +168,8 @@ func (r *buildingBlockDefinitionResource) writePolicies(
 		// approval gates and without a schedule in a previous step.
 		return nil
 	}
-	updatedDto, err := r.buildingBlockDefinitionClient.Update(ctx, bbdUuid, client.MeshBuildingBlockDefinition{
+	metadata.Uuid = &bbdUuid
+	updatedDto, err := r.buildingBlockDefinitionClient.Update(ctx, client.MeshBuildingBlockDefinition{
 		Metadata: metadata,
 		Spec:     plannedSpec,
 	})
@@ -178,7 +182,7 @@ func (r *buildingBlockDefinitionResource) writePolicies(
 		))
 		return nil
 	}
-	return updatedDto
+	return &updatedDto
 }
 
 func implementationType(implementation client.MeshBuildingBlockDefinitionImplementation, diags *diag.Diagnostics) client.MeshBuildingBlockImplementationType {
@@ -233,7 +237,7 @@ func (r *buildingBlockDefinitionResource) Read(ctx context.Context, req resource
 		return
 	}
 
-	versionDtos, err := r.buildingBlockDefinitionVersionClient.List(ctx, bbdUuid)
+	versionDtos, err := listVersions(ctx, r.buildingBlockDefinitionVersionClient, bbdUuid)
 	if err != nil {
 		resp.Diagnostics.AddError("Failed to list versions for definition", fmt.Sprintf("Cannot list version for BBD %s: %s", bbdUuid, err.Error()))
 		return
@@ -905,8 +909,10 @@ func (r *buildingBlockDefinitionResource) Update(ctx context.Context, req resour
 		plan.Spec = plannedSpec.WithNeutralPolicies()
 	}
 
-	updatedDto, err := r.buildingBlockDefinitionClient.Update(ctx, bbdUuid, client.MeshBuildingBlockDefinition{
-		Metadata: plan.Metadata,
+	updatedMetadata := plan.Metadata
+	updatedMetadata.Uuid = &bbdUuid
+	updatedDto, err := r.buildingBlockDefinitionClient.Update(ctx, client.MeshBuildingBlockDefinition{
+		Metadata: updatedMetadata,
 		Spec:     plan.Spec,
 	})
 	if err != nil {
@@ -916,7 +922,7 @@ func (r *buildingBlockDefinitionResource) Update(ctx context.Context, req resour
 
 	// Keep the tags the user declared rather than the superset the API returns, mirroring Create.
 	plannedTags := plan.Metadata.Tags
-	plan.SetFromClientDto(updatedDto, &resp.Diagnostics)
+	plan.SetFromClientDto(&updatedDto, &resp.Diagnostics)
 	plan.Metadata.Tags = plannedTags
 	resp.Diagnostics.Append(generic.SetAttributeTo(ctx, &resp.State, path.Root("metadata"), plan.Metadata, buildingBlockDefinitionConverterOptions()...)...)
 	resp.Diagnostics.Append(generic.SetAttributeTo(ctx, &resp.State, path.Root("spec"), plan.Spec, buildingBlockDefinitionConverterOptions()...)...)
@@ -926,12 +932,15 @@ func (r *buildingBlockDefinitionResource) Update(ctx context.Context, req resour
 
 	// Handle version_spec update logic
 
-	var updatedVersionDto *client.MeshBuildingBlockDefinitionVersion
+	var updatedVersionDto client.MeshBuildingBlockDefinitionVersion
 	switch {
 	case !state.VersionSpec.Draft && plan.VersionSpec.Draft:
 		// changing draft=false->true means creating a new draft version from the existing one with increased version number
 		versionSpecDto.VersionNumber = new(state.VersionLatest.Number.Get() + 1)
-		updatedVersionDto, err = r.buildingBlockDefinitionVersionClient.Create(ctx, plan.Metadata.OwnedByWorkspace, versionSpecDto)
+		updatedVersionDto, err = r.buildingBlockDefinitionVersionClient.Create(ctx, client.MeshBuildingBlockDefinitionVersion{
+			Metadata: client.MeshBuildingBlockDefinitionVersionMetadata{OwnedByWorkspace: plan.Metadata.OwnedByWorkspace},
+			Spec:     versionSpecDto,
+		})
 		if err != nil {
 			resp.Diagnostics.AddError("Error creating new version", fmt.Sprintf(
 				"Failed to create new version for building block '%s', ID=%s:\n%s",
@@ -946,7 +955,10 @@ func (r *buildingBlockDefinitionResource) Update(ctx context.Context, req resour
 	default:
 		// State is in draft=true, so we update the version_spec (even if content hashes are equal)
 		latestVersionUuid := *state.VersionLatest.Uuid.Value
-		updatedVersionDto, err = r.buildingBlockDefinitionVersionClient.Update(ctx, latestVersionUuid, plan.Metadata.OwnedByWorkspace, versionSpecDto)
+		updatedVersionDto, err = r.buildingBlockDefinitionVersionClient.Update(ctx, client.MeshBuildingBlockDefinitionVersion{
+			Metadata: client.MeshBuildingBlockDefinitionVersionMetadata{Uuid: &latestVersionUuid, OwnedByWorkspace: plan.Metadata.OwnedByWorkspace},
+			Spec:     versionSpecDto,
+		})
 		if err != nil {
 			resp.Diagnostics.AddError("Error updating version", fmt.Sprintf(
 				"Failed to update version '%s' for building block '%s', ID=%s:\n%s",
@@ -957,7 +969,7 @@ func (r *buildingBlockDefinitionResource) Update(ctx context.Context, req resour
 	}
 
 	// Re-read all versions to update version refs
-	allVersionDtos, err := r.buildingBlockDefinitionVersionClient.List(ctx, bbdUuid)
+	allVersionDtos, err := listVersions(ctx, r.buildingBlockDefinitionVersionClient, bbdUuid)
 	if err != nil {
 		resp.Diagnostics.AddError("Error listing versions after update", err.Error())
 		return
@@ -981,7 +993,7 @@ func (r *buildingBlockDefinitionResource) Update(ctx context.Context, req resour
 		}
 	}
 
-	if updatedVersionDto != nil {
+	if updatedVersionDto.Metadata.Uuid != nil {
 		updatedVersionSpecContentHash := calculateBuildingBlockDefinitionVersionContentHash(updatedVersionDto.Spec, &resp.Diagnostics)
 		if resp.Diagnostics.HasError() {
 			return

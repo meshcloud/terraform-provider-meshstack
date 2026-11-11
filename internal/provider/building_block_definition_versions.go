@@ -13,10 +13,17 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
+	"github.com/meshcloud/meshstack-cli/client"
+
+	"github.com/meshcloud/terraform-provider-meshstack/internal/util/iter"
 )
 
 const versionsKeyDescription = "Keyed by `v<number>`, such as `versions[\"v2\"]`. " +
 	"A `for` expression visits the keys in lexical order, so `v10` comes before `v2`."
+
+func listVersions(ctx context.Context, versionClient client.MeshBuildingBlockDefinitionVersionClient, definitionUuid string) ([]client.MeshBuildingBlockDefinitionVersion, error) {
+	return iter.Collect(versionClient.List(ctx, client.MeshBuildingBlockDefinitionVersionFilter{BuildingBlockDefinitionUuid: definitionUuid}))
+}
 
 func versionKey(number int64) string {
 	return fmt.Sprintf("v%d", number)

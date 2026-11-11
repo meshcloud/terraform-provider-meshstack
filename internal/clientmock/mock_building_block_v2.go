@@ -1,14 +1,20 @@
 package clientmock
 
 import (
+	"bytes"
 	"context"
 	"encoding/json/v2"
 	"fmt"
+	"io"
+	"iter"
 	"slices"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/meshcloud/meshstack-cli/client"
+	"github.com/meshcloud/meshstack-cli/client/http"
 	clientTypes "github.com/meshcloud/meshstack-cli/client/types"
+	"github.com/meshcloud/meshstack-cli/client/types/hal"
 )
 
 // wireCompatibility repeats what internal/provider marshals with, so that the round-trip below
@@ -77,20 +83,22 @@ func (m MeshBuildingBlockV2Client) withBasedOnDraftVersion(bb *client.MeshBuildi
 	return bb
 }
 
+func (m MeshBuildingBlockV2Client) withLinks(bb *client.MeshBuildingBlockV2) *client.MeshBuildingBlockV2 {
+	bb.Links = hal.Links{
+		"forcePurge": hal.NewLink(*bb.Metadata.Uuid, m.purge),
+		"triggerRun": hal.NewLink(*bb.Metadata.Uuid, m.triggerRun),
+	}
+	return bb
+}
+
 func (m MeshBuildingBlockV2Client) Read(_ context.Context, bbUuid string) (*client.MeshBuildingBlockV2, error) {
 	if bb, ok := m.Store.Get(bbUuid); ok {
-		return m.withBasedOnDraftVersion(deepCopyBB(bb)), nil
+		return m.withLinks(m.withBasedOnDraftVersion(deepCopyBB(bb))), nil
 	}
 	return nil, nil
 }
 
-func (m MeshBuildingBlockV2Client) ReadFunc(bbUuid string) func(ctx context.Context) (*client.MeshBuildingBlockV2, error) {
-	return func(ctx context.Context) (*client.MeshBuildingBlockV2, error) {
-		return m.Read(ctx, bbUuid)
-	}
-}
-
-func (m MeshBuildingBlockV2Client) List(_ context.Context, filter client.MeshBuildingBlockV2ListFilter) ([]client.MeshBuildingBlockV2, error) {
+func (m MeshBuildingBlockV2Client) List(_ context.Context, filter client.MeshBuildingBlockV2Filter, _ ...client.ListOption) iter.Seq2[client.MeshBuildingBlockV2, error] {
 	result := make([]client.MeshBuildingBlockV2, 0)
 	// Iterate in sorted-uuid order for deterministic test output.
 	for _, key := range m.Store.SortedKeys() {
@@ -101,17 +109,17 @@ func (m MeshBuildingBlockV2Client) List(_ context.Context, filter client.MeshBui
 		if !mockBuildingBlockMatchesFilter(bb, filter) {
 			continue
 		}
-		result = append(result, *m.withBasedOnDraftVersion(deepCopyBB(bb)))
+		result = append(result, *m.withLinks(m.withBasedOnDraftVersion(deepCopyBB(bb))))
 	}
-	return result, nil
+	return listOf(result, nil)
 }
 
-// mockBuildingBlockMatchesFilter applies the subset of MeshBuildingBlockV2ListFilter fields that
+// mockBuildingBlockMatchesFilter applies the subset of MeshBuildingBlockV2Filter fields that
 // are derivable from a stored building block. Fields the mock store doesn't carry — DefinitionUuid
 // and VersionNumber (the store only holds the definition *version* uuid, not the definition uuid or
 // the version number) — are accepted but not applied, so tests should assert only on the supported
 // filters. The real backend applies all of them.
-func mockBuildingBlockMatchesFilter(bb *client.MeshBuildingBlockV2, filter client.MeshBuildingBlockV2ListFilter) bool {
+func mockBuildingBlockMatchesFilter(bb *client.MeshBuildingBlockV2, filter client.MeshBuildingBlockV2Filter) bool {
 	if filter.WorkspaceIdentifier != nil && bb.Metadata.OwnedByWorkspace != *filter.WorkspaceIdentifier {
 		return false
 	}
@@ -136,7 +144,7 @@ func mockBuildingBlockMatchesFilter(bb *client.MeshBuildingBlockV2, filter clien
 	return true
 }
 
-func (m MeshBuildingBlockV2Client) Create(_ context.Context, bb *client.MeshBuildingBlockV2) (*client.MeshBuildingBlockV2, error) {
+func (m MeshBuildingBlockV2Client) Create(_ context.Context, bb client.MeshBuildingBlockV2) (client.MeshBuildingBlockV2, error) {
 	id := uuid.NewString()
 
 	ownedByWorkspace := ""
@@ -145,7 +153,7 @@ func (m MeshBuildingBlockV2Client) Create(_ context.Context, bb *client.MeshBuil
 	}
 
 	// Deep-copy the incoming DTO before any mutation so we never modify the caller's data.
-	stored := deepCopyBB(bb)
+	stored := deepCopyBB(&bb)
 
 	for _, input := range stored.Spec.Inputs {
 		if input.AssignmentType == "" {
@@ -165,20 +173,20 @@ func (m MeshBuildingBlockV2Client) Create(_ context.Context, bb *client.MeshBuil
 		OwnedByWorkspace: ownedByWorkspace,
 	}
 	stored.Status = finishedRun(client.MeshBuildingBlockV2Status{
-		Lifecycle: client.MeshBuildingBlockV2Lifecycle{State: client.BuildingBlockLifecycleStateActive},
+		Lifecycle: client.MeshLifecycle{State: client.MeshLifecycleStateActive},
 	})
 
 	m.Store.Set(id, stored)
 	// Return a fresh deep copy so SetFromClientDto cannot mutate the store via the returned pointer.
-	return m.withBasedOnDraftVersion(deepCopyBB(stored)), nil
+	return *m.withLinks(m.withBasedOnDraftVersion(deepCopyBB(stored))), nil
 }
 
-func (m MeshBuildingBlockV2Client) Update(_ context.Context, bb *client.MeshBuildingBlockV2) (*client.MeshBuildingBlockV2, error) {
+func (m MeshBuildingBlockV2Client) Update(_ context.Context, bb client.MeshBuildingBlockV2) (client.MeshBuildingBlockV2, error) {
 	if bb.Metadata.Uuid == nil {
-		return nil, fmt.Errorf("cannot update building block without UUID")
+		return client.MeshBuildingBlockV2{}, fmt.Errorf("cannot update building block without UUID")
 	}
 
-	stored := deepCopyBB(bb) // deep-copy in (see Create)
+	stored := deepCopyBB(&bb) // deep-copy in (see Create)
 
 	for _, input := range stored.Spec.Inputs {
 		if input.AssignmentType == "" {
@@ -191,7 +199,7 @@ func (m MeshBuildingBlockV2Client) Update(_ context.Context, bb *client.MeshBuil
 	// inputs let the shared walker reach each addressable secret directly.
 	prior, ok := m.Store.Get(*stored.Metadata.Uuid)
 	if !ok {
-		return nil, fmt.Errorf("building block %q not found", *stored.Metadata.Uuid)
+		return client.MeshBuildingBlockV2{}, fmt.Errorf("building block %q not found", *stored.Metadata.Uuid)
 	}
 	existing := deepCopyBB(prior)
 
@@ -217,15 +225,20 @@ func (m MeshBuildingBlockV2Client) Update(_ context.Context, bb *client.MeshBuil
 	stored.Status = finishedRun(*existing.Status)
 
 	m.Store.Set(*stored.Metadata.Uuid, stored)
-	return m.withBasedOnDraftVersion(answered), nil
+	return *m.withLinks(m.withBasedOnDraftVersion(answered)), nil
 }
 
-func (m MeshBuildingBlockV2Client) Delete(_ context.Context, bbUuid string, purge bool) error {
+func (m MeshBuildingBlockV2Client) Delete(_ context.Context, bbUuid string) error {
 	m.Store.Delete(bbUuid)
 	return nil
 }
 
-func (m MeshBuildingBlockV2Client) TriggerRun(_ context.Context, bbUuid string) (*client.MeshBuildingBlockV2, error) {
+func (m MeshBuildingBlockV2Client) purge(_ context.Context, _, bbUuid string, _ ...http.RequestOption) (io.ReadCloser, error) {
+	m.Store.Delete(bbUuid)
+	return io.NopCloser(strings.NewReader("")), nil
+}
+
+func (m MeshBuildingBlockV2Client) triggerRun(_ context.Context, _, bbUuid string, _ ...http.RequestOption) (io.ReadCloser, error) {
 	bb, ok := m.Store.Get(bbUuid)
 	if !ok {
 		return nil, fmt.Errorf("building block %q not found", bbUuid)
@@ -234,7 +247,8 @@ func (m MeshBuildingBlockV2Client) TriggerRun(_ context.Context, bbUuid string) 
 	stored.Status = finishedRun(*bb.Status)
 	m.Store.Set(bbUuid, stored)
 	// The answer keeps the run before, see Update.
-	return m.withBasedOnDraftVersion(deepCopyBB(bb)), nil
+	data, err := json.Marshal(m.withBasedOnDraftVersion(deepCopyBB(bb)), wireCompatibility)
+	return io.NopCloser(bytes.NewReader(data)), err
 }
 
 func finishedRun(status client.MeshBuildingBlockV2Status) *client.MeshBuildingBlockV2Status {

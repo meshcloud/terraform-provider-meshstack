@@ -9,6 +9,7 @@ import (
 	"github.com/meshcloud/meshstack-cli/client"
 
 	"github.com/meshcloud/terraform-provider-meshstack/internal/types/generic"
+	"github.com/meshcloud/terraform-provider-meshstack/internal/util/iter"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
@@ -88,13 +89,13 @@ func (d *serviceInstancesDataSource) Read(ctx context.Context, req datasource.Re
 		return
 	}
 
-	serviceInstances, err := d.meshServiceInstanceClient.List(ctx, client.MeshServiceInstanceFilter{
+	serviceInstances, err := iter.Collect(d.meshServiceInstanceClient.List(ctx, client.MeshServiceInstanceFilter{
 		WorkspaceIdentifier:   workspaceIdentifier,
 		ProjectIdentifier:     projectIdentifier,
 		MarketplaceIdentifier: marketplaceIdentifier,
 		ServiceIdentifier:     serviceIdentifier,
 		PlanIdentifier:        planIdentifier,
-	})
+	}))
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read service instances", err.Error())
 		return

@@ -18,6 +18,7 @@ import (
 	"github.com/meshcloud/meshstack-cli/client"
 
 	"github.com/meshcloud/terraform-provider-meshstack/internal/types/generic"
+	"github.com/meshcloud/terraform-provider-meshstack/internal/util/iter"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/util/poll"
 )
 
@@ -62,12 +63,12 @@ func (r *tenantResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	createRequest := client.MeshTenantCreate{
-		Metadata: client.MeshTenantCreateMetadata{
+	createRequest := client.MeshTenant{
+		Metadata: client.MeshTenantMetadata{
 			OwnedByProject:   plan.Metadata.OwnedByProject,
 			OwnedByWorkspace: plan.Metadata.OwnedByWorkspace,
 		},
-		Spec: client.MeshTenantCreateSpec{
+		Spec: client.MeshTenantSpec{
 			PlatformRef:      plan.Spec.PlatformRef,
 			PlatformTenantId: plan.Spec.PlatformTenantId,
 			LandingZoneRef:   plan.Spec.LandingZoneRef,
@@ -75,14 +76,17 @@ func (r *tenantResource) Create(ctx context.Context, req resource.CreateRequest,
 		},
 	}
 
-	tenant, err := r.meshTenantClient.Create(ctx, &createRequest)
+	created, err := r.meshTenantClient.Create(ctx, createRequest)
 	if err != nil {
 		resp.Diagnostics.AddError("Error creating tenant", fmt.Sprintf("Could not create tenant, unexpected error: %s", err.Error()))
 		return
 	}
 
+	tenant := &created
 	if plan.WaitForCompletion {
-		err := poll.AtMostFor(30*time.Minute, r.meshTenantClient.ReadFunc(tenant.Metadata.Uuid), poll.WithLastResultTo(&tenant)).
+		err := poll.AtMostFor(30*time.Minute, func(ctx context.Context) (*client.MeshTenant, error) {
+			return r.meshTenantClient.Read(ctx, *created.Metadata.Uuid)
+		}, poll.WithLastResultTo(&tenant)).
 			Until(ctx, (*client.MeshTenant).CreationSuccessful)
 		if err != nil {
 			resp.Diagnostics.AddError("Failed to await tenant creation", err.Error())
@@ -102,9 +106,9 @@ func (r *tenantResource) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
-	tenant, err := r.meshTenantClient.Read(ctx, state.Metadata.Uuid)
+	tenant, err := r.meshTenantClient.Read(ctx, *state.Metadata.Uuid)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading tenant", fmt.Sprintf("Could not read tenant with uuid %s, unexpected error: %s", state.Metadata.Uuid, err.Error()))
+		resp.Diagnostics.AddError("Error reading tenant", fmt.Sprintf("Could not read tenant with uuid %s, unexpected error: %s", *state.Metadata.Uuid, err.Error()))
 		return
 	}
 
@@ -157,7 +161,7 @@ func (r *tenantResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		return
 	}
 
-	uuid := state.Metadata.Uuid
+	uuid := *state.Metadata.Uuid
 	err := r.meshTenantClient.Delete(ctx, uuid)
 	if err != nil {
 		resp.Diagnostics.AddError("Error deleting tenant", fmt.Sprintf("Could not delete tenant with uuid %s, unexpected error: %s", uuid, err.Error()))
@@ -166,7 +170,9 @@ func (r *tenantResource) Delete(ctx context.Context, req resource.DeleteRequest,
 
 	if state.WaitForCompletion {
 		var lastSeen *client.MeshTenant
-		if err := poll.AtMostFor(30*time.Minute, r.meshTenantClient.ReadFunc(uuid), poll.WithLastResultTo(&lastSeen)).
+		if err := poll.AtMostFor(30*time.Minute, func(ctx context.Context) (*client.MeshTenant, error) {
+			return r.meshTenantClient.Read(ctx, uuid)
+		}, poll.WithLastResultTo(&lastSeen)).
 			Until(ctx, (*client.MeshTenant).DeletionSuccessful); err != nil {
 			resp.Diagnostics.AddError("Failed to await tenant deletion", fmt.Sprintf(
 				"Could not confirm deletion of tenant %s: %s. Last observed state: %s. "+
@@ -259,11 +265,11 @@ func (r *tenantResource) upgradeFromV0(ctx context.Context, req resource.Upgrade
 // listSingleTenant resolves the single active (not soft-deleted) tenant for a workspace/project/platform
 // composite, erroring if zero or more than one match.
 func (r *tenantResource) listSingleTenant(ctx context.Context, workspace, project, platform string) (*client.MeshTenant, error) {
-	tenants, err := r.meshTenantClient.List(ctx, client.MeshTenantQuery{
+	tenants, err := iter.Collect(r.meshTenantClient.List(ctx, client.MeshTenantFilter{
 		Workspace: workspace,
 		Project:   new(project),
 		Platform:  new(platform),
-	})
+	}))
 	if err != nil {
 		return nil, err
 	}

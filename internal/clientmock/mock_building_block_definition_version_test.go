@@ -35,11 +35,17 @@ func TestMockBuildingBlockDefinitionVersionRejectsSecretHashOnRunnerChange(t *te
 		}
 	}
 
-	create := func(t *testing.T) (versionClient meshBuildingBlockDefinitionVersionClient, uuid, hash string) {
+	version := func(uuid *string, runner string, sshPrivateKey clientTypes.Secret) client.MeshBuildingBlockDefinitionVersion {
+		return client.MeshBuildingBlockDefinitionVersion{
+			Metadata: client.MeshBuildingBlockDefinitionVersionMetadata{Uuid: uuid, OwnedByWorkspace: "my-workspace"},
+			Spec:     versionSpec(runner, sshPrivateKey),
+		}
+	}
+
+	create := func(t *testing.T) (versionClient meshBuildingBlockDefinitionVersionClient, uuid *string, hash string) {
 		t.Helper()
 		versionClient = meshBuildingBlockDefinitionVersionClient{Store: NewStore[client.MeshBuildingBlockDefinitionVersion]()}
-		created, err := versionClient.Create(context.Background(), "my-workspace",
-			versionSpec(runnerUuid, clientTypes.Secret{Plaintext: new("private-key")}))
+		created, err := versionClient.Create(context.Background(), version(nil, runnerUuid, clientTypes.Secret{Plaintext: new("private-key")}))
 		require.NoError(t, err)
 		return versionClient, created.Metadata.Uuid, *created.Spec.Implementation.Terraform.SSHPrivateKey.Hash
 	}
@@ -47,8 +53,7 @@ func TestMockBuildingBlockDefinitionVersionRejectsSecretHashOnRunnerChange(t *te
 	t.Run("hash kept on the same runner", func(t *testing.T) {
 		versionClient, uuid, hash := create(t)
 
-		updated, err := versionClient.Update(context.Background(), uuid, "my-workspace",
-			versionSpec(runnerUuid, clientTypes.Secret{Hash: new(hash)}))
+		updated, err := versionClient.Update(context.Background(), version(uuid, runnerUuid, clientTypes.Secret{Hash: new(hash)}))
 
 		require.NoError(t, err)
 		assert.Equal(t, hash, *updated.Spec.Implementation.Terraform.SSHPrivateKey.Hash)
@@ -57,8 +62,7 @@ func TestMockBuildingBlockDefinitionVersionRejectsSecretHashOnRunnerChange(t *te
 	t.Run("hash rejected on another runner", func(t *testing.T) {
 		versionClient, uuid, hash := create(t)
 
-		_, err := versionClient.Update(context.Background(), uuid, "my-workspace",
-			versionSpec(otherRunnerUuid, clientTypes.Secret{Hash: new(hash)}))
+		_, err := versionClient.Update(context.Background(), version(uuid, otherRunnerUuid, clientTypes.Secret{Hash: new(hash)}))
 
 		assert.ErrorContains(t, err, `secret at "*.Implementation.*Terraform.*SSHPrivateKey" must not contain a hash value`)
 	})
@@ -66,8 +70,7 @@ func TestMockBuildingBlockDefinitionVersionRejectsSecretHashOnRunnerChange(t *te
 	t.Run("plaintext accepted on another runner", func(t *testing.T) {
 		versionClient, uuid, _ := create(t)
 
-		updated, err := versionClient.Update(context.Background(), uuid, "my-workspace",
-			versionSpec(otherRunnerUuid, clientTypes.Secret{Plaintext: new("rotated-private-key")}))
+		updated, err := versionClient.Update(context.Background(), version(uuid, otherRunnerUuid, clientTypes.Secret{Plaintext: new("rotated-private-key")}))
 
 		require.NoError(t, err)
 		assert.Equal(t, "sha256:rotated-private-key", *updated.Spec.Implementation.Terraform.SSHPrivateKey.Hash)

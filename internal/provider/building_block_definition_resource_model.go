@@ -304,13 +304,13 @@ func (model *buildingBlockDefinition) SetFromVersionClientDtos(diags *diag.Diagn
 	ascending := make([]buildingBlockDefinitionVersionRef, len(versionDtos))
 	for i, versionDto := range versionDtos {
 		ascending[i] = buildingBlockDefinitionVersionRef{
-			Uuid:        generic.KnownValue(versionDto.Metadata.Uuid),
+			Uuid:        generic.KnownValue(*versionDto.Metadata.Uuid),
 			Number:      generic.KnownValue(*versionDto.Spec.VersionNumber),
 			State:       generic.KnownValue(*versionDto.Spec.State),
 			ContentHash: generic.KnownValue(calculateBuildingBlockDefinitionVersionContentHash(versionDto.Spec, diags).toBase64()),
 			Kind:        generic.KnownValue(client.MeshObjectKind.BuildingBlockDefinitionVersion),
 
-			WorkloadIdentityFederation: generic.KnownValue(identities[versionDto.Metadata.Uuid]),
+			WorkloadIdentityFederation: generic.KnownValue(identities[*versionDto.Metadata.Uuid]),
 		}
 	}
 	if diags.HasError() {

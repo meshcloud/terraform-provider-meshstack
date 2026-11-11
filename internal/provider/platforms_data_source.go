@@ -13,6 +13,7 @@ import (
 
 	"github.com/meshcloud/terraform-provider-meshstack/internal/types/generic"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/types/secret"
+	"github.com/meshcloud/terraform-provider-meshstack/internal/util/iter"
 )
 
 var (
@@ -101,7 +102,7 @@ func (d *platformsDataSource) Schema(_ context.Context, _ datasource.SchemaReque
 }
 
 func (d *platformsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var query client.MeshPlatformListQuery
+	var query client.MeshPlatformFilter
 
 	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("owned_by_workspace"), &query.OwnedByWorkspace)...)
 	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("identifier"), &query.Identifier)...)
@@ -116,7 +117,7 @@ func (d *platformsDataSource) Read(ctx context.Context, req datasource.ReadReque
 		return
 	}
 
-	platforms, err := d.meshPlatformClient.List(ctx, query)
+	platforms, err := iter.Collect(d.meshPlatformClient.List(ctx, query))
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to list meshPlatforms", err.Error())
 		return

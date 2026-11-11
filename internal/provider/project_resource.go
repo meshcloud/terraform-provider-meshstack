@@ -114,14 +114,14 @@ type projectSpec struct {
 	SubstitutePaymentMethodIdentifier types.String `json:"substitutePaymentMethodIdentifier" tfsdk:"substitute_payment_method_identifier"`
 }
 
-func (plan projectCreate) meshProject(ctx context.Context) (client.MeshProjectCreate, diag.Diagnostics) {
+func (plan projectCreate) meshProject(ctx context.Context) (client.MeshProject, diag.Diagnostics) {
 	tags := make(map[string][]string)
 	var diags diag.Diagnostics
 	if !plan.Spec.Tags.IsNull() {
 		diags = plan.Spec.Tags.ElementsAs(ctx, &tags, false)
 	}
-	project := client.MeshProjectCreate{
-		Metadata: client.MeshProjectCreateMetadata{
+	project := client.MeshProject{
+		Metadata: client.MeshProjectMetadata{
 			Name:             plan.Metadata.Name.ValueString(),
 			OwnedByWorkspace: plan.Metadata.OwnedByWorkspace.ValueString(),
 		},
@@ -156,7 +156,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	project, err := r.meshProjectClient.Create(ctx, &create)
+	project, err := r.meshProjectClient.Create(ctx, create)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating project",
@@ -182,7 +182,7 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	project, err := r.meshProjectClient.Read(ctx, workspace, name)
+	project, err := r.meshProjectClient.Read(ctx, client.NewMeshProjectId(workspace, name))
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read project", err.Error())
 	}
@@ -221,7 +221,7 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	project, err := r.meshProjectClient.Update(ctx, &create)
+	project, err := r.meshProjectClient.Update(ctx, create)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error updating project",
@@ -246,7 +246,7 @@ func (r *projectResource) Delete(ctx context.Context, req resource.DeleteRequest
 		return
 	}
 
-	err := r.meshProjectClient.Delete(ctx, workspace, name)
+	err := r.meshProjectClient.Delete(ctx, client.NewMeshProjectId(workspace, name))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error deleting project",

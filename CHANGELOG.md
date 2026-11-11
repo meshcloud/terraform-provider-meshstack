@@ -1,6 +1,11 @@
 # v0.28.1
 
 FIXES:
+- Provider: with no `profile` set, the provider takes the profile that the last `meshstack login` selected only when it
+  has the endpoint in use, else the only stored profile with that endpoint. A selected profile of another endpoint no
+  longer fails every resource. A `profile` that `meshstack login` has not stored is an error.
+- `meshstack_building_block`: when the API key may not purge the block (`purge_on_delete`) or run it again, the error
+  says so.
 - `meshstack_project`: `spec.substitute_payment_method_identifier` is sent to meshStack. Before, it was never sent, and
   it replaced `spec.payment_method_identifier` when it was set.
 - `meshstack_building_block_definition`: the docs of `spec.supported_platforms` state that a landing zone needs

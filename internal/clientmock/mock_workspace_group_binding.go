@@ -3,11 +3,14 @@ package clientmock
 import (
 	"context"
 	"errors"
+	"iter"
 
 	"github.com/meshcloud/meshstack-cli/client"
 )
 
 type MeshWorkspaceGroupBindingClient struct {
+	client.MeshWorkspaceGroupBindingClient
+
 	Store *Store[client.MeshWorkspaceGroupBinding]
 }
 
@@ -16,9 +19,9 @@ func (m MeshWorkspaceGroupBindingClient) Read(_ context.Context, name string) (*
 	return v, nil
 }
 
-func (m MeshWorkspaceGroupBindingClient) List(_ context.Context, filter client.MeshWorkspaceBindingListFilter) ([]client.MeshWorkspaceGroupBinding, error) {
+func (m MeshWorkspaceGroupBindingClient) List(_ context.Context, filter client.MeshWorkspaceBindingFilter, _ ...client.ListOption) iter.Seq2[client.MeshWorkspaceGroupBinding, error] {
 	if filter.Username != nil {
-		return nil, errors.New("group membership is not mocked")
+		return listOf[client.MeshWorkspaceGroupBinding](nil, errors.New("group membership is not mocked"))
 	}
 	var result []client.MeshWorkspaceGroupBinding
 	for _, binding := range m.Store.Values() {
@@ -26,11 +29,11 @@ func (m MeshWorkspaceGroupBindingClient) List(_ context.Context, filter client.M
 			result = append(result, *binding)
 		}
 	}
-	return result, nil
+	return listOf(result, nil)
 }
 
-func (m MeshWorkspaceGroupBindingClient) Create(_ context.Context, binding *client.MeshWorkspaceGroupBinding) (*client.MeshWorkspaceGroupBinding, error) {
-	m.Store.Set(binding.Metadata.Name, binding)
+func (m MeshWorkspaceGroupBindingClient) Create(_ context.Context, binding client.MeshWorkspaceGroupBinding) (client.MeshWorkspaceGroupBinding, error) {
+	m.Store.Set(binding.Metadata.Name, &binding)
 	return binding, nil
 }
 
