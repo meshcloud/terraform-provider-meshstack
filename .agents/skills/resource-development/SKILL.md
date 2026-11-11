@@ -27,6 +27,8 @@ Mid-complexity, clean, and complete — prefer these over the large `building_bl
 | Data source test | `internal/provider/project_data_source_test.go` |
 | One step file for several variants | `internal/provider/project_binding_resource_test.go` + `testdata/hcl/resources/project_binding/step1.tf` |
 | Named subtests, one set of step files each | `internal/provider/project_resource_test.go` (`restricted_default_tag` → `resources/project/restricted_default_tag/step1.tf`) |
+| Table-driven cases, one directory per row | `internal/provider/building_block_definition_resource_test.go` (`resources/building_block_definition/policy_validation/<case>/step1.tf`) |
+| Function test | `internal/provider/non_ephemeral_secret_function_test.go` (`functions/non_ephemeral_secret/`) |
 | State-check helpers | `internal/provider/acctest/xknownvalue/{not_empty_string,ref,map}.go` |
 
 ## Steps
@@ -120,12 +122,12 @@ Cross-cutting rules for the schema and its backing client, beyond the ref/DTO sh
 ## Step files
 
 Each config step of a TestAcc test is one file under `internal/provider/testdata/hcl/`, laid out
-like `docs/`: `<resources|data-sources>/<name>/[<case>/]step<N>.tf`. `<name>` is the Terraform type
-without `meshstack_`, or the common part of the types one templated set serves (`project_binding`).
-`<case>` is a directory for a second test case of the same resource, and `<N>` is the step's
-position in `Steps`, from 1. An import step has no file. `hclStep(t, dir, N, vars)` renders
-`<dir>/step<N>.tf` with `text/template`, so a reviewer reads the HCL that runs instead of Go that
-rewrites it.
+like `docs/`: `<resources|data-sources|functions>/<name>/[<case>/]step<N>.tf`. `<name>` is the
+Terraform type or function without `meshstack_`, or the common part of the types one templated set
+serves (`project_binding`). `<case>` is a directory for a second test case of the same resource or
+for one row of a table-driven test, and `<N>` is the step's position in `Steps`, from 1. An import
+step has no file. `hclStep(t, dir, N, vars)` renders `<dir>/step<N>.tf` with `text/template`, so a
+reviewer reads the HCL that runs instead of Go that rewrites it.
 
 - **Placeholders** are `[[.key]]`, filled from the `hclStepVars` the test passes to every step. The
   type exists only to feed step files. A key missing from it fails the test. `vars["suffix"]` holds
@@ -142,7 +144,10 @@ rewrites it.
 - **Nothing else.** No conditionals, no loops. A variant that would need one gets its own file.
 - **Each file is complete.** It declares every prerequisite inline, and only those its test needs.
   An update step is a copy of the step before it with the change, so a `diff` of the two files is
-  the change.
+  the change. A step that applies the same config again (a `PlanOnly` check, a restore) is an
+  identical copy, because every step has its own file.
+- **Upper-case names** come from HCL, not from a second variable: `upper("test-pt-[[.suffix]]")`
+  for a platform type, whose name meshStack requires in upper case.
 
 One step applies the example, so the examples stay tested against a real meshStack. An example
 carries fixed names, which a test must not collide on:
@@ -157,6 +162,16 @@ carries fixed names, which a test must not collide on:
 - When the example depends on something it cannot reference, such as a literal tag key or a data
   source looking up a literal name, an earlier step creates it. `resources/project/step1.tf` creates
   the tag definition `tag-key`, and step 2 adds the project example.
+- meshStack keeps some identifiers taken after a delete: payment methods, locations, platform types
+  (name and display name), platforms and landing zones. A step never applies an example that
+  creates one; it writes the resource with a suffixed identifier, so the test can run again on the
+  same database.
+- A step that names a user or group names one the dev seed holds (`seededUsername`,
+  `seededGroupName`), because meshStack rejects a subject it does not know.
+- An example that reads `${path.module}/<file>` is not included: `${path.module}` would resolve to
+  `internal/provider/` in a test. The step writes the resource itself and reads a fixture from
+  `testdata/`, such as `testdata/images/image.png` or `testdata/files/some-yaml.yaml`. A test embeds
+  those folders, so CI reruns the acceptance suite when a fixture changes.
 
 ## The TestAcc test
 
@@ -179,6 +194,10 @@ A data source example looks its object up by a literal name, so step 1 creates t
 adds the example (`data-sources/project/step{1,2}.tf`). A lookup the example does not show goes into a
 later step that references the resource's attributes, so Terraform infers the dependency — never
 `depends_on`. Full example in `REFERENCE.md`.
+
+`depends_on` appears only in a step file, and only for a destroy order that no reference expresses:
+an API key the second provider block needs to delete a building block, or tags a definition still
+pins. An example never uses it.
 
 ## Multiple example files → named subtests
 

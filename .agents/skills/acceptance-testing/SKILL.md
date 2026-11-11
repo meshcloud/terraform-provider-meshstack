@@ -21,7 +21,8 @@ A fork pull request gets no run: a maintainer must adopt its branch here before 
 ## Why local only
 
 Every test creates its own resources with random-suffixed names, so runs never collide and need no
-particular database state. Keep it so: never hardcode a name that a parallel run could clash on.
+particular database state. Keep it so: never hardcode a name that a parallel run could clash on,
+or one that meshStack keeps taken after a delete, so the suite can run twice on one database.
 
 `requireLocalMeshStack` (`provider_test.go`) pins the suite to `http://localhost`, so a failed
 teardown is fixed by rebuilding the local backend and never touches a shared meshStack.
@@ -29,7 +30,10 @@ teardown is fixed by rebuilding the local backend and never touches a shared mes
 ## Backend
 
 *meshcloud-internal:* bring up the stack, runner included, with the `local-dev-stack` skill in
-`../meshfed-release`. Leave alone any service that another worktree already runs.
+`../meshfed-release`. Leave alone any service that another worktree already runs. The full suite
+needs replication: start meshfed-api without `WEB_DISABLEREPLICATION=true`, and start the
+replicator, block-coordinator and the runner. Without them the platform, landing zone, tenant and
+building block tests fail or hang.
 
 The terraform tests commit `internal/provider/testdata/tf-building-block` to a temporary git repo
 and hand its `file://` URL to the runner, so the runner must run on the same filesystem as the
@@ -75,6 +79,7 @@ grep -E -- '--- (PASS|FAIL|SKIP)' /tmp/acc-tests.log
 | Tenant delete `400`                   | replicator not running, or mandatory BBs still pending  |
 | `409 BuildingBlockConflict` on delete | BB not in a final state                                 |
 | `409 Conflict` (other)                | stale data from a previous run (tag definitions, etc.)  |
+| Platform create `500`, `metering` null | meshfed-api runs with replication disabled             |
 | `422` on bindings                     | groups/users the step files bind don't exist locally    |
 | `400` on a request                    | request body / serialization mismatch                   |
 
