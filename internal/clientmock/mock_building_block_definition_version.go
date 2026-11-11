@@ -11,35 +11,38 @@ import (
 )
 
 type meshBuildingBlockDefinitionVersionClient struct {
+	client.MeshBuildingBlockDefinitionVersionClient
+
 	Store       *Store[client.MeshBuildingBlockDefinitionVersion]
 	StoreRunner *Store[client.MeshBuildingBlockRunner]
 }
 
-func (m meshBuildingBlockDefinitionVersionClient) List(_ context.Context, buildingBlockDefinitionUuid string) ([]client.MeshBuildingBlockDefinitionVersion, error) {
+func (m meshBuildingBlockDefinitionVersionClient) List(_ context.Context, filter client.MeshBuildingBlockDefinitionVersionFilter, _ ...client.ListOption) ([]client.MeshBuildingBlockDefinitionVersion, error) {
 	var result []client.MeshBuildingBlockDefinitionVersion
 	for _, version := range m.Store.Values() {
-		if version.Spec.BuildingBlockDefinitionRef.Uuid == buildingBlockDefinitionUuid {
+		if version.Spec.BuildingBlockDefinitionRef.Uuid == filter.BuildingBlockDefinitionUuid {
 			result = append(result, *version)
 		}
 	}
 	return result, nil
 }
 
-func (m meshBuildingBlockDefinitionVersionClient) Create(_ context.Context, ownedByWorkspace string, versionSpec client.MeshBuildingBlockDefinitionVersionSpec) (*client.MeshBuildingBlockDefinitionVersion, error) {
-	if versionSpec.RunnerRef == nil {
-		return nil, errRunnerRefRequired
+func (m meshBuildingBlockDefinitionVersionClient) Create(_ context.Context, version client.MeshBuildingBlockDefinitionVersion) (client.MeshBuildingBlockDefinitionVersion, error) {
+	if version.Spec.RunnerRef == nil {
+		return client.MeshBuildingBlockDefinitionVersion{}, errRunnerRefRequired
 	}
+	ownedByWorkspace, versionSpec := version.Metadata.OwnedByWorkspace, version.Spec
 	nextNum := m.getNextVersionNumber()
 	versionUuid := uuid.NewString()
 	if latest := m.latestVersionOf(versionSpec.BuildingBlockDefinitionRef); latest != nil && m.versionSecretsNeedPlaintext(latest.Spec, versionSpec) {
 		if err := rejectSecretHashes(&versionSpec); err != nil {
-			return nil, err
+			return client.MeshBuildingBlockDefinitionVersion{}, err
 		}
 	}
 	// Compute hashes for all secrets in the spec
 	backendSecretBehavior(true, &versionSpec, nil)
 	if err := applyManualOutputBehavior(&versionSpec); err != nil {
-		return nil, err
+		return client.MeshBuildingBlockDefinitionVersion{}, err
 	}
 
 	// Set version number if not already set
@@ -49,7 +52,7 @@ func (m meshBuildingBlockDefinitionVersionClient) Create(_ context.Context, owne
 
 	created := &client.MeshBuildingBlockDefinitionVersion{
 		Metadata: client.MeshBuildingBlockDefinitionVersionMetadata{
-			Uuid:             versionUuid,
+			Uuid:             &versionUuid,
 			OwnedByWorkspace: ownedByWorkspace,
 			CreatedOn:        "2024-01-01T00:00:00Z",
 		},
@@ -57,32 +60,33 @@ func (m meshBuildingBlockDefinitionVersionClient) Create(_ context.Context, owne
 	}
 
 	m.Store.Set(versionUuid, created)
-	return created, nil
+	return *created, nil
 }
 
-func (m meshBuildingBlockDefinitionVersionClient) Update(_ context.Context, uuid string, ownedByWorkspace string, versionSpec client.MeshBuildingBlockDefinitionVersionSpec) (*client.MeshBuildingBlockDefinitionVersion, error) {
-	if versionSpec.RunnerRef == nil {
-		return nil, errRunnerRefRequired
+func (m meshBuildingBlockDefinitionVersionClient) Update(_ context.Context, version client.MeshBuildingBlockDefinitionVersion) (client.MeshBuildingBlockDefinitionVersion, error) {
+	if version.Spec.RunnerRef == nil {
+		return client.MeshBuildingBlockDefinitionVersion{}, errRunnerRefRequired
 	}
+	uuid, ownedByWorkspace, versionSpec := *version.Metadata.Uuid, version.Metadata.OwnedByWorkspace, version.Spec
 	if existing, ok := m.Store.Get(uuid); ok {
 		// meshStack encrypts the secrets of a version with the public key of its runner.
 		if m.versionSecretsNeedPlaintext(existing.Spec, versionSpec) {
 			if err := rejectSecretHashes(&versionSpec); err != nil {
-				return nil, err
+				return client.MeshBuildingBlockDefinitionVersion{}, err
 			}
 		}
 		// Compute hashes for all secrets in the spec
 		backendSecretBehavior(false, &versionSpec, &existing.Spec)
 		if err := applyManualOutputBehavior(&versionSpec); err != nil {
-			return nil, err
+			return client.MeshBuildingBlockDefinitionVersion{}, err
 		}
 		if existing.Metadata.OwnedByWorkspace != ownedByWorkspace {
-			return nil, fmt.Errorf("mismatching workspace ownership: %s (existing) != %s (expected)", existing.Metadata.OwnedByWorkspace, ownedByWorkspace)
+			return client.MeshBuildingBlockDefinitionVersion{}, fmt.Errorf("mismatching workspace ownership: %s (existing) != %s (expected)", existing.Metadata.OwnedByWorkspace, ownedByWorkspace)
 		}
 		existing.Spec = versionSpec
-		return existing, nil
+		return *existing, nil
 	}
-	return nil, fmt.Errorf("building block definition version not found: %s", uuid)
+	return client.MeshBuildingBlockDefinitionVersion{}, fmt.Errorf("building block definition version not found: %s", uuid)
 }
 
 var errRunnerRefRequired = errors.New("'spec.runnerRef' is required")

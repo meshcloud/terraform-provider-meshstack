@@ -9,10 +9,12 @@ import (
 )
 
 type MeshIntegrationClient struct {
+	client.MeshIntegrationClient
+
 	Store *Store[client.MeshIntegration]
 }
 
-func (m MeshIntegrationClient) Create(_ context.Context, integration client.MeshIntegration) (*client.MeshIntegration, error) {
+func (m MeshIntegrationClient) Create(_ context.Context, integration client.MeshIntegration) (client.MeshIntegration, error) {
 	integrationUuid := uuid.NewString()
 	created := &client.MeshIntegration{
 		Metadata: client.MeshIntegrationMetadata{
@@ -34,7 +36,7 @@ func (m MeshIntegrationClient) Create(_ context.Context, integration client.Mesh
 		}
 	}
 	m.Store.Set(integrationUuid, created)
-	return created, nil
+	return *created, nil
 }
 
 func (m MeshIntegrationClient) Read(_ context.Context, uuid string) (*client.MeshIntegration, error) {
@@ -44,7 +46,7 @@ func (m MeshIntegrationClient) Read(_ context.Context, uuid string) (*client.Mes
 	return nil, nil
 }
 
-func (m MeshIntegrationClient) Update(_ context.Context, integration client.MeshIntegration) (*client.MeshIntegration, error) {
+func (m MeshIntegrationClient) Update(_ context.Context, integration client.MeshIntegration) (client.MeshIntegration, error) {
 	if existing, ok := m.Store.Get(*integration.Metadata.Uuid); ok {
 		backendSecretBehavior(false, &integration, existing)
 		if integration.Spec.Config.EntraId != nil && existing.Spec.Config.EntraId != nil {
@@ -55,9 +57,9 @@ func (m MeshIntegrationClient) Update(_ context.Context, integration client.Mesh
 			}
 		}
 		existing.Spec = integration.Spec
-		return existing, nil
+		return *existing, nil
 	}
-	return nil, fmt.Errorf("integration not found: %s", *integration.Metadata.Uuid)
+	return client.MeshIntegration{}, fmt.Errorf("integration not found: %s", *integration.Metadata.Uuid)
 }
 
 func (m MeshIntegrationClient) Delete(_ context.Context, uuid string) error {
@@ -65,7 +67,7 @@ func (m MeshIntegrationClient) Delete(_ context.Context, uuid string) error {
 	return nil
 }
 
-func (m MeshIntegrationClient) List(_ context.Context) ([]client.MeshIntegration, error) {
+func (m MeshIntegrationClient) List(context.Context, client.NoFilter, ...client.ListOption) ([]client.MeshIntegration, error) {
 	var result []client.MeshIntegration
 	for _, integration := range m.Store.Values() {
 		result = append(result, *integration)

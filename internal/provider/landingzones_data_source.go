@@ -82,7 +82,7 @@ func (d *landingZonesDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 }
 
 func (d *landingZonesDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var query client.MeshLandingZoneListQuery
+	var query client.MeshLandingZoneFilter
 
 	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("platform_uuid"), &query.PlatformUuid)...)
 	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("identifier"), &query.Identifier)...)

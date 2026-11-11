@@ -102,7 +102,7 @@ func (r *workspaceResource) Create(ctx context.Context, req resource.CreateReque
 		return
 	}
 
-	createdWorkspace, err := r.meshWorkspaceClient.Create(ctx, &workspace)
+	createdWorkspace, err := r.meshWorkspaceClient.Create(ctx, workspace)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Creating Workspace",
@@ -117,10 +117,10 @@ func (r *workspaceResource) Create(ctx context.Context, req resource.CreateReque
 	// landing zone resources.
 	createdWorkspace.Metadata.Tags = workspace.Metadata.Tags
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, newWorkspaceModel(createdWorkspace))...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, newWorkspaceModel(&createdWorkspace))...)
 }
 
-func plannedWorkspace(ctx context.Context, plan tfsdk.Plan, diags *diag.Diagnostics) (workspace client.MeshWorkspaceCreate) {
+func plannedWorkspace(ctx context.Context, plan tfsdk.Plan, diags *diag.Diagnostics) (workspace client.MeshWorkspace) {
 	diags.Append(plan.GetAttribute(ctx, path.Root("spec"), &workspace.Spec)...)
 	diags.Append(plan.GetAttribute(ctx, path.Root("metadata").AtName("name"), &workspace.Metadata.Name)...)
 	diags.Append(plan.GetAttribute(ctx, path.Root("metadata").AtName("tags"), &workspace.Metadata.Tags)...)
@@ -170,7 +170,7 @@ func (r *workspaceResource) Update(ctx context.Context, req resource.UpdateReque
 		return
 	}
 
-	updatedWorkspace, err := r.meshWorkspaceClient.Update(ctx, workspace.Metadata.Name, &workspace)
+	updatedWorkspace, err := r.meshWorkspaceClient.Update(ctx, workspace)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Updating Workspace",
@@ -182,7 +182,7 @@ func (r *workspaceResource) Update(ctx context.Context, req resource.UpdateReque
 	// Keep the tags the user declared rather than the superset the API returns, mirroring Create.
 	updatedWorkspace.Metadata.Tags = workspace.Metadata.Tags
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, newWorkspaceModel(updatedWorkspace))...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, newWorkspaceModel(&updatedWorkspace))...)
 }
 
 func (r *workspaceResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {

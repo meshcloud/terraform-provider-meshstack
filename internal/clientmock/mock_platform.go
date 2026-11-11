@@ -10,6 +10,8 @@ import (
 )
 
 type MeshPlatformClient struct {
+	client.MeshPlatformClient
+
 	Store *Store[client.MeshPlatform]
 }
 
@@ -23,7 +25,7 @@ func (m MeshPlatformClient) Read(_ context.Context, uuid string) (*client.MeshPl
 // List applies only the plain attribute filters from the query; it does not simulate marketplace
 // visibility or permissions (the mock has no notion of the calling workspace). Entitlement and
 // config-redaction behaviour is therefore acceptance-only.
-func (m MeshPlatformClient) List(_ context.Context, query client.MeshPlatformListQuery) ([]client.MeshPlatform, error) {
+func (m MeshPlatformClient) List(_ context.Context, query client.MeshPlatformFilter, _ ...client.ListOption) ([]client.MeshPlatform, error) {
 	var result []client.MeshPlatform
 	for _, platform := range m.Store.Values() {
 		if query.OwnedByWorkspace != nil && platform.Metadata.OwnedByWorkspace != *query.OwnedByWorkspace {
@@ -54,21 +56,22 @@ func (m MeshPlatformClient) List(_ context.Context, query client.MeshPlatformLis
 	return result, nil
 }
 
-func (m MeshPlatformClient) Create(_ context.Context, platform client.MeshPlatform) (*client.MeshPlatform, error) {
+func (m MeshPlatformClient) Create(_ context.Context, platform client.MeshPlatform) (client.MeshPlatform, error) {
 	platformUuid := uuid.NewString()
 	platform.Metadata.Uuid = &platformUuid
 	backendSecretBehavior(true, &platform, nil)
 	m.Store.Set(platformUuid, &platform)
-	return &platform, nil
+	return platform, nil
 }
 
-func (m MeshPlatformClient) Update(_ context.Context, uuid string, platform client.MeshPlatform) (*client.MeshPlatform, error) {
+func (m MeshPlatformClient) Update(_ context.Context, platform client.MeshPlatform) (client.MeshPlatform, error) {
+	uuid := *platform.Metadata.Uuid
 	if existing, ok := m.Store.Get(uuid); ok {
 		backendSecretBehavior(false, &platform.Spec, &existing.Spec)
 		existing.Spec = platform.Spec
-		return existing, nil
+		return *existing, nil
 	}
-	return nil, fmt.Errorf("platform not found: %s", uuid)
+	return client.MeshPlatform{}, fmt.Errorf("platform not found: %s", uuid)
 }
 
 func (m MeshPlatformClient) Delete(_ context.Context, uuid string) error {

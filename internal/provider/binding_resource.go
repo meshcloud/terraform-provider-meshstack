@@ -19,7 +19,7 @@ var (
 )
 
 type bindingResourceClient[B any] interface {
-	Create(ctx context.Context, binding *B) (*B, error)
+	Create(ctx context.Context, binding B) (B, error)
 	Read(ctx context.Context, name string) (*B, error)
 	Delete(ctx context.Context, name string) error
 }
@@ -62,7 +62,7 @@ func (r *bindingResource[B]) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 
-	binding, err := r.client.Create(ctx, plan)
+	binding, err := r.client.Create(ctx, *plan)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating "+r.kind(),
@@ -73,7 +73,7 @@ func (r *bindingResource[B]) Create(ctx context.Context, req resource.CreateRequ
 
 	var name string
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("metadata").AtName("name"), &name)...)
-	warnIfWaitingForApproval(&resp.Diagnostics, name, r.approvalStatus(binding))
+	warnIfWaitingForApproval(&resp.Diagnostics, name, r.approvalStatus(&binding))
 	resp.Diagnostics.Append(resp.State.Set(ctx, binding)...)
 }
 

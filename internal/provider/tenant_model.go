@@ -24,7 +24,7 @@ type tenantModel struct {
 func tenantModelFromDto(tenant *client.MeshTenant) tenantModel {
 	return tenantModel{
 		MeshTenant: tenant,
-		Ref:        tenantRef{Kind: client.MeshObjectKind.Tenant, Uuid: tenant.Metadata.Uuid},
+		Ref:        tenantRef{Kind: client.MeshObjectKind.Tenant, Uuid: *tenant.Metadata.Uuid},
 	}
 }
 
@@ -46,7 +46,7 @@ func tenantResourceModelFromDto(dto *client.MeshTenant, specRequestedQuotas map[
 	spec := dto.Spec
 	spec.RequestedQuotas = specRequestedQuotas
 	return tenantResourceModel{
-		Ref:               tenantRef{Kind: client.MeshObjectKind.Tenant, Uuid: dto.Metadata.Uuid},
+		Ref:               tenantRef{Kind: client.MeshObjectKind.Tenant, Uuid: *dto.Metadata.Uuid},
 		Metadata:          dto.Metadata,
 		Spec:              spec,
 		Status:            dto.Status,

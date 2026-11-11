@@ -101,7 +101,7 @@ func (d *platformsDataSource) Schema(_ context.Context, _ datasource.SchemaReque
 }
 
 func (d *platformsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var query client.MeshPlatformListQuery
+	var query client.MeshPlatformFilter
 
 	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("owned_by_workspace"), &query.OwnedByWorkspace)...)
 	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("identifier"), &query.Identifier)...)

@@ -79,7 +79,7 @@ func (d *tagDefinitionDataSource) Read(ctx context.Context, req datasource.ReadR
 
 func (d *tagDefinitionDataSource) candidates(ctx context.Context, filter tagDefinitionFilter, diags *diag.Diagnostics) []client.MeshTagDefinition {
 	if filter.Name == nil {
-		tags, err := d.meshTagDefinitionClient.List(ctx)
+		tags, err := d.meshTagDefinitionClient.List(ctx, client.NoFilter{})
 		if err != nil {
 			diags.AddError("Unable to list meshTagDefinitions", err.Error())
 		}
