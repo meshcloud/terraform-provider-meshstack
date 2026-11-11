@@ -13,7 +13,7 @@ resource "meshstack_workspace" "example" {
   metadata = {
     name = "test-ws-[[.suffix]]"
     tags = {
-      "cost-center-[[.suffix]]" = ["12345"]
+      (meshstack_tag_definition.cost_center.spec.key) = ["12345"]
     }
   }
   spec = {

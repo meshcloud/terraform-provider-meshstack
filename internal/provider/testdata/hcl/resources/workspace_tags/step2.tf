@@ -30,7 +30,7 @@ resource "meshstack_workspace_tags" "example" {
   }
   spec = {
     tags = {
-      "cost-center-[[.suffix]]" = ["12345"]
+      (meshstack_tag_definition.cost_center.spec.key) = ["12345"]
     }
   }
 }
