@@ -82,8 +82,8 @@ resource "meshstack_building_block_definition" "example_01_terraform" {
   metadata = {
     owned_by_workspace = data.meshstack_workspace.example.metadata.name
     tags = { # Optional
-      "environment-[[.suffix]]" = ["dev", "prod"]
-      "cost-center-[[.suffix]]" = ["cc-123"]
+      (meshstack_tag_definition.environment.spec.key) = ["dev", "prod"]
+      (meshstack_tag_definition.cost_center.spec.key) = ["cc-123"]
     }
   }
 

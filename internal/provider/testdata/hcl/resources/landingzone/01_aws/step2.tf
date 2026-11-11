@@ -156,8 +156,8 @@ resource "meshstack_landingzone" "example" {
     name               = "test-lz-[[.suffix]]"
     owned_by_workspace = data.meshstack_workspace.example.metadata.name
     tags = {
-      "confidentiality-[[.suffix]]" = ["internal"],
-      "environment-[[.suffix]]"     = ["dev", "qa", "test"],
+      (meshstack_tag_definition.confidentiality.spec.key) = ["internal"],
+      (meshstack_tag_definition.environment.spec.key)     = ["dev", "qa", "test"],
     }
   }
   spec = {

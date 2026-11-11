@@ -35,7 +35,7 @@ resource "meshstack_payment_method" "example" {
     expiration_date = "2025-12-31"
     amount          = 10000
     tags = {
-      "cost-center-[[.suffix]]" = ["0000"]
+      (meshstack_tag_definition.cost_center.spec.key) = ["0000"]
     }
   }
 }
