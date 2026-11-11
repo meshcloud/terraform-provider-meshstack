@@ -38,7 +38,7 @@ resource "meshstack_landingzone" "example" {
         aws_role_mappings = [
           {
             project_role_ref = { name = "reader" }
-            platform_role    = "project-reader"
+            platform_role    = "aws-reader-role"
             policies = [
               "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess",
             ]
