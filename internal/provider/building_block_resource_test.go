@@ -694,13 +694,6 @@ func TestAccBuildingBlock(t *testing.T) {
 		// `broken` ref, whose `tofu apply` fails on a deliberately-false precondition. Each case is fully
 		// isolated (its own workspaces, BBD, key) so the two opposite outcomes cannot interfere.
 		//
-		// A run that does not succeed never errors on its own (#277), so what fails these applies is the
-		// postcondition the test-support file carries — the recipe the resource documentation recommends,
-		// exercised end to end. Each step's plan check is the other half of the assertion: a postcondition
-		// is evaluated after the building block is written to state and after every taint call site, so the
-		// block must still plan as an in-place update after an apply it failed. A replace there would mean
-		// the next apply destroys everything the runs created, which is the whole point of #277.
-		//
 		// What run_transparency gates for a workspace-scoped key is whether the repair may be triggered at
 		// all: with it ON the re-run starts and fails on the broken ref again, with it OFF meshStack
 		// refuses the trigger-run and that refusal is the error instead.
