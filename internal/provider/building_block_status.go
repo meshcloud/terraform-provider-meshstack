@@ -12,7 +12,8 @@ import (
 
 var (
 	buildingBlockSucceededDescription = "True when the latest run succeeded and the building block needs no attention: " +
-		"`health_status` is `SUCCEEDED` and `action` is one of `NO_ACTION`, `UPGRADE_AVAILABLE`, `REVIEW_DRIFT`. " +
+		"`health_status` is `SUCCEEDED` and `action` is one of `NO_ACTION`, `UPGRADE_AVAILABLE`, `REVIEW_DRIFT`, `UNLOCK_RUNS`. " +
+		"A locked building block (`UNLOCK_RUNS`) reads as succeeded when its latest run did, so that a postcondition does not fail on a deliberate lock. " +
 		"On meshStack versions before the `REVIEW_ABORTED_RUN` action an aborted run reads as succeeded."
 	buildingBlockHealthStatusDescription = "Outcome of the latest run that speaks for the building block. One of " +
 		client.BuildingBlockHealthStatuses.Markdown() + ". Only a run that finished as succeeded or failed moves it: it keeps " +
@@ -22,6 +23,7 @@ var (
 		client.BuildingBlockActions.Markdown() + ". `PROVIDE_INPUT` covers user and operator input, `REVIEW_DRIFT` reports a " +
 		"dry run that detected changes, `REVIEW_ABORTED_RUN` an aborted or rejected latest run, and " +
 		"`UPGRADE_AVAILABLE` a building block that needs nothing else while a newer definition version exists. " +
+		"`UNLOCK_RUNS` a locked building block, which meshStack does not run until it is unlocked. " +
 		"Later meshStack releases may add values, which `succeeded` reads as not succeeded."
 )
 
@@ -35,7 +37,7 @@ func newBuildingBlockStatusModel(status client.MeshBuildingBlockV2Status) buildi
 	return buildingBlockStatusModel{
 		MeshBuildingBlockV2Status: status,
 		Succeeded: status.HealthStatus == client.BuildingBlockHealthStatusSucceeded && slices.Contains(
-			[]client.BuildingBlockAction{client.BuildingBlockActionNoAction.Unwrap(), client.BuildingBlockActionUpgradeAvailable.Unwrap(), client.BuildingBlockActionReviewDrift.Unwrap()},
+			[]client.BuildingBlockAction{client.BuildingBlockActionNoAction.Unwrap(), client.BuildingBlockActionUpgradeAvailable.Unwrap(), client.BuildingBlockActionReviewDrift.Unwrap(), client.BuildingBlockActionUnlockRuns.Unwrap()},
 			status.Action.Unwrap(),
 		),
 	}

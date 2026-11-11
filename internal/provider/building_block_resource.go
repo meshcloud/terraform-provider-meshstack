@@ -12,7 +12,9 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework-jsontypes/jsontypes"
 	timeouts "github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -397,6 +399,25 @@ func (r *buildingBlockResource) Schema(ctx context.Context, req resource.SchemaR
 				Optional:  true,
 				WriteOnly: true,
 			},
+			"skip_run_on": schema.ListAttribute{
+				MarkdownDescription: "Changes for which an update saves the building block without starting a run. The only value is " +
+					client.BuildingBlockSkipRunOns.Markdown() + ": an update that changes `spec.building_block_definition_version_ref.uuid` " +
+					"saves the new version together with every other change of the same apply, such as new inputs, starts no run, and locks " +
+					"the building block: meshStack does not run it until it is unlocked in meshPanel or with `meshstack bb unlock <uuid>`. " +
+					"The apply then does not wait, and `status` keeps the run before the upgrade. On a locked building block, whose " +
+					"`status.action` is `UNLOCK_RUNS`, every update plans no run, and its apply warns about the lock. The provider never unlocks. " +
+					"An update without a version change runs as usual. The plan shows whether a run follows only when the version is " +
+					"known at plan time. Needs a meshStack that knows the `skipRunOn` parameter. The value is write-only: it is never " +
+					"stored in state, so changing only this attribute plans no change.",
+				ElementType: types.StringType,
+				Optional:    true,
+				WriteOnly:   true,
+				// Terraform has no write-only sets.
+				Validators: []validator.List{
+					listvalidator.UniqueValues(),
+					listvalidator.ValueStringsAre(stringvalidator.OneOf(client.BuildingBlockSkipRunOns.Strings()...)),
+				},
+			},
 			"purge_on_delete": schema.BoolAttribute{
 				MarkdownDescription: "When true, deletes via the `DELETE /{uuid}/purge` sub-path, which requires admin authority (`ADM_BUILDINGBLOCK_DELETE`). This is a last resort option for stuck deletions.",
 				Optional:            true,
@@ -452,8 +473,9 @@ type buildingBlockModel struct {
 	client.MeshBuildingBlockV2
 	Ref           client.UuidRef `tfsdk:"ref"`
 	PurgeOnDelete bool           `tfsdk:"purge_on_delete"`
-	// Write-only, so always null here; read it from the config.
-	WaitForCompletion *bool `tfsdk:"wait_for_completion"`
+	// Write-only, so always null here; read them from the config.
+	WaitForCompletion *bool    `tfsdk:"wait_for_completion"`
+	SkipRunOn         []string `tfsdk:"skip_run_on"`
 
 	AllInputs map[string]buildingBlockAllInput `tfsdk:"all_inputs"`
 	// Timeouts mirrors the schema's timeouts block so it round-trips through state via the generic
@@ -744,6 +766,14 @@ func (r *buildingBlockResource) addRunFailureDiagnostics(
 	}
 }
 
+func addLockedWarning(diags *diag.Diagnostics, bb *client.MeshBuildingBlockV2) {
+	diags.AddWarning(
+		"Building block is locked",
+		withBuildingBlockDetails(fmt.Sprintf("Building block %[1]s is locked. meshStack does not run it until it is unlocked in "+
+			"meshPanel or with `meshstack bb unlock %[1]s`.", *bb.Metadata.Uuid), bb),
+	)
+}
+
 func addWaitingForInputWarning(diags *diag.Diagnostics, bb *client.MeshBuildingBlockV2) {
 	diags.AddWarning(
 		"Building block run is waiting for input or approval",
@@ -775,6 +805,9 @@ func (r *buildingBlockResource) awaitRun(
 					// meshStack starts the update's run only after the current run has ended.
 					runStartDeadline = time.Now().Add(runStartTimeout)
 				}
+			}
+			if bb.Status != nil && bb.Status.IsLocked() {
+				return true, nil
 			}
 			if !runStarted && time.Now().After(runStartDeadline) {
 				return false, errRunNotStarted
@@ -818,6 +851,8 @@ func (r *buildingBlockResource) awaitRun(
 				"configuration. Check the run in meshPanel and fix the cause; the next plan shows an in-place update that "+
 				"runs it again. Add a postcondition on self.status.succeeded to fail the apply on this.",
 				uuid, final.Status.Action), final)
+	case final.Status.IsLocked():
+		addLockedWarning(diags, final)
 	case final.IsWaitingForInput():
 		addWaitingForInputWarning(diags, final)
 	case !slices.Contains(client.BuildingBlockActions, final.Status.Action):
@@ -1056,7 +1091,11 @@ func (r *buildingBlockResource) ModifyPlan(ctx context.Context, req resource.Mod
 		resp.Diagnostics.AddError("Unable to inspect the planned building block spec", err.Error())
 		return
 	}
-	if planSpecUnknown {
+	skipRunOn, skipRunOnKnown := skipRunOnFrom(ctx, req.Config, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if planSpecUnknown || !skipRunOnKnown {
 		triggerRun()
 		return
 	}
@@ -1086,9 +1125,39 @@ func (r *buildingBlockResource) ModifyPlan(ctx context.Context, req resource.Mod
 	}
 	repairNeeded := stateStatus.RunFailed()
 
-	if rerunNeeded(planSpec, stateSpec, getBasedOnDraftVersion(ctx, req.Private, &resp.Diagnostics)) || secretRotated || repairNeeded {
-		triggerRun()
+	if !rerunNeeded(planSpec, stateSpec, getBasedOnDraftVersion(ctx, req.Private, &resp.Diagnostics)) && !secretRotated && !repairNeeded {
+		return
 	}
+	if stateStatus.IsLocked() || skipRunOn.skipsRun(planSpec, stateSpec) {
+		// The update saves new inputs without a run, so all_inputs comes from the answer of the PUT.
+		var allInputs types.Map
+		resp.Diagnostics.Append(resp.Plan.GetAttribute(ctx, path.Root("all_inputs"), &allInputs)...)
+		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("all_inputs"), types.MapUnknown(allInputs.ElementType(ctx)))...)
+		return
+	}
+	triggerRun()
+}
+
+type skipRunOn []enum.Entry[client.BuildingBlockSkipRunOn]
+
+// skipRunOnFrom reports known as false only at plan time, when the value depends on another resource.
+func skipRunOnFrom(ctx context.Context, config tfsdk.Config, diags *diag.Diagnostics) (result skipRunOn, known bool) {
+	var list types.List
+	diags.Append(config.GetAttribute(ctx, path.Root("skip_run_on"), &list)...)
+	if list.IsUnknown() || slices.ContainsFunc(list.Elements(), attr.Value.IsUnknown) {
+		return nil, false
+	}
+	var values []string
+	diags.Append(list.ElementsAs(ctx, &values, false)...)
+	for _, value := range values {
+		result = append(result, enum.Entry[client.BuildingBlockSkipRunOn](value))
+	}
+	return result, true
+}
+
+func (s skipRunOn) skipsRun(plan, state client.MeshBuildingBlockV2Spec) bool {
+	versionChanging := plan.BuildingBlockDefinitionVersionRef.Uuid != state.BuildingBlockDefinitionVersionRef.Uuid
+	return versionChanging && slices.Contains(s, client.BuildingBlockSkipRunOnVersionUpgrade)
 }
 
 func waitForCompletion(ctx context.Context, config tfsdk.Config, diags *diag.Diagnostics) bool {
@@ -1134,7 +1203,12 @@ func (r *buildingBlockResource) Update(ctx context.Context, req resource.UpdateR
 	// A building block whose run failed or was aborted is repaired by running it again, and that repair
 	// is the in-place update the plan showed. Same actions as ModifyPlan, so plan and apply agree.
 	repairNeeded := state.Status != nil && state.Status.RunFailed()
-	needsRun := rerunNeeded(plan.Spec, state.Spec, getBasedOnDraftVersion(ctx, req.Private, &resp.Diagnostics)) || secretRotated || repairNeeded
+	skipRunOn, _ := skipRunOnFrom(ctx, req.Config, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	runSkipped := skipRunOn.skipsRun(plan.Spec, state.Spec) || (state.Status != nil && state.Status.IsLocked())
+	needsRun := !runSkipped && (rerunNeeded(plan.Spec, state.Spec, getBasedOnDraftVersion(ctx, req.Private, &resp.Diagnostics)) || secretRotated || repairNeeded)
 
 	// The backend answers a version-change PUT with a 409 while the run has not finished. Fail fast with a
 	// clear message so that no raw 409 reaches the user.
@@ -1151,7 +1225,7 @@ func (r *buildingBlockResource) Update(ctx context.Context, req resource.UpdateR
 	updated, err := r.BuildingBlockClient.Update(ctx, &client.MeshBuildingBlockV2{
 		Metadata: plan.Metadata,
 		Spec:     plan.Spec,
-	})
+	}, client.MeshBuildingBlockV2UpdateOptions{SkipRunOn: skipRunOn})
 	if err != nil {
 		// Map a backend 409 (e.g. a version change on a non-completed block that slipped past the
 		// pre-check, or a concurrent run) to a clear, actionable message instead of a raw HTTP error.
@@ -1172,7 +1246,11 @@ func (r *buildingBlockResource) Update(ctx context.Context, req resource.UpdateR
 		!reflect.DeepEqual(plan.Spec.ParentBuildingBlockRefs, state.Spec.ParentBuildingBlockRefs) ||
 		secretRotated
 	effective := updated
-	if needsRun && !backendWillRun {
+	locked := updated.Status != nil && updated.Status.IsLocked()
+	if locked {
+		addLockedWarning(&resp.Diagnostics, updated)
+	}
+	if needsRun && !backendWillRun && !locked {
 		triggered, err := r.BuildingBlockClient.TriggerRun(ctx, *updated.Metadata.Uuid)
 		if err != nil {
 			if httpErr, ok := errors.AsType[client.HttpError](err); ok && httpErr.IsForbidden() && repairNeeded {
@@ -1197,10 +1275,12 @@ func (r *buildingBlockResource) Update(ctx context.Context, req resource.UpdateR
 		state.Status.RunStartFailedOn = getRunStartFailedOn(ctx, req.Private, &resp.Diagnostics)
 	}
 	var plannedAction types.String
+	var plannedAllInputs types.Map
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("status").AtName("action"), &plannedAction)...)
+	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("all_inputs"), &plannedAllInputs)...)
 	statusPlannedUnknown := plannedAction.IsUnknown()
 	before, runFollows := runFollowingUpdate(state.Status, effective.Status, statusPlannedUnknown)
-	if (needsRun || runFollows) && waitForCompletion(ctx, req.Config, &resp.Diagnostics) {
+	if !locked && (needsRun || runFollows) && waitForCompletion(ctx, req.Config, &resp.Diagnostics) {
 		timeout := resolveTimeout(ctx, req.Plan, "update", &resp.Diagnostics)
 		if resp.Diagnostics.HasError() {
 			return
@@ -1211,9 +1291,12 @@ func (r *buildingBlockResource) Update(ctx context.Context, req resource.UpdateR
 	}
 
 	plan.SetFromClientDto(effective, false, &resp.Diagnostics)
+	// The plan promised the prior values, whatever meshStack answered; the next refresh reads the new ones.
 	if !statusPlannedUnknown {
-		// The plan promised the prior status, whatever meshStack answered; the next refresh reads the new one.
-		plan.Status, plan.AllInputs = state.Status, state.AllInputs
+		plan.Status = state.Status
+	}
+	if !plannedAllInputs.IsUnknown() {
+		plan.AllInputs = state.AllInputs
 	}
 	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, plan, converterOptions...)...)
 	resp.Diagnostics.Append(resp.Private.SetKey(ctx, basedOnDraftVersionPrivateKey, basedOnDraftVersion(effective))...)
