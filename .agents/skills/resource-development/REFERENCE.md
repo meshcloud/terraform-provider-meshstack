@@ -42,13 +42,13 @@ data "meshstack_workspace" "example" {
   }
 }
 
-# ... payment method, its data source, the tag definition "tag-key" ...
+# ... payment method, its data source, the tag definition, its data source ...
 
 [[ example "resources/meshstack_project/resource.tf" ]]
 ```
 
-`resources/project/step1.tf` is the same without the example line, because the example's literal tag
-key `tag-key` has no reference that would order the project after its tag definition.
+`resources/project/step1.tf` is the same without the example line. It creates the tag definition
+first, so the data source that gives the example its tag key can read it during the plan of step 2.
 `resources/project/step3.tf` replaces the example line with a copy of the project block whose
 `display_name` changed.
 

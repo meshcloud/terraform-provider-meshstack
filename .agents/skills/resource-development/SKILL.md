@@ -159,9 +159,9 @@ carries fixed names, which a test must not collide on:
   `cost-center`), and so do the docs generated from it. When such a name is global in meshStack, or
   names a subject the backend may not have (`user@meshcloud.io`), the step does not include the
   example: it writes the resource itself under its own names, `"test-wb-[[.suffix]]"`.
-- When the example depends on something it cannot reference, such as a literal tag key or a data
-  source looking up a literal name, an earlier step creates it. `resources/project/step1.tf` creates
-  the tag definition `tag-key`, and step 2 adds the project example.
+- When the example reads something through a data source, an earlier step creates it, so the data
+  source can read it during the plan. `resources/project/step1.tf` creates the tag definition, and
+  step 2 adds the project example, which takes its tag key from `data.meshstack_tag_definition.my_key`.
 - meshStack keeps some identifiers taken after a delete: payment methods, locations, platform types
   (name and display name), platforms and landing zones. A step never applies an example that
   creates one; it writes the resource with a suffixed identifier, so the test can run again on the

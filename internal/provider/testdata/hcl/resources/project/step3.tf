@@ -31,14 +31,20 @@ data "meshstack_payment_method" "example" {
   }
 }
 
-resource "meshstack_tag_definition" "tag_key" {
+resource "meshstack_tag_definition" "my_key" {
   spec = {
     target_kind  = "meshProject"
-    key          = "tag-key"
-    display_name = "Tag Key"
+    key          = "my-key-[[.suffix]]"
+    display_name = "My Key"
     value_type = {
       string = {}
     }
+  }
+}
+
+data "meshstack_tag_definition" "my_key" {
+  metadata = {
+    name = meshstack_tag_definition.my_key.metadata.name
   }
 }
 
@@ -51,7 +57,7 @@ resource "meshstack_project" "example" {
     payment_method_identifier = data.meshstack_payment_method.example.metadata.name
     display_name              = "Updated Display Name"
     tags = {
-      "tag-key" = [
+      (data.meshstack_tag_definition.my_key.spec.key) = [
         "tag-value1",
         "tag-value2",
         "tag-valueN"
