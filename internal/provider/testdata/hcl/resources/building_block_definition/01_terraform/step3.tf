@@ -89,8 +89,8 @@ resource "meshstack_building_block_definition" "example_01_terraform" {
 
   spec = {
     display_name              = "Example Building Block"
-    display_name_template     = "Example Building Block {{ resource_name }}"                         # Optional: names each ordered building block after its inputs
-    symbol                    = provider::meshstack::load_image_file("${path.module}/bb-symbol.png") # Optional
+    display_name_template     = "Example Building Block {{ resource_name }}"                      # Optional: names each ordered building block after its inputs
+    symbol                    = provider::meshstack::load_image_file("testdata/images/image.png") # Optional
     description               = "An example building block definition"
     readme                    = "# Example Building Block\n\nThis is a comprehensive example showcasing all available attributes." # Optional
     support_url               = "https://support.example.com/building-blocks"                                                      # Optional
@@ -196,7 +196,7 @@ resource "meshstack_building_block_definition" "example_01_terraform" {
         display_name    = "Some input file"
         type            = "FILE"
         assignment_type = "STATIC"
-        argument        = jsonencode(provider::meshstack::load_file("${path.module}/some-file.yaml"))
+        argument        = jsonencode(provider::meshstack::load_file("testdata/files/some-yaml.yaml"))
       }
     }
 

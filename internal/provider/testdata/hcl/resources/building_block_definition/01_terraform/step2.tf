@@ -88,16 +88,16 @@ resource "meshstack_building_block_definition" "example_01_terraform" {
 
   spec = {
     display_name              = "Example Building Block"
-    display_name_template     = "Example Building Block {{ resource_name }}"                         # Optional: names each ordered building block after its inputs
-    symbol                    = provider::meshstack::load_image_file("${path.module}/bb-symbol.png") # Optional
+    display_name_template     = "Example Building Block {{ resource_name }}"                      # Optional: names each ordered building block after its inputs
+    symbol                    = provider::meshstack::load_image_file("testdata/images/image.png") # Optional
     description               = "An example building block definition"
     readme                    = "# Example Building Block\n\nThis is a comprehensive example showcasing all available attributes." # Optional
     support_url               = "https://support.example.com/building-blocks"                                                      # Optional
     documentation_url         = "https://docs.example.com/building-blocks"                                                         # Optional
     target_type               = "TENANT_LEVEL"                                                                                     # Optional: defaults to "WORKSPACE"
     supported_platforms       = [{ name = "AZURE" }, { name = "AWS" }]
-    run_transparency          = true                                            # Optional: defaults to false
-    use_in_landing_zones_only = true                                            # Optional: defaults to false
+    run_transparency          = true                      # Optional: defaults to false
+    use_in_landing_zones_only = true                      # Optional: defaults to false
     notification_subscribers  = ["email:ops@example.com"] # Optional, note user: and email: prefix
 
     approval_policies = {
@@ -175,14 +175,14 @@ resource "meshstack_building_block_definition" "example_01_terraform" {
         type            = "CODE"                                                                  # Tag inputs are always CODE: a tag value is a list of strings
         assignment_type = "TAG"
         is_optional     = true # Optional: run without the value while the tag is unset, instead of waiting for it
-        argument      = jsonencode("WORKSPACE.${meshstack_tag_definition.workspace_business_unit.spec.key}")
-        display_order = 4
+        argument        = jsonencode("WORKSPACE.${meshstack_tag_definition.workspace_business_unit.spec.key}")
+        display_order   = 4
       }
       "some-file.yaml" = {
         display_name    = "Some input file"
         type            = "FILE"
         assignment_type = "STATIC"
-        argument        = jsonencode(provider::meshstack::load_file("${path.module}/some-file.yaml"))
+        argument        = jsonencode(provider::meshstack::load_file("testdata/files/some-yaml.yaml"))
       }
     }
 
