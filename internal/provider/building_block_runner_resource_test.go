@@ -48,7 +48,7 @@ func TestAccBuildingBlockRunnerResource(t *testing.T) {
 							"last_seen":          knownvalue.Null(),
 							"last_known_version": knownvalue.Null(),
 						})),
-						xknownvalue.Ref(runnerAddr, "meshBuildingBlockRunner", &runnerUuid),
+						xknownvalue.Ref(runnerAddr.String(), "meshBuildingBlockRunner", &runnerUuid),
 					},
 				},
 				{
@@ -62,7 +62,7 @@ func TestAccBuildingBlockRunnerResource(t *testing.T) {
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(runnerAddr.String(), tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("Updated Runner")),
-						xknownvalue.Ref(runnerAddr, "meshBuildingBlockRunner", &runnerUuid),
+						xknownvalue.Ref(runnerAddr.String(), "meshBuildingBlockRunner", &runnerUuid),
 					},
 				},
 				{
@@ -78,7 +78,7 @@ func TestAccBuildingBlockRunnerResource(t *testing.T) {
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(runnerAddr.String(), tfjsonpath.New("spec").AtMapKey("implementation_type"), knownvalue.StringExact("GITHUB_WORKFLOW")),
-						xknownvalue.Ref(runnerAddr, "meshBuildingBlockRunner", &replacedRunnerUuid),
+						xknownvalue.Ref(runnerAddr.String(), "meshBuildingBlockRunner", &replacedRunnerUuid),
 					},
 				},
 				{
@@ -129,7 +129,7 @@ func TestAccBuildingBlockRunnerResource(t *testing.T) {
 							"aws":   knownvalue.Null(),
 							"azure": knownvalue.Null(),
 						})),
-						xknownvalue.Ref(runnerAddr, "meshBuildingBlockRunner", &runnerUuid),
+						xknownvalue.Ref(runnerAddr.String(), "meshBuildingBlockRunner", &runnerUuid),
 					},
 				},
 			},
@@ -163,7 +163,7 @@ func TestAccBuildingBlockRunnerResource(t *testing.T) {
 							"aws":   knownvalue.Null(),
 							"azure": knownvalue.Null(),
 						})),
-						xknownvalue.Ref(runnerAddr, "meshBuildingBlockRunner", &runnerUuid),
+						xknownvalue.Ref(runnerAddr.String(), "meshBuildingBlockRunner", &runnerUuid),
 					},
 				},
 				{
@@ -177,7 +177,7 @@ func TestAccBuildingBlockRunnerResource(t *testing.T) {
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(runnerAddr.String(), tfjsonpath.New("spec").AtMapKey("workload_identity_federation").AtMapKey("subject_template"), knownvalue.StringExact(updatedTemplate)),
-						xknownvalue.Ref(runnerAddr, "meshBuildingBlockRunner", &runnerUuid),
+						xknownvalue.Ref(runnerAddr.String(), "meshBuildingBlockRunner", &runnerUuid),
 					},
 				},
 			},
@@ -241,7 +241,7 @@ func TestAccBuildingBlockRunnerResource(t *testing.T) {
 				{
 					Config: config.String(),
 					ConfigStateChecks: []statecheck.StateCheck{
-						xknownvalue.Ref(runnerAddr, "meshBuildingBlockRunner", &runnerUuid),
+						xknownvalue.Ref(runnerAddr.String(), "meshBuildingBlockRunner", &runnerUuid),
 						statecheck.ExpectKnownValue(runnerAddr.String(), tfjsonpath.New("spec").AtMapKey("restriction"), knownvalue.StringExact("PRIVATE")),
 					},
 				},
@@ -257,7 +257,7 @@ func TestAccBuildingBlockRunnerResource(t *testing.T) {
 						},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						xknownvalue.Ref(runnerAddr, "meshBuildingBlockRunner", &replacedRunnerUuid),
+						xknownvalue.Ref(runnerAddr.String(), "meshBuildingBlockRunner", &replacedRunnerUuid),
 						statecheck.ExpectKnownValue(runnerAddr.String(), tfjsonpath.New("spec").AtMapKey("restriction"), knownvalue.StringExact("PUBLIC")),
 					},
 				},
