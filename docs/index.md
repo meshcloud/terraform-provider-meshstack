@@ -99,16 +99,16 @@ resource "meshstack_building_block" "team_a_sandbox" {
   Always set this through the environment: a value set here is written to Terraform state.
 - `apitoken` (String, Sensitive) A meshStack access token to send as it is, also read from `MESHSTACK_API_TOKEN`.
   
-  The token is minted elsewhere, so nothing renews it and nothing asks for a workspace: it already carries the one it was minted for. A building block runner's token is the usual one to bring here, to see what a run sees, and such a token may not be allowed to list workspaces at all.
+  The meshStack CLI does not renew this token and does not ask for a workspace, because the token already belongs to one. A typical use is the token of a building block runner, to see what a run sees. Such a token may not be allowed to list workspaces.
   
   Always set this through the environment: a value set here is written to Terraform state.
-- `endpoint` (String) The meshStack API to act against, such as `https://api.example.meshcloud.io`, also read from `MESHSTACK_ENDPOINT` and inferred from current profile if possible.
+- `endpoint` (String) The URL of the meshStack API, such as `https://api.example.meshcloud.io`, also read from `MESHSTACK_ENDPOINT`, else taken from the current profile.
 - `profile` (String) The profile whose credentials and defaults this run uses, also read from `MESHSTACK_PROFILE`.
   
-  A profile is a named bundle of endpoint and credential, written by `meshstack login` into the meshStack CLI's configuration directory. It supplies each of those only where nothing above it did, so it is never an override.
+  A profile is a named bundle of endpoint and credential, written by `meshstack login` into the meshStack CLI's configuration directory. Flags and environment variables take precedence over the values in a profile.
   
   With no name given, the profile is the one whose endpoint matches the endpoint in use, else the one the last `meshstack login` selected, else `default`.
-- `workspace` (String) The workspace to act in, identified as in meshPanel, such as my-workspace-ab12c. Also read from MESHSTACK_WORKSPACE.
+- `workspace` (String) The workspace to work in, identified as in meshPanel, such as my-workspace-ab12c. Also read from MESHSTACK_WORKSPACE.
   
   A browser login needs this or `MESHSTACK_WORKSPACE`: the provider does not take the profile's default workspace, which `meshstack login` stores. An API key or an API token needs no workspace.
 
