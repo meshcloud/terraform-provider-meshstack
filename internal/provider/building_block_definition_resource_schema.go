@@ -542,7 +542,7 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 							},
 							Attributes: map[string]schema.Attribute{
 								"kind": schema.StringAttribute{
-									MarkdownDescription: "Kind of the platform ref, one of `" + client.MeshObjectKind.PlatformType + "`, `" + client.MeshObjectKind.Platform + "` and `" + client.MeshObjectKind.LandingZone + "`. An entry with a platform type supports every platform of that type, and an entry with a platform supports every landing zone of that platform, also the ones added later. So narrow a definition by using individual platforms or landing zones instead of the type or platform rather than next to it. Using an individual platform requires meshStack 2026.40.0 or later, using a landing zone requires meshStack 2026.45.0 or later.",
+									MarkdownDescription: "Kind of the platform ref, one of `" + client.MeshObjectKind.PlatformType + "`, `" + client.MeshObjectKind.Platform + "` and `" + client.MeshObjectKind.LandingZone + "`. An entry with a platform type supports every platform of that type, and an entry with a platform supports every landing zone of that platform, also the ones added later. So narrow a definition by using individual platforms or landing zones instead of the type or platform rather than next to it. Using an individual platform requires meshStack 2026.40.0 or later, using a landing zone requires meshStack 2026.46.0 or later.",
 									Optional:            true,
 									Computed:            true,
 									Default:             stringdefault.StaticString(client.MeshObjectKind.PlatformType),
