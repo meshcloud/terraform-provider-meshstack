@@ -64,7 +64,7 @@ Required:
 Optional:
 
 - `payment_method_identifier` (String)
-- `substitute_payment_method_identifier` (String)
+- `substitute_payment_method_identifier` (String) Payment method that meshStack makes the payment method of the project when `payment_method_identifier` expires. meshStack then clears this attribute, so update both attributes after the expiry to end the drift.
 - `tags` (Map of List of String) Tags of `meshProject`. Only the tags you declare here are managed by Terraform; restricted-tag defaults meshStack injects are not tracked and never show as drift.
 
 ## Import

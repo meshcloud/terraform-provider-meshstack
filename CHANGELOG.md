@@ -1,3 +1,9 @@
+# v0.28.1
+
+FIXES:
+- `meshstack_project`: `spec.substitute_payment_method_identifier` is sent to meshStack. Before, it was never sent, and
+  it replaced `spec.payment_method_identifier` when it was set.
+
 # v0.28.0
 
 BREAKING CHANGES:

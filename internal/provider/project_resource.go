@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -82,6 +83,8 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 						Computed: true,
 					},
 					"substitute_payment_method_identifier": schema.StringAttribute{
+						MarkdownDescription: "Payment method that meshStack makes the payment method of the project when `payment_method_identifier` expires. " +
+							"meshStack then clears this attribute, so update both attributes after the expiry to end the drift.",
 						Optional: true,
 						Computed: true,
 					},
@@ -111,6 +114,32 @@ type projectSpec struct {
 	SubstitutePaymentMethodIdentifier types.String `json:"substitutePaymentMethodIdentifier" tfsdk:"substitute_payment_method_identifier"`
 }
 
+func (plan projectCreate) meshProject(ctx context.Context) (client.MeshProjectCreate, diag.Diagnostics) {
+	tags := make(map[string][]string)
+	var diags diag.Diagnostics
+	if !plan.Spec.Tags.IsNull() {
+		diags = plan.Spec.Tags.ElementsAs(ctx, &tags, false)
+	}
+	project := client.MeshProjectCreate{
+		Metadata: client.MeshProjectCreateMetadata{
+			Name:             plan.Metadata.Name.ValueString(),
+			OwnedByWorkspace: plan.Metadata.OwnedByWorkspace.ValueString(),
+		},
+		Spec: client.MeshProjectSpec{
+			DisplayName: plan.Spec.DisplayName.ValueString(),
+			Tags:        tags,
+		},
+	}
+	// Unknown values result in empty strings but we want nil instead
+	if !plan.Spec.PaymentMethodIdentifier.IsUnknown() {
+		project.Spec.PaymentMethodIdentifier = plan.Spec.PaymentMethodIdentifier.ValueStringPointer()
+	}
+	if !plan.Spec.SubstitutePaymentMethodIdentifier.IsUnknown() {
+		project.Spec.SubstitutePaymentMethodIdentifier = plan.Spec.SubstitutePaymentMethodIdentifier.ValueStringPointer()
+	}
+	return project, diags
+}
+
 // Create creates the resource and sets the initial Terraform state.
 func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var plan projectCreate
@@ -121,37 +150,10 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	tags := make(map[string][]string)
-	if !plan.Spec.Tags.IsNull() {
-		diags = plan.Spec.Tags.ElementsAs(ctx, &tags, false)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-	}
-
-	// Unknown values result in empty strings but we want nil instead
-	var paymentMethodIdentifier *string
-	if !plan.Spec.PaymentMethodIdentifier.IsUnknown() {
-		paymentMethodIdentifier = plan.Spec.PaymentMethodIdentifier.ValueStringPointer()
-	}
-
-	var substitutePaymentMethodIdentifier *string
-	if !plan.Spec.SubstitutePaymentMethodIdentifier.IsUnknown() {
-		paymentMethodIdentifier = plan.Spec.SubstitutePaymentMethodIdentifier.ValueStringPointer()
-	}
-
-	create := client.MeshProjectCreate{
-		Metadata: client.MeshProjectCreateMetadata{
-			Name:             plan.Metadata.Name.ValueString(),
-			OwnedByWorkspace: plan.Metadata.OwnedByWorkspace.ValueString(),
-		},
-		Spec: client.MeshProjectSpec{
-			DisplayName:                       plan.Spec.DisplayName.ValueString(),
-			Tags:                              tags,
-			PaymentMethodIdentifier:           paymentMethodIdentifier,
-			SubstitutePaymentMethodIdentifier: substitutePaymentMethodIdentifier,
-		},
+	create, diags := plan.meshProject(ctx)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
 	project, err := r.meshProjectClient.Create(ctx, &create)
@@ -163,7 +165,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	project.Spec.Tags = tags
+	project.Spec.Tags = create.Spec.Tags
 
 	diags = resp.State.Set(ctx, project)
 	resp.Diagnostics.Append(diags...)
@@ -213,37 +215,10 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	tags := make(map[string][]string)
-	if !plan.Spec.Tags.IsNull() {
-		diags = plan.Spec.Tags.ElementsAs(ctx, &tags, false)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-	}
-
-	// Unknown values result in empty strings but we want nil instead
-	var paymentMethodIdentifier *string
-	if !plan.Spec.PaymentMethodIdentifier.IsUnknown() {
-		paymentMethodIdentifier = plan.Spec.PaymentMethodIdentifier.ValueStringPointer()
-	}
-
-	var substitutePaymentMethodIdentifier *string
-	if !plan.Spec.SubstitutePaymentMethodIdentifier.IsUnknown() {
-		paymentMethodIdentifier = plan.Spec.SubstitutePaymentMethodIdentifier.ValueStringPointer()
-	}
-
-	create := client.MeshProjectCreate{
-		Metadata: client.MeshProjectCreateMetadata{
-			Name:             plan.Metadata.Name.ValueString(),
-			OwnedByWorkspace: plan.Metadata.OwnedByWorkspace.ValueString(),
-		},
-		Spec: client.MeshProjectSpec{
-			DisplayName:                       plan.Spec.DisplayName.ValueString(),
-			Tags:                              tags,
-			PaymentMethodIdentifier:           paymentMethodIdentifier,
-			SubstitutePaymentMethodIdentifier: substitutePaymentMethodIdentifier,
-		},
+	create, diags := plan.meshProject(ctx)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
 	project, err := r.meshProjectClient.Update(ctx, &create)
@@ -255,7 +230,7 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	project.Spec.Tags = tags
+	project.Spec.Tags = create.Spec.Tags
 
 	diags = resp.State.Set(ctx, project)
 	resp.Diagnostics.Append(diags...)
