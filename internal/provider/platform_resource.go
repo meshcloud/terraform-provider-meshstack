@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"regexp"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -85,26 +84,8 @@ func (r *platformResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 							stringplanmodifier.UseStateForUnknown(),
 						},
 					},
-					"name": schema.StringAttribute{
-						MarkdownDescription: "Make sure you use a unique platform identifier within a Location. Location + Platform identifiers are being used to uniquely identify a platform in meshStack. You cannot change this identifier after creation of a platform.",
-						Required:            true,
-						PlanModifiers: []planmodifier.String{
-							stringplanmodifier.RequiresReplace(),
-						},
-						Validators: []validator.String{
-							stringvalidator.RegexMatches(
-								regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`),
-								"must be alphanumeric with dashes, must be lowercase, and have no leading, trailing or consecutive dashes",
-							),
-						},
-					},
-					"owned_by_workspace": schema.StringAttribute{
-						MarkdownDescription: "The identifier of the workspace that owns this meshPlatform.",
-						Required:            true,
-						PlanModifiers: []planmodifier.String{
-							stringplanmodifier.RequiresReplace(),
-						},
-					},
+					"name":               lowercaseDashedName("Make sure you use a unique platform identifier within a Location. Location + Platform identifiers are being used to uniquely identify a platform in meshStack. You cannot change this identifier after creation of a platform."),
+					"owned_by_workspace": requiredReplaceOnChangeString("The identifier of the workspace that owns this meshPlatform."),
 				},
 			},
 

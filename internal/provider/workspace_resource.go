@@ -3,16 +3,15 @@ package provider
 import (
 	"context"
 	"fmt"
-	"regexp"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/meshcloud/meshstack-cli/client"
 )
 
@@ -63,19 +62,7 @@ func (r *workspaceResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 			"metadata": schema.SingleNestedAttribute{
 				Required: true,
 				Attributes: map[string]schema.Attribute{
-					"name": schema.StringAttribute{
-						MarkdownDescription: "Workspace identifier.",
-						Required:            true,
-						PlanModifiers: []planmodifier.String{
-							stringplanmodifier.RequiresReplace(),
-						},
-						Validators: []validator.String{
-							stringvalidator.RegexMatches(
-								regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`),
-								"must be alphanumeric with dashes, must be lowercase, and have no leading, trailing or consecutive dashes",
-							),
-						},
-					},
+					"name": lowercaseDashedName("Workspace identifier."),
 					"created_on": schema.StringAttribute{
 						MarkdownDescription: "Creation date of the workspace.",
 						Computed:            true,
@@ -110,15 +97,7 @@ func (r *workspaceResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 }
 
 func (r *workspaceResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	workspace := client.MeshWorkspaceCreate{
-		Metadata: client.MeshWorkspaceCreateMetadata{},
-	}
-
-	// Retrieve values from plan
-	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec"), &workspace.Spec)...)
-	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("metadata").AtName("name"), &workspace.Metadata.Name)...)
-	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("metadata").AtName("tags"), &workspace.Metadata.Tags)...)
-
+	workspace := plannedWorkspace(ctx, req.Plan, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -139,6 +118,13 @@ func (r *workspaceResource) Create(ctx context.Context, req resource.CreateReque
 	createdWorkspace.Metadata.Tags = workspace.Metadata.Tags
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, newWorkspaceModel(createdWorkspace))...)
+}
+
+func plannedWorkspace(ctx context.Context, plan tfsdk.Plan, diags *diag.Diagnostics) (workspace client.MeshWorkspaceCreate) {
+	diags.Append(plan.GetAttribute(ctx, path.Root("spec"), &workspace.Spec)...)
+	diags.Append(plan.GetAttribute(ctx, path.Root("metadata").AtName("name"), &workspace.Metadata.Name)...)
+	diags.Append(plan.GetAttribute(ctx, path.Root("metadata").AtName("tags"), &workspace.Metadata.Tags)...)
+	return
 }
 
 func (r *workspaceResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -179,15 +165,7 @@ func (r *workspaceResource) Read(ctx context.Context, req resource.ReadRequest, 
 }
 
 func (r *workspaceResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	workspace := client.MeshWorkspaceCreate{
-		Metadata: client.MeshWorkspaceCreateMetadata{},
-	}
-
-	// Retrieve values from plan
-	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec"), &workspace.Spec)...)
-	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("metadata").AtName("name"), &workspace.Metadata.Name)...)
-	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("metadata").AtName("tags"), &workspace.Metadata.Tags)...)
-
+	workspace := plannedWorkspace(ctx, req.Plan, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}

@@ -35,30 +35,7 @@ func (v BuildingBlockDefinitionTagInputs) MarkdownDescription(ctx context.Contex
 }
 
 func (v BuildingBlockDefinitionTagInputs) ValidateMap(ctx context.Context, req validator.MapRequest, resp *validator.MapResponse) {
-	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
-		return
-	}
-
-	var targetType types.String
-	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("spec").AtName("target_type"), &targetType)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	// target_type defaults after validation, so a null value here is the schema default.
-	configuredTargetType, targetTypeKnown := configuredString(targetType, client.MeshBuildingBlockTypeWorkspaceLevel.String())
-
-	for key, element := range req.ConfigValue.Elements() {
-		input, ok := element.(types.Object)
-		if !ok || input.IsNull() || input.IsUnknown() {
-			continue
-		}
-		attributes := input.Attributes()
-		assignmentType, assignmentTypeKnown := configuredString(attributes["assignment_type"], "")
-		if !assignmentTypeKnown || assignmentType != client.MeshBuildingBlockInputAssignmentTypeTag.String() {
-			continue
-		}
-		inputPath := req.Path.AtMapKey(key)
-
+	forEachInputAssigned(ctx, req, resp, client.MeshBuildingBlockInputAssignmentTypeTag, func(key string, inputPath path.Path, attributes map[string]attr.Value, target inputsTargetType) {
 		inputType, inputTypeKnown := configuredString(attributes["type"], "")
 		if inputTypeKnown && inputType != "" && inputType != client.MeshBuildingBlockIOTypeCode.String() {
 			resp.Diagnostics.AddAttributeError(inputPath.AtName("type"),
@@ -73,10 +50,10 @@ func (v BuildingBlockDefinitionTagInputs) ValidateMap(ctx context.Context, req v
 				fmt.Sprintf("Tags are visible metadata in meshStack, so encrypting the resolved value of input %q would hide nothing. Remove the sensitive block.", key))
 		}
 
-		if targetTypeKnown {
-			validateTagInputArgument(key, inputPath, attributes["argument"], configuredTargetType, resp)
+		if target.known {
+			validateTagInputArgument(key, inputPath, attributes["argument"], target.value, resp)
 		}
-	}
+	})
 }
 
 // validateTagInputArgument checks the `<target>.<tag key>` reference the argument carries, and that the

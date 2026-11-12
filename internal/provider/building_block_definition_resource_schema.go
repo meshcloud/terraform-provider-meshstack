@@ -343,37 +343,20 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 	},
 	}
 
+	approvalGate := func(description string) schema.BoolAttribute {
+		return schema.BoolAttribute{
+			MarkdownDescription: description,
+			Optional:            true,
+			Computed:            true,
+			Default:             booldefault.StaticBool(false),
+		}
+	}
 	approvalPoliciesAttributes := map[string]schema.Attribute{
-		"version_upgrade": schema.BoolAttribute{
-			MarkdownDescription: "Whether upgrading a building block to a newer definition version requires approval.",
-			Optional:            true,
-			Computed:            true,
-			Default:             booldefault.StaticBool(false),
-		},
-		"user_input_changes": schema.BoolAttribute{
-			MarkdownDescription: "Whether changes to user-provided inputs require approval.",
-			Optional:            true,
-			Computed:            true,
-			Default:             booldefault.StaticBool(false),
-		},
-		"manual_triggers": schema.BoolAttribute{
-			MarkdownDescription: "Whether a manually triggered run requires approval.",
-			Optional:            true,
-			Computed:            true,
-			Default:             booldefault.StaticBool(false),
-		},
-		"building_block_creation": schema.BoolAttribute{
-			MarkdownDescription: "Whether creating a new building block from this definition requires approval.",
-			Optional:            true,
-			Computed:            true,
-			Default:             booldefault.StaticBool(false),
-		},
-		"any_input_changes": schema.BoolAttribute{
-			MarkdownDescription: "Whether any input change - user-provided or system-generated - requires approval.",
-			Optional:            true,
-			Computed:            true,
-			Default:             booldefault.StaticBool(false),
-		},
+		"version_upgrade":         approvalGate("Whether upgrading a building block to a newer definition version requires approval."),
+		"user_input_changes":      approvalGate("Whether changes to user-provided inputs require approval."),
+		"manual_triggers":         approvalGate("Whether a manually triggered run requires approval."),
+		"building_block_creation": approvalGate("Whether creating a new building block from this definition requires approval."),
+		"any_input_changes":       approvalGate("Whether any input change - user-provided or system-generated - requires approval."),
 	}
 	approvalPoliciesAttribute := schema.SingleNestedAttribute{
 		MarkdownDescription: "Which run triggers require an operator's approval before the run is applied. " +
@@ -473,14 +456,8 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 							stringplanmodifier.UseStateForUnknown(),
 						},
 					},
-					"owned_by_workspace": schema.StringAttribute{
-						MarkdownDescription: "Identifier of the workspace that owns this building block definition.",
-						Required:            true,
-						PlanModifiers: []planmodifier.String{
-							stringplanmodifier.RequiresReplace(),
-						},
-					},
-					"tags": tagsAttribute(tagsOptions{Kind: client.MeshObjectKind.BuildingBlockDefinition, Restricted: true}),
+					"owned_by_workspace": requiredReplaceOnChangeString("Identifier of the workspace that owns this building block definition."),
+					"tags":               tagsAttribute(tagsOptions{Kind: client.MeshObjectKind.BuildingBlockDefinition, Restricted: true}),
 				},
 			},
 

@@ -3,9 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
-	"regexp"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -109,27 +107,9 @@ func (r *landingZoneResource) Schema(_ context.Context, _ resource.SchemaRequest
 			"metadata": schema.SingleNestedAttribute{
 				Required: true,
 				Attributes: map[string]schema.Attribute{
-					"name": schema.StringAttribute{
-						MarkdownDescription: "Landing zone identifier.",
-						Required:            true,
-						PlanModifiers: []planmodifier.String{
-							stringplanmodifier.RequiresReplace(),
-						},
-						Validators: []validator.String{
-							stringvalidator.RegexMatches(
-								regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`),
-								"must be alphanumeric with dashes, must be lowercase, and have no leading, trailing or consecutive dashes",
-							),
-						},
-					},
-					"owned_by_workspace": schema.StringAttribute{
-						MarkdownDescription: "Identifier of the workspace that owns this landing zone.",
-						Required:            true,
-						PlanModifiers: []planmodifier.String{
-							stringplanmodifier.RequiresReplace(),
-						},
-					},
-					"tags": tagsAttribute(tagsOptions{Kind: client.MeshObjectKind.LandingZone, Restricted: true}),
+					"name":               lowercaseDashedName("Landing zone identifier."),
+					"owned_by_workspace": requiredReplaceOnChangeString("Identifier of the workspace that owns this landing zone."),
+					"tags":               tagsAttribute(tagsOptions{Kind: client.MeshObjectKind.LandingZone, Restricted: true}),
 				},
 			},
 
@@ -394,11 +374,7 @@ func azureRgPlatformConfigSchema() schema.Attribute {
 		MarkdownDescription: "Azure Resource Group platform properties.",
 		Optional:            true,
 		Attributes: map[string]schema.Attribute{
-			"azure_rg_location": schema.StringAttribute{
-				MarkdownDescription: "The newly created Resource Group for the meshProjects will get assigned to this location. It must be all lower case and without spaces (e.g. `eastus2` for East US 2). In order to list the available locations you can use `az account list-locations --query \"[*].name\" --out tsv | sort`",
-				Required:            true,
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
-			},
+			"azure_rg_location": requiredReplaceOnChangeString("The newly created Resource Group for the meshProjects will get assigned to this location. It must be all lower case and without spaces (e.g. `eastus2` for East US 2). In order to list the available locations you can use `az account list-locations --query \"[*].name\" --out tsv | sort`"),
 			"azure_rg_role_mappings": schema.SetNestedAttribute{
 				MarkdownDescription: "An array of mappings between the meshRole and the Azure" +
 					" specific access role. " +

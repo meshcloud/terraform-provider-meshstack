@@ -118,10 +118,6 @@ func (d *buildingBlockDataSource) Read(ctx context.Context, req datasource.ReadR
 	)...)
 }
 
-func computedString(md string) schema.StringAttribute {
-	return schema.StringAttribute{MarkdownDescription: md, Computed: true}
-}
-
 type buildingBlockReadSpec struct {
 	DisplayName                       string                              `tfsdk:"display_name"`
 	BuildingBlockDefinitionVersionRef buildingBlockReadVersionRef         `tfsdk:"building_block_definition_version_ref"`

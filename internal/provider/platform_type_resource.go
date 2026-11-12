@@ -62,13 +62,7 @@ func (r *platformTypeResource) Schema(_ context.Context, _ resource.SchemaReques
 							),
 						},
 					},
-					"owned_by_workspace": schema.StringAttribute{
-						MarkdownDescription: "Identifier of the workspace that owns this platform type.",
-						Required:            true,
-						PlanModifiers: []planmodifier.String{
-							stringplanmodifier.RequiresReplace(),
-						},
-					},
+					"owned_by_workspace": requiredReplaceOnChangeString("Identifier of the workspace that owns this platform type."),
 					"uuid": schema.StringAttribute{
 						MarkdownDescription: "UUID of the platform type.",
 						Computed:            true,

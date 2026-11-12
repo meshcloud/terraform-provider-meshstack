@@ -77,10 +77,7 @@ func awsPlatformDataSourceSchema() schema.Attribute {
 		MarkdownDescription: "Configuration for AWS",
 		Computed:            true,
 		Attributes: map[string]schema.Attribute{
-			"region": schema.StringAttribute{
-				MarkdownDescription: "AWS region",
-				Computed:            true,
-			},
+			"region":      computedString("AWS region"),
 			"replication": awsReplicationConfigDataSourceSchema(),
 			"metering":    awsMeteringConfigDataSourceSchema(),
 		},
@@ -92,16 +89,10 @@ func aksPlatformDataSourceSchema() schema.Attribute {
 		MarkdownDescription: "Azure Kubernetes Service configuration",
 		Computed:            true,
 		Attributes: map[string]schema.Attribute{
-			"base_url": schema.StringAttribute{
-				MarkdownDescription: "Base URL of the AKS cluster",
-				Computed:            true,
-			},
-			"disable_ssl_validation": schema.BoolAttribute{
-				MarkdownDescription: "Flag to disable SSL validation for the AKS cluster. (SSL Validation should at best never be disabled, but for integration of some private cloud platforms in an early state, they might not yet be using valid SSL certificates. In that case it can make sense to disable SSL validation here to already test integration of these platforms.)",
-				Computed:            true,
-			},
-			"replication": aksReplicationConfigDataSourceSchema(),
-			"metering":    aksMeteringConfigDataSourceSchema(),
+			"base_url":               computedString("Base URL of the AKS cluster"),
+			"disable_ssl_validation": computedBool("Flag to disable SSL validation for the AKS cluster. (SSL Validation should at best never be disabled, but for integration of some private cloud platforms in an early state, they might not yet be using valid SSL certificates. In that case it can make sense to disable SSL validation here to already test integration of these platforms.)"),
+			"replication":            aksReplicationConfigDataSourceSchema(),
+			"metering":               aksMeteringConfigDataSourceSchema(),
 		},
 	}
 }
@@ -111,12 +102,9 @@ func azurePlatformDataSourceSchema() schema.Attribute {
 		MarkdownDescription: "Azure platform configuration.",
 		Computed:            true,
 		Attributes: map[string]schema.Attribute{
-			"entra_tenant": schema.StringAttribute{
-				MarkdownDescription: "Azure Active Directory (Entra ID) tenant",
-				Computed:            true,
-			},
-			"replication": azureReplicationConfigDataSourceSchema(),
-			"metering":    azureMeteringConfigDataSourceSchema(),
+			"entra_tenant": computedString("Azure Active Directory (Entra ID) tenant"),
+			"replication":  azureReplicationConfigDataSourceSchema(),
+			"metering":     azureMeteringConfigDataSourceSchema(),
 		},
 	}
 }
@@ -126,11 +114,8 @@ func azureRgPlatformDataSourceSchema() schema.Attribute {
 		MarkdownDescription: "Azure Resource Group platform configuration.",
 		Computed:            true,
 		Attributes: map[string]schema.Attribute{
-			"entra_tenant": schema.StringAttribute{
-				MarkdownDescription: "Azure Active Directory (Entra ID) tenant",
-				Computed:            true,
-			},
-			"replication": azureRgReplicationConfigDataSourceSchema(),
+			"entra_tenant": computedString("Azure Active Directory (Entra ID) tenant"),
+			"replication":  azureRgReplicationConfigDataSourceSchema(),
 		},
 	}
 }
@@ -151,16 +136,10 @@ func kubernetesPlatformDataSourceSchema() schema.Attribute {
 		MarkdownDescription: "Kubernetes platform configuration.",
 		Computed:            true,
 		Attributes: map[string]schema.Attribute{
-			"base_url": schema.StringAttribute{
-				MarkdownDescription: "This URL is the base URL to your Kubernetes Cluster, which is used to call the APIs to create new Kubernetes projects, get raw data for metering the Kubernetes projects, etc. An example base URL is: https://k8s.dev.eu-de-central.msh.host:6443",
-				Computed:            true,
-			},
-			"disable_ssl_validation": schema.BoolAttribute{
-				MarkdownDescription: "Flag to disable SSL validation for the Kubernetes cluster. SSL Validation should at best never be disabled, but for integration of some private cloud platforms in an early state, they might not yet be using valid SSL certificates. In that case it can make sense to disable SSL validation here to already test integration of these platforms.",
-				Computed:            true,
-			},
-			"replication": kubernetesReplicationConfigDataSourceSchema(),
-			"metering":    kubernetesMeteringConfigDataSourceSchema(),
+			"base_url":               computedString("This URL is the base URL to your Kubernetes Cluster, which is used to call the APIs to create new Kubernetes projects, get raw data for metering the Kubernetes projects, etc. An example base URL is: https://k8s.dev.eu-de-central.msh.host:6443"),
+			"disable_ssl_validation": computedBool("Flag to disable SSL validation for the Kubernetes cluster. SSL Validation should at best never be disabled, but for integration of some private cloud platforms in an early state, they might not yet be using valid SSL certificates. In that case it can make sense to disable SSL validation here to already test integration of these platforms."),
+			"replication":            kubernetesReplicationConfigDataSourceSchema(),
+			"metering":               kubernetesMeteringConfigDataSourceSchema(),
 		},
 	}
 }
@@ -170,16 +149,10 @@ func openShiftPlatformDataSourceSchema() schema.Attribute {
 		MarkdownDescription: "OpenShift platform configuration.",
 		Computed:            true,
 		Attributes: map[string]schema.Attribute{
-			"base_url": schema.StringAttribute{
-				MarkdownDescription: "This URL is the base URL to your OpenShift Cluster, which is used to call the APIs to create new OpenShift projects, get raw data for metering the OpenShift projects, etc. An example base URL is: https://api.okd4.dev.eu-de-central.msh.host:6443",
-				Computed:            true,
-			},
-			"disable_ssl_validation": schema.BoolAttribute{
-				MarkdownDescription: "Flag to disable SSL validation for the OpenShift cluster. SSL Validation should at best never be disabled, but for integration of some private cloud platforms in an early state, they might not yet be using valid SSL certificates. In that case it can make sense to disable SSL validation here to already test integration of these platforms.",
-				Computed:            true,
-			},
-			"replication": openShiftReplicationConfigDataSourceSchema(),
-			"metering":    openShiftMeteringConfigDataSourceSchema(),
+			"base_url":               computedString("This URL is the base URL to your OpenShift Cluster, which is used to call the APIs to create new OpenShift projects, get raw data for metering the OpenShift projects, etc. An example base URL is: https://api.okd4.dev.eu-de-central.msh.host:6443"),
+			"disable_ssl_validation": computedBool("Flag to disable SSL validation for the OpenShift cluster. SSL Validation should at best never be disabled, but for integration of some private cloud platforms in an early state, they might not yet be using valid SSL certificates. In that case it can make sense to disable SSL validation here to already test integration of these platforms."),
+			"replication":            openShiftReplicationConfigDataSourceSchema(),
+			"metering":               openShiftMeteringConfigDataSourceSchema(),
 		},
 	}
 }
@@ -204,59 +177,81 @@ func awsMeteringConfigDataSourceSchema() schema.Attribute {
 				MarkdownDescription: "Access configuration for AWS metering",
 				Computed:            true,
 				Attributes: map[string]schema.Attribute{
-					"organization_root_account_role": schema.StringAttribute{
-						MarkdownDescription: "ARN of the Management Account Role",
-						Computed:            true,
-					},
-					"organization_root_account_external_id": schema.StringAttribute{
-						MarkdownDescription: "ExternalId for the organization root account role",
-						Computed:            true,
-					},
-					"auth": schema.SingleNestedAttribute{
-						MarkdownDescription: "Authentication configuration",
-						Computed:            true,
-						Attributes: map[string]schema.Attribute{
-							"type": schema.StringAttribute{
-								MarkdownDescription: "Authentication type (credential or workloadIdentity)",
-								Computed:            true,
-							},
-							"credential": schema.SingleNestedAttribute{
-								MarkdownDescription: "Service user credential configuration (if type is credential)",
-								Computed:            true,
-								Attributes: map[string]schema.Attribute{
-									"access_key": schema.StringAttribute{
-										MarkdownDescription: "AWS access key",
-										Computed:            true,
-									},
-									"secret_key": secret.DatasourceSchema(secret.DatasourceSchemaOptions{MarkdownDescription: "AWS secret key"})},
-							},
-							"workload_identity": schema.SingleNestedAttribute{
-								MarkdownDescription: "Workload identity configuration (if type is workloadIdentity)",
-								Computed:            true,
-								Attributes: map[string]schema.Attribute{
-									"role_arn": schema.StringAttribute{
-										MarkdownDescription: "ARN of the role for workload identity",
-										Computed:            true,
-									},
-								},
-							},
-						},
-					},
+					"organization_root_account_role":        computedString("ARN of the Management Account Role"),
+					"organization_root_account_external_id": computedString("ExternalId for the organization root account role"),
+					"auth":                                  awsAuthConfigDataSourceSchema("AWS access key", "ARN of the role for workload identity"),
 				},
 			},
-			"filter": schema.StringAttribute{
-				MarkdownDescription: "Cost Explorer filter type (NONE or EXCLUDE_TAX)",
+			"filter":                            computedString("Cost Explorer filter type (NONE or EXCLUDE_TAX)"),
+			"reserved_instance_fair_chargeback": computedBool("Enable fair chargeback for reserved instances"),
+			"savings_plan_fair_chargeback":      computedBool("Enable fair chargeback for savings plans"),
+			"processing":                        meteringProcessingConfigDataSourceSchema(),
+		},
+	}
+}
+
+func awsAuthConfigDataSourceSchema(accessKeyDescription, roleArnDescription string) schema.Attribute {
+	return schema.SingleNestedAttribute{
+		MarkdownDescription: "Authentication configuration",
+		Computed:            true,
+		Attributes: map[string]schema.Attribute{
+			"type": computedString("Authentication type (credential or workloadIdentity)"),
+			"credential": schema.SingleNestedAttribute{
+				MarkdownDescription: "Service user credential configuration (if type is credential)",
 				Computed:            true,
+				Attributes: map[string]schema.Attribute{
+					"access_key": computedString(accessKeyDescription),
+					"secret_key": secret.DatasourceSchema(secret.DatasourceSchemaOptions{MarkdownDescription: "AWS secret key"}),
+				},
 			},
-			"reserved_instance_fair_chargeback": schema.BoolAttribute{
-				MarkdownDescription: "Enable fair chargeback for reserved instances",
+			"workload_identity": schema.SingleNestedAttribute{
+				MarkdownDescription: "Workload identity configuration (if type is workloadIdentity)",
 				Computed:            true,
+				Attributes: map[string]schema.Attribute{
+					"role_arn": computedString(roleArnDescription),
+				},
 			},
-			"savings_plan_fair_chargeback": schema.BoolAttribute{
-				MarkdownDescription: "Enable fair chargeback for savings plans",
+		},
+	}
+}
+
+func awsRoleMappingsDataSourceSchema(description, awsRoleDescription, permissionSetArnsDescription string) schema.Attribute {
+	return schema.SetNestedAttribute{
+		MarkdownDescription: description,
+		Computed:            true,
+		NestedObject: schema.NestedAttributeObject{
+			Attributes: map[string]schema.Attribute{
+				"project_role_ref": meshRefByName(meshRefOptions{Kind: client.MeshObjectKind.ProjectRole, Description: "Reference to the meshProjectRole.", Output: true}),
+				"aws_role":         computedString(awsRoleDescription),
+				"permission_set_arns": schema.ListAttribute{
+					MarkdownDescription: permissionSetArnsDescription,
+					ElementType:         types.StringType,
+					Computed:            true,
+				},
+			},
+		},
+	}
+}
+
+type gcpServiceAccountDescriptions struct {
+	serviceAccount, credential, audience, serviceAccountEmail string
+}
+
+func gcpServiceAccountDataSourceSchema(descriptions gcpServiceAccountDescriptions) schema.Attribute {
+	return schema.SingleNestedAttribute{
+		MarkdownDescription: descriptions.serviceAccount,
+		Computed:            true,
+		Attributes: map[string]schema.Attribute{
+			"type":       computedString("Service account type"),
+			"credential": secret.DatasourceSchema(secret.DatasourceSchemaOptions{MarkdownDescription: descriptions.credential}),
+			"workload_identity": schema.SingleNestedAttribute{
+				MarkdownDescription: "Workload identity configuration (if type supports it)",
 				Computed:            true,
+				Attributes: map[string]schema.Attribute{
+					"audience":              computedString(descriptions.audience),
+					"service_account_email": computedString(descriptions.serviceAccountEmail),
+				},
 			},
-			"processing": meteringProcessingConfigDataSourceSchema(),
 		},
 	}
 }
@@ -270,15 +265,9 @@ func azureMeteringConfigDataSourceSchema() schema.Attribute {
 				MarkdownDescription: "Service principal configuration for Azure metering",
 				Computed:            true,
 				Attributes: map[string]schema.Attribute{
-					"client_id": schema.StringAttribute{
-						MarkdownDescription: "The Application (Client) ID",
-						Computed:            true,
-					},
-					"object_id": schema.StringAttribute{
-						MarkdownDescription: "The Object ID of the Enterprise Application",
-						Computed:            true,
-					},
-					"auth": azureAuthConfigDataSourceSchema(),
+					"client_id": computedString("The Application (Client) ID"),
+					"object_id": computedString("The Object ID of the Enterprise Application"),
+					"auth":      azureAuthConfigDataSourceSchema(),
 				},
 			},
 			"processing": meteringProcessingConfigDataSourceSchema(),
@@ -291,52 +280,18 @@ func gcpMeteringConfigDataSourceSchema() schema.Attribute {
 		MarkdownDescription: "Metering configuration for GCP (optional, but required for metering)",
 		Computed:            true,
 		Attributes: map[string]schema.Attribute{
-			"service_account": schema.SingleNestedAttribute{
-				MarkdownDescription: "Service account configuration for GCP metering",
-				Computed:            true,
-				Attributes: map[string]schema.Attribute{
-					"type": schema.StringAttribute{
-						MarkdownDescription: "Service account type",
-						Computed:            true,
-					},
-					"credential": secret.DatasourceSchema(secret.DatasourceSchemaOptions{MarkdownDescription: "Base64 encoded service account credentials (if type supports it)"}),
-					"workload_identity": schema.SingleNestedAttribute{
-						MarkdownDescription: "Workload identity configuration (if type supports it)",
-						Computed:            true,
-						Attributes: map[string]schema.Attribute{
-							"audience": schema.StringAttribute{
-								MarkdownDescription: "The audience for workload identity",
-								Computed:            true,
-							},
-							"service_account_email": schema.StringAttribute{
-								MarkdownDescription: "Service account email address",
-								Computed:            true,
-							},
-						},
-					},
-				},
-			},
-			"bigquery_table": schema.StringAttribute{
-				MarkdownDescription: "BigQuery table for metering data",
-				Computed:            true,
-			},
-			"bigquery_table_for_carbon_footprint": schema.StringAttribute{
-				MarkdownDescription: "BigQuery table for carbon footprint data",
-				Computed:            true,
-			},
-			"carbon_footprint_data_collection_start_month": schema.StringAttribute{
-				MarkdownDescription: "Start month for carbon footprint data collection",
-				Computed:            true,
-			},
-			"partition_time_column": schema.StringAttribute{
-				MarkdownDescription: "Partition time column name",
-				Computed:            true,
-			},
-			"additional_filter": schema.StringAttribute{
-				MarkdownDescription: "Additional filter for metering queries",
-				Computed:            true,
-			},
-			"processing": meteringProcessingConfigDataSourceSchema(),
+			"service_account": gcpServiceAccountDataSourceSchema(gcpServiceAccountDescriptions{
+				serviceAccount:      "Service account configuration for GCP metering",
+				credential:          "Base64 encoded service account credentials (if type supports it)",
+				audience:            "The audience for workload identity",
+				serviceAccountEmail: "Service account email address",
+			}),
+			"bigquery_table":                               computedString("BigQuery table for metering data"),
+			"bigquery_table_for_carbon_footprint":          computedString("BigQuery table for carbon footprint data"),
+			"carbon_footprint_data_collection_start_month": computedString("Start month for carbon footprint data collection"),
+			"partition_time_column":                        computedString("Partition time column name"),
+			"additional_filter":                            computedString("Additional filter for metering queries"),
+			"processing":                                   meteringProcessingConfigDataSourceSchema(),
 		},
 	}
 }
@@ -346,62 +301,26 @@ func aksReplicationConfigDataSourceSchema() schema.Attribute {
 		MarkdownDescription: "Replication configuration for AKS (optional, but required for replication)",
 		Computed:            true,
 		Attributes: map[string]schema.Attribute{
-			"access_token": secret.DatasourceSchema(secret.DatasourceSchemaOptions{MarkdownDescription: "The access token of the service account for replicator access."}),
-			"namespace_name_pattern": schema.StringAttribute{
-				MarkdownDescription: "Pattern for naming namespaces in AKS",
-				Computed:            true,
-			},
-			"group_name_pattern": schema.StringAttribute{
-				MarkdownDescription: "Pattern for naming groups in AKS",
-				Computed:            true,
-			},
+			"access_token":           secret.DatasourceSchema(secret.DatasourceSchemaOptions{MarkdownDescription: "The access token of the service account for replicator access."}),
+			"namespace_name_pattern": computedString("Pattern for naming namespaces in AKS"),
+			"group_name_pattern":     computedString("Pattern for naming groups in AKS"),
 			"service_principal": schema.SingleNestedAttribute{
 				MarkdownDescription: "Service principal configuration for AKS",
 				Computed:            true,
 				Attributes: map[string]schema.Attribute{
-					"client_id": schema.StringAttribute{
-						MarkdownDescription: "The Application (Client) ID. In Azure Portal, this is the Application ID of the 'Enterprise Application' but can also be retrieved via the 'App Registration' object as 'Application (Client) ID'.",
-						Computed:            true,
-					},
-					"auth": azureAuthConfigDataSourceSchema(),
-					"entra_tenant": schema.StringAttribute{
-						MarkdownDescription: "Domain name or ID of the Entra Tenant that holds the Service Principal.",
-						Computed:            true,
-					},
-					"object_id": schema.StringAttribute{
-						MarkdownDescription: "The Object ID of the Enterprise Application. You can get this Object ID via the API (e.g. when using our Terraform provider) or from Enterprise applications pane in Microsoft Entra admin center.",
-						Computed:            true,
-					},
+					"client_id":    computedString("The Application (Client) ID. In Azure Portal, this is the Application ID of the 'Enterprise Application' but can also be retrieved via the 'App Registration' object as 'Application (Client) ID'."),
+					"auth":         azureAuthConfigDataSourceSchema(),
+					"entra_tenant": computedString("Domain name or ID of the Entra Tenant that holds the Service Principal."),
+					"object_id":    computedString("The Object ID of the Enterprise Application. You can get this Object ID via the API (e.g. when using our Terraform provider) or from Enterprise applications pane in Microsoft Entra admin center."),
 				},
 			},
-			"aks_subscription_id": schema.StringAttribute{
-				MarkdownDescription: "Subscription ID for the AKS cluster",
-				Computed:            true,
-			},
-			"aks_cluster_name": schema.StringAttribute{
-				MarkdownDescription: "Name of the AKS cluster",
-				Computed:            true,
-			},
-			"aks_resource_group": schema.StringAttribute{
-				MarkdownDescription: "Resource group for the AKS cluster",
-				Computed:            true,
-			},
-			"redirect_url": schema.StringAttribute{
-				MarkdownDescription: "This is the URL that Azure’s consent experience redirects users to after they accept their invitation.",
-				Computed:            true,
-			},
-			"send_azure_invitation_mail": schema.BoolAttribute{
-				MarkdownDescription: "Flag to send Azure invitation emails. When true, meshStack instructs Azure to send out Invitation mails to invited users.",
-				Computed:            true,
-			},
-			"user_lookup_strategy": schema.StringAttribute{
-				MarkdownDescription: "Strategy for user lookup in Azure (`userPrincipalName` or `email`)",
-				Computed:            true,
-			},
-			"administrative_unit_id": schema.StringAttribute{
-				MarkdownDescription: "If you enter an administrative unit ID the replicated (and potentially existing) groups will be put into this AU. This can be used to limit the permission scopes which are required for the replicator principal. If you remove the AU ID again or change it, the groups will not be removed from the old AU.",
-				Computed:            true,
-			},
+			"aks_subscription_id":        computedString("Subscription ID for the AKS cluster"),
+			"aks_cluster_name":           computedString("Name of the AKS cluster"),
+			"aks_resource_group":         computedString("Resource group for the AKS cluster"),
+			"redirect_url":               computedString("This is the URL that Azure’s consent experience redirects users to after they accept their invitation."),
+			"send_azure_invitation_mail": computedBool("Flag to send Azure invitation emails. When true, meshStack instructs Azure to send out Invitation mails to invited users."),
+			"user_lookup_strategy":       computedString("Strategy for user lookup in Azure (`userPrincipalName` or `email`)"),
+			"administrative_unit_id":     computedString("If you enter an administrative unit ID the replicated (and potentially existing) groups will be put into this AU. This can be used to limit the permission scopes which are required for the replicator principal. If you remove the AU ID again or change it, the groups will not be removed from the old AU."),
 		},
 	}
 }
@@ -415,96 +334,30 @@ func awsReplicationConfigDataSourceSchema() schema.Attribute {
 				MarkdownDescription: "meshStack currently supports 2 types of authentication. Workload Identity Federation (using OIDC) is the one that we recommend as it enables secure access to your AWS account without using long lived credentials. Alternatively, you can use credential based authentication by providing access and secret keys. Either the `service_user_config` or `workload_identity_config` must be provided.",
 				Computed:            true,
 				Attributes: map[string]schema.Attribute{
-					"organization_root_account_role": schema.StringAttribute{
-						MarkdownDescription: "ARN of the Management Account Role. The Management Account contains your AWS organization. E.g. arn:aws:iam::123456789:role/MeshfedServiceRole.",
-						Computed:            true,
-					},
-					"organization_root_account_external_id": schema.StringAttribute{
-						MarkdownDescription: "ExternalId to enhance security in a multi account setup when assuming the organization root account role.",
-						Computed:            true,
-					},
-					"auth": schema.SingleNestedAttribute{
-						MarkdownDescription: "Authentication configuration",
-						Computed:            true,
-						Attributes: map[string]schema.Attribute{
-							"type": schema.StringAttribute{
-								MarkdownDescription: "Authentication type (credential or workloadIdentity)",
-								Computed:            true,
-							},
-							"credential": schema.SingleNestedAttribute{
-								MarkdownDescription: "Service user credential configuration (if type is credential)",
-								Computed:            true,
-								Attributes: map[string]schema.Attribute{
-									"access_key": schema.StringAttribute{
-										MarkdownDescription: "AWS access key for service user",
-										Computed:            true,
-									},
-									"secret_key": secret.DatasourceSchema(secret.DatasourceSchemaOptions{MarkdownDescription: "AWS secret key"}),
-								},
-							},
-							"workload_identity": schema.SingleNestedAttribute{
-								MarkdownDescription: "Workload identity configuration (if type is workloadIdentity)",
-								Computed:            true,
-								Attributes: map[string]schema.Attribute{
-									"role_arn": schema.StringAttribute{
-										MarkdownDescription: "ARN of the role that should be used as the entry point for meshStack by assuming it via web identity.",
-										Computed:            true,
-									},
-								},
-							},
-						},
-					},
+					"organization_root_account_role":        computedString("ARN of the Management Account Role. The Management Account contains your AWS organization. E.g. arn:aws:iam::123456789:role/MeshfedServiceRole."),
+					"organization_root_account_external_id": computedString("ExternalId to enhance security in a multi account setup when assuming the organization root account role."),
+					"auth":                                  awsAuthConfigDataSourceSchema("AWS access key for service user", "ARN of the role that should be used as the entry point for meshStack by assuming it via web identity."),
 				},
 			},
-			"wait_for_external_avm": schema.BoolAttribute{
-				MarkdownDescription: "Flag to wait for external AVM. Please use this setting with care! It is currently very specific to certain tags being present on the account! In general, we recommend not to activate this functionality! In a meshLandingZone an AVM can be triggered via a Lambda Function. If meshStack shall wait for the AVM to complete when creating a new platform tenant, this flag must be checked. meshStack will identify completion of the AVM by checking the presence of the following tags on the AWS account: 'ProductName' is set to workspace identifier and 'Stage' is set to project identifier.",
-				Computed:            true,
-			},
-			"automation_account_role": schema.StringAttribute{
-				MarkdownDescription: "ARN of the Automation Account Role. The Automation Account contains all Lambda Functions that shall be executed via meshLandingZones. E.g. `arn:aws:iam::123456789:role/MeshfedAutomationRole`.",
-				Computed:            true,
-			},
-			"automation_account_external_id": schema.StringAttribute{
-				MarkdownDescription: "ExternalId to enhance security in a multi account setup when assuming the automation account role.",
-				Computed:            true,
-			},
-			"account_access_role": schema.StringAttribute{
-				MarkdownDescription: "The name for the Account Access Role that will be rolled out to all managed accounts. Only a name, not an ARN must be set here, as the ARN must be built dynamically for every managed AWS Account. The replicator service user needs to assume this role in all accounts to manage them.",
-				Computed:            true,
-			},
-			"account_alias_pattern": schema.StringAttribute{
-				MarkdownDescription: "With a String Pattern you can define how the account alias of the created AWS account will be named. E.g. `#{workspaceIdentifier}-#{projectIdentifier}`. Attention: Account Alias must be globally unique in AWS. So consider defining a unique prefix.",
-				Computed:            true,
-			},
-			"enforce_account_alias": schema.BoolAttribute{
-				MarkdownDescription: "Flag to enforce account alias. If set, meshStack will guarantee on every replication that the configured Account Alias is applied. Otherwise it will only set the Account Alias once during tenant creation.",
-				Computed:            true,
-			},
-			"account_email_pattern": schema.StringAttribute{
-				MarkdownDescription: "With a String Pattern you can define how the account email address of the created AWS account will be set. E.g. `aws+#{workspaceIdentifier}.#{projectIdentifier}@yourcompany.com`. Please consider that this email address is limited to 64 characters! Also have a look at our docs for more information.",
-				Computed:            true,
-			},
+			"wait_for_external_avm":          computedBool("Flag to wait for external AVM. Please use this setting with care! It is currently very specific to certain tags being present on the account! In general, we recommend not to activate this functionality! In a meshLandingZone an AVM can be triggered via a Lambda Function. If meshStack shall wait for the AVM to complete when creating a new platform tenant, this flag must be checked. meshStack will identify completion of the AVM by checking the presence of the following tags on the AWS account: 'ProductName' is set to workspace identifier and 'Stage' is set to project identifier."),
+			"automation_account_role":        computedString("ARN of the Automation Account Role. The Automation Account contains all Lambda Functions that shall be executed via meshLandingZones. E.g. `arn:aws:iam::123456789:role/MeshfedAutomationRole`."),
+			"automation_account_external_id": computedString("ExternalId to enhance security in a multi account setup when assuming the automation account role."),
+			"account_access_role":            computedString("The name for the Account Access Role that will be rolled out to all managed accounts. Only a name, not an ARN must be set here, as the ARN must be built dynamically for every managed AWS Account. The replicator service user needs to assume this role in all accounts to manage them."),
+			"account_alias_pattern":          computedString("With a String Pattern you can define how the account alias of the created AWS account will be named. E.g. `#{workspaceIdentifier}-#{projectIdentifier}`. Attention: Account Alias must be globally unique in AWS. So consider defining a unique prefix."),
+			"enforce_account_alias":          computedBool("Flag to enforce account alias. If set, meshStack will guarantee on every replication that the configured Account Alias is applied. Otherwise it will only set the Account Alias once during tenant creation."),
+			"account_email_pattern":          computedString("With a String Pattern you can define how the account email address of the created AWS account will be set. E.g. `aws+#{workspaceIdentifier}.#{projectIdentifier}@yourcompany.com`. Please consider that this email address is limited to 64 characters! Also have a look at our docs for more information."),
 			"tenant_tags": schema.SingleNestedAttribute{
 				MarkdownDescription: "Tenant tags configuration",
 				Computed:            true,
 				Attributes: map[string]schema.Attribute{
-					"namespace_prefix": schema.StringAttribute{
-						MarkdownDescription: "Namespace prefix for tenant tags",
-						Computed:            true,
-					},
+					"namespace_prefix": computedString("Namespace prefix for tenant tags"),
 					"tag_mappers": schema.SetNestedAttribute{
 						MarkdownDescription: "Set of tag mappers for tenant tags",
 						Computed:            true,
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
-								"key": schema.StringAttribute{
-									MarkdownDescription: "Key for the tag mapper",
-									Computed:            true,
-								},
-								"value_pattern": schema.StringAttribute{
-									MarkdownDescription: "Value pattern for the tag mapper",
-									Computed:            true,
-								},
+								"key":           computedString("Key for the tag mapper"),
+								"value_pattern": computedString("Value pattern for the tag mapper"),
 							},
 						},
 					},
@@ -514,109 +367,36 @@ func awsReplicationConfigDataSourceSchema() schema.Attribute {
 				MarkdownDescription: "AWS SSO configuration.",
 				Computed:            true,
 				Attributes: map[string]schema.Attribute{
-					"scim_endpoint": schema.StringAttribute{
-						MarkdownDescription: "The SCIM endpoint you can find in your AWS IAM Identity Center Automatic provisioning config.",
-						Computed:            true,
-					},
-					"arn": schema.StringAttribute{
-						MarkdownDescription: "The ARN of your AWS IAM Identity Center Instance. E.g. `arn:aws:sso:::instance/ssoins-123456789abc`.",
-						Computed:            true,
-					},
-					"group_name_pattern": schema.StringAttribute{
-						MarkdownDescription: "Configures the pattern that defines the desired name of AWS IAM Identity Center groups managed by meshStack. It follows the usual replicator string pattern features and provides the additional replacement 'platformGroupAlias', which contains the role name suffix, which is configurable via Role Mappings in this platform config or via a meshLandingZone. Operators must ensure the group names will be unique within the same AWS IAM Identity Center Instance with that configuration.",
-						Computed:            true,
-					},
-					"sso_access_token": secret.DatasourceSchema(secret.DatasourceSchemaOptions{MarkdownDescription: "The AWS IAM Identity Center SCIM Access Token that was generated via the Automatic provisioning config in AWS IAM Identity Center."}),
-					"aws_role_mappings": schema.SetNestedAttribute{
-						MarkdownDescription: "AWS role mappings for AWS SSO",
-						Computed:            true,
-						NestedObject: schema.NestedAttributeObject{
-							Attributes: map[string]schema.Attribute{
-								"project_role_ref": meshRefByName(meshRefOptions{Kind: client.MeshObjectKind.ProjectRole, Description: "Reference to the meshProjectRole.", Output: true}),
-								"aws_role": schema.StringAttribute{
-									MarkdownDescription: "The AWS role name",
-									Computed:            true,
-								},
-								"permission_set_arns": schema.ListAttribute{
-									MarkdownDescription: "List of permission set ARNs associated with this role mapping",
-									ElementType:         types.StringType,
-									Computed:            true,
-								},
-							},
-						},
-					},
-					"sign_in_url": schema.StringAttribute{
-						MarkdownDescription: "The AWS IAM Identity Center sign in Url, that must be used by end-users to log in via AWS IAM Identity Center to AWS Management Console.",
-						Computed:            true,
-					},
+					"scim_endpoint":      computedString("The SCIM endpoint you can find in your AWS IAM Identity Center Automatic provisioning config."),
+					"arn":                computedString("The ARN of your AWS IAM Identity Center Instance. E.g. `arn:aws:sso:::instance/ssoins-123456789abc`."),
+					"group_name_pattern": computedString("Configures the pattern that defines the desired name of AWS IAM Identity Center groups managed by meshStack. It follows the usual replicator string pattern features and provides the additional replacement 'platformGroupAlias', which contains the role name suffix, which is configurable via Role Mappings in this platform config or via a meshLandingZone. Operators must ensure the group names will be unique within the same AWS IAM Identity Center Instance with that configuration."),
+					"sso_access_token":   secret.DatasourceSchema(secret.DatasourceSchemaOptions{MarkdownDescription: "The AWS IAM Identity Center SCIM Access Token that was generated via the Automatic provisioning config in AWS IAM Identity Center."}),
+					"aws_role_mappings":  awsRoleMappingsDataSourceSchema("AWS role mappings for AWS SSO", "The AWS role name", "List of permission set ARNs associated with this role mapping"),
+					"sign_in_url":        computedString("The AWS IAM Identity Center sign in Url, that must be used by end-users to log in via AWS IAM Identity Center to AWS Management Console."),
 				},
 			},
 			"aws_identity_store": schema.SingleNestedAttribute{
 				MarkdownDescription: "AWS IAM Identity Store configuration. Alternative to `aws_sso` that uses the AWS Identity Store API directly, without a SCIM token.",
 				Computed:            true,
 				Attributes: map[string]schema.Attribute{
-					"identity_store_id": schema.StringAttribute{
-						MarkdownDescription: "The ID of the AWS IAM Identity Center Identity Store, e.g. `d-1234567890`.",
-						Computed:            true,
-					},
-					"arn": schema.StringAttribute{
-						MarkdownDescription: "The ARN of the AWS IAM Identity Center Instance, e.g. `arn:aws:sso:::instance/ssoins-123456789abc`.",
-						Computed:            true,
-					},
-					"group_name_pattern": schema.StringAttribute{
-						MarkdownDescription: "Configures the pattern that defines the desired name of AWS IAM Identity Center groups managed by meshStack. It supports the `platformGroupAlias` replacement. meshStack will additionally prefix the group name with `mst-` to identify groups it manages.",
-						Computed:            true,
-					},
-					"aws_role_mappings": schema.SetNestedAttribute{
-						MarkdownDescription: "AWS role mappings for AWS IAM Identity Store",
-						Computed:            true,
-						NestedObject: schema.NestedAttributeObject{
-							Attributes: map[string]schema.Attribute{
-								"project_role_ref": meshRefByName(meshRefOptions{Kind: client.MeshObjectKind.ProjectRole, Description: "Reference to the meshProjectRole.", Output: true}),
-								"aws_role": schema.StringAttribute{
-									MarkdownDescription: "AWS role alias used as suffix in the group name pattern.",
-									Computed:            true,
-								},
-								"permission_set_arns": schema.ListAttribute{
-									MarkdownDescription: "ARNs of IAM Identity Center permission sets to assign to the group. At least one is required.",
-									ElementType:         types.StringType,
-									Computed:            true,
-								},
-							},
-						},
-					},
-					"sign_in_url": schema.StringAttribute{
-						MarkdownDescription: "The AWS IAM Identity Center sign-in URL for end-users.",
-						Computed:            true,
-					},
+					"identity_store_id":  computedString("The ID of the AWS IAM Identity Center Identity Store, e.g. `d-1234567890`."),
+					"arn":                computedString("The ARN of the AWS IAM Identity Center Instance, e.g. `arn:aws:sso:::instance/ssoins-123456789abc`."),
+					"group_name_pattern": computedString("Configures the pattern that defines the desired name of AWS IAM Identity Center groups managed by meshStack. It supports the `platformGroupAlias` replacement. meshStack will additionally prefix the group name with `mst-` to identify groups it manages."),
+					"aws_role_mappings":  awsRoleMappingsDataSourceSchema("AWS role mappings for AWS IAM Identity Store", "AWS role alias used as suffix in the group name pattern.", "ARNs of IAM Identity Center permission sets to assign to the group. At least one is required."),
+					"sign_in_url":        computedString("The AWS IAM Identity Center sign-in URL for end-users."),
 				},
 			},
 			"enrollment_configuration": schema.SingleNestedAttribute{
 				MarkdownDescription: "AWS account enrollment configuration.",
 				Computed:            true,
 				Attributes: map[string]schema.Attribute{
-					"management_account_id": schema.StringAttribute{
-						MarkdownDescription: "The Account ID of the management account configured for the platform instance.",
-						Computed:            true,
-					},
-					"account_factory_product_id": schema.StringAttribute{
-						MarkdownDescription: "The Product ID of the AWS Account Factory Product in AWS Service Catalog that should be used for enrollment. Starts with `prod-`.",
-						Computed:            true,
-					},
+					"management_account_id":      computedString("The Account ID of the management account configured for the platform instance."),
+					"account_factory_product_id": computedString("The Product ID of the AWS Account Factory Product in AWS Service Catalog that should be used for enrollment. Starts with `prod-`."),
 				},
 			},
-			"self_downgrade_access_role": schema.BoolAttribute{
-				MarkdownDescription: "Flag for self downgrade access role. If set, meshStack will revoke its rights on the managed account that were only needed for initial account creation.",
-				Computed:            true,
-			},
-			"skip_user_group_permission_cleanup": schema.BoolAttribute{
-				MarkdownDescription: "Flag to skip user group permission cleanup. For certain use cases you might want to preserve user groups and replicated permission after a tenant was deleted on the AWS platform. Checking this option preserves those permissions. Please keep in mind that the platform operator is then responsible for cleaning them up later.",
-				Computed:            true,
-			},
-			"allow_hierarchical_organizational_unit_assignment": schema.BoolAttribute{
-				MarkdownDescription: "Configuration flag to enable or disable hierarchical organizational unit assignment in AWS. If set to true: Accounts can be moved to child organizational units of the organizational unit defined in the Landing Zone. This is useful if you want to manage the account location with a deeper and more granular hierarchy. If set to false: Accounts will always be moved directly to the organizational unit defined in the Landing Zone.",
-				Computed:            true,
-			},
+			"self_downgrade_access_role":                        computedBool("Flag for self downgrade access role. If set, meshStack will revoke its rights on the managed account that were only needed for initial account creation."),
+			"skip_user_group_permission_cleanup":                computedBool("Flag to skip user group permission cleanup. For certain use cases you might want to preserve user groups and replicated permission after a tenant was deleted on the AWS platform. Checking this option preserves those permissions. Please keep in mind that the platform operator is then responsible for cleaning them up later."),
+			"allow_hierarchical_organizational_unit_assignment": computedBool("Configuration flag to enable or disable hierarchical organizational unit assignment in AWS. If set to true: Accounts can be moved to child organizational units of the organizational unit defined in the Landing Zone. This is useful if you want to manage the account location with a deeper and more granular hierarchy. If set to false: Accounts will always be moved directly to the organizational unit defined in the Landing Zone."),
 		},
 	}
 }
@@ -630,21 +410,12 @@ func azureReplicationConfigDataSourceSchema() schema.Attribute {
 				MarkdownDescription: "Service principal configuration for Azure",
 				Computed:            true,
 				Attributes: map[string]schema.Attribute{
-					"client_id": schema.StringAttribute{
-						MarkdownDescription: "The Application (Client) ID. In Azure Portal, this is the Application ID of the 'Enterprise Application' but can also be retrieved via the 'App Registration' object as 'Application (Client) ID",
-						Computed:            true,
-					},
-					"auth": azureAuthConfigDataSourceSchema(),
-					"object_id": schema.StringAttribute{
-						MarkdownDescription: "The Object ID of the Enterprise Application. You can get this Object ID via the API (e.g. when using our Terraform provider) or from Enterprise applications pane in Microsoft Entra admin center.",
-						Computed:            true,
-					},
+					"client_id": computedString("The Application (Client) ID. In Azure Portal, this is the Application ID of the 'Enterprise Application' but can also be retrieved via the 'App Registration' object as 'Application (Client) ID"),
+					"auth":      azureAuthConfigDataSourceSchema(),
+					"object_id": computedString("The Object ID of the Enterprise Application. You can get this Object ID via the API (e.g. when using our Terraform provider) or from Enterprise applications pane in Microsoft Entra admin center."),
 				},
 			},
-			"update_subscription_name": schema.BoolAttribute{
-				MarkdownDescription: "Update existing subscription names to match the subscription name pattern during replication.",
-				Computed:            true,
-			},
+			"update_subscription_name": computedBool("Update existing subscription names to match the subscription name pattern during replication."),
 			"provisioning": schema.SingleNestedAttribute{
 				MarkdownDescription: "To provide Azure Subscription for your organization's meshProjects, meshcloud supports using Enterprise Enrollment or allocating from a pool of pre-provisioned subscriptions. One of the subFields enterpriseEnrollment, customerAgreement or preProvisioned must be provided!",
 				Computed:            true,
@@ -658,22 +429,10 @@ func azureReplicationConfigDataSourceSchema() schema.Attribute {
 						MarkdownDescription: "meshcloud can automatically provision new subscriptions from an Enterprise Enrollment Account owned by your organization. This is suitable for large organizations that have a Microsoft Enterprise Agreement, Microsoft Customer Agreement or a Microsoft Partner Agreement and want to provide a large number of subscriptions in a fully automated fashion.",
 						Computed:            true,
 						Attributes: map[string]schema.Attribute{
-							"enrollment_account_id": schema.StringAttribute{
-								MarkdownDescription: "ID of the EA Enrollment Account used for the Subscription creation. Should look like this: `/providers/Microsoft.Billing/billingAccounts/1234567/enrollmentAccounts/7654321`. For more information, review the [Azure docs](https://docs.microsoft.com/en-us/azure/cost-management-billing/manage/programmatically-create-subscription-enterprise-agreement?tabs=rest-getEnrollments%2Crest-EA#find-accounts-you-have-access-to).",
-								Computed:            true,
-							},
-							"subscription_offer_type": schema.StringAttribute{
-								MarkdownDescription: "The Microsoft Subscription offer type to use when creating subscriptions. Only Production for standard and DevTest for Dev/Test subscriptions are supported for the Non Legacy Subscription Enrollment. For the Legacy Subscription Enrollment also other types can be defined.",
-								Computed:            true,
-							},
-							"use_legacy_subscription_enrollment": schema.BoolAttribute{
-								MarkdownDescription: "Deprecated: Uses the old Subscription enrollment API in its preview version. This enrollment is less reliable and should not be used for new Azure Platform Integrations.",
-								Computed:            true,
-							},
-							"subscription_creation_error_cooldown_sec": schema.Int64Attribute{
-								MarkdownDescription: "This value must be defined in seconds. It is a safety mechanism to avoid duplicate Subscription creation in case of an error on Azure's MCA API. This delay should be a bit higher than it usually takes to create subscriptions. For big installations this is somewhere between 5-15 minutes. The default of 900s should be fine for most installations.",
-								Computed:            true,
-							},
+							"enrollment_account_id":                    computedString("ID of the EA Enrollment Account used for the Subscription creation. Should look like this: `/providers/Microsoft.Billing/billingAccounts/1234567/enrollmentAccounts/7654321`. For more information, review the [Azure docs](https://docs.microsoft.com/en-us/azure/cost-management-billing/manage/programmatically-create-subscription-enterprise-agreement?tabs=rest-getEnrollments%2Crest-EA#find-accounts-you-have-access-to)."),
+							"subscription_offer_type":                  computedString("The Microsoft Subscription offer type to use when creating subscriptions. Only Production for standard and DevTest for Dev/Test subscriptions are supported for the Non Legacy Subscription Enrollment. For the Legacy Subscription Enrollment also other types can be defined."),
+							"use_legacy_subscription_enrollment":       computedBool("Deprecated: Uses the old Subscription enrollment API in its preview version. This enrollment is less reliable and should not be used for new Azure Platform Integrations."),
+							"subscription_creation_error_cooldown_sec": computedInt64("This value must be defined in seconds. It is a safety mechanism to avoid duplicate Subscription creation in case of an error on Azure's MCA API. This delay should be a bit higher than it usually takes to create subscriptions. For big installations this is somewhere between 5-15 minutes. The default of 900s should be fine for most installations."),
 						},
 					},
 					"customer_agreement": schema.SingleNestedAttribute{
@@ -684,39 +443,21 @@ func azureReplicationConfigDataSourceSchema() schema.Attribute {
 								MarkdownDescription: "Configure the SPN used by meshStack to create a new Subscription in your MCA billing scope. For more information on the required permissions, see the [Azure docs](https://learn.microsoft.com/en-us/azure/cost-management-billing/manage/programmatically-create-subscription-microsoft-customer-agreement-across-tenants).",
 								Computed:            true,
 								Attributes: map[string]schema.Attribute{
-									"client_id": schema.StringAttribute{
-										MarkdownDescription: "The Application (Client) ID. In Azure Portal, this is the Application ID of the \"Enterprise Application\" but can also be retrieved via the \"App Registration\" object as \"Application (Client) ID\".",
-										Computed:            true,
-									},
-									"auth": azureAuthConfigDataSourceSchema(),
+									"client_id": computedString("The Application (Client) ID. In Azure Portal, this is the Application ID of the \"Enterprise Application\" but can also be retrieved via the \"App Registration\" object as \"Application (Client) ID\"."),
+									"auth":      azureAuthConfigDataSourceSchema(),
 								},
 							},
-							"destination_entra_id": schema.StringAttribute{
-								MarkdownDescription: "Microsoft Entra ID Tenant UUID where created subscriptions should be moved. Set this to the Microsoft Entra ID Tenant hosting your landing zones.",
-								Computed:            true,
-							},
-							"source_entra_tenant": schema.StringAttribute{
-								MarkdownDescription: "Microsoft Entra ID Tenant UUID or domain name used for creating subscriptions. Set this to the Microsoft Entra ID Tenant owning the MCA Billing Scope. If source and destination Microsoft Entra ID Tenants are the same, you need to use UUID.",
-								Computed:            true,
-							},
-							"billing_scope": schema.StringAttribute{
-								MarkdownDescription: "ID of the MCA Billing Scope used for creating subscriptions. Must follow this format: `/providers/Microsoft.Billing/billingAccounts/$accountId/billingProfiles/$profileId/invoiceSections/$sectionId`.",
-								Computed:            true,
-							},
-							"subscription_creation_error_cooldown_sec": schema.Int64Attribute{
-								MarkdownDescription: "This value must be defined in seconds. It is a safety mechanism to avoid duplicate Subscription creation in case of an error on Azure's MCA API. This delay should be a bit higher than it usually takes to create subscriptions. For big installations this is somewhere between 5-15 minutes. The default of 900s should be fine for most installations.",
-								Computed:            true,
-							},
+							"destination_entra_id":                     computedString("Microsoft Entra ID Tenant UUID where created subscriptions should be moved. Set this to the Microsoft Entra ID Tenant hosting your landing zones."),
+							"source_entra_tenant":                      computedString("Microsoft Entra ID Tenant UUID or domain name used for creating subscriptions. Set this to the Microsoft Entra ID Tenant owning the MCA Billing Scope. If source and destination Microsoft Entra ID Tenants are the same, you need to use UUID."),
+							"billing_scope":                            computedString("ID of the MCA Billing Scope used for creating subscriptions. Must follow this format: `/providers/Microsoft.Billing/billingAccounts/$accountId/billingProfiles/$profileId/invoiceSections/$sectionId`."),
+							"subscription_creation_error_cooldown_sec": computedInt64("This value must be defined in seconds. It is a safety mechanism to avoid duplicate Subscription creation in case of an error on Azure's MCA API. This delay should be a bit higher than it usually takes to create subscriptions. For big installations this is somewhere between 5-15 minutes. The default of 900s should be fine for most installations."),
 						},
 					},
 					"pre_provisioned": schema.SingleNestedAttribute{
 						MarkdownDescription: "If your organization does not have access to an Enterprise Enrollment, you can alternatively configure meshcloud to consume subscriptions from a pool of externally-provisioned subscriptions. This is useful for smaller organizations that wish to use 'Pay-as-you-go' subscriptions or if you're organization partners with an Azure Cloud Solution Provider to provide your subscriptions. The meshcloud Azure replication detects externally-provisioned subscriptions based on a configurable prefix in the subscription name. Upon assignment to a meshProject, the subscription is inflated with the right Landing Zone configuration and removed from the subscription pool.",
 						Computed:            true,
 						Attributes: map[string]schema.Attribute{
-							"unused_subscription_name_prefix": schema.StringAttribute{
-								MarkdownDescription: "The prefix that identifies unused subscriptions. Subscriptions will be renamed during meshStack's project replication, at which point they should no longer carry this prefix.",
-								Computed:            true,
-							},
+							"unused_subscription_name_prefix": computedString("The prefix that identifies unused subscriptions. Subscriptions will be renamed during meshStack's project replication, at which point they should no longer carry this prefix."),
 						},
 					},
 				},
@@ -728,20 +469,11 @@ func azureReplicationConfigDataSourceSchema() schema.Attribute {
 					"redirect_url": schema.StringAttribute{
 						Computed: true,
 					},
-					"send_azure_invitation_mail": schema.BoolAttribute{
-						MarkdownDescription: "When true, meshStack instructs Azure to send out Invitation mails to invited users. These mails allow users to redeem their invitation to the AAD tenant only using email and Azure Portal.",
-						Computed:            true,
-					},
+					"send_azure_invitation_mail": computedBool("When true, meshStack instructs Azure to send out Invitation mails to invited users. These mails allow users to redeem their invitation to the AAD tenant only using email and Azure Portal."),
 				},
 			},
-			"subscription_name_pattern": schema.StringAttribute{
-				MarkdownDescription: "Configures the pattern that defines the desired name of Azure Subscriptions managed by meshStack.",
-				Computed:            true,
-			},
-			"group_name_pattern": schema.StringAttribute{
-				MarkdownDescription: "Configures the pattern that defines the desired name of AAD groups managed by meshStack. It follows the usual replicator string pattern features and provides the additional replacement 'platformGroupAlias', which contains the role name suffix, which is configurable via Role Mappings in this platform config or via a meshLandingZone. Operators must ensure the group names are unique in the managed AAD Tenant.",
-				Computed:            true,
-			},
+			"subscription_name_pattern": computedString("Configures the pattern that defines the desired name of Azure Subscriptions managed by meshStack."),
+			"group_name_pattern":        computedString("Configures the pattern that defines the desired name of AAD groups managed by meshStack. It follows the usual replicator string pattern features and provides the additional replacement 'platformGroupAlias', which contains the role name suffix, which is configurable via Role Mappings in this platform config or via a meshLandingZone. Operators must ensure the group names are unique in the managed AAD Tenant."),
 			"azure_role_mappings": schema.SetNestedAttribute{
 				MarkdownDescription: "Azure role mappings for Azure role definitions.",
 				Computed:            true,
@@ -752,14 +484,8 @@ func azureReplicationConfigDataSourceSchema() schema.Attribute {
 							MarkdownDescription: "The Azure role definition.",
 							Computed:            true,
 							Attributes: map[string]schema.Attribute{
-								"alias": schema.StringAttribute{
-									MarkdownDescription: "The alias/name of the Azure role.",
-									Computed:            true,
-								},
-								"id": schema.StringAttribute{
-									MarkdownDescription: "The Azure role definition ID.",
-									Computed:            true,
-								},
+								"alias": computedString("The alias/name of the Azure role."),
+								"id":    computedString("The Azure role definition ID."),
 							},
 						},
 					},
@@ -769,44 +495,23 @@ func azureReplicationConfigDataSourceSchema() schema.Attribute {
 				MarkdownDescription: "Tenant tagging configuration.",
 				Computed:            true,
 				Attributes: map[string]schema.Attribute{
-					"namespace_prefix": schema.StringAttribute{
-						MarkdownDescription: "This is the prefix for all labels created by meshStack. It helps to keep track of which labels are managed by meshStack. It is recommended to let this prefix end with a delimiter like an underscore.",
-						Computed:            true,
-					},
+					"namespace_prefix": computedString("This is the prefix for all labels created by meshStack. It helps to keep track of which labels are managed by meshStack. It is recommended to let this prefix end with a delimiter like an underscore."),
 					"tag_mappers": schema.SetNestedAttribute{
 						MarkdownDescription: "Set of tag mappers for tenant tags",
 						Computed:            true,
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
-								"key": schema.StringAttribute{
-									MarkdownDescription: "Key for the tag mapper",
-									Computed:            true,
-								},
-								"value_pattern": schema.StringAttribute{
-									MarkdownDescription: "Value pattern for the tag mapper",
-									Computed:            true,
-								},
+								"key":           computedString("Key for the tag mapper"),
+								"value_pattern": computedString("Value pattern for the tag mapper"),
 							},
 						},
 					},
 				},
 			},
-			"user_lookup_strategy": schema.StringAttribute{
-				MarkdownDescription: "User lookup strategy (`userPrincipalName` or `email`). Users can either be looked up in cloud platforms by email or UPN (User Principal Name). In most cases email is the matching way as it is the only identifier that is consistently used throughout all cloud platforms and meshStack.",
-				Computed:            true,
-			},
-			"skip_user_group_permission_cleanup": schema.BoolAttribute{
-				MarkdownDescription: "Flag to skip user group permission cleanup. For certain use cases you might want to preserve user groups and replicated permission after a tenant was deleted on the Azure platform. Checking this option preserves those permissions. Please keep in mind that the platform operator is then responsible for cleaning them up later.",
-				Computed:            true,
-			},
-			"administrative_unit_id": schema.StringAttribute{
-				MarkdownDescription: "If you enter an administrative unit ID the replicated (and potentially existing) groups will be put into this AU. This can be used to limit the permission scopes which are required for the replicator principal. If you remove the AU ID again or change it, the groups will not be removed from the old AU.",
-				Computed:            true,
-			},
-			"allow_hierarchical_management_group_assignment": schema.BoolAttribute{
-				MarkdownDescription: "Configuration flag to enable or disable hierarchical management group assignment in Azure. If set to true: Subscriptions can be moved to sub management groups of the management group defined in the Landing Zone. This is useful if you want to manage the subscription location with a deeper and more granular hierarchy. If set to false: Subscriptions will always be moved directly to the management group defined in the Landing Zone.",
-				Computed:            true,
-			},
+			"user_lookup_strategy":                           computedString("User lookup strategy (`userPrincipalName` or `email`). Users can either be looked up in cloud platforms by email or UPN (User Principal Name). In most cases email is the matching way as it is the only identifier that is consistently used throughout all cloud platforms and meshStack."),
+			"skip_user_group_permission_cleanup":             computedBool("Flag to skip user group permission cleanup. For certain use cases you might want to preserve user groups and replicated permission after a tenant was deleted on the Azure platform. Checking this option preserves those permissions. Please keep in mind that the platform operator is then responsible for cleaning them up later."),
+			"administrative_unit_id":                         computedString("If you enter an administrative unit ID the replicated (and potentially existing) groups will be put into this AU. This can be used to limit the permission scopes which are required for the replicator principal. If you remove the AU ID again or change it, the groups will not be removed from the old AU."),
+			"allow_hierarchical_management_group_assignment": computedBool("Configuration flag to enable or disable hierarchical management group assignment in Azure. If set to true: Subscriptions can be moved to sub management groups of the management group defined in the Landing Zone. This is useful if you want to manage the subscription location with a deeper and more granular hierarchy. If set to false: Subscriptions will always be moved directly to the management group defined in the Landing Zone."),
 		},
 	}
 }
@@ -816,10 +521,7 @@ func azureAuthConfigDataSourceSchema() schema.Attribute {
 		MarkdownDescription: "Authentication configuration",
 		Computed:            true,
 		Attributes: map[string]schema.Attribute{
-			"type": schema.StringAttribute{
-				MarkdownDescription: "Authentication type (credential or workloadIdentity)",
-				Computed:            true,
-			},
+			"type":       computedString("Authentication type (credential or workloadIdentity)"),
 			"credential": secret.DatasourceSchema(secret.DatasourceSchemaOptions{MarkdownDescription: "Client secret (if type is credential)"}),
 		},
 	}
@@ -834,81 +536,42 @@ func azureRgReplicationConfigDataSourceSchema() schema.Attribute {
 				MarkdownDescription: "Service principal configuration for Azure Resource Group access.",
 				Computed:            true,
 				Attributes: map[string]schema.Attribute{
-					"client_id": schema.StringAttribute{
-						MarkdownDescription: "The Application (Client) ID. In Azure Portal, this is the Application ID of the 'Enterprise Application' but can also be retrieved via the 'App Registration' object as 'Application (Client) ID",
-						Computed:            true,
-					},
-					"auth": azureAuthConfigDataSourceSchema(),
-					"object_id": schema.StringAttribute{
-						MarkdownDescription: "The Object ID of the Enterprise Application. You can get this Object ID via the API (e.g. when using our Terraform provider) or from Enterprise applications pane in Microsoft Entra admin center.",
-						Computed:            true,
-					},
+					"client_id": computedString("The Application (Client) ID. In Azure Portal, this is the Application ID of the 'Enterprise Application' but can also be retrieved via the 'App Registration' object as 'Application (Client) ID"),
+					"auth":      azureAuthConfigDataSourceSchema(),
+					"object_id": computedString("The Object ID of the Enterprise Application. You can get this Object ID via the API (e.g. when using our Terraform provider) or from Enterprise applications pane in Microsoft Entra admin center."),
 				},
 			},
-			"subscription": schema.StringAttribute{
-				MarkdownDescription: "The Subscription that will contain all the created Resource Groups. Once you set the Subscription, you must not change it.",
-				Computed:            true,
-			},
-			"resource_group_name_pattern": schema.StringAttribute{
-				MarkdownDescription: "Configures the pattern that defines the desired name Resource Group managed by meshStack. It follows the usual replicator string pattern features. Operators must ensure the group names are unique within the Subscription.",
-				Computed:            true,
-			},
-			"user_group_name_pattern": schema.StringAttribute{
-				MarkdownDescription: "Configures the pattern that defines the desired name of AAD groups managed by meshStack. It follows the usual replicator string pattern features and provides the additional replacement 'platformGroupAlias', which contains the role name suffix. This suffix is configurable via Role Mappings in this platform config.",
-				Computed:            true,
-			},
+			"subscription":                computedString("The Subscription that will contain all the created Resource Groups. Once you set the Subscription, you must not change it."),
+			"resource_group_name_pattern": computedString("Configures the pattern that defines the desired name Resource Group managed by meshStack. It follows the usual replicator string pattern features. Operators must ensure the group names are unique within the Subscription."),
+			"user_group_name_pattern":     computedString("Configures the pattern that defines the desired name of AAD groups managed by meshStack. It follows the usual replicator string pattern features and provides the additional replacement 'platformGroupAlias', which contains the role name suffix. This suffix is configurable via Role Mappings in this platform config."),
 			"b2b_user_invitation": schema.SingleNestedAttribute{
 				MarkdownDescription: "Optional B2B user invitation configuration. When configured, instructs the replicator to create AAD B2B guest invitations for users missing in the AAD tenant managed by this meshPlatform.",
 				Computed:            true,
 				Attributes: map[string]schema.Attribute{
-					"redirect_url": schema.StringAttribute{
-						MarkdownDescription: "This is the URL that Azure’s consent experience redirects users to after they accept their invitation.",
-						Computed:            true,
-					},
-					"send_azure_invitation_mail": schema.BoolAttribute{
-						MarkdownDescription: "When true, meshStack instructs Azure to send out Invitation mails to invited users. These mails allow users to redeem their invitation to the AAD tenant only using email and Azure Portal.",
-						Computed:            true,
-					},
+					"redirect_url":               computedString("This is the URL that Azure’s consent experience redirects users to after they accept their invitation."),
+					"send_azure_invitation_mail": computedBool("When true, meshStack instructs Azure to send out Invitation mails to invited users. These mails allow users to redeem their invitation to the AAD tenant only using email and Azure Portal."),
 				},
 			},
-			"user_lookup_strategy": schema.StringAttribute{
-				MarkdownDescription: "User lookup strategy (`UserByMailLookupStrategy` or `UserByUsernameLookupStrategy`). Users can either be looked up in cloud platforms by email or UPN (User Principal Name). In most cases email is the matching way as it is the only identifier that is consistently used throughout all cloud platforms and meshStack.",
-				Computed:            true,
-			},
+			"user_lookup_strategy": computedString("User lookup strategy (`UserByMailLookupStrategy` or `UserByUsernameLookupStrategy`). Users can either be looked up in cloud platforms by email or UPN (User Principal Name). In most cases email is the matching way as it is the only identifier that is consistently used throughout all cloud platforms and meshStack."),
 			"tenant_tags": schema.SingleNestedAttribute{
 				MarkdownDescription: "Tenant tags configuration",
 				Computed:            true,
 				Attributes: map[string]schema.Attribute{
-					"namespace_prefix": schema.StringAttribute{
-						MarkdownDescription: "Prefix for tag namespaces.",
-						Computed:            true,
-					},
+					"namespace_prefix": computedString("Prefix for tag namespaces."),
 					"tag_mappers": schema.SetNestedAttribute{
 						MarkdownDescription: "Set of tag mappers for tenant tags",
 						Computed:            true,
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
-								"key": schema.StringAttribute{
-									MarkdownDescription: "Key for the tag mapper",
-									Computed:            true,
-								},
-								"value_pattern": schema.StringAttribute{
-									MarkdownDescription: "Value pattern for the tag mapper",
-									Computed:            true,
-								},
+								"key":           computedString("Key for the tag mapper"),
+								"value_pattern": computedString("Value pattern for the tag mapper"),
 							},
 						},
 					},
 				},
 			},
-			"skip_user_group_permission_cleanup": schema.BoolAttribute{
-				MarkdownDescription: "For certain use cases you might want to preserve user groups and replicated permission after a tenant was deleted on the Azure platform. Checking this option preserves those permissions. Please keep in mind that the platform operator is then responsible for cleaning them up later.",
-				Computed:            true,
-			},
-			"administrative_unit_id": schema.StringAttribute{
-				MarkdownDescription: "If you enter an administrative unit ID the replicated (and potentially existing) groups will be put into this AU. This can be used to limit the permission scopes which are required for the replicator principal. If you remove the AU ID again or change it, the groups will not be removed from the old AU.",
-				Computed:            true,
-			},
+			"skip_user_group_permission_cleanup": computedBool("For certain use cases you might want to preserve user groups and replicated permission after a tenant was deleted on the Azure platform. Checking this option preserves those permissions. Please keep in mind that the platform operator is then responsible for cleaning them up later."),
+			"administrative_unit_id":             computedString("If you enter an administrative unit ID the replicated (and potentially existing) groups will be put into this AU. This can be used to limit the permission scopes which are required for the replicator principal. If you remove the AU ID again or change it, the groups will not be removed from the old AU."),
 		},
 	}
 }
@@ -918,110 +581,49 @@ func gcpReplicationConfigDataSourceSchema() schema.Attribute {
 		MarkdownDescription: "GCP-specific replication configuration for the platform.",
 		Computed:            true,
 		Attributes: map[string]schema.Attribute{
-			"service_account": schema.SingleNestedAttribute{
-				MarkdownDescription: "Service account configuration. Either credential or workload_identity must be provided.",
-				Computed:            true,
-				Attributes: map[string]schema.Attribute{
-					"type": schema.StringAttribute{
-						MarkdownDescription: "Service account type",
-						Computed:            true,
-					},
-					"credential": secret.DatasourceSchema(secret.DatasourceSchemaOptions{MarkdownDescription: "Base64 encoded credentials.json file for a GCP ServiceAccount (if type supports it). The replicator uses this Service Account to automate GCP API operations (IAM, ResourceManager etc.)."}),
-					"workload_identity": schema.SingleNestedAttribute{
-						MarkdownDescription: "Workload identity configuration (if type supports it)",
-						Computed:            true,
-						Attributes: map[string]schema.Attribute{
-							"audience": schema.StringAttribute{
-								MarkdownDescription: "The audience associated with your workload identity pool provider.",
-								Computed:            true,
-							},
-							"service_account_email": schema.StringAttribute{
-								MarkdownDescription: "The email address of the Service Account, that gets impersonated for calling Google APIs via Workload Identity Federation.",
-								Computed:            true,
-							},
-						},
-					},
-				},
-			},
-			"domain": schema.StringAttribute{
-				MarkdownDescription: "The domain used for cloud identity directory-groups created and managed by meshStack. meshStack maintains separate groups for each meshProject role on each managed GCP project.",
-				Computed:            true,
-			},
-			"customer_id": schema.StringAttribute{
-				MarkdownDescription: "A Google Customer ID. It typically starts with a 'C'.",
-				Computed:            true,
-			},
-			"group_name_pattern": schema.StringAttribute{
-				MarkdownDescription: "All the commonly available replicator string template properties are available. Additionally you can also use 'platformGroupAlias' as a placeholder to access the specific project role from the role mappings done in this platform configuration or in the meshLandingZone configuration.",
-				Computed:            true,
-			},
-			"project_name_pattern": schema.StringAttribute{
-				MarkdownDescription: "All the commonly available replicator string template properties are available. The result must be 4 to 30 characters. Allowed characters are: lowercase and uppercase letters, numbers, hyphen, single-quote, double-quote, space, and exclamation point. When length restrictions are applied, the abbreviation will be in the middle and marked by a single-quote.",
-				Computed:            true,
-			},
-			"project_id_pattern": schema.StringAttribute{
-				MarkdownDescription: "All the commonly available replicator string template properties are available. The resulting string must not exceed a total length of 30 characters. Only alphanumeric + hyphen are allowed. We recommend that configuration include at least 3 characters of the random parameter to reduce the chance of naming collisions as the project Ids must be globally unique within GCP.",
-				Computed:            true,
-			},
-			"billing_account_id": schema.StringAttribute{
-				MarkdownDescription: "The ID of the billing account to associate with all GCP projects managed by meshStack",
-				Computed:            true,
-			},
-			"user_lookup_strategy": schema.StringAttribute{
-				MarkdownDescription: "Users can either be looked up by E-Mail or externalAccountId. This must also be the property that is placed in the external user id (EUID) of your meshUser entity to match. E-Mail is usually a good choice as this is often set up as the EUID throughout all cloud platforms and meshStack. ('email' or 'externalId')",
-				Computed:            true,
-			},
-			"used_external_id_type": schema.StringAttribute{
-				MarkdownDescription: "The type of external ID used for user lookup.",
-				Computed:            true,
-			},
+			"service_account": gcpServiceAccountDataSourceSchema(gcpServiceAccountDescriptions{
+				serviceAccount:      "Service account configuration. Either credential or workload_identity must be provided.",
+				credential:          "Base64 encoded credentials.json file for a GCP ServiceAccount (if type supports it). The replicator uses this Service Account to automate GCP API operations (IAM, ResourceManager etc.).",
+				audience:            "The audience associated with your workload identity pool provider.",
+				serviceAccountEmail: "The email address of the Service Account, that gets impersonated for calling Google APIs via Workload Identity Federation.",
+			}),
+			"domain":                computedString("The domain used for cloud identity directory-groups created and managed by meshStack. meshStack maintains separate groups for each meshProject role on each managed GCP project."),
+			"customer_id":           computedString("A Google Customer ID. It typically starts with a 'C'."),
+			"group_name_pattern":    computedString("All the commonly available replicator string template properties are available. Additionally you can also use 'platformGroupAlias' as a placeholder to access the specific project role from the role mappings done in this platform configuration or in the meshLandingZone configuration."),
+			"project_name_pattern":  computedString("All the commonly available replicator string template properties are available. The result must be 4 to 30 characters. Allowed characters are: lowercase and uppercase letters, numbers, hyphen, single-quote, double-quote, space, and exclamation point. When length restrictions are applied, the abbreviation will be in the middle and marked by a single-quote."),
+			"project_id_pattern":    computedString("All the commonly available replicator string template properties are available. The resulting string must not exceed a total length of 30 characters. Only alphanumeric + hyphen are allowed. We recommend that configuration include at least 3 characters of the random parameter to reduce the chance of naming collisions as the project Ids must be globally unique within GCP."),
+			"billing_account_id":    computedString("The ID of the billing account to associate with all GCP projects managed by meshStack"),
+			"user_lookup_strategy":  computedString("Users can either be looked up by E-Mail or externalAccountId. This must also be the property that is placed in the external user id (EUID) of your meshUser entity to match. E-Mail is usually a good choice as this is often set up as the EUID throughout all cloud platforms and meshStack. ('email' or 'externalId')"),
+			"used_external_id_type": computedString("The type of external ID used for user lookup."),
 			"gcp_role_mappings": schema.SetNestedAttribute{
 				MarkdownDescription: "Mapping of platform roles to GCP IAM roles.",
 				Computed:            true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"project_role_ref": meshRefByName(meshRefOptions{Kind: client.MeshObjectKind.ProjectRole, Description: "Reference to the meshProjectRole.", Output: true}),
-						"gcp_role": schema.StringAttribute{
-							MarkdownDescription: "The GCP IAM role",
-							Computed:            true,
-						},
+						"gcp_role":         computedString("The GCP IAM role"),
 					},
 				},
 			},
-			"allow_hierarchical_folder_assignment": schema.BoolAttribute{
-				MarkdownDescription: "Configuration flag to enable or disable hierarchical folder assignment in GCP. If set to true: Projects can be moved to sub folders of the folder defined in the Landing Zone. This is useful if you want to manage the project location with a deeper and more granular hierarchy. If set to false: Projects will always be moved directly to the folder defined in the Landing Zone.",
-				Computed:            true,
-			},
+			"allow_hierarchical_folder_assignment": computedBool("Configuration flag to enable or disable hierarchical folder assignment in GCP. If set to true: Projects can be moved to sub folders of the folder defined in the Landing Zone. This is useful if you want to manage the project location with a deeper and more granular hierarchy. If set to false: Projects will always be moved directly to the folder defined in the Landing Zone."),
 			"tenant_tags": schema.SingleNestedAttribute{
 				MarkdownDescription: "Tenant tags configuration",
 				Computed:            true,
 				Attributes: map[string]schema.Attribute{
-					"namespace_prefix": schema.StringAttribute{
-						MarkdownDescription: "Prefix for tag namespaces.",
-						Computed:            true,
-					},
+					"namespace_prefix": computedString("Prefix for tag namespaces."),
 					"tag_mappers": schema.SetNestedAttribute{
 						MarkdownDescription: "Set of tag mappers for generating tags.",
 						Computed:            true,
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
-								"key": schema.StringAttribute{
-									MarkdownDescription: "Key for the tag mapper",
-									Computed:            true,
-								},
-								"value_pattern": schema.StringAttribute{
-									MarkdownDescription: "Value pattern for the tag mapper",
-									Computed:            true,
-								},
+								"key":           computedString("Key for the tag mapper"),
+								"value_pattern": computedString("Value pattern for the tag mapper"),
 							},
 						},
 					},
 				},
 			},
-			"skip_user_group_permission_cleanup": schema.BoolAttribute{
-				MarkdownDescription: "For certain use cases you might want to preserve user groups and replicated permission after a tenant was deleted on the GCP platform. Checking this option preserves those permissions. Please keep in mind that the platform operator is then responsible for cleaning them up later.",
-				Computed:            true,
-			},
+			"skip_user_group_permission_cleanup": computedBool("For certain use cases you might want to preserve user groups and replicated permission after a tenant was deleted on the GCP platform. Checking this option preserves those permissions. Please keep in mind that the platform operator is then responsible for cleaning them up later."),
 		},
 	}
 }
@@ -1041,14 +643,8 @@ func meteringProcessingConfigDataSourceSchema() schema.Attribute {
 		MarkdownDescription: "Processing configuration for metering",
 		Computed:            true,
 		Attributes: map[string]schema.Attribute{
-			"compact_timelines_after_days": schema.Int64Attribute{
-				MarkdownDescription: "Number of days after which timelines should be compacted.",
-				Computed:            true,
-			},
-			"delete_raw_data_after_days": schema.Int64Attribute{
-				MarkdownDescription: "Number of days after which raw data should be deleted.",
-				Computed:            true,
-			},
+			"compact_timelines_after_days": computedInt64("Number of days after which timelines should be compacted."),
+			"delete_raw_data_after_days":   computedInt64("Number of days after which raw data should be deleted."),
 		},
 	}
 }
@@ -1058,11 +654,8 @@ func kubernetesReplicationConfigDataSourceSchema() schema.Attribute {
 		MarkdownDescription: "Replication configuration for Kubernetes (optional, but required for replication)",
 		Computed:            true,
 		Attributes: map[string]schema.Attribute{
-			"client_config": kubernetesClientConfigDataSourceSchema("Client configuration for Kubernetes"),
-			"namespace_name_pattern": schema.StringAttribute{
-				MarkdownDescription: "All the commonly available replicator string template properties are available. Kubernetes Namespace Names must be no longer than 63 characters, must start and end with a lowercase letter or number, and may contain lowercase letters, numbers, and hyphens.",
-				Computed:            true,
-			},
+			"client_config":          kubernetesClientConfigDataSourceSchema("Client configuration for Kubernetes"),
+			"namespace_name_pattern": computedString("All the commonly available replicator string template properties are available. Kubernetes Namespace Names must be no longer than 63 characters, must start and end with a lowercase letter or number, and may contain lowercase letters, numbers, and hyphens."),
 		},
 	}
 }
@@ -1083,53 +676,32 @@ func openShiftReplicationConfigDataSourceSchema() schema.Attribute {
 		MarkdownDescription: "Replication configuration for OpenShift (optional, but required for replication)",
 		Computed:            true,
 		Attributes: map[string]schema.Attribute{
-			"client_config": kubernetesClientConfigDataSourceSchema("Client configuration for OpenShift"),
-			"web_console_url": schema.StringAttribute{
-				MarkdownDescription: "The Web Console URL that is used to redirect the user to the cloud platform. An example Web Console URL is https://console-openshift-console.apps.okd4.dev.eu-de-central.msh.host",
-				Computed:            true,
-			},
-			"project_name_pattern": schema.StringAttribute{
-				MarkdownDescription: "All the commonly available replicator string template properties are available. OpenShift Project Names must be no longer than 63 characters, must start and end with a lowercase letter or number, and may contain lowercase letters, numbers, and hyphens.",
-				Computed:            true,
-			},
+			"client_config":        kubernetesClientConfigDataSourceSchema("Client configuration for OpenShift"),
+			"web_console_url":      computedString("The Web Console URL that is used to redirect the user to the cloud platform. An example Web Console URL is https://console-openshift-console.apps.okd4.dev.eu-de-central.msh.host"),
+			"project_name_pattern": computedString("All the commonly available replicator string template properties are available. OpenShift Project Names must be no longer than 63 characters, must start and end with a lowercase letter or number, and may contain lowercase letters, numbers, and hyphens."),
 			"openshift_role_mappings": schema.SetNestedAttribute{
 				MarkdownDescription: "OpenShift role mappings for OpenShift roles.",
 				Computed:            true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"project_role_ref": meshRefByName(meshRefOptions{Kind: client.MeshObjectKind.ProjectRole, Description: "Reference to the meshProjectRole.", Output: true}),
-						"openshift_role": schema.StringAttribute{
-							MarkdownDescription: "The OpenShift role name",
-							Computed:            true,
-						},
+						"openshift_role":   computedString("The OpenShift role name"),
 					},
 				},
 			},
-			"identity_provider_name": schema.StringAttribute{
-				MarkdownDescription: "Identity provider name",
-				Computed:            true,
-			},
+			"identity_provider_name": computedString("Identity provider name"),
 			"tenant_tags": schema.SingleNestedAttribute{
 				MarkdownDescription: "Tenant tagging configuration.",
 				Computed:            true,
 				Attributes: map[string]schema.Attribute{
-					"namespace_prefix": schema.StringAttribute{
-						MarkdownDescription: "This is the prefix for all labels created by meshStack. It helps to keep track of which labels are managed by meshStack. It is recommended to let this prefix end with a delimiter like an underscore.",
-						Computed:            true,
-					},
+					"namespace_prefix": computedString("This is the prefix for all labels created by meshStack. It helps to keep track of which labels are managed by meshStack. It is recommended to let this prefix end with a delimiter like an underscore."),
 					"tag_mappers": schema.SetNestedAttribute{
 						MarkdownDescription: "Set of tag mappers for tenant tags",
 						Computed:            true,
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
-								"key": schema.StringAttribute{
-									MarkdownDescription: "Key for the tag mapper",
-									Computed:            true,
-								},
-								"value_pattern": schema.StringAttribute{
-									MarkdownDescription: "Value pattern for the tag mapper",
-									Computed:            true,
-								},
+								"key":           computedString("Key for the tag mapper"),
+								"value_pattern": computedString("Value pattern for the tag mapper"),
 							},
 						},
 					},

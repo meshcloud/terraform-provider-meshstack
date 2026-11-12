@@ -7,7 +7,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
-	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/meshcloud/meshstack-cli/client"
 )
 
@@ -38,35 +37,12 @@ func (v BuildingBlockDefinitionPaymentMethodInputs) MarkdownDescription(ctx cont
 }
 
 func (v BuildingBlockDefinitionPaymentMethodInputs) ValidateMap(ctx context.Context, req validator.MapRequest, resp *validator.MapResponse) {
-	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
-		return
-	}
-
-	var targetType types.String
-	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("spec").AtName("target_type"), &targetType)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	// target_type defaults after validation, so a null value here is the schema default.
-	configuredTargetType, targetTypeKnown := configuredString(targetType, client.MeshBuildingBlockTypeWorkspaceLevel.String())
-
-	for key, element := range req.ConfigValue.Elements() {
-		input, ok := element.(types.Object)
-		if !ok || input.IsNull() || input.IsUnknown() {
-			continue
-		}
-		attributes := input.Attributes()
-		assignmentType, assignmentTypeKnown := configuredString(attributes["assignment_type"], "")
-		if !assignmentTypeKnown || assignmentType != client.MeshBuildingBlockInputAssignmentTypePaymentMethod.String() {
-			continue
-		}
-		inputPath := req.Path.AtMapKey(key)
-
-		if targetTypeKnown && configuredTargetType != client.MeshBuildingBlockTypeWorkspaceLevel.String() {
+	forEachInputAssigned(ctx, req, resp, client.MeshBuildingBlockInputAssignmentTypePaymentMethod, func(key string, inputPath path.Path, attributes map[string]attr.Value, target inputsTargetType) {
+		if target.known && target.value != client.MeshBuildingBlockTypeWorkspaceLevel.String() {
 			resp.Diagnostics.AddAttributeError(inputPath.AtName("assignment_type"),
 				"A Payment Method input needs a workspace building block",
 				fmt.Sprintf("Input %q reads a Payment Method, which meshStack offers only on a %s building block, not on a %s one.",
-					key, client.MeshBuildingBlockTypeWorkspaceLevel, configuredTargetType))
+					key, client.MeshBuildingBlockTypeWorkspaceLevel, target.value))
 		}
 
 		inputType, inputTypeKnown := configuredString(attributes["type"], "")
@@ -90,7 +66,7 @@ func (v BuildingBlockDefinitionPaymentMethodInputs) ValidateMap(ctx context.Cont
 					fmt.Sprintf("Remove %s from input %q: %s.", attributeName, key, reason))
 			}
 		}
-	}
+	})
 }
 
 // isSet is false for an unknown value too, because it may still turn out null.

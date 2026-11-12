@@ -3,16 +3,13 @@ package provider
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/meshcloud/meshstack-cli/client"
 )
 
@@ -50,26 +47,8 @@ func (r *paymentMethodResource) Schema(_ context.Context, _ resource.SchemaReque
 			"metadata": schema.SingleNestedAttribute{
 				Required: true,
 				Attributes: map[string]schema.Attribute{
-					"name": schema.StringAttribute{
-						MarkdownDescription: "Payment method identifier.",
-						Required:            true,
-						PlanModifiers: []planmodifier.String{
-							stringplanmodifier.RequiresReplace(),
-						},
-						Validators: []validator.String{
-							stringvalidator.RegexMatches(
-								regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`),
-								"must be alphanumeric with dashes, must be lowercase, and have no leading, trailing or consecutive dashes",
-							),
-						},
-					},
-					"owned_by_workspace": schema.StringAttribute{
-						MarkdownDescription: "Identifier of the workspace that owns this payment method.",
-						Required:            true,
-						PlanModifiers: []planmodifier.String{
-							stringplanmodifier.RequiresReplace(),
-						},
-					},
+					"name":               lowercaseDashedName("Payment method identifier."),
+					"owned_by_workspace": requiredReplaceOnChangeString("Identifier of the workspace that owns this payment method."),
 					"created_on": schema.StringAttribute{
 						MarkdownDescription: "Creation date of the payment method.",
 						Computed:            true,

@@ -54,11 +54,8 @@ func kubernetesReplicationConfigSchema() schema.Attribute {
 		MarkdownDescription: "Replication configuration for Kubernetes (optional, but required for replication)",
 		Optional:            true,
 		Attributes: map[string]schema.Attribute{
-			"client_config": kubernetesClientConfigSchema("Client configuration for Kubernetes"),
-			"namespace_name_pattern": schema.StringAttribute{
-				MarkdownDescription: "All the commonly available replicator string template properties are available. Kubernetes Namespace Names must be no longer than 63 characters, must start and end with a lowercase letter or number, and may contain lowercase letters, numbers, and hyphens.",
-				Required:            true,
-			},
+			"client_config":          kubernetesClientConfigSchema("Client configuration for Kubernetes"),
+			"namespace_name_pattern": requiredString("All the commonly available replicator string template properties are available. Kubernetes Namespace Names must be no longer than 63 characters, must start and end with a lowercase letter or number, and may contain lowercase letters, numbers, and hyphens."),
 		},
 	}
 }
@@ -100,28 +97,19 @@ func openShiftReplicationConfigSchema() schema.Attribute {
 				MarkdownDescription: "The Web Console URL that is used to redirect the user to the cloud platform. An example Web Console URL is https://console-openshift-console.apps.okd4.dev.eu-de-central.msh.host",
 				Optional:            true,
 			},
-			"project_name_pattern": schema.StringAttribute{
-				MarkdownDescription: "All the commonly available replicator string template properties are available. OpenShift Project Names must be no longer than 63 characters, must start and end with a lowercase letter or number, and may contain lowercase letters, numbers, and hyphens.",
-				Required:            true,
-			},
+			"project_name_pattern": requiredString("All the commonly available replicator string template properties are available. OpenShift Project Names must be no longer than 63 characters, must start and end with a lowercase letter or number, and may contain lowercase letters, numbers, and hyphens."),
 			"openshift_role_mappings": schema.SetNestedAttribute{
 				MarkdownDescription: "OpenShift role mappings for OpenShift roles.",
 				Optional:            true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"project_role_ref": meshRefByName(meshRefOptions{Kind: client.MeshObjectKind.ProjectRole, Description: "Reference to the meshProjectRole.", InSet: true}),
-						"openshift_role": schema.StringAttribute{
-							MarkdownDescription: "The OpenShift role name",
-							Required:            true,
-						},
+						"openshift_role":   requiredString("The OpenShift role name"),
 					},
 				},
 			},
-			"identity_provider_name": schema.StringAttribute{
-				MarkdownDescription: "Identity provider name",
-				Required:            true,
-			},
-			"tenant_tags": tenantTagsAttribute(),
+			"identity_provider_name": requiredString("Identity provider name"),
+			"tenant_tags":            tenantTagsAttribute(),
 		},
 	}
 }
@@ -151,54 +139,27 @@ func aksReplicationConfigSchema() schema.Attribute {
 			"access_token": secret.ResourceSchema(secret.ResourceSchemaOptions{
 				MarkdownDescription: "The Access Token of the service account for replicator access.",
 			}),
-			"namespace_name_pattern": schema.StringAttribute{
-				MarkdownDescription: "Pattern for naming namespaces in AKS",
-				Required:            true,
-			},
-			"group_name_pattern": schema.StringAttribute{
-				MarkdownDescription: "Pattern for naming groups in AKS",
-				Required:            true,
-			},
+			"namespace_name_pattern": requiredString("Pattern for naming namespaces in AKS"),
+			"group_name_pattern":     requiredString("Pattern for naming groups in AKS"),
 			"service_principal": schema.SingleNestedAttribute{
 				MarkdownDescription: "Service principal configuration for AKS",
 				Required:            true,
 				Attributes: map[string]schema.Attribute{
-					"entra_tenant": schema.StringAttribute{
-						MarkdownDescription: "Domain name or ID of the Entra Tenant that holds the Service Principal.",
-						Required:            true,
-					},
-					"object_id": schema.StringAttribute{
-						MarkdownDescription: "The Object ID of the Enterprise Application. You can get this Object ID via the API (e.g. when using our Terraform provider) or from Enterprise applications pane in Microsoft Entra admin center.",
-						Required:            true,
-					},
-					"client_id": schema.StringAttribute{
-						MarkdownDescription: "The Application (Client) ID. In Azure Portal, this is the Application ID of the 'Enterprise Application' but can also be retrieved via the 'App Registration' object as 'Application (Client) ID'.",
-						Required:            true,
-					},
-					"auth": azureAuthSchema(),
+					"entra_tenant": requiredString("Domain name or ID of the Entra Tenant that holds the Service Principal."),
+					"object_id":    requiredString("The Object ID of the Enterprise Application. You can get this Object ID via the API (e.g. when using our Terraform provider) or from Enterprise applications pane in Microsoft Entra admin center."),
+					"client_id":    requiredString("The Application (Client) ID. In Azure Portal, this is the Application ID of the 'Enterprise Application' but can also be retrieved via the 'App Registration' object as 'Application (Client) ID'."),
+					"auth":         azureAuthSchema(),
 				},
 			},
-			"aks_subscription_id": schema.StringAttribute{
-				MarkdownDescription: "Subscription ID for the AKS cluster",
-				Required:            true,
-			},
-			"aks_cluster_name": schema.StringAttribute{
-				MarkdownDescription: "Name of the AKS cluster.",
-				Required:            true,
-			},
-			"aks_resource_group": schema.StringAttribute{
-				MarkdownDescription: "Resource group for the AKS cluster",
-				Required:            true,
-			},
+			"aks_subscription_id": requiredString("Subscription ID for the AKS cluster"),
+			"aks_cluster_name":    requiredString("Name of the AKS cluster."),
+			"aks_resource_group":  requiredString("Resource group for the AKS cluster"),
 			"redirect_url": schema.StringAttribute{
 				MarkdownDescription: "This is the URL that Azure's consent experience redirects users to after they accept their invitation.",
 				Optional:            true,
 			},
-			"send_azure_invitation_mail": schema.BoolAttribute{
-				MarkdownDescription: "Flag to send Azure invitation emails. When true, meshStack instructs Azure to send out Invitation mails to invited users.",
-				Required:            true,
-			},
-			"user_lookup_strategy": azureUserLookupStrategySchema(),
+			"send_azure_invitation_mail": requiredBool("Flag to send Azure invitation emails. When true, meshStack instructs Azure to send out Invitation mails to invited users."),
+			"user_lookup_strategy":       azureUserLookupStrategySchema(),
 			"administrative_unit_id": schema.StringAttribute{
 				MarkdownDescription: "If you enter an administrative unit ID the replicated (and potentially existing) groups will be put into this AU. This can be used to limit the permission scopes which are required for the replicator principal. If you remove the AU ID again or change it, the groups will not be removed from the old AU.",
 				Optional:            true,

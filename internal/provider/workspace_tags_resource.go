@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/meshcloud/meshstack-cli/client"
 )
@@ -69,13 +69,7 @@ func (r *workspaceTagsResource) Schema(_ context.Context, _ resource.SchemaReque
 				MarkdownDescription: "Workspace tags metadata.",
 				Required:            true,
 				Attributes: map[string]schema.Attribute{
-					"workspace_identifier": schema.StringAttribute{
-						MarkdownDescription: "Identifier of the workspace.",
-						Required:            true,
-						PlanModifiers: []planmodifier.String{
-							stringplanmodifier.RequiresReplace(),
-						},
-					},
+					"workspace_identifier": requiredReplaceOnChangeString("Identifier of the workspace."),
 				},
 			},
 			"spec": schema.SingleNestedAttribute{
@@ -96,45 +90,7 @@ func (r *workspaceTagsResource) Schema(_ context.Context, _ resource.SchemaReque
 }
 
 func (r *workspaceTagsResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var plan workspaceTagsModel
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	wsName := plan.Metadata.WorkspaceIdentifier.ValueString()
-	workspace, err := r.meshWorkspaceClient.Read(ctx, wsName)
-	if err != nil {
-		resp.Diagnostics.AddError("Error Reading Workspace", fmt.Sprintf("Could not read workspace '%s': %v", wsName, err))
-		return
-	}
-	if workspace == nil {
-		resp.Diagnostics.AddError("Error Reading Workspace", fmt.Sprintf("Workspace '%s' not found", wsName))
-		return
-	}
-
-	tags := make(map[string][]string)
-	if !plan.Spec.Tags.IsNull() {
-		resp.Diagnostics.Append(plan.Spec.Tags.ElementsAs(ctx, &tags, false)...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-	}
-
-	updatePayload := client.MeshWorkspaceCreate{
-		Metadata: client.MeshWorkspaceCreateMetadata{Name: wsName, Tags: tags},
-		Spec:     workspace.Spec,
-	}
-	if _, err := r.meshWorkspaceClient.Update(ctx, wsName, &updatePayload); err != nil {
-		resp.Diagnostics.AddError("Error Updating Workspace Tags", fmt.Sprintf("Could not update tags for workspace '%s': %v", wsName, err))
-		return
-	}
-
-	// Keep the tags the user declared rather than what the API echoes back. It may carry entries the
-	// caller never sent (injected restricted-tag defaults) and drops any tag declared with no values,
-	// either of which would break plan/apply consistency on the Required spec.tags. Mirrors
-	// workspace_resource.go.
-	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+	r.setTags(ctx, req.Plan, &resp.State, &resp.Diagnostics)
 }
 
 func (r *workspaceTagsResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -145,9 +101,8 @@ func (r *workspaceTagsResource) Read(ctx context.Context, req resource.ReadReque
 	}
 
 	wsName := state.Metadata.WorkspaceIdentifier.ValueString()
-	workspace, err := r.meshWorkspaceClient.Read(ctx, wsName)
-	if err != nil {
-		resp.Diagnostics.AddError("Error Reading Workspace", fmt.Sprintf("Could not read workspace '%s': %v", wsName, err))
+	workspace := readTaggedWorkspace(ctx, r.meshWorkspaceClient, wsName, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
 		return
 	}
 	if workspace == nil {
@@ -178,27 +133,30 @@ func (r *workspaceTagsResource) Read(ctx context.Context, req resource.ReadReque
 }
 
 func (r *workspaceTagsResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	r.setTags(ctx, req.Plan, &resp.State, &resp.Diagnostics)
+}
+
+func (r *workspaceTagsResource) setTags(ctx context.Context, tfPlan tfsdk.Plan, state *tfsdk.State, diags *diag.Diagnostics) {
 	var plan workspaceTagsModel
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
-	if resp.Diagnostics.HasError() {
+	diags.Append(tfPlan.Get(ctx, &plan)...)
+	if diags.HasError() {
 		return
 	}
 
 	wsName := plan.Metadata.WorkspaceIdentifier.ValueString()
-	workspace, err := r.meshWorkspaceClient.Read(ctx, wsName)
-	if err != nil {
-		resp.Diagnostics.AddError("Error Reading Workspace", fmt.Sprintf("Could not read workspace '%s': %v", wsName, err))
+	workspace := readTaggedWorkspace(ctx, r.meshWorkspaceClient, wsName, diags)
+	if diags.HasError() {
 		return
 	}
 	if workspace == nil {
-		resp.Diagnostics.AddError("Error Reading Workspace", fmt.Sprintf("Workspace '%s' not found", wsName))
+		diags.AddError("Error Reading Workspace", fmt.Sprintf("Workspace '%s' not found", wsName))
 		return
 	}
 
 	tags := make(map[string][]string)
 	if !plan.Spec.Tags.IsNull() {
-		resp.Diagnostics.Append(plan.Spec.Tags.ElementsAs(ctx, &tags, false)...)
-		if resp.Diagnostics.HasError() {
+		diags.Append(plan.Spec.Tags.ElementsAs(ctx, &tags, false)...)
+		if diags.HasError() {
 			return
 		}
 	}
@@ -208,12 +166,15 @@ func (r *workspaceTagsResource) Update(ctx context.Context, req resource.UpdateR
 		Spec:     workspace.Spec,
 	}
 	if _, err := r.meshWorkspaceClient.Update(ctx, wsName, &updatePayload); err != nil {
-		resp.Diagnostics.AddError("Error Updating Workspace Tags", fmt.Sprintf("Could not update tags for workspace '%s': %v", wsName, err))
+		diags.AddError("Error Updating Workspace Tags", fmt.Sprintf("Could not update tags for workspace '%s': %v", wsName, err))
 		return
 	}
 
-	// Keep the declared tags rather than the API's superset, mirroring Create.
-	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+	// Keep the tags the user declared rather than what the API echoes back. It may carry entries the
+	// caller never sent (injected restricted-tag defaults) and drops any tag declared with no values,
+	// either of which would break plan/apply consistency on the Required spec.tags. Mirrors
+	// workspace_resource.go.
+	diags.Append(state.Set(ctx, &plan)...)
 }
 
 func (r *workspaceTagsResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -224,9 +185,8 @@ func (r *workspaceTagsResource) Delete(ctx context.Context, req resource.DeleteR
 	}
 
 	wsName := state.Metadata.WorkspaceIdentifier.ValueString()
-	workspace, err := r.meshWorkspaceClient.Read(ctx, wsName)
-	if err != nil {
-		resp.Diagnostics.AddError("Error Reading Workspace", fmt.Sprintf("Could not read workspace '%s': %v", wsName, err))
+	workspace := readTaggedWorkspace(ctx, r.meshWorkspaceClient, wsName, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
 		return
 	}
 	if workspace == nil {
@@ -239,8 +199,7 @@ func (r *workspaceTagsResource) Delete(ctx context.Context, req resource.DeleteR
 		Metadata: client.MeshWorkspaceCreateMetadata{Name: wsName, Tags: make(map[string][]string)},
 		Spec:     workspace.Spec,
 	}
-	_, err = r.meshWorkspaceClient.Update(ctx, wsName, &updatePayload)
-	if err != nil {
+	if _, err := r.meshWorkspaceClient.Update(ctx, wsName, &updatePayload); err != nil {
 		resp.Diagnostics.AddError("Error Clearing Workspace Tags", fmt.Sprintf("Could not clear tags for workspace '%s': %v", wsName, err))
 		return
 	}
@@ -265,4 +224,12 @@ func (r *workspaceTagsResource) ImportState(ctx context.Context, req resource.Im
 	// spec object, which the null-into-value-struct decode in Read requires.
 	nullTags := types.MapNull(types.ListType{ElemType: types.StringType})
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("spec").AtName("tags"), nullTags)...)
+}
+
+func readTaggedWorkspace(ctx context.Context, workspaces client.MeshWorkspaceClient, name string, diags *diag.Diagnostics) *client.MeshWorkspace {
+	workspace, err := workspaces.Read(ctx, name)
+	if err != nil {
+		diags.AddError("Error Reading Workspace", fmt.Sprintf("Could not read workspace '%s': %v", name, err))
+	}
+	return workspace
 }

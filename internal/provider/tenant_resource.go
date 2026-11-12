@@ -353,16 +353,8 @@ func tenantBodyAttributes() map[string]schema.Attribute {
 					Computed:            true,
 					PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 				},
-				"owned_by_workspace": schema.StringAttribute{
-					MarkdownDescription: "The identifier of the workspace that the tenant belongs to.",
-					Required:            true,
-					PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
-				},
-				"owned_by_project": schema.StringAttribute{
-					MarkdownDescription: "The identifier of the project that the tenant belongs to.",
-					Required:            true,
-					PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
-				},
+				"owned_by_workspace": requiredReplaceOnChangeString("The identifier of the workspace that the tenant belongs to."),
+				"owned_by_project":   requiredReplaceOnChangeString("The identifier of the project that the tenant belongs to."),
 			},
 		},
 

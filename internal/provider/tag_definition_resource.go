@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/meshcloud/meshstack-cli/client"
 
@@ -329,25 +330,39 @@ type tagValueMultiSelect struct {
 
 // Create creates the resource and sets the initial Terraform state.
 func (r *tagDefinitionResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	create := plannedTagDefinition(ctx, req.Plan, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	tagDefinition, err := r.meshTagDefinitionClient.Create(ctx, &create)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error creating tag definition",
+			"Could not create tag definition, unexpected error: "+err.Error(),
+		)
+		return
+	}
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, tagDefinition)...)
+}
+
+func plannedTagDefinition(ctx context.Context, plan tfsdk.Plan, diags *diag.Diagnostics) (tagDefinition client.MeshTagDefinition) {
 	var spec tagDefinitionSpec
-
-	diags := req.Plan.GetAttribute(ctx, path.Root("spec"), &spec)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
+	diags.Append(plan.GetAttribute(ctx, path.Root("spec"), &spec)...)
+	if diags.HasError() {
 		return
 	}
 
-	valueType, diags := buildValueType(ctx, spec.ValueType)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
+	valueType, valueTypeDiags := buildValueType(ctx, spec.ValueType)
+	diags.Append(valueTypeDiags...)
+	if diags.HasError() {
 		return
 	}
 
-	name := spec.TargetKind.ValueString() + "." + spec.Key.ValueString()
-
-	create := client.MeshTagDefinition{
+	return client.MeshTagDefinition{
 		Metadata: client.MeshTagDefinitionMetadata{
-			Name: name,
+			Name: spec.TargetKind.ValueString() + "." + spec.Key.ValueString(),
 		},
 		Spec: client.MeshTagDefinitionSpec{
 			TargetKind:     spec.TargetKind.ValueString(),
@@ -362,18 +377,6 @@ func (r *tagDefinitionResource) Create(ctx context.Context, req resource.CreateR
 			ReplicationKey: spec.ReplicationKey.ValueStringPointer(),
 		},
 	}
-
-	tagDefinition, err := r.meshTagDefinitionClient.Create(ctx, &create)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error creating tag definition",
-			"Could not create tag definition, unexpected error: "+err.Error(),
-		)
-		return
-	}
-
-	diags = resp.State.Set(ctx, tagDefinition)
-	resp.Diagnostics.Append(diags...)
 }
 
 func extractStringValuesFromList(ctx context.Context, list types.List) ([]string, diag.Diagnostics) {
@@ -465,37 +468,9 @@ func (r *tagDefinitionResource) Read(ctx context.Context, req resource.ReadReque
 
 // Update updates the resource and sets the updated Terraform state on success.
 func (r *tagDefinitionResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var spec tagDefinitionSpec
-
-	diags := req.Plan.GetAttribute(ctx, path.Root("spec"), &spec)
-	resp.Diagnostics.Append(diags...)
+	update := plannedTagDefinition(ctx, req.Plan, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
-	}
-
-	valueType, diags := buildValueType(ctx, spec.ValueType)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	name := spec.TargetKind.ValueString() + "." + spec.Key.ValueString()
-
-	update := client.MeshTagDefinition{
-		Metadata: client.MeshTagDefinitionMetadata{
-			Name: name,
-		},
-		Spec: client.MeshTagDefinitionSpec{
-			TargetKind:     spec.TargetKind.ValueString(),
-			Key:            spec.Key.ValueString(),
-			ValueType:      valueType,
-			Description:    spec.Description.ValueString(),
-			DisplayName:    spec.DisplayName.ValueString(),
-			SortOrder:      spec.SortOrder.ValueInt64(),
-			Mandatory:      spec.Mandatory.ValueBool(),
-			Immutable:      spec.Immutable.ValueBool(),
-			Restricted:     spec.Restricted.ValueBool(),
-			ReplicationKey: spec.ReplicationKey.ValueStringPointer(),
-		},
 	}
 
 	tagDefinition, err := r.meshTagDefinitionClient.Update(ctx, &update)
@@ -507,8 +482,7 @@ func (r *tagDefinitionResource) Update(ctx context.Context, req resource.UpdateR
 		return
 	}
 
-	diags = resp.State.Set(ctx, tagDefinition)
-	resp.Diagnostics.Append(diags...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, tagDefinition)...)
 }
 
 // Delete deletes the resource and removes the Terraform state on success.

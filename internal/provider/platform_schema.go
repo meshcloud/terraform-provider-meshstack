@@ -31,54 +31,27 @@ func platformMetadataDataSourceSchema(computed bool) schema.SingleNestedAttribut
 				Computed:            computed,
 				Required:            !computed,
 			},
-			"name": schema.StringAttribute{
-				MarkdownDescription: "Platform identifier.",
-				Computed:            true,
-			},
-			"owned_by_workspace": schema.StringAttribute{
-				MarkdownDescription: "The identifier of the workspace that owns this meshPlatform.",
-				Computed:            true,
-			},
+			"name":               computedString("Platform identifier."),
+			"owned_by_workspace": computedString("The identifier of the workspace that owns this meshPlatform."),
 		},
 	}
 }
 
 func platformIdentifierDataSourceSchema() schema.Attribute {
-	return schema.StringAttribute{
-		MarkdownDescription: "Full platform identifier (`<platform-name>.<location-name>`), suitable for use as `platform_identifier` in tenant resources.",
-		Computed:            true,
-	}
+	return computedString("Full platform identifier (`<platform-name>.<location-name>`), suitable for use as `platform_identifier` in tenant resources.")
 }
 
 func platformSpecDataSourceSchema() schema.Attribute {
 	return schema.SingleNestedAttribute{
 		Computed: true,
 		Attributes: map[string]schema.Attribute{
-			"display_name": schema.StringAttribute{
-				MarkdownDescription: "The human-readable display name of the meshPlatform.",
-				Computed:            true,
-			},
-			"description": schema.StringAttribute{
-				MarkdownDescription: "Description of the meshPlatform.",
-				Computed:            true,
-			},
-			"endpoint": schema.StringAttribute{
-				MarkdownDescription: "The web console URL endpoint of the platform.",
-				Computed:            true,
-			},
-			"support_url": schema.StringAttribute{
-				MarkdownDescription: "URL for platform support documentation.",
-				Computed:            true,
-			},
-			"documentation_url": schema.StringAttribute{
-				MarkdownDescription: "URL for platform documentation.",
-				Computed:            true,
-			},
-			"access_information": schema.StringAttribute{
-				MarkdownDescription: "Free-text access information shown to users when accessing tenants on this platform. Supports markdown formatting.",
-				Computed:            true,
-			},
-			"location_ref": meshRefByName(meshRefOptions{Kind: client.MeshObjectKind.Location, Description: "Reference to the location where this platform is situated.", Output: true}),
+			"display_name":       computedString("The human-readable display name of the meshPlatform."),
+			"description":        computedString("Description of the meshPlatform."),
+			"endpoint":           computedString("The web console URL endpoint of the platform."),
+			"support_url":        computedString("URL for platform support documentation."),
+			"documentation_url":  computedString("URL for platform documentation."),
+			"access_information": computedString("Free-text access information shown to users when accessing tenants on this platform. Supports markdown formatting."),
+			"location_ref":       meshRefByName(meshRefOptions{Kind: client.MeshObjectKind.Location, Description: "Reference to the location where this platform is situated.", Output: true}),
 			"contributing_workspaces": schema.SetAttribute{
 				MarkdownDescription: "A set of workspace identifiers that contribute to this meshPlatform.",
 				ElementType:         types.StringType,
@@ -88,14 +61,8 @@ func platformSpecDataSourceSchema() schema.Attribute {
 				MarkdownDescription: "Availability configuration for the meshPlatform.",
 				Computed:            true,
 				Attributes: map[string]schema.Attribute{
-					"restriction": schema.StringAttribute{
-						MarkdownDescription: "Access restriction for the platform. Must be one of: PUBLIC, PRIVATE, RESTRICTED.",
-						Computed:            true,
-					},
-					"publication_state": schema.StringAttribute{
-						MarkdownDescription: "Publication state of the platform. Must be one of: PUBLISHED, UNPUBLISHED.",
-						Computed:            true,
-					},
+					"restriction":       computedString("Access restriction for the platform. Must be one of: PUBLIC, PRIVATE, RESTRICTED."),
+					"publication_state": computedString("Publication state of the platform. Must be one of: PUBLISHED, UNPUBLISHED."),
 					"restricted_to_workspaces": schema.SetAttribute{
 						MarkdownDescription: "If the restriction is set to `RESTRICTED`, you can specify the workspace identifiers this meshPlatform is restricted to.",
 						ElementType:         types.StringType,
@@ -131,10 +98,7 @@ func platformSpecDataSourceSchema() schema.Attribute {
 					"gcp":        gcpPlatformDataSourceSchema(),
 					"kubernetes": kubernetesPlatformDataSourceSchema(),
 					"openshift":  openShiftPlatformDataSourceSchema(),
-					"type": schema.StringAttribute{
-						MarkdownDescription: "Type of the platform.",
-						Computed:            true,
-					},
+					"type":       computedString("Type of the platform."),
 				},
 			},
 		},

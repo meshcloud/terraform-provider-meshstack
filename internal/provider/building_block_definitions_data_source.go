@@ -76,22 +76,10 @@ func (d *buildingBlockDefinitionsDataSource) Configure(_ context.Context, req da
 
 func buildingBlockDefinitionDataSourceAttributes() map[string]schema.Attribute {
 	versionRefAttributes := map[string]schema.Attribute{
-		"uuid": schema.StringAttribute{
-			MarkdownDescription: "UUID of the version.",
-			Computed:            true,
-		},
-		"number": schema.Int64Attribute{
-			MarkdownDescription: "Version number.",
-			Computed:            true,
-		},
-		"state": schema.StringAttribute{
-			MarkdownDescription: "State of the version.",
-			Computed:            true,
-		},
-		"content_hash": schema.StringAttribute{
-			MarkdownDescription: "Content hash of the version. Null when accessing cross-workspace definitions without sufficient permissions.",
-			Computed:            true,
-		},
+		"uuid":         computedString("UUID of the version."),
+		"number":       computedInt64("Version number."),
+		"state":        computedString("State of the version."),
+		"content_hash": computedString("Content hash of the version. Null when accessing cross-workspace definitions without sufficient permissions."),
 		"workload_identity_federation": dataSourceVersionWifAttribute(
 			"The identity a run of this version presents to a cloud: the subject template of the version's runner, " +
 				"filled in by meshStack for this definition. Grant cloud access to `subject`. " +
@@ -104,28 +92,16 @@ func buildingBlockDefinitionDataSourceAttributes() map[string]schema.Attribute {
 			MarkdownDescription: "Building block definition metadata.",
 			Computed:            true,
 			Attributes: map[string]schema.Attribute{
-				"uuid": schema.StringAttribute{
-					MarkdownDescription: "UUID of the building block definition.",
-					Computed:            true,
-				},
-				"owned_by_workspace": schema.StringAttribute{
-					MarkdownDescription: "Workspace identifier owning this definition.",
-					Computed:            true,
-				},
+				"uuid":               computedString("UUID of the building block definition."),
+				"owned_by_workspace": computedString("Workspace identifier owning this definition."),
 			},
 		},
 		"spec": schema.SingleNestedAttribute{
 			MarkdownDescription: "Key specification fields for selecting a definition.",
 			Computed:            true,
 			Attributes: map[string]schema.Attribute{
-				"display_name": schema.StringAttribute{
-					MarkdownDescription: "Display name of the definition.",
-					Computed:            true,
-				},
-				"target_type": schema.StringAttribute{
-					MarkdownDescription: "Target type (`TENANT_LEVEL` or `WORKSPACE_LEVEL`).",
-					Computed:            true,
-				},
+				"display_name": computedString("Display name of the definition."),
+				"target_type":  computedString("Target type (`TENANT_LEVEL` or `WORKSPACE_LEVEL`)."),
 			},
 		},
 		"version_latest": schema.SingleNestedAttribute{

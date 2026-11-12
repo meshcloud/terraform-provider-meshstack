@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"regexp"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -60,6 +61,33 @@ func attributeDefaultsObject(ctx context.Context, attributes map[string]schema.A
 // schema.NestedAttributeObject as a default value.
 func emptySetDefault(nested schema.NestedAttributeObject) defaults.Set {
 	return setdefault.StaticValue(types.SetValueMust(nestedObjectToObjectType(nested), nil))
+}
+
+func requiredString(description string) schema.StringAttribute {
+	return schema.StringAttribute{MarkdownDescription: description, Required: true}
+}
+
+func requiredBool(description string) schema.BoolAttribute {
+	return schema.BoolAttribute{MarkdownDescription: description, Required: true}
+}
+
+func requiredReplaceOnChangeString(description string) schema.StringAttribute {
+	return schema.StringAttribute{
+		MarkdownDescription: description,
+		Required:            true,
+		PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
+	}
+}
+
+func lowercaseDashedName(description string) schema.StringAttribute {
+	name := requiredReplaceOnChangeString(description)
+	name.Validators = []validator.String{
+		stringvalidator.RegexMatches(
+			regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`),
+			"must be alphanumeric with dashes, must be lowercase, and have no leading, trailing or consecutive dashes",
+		),
+	}
+	return name
 }
 
 // tagsOptions configures the shared meshObject `tags` attribute. Kind is required (it names the

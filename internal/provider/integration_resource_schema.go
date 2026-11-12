@@ -79,23 +79,14 @@ func (r *integrationResource) Schema(_ context.Context, _ resource.SchemaRequest
 							stringplanmodifier.UseStateForUnknown(),
 						},
 					},
-					"owned_by_workspace": schema.StringAttribute{
-						MarkdownDescription: "Identifier of the workspace that owns this integration. The integration will be owned by the workspace specified here.",
-						Required:            true,
-						PlanModifiers: []planmodifier.String{
-							stringplanmodifier.RequiresReplace(),
-						},
-					},
+					"owned_by_workspace": requiredReplaceOnChangeString("Identifier of the workspace that owns this integration. The integration will be owned by the workspace specified here."),
 				},
 			},
 			"spec": schema.SingleNestedAttribute{
 				MarkdownDescription: "Specification of the integration. Contains configuration settings specific to the integration type.",
 				Required:            true,
 				Attributes: map[string]schema.Attribute{
-					"display_name": schema.StringAttribute{
-						MarkdownDescription: "Display name of the integration.",
-						Required:            true,
-					},
+					"display_name": requiredString("Display name of the integration."),
 					"config": schema.SingleNestedAttribute{
 						MarkdownDescription: "Configuration for the integration. Must specify exactly one of `github`, `gitlab`, `azuredevops`, or `entraid`. Note that your meshStack does not support Entra ID integrations by default and needs to be configured explicitly to do so.",
 						Required:            true,
@@ -107,18 +98,9 @@ func (r *integrationResource) Schema(_ context.Context, _ resource.SchemaRequest
 								MarkdownDescription: "GitHub integration configuration.",
 								Optional:            true,
 								Attributes: map[string]schema.Attribute{
-									"owner": schema.StringAttribute{
-										MarkdownDescription: "GitHub organization or user that owns the repositories.",
-										Required:            true,
-									},
-									"base_url": schema.StringAttribute{
-										MarkdownDescription: "Base URL of the GitHub instance (e.g., `https://github.com` for GitHub.com or your GitHub Enterprise URL).",
-										Required:            true,
-									},
-									"app_id": schema.StringAttribute{
-										MarkdownDescription: "GitHub App ID for authentication.",
-										Required:            true,
-									},
+									"owner":    requiredString("GitHub organization or user that owns the repositories."),
+									"base_url": requiredString("Base URL of the GitHub instance (e.g., `https://github.com` for GitHub.com or your GitHub Enterprise URL)."),
+									"app_id":   requiredString("GitHub App ID for authentication."),
 									"app_private_key": secret.ResourceSchema(secret.ResourceSchemaOptions{
 										MarkdownDescription: "Private key for the GitHub App.",
 										Optional:            false,
@@ -131,10 +113,7 @@ func (r *integrationResource) Schema(_ context.Context, _ resource.SchemaRequest
 								MarkdownDescription: "GitLab integration configuration.",
 								Optional:            true,
 								Attributes: map[string]schema.Attribute{
-									"base_url": schema.StringAttribute{
-										MarkdownDescription: "Base URL of the GitLab instance (e.g., `https://gitlab.com` or your self-hosted GitLab URL).",
-										Required:            true,
-									},
+									"base_url": requiredString("Base URL of the GitLab instance (e.g., `https://gitlab.com` or your self-hosted GitLab URL)."),
 									"runner_ref": meshRefByUuid(meshRefOptions{Kind: client.MeshObjectKind.BuildingBlockRunner, Description: "Reference to the building block runner that executes GitLab pipelines." +
 										"If omitted, the pre-defined shared runner is used.", OptionalComputed: true}),
 								},
@@ -143,14 +122,8 @@ func (r *integrationResource) Schema(_ context.Context, _ resource.SchemaRequest
 								MarkdownDescription: "Azure DevOps integration configuration.",
 								Optional:            true,
 								Attributes: map[string]schema.Attribute{
-									"base_url": schema.StringAttribute{
-										MarkdownDescription: "Base URL of the Azure DevOps instance (e.g., `https://dev.azure.com`).",
-										Required:            true,
-									},
-									"organization": schema.StringAttribute{
-										MarkdownDescription: "Azure DevOps organization name.",
-										Required:            true,
-									},
+									"base_url":     requiredString("Base URL of the Azure DevOps instance (e.g., `https://dev.azure.com`)."),
+									"organization": requiredString("Azure DevOps organization name."),
 									"personal_access_token": secret.ResourceSchema(secret.ResourceSchemaOptions{
 										MarkdownDescription: "Personal Access Token (PAT) for authentication.",
 										Optional:            true,
@@ -163,14 +136,8 @@ func (r *integrationResource) Schema(_ context.Context, _ resource.SchemaRequest
 								MarkdownDescription: "Entra ID SSO integration configuration. **Note**: Entra ID integrations can only be owned by the admin workspace.",
 								Optional:            true,
 								Attributes: map[string]schema.Attribute{
-									"tenant_id": schema.StringAttribute{
-										MarkdownDescription: "Entra ID tenant ID.",
-										Required:            true,
-									},
-									"client_id": schema.StringAttribute{
-										MarkdownDescription: "Entra ID application (client) ID.",
-										Required:            true,
-									},
+									"tenant_id": requiredString("Entra ID tenant ID."),
+									"client_id": requiredString("Entra ID application (client) ID."),
 									"client_secret": secret.ResourceSchema(secret.ResourceSchemaOptions{
 										MarkdownDescription: "Client secret for the Entra ID application.",
 										Optional:            false,

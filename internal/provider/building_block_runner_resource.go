@@ -128,11 +128,7 @@ func (r *buildingBlockRunnerResource) Schema(_ context.Context, _ resource.Schem
 						Computed:            true,
 						PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 					},
-					"owned_by_workspace": schema.StringAttribute{
-						MarkdownDescription: "Identifier of the workspace that owns this runner.",
-						Required:            true,
-						PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
-					},
+					"owned_by_workspace": requiredReplaceOnChangeString("Identifier of the workspace that owns this runner."),
 					"created_on": schema.StringAttribute{
 						MarkdownDescription: "Timestamp when the runner was created (ISO 8601).",
 						Computed:            true,

@@ -26,145 +26,7 @@ func (d *tagDefinitionDataSource) Metadata(ctx context.Context, req datasource.M
 }
 
 func (d *tagDefinitionDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
-	attributes := map[string]schema.Attribute{
-		"metadata": schema.SingleNestedAttribute{
-			MarkdownDescription: "Always contains the 'name' to uniquely identify the meshTagDefinition.",
-			Computed:            true,
-			Attributes: map[string]schema.Attribute{
-				"name": schema.StringAttribute{
-					MarkdownDescription: "Must be of the form $targetKind.$key since tag definitions must be non-conflicting.",
-					Computed:            true,
-				},
-			},
-		},
-		"spec": schema.SingleNestedAttribute{
-			MarkdownDescription: "Specification for the meshTagDefinition.",
-			Computed:            true,
-			Attributes: map[string]schema.Attribute{
-				"target_kind": schema.StringAttribute{
-					MarkdownDescription: "The kind of meshObject this tag is defined for. Must be one of: meshProject, meshWorkspace, meshLandingZone, meshPaymentMethod or meshBuildingBlockDefinition.",
-					Computed:            true,
-				},
-				"key": schema.StringAttribute{
-					MarkdownDescription: "The key of the tag.",
-					Computed:            true,
-				},
-				"value_type": schema.SingleNestedAttribute{
-					MarkdownDescription: "The TagValueType of the tag. Must define exactly one of the available types.",
-					Computed:            true,
-					Attributes: map[string]schema.Attribute{
-						"string": schema.SingleNestedAttribute{
-							MarkdownDescription: "string, represented as JSON string",
-							Computed:            true,
-							Attributes: map[string]schema.Attribute{
-								"default_value": schema.StringAttribute{
-									MarkdownDescription: "The default value of the tag.",
-									Computed:            true,
-								},
-								"validation_regex": schema.StringAttribute{
-									MarkdownDescription: "The regex pattern that the tag value must match.",
-									Computed:            true,
-								},
-							},
-						},
-						"email": schema.SingleNestedAttribute{
-							MarkdownDescription: "email address, represented as JSON string",
-							Computed:            true,
-							Attributes: map[string]schema.Attribute{
-								"default_value": schema.StringAttribute{
-									MarkdownDescription: "The default value of the tag.",
-									Computed:            true,
-								},
-								"validation_regex": schema.StringAttribute{
-									MarkdownDescription: "The regex pattern that the tag value must match.",
-									Computed:            true,
-								},
-							},
-						},
-						"integer": schema.SingleNestedAttribute{
-							MarkdownDescription: "an integer, represented as a JSON number",
-							Computed:            true,
-							Attributes: map[string]schema.Attribute{
-								"default_value": schema.Int64Attribute{
-									MarkdownDescription: "The default value of the tag.",
-									Computed:            true,
-								},
-							},
-						},
-						"number": schema.SingleNestedAttribute{
-							MarkdownDescription: "a decimal number, represented as a JSON number",
-							Computed:            true,
-							Attributes: map[string]schema.Attribute{
-								"default_value": schema.Float64Attribute{
-									MarkdownDescription: "The default value of the tag.",
-									Computed:            true,
-								},
-							},
-						},
-						"single_select": schema.SingleNestedAttribute{
-							MarkdownDescription: "a string from a list of options, represented as a JSON string",
-							Computed:            true,
-							Attributes: map[string]schema.Attribute{
-								"options": schema.ListAttribute{
-									MarkdownDescription: "The allowed options for the tag as a string[]",
-									Computed:            true,
-									ElementType:         types.StringType,
-								},
-								"default_value": schema.StringAttribute{
-									MarkdownDescription: "The default value of the tag.",
-									Computed:            true,
-								},
-							},
-						},
-						"multi_select": schema.SingleNestedAttribute{
-							MarkdownDescription: "one or multiple strings from a list of options, represented as a JSON array",
-							Computed:            true,
-							Attributes: map[string]schema.Attribute{
-								"options": schema.ListAttribute{
-									MarkdownDescription: "The allowed options for the tag as a string[]",
-									Computed:            true,
-									ElementType:         types.StringType,
-								},
-								"default_value": schema.ListAttribute{
-									MarkdownDescription: "The default value of the tag.",
-									Computed:            true,
-									ElementType:         types.StringType,
-								},
-							},
-						},
-					},
-				},
-				"description": schema.StringAttribute{
-					MarkdownDescription: "The detailed description of the tag.",
-					Computed:            true,
-				},
-				"display_name": schema.StringAttribute{
-					MarkdownDescription: "The display name of the tag.",
-					Computed:            true,
-				},
-				"sort_order": schema.Int64Attribute{
-					MarkdownDescription: "The sort order for this tag when displayed in the UI. meshPanel sorts tags in ascending order.",
-					Computed:            true,
-				},
-				"mandatory": schema.BoolAttribute{
-					MarkdownDescription: "Indicates whether the tag is mandatory.",
-					Computed:            true,
-				},
-				"immutable": schema.BoolAttribute{
-					MarkdownDescription: "Indicates whether the tag value is not editable after initially set.",
-					Computed:            true,
-				},
-				"restricted": schema.BoolAttribute{
-					MarkdownDescription: "Indicates whether only admins can edit this tag.",
-					Computed:            true,
-				},
-				"replication_key": schema.StringAttribute{
-					MarkdownDescription: "The replication key of the tag.",
-					Computed:            true,
-				},
-			},
-		},
-	}
+	attributes := tagDefinitionDataSourceAttributes()
 	attributes["metadata"] = asFilter(attributes["metadata"], "name")
 	attributes["spec"] = asFilter(attributes["spec"], "target_kind", "key")
 
@@ -231,6 +93,97 @@ func (d *tagDefinitionDataSource) candidates(ctx context.Context, filter tagDefi
 		return nil
 	}
 	return []client.MeshTagDefinition{*tag}
+}
+
+func tagDefinitionDataSourceAttributes() map[string]schema.Attribute {
+	return map[string]schema.Attribute{
+		"metadata": schema.SingleNestedAttribute{
+			MarkdownDescription: "Always contains the 'name' to uniquely identify the meshTagDefinition.",
+			Computed:            true,
+			Attributes: map[string]schema.Attribute{
+				"name": computedString("Must be of the form $targetKind.$key since tag definitions must be non-conflicting."),
+			},
+		},
+		"spec": schema.SingleNestedAttribute{
+			MarkdownDescription: "Specification for the meshTagDefinition.",
+			Computed:            true,
+			Attributes: map[string]schema.Attribute{
+				"target_kind": computedString("The kind of meshObject this tag is defined for. Must be one of: meshProject, meshWorkspace, meshLandingZone, meshPaymentMethod or meshBuildingBlockDefinition."),
+				"key":         computedString("The key of the tag."),
+				"value_type": schema.SingleNestedAttribute{
+					MarkdownDescription: "The TagValueType of the tag. Must define exactly one of the available types.",
+					Computed:            true,
+					Attributes: map[string]schema.Attribute{
+						"string": textTagValueTypeDataSourceSchema("string, represented as JSON string"),
+						"email":  textTagValueTypeDataSourceSchema("email address, represented as JSON string"),
+						"integer": schema.SingleNestedAttribute{
+							MarkdownDescription: "an integer, represented as a JSON number",
+							Computed:            true,
+							Attributes: map[string]schema.Attribute{
+								"default_value": computedInt64("The default value of the tag."),
+							},
+						},
+						"number": schema.SingleNestedAttribute{
+							MarkdownDescription: "a decimal number, represented as a JSON number",
+							Computed:            true,
+							Attributes: map[string]schema.Attribute{
+								"default_value": schema.Float64Attribute{
+									MarkdownDescription: "The default value of the tag.",
+									Computed:            true,
+								},
+							},
+						},
+						"single_select": schema.SingleNestedAttribute{
+							MarkdownDescription: "a string from a list of options, represented as a JSON string",
+							Computed:            true,
+							Attributes: map[string]schema.Attribute{
+								"options": schema.ListAttribute{
+									MarkdownDescription: "The allowed options for the tag as a string[]",
+									Computed:            true,
+									ElementType:         types.StringType,
+								},
+								"default_value": computedString("The default value of the tag."),
+							},
+						},
+						"multi_select": schema.SingleNestedAttribute{
+							MarkdownDescription: "one or multiple strings from a list of options, represented as a JSON array",
+							Computed:            true,
+							Attributes: map[string]schema.Attribute{
+								"options": schema.ListAttribute{
+									MarkdownDescription: "The allowed options for the tag as a string[]",
+									Computed:            true,
+									ElementType:         types.StringType,
+								},
+								"default_value": schema.ListAttribute{
+									MarkdownDescription: "The default value of the tag.",
+									Computed:            true,
+									ElementType:         types.StringType,
+								},
+							},
+						},
+					},
+				},
+				"description":     computedString("The detailed description of the tag."),
+				"display_name":    computedString("The display name of the tag."),
+				"sort_order":      computedInt64("The sort order for this tag when displayed in the UI. meshPanel sorts tags in ascending order."),
+				"mandatory":       computedBool("Indicates whether the tag is mandatory."),
+				"immutable":       computedBool("Indicates whether the tag value is not editable after initially set."),
+				"restricted":      computedBool("Indicates whether only admins can edit this tag."),
+				"replication_key": computedString("The replication key of the tag."),
+			},
+		},
+	}
+}
+
+func textTagValueTypeDataSourceSchema(description string) schema.Attribute {
+	return schema.SingleNestedAttribute{
+		MarkdownDescription: description,
+		Computed:            true,
+		Attributes: map[string]schema.Attribute{
+			"default_value":    computedString("The default value of the tag."),
+			"validation_regex": computedString("The regex pattern that the tag value must match."),
+		},
+	}
 }
 
 type tagDefinitionFilter struct {

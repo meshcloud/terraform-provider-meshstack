@@ -106,24 +106,15 @@ func (d *integrationsDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 							MarkdownDescription: "Metadata of the integration. Contains identifiers and ownership details.",
 							Computed:            true,
 							Attributes: map[string]schema.Attribute{
-								"uuid": schema.StringAttribute{
-									MarkdownDescription: "UUID of the integration.",
-									Computed:            true,
-								},
-								"owned_by_workspace": schema.StringAttribute{
-									MarkdownDescription: "Identifier of the workspace that owns this integration. **Note**: Entra ID integrations can only be owned by the admin workspace.",
-									Computed:            true,
-								},
+								"uuid":               computedString("UUID of the integration."),
+								"owned_by_workspace": computedString("Identifier of the workspace that owns this integration. **Note**: Entra ID integrations can only be owned by the admin workspace."),
 							},
 						},
 						"spec": schema.SingleNestedAttribute{
 							MarkdownDescription: "Specification of the integration. Contains configuration settings specific to the integration type.",
 							Computed:            true,
 							Attributes: map[string]schema.Attribute{
-								"display_name": schema.StringAttribute{
-									MarkdownDescription: "Display name of the integration.",
-									Computed:            true,
-								},
+								"display_name": computedString("Display name of the integration."),
 								"config": schema.SingleNestedAttribute{
 									MarkdownDescription: "Configuration for the integration. Specifies one of `github`, `gitlab`, `azuredevops`, or `entraid` integration types. Note that your meshStack does not support Entra ID integrations by default and needs to be configured explicitly to do so.",
 									Computed:            true,
@@ -133,18 +124,9 @@ func (d *integrationsDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 											Computed:            true,
 											Optional:            true,
 											Attributes: map[string]schema.Attribute{
-												"owner": schema.StringAttribute{
-													MarkdownDescription: "GitHub organization or user that owns the repositories.",
-													Computed:            true,
-												},
-												"base_url": schema.StringAttribute{
-													MarkdownDescription: "Base URL of the GitHub instance (e.g., https://github.com for GitHub.com or your GitHub Enterprise URL).",
-													Computed:            true,
-												},
-												"app_id": schema.StringAttribute{
-													MarkdownDescription: "GitHub App ID for authentication.",
-													Computed:            true,
-												},
+												"owner":           computedString("GitHub organization or user that owns the repositories."),
+												"base_url":        computedString("Base URL of the GitHub instance (e.g., https://github.com for GitHub.com or your GitHub Enterprise URL)."),
+												"app_id":          computedString("GitHub App ID for authentication."),
 												"app_private_key": secret.DatasourceSchema(secret.DatasourceSchemaOptions{}),
 												"runner_ref":      meshRefByUuid(meshRefOptions{Kind: client.MeshObjectKind.BuildingBlockRunner, Description: "Reference to the building block runner that executes GitHub workflows.", Output: true}),
 											},
@@ -154,10 +136,7 @@ func (d *integrationsDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 											Computed:            true,
 											Optional:            true,
 											Attributes: map[string]schema.Attribute{
-												"base_url": schema.StringAttribute{
-													MarkdownDescription: "Base URL of the GitLab instance (e.g., https://gitlab.com or your self-hosted GitLab URL).",
-													Computed:            true,
-												},
+												"base_url":   computedString("Base URL of the GitLab instance (e.g., https://gitlab.com or your self-hosted GitLab URL)."),
 												"runner_ref": meshRefByUuid(meshRefOptions{Kind: client.MeshObjectKind.BuildingBlockRunner, Description: "Reference to the building block runner that executes GitLab pipelines.", Output: true}),
 											},
 										},
@@ -166,14 +145,8 @@ func (d *integrationsDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 											Computed:            true,
 											Optional:            true,
 											Attributes: map[string]schema.Attribute{
-												"base_url": schema.StringAttribute{
-													MarkdownDescription: "Base URL of the Azure DevOps instance (e.g., https://dev.azure.com).",
-													Computed:            true,
-												},
-												"organization": schema.StringAttribute{
-													MarkdownDescription: "Azure DevOps organization name.",
-													Computed:            true,
-												},
+												"base_url":              computedString("Base URL of the Azure DevOps instance (e.g., https://dev.azure.com)."),
+												"organization":          computedString("Azure DevOps organization name."),
 												"personal_access_token": secret.DatasourceSchema(secret.DatasourceSchemaOptions{}),
 												"runner_ref":            meshRefByUuid(meshRefOptions{Kind: client.MeshObjectKind.BuildingBlockRunner, Description: "Reference to the building block runner that executes Azure DevOps pipelines.", Output: true}),
 											},
@@ -183,19 +156,10 @@ func (d *integrationsDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 											Computed:            true,
 											Optional:            true,
 											Attributes: map[string]schema.Attribute{
-												"tenant_id": schema.StringAttribute{
-													MarkdownDescription: "Entra ID tenant ID.",
-													Computed:            true,
-												},
-												"client_id": schema.StringAttribute{
-													MarkdownDescription: "Entra ID application (client) ID.",
-													Computed:            true,
-												},
+												"tenant_id":     computedString("Entra ID tenant ID."),
+												"client_id":     computedString("Entra ID application (client) ID."),
 												"client_secret": secret.DatasourceSchema(secret.DatasourceSchemaOptions{}),
-												"idp_alias": schema.StringAttribute{
-													MarkdownDescription: "Alias of the identity provider backing this integration.",
-													Computed:            true,
-												},
+												"idp_alias":     computedString("Alias of the identity provider backing this integration."),
 											},
 										},
 									},
@@ -211,16 +175,10 @@ func (d *integrationsDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 									MarkdownDescription: "Derived state of an Entra ID integration.",
 									Computed:            true,
 									Attributes: map[string]schema.Attribute{
-										"redirect_url": schema.StringAttribute{
-											MarkdownDescription: "OAuth2 redirect URL, which meshStack derives from `idp_alias`.",
-											Computed:            true,
-										},
+										"redirect_url": computedString("OAuth2 redirect URL, which meshStack derives from `idp_alias`."),
 									},
 								},
-								"is_built_in": schema.BoolAttribute{
-									MarkdownDescription: "Indicates whether this is a built-in integration (replicator or metering).",
-									Computed:            true,
-								},
+								"is_built_in":                  computedBool("Indicates whether this is a built-in integration (replicator or metering)."),
 								"workload_identity_federation": workloadIdentityFederation,
 							},
 						},
