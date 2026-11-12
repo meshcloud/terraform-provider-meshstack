@@ -461,7 +461,7 @@ Optional:
 
 Optional:
 
-- `kind` (String) Kind of the platform ref, one of `meshPlatformType`, `meshPlatform` and `meshLandingZone`. An entry with a platform type supports every platform of that type, and an entry with a platform supports every landing zone of that platform, also the ones added later. So narrow a definition by using individual platforms or landing zones instead of the type or platform rather than next to it. Using an individual platform requires meshStack 2026.40.0 or later, using a landing zone requires meshStack 2026.45.0 or later.
+- `kind` (String) Kind of the platform ref, one of `meshPlatformType`, `meshPlatform` and `meshLandingZone`. An entry with a platform type supports every platform of that type, and an entry with a platform supports every landing zone of that platform, also the ones added later. So narrow a definition by using individual platforms or landing zones instead of the type or platform rather than next to it. Using an individual platform requires meshStack 2026.40.0 or later, using a landing zone requires meshStack 2026.46.0 or later.
 - `name` (String) Identifier (`metadata.name`) of the platform type, for example `AZURE`, or of the landing zone. Required when `kind = "meshPlatformType"` or `kind = "meshLandingZone"`, must be omitted for `kind = "meshPlatform"`.
 - `uuid` (String) UUID (`metadata.uuid`) of the platform. Required when `kind = "meshPlatform"`, must be omitted for `kind = "meshPlatformType"` and `kind = "meshLandingZone"`. Assigning the platform's whole `ref` sets this and `kind` together.
 

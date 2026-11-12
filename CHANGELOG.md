@@ -3,6 +3,8 @@
 FIXES:
 - `meshstack_project`: `spec.substitute_payment_method_identifier` is sent to meshStack. Before, it was never sent, and
   it replaced `spec.payment_method_identifier` when it was set.
+- `meshstack_building_block_definition`: the docs of `spec.supported_platforms` state that a landing zone needs
+  meshStack 2026.46.0 or later. They said 2026.45.0, which does not support landing zones.
 
 # v0.28.0
 
@@ -17,7 +19,7 @@ BREAKING CHANGES:
 FEATURES:
 - `meshstack_building_block_definition`: `spec.supported_platforms` accepts a landing zone, so you can offer a
   definition only in single landing zones. A platform type or a platform still supports every landing zone of it, also
-  the ones added later. Needs meshStack 2026.45.0 or later. An older provider reads a landing zone entry that was set
+  the ones added later. Needs meshStack 2026.46.0 or later. An older provider reads a landing zone entry that was set
   elsewhere into state, but the only change it can plan for it is removal.
 
 # v0.27.2
