@@ -2,6 +2,8 @@ module github.com/meshcloud/terraform-provider-meshstack
 
 go 1.27.0 // keep flake.nix's pinned Go (go_1_27 + GOROOT) in lock-step when bumping
 
+toolchain go1.27.4
+
 tool (
 	github.com/golangci/golangci-lint/v2/cmd/golangci-lint
 	github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs
