@@ -63,7 +63,7 @@ resource "meshstack_building_block_definition" "example_01_terraform" {
   version_spec = {
     draft = false
 
-    # Optional: Specify runner if necessary (otherwise, shared runner is used)
+    # Optional: defaults to meshStack's default runner.
     runner_ref = meshstack_building_block_runner.example_with_wif.ref
 
     only_apply_once_per_tenant = true     # Optional: defaults to false
