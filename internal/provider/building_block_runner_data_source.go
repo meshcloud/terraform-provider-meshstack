@@ -53,7 +53,7 @@ func (d *buildingBlockRunnerDataSource) Schema(ctx context.Context, _ datasource
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Read the one building block runner that matches what you set in `metadata` and `spec`, " +
 			"such as `spec.display_name`. Without any of `metadata.uuid`, `metadata.owned_by_workspace` and `spec.display_name`, " +
-			"it reads the runner meshStack hosts. " +
+			"it returns meshStack's default runner. " +
 			"It searches your workspace's own and all shared runners, and fails unless exactly one of them matches. " +
 			"It is read-only and mirrors the `meshstack_building_block_runner` resource." +
 			previewDisclaimer(),
@@ -75,7 +75,12 @@ func (d *buildingBlockRunnerDataSource) Read(ctx context.Context, req datasource
 		return
 	}
 	if filter == (buildingBlockRunnerFilter{}) {
-		filter.Uuid = new(SharedBuildingBlockRunnerUuid)
+		defaultUuid, err := defaultBuildingBlockRunnerUuid(ctx, d.client)
+		if err != nil {
+			resp.Diagnostics.AddError(defaultRunnerNotFound, err.Error())
+			return
+		}
+		filter.Uuid = &defaultUuid
 	}
 
 	candidates := d.candidates(ctx, filter, &resp.Diagnostics)
