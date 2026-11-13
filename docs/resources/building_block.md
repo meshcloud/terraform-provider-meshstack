@@ -6,7 +6,6 @@ description: |-
   Manage a workspace or tenant building block created from a building block definition (BBD).
   A building block is usually managed by the app team that owns its workspace; a platform operator typically only creates one directly to test a draft BBD in the operator's own workspace. Building blocks can depend on each other via parent_building_block_refs, forming a dependency hierarchy in which a child's inputs draw their values from a parent's outputs (see building block concepts https://docs.meshcloud.io/concepts/building-block/).
   -> AI agents: Read the meshStack agent context https://docs.meshcloud.io/agent-context/index.md before you act, starting with its guardrails.
-  ~> Preview: This resource is in preview. Breaking changes are possible without prior notice due to changes in the underlying meshStack preview API https://docs.meshcloud.io/api/technical-specifications#preview-endpoints or due to changes in this provider. Please ensure you are running the latest version of the provider and report any bugs via GitHub issues https://github.com/meshcloud/terraform-provider-meshstack/issues or via support@meshcloud.io.
 ---
 
 # meshstack_building_block (Resource)
@@ -16,8 +15,6 @@ Manage a workspace or tenant building block created from a building block defini
 A building block is usually managed by the app team that owns its workspace; a platform operator typically only creates one directly to test a draft BBD in the operator's own workspace. Building blocks can depend on each other via `parent_building_block_refs`, forming a dependency hierarchy in which a child's inputs draw their values from a parent's outputs (see [building block concepts](https://docs.meshcloud.io/concepts/building-block/)).
 
 -> **AI agents:** Read the [meshStack agent context](https://docs.meshcloud.io/agent-context/index.md) before you act, starting with its guardrails.
-
-~> **Preview:** This resource is in preview. Breaking changes are possible without prior notice due to changes in the underlying [meshStack preview API](https://docs.meshcloud.io/api/technical-specifications#preview-endpoints) or due to changes in this provider. Please ensure you are running the latest version of the provider and report any bugs via [GitHub issues](https://github.com/meshcloud/terraform-provider-meshstack/issues) or via support@meshcloud.io.
 
 ## Example Usage
 

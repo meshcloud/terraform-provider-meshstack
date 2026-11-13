@@ -54,8 +54,7 @@ func (d *buildingBlockDataSource) Schema(_ context.Context, _ datasource.SchemaR
 		MarkdownDescription: "Read a single building block by UUID. " +
 			"It is read-only and mirrors the `meshstack_building_block` resource " +
 			"(`metadata`/`spec`/`status`/`all_inputs`, plus the resource's computed `ref`). " +
-			"Use `meshstack_building_blocks` to look building blocks up by filter instead of by UUID." +
-			previewDisclaimer(),
+			"Use `meshstack_building_blocks` to look building blocks up by filter instead of by UUID.",
 		Attributes: map[string]schema.Attribute{
 			"ref": meshRefByUuid(meshRefOptions{Kind: client.MeshObjectKind.BuildingBlock, Description: "Reference to this building block, can be used in another building block's `spec.parent_building_block_refs`.", Output: true}),
 

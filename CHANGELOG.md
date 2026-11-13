@@ -1,4 +1,11 @@
-# v0.28.1
+# v0.29.0
+
+Requires meshStack 2026.47.0 or later (previously 2026.36.0).
+
+FEATURES:
+- `meshstack_building_block` and `meshstack_building_block_definition` resources and data sources,
+  `meshstack_building_blocks` and `meshstack_building_block_definitions`: they are generally available and use the GA
+  API versions meshBuildingBlock v2 and meshBuildingBlockDefinition v1.
 
 FIXES:
 - `meshstack_project`: `spec.substitute_payment_method_identifier` is sent to meshStack. Before, it was never sent, and
