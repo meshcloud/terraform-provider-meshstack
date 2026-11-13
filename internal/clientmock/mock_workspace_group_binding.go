@@ -30,6 +30,7 @@ func (m MeshWorkspaceGroupBindingClient) List(_ context.Context, filter client.M
 }
 
 func (m MeshWorkspaceGroupBindingClient) Create(_ context.Context, binding *client.MeshWorkspaceGroupBinding) (*client.MeshWorkspaceGroupBinding, error) {
+	binding.Status = &client.MeshGroupBindingStatus{Approval: client.MeshBindingApprovalAssigned}
 	m.Store.Set(binding.Metadata.Name, binding)
 	return binding, nil
 }

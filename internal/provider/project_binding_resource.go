@@ -14,14 +14,18 @@ func NewProjectUserBindingResource() resource.Resource {
 			return c.ProjectUserBinding
 		})
 	binding.attributes["status"] = userBindingStatusResourceAttribute()
+	binding.approvalStatus = func(b *client.MeshProjectUserBinding) bindingApprovalStatus { return b.Status }
 	return binding
 }
 
 func NewProjectGroupBindingResource() resource.Resource {
-	return newProjectBindingResource("group", "Groupname.",
+	binding := newProjectBindingResource("group", "Groupname.",
 		func(c client.Client) bindingResourceClient[client.MeshProjectGroupBinding] {
 			return c.ProjectGroupBinding
 		})
+	binding.attributes["status"] = groupBindingStatusResourceAttribute()
+	binding.approvalStatus = func(b *client.MeshProjectGroupBinding) bindingApprovalStatus { return b.Status }
+	return binding
 }
 
 func newProjectBindingResource[B any](

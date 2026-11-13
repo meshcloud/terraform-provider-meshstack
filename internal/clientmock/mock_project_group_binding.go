@@ -26,6 +26,7 @@ func (m MeshProjectGroupBindingClient) List(_ context.Context, filter client.Mes
 }
 
 func (m MeshProjectGroupBindingClient) Create(_ context.Context, binding *client.MeshProjectGroupBinding) (*client.MeshProjectGroupBinding, error) {
+	binding.Status = &client.MeshGroupBindingStatus{Approval: client.MeshBindingApprovalAssigned}
 	m.Store.Set(binding.Metadata.Name, binding)
 	return binding, nil
 }

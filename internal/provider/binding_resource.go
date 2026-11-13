@@ -29,7 +29,9 @@ type bindingResource[B any] struct {
 	target, subject string
 	attributes      map[string]schema.Attribute
 	selectClient    func(client.Client) bindingResourceClient[B]
-	client          bindingResourceClient[B]
+	// approvalStatus lets Create and Read warn about a binding that waits for four-eyes approval.
+	approvalStatus func(*B) bindingApprovalStatus
+	client         bindingResourceClient[B]
 }
 
 func (r *bindingResource[B]) kind() string {
@@ -69,6 +71,9 @@ func (r *bindingResource[B]) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 
+	var name string
+	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("metadata").AtName("name"), &name)...)
+	warnIfWaitingForApproval(&resp.Diagnostics, name, r.approvalStatus(binding))
 	resp.Diagnostics.Append(resp.State.Set(ctx, binding)...)
 }
 
@@ -89,6 +94,7 @@ func (r *bindingResource[B]) Read(ctx context.Context, req resource.ReadRequest,
 		return
 	}
 
+	warnIfWaitingForApproval(&resp.Diagnostics, name, r.approvalStatus(binding))
 	resp.Diagnostics.Append(resp.State.Set(ctx, binding)...)
 }
 
