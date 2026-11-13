@@ -85,7 +85,7 @@ func NewMock() Client {
 		ApiKey:                         MeshApiKeyClient{Store: NewStore[client.MeshApiKey]()},
 		BuildingBlockRun:               MeshBuildingBlockRunClient{Store: buildingBlockRunStore, LogStore: buildingBlockRunLogStore},
 		BuildingBlockDefinition:        meshBuildingBlockDefinitionClient{Store: NewStore[client.MeshBuildingBlockDefinition](), StoreVersion: bbdVersionStore, StoreRunner: buildingBlockRunnerStore},
-		BuildingBlockDefinitionVersion: meshBuildingBlockDefinitionVersionClient{Store: bbdVersionStore},
+		BuildingBlockDefinitionVersion: meshBuildingBlockDefinitionVersionClient{Store: bbdVersionStore, StoreRunner: buildingBlockRunnerStore},
 		BuildingBlockRunner:            MeshBuildingBlockRunnerClient{Store: buildingBlockRunnerStore},
 		BuildingBlockV2:                MeshBuildingBlockV2Client{Store: buildingBlockStore, BbdVersionStore: bbdVersionStore},
 		Integration:                    MeshIntegrationClient{Store: NewStore[client.MeshIntegration]()},
