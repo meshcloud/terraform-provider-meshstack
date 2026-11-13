@@ -160,7 +160,7 @@ func (r *buildingBlockResource) Schema(ctx context.Context, req resource.SchemaR
 			"typically only creates one directly to test a draft BBD in the operator's own workspace. " +
 			"Building blocks can depend on each other via `parent_building_block_refs`, forming a dependency hierarchy " +
 			"in which a child's inputs draw their values from a parent's outputs " +
-			"(see [building block concepts](https://docs.meshcloud.io/concepts/building-block/))." + agentContextNote() + previewDisclaimer(),
+			"(see [building block concepts](https://docs.meshcloud.io/concepts/building-block/))." + agentContextNote(),
 		Attributes: map[string]schema.Attribute{
 			"ref": meshRefByUuid(meshRefOptions{Kind: client.MeshObjectKind.BuildingBlock, Description: "Reference to this building block, can be used in another building block's `spec.parent_building_block_refs`.", Output: true}),
 
