@@ -197,6 +197,10 @@ func (r *buildingBlockRunnerResource) Schema(_ context.Context, _ resource.Schem
 						MarkdownDescription: "Version the runner reported when it last polled for work. Null if it has never reported one.",
 						Computed:            true,
 					},
+					"is_default": schema.BoolAttribute{
+						MarkdownDescription: "Whether this is meshStack's default runner. A new version or a draft without `runner_ref` uses the default runner.",
+						Computed:            true,
+					},
 				},
 			},
 			"ref": meshRefByUuid(meshRefOptions{Kind: client.MeshObjectKind.BuildingBlockRunner, Description: "Reference to this runner, can be used in building block definitions.", Output: true}),

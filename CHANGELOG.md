@@ -1,5 +1,9 @@
 # v0.28.1
 
+FEATURES:
+- `meshstack_building_block_runner`: the data source returns meshStack's default runner when `metadata` and `spec` are
+  omitted. The resource and the data source show `status.is_default`.
+
 FIXES:
 - `meshstack_project`: `spec.substitute_payment_method_identifier` is sent to meshStack. Before, it was never sent, and
   it replaced `spec.payment_method_identifier` when it was set.

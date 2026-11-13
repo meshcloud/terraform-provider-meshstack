@@ -48,7 +48,7 @@ resource "meshstack_building_block_runner" "example_with_wif" {
   }
 }
 
-data "meshstack_building_block_runner" "hosted" {
+data "meshstack_building_block_runner" "default" {
   metadata = {
     uuid = meshstack_building_block_runner.example_with_wif.metadata.uuid
   }

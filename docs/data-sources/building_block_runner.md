@@ -3,13 +3,13 @@
 page_title: "meshstack_building_block_runner Data Source - terraform-provider-meshstack"
 subcategory: ""
 description: |-
-  Read the one building block runner that matches what you set in metadata and spec, such as spec.display_name. Without any of metadata.uuid, metadata.owned_by_workspace and spec.display_name, it reads the runner meshStack hosts. It searches your workspace's own and all shared runners, and fails unless exactly one of them matches. It is read-only and mirrors the meshstack_building_block_runner resource.
+  Read the one building block runner that matches what you set in metadata and spec, such as spec.display_name. Without any of metadata.uuid, metadata.owned_by_workspace and spec.display_name, it returns meshStack's default runner. It searches your workspace's own and all shared runners, and fails unless exactly one of them matches. It is read-only and mirrors the meshstack_building_block_runner resource.
   ~> Preview: This resource is in preview. Breaking changes are possible without prior notice due to changes in the underlying meshStack preview API https://docs.meshcloud.io/api/technical-specifications#preview-endpoints or due to changes in this provider. Please ensure you are running the latest version of the provider and report any bugs via GitHub issues https://github.com/meshcloud/terraform-provider-meshstack/issues or via support@meshcloud.io.
 ---
 
 # meshstack_building_block_runner (Data Source)
 
-Read the one building block runner that matches what you set in `metadata` and `spec`, such as `spec.display_name`. Without any of `metadata.uuid`, `metadata.owned_by_workspace` and `spec.display_name`, it reads the runner meshStack hosts. It searches your workspace's own and all shared runners, and fails unless exactly one of them matches. It is read-only and mirrors the `meshstack_building_block_runner` resource.
+Read the one building block runner that matches what you set in `metadata` and `spec`, such as `spec.display_name`. Without any of `metadata.uuid`, `metadata.owned_by_workspace` and `spec.display_name`, it returns meshStack's default runner. It searches your workspace's own and all shared runners, and fails unless exactly one of them matches. It is read-only and mirrors the `meshstack_building_block_runner` resource.
 
 ~> **Preview:** This resource is in preview. Breaking changes are possible without prior notice due to changes in the underlying [meshStack preview API](https://docs.meshcloud.io/api/technical-specifications#preview-endpoints) or due to changes in this provider. Please ensure you are running the latest version of the provider and report any bugs via [GitHub issues](https://github.com/meshcloud/terraform-provider-meshstack/issues) or via support@meshcloud.io.
 
@@ -28,8 +28,8 @@ data "meshstack_building_block_runner" "example" {
 ```
 
 ```terraform
-# Without metadata and spec, the data source reads the runner meshStack hosts.
-data "meshstack_building_block_runner" "hosted" {
+# Without metadata and spec, the data source returns meshStack's default runner.
+data "meshstack_building_block_runner" "default" {
 }
 ```
 
@@ -128,5 +128,6 @@ Read-Only:
 
 Read-Only:
 
+- `is_default` (Boolean) Whether this is meshStack's default runner. A new version or a draft without `runner_ref` uses the default runner.
 - `last_known_version` (String) Version the runner reported when it last polled for work. Null if it has never reported one.
 - `last_seen` (String) Timestamp when the runner last polled meshStack for work (ISO 8601). Null if it has never connected.

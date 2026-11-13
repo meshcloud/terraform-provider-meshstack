@@ -41,6 +41,7 @@ func TestAccBuildingBlockRunnerResource(t *testing.T) {
 						statecheck.ExpectKnownValue(runnerAddr, tfjsonpath.New("status"), xknownvalue.MapExact(map[string]knownvalue.Check{
 							"last_seen":          knownvalue.Null(),
 							"last_known_version": knownvalue.Null(),
+							"is_default":         knownvalue.Bool(false),
 						})),
 						xknownvalue.Ref(runnerAddr, "meshBuildingBlockRunner", &runnerUuid),
 					},
