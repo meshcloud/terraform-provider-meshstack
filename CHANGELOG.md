@@ -7,6 +7,8 @@ FEATURES:
   `meshstack_project_group_binding` and their data sources: the new `status.approval` is `PENDING` while the binding
   waits for four-eyes approval in meshPanel, and `ASSIGNED` once the role is in effect. A pending binding gives no access
   yet, so the provider warns about it on create and on every refresh until a person approves it.
+- `meshstack_building_block_definition`: without `version_spec.runner_ref`, the provider assigns meshStack's default
+  runner to a draft. To specify a runner, set `version_spec.runner_ref`.
 - `meshstack_building_block_runner`: the data source returns meshStack's default runner when `metadata` and `spec` are
   omitted. The resource and the data source show `status.is_default`.
 
