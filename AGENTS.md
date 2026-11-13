@@ -67,10 +67,6 @@ opens a browser.
 
 <rules id="always-on">
 
-- **Lean comments.** A comment earns its place only by saying what the code cannot — the *why*, a
-  trade-off, a non-obvious constraint. Don't restate what a name, type, or signature already conveys;
-  prefer one sharp line over a paragraph. (*meshcloud-internal* deep-dive: meshfed-release
-  `PRINCIPLES.md`.)
 - **Lint only via `task lint`** (golangci-lint, which also enforces gci import ordering + gofmt). It
   already runs `govet`, so **do not run `go vet` separately**. Auto-fix with `task lint -- --fix`.
 - **Changelog for user-facing changes.** Every feature, fix, or breaking change needs a
@@ -85,6 +81,19 @@ opens a browser.
   example. docs.meshcloud.io links to its headings, so rename a heading only together with the docs. It links only public pages: never
   `../meshfed-release`, an `AGENTS.md` or an `.agents/` folder.
 
+</rules>
+
+<rules id="no-code-comments">
+**An agent writes no code comment**, unless:
+
+- an existing comment must be updated to stay true;
+- the user explicitly asked for it;
+- a tool requires it, such as the compiler (`//go:embed`, `//go:generate`), the linter (`//nolint`)
+  or Dependabot (the version after a pinned action SHA);
+- it is in an `examples/` file, which the registry docs show to users;
+- the instruction that asks for the comment says "This overrides the no-code-comments rule".
+
+If you cannot express a fact in the code, write it in the commit message instead.
 </rules>
 
 ## Authoring instructions & skills
