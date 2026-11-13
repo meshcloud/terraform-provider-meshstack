@@ -124,3 +124,12 @@ func (m MeshBuildingBlockRunnerClient) MakeDefault(runnerUuid string) {
 		runner.Status.IsDefault = new(*runner.Metadata.Uuid == runnerUuid)
 	}
 }
+
+func defaultRunnerRef(runners *Store[client.MeshBuildingBlockRunner]) *client.UuidRef {
+	for _, runner := range runners.Values() {
+		if runner.Status.IsDefault != nil && *runner.Status.IsDefault {
+			return &client.UuidRef{Uuid: *runner.Metadata.Uuid, Kind: client.MeshObjectKind.BuildingBlockRunner}
+		}
+	}
+	return nil
+}

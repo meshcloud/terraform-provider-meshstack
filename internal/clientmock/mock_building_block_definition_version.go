@@ -2,6 +2,7 @@ package clientmock
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 
@@ -10,7 +11,8 @@ import (
 )
 
 type meshBuildingBlockDefinitionVersionClient struct {
-	Store *Store[client.MeshBuildingBlockDefinitionVersion]
+	Store       *Store[client.MeshBuildingBlockDefinitionVersion]
+	StoreRunner *Store[client.MeshBuildingBlockRunner]
 }
 
 func (m meshBuildingBlockDefinitionVersionClient) List(_ context.Context, buildingBlockDefinitionUuid string) ([]client.MeshBuildingBlockDefinitionVersion, error) {
@@ -24,8 +26,16 @@ func (m meshBuildingBlockDefinitionVersionClient) List(_ context.Context, buildi
 }
 
 func (m meshBuildingBlockDefinitionVersionClient) Create(_ context.Context, ownedByWorkspace string, versionSpec client.MeshBuildingBlockDefinitionVersionSpec) (*client.MeshBuildingBlockDefinitionVersion, error) {
+	if versionSpec.RunnerRef == nil {
+		return nil, errRunnerRefRequired
+	}
 	nextNum := m.getNextVersionNumber()
 	versionUuid := uuid.NewString()
+	if latest := m.latestVersionOf(versionSpec.BuildingBlockDefinitionRef); latest != nil && m.versionSecretsNeedPlaintext(latest.Spec, versionSpec) {
+		if err := rejectSecretHashes(&versionSpec); err != nil {
+			return nil, err
+		}
+	}
 	// Compute hashes for all secrets in the spec
 	backendSecretBehavior(true, &versionSpec, nil)
 	if err := applyManualOutputBehavior(&versionSpec); err != nil {
@@ -51,12 +61,14 @@ func (m meshBuildingBlockDefinitionVersionClient) Create(_ context.Context, owne
 }
 
 func (m meshBuildingBlockDefinitionVersionClient) Update(_ context.Context, uuid string, ownedByWorkspace string, versionSpec client.MeshBuildingBlockDefinitionVersionSpec) (*client.MeshBuildingBlockDefinitionVersion, error) {
+	if versionSpec.RunnerRef == nil {
+		return nil, errRunnerRefRequired
+	}
 	if existing, ok := m.Store.Get(uuid); ok {
-		// meshStack stores a version's secrets encrypted for its runner, so a version that moves to another
-		// runner - or to another implementation type - cannot keep them and has to re-supply each one as
-		// plaintext (MeshBuildingBlockDefinitionVersionMapper). Rejecting the hash here keeps the mock in
-		// lock-step with the 400 an acceptance run gets.
-		if versionSecretsNeedPlaintext(existing.Spec, versionSpec) {
+		// meshStack encrypts the secrets of a version with the public key of its runner
+		// (MeshBuildingBlockDefinitionVersionMapper). When the runner changes to one with another key, or the
+		// implementation type changes, the client must send each secret again as plaintext.
+		if m.versionSecretsNeedPlaintext(existing.Spec, versionSpec) {
 			if err := rejectSecretHashes(&versionSpec); err != nil {
 				return nil, err
 			}
@@ -75,20 +87,23 @@ func (m meshBuildingBlockDefinitionVersionClient) Update(_ context.Context, uuid
 	return nil, fmt.Errorf("building block definition version not found: %s", uuid)
 }
 
-// versionSecretsNeedPlaintext reports whether an update moves the version to another runner or another
-// implementation type, the two cases in which meshStack refuses a secret that carries only a hash. A nil
-// runner ref means "whichever runner meshStack picks", which the mock cannot resolve, so it compares the
-// uuids as they are.
-func versionSecretsNeedPlaintext(existing, updated client.MeshBuildingBlockDefinitionVersionSpec) bool {
-	runnerUuid := func(ref *client.UuidRef) string {
+var errRunnerRefRequired = errors.New("'spec.runnerRef' is required")
+
+// versionSecretsNeedPlaintext reports whether meshStack refuses a secret that carries only a hash. It does when the
+// runner changes to one with another public key, or when the implementation type changes.
+func (m meshBuildingBlockDefinitionVersionClient) versionSecretsNeedPlaintext(existing, updated client.MeshBuildingBlockDefinitionVersionSpec) bool {
+	publicKey := func(ref *client.UuidRef) string {
 		if ref == nil {
-			return ""
+			return "no runner"
 		}
-		return ref.Uuid
+		if runner, ok := m.StoreRunner.Get(ref.Uuid); ok {
+			return runner.Spec.PublicKey
+		}
+		return "unknown runner " + ref.Uuid
 	}
 	existingType, existingErr := existing.Implementation.InferType()
 	updatedType, updatedErr := updated.Implementation.InferType()
-	return runnerUuid(existing.RunnerRef) != runnerUuid(updated.RunnerRef) ||
+	return publicKey(existing.RunnerRef) != publicKey(updated.RunnerRef) ||
 		existingErr != nil || updatedErr != nil || existingType != updatedType
 }
 
@@ -165,6 +180,21 @@ func translateManualInputTypeToOutput(inputType client.MeshBuildingBlockIOType) 
 	default:
 		return inputType
 	}
+}
+
+func (m meshBuildingBlockDefinitionVersionClient) latestVersionOf(definitionRef *client.UuidRef) (latest *client.MeshBuildingBlockDefinitionVersion) {
+	if definitionRef == nil {
+		return nil
+	}
+	for _, version := range m.Store.Values() {
+		if version.Spec.BuildingBlockDefinitionRef == nil || version.Spec.BuildingBlockDefinitionRef.Uuid != definitionRef.Uuid {
+			continue
+		}
+		if latest == nil || *version.Spec.VersionNumber > *latest.Spec.VersionNumber {
+			latest = version
+		}
+	}
+	return latest
 }
 
 func (m meshBuildingBlockDefinitionVersionClient) getNextVersionNumber() int {
