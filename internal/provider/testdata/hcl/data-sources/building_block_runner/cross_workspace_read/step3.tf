@@ -71,7 +71,7 @@ provider "meshstack-other" {
   apisecret = var.apikey_client_secret
 }
 
-data "meshstack_building_block_runner" "hosted" {
+data "meshstack_building_block_runner" "default" {
   provider = meshstack-other
 
   metadata = {

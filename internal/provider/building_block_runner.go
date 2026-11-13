@@ -1,6 +1,40 @@
 package provider
 
-const SharedBuildingBlockRunnerUuid = "98520496-627d-43e6-82da-ce499179ff3f"
+import (
+	"context"
+	"errors"
+	"fmt"
+
+	"github.com/meshcloud/meshstack-cli/client"
+)
+
+const (
+	SharedBuildingBlockRunnerUuid = "98520496-627d-43e6-82da-ce499179ff3f"
+	defaultRunnerNotFound         = "Unable to find the default building block runner"
+)
+
+func defaultBuildingBlockRunnerUuid(ctx context.Context, runnerClient client.MeshBuildingBlockRunnerClient) (string, error) {
+	runners, err := runnerClient.List(ctx, client.MeshBuildingBlockRunnerFilter{IsDefault: new(true)})
+	if err != nil {
+		return "", err
+	}
+	if len(runners) == 0 {
+		return "", errors.New("meshStack must have one default building block runner, but it returned none")
+	}
+	var defaults []string
+	for _, runner := range runners {
+		if runner.Status == nil || runner.Status.IsDefault == nil {
+			return SharedBuildingBlockRunnerUuid, nil
+		}
+		if *runner.Status.IsDefault && runner.Metadata.Uuid != nil {
+			defaults = append(defaults, *runner.Metadata.Uuid)
+		}
+	}
+	if len(defaults) != 1 {
+		return "", fmt.Errorf("meshStack must have one default building block runner, but it returned %d: %v", len(defaults), defaults)
+	}
+	return defaults[0], nil
+}
 
 // subjectTemplateDescription documents the placeholder syntax of a runner's subject template. The
 // placeholder set is a public contract for self-hosted runner operators, so the description spells
