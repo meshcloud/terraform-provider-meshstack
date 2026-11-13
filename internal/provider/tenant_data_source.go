@@ -10,6 +10,7 @@ import (
 	"github.com/meshcloud/meshstack-cli/client"
 
 	"github.com/meshcloud/terraform-provider-meshstack/internal/types/generic"
+	"github.com/meshcloud/terraform-provider-meshstack/internal/util/iter"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
@@ -94,7 +95,7 @@ func (d *tenantDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 
 	// The v4 GA singular GET is by uuid, which composite-key callers don't have; resolve via the list
 	// endpoint filtered by workspace/project/platform.
-	tenants, err := d.meshTenantClient.List(ctx, client.MeshTenantQuery{Workspace: workspace, Project: &project, Platform: &platform})
+	tenants, err := iter.Collect(d.meshTenantClient.List(ctx, client.MeshTenantFilter{Workspace: workspace, Project: &project, Platform: &platform}))
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read tenant", err.Error())
 		return
@@ -116,7 +117,7 @@ func (d *tenantDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 			OwnedByWorkspace:   tenant.Metadata.OwnedByWorkspace,
 			OwnedByProject:     tenant.Metadata.OwnedByProject,
 			PlatformIdentifier: platform,
-			Uuid:               tenant.Metadata.Uuid,
+			Uuid:               *tenant.Metadata.Uuid,
 		},
 		Spec:   tenant.Spec,
 		Status: tenant.Status,

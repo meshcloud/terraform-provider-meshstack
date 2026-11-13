@@ -161,11 +161,11 @@ func (r *workspaceTagsResource) setTags(ctx context.Context, tfPlan tfsdk.Plan, 
 		}
 	}
 
-	updatePayload := client.MeshWorkspaceCreate{
-		Metadata: client.MeshWorkspaceCreateMetadata{Name: wsName, Tags: tags},
+	updatePayload := client.MeshWorkspace{
+		Metadata: client.MeshWorkspaceMetadata{Name: wsName, Tags: tags},
 		Spec:     workspace.Spec,
 	}
-	if _, err := r.meshWorkspaceClient.Update(ctx, wsName, &updatePayload); err != nil {
+	if _, err := r.meshWorkspaceClient.Update(ctx, updatePayload); err != nil {
 		diags.AddError("Error Updating Workspace Tags", fmt.Sprintf("Could not update tags for workspace '%s': %v", wsName, err))
 		return
 	}
@@ -195,11 +195,11 @@ func (r *workspaceTagsResource) Delete(ctx context.Context, req resource.DeleteR
 	}
 
 	// Authoritative delete removes all tags by updating workspace with an empty tags map.
-	updatePayload := client.MeshWorkspaceCreate{
-		Metadata: client.MeshWorkspaceCreateMetadata{Name: wsName, Tags: make(map[string][]string)},
+	updatePayload := client.MeshWorkspace{
+		Metadata: client.MeshWorkspaceMetadata{Name: wsName, Tags: make(map[string][]string)},
 		Spec:     workspace.Spec,
 	}
-	if _, err := r.meshWorkspaceClient.Update(ctx, wsName, &updatePayload); err != nil {
+	if _, err := r.meshWorkspaceClient.Update(ctx, updatePayload); err != nil {
 		resp.Diagnostics.AddError("Error Clearing Workspace Tags", fmt.Sprintf("Could not clear tags for workspace '%s': %v", wsName, err))
 		return
 	}

@@ -9,6 +9,8 @@ import (
 )
 
 type MeshPaymentMethodClient struct {
+	client.MeshPaymentMethodClient
+
 	Store *Store[client.MeshPaymentMethod]
 }
 
@@ -17,7 +19,7 @@ func (m MeshPaymentMethodClient) Read(_ context.Context, identifier string) (*cl
 	return v, nil
 }
 
-func (m MeshPaymentMethodClient) Create(_ context.Context, paymentMethod *client.MeshPaymentMethodCreate) (*client.MeshPaymentMethod, error) {
+func (m MeshPaymentMethodClient) Create(_ context.Context, paymentMethod client.MeshPaymentMethod) (client.MeshPaymentMethod, error) {
 	created := &client.MeshPaymentMethod{
 		Metadata: client.MeshPaymentMethodMetadata{
 			Name:             paymentMethod.Metadata.Name,
@@ -32,13 +34,14 @@ func (m MeshPaymentMethodClient) Create(_ context.Context, paymentMethod *client
 	}
 
 	m.Store.Set(paymentMethod.Metadata.Name, created)
-	return created, nil
+	return *created, nil
 }
 
-func (m MeshPaymentMethodClient) Update(_ context.Context, identifier string, paymentMethod *client.MeshPaymentMethodCreate) (*client.MeshPaymentMethod, error) {
+func (m MeshPaymentMethodClient) Update(_ context.Context, paymentMethod client.MeshPaymentMethod) (client.MeshPaymentMethod, error) {
+	identifier := paymentMethod.Metadata.Name
 	existing, _ := m.Store.Get(identifier)
 	if existing == nil {
-		return nil, fmt.Errorf("payment method not found: %s", identifier)
+		return client.MeshPaymentMethod{}, fmt.Errorf("payment method not found: %s", identifier)
 	}
 
 	existing.Spec = paymentMethod.Spec
@@ -46,7 +49,7 @@ func (m MeshPaymentMethodClient) Update(_ context.Context, identifier string, pa
 		existing.Spec.Tags = map[string][]string{}
 	}
 
-	return existing, nil
+	return *existing, nil
 }
 
 func (m MeshPaymentMethodClient) Delete(_ context.Context, identifier string) error {

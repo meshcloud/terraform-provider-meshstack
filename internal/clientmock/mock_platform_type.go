@@ -3,6 +3,7 @@ package clientmock
 import (
 	"context"
 	"fmt"
+	"iter"
 
 	"github.com/google/uuid"
 	"github.com/meshcloud/meshstack-cli/client"
@@ -19,7 +20,7 @@ func (m MeshPlatformTypeClient) Read(_ context.Context, identifier string) (*cli
 	return nil, nil
 }
 
-func (m MeshPlatformTypeClient) Create(_ context.Context, platformType *client.MeshPlatformTypeCreate) (*client.MeshPlatformType, error) {
+func (m MeshPlatformTypeClient) Create(_ context.Context, platformType client.MeshPlatformType) (client.MeshPlatformType, error) {
 	platformTypeUuid := uuid.NewString()
 	created := &client.MeshPlatformType{
 		Metadata: client.MeshPlatformTypeMetadata{
@@ -35,15 +36,16 @@ func (m MeshPlatformTypeClient) Create(_ context.Context, platformType *client.M
 		},
 	}
 	m.Store.Set(created.Metadata.Name, created)
-	return created, nil
+	return *created, nil
 }
 
-func (m MeshPlatformTypeClient) Update(_ context.Context, name string, platformType *client.MeshPlatformTypeCreate) (*client.MeshPlatformType, error) {
+func (m MeshPlatformTypeClient) Update(_ context.Context, platformType client.MeshPlatformType) (client.MeshPlatformType, error) {
+	name := platformType.Metadata.Name
 	if existing, ok := m.Store.Get(name); ok {
 		existing.Spec = platformType.Spec
-		return existing, nil
+		return *existing, nil
 	}
-	return nil, fmt.Errorf("platform type not found: %s", name)
+	return client.MeshPlatformType{}, fmt.Errorf("platform type not found: %s", name)
 }
 
 func (m MeshPlatformTypeClient) Delete(_ context.Context, name string) error {
@@ -51,16 +53,16 @@ func (m MeshPlatformTypeClient) Delete(_ context.Context, name string) error {
 	return nil
 }
 
-func (m MeshPlatformTypeClient) List(_ context.Context, category *string, lifecycleStatus *string) ([]client.MeshPlatformType, error) {
+func (m MeshPlatformTypeClient) List(_ context.Context, filter client.MeshPlatformTypeFilter, _ ...client.ListOption) iter.Seq2[client.MeshPlatformType, error] {
 	var result []client.MeshPlatformType
 	for _, platformType := range m.Store.Values() {
-		if category != nil && platformType.Spec.Category != *category {
+		if filter.Category != nil && platformType.Spec.Category != *filter.Category {
 			continue
 		}
-		if lifecycleStatus != nil && platformType.Status.Lifecycle.State != *lifecycleStatus {
+		if filter.LifecycleStatus != nil && platformType.Status.Lifecycle.State != *filter.LifecycleStatus {
 			continue
 		}
 		result = append(result, *platformType)
 	}
-	return result, nil
+	return listOf(result, nil)
 }

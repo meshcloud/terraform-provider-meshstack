@@ -7,6 +7,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/meshcloud/meshstack-cli/client"
+
+	"github.com/meshcloud/terraform-provider-meshstack/internal/util/iter"
 )
 
 var (
@@ -112,14 +114,14 @@ func (d *tenantsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		return
 	}
 
-	tenants, err := d.meshTenantClient.List(ctx, client.MeshTenantQuery{
+	tenants, err := iter.Collect(d.meshTenantClient.List(ctx, client.MeshTenantFilter{
 		Workspace:      workspace,
 		Project:        project,
 		Platform:       platform,
 		PlatformType:   platformType,
 		LandingZone:    landingZone,
 		PlatformTenant: platformTenantId,
-	})
+	}))
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read tenants", err.Error())
 		return

@@ -28,3 +28,14 @@ func Map[V, U any](seq iter.Seq[V], mapper func(V) U) iter.Seq[U] {
 func MapAndSortBy[T any, Comparable interface{ Compare(Comparable) int }](mapper func(T) Comparable, seq iter.Seq[T]) []Comparable {
 	return slices.SortedStableFunc(Map(seq, mapper), Comparable.Compare)
 }
+
+func Collect[V any](seq iter.Seq2[V, error]) ([]V, error) {
+	var values []V
+	for value, err := range seq {
+		if err != nil {
+			return nil, err
+		}
+		values = append(values, value)
+	}
+	return values, nil
+}

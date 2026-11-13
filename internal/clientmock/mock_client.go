@@ -2,6 +2,7 @@ package clientmock
 
 import (
 	"fmt"
+	"iter"
 	"maps"
 	"reflect"
 	"slices"
@@ -104,6 +105,21 @@ func NewMock() Client {
 		Workspace:                      MeshWorkspaceClient{Store: NewStore[client.MeshWorkspace]()},
 		WorkspaceGroupBinding:          MeshWorkspaceGroupBindingClient{Store: NewStore[client.MeshWorkspaceGroupBinding]()},
 		WorkspaceUserBinding:           MeshWorkspaceUserBindingClient{Store: NewStore[client.MeshWorkspaceUserBinding]()},
+	}
+}
+
+func listOf[M any](objects []M, err error) iter.Seq2[M, error] {
+	return func(yield func(M, error) bool) {
+		if err != nil {
+			var noObject M
+			yield(noObject, err)
+			return
+		}
+		for _, object := range objects {
+			if !yield(object, nil) {
+				return
+			}
+		}
 	}
 }
 

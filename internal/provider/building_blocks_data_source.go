@@ -12,6 +12,7 @@ import (
 	clientTypes "github.com/meshcloud/meshstack-cli/client/types"
 
 	"github.com/meshcloud/terraform-provider-meshstack/internal/types/generic"
+	"github.com/meshcloud/terraform-provider-meshstack/internal/util/iter"
 )
 
 var (
@@ -139,7 +140,7 @@ func (d *buildingBlocksDataSource) Read(ctx context.Context, req datasource.Read
 		return
 	}
 
-	blocks, err := d.client.List(ctx, client.MeshBuildingBlockV2ListFilter{
+	blocks, err := iter.Collect(d.client.List(ctx, client.MeshBuildingBlockV2Filter{
 		WorkspaceIdentifier:          config.WorkspaceIdentifier,
 		ProjectIdentifier:            config.ProjectIdentifier,
 		PlatformIdentifier:           config.PlatformIdentifier,
@@ -153,7 +154,7 @@ func (d *buildingBlocksDataSource) Read(ctx context.Context, req datasource.Read
 		Action:                       config.Action,
 		ManagedByWorkspaceIdentifier: config.ManagedByWorkspaceIdentifier,
 		ManagedByDefinitionUuid:      config.ManagedByDefinitionUuid,
-	})
+	}))
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to list building blocks", err.Error())
 		return

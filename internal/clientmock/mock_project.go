@@ -3,6 +3,7 @@ package clientmock
 import (
 	"context"
 	"fmt"
+	"iter"
 	"strings"
 	"time"
 
@@ -13,22 +14,22 @@ type MeshProjectClient struct {
 	Store *Store[client.MeshProject]
 }
 
-func (m MeshProjectClient) Read(_ context.Context, workspace string, name string) (*client.MeshProject, error) {
-	v, _ := m.Store.Get(workspace + "." + name)
+func (m MeshProjectClient) Read(_ context.Context, id string) (*client.MeshProject, error) {
+	v, _ := m.Store.Get(id)
 	return v, nil
 }
 
-func (m MeshProjectClient) List(_ context.Context, workspaceIdentifier string, paymentMethodIdentifier *string) ([]client.MeshProject, error) {
+func (m MeshProjectClient) List(_ context.Context, filter client.MeshProjectFilter, _ ...client.ListOption) iter.Seq2[client.MeshProject, error] {
 	var wantedPaymentMethod *string
-	if paymentMethodIdentifier != nil {
-		wantedPaymentMethod = new(*paymentMethodIdentifier)
+	if filter.PaymentIdentifier != nil {
+		wantedPaymentMethod = new(*filter.PaymentIdentifier)
 		if strings.TrimSpace(*wantedPaymentMethod) == "" {
 			*wantedPaymentMethod = ""
 		}
 	}
 	var result []client.MeshProject
 	for _, p := range m.Store.Values() {
-		if p.Metadata.OwnedByWorkspace != workspaceIdentifier {
+		if p.Metadata.OwnedByWorkspace != filter.WorkspaceIdentifier {
 			continue
 		}
 		if wantedPaymentMethod != nil {
@@ -42,10 +43,10 @@ func (m MeshProjectClient) List(_ context.Context, workspaceIdentifier string, p
 		}
 		result = append(result, *p)
 	}
-	return result, nil
+	return listOf(result, nil)
 }
 
-func (m MeshProjectClient) Create(_ context.Context, project *client.MeshProjectCreate) (*client.MeshProject, error) {
+func (m MeshProjectClient) Create(_ context.Context, project client.MeshProject) (client.MeshProject, error) {
 	created := &client.MeshProject{
 		Metadata: client.MeshProjectMetadata{
 			Name:             project.Metadata.Name,
@@ -54,21 +55,21 @@ func (m MeshProjectClient) Create(_ context.Context, project *client.MeshProject
 		},
 		Spec: project.Spec,
 	}
-	m.Store.Set(project.Metadata.OwnedByWorkspace+"."+project.Metadata.Name, created)
-	return created, nil
+	m.Store.Set(client.NewMeshProjectId(project.Metadata.OwnedByWorkspace, project.Metadata.Name), created)
+	return *created, nil
 }
 
-func (m MeshProjectClient) Update(_ context.Context, project *client.MeshProjectCreate) (*client.MeshProject, error) {
-	key := project.Metadata.OwnedByWorkspace + "." + project.Metadata.Name
+func (m MeshProjectClient) Update(_ context.Context, project client.MeshProject) (client.MeshProject, error) {
+	key := client.NewMeshProjectId(project.Metadata.OwnedByWorkspace, project.Metadata.Name)
 	existing, _ := m.Store.Get(key)
 	if existing == nil {
-		return nil, fmt.Errorf("project not found: %s", key)
+		return client.MeshProject{}, fmt.Errorf("project not found: %s", key)
 	}
 	existing.Spec = project.Spec
-	return existing, nil
+	return *existing, nil
 }
 
-func (m MeshProjectClient) Delete(_ context.Context, workspace string, name string) error {
-	m.Store.Delete(workspace + "." + name)
+func (m MeshProjectClient) Delete(_ context.Context, id string) error {
+	m.Store.Delete(id)
 	return nil
 }

@@ -6,6 +6,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/meshcloud/meshstack-cli/client"
+
+	"github.com/meshcloud/terraform-provider-meshstack/internal/util/iter"
 )
 
 type workspaceBindingModel struct {
@@ -26,10 +28,7 @@ func (m workspaceBindingModel) workspaceBinding() client.MeshWorkspaceBinding {
 	return m.MeshWorkspaceBinding
 }
 
-type workspaceBindingClient[B any] interface {
-	Read(ctx context.Context, name string) (*B, error)
-	List(ctx context.Context, filter client.MeshWorkspaceBindingListFilter) ([]B, error)
-}
+type workspaceBindingClient[B any] = client.MeshObjectClient[B, client.MeshWorkspaceBindingFilter]
 
 func newWorkspaceBindingDataSource[B any, M workspaceBindingView](
 	subject, subjectNameDescription string,
@@ -57,14 +56,14 @@ func newWorkspaceBindingDataSource[B any, M workspaceBindingView](
 		selectClient: func(c client.Client) bindingClient[M] {
 			bindings := selectClient(c)
 			list := func(ctx context.Context, filter bindingFilter) ([]B, error) {
-				listFilter := client.MeshWorkspaceBindingListFilter{
+				listFilter := client.MeshWorkspaceBindingFilter{
 					WorkspaceIdentifier: filter["target_ref.name"],
 					WorkspaceRole:       filter["role_ref.name"],
 				}
 				if listBySubject {
 					listFilter.Username = filter["subject.name"]
 				}
-				return bindings.List(ctx, listFilter)
+				return iter.Collect(bindings.List(ctx, listFilter))
 			}
 			return newBindingClient(bindings.Read, list, model)
 		},

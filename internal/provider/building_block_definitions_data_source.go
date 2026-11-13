@@ -13,6 +13,7 @@ import (
 	"github.com/meshcloud/meshstack-cli/client"
 
 	"github.com/meshcloud/terraform-provider-meshstack/internal/types/generic"
+	"github.com/meshcloud/terraform-provider-meshstack/internal/util/iter"
 )
 
 var (
@@ -166,7 +167,10 @@ func (d *buildingBlockDefinitionsDataSource) Read(ctx context.Context, req datas
 		return
 	}
 
-	definitions, err := d.meshBuildingBlockDefinitionClient.List(ctx, data.WorkspaceIdentifier)
+	definitions, err := iter.Collect(d.meshBuildingBlockDefinitionClient.List(ctx, client.MeshBuildingBlockDefinitionFilter{
+		OwnedByWorkspace:    data.WorkspaceIdentifier,
+		IncludeAllPublished: true,
+	}))
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to list building block definitions", err.Error())
 		return
@@ -206,7 +210,7 @@ func buildingBlockDefinitionDataSourceModelFrom(ctx context.Context, versionClie
 	var versions []client.MeshBuildingBlockDefinitionVersion
 	var err error
 	if !redacted {
-		versions, err = versionClient.List(ctx, *definition.Metadata.Uuid)
+		versions, err = listVersions(ctx, versionClient, *definition.Metadata.Uuid)
 	}
 	httpErr, isHttpErr := errors.AsType[client.HttpError](err)
 	if redacted || (isHttpErr && httpErr.IsForbidden()) {

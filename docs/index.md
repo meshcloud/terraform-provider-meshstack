@@ -107,7 +107,7 @@ resource "meshstack_building_block" "team_a_sandbox" {
   
   A profile is a named bundle of endpoint and credential, written by `meshstack login` into the meshStack CLI's configuration directory. Flags and environment variables take precedence over the values in a profile.
   
-  With no name given, the profile is the one whose endpoint matches the endpoint in use, else the one the last `meshstack login` selected, else `default`.
+  With no name given, the profile is the one the last `meshstack login` selected, if it has the endpoint in use, else the only profile with that endpoint. Without such a profile, the endpoint and the credential come from the other settings alone.
 - `workspace` (String) The workspace to work in, identified as in meshPanel, such as my-workspace-ab12c. Also read from MESHSTACK_WORKSPACE.
   
   A browser login needs this or `MESHSTACK_WORKSPACE`: the provider does not take the profile's default workspace, which `meshstack login` stores. An API key or an API token needs no workspace.

@@ -14,6 +14,7 @@ import (
 	"github.com/meshcloud/meshstack-cli/client"
 
 	"github.com/meshcloud/terraform-provider-meshstack/internal/types/generic"
+	"github.com/meshcloud/terraform-provider-meshstack/internal/util/iter"
 )
 
 var (
@@ -94,7 +95,7 @@ func (d *buildingBlockRunnerDataSource) Read(ctx context.Context, req datasource
 
 func (d *buildingBlockRunnerDataSource) candidates(ctx context.Context, filter buildingBlockRunnerFilter, diags *diag.Diagnostics) []client.MeshBuildingBlockRunner {
 	if filter.Uuid == nil {
-		runners, err := d.client.List(ctx, client.MeshBuildingBlockRunnerFilter{WorkspaceIdentifier: filter.OwnedByWorkspace})
+		runners, err := iter.Collect(d.client.List(ctx, client.MeshBuildingBlockRunnerFilter{WorkspaceIdentifier: filter.OwnedByWorkspace}))
 		if err != nil {
 			diags.AddError("Unable to list building block runners", err.Error())
 			return nil

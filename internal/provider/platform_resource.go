@@ -270,7 +270,7 @@ func (r *platformResource) Create(ctx context.Context, req resource.CreateReques
 		resp.Diagnostics.AddError("Error Creating Platform", "Could not create platform, unexpected error: "+err.Error())
 		return
 	}
-	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, platformModelFromDto(createdPlatform), converterOptions...)...)
+	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, platformModelFromDto(&createdPlatform), converterOptions...)...)
 }
 
 func (r *platformResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -309,12 +309,12 @@ func (r *platformResource) Update(ctx context.Context, req resource.UpdateReques
 
 	model := generic.Get[platformModel](ctx, req.Plan, &resp.Diagnostics, converterOptions.Append(generic.WithSetUnknownValueToZero())...)
 
-	updatedPlatform, err := r.meshPlatformClient.Update(ctx, *model.Metadata.Uuid, client.MeshPlatform{Metadata: model.Metadata, Spec: model.Spec})
+	updatedPlatform, err := r.meshPlatformClient.Update(ctx, client.MeshPlatform{Metadata: model.Metadata, Spec: model.Spec})
 	if err != nil {
 		resp.Diagnostics.AddError("Error Updating Platform", "Could not update platform, unexpected error: "+err.Error())
 		return
 	}
-	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, platformModelFromDto(updatedPlatform), converterOptions...)...)
+	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, platformModelFromDto(&updatedPlatform), converterOptions...)...)
 }
 
 func (r *platformResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {

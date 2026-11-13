@@ -2,11 +2,14 @@ package clientmock
 
 import (
 	"context"
+	"iter"
 
 	"github.com/meshcloud/meshstack-cli/client"
 )
 
 type MeshServiceInstanceClient struct {
+	client.MeshServiceInstanceClient
+
 	Store *Store[client.MeshServiceInstance]
 }
 
@@ -17,7 +20,7 @@ func (m MeshServiceInstanceClient) Read(_ context.Context, instanceId string) (*
 	return nil, nil
 }
 
-func (m MeshServiceInstanceClient) List(_ context.Context, filter client.MeshServiceInstanceFilter) ([]client.MeshServiceInstance, error) {
+func (m MeshServiceInstanceClient) List(_ context.Context, filter client.MeshServiceInstanceFilter, _ ...client.ListOption) iter.Seq2[client.MeshServiceInstance, error] {
 	var result []client.MeshServiceInstance
 	for _, serviceInstance := range m.Store.Values() {
 		if filter.WorkspaceIdentifier != nil && serviceInstance.Metadata.OwnedByWorkspace != *filter.WorkspaceIdentifier {
@@ -37,5 +40,5 @@ func (m MeshServiceInstanceClient) List(_ context.Context, filter client.MeshSer
 		}
 		result = append(result, *serviceInstance)
 	}
-	return result, nil
+	return listOf(result, nil)
 }

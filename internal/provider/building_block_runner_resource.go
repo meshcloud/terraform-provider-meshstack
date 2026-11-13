@@ -157,7 +157,7 @@ func (r *buildingBlockRunnerResource) Schema(_ context.Context, _ resource.Schem
 							stringplanmodifier.RequiresReplace(),
 						},
 						Validators: []validator.String{
-							stringvalidator.OneOf(client.MeshBuildingBlockRunnerImplementationTypes...),
+							stringvalidator.OneOf(client.MeshBuildingBlockRunnerImplementationTypes.Strings()...),
 						},
 					},
 					"restriction": schema.StringAttribute{
@@ -250,7 +250,7 @@ func (r *buildingBlockRunnerResource) Create(ctx context.Context, req resource.C
 		resp.Diagnostics.AddError("Error creating meshBuildingBlockRunner", err.Error())
 		return
 	}
-	plan.setFromClientDto(created)
+	plan.setFromClientDto(&created)
 	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, plan)...)
 }
 
@@ -282,7 +282,7 @@ func (r *buildingBlockRunnerResource) Update(ctx context.Context, req resource.U
 		resp.Diagnostics.AddError("Error updating meshBuildingBlockRunner", fmt.Sprintf("Updating runner '%s' failed: %s", *plan.Metadata.Uuid, err.Error()))
 		return
 	}
-	plan.setFromClientDto(updated)
+	plan.setFromClientDto(&updated)
 	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, plan)...)
 }
 
