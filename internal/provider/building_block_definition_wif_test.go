@@ -102,9 +102,7 @@ func TestAccBuildingBlockDefinitionWif(t *testing.T) {
 			},
 			{
 				// A changed runner changes the identity of the version it is changed on, so it is read again.
-				// meshStack stores a version's secrets encrypted for its runner, so moving the definition to another
-				// one has to re-supply every secret as plaintext - a hash is a 400. Bumping secret_version is how the
-				// provider is asked for that, same as the rotation step of TestAccBuildingBlockDefinition.
+				// Both runners have the same public key, so meshStack accepts the secret hashes when the runner changes.
 				Config: hclStep(t, "resources/building_block_definition/wif", 2, vars),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{

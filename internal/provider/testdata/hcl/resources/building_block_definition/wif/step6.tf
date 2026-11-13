@@ -162,7 +162,7 @@ resource "meshstack_building_block_definition" "example_01_terraform" {
   version_spec = {
     draft = true
 
-    # Optional: Specify runner if necessary (otherwise, shared runner is used)
+    # Optional: pin a runner. Without runner_ref, a new version or a draft uses meshStack's default runner.
     runner_ref = meshstack_building_block_runner.example_with_other_wif.ref
 
     only_apply_once_per_tenant = false    # Optional: defaults to false
@@ -218,8 +218,7 @@ resource "meshstack_building_block_definition" "example_01_terraform" {
         is_environment  = true # Optional: defaults to false
         sensitive = {
           argument = {
-            secret_value   = "write-only-plaintext-value-should-be-ephemeral"
-            secret_version = "moved-to-other-runner"
+            secret_value = "write-only-plaintext-value-should-be-ephemeral"
           }
         }
       }
@@ -253,7 +252,7 @@ resource "meshstack_building_block_definition" "example_01_terraform" {
         # Optional: SSH configuration for private repositories
         ssh_private_key = {
           secret_value   = "-----BEGIN OPENSSH PRIVATE KEY-----\n..." # write-only, not stored in state
-          secret_version = "moved-to-other-runner"                    # change whenever value shall be re-applied
+          secret_version = null                                       # change whenever value shall be re-applied
         }
 
         # Optional: SSH known host configuration

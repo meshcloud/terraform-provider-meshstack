@@ -1,5 +1,11 @@
 # v0.28.1
 
+FEATURES:
+- `meshstack_building_block_definition`: without `version_spec.runner_ref`, the provider assigns meshStack's default
+  runner to a new definition and to a draft. To specify a runner, set `version_spec.runner_ref`.
+- `meshstack_building_block_runner`: the data source returns meshStack's default runner when `metadata` and `spec` are
+  omitted. The resource and the data source show `status.is_default`.
+
 FIXES:
 - `meshstack_project`: `spec.substitute_payment_method_identifier` is sent to meshStack. Before, it was never sent, and
   it replaced `spec.payment_method_identifier` when it was set.

@@ -16,10 +16,10 @@ type MeshBuildingBlockRunnerClient struct {
 // package holds the same literal; the mock cannot import it without a cycle.
 const SharedBuildingBlockRunnerUuid = "98520496-627d-43e6-82da-ce499179ff3f"
 
-// sharedBuildingBlockRunner mirrors the hosted runner: readable by any workspace, and the runner a
-// building block definition version uses when it names none. Its workload identity federation values are made up -
-// a real meshStack learns them from the run-controller at startup - so assert their shape, not their
-// content, in a test that has to hold against both backends.
+// sharedBuildingBlockRunner mirrors the hosted runner. Any workspace can read it, and it is the default runner.
+// Its workload identity federation values are made up - a real meshStack learns them from the
+// run-controller at startup - so assert their shape, not their content, in a test that has to hold
+// against both backends.
 func sharedBuildingBlockRunner() *client.MeshBuildingBlockRunner {
 	return &client.MeshBuildingBlockRunner{
 		Metadata: client.MeshBuildingBlockRunnerMetadata{
@@ -43,6 +43,7 @@ func sharedBuildingBlockRunner() *client.MeshBuildingBlockRunner {
 		Status: &client.MeshBuildingBlockRunnerStatus{
 			LastSeen:         new("2026-01-01T00:00:00Z"),
 			LastKnownVersion: new("1.0.0"),
+			IsDefault:        new(true),
 		},
 	}
 }
@@ -67,7 +68,7 @@ func (m MeshBuildingBlockRunnerClient) Create(_ context.Context, runner client.M
 			IsSelfHosted:               new(true),
 			WorkloadIdentityFederation: runner.Spec.WorkloadIdentityFederation,
 		},
-		Status: &client.MeshBuildingBlockRunnerStatus{},
+		Status: &client.MeshBuildingBlockRunnerStatus{IsDefault: new(false)},
 	}
 	m.Store.Set(runnerUuid, created)
 	return created, nil
@@ -83,7 +84,8 @@ func (m MeshBuildingBlockRunnerClient) Read(_ context.Context, uuid string) (*cl
 func (m MeshBuildingBlockRunnerClient) List(_ context.Context, filter client.MeshBuildingBlockRunnerFilter) ([]client.MeshBuildingBlockRunner, error) {
 	var result []client.MeshBuildingBlockRunner
 	for _, runner := range m.Store.Values() {
-		if filter.WorkspaceIdentifier == nil || runner.Metadata.OwnedByWorkspace == *filter.WorkspaceIdentifier {
+		if (filter.WorkspaceIdentifier == nil || runner.Metadata.OwnedByWorkspace == *filter.WorkspaceIdentifier) &&
+			(filter.IsDefault == nil || runner.Status.IsDefault != nil && *runner.Status.IsDefault == *filter.IsDefault) {
 			result = append(result, *runner)
 		}
 	}
@@ -114,5 +116,20 @@ func (m MeshBuildingBlockRunnerClient) Update(_ context.Context, runner client.M
 
 func (m MeshBuildingBlockRunnerClient) Delete(_ context.Context, uuid string) error {
 	m.Store.Delete(uuid)
+	return nil
+}
+
+func (m MeshBuildingBlockRunnerClient) MakeDefault(runnerUuid string) {
+	for _, runner := range m.Store.Values() {
+		runner.Status.IsDefault = new(*runner.Metadata.Uuid == runnerUuid)
+	}
+}
+
+func defaultRunnerRef(runners *Store[client.MeshBuildingBlockRunner]) *client.UuidRef {
+	for _, runner := range runners.Values() {
+		if runner.Status.IsDefault != nil && *runner.Status.IsDefault {
+			return &client.UuidRef{Uuid: *runner.Metadata.Uuid, Kind: client.MeshObjectKind.BuildingBlockRunner}
+		}
+	}
 	return nil
 }

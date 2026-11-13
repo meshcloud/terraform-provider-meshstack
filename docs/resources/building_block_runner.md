@@ -158,5 +158,6 @@ Read-Only:
 
 Read-Only:
 
+- `is_default` (Boolean) Whether this is meshStack's default runner. A new version or a draft without `runner_ref` uses the default runner.
 - `last_known_version` (String) Version the runner reported when it last polled for work. Null if it has never reported one.
 - `last_seen` (String) Timestamp when the runner last polled meshStack for work (ISO 8601). Null if it has never connected.

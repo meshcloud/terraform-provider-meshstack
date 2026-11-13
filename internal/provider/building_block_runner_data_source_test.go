@@ -14,15 +14,16 @@ import (
 func TestAccBuildingBlockRunnerDataSource(t *testing.T) {
 	t.Parallel()
 
-	t.Run("hosted", func(t *testing.T) {
-		dataSourceAddr := "data.meshstack_building_block_runner.hosted"
+	t.Run("default", func(t *testing.T) {
+		dataSourceAddr := "data.meshstack_building_block_runner.default"
 
 		ApplyAndTest(t, resource.TestCase{Steps: []resource.TestStep{
 			{
-				Config: hclStep(t, "data-sources/building_block_runner/hosted", 1, hclStepVars{}),
+				Config: hclStep(t, "data-sources/building_block_runner/default", 1, hclStepVars{}),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(dataSourceAddr, tfjsonpath.New("ref").AtMapKey("uuid"), knownvalue.StringExact(SharedBuildingBlockRunnerUuid)),
 					statecheck.ExpectKnownValue(dataSourceAddr, tfjsonpath.New("spec").AtMapKey("restriction"), knownvalue.StringExact("PUBLIC")),
+					statecheck.ExpectKnownValue(dataSourceAddr, tfjsonpath.New("status").AtMapKey("is_default"), knownvalue.Bool(true)),
 				},
 			},
 		}})
@@ -31,7 +32,7 @@ func TestAccBuildingBlockRunnerDataSource(t *testing.T) {
 	t.Run("by_uuid", func(t *testing.T) {
 		vars := hclStepVars{"suffix": acctest.RandString(8)}
 		runnerAddr := "meshstack_building_block_runner.example_with_wif"
-		dataSourceAddr := "data.meshstack_building_block_runner.hosted"
+		dataSourceAddr := "data.meshstack_building_block_runner.default"
 
 		ApplyAndTest(t, resource.TestCase{Steps: []resource.TestStep{
 			{
@@ -85,7 +86,7 @@ func TestAccBuildingBlockRunnerDataSource(t *testing.T) {
 
 		vars := hclStepVars{"suffix": acctest.RandString(8)}
 		captureReaderKey, readerKey := otherWorkspaceReader()
-		hostedAddr := "data.meshstack_building_block_runner.hosted"
+		defaultAddr := "data.meshstack_building_block_runner.default"
 
 		ApplyAndTest(t, resource.TestCase{Steps: []resource.TestStep{
 			{
@@ -96,7 +97,7 @@ func TestAccBuildingBlockRunnerDataSource(t *testing.T) {
 				Config:          hclStep(t, "data-sources/building_block_runner/cross_workspace_read", 2, vars),
 				ConfigVariables: readerKey,
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(hostedAddr, tfjsonpath.New("ref").AtMapKey("uuid"), knownvalue.StringExact(SharedBuildingBlockRunnerUuid)),
+					statecheck.ExpectKnownValue(defaultAddr, tfjsonpath.New("ref").AtMapKey("uuid"), knownvalue.StringExact(SharedBuildingBlockRunnerUuid)),
 				},
 			},
 			{

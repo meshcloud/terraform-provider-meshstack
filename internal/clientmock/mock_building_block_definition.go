@@ -44,12 +44,10 @@ func (m meshBuildingBlockDefinitionClient) setStatus(definition *client.MeshBuil
 }
 
 func (m meshBuildingBlockDefinitionClient) resolveWif(definition *client.MeshBuildingBlockDefinition, version *client.MeshBuildingBlockDefinitionVersion) *client.MeshBuildingBlockDefinitionWif {
-	// A version that names no runner runs on the hosted one, as on a real meshStack.
-	runnerUuid := SharedBuildingBlockRunnerUuid
-	if version.Spec.RunnerRef != nil {
-		runnerUuid = version.Spec.RunnerRef.Uuid
+	if version.Spec.RunnerRef == nil {
+		return nil
 	}
-	runner, ok := m.StoreRunner.Get(runnerUuid)
+	runner, ok := m.StoreRunner.Get(version.Spec.RunnerRef.Uuid)
 	if !ok || runner.Spec.WorkloadIdentityFederation == nil {
 		return nil
 	}
@@ -139,6 +137,7 @@ func (m meshBuildingBlockDefinitionClient) Create(_ context.Context, definition 
 				Uuid: definitionUuid,
 				Kind: "meshBuildingBlockDefinition",
 			},
+			RunnerRef:     defaultRunnerRef(m.StoreRunner),
 			DeletionMode:  client.BuildingBlockDeletionModeDelete.Unwrap(),
 			VersionNumber: new(int64(1)),
 			State:         client.MeshBuildingBlockDefinitionVersionStateDraft.Ptr(),

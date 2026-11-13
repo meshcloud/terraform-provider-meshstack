@@ -35,6 +35,7 @@ func NewBuildingBlockDefinitionResource() resource.Resource {
 type buildingBlockDefinitionResource struct {
 	buildingBlockDefinitionClient        client.MeshBuildingBlockDefinitionClient
 	buildingBlockDefinitionVersionClient client.MeshBuildingBlockDefinitionVersionClient
+	buildingBlockRunnerClient            client.MeshBuildingBlockRunnerClient
 }
 
 func (r *buildingBlockDefinitionResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -45,6 +46,7 @@ func (r *buildingBlockDefinitionResource) Configure(_ context.Context, req resou
 	resp.Diagnostics.Append(configureProviderClient(req.ProviderData, func(client client.Client) {
 		r.buildingBlockDefinitionClient = client.BuildingBlockDefinition
 		r.buildingBlockDefinitionVersionClient = client.BuildingBlockDefinitionVersion
+		r.buildingBlockRunnerClient = client.BuildingBlockRunner
 	})...)
 }
 
@@ -590,6 +592,11 @@ func (r *buildingBlockDefinitionResource) ModifyPlan(ctx context.Context, req re
 		return
 	}
 
+	r.planDefaultRunnerRef(ctx, req, resp)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	versionSpecSecretsChanged := false
 	secret.WalkSecretPathsIn(req.Plan.Raw, &resp.Diagnostics, func(attributePath path.Path, diags *diag.Diagnostics) {
 		versionChanged := secret.SetToUnknownIfVersionChangedOrCreated(ctx, req.Plan, req.State, &resp.Plan)(attributePath, diags)
@@ -816,12 +823,59 @@ func (r *buildingBlockDefinitionResource) ModifyPlan(ctx context.Context, req re
 		// meshStack resolves the identity of a version against its runner, so a changed runner changes it.
 		runnerRefPath := path.Root("version_spec").AtName("runner_ref")
 		var plannedRunner, currentRunner types.Object
-		resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, runnerRefPath, &plannedRunner)...)
+		resp.Diagnostics.Append(resp.Plan.GetAttribute(ctx, runnerRefPath, &plannedRunner)...)
 		resp.Diagnostics.Append(req.State.GetAttribute(ctx, runnerRefPath, &currentRunner)...)
 		if !plannedRunner.Equal(currentRunner) {
 			latestVersionRef.WorkloadIdentityFederation = generic.NullIsUnknown[*client.MeshBuildingBlockDefinitionWif]{}
 		}
 	}
+}
+
+func (r *buildingBlockDefinitionResource) planDefaultRunnerRef(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	runnerRefPath := path.Root("version_spec").AtName("runner_ref")
+	var configured types.Object
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, runnerRefPath, &configured)...)
+	if resp.Diagnostics.HasError() || !configured.IsNull() || r.buildingBlockRunnerClient == nil {
+		return
+	}
+	defaultUuid, err := defaultBuildingBlockRunnerUuid(ctx, r.buildingBlockRunnerClient)
+	if err != nil {
+		resp.Diagnostics.AddError(defaultRunnerNotFound, err.Error())
+		return
+	}
+
+	if !req.State.Raw.IsNull() {
+		var currentUuid types.String
+		var stateDraft, planDraft types.Bool
+		draftPath := path.Root("version_spec").AtName("draft")
+		resp.Diagnostics.Append(req.State.GetAttribute(ctx, runnerRefPath.AtName("uuid"), &currentUuid)...)
+		resp.Diagnostics.Append(req.State.GetAttribute(ctx, draftPath, &stateDraft)...)
+		resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, draftPath, &planDraft)...)
+		if resp.Diagnostics.HasError() || currentUuid.ValueString() == defaultUuid {
+			return
+		}
+		releasesDraft := stateDraft.ValueBool() && !planDraft.IsUnknown() && !planDraft.ValueBool()
+		if releasesDraft {
+			resp.Diagnostics.AddError("Cannot change the runner and release the draft in one apply", fmt.Sprintf(
+				"meshStack's default runner has changed (uuid: %s), and version_spec.runner_ref is not set. "+
+					"Apply with version_spec.draft = true first to change the runner, and then set draft = false. "+
+					"To release on the current runner, set version_spec.runner_ref to %s.",
+				defaultUuid, currentUuid.ValueString()))
+			return
+		}
+		if !stateDraft.ValueBool() && (planDraft.IsUnknown() || !planDraft.ValueBool()) {
+			return
+		}
+		resp.Diagnostics.AddWarning("Default runner changed", fmt.Sprintf(
+			"meshStack's default runner has changed, and version_spec.runner_ref is not set. "+
+				"Set it to %s to keep the current runner.",
+			currentUuid.ValueString()))
+	}
+
+	resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, runnerRefPath, client.UuidRef{
+		Kind: client.MeshObjectKind.BuildingBlockRunner,
+		Uuid: defaultUuid,
+	})...)
 }
 
 // compareToStoredVersionSpec recomputes a stored hash of another hash version from the spec it was stored for,
