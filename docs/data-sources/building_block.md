@@ -4,14 +4,11 @@ page_title: "meshstack_building_block Data Source - terraform-provider-meshstack
 subcategory: ""
 description: |-
   Read a single building block by UUID. It is read-only and mirrors the meshstack_building_block resource (metadata/spec/status/all_inputs, plus the resource's computed ref). Use meshstack_building_blocks to look building blocks up by filter instead of by UUID.
-  ~> Preview: This resource is in preview. Breaking changes are possible without prior notice due to changes in the underlying meshStack preview API https://docs.meshcloud.io/api/technical-specifications#preview-endpoints or due to changes in this provider. Please ensure you are running the latest version of the provider and report any bugs via GitHub issues https://github.com/meshcloud/terraform-provider-meshstack/issues or via support@meshcloud.io.
 ---
 
 # meshstack_building_block (Data Source)
 
 Read a single building block by UUID. It is read-only and mirrors the `meshstack_building_block` resource (`metadata`/`spec`/`status`/`all_inputs`, plus the resource's computed `ref`). Use `meshstack_building_blocks` to look building blocks up by filter instead of by UUID.
-
-~> **Preview:** This resource is in preview. Breaking changes are possible without prior notice due to changes in the underlying [meshStack preview API](https://docs.meshcloud.io/api/technical-specifications#preview-endpoints) or due to changes in this provider. Please ensure you are running the latest version of the provider and report any bugs via [GitHub issues](https://github.com/meshcloud/terraform-provider-meshstack/issues) or via support@meshcloud.io.
 
 ## Example Usage
 

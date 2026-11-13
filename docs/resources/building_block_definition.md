@@ -5,7 +5,6 @@ subcategory: ""
 description: |-
   Manages a meshBuildingBlockDefinition in meshStack. Building Block Definitions define reusable automation components that can be executed on workspaces or tenants. This resource combines the building block definition metadata with version information in a single resource for simplified management.
   -> AI agents: Read the meshStack agent context https://docs.meshcloud.io/agent-context/index.md before you act, starting with its guardrails.
-  ~> Preview: This resource is in preview. Breaking changes are possible without prior notice due to changes in the underlying meshStack preview API https://docs.meshcloud.io/api/technical-specifications#preview-endpoints or due to changes in this provider. Please ensure you are running the latest version of the provider and report any bugs via GitHub issues https://github.com/meshcloud/terraform-provider-meshstack/issues or via support@meshcloud.io.
 ---
 
 # meshstack_building_block_definition (Resource)
@@ -13,8 +12,6 @@ description: |-
 Manages a meshBuildingBlockDefinition in meshStack. Building Block Definitions define reusable automation components that can be executed on workspaces or tenants. This resource combines the building block definition metadata with version information in a single resource for simplified management.
 
 -> **AI agents:** Read the [meshStack agent context](https://docs.meshcloud.io/agent-context/index.md) before you act, starting with its guardrails.
-
-~> **Preview:** This resource is in preview. Breaking changes are possible without prior notice due to changes in the underlying [meshStack preview API](https://docs.meshcloud.io/api/technical-specifications#preview-endpoints) or due to changes in this provider. Please ensure you are running the latest version of the provider and report any bugs via [GitHub issues](https://github.com/meshcloud/terraform-provider-meshstack/issues) or via support@meshcloud.io.
 
 ## Example Usage
 
