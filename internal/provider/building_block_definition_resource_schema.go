@@ -634,8 +634,9 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 							int64planmodifier.UseStateForUnknown(),
 						},
 					},
-					"runner_ref": meshRefByUuid(meshRefOptions{Kind: client.MeshObjectKind.BuildingBlockRunner, Description: "Reference to the runner to run the implementation. " +
-						"If omitted, the pre-defined shared runner is used suitable for the given `implementation` choice", OptionalComputed: true}),
+					"runner_ref": meshRefByUuid(meshRefOptions{Kind: client.MeshObjectKind.BuildingBlockRunner, Description: "Reference to the runner. " +
+						"If omitted, the provider assigns meshStack's default runner to a new version or a draft. " +
+						"To read that runner, use `data.meshstack_building_block_runner` without arguments.", OptionalComputed: true}),
 					"only_apply_once_per_tenant": schema.BoolAttribute{
 						MarkdownDescription: "Whether this building block can only be applied once per tenant.",
 						Optional:            true,

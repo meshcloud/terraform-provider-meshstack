@@ -63,7 +63,7 @@ resource "meshstack_building_block_definition" "example_01_terraform" {
   version_spec = {
     draft = true
 
-    # Optional: Specify runner if necessary (otherwise, shared runner is used)
+    # Optional: pin a runner. Without runner_ref, a new version or a draft uses meshStack's default runner.
     runner_ref = { uuid = "98520496-627d-43e6-82da-ce499179ff3f" }
 
     only_apply_once_per_tenant = true     # Optional: defaults to false
@@ -483,7 +483,7 @@ Optional:
 - `only_apply_once_per_tenant` (Boolean) Whether this building block can only be applied once per tenant.
 - `outputs` (Attributes Map) Map of output definitions for the building block. Keys are output names of at most 255 characters, values are output configuration objects. Outputs define values that building blocks produce and can be consumed by other building blocks. If implementation type is `manual`, outputs are derived from the inputs by the backend (one output per input) and this attribute is a **sparse override**: declare only the outputs you want to customize (keyed by the matching input); the rest are derived. An empty map or omitting it entirely means "no overrides". A declared output's `display_name`, `display_order`, and `assignment_type` (any of `NONE`, `PLATFORM_TENANT_ID`, `SIGN_IN_URL`, `RESOURCE_URL`, `SUMMARY`) are honored; its `type` is always derived from the input's translated output type (`SINGLE_SELECT` becomes `STRING`, `MULTI_SELECT`/`LIST` become `CODE`) and must not be set. (see [below for nested schema](#nestedatt--version_spec--outputs))
 - `permissions` (Set of String) Set of API permissions required by this building block. Will provide building block runs with an ephemeral API token with the specified workspace permissions. See [Workspace Permissions](https://docs.meshcloud.io/api/authentication/api-permissions/) for available values and [documentation on ephemeral API keys](https://docs.dev.meshcloud.io/concepts/building-block/#ephemeral-api-keys).
-- `runner_ref` (Attributes) Reference to the runner to run the implementation. If omitted, the pre-defined shared runner is used suitable for the given `implementation` choice (see [below for nested schema](#nestedatt--version_spec--runner_ref))
+- `runner_ref` (Attributes) Reference to the runner. If omitted, the provider assigns meshStack's default runner to a new version or a draft. To read that runner, use `data.meshstack_building_block_runner` without arguments. (see [below for nested schema](#nestedatt--version_spec--runner_ref))
 
 Read-Only:
 
