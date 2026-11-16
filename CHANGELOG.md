@@ -1,5 +1,7 @@
 # v0.28.1
 
+Requires meshStack 2026.47.0 or later to see `status.approval` on role bindings.
+
 FEATURES:
 - `meshstack_workspace_user_binding`, `meshstack_workspace_group_binding`, `meshstack_project_user_binding`,
   `meshstack_project_group_binding` and their data sources: the new `status.approval` is `PENDING` while the binding
