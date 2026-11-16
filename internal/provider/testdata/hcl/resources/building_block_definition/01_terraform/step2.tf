@@ -95,10 +95,10 @@ resource "meshstack_building_block_definition" "example_01_terraform" {
     support_url               = "https://support.example.com/building-blocks"                                                      # Optional
     documentation_url         = "https://docs.example.com/building-blocks"                                                         # Optional
     target_type               = "TENANT_LEVEL"                                                                                     # Optional: defaults to "WORKSPACE"
-    supported_platforms       = [{ name = "AZURE" }, { name = "AWS" }]
-    run_transparency          = true                      # Optional: defaults to false
-    use_in_landing_zones_only = true                      # Optional: defaults to false
-    notification_subscribers  = ["email:ops@example.com"] # Optional, note user: and email: prefix
+    supported_platforms       = [{ name = "AZURE" }, { name = "AWS" }]                                                             # Required if target_type is "TENANT_LEVEL"
+    run_transparency          = true                                                                                               # Optional: defaults to false
+    use_in_landing_zones_only = true                                                                                               # Optional: defaults to false
+    notification_subscribers  = ["email:ops@example.com"]                                                                          # Optional, note user: and email: prefix
 
     approval_policies = {
       version_upgrade = true
@@ -140,7 +140,7 @@ resource "meshstack_building_block_definition" "example_01_terraform" {
         updateable_by_consumer         = true                                                                      # Optional: defaults to false
         value_validation_regex         = "^[a-z0-9-]+$"                                                            # Optional
         validation_regex_error_message = "Resource name must contain only lowercase letters, numbers, and hyphens" # Optional
-        display_order                  = 2                                                                         # Optional: arranges inputs in meshPanel; part of the content hash, so it cannot change on a released version
+        display_order                  = 2                                                                         # Optional: position of this input in meshPanel
       }
       deploy_settings = {
         display_name    = "Deploy Settings"

@@ -17,22 +17,20 @@ resource "meshstack_building_block_definition" "example_01_terraform" {
     support_url               = "https://support.example.com/building-blocks"                                                      # Optional
     documentation_url         = "https://docs.example.com/building-blocks"                                                         # Optional
     target_type               = "TENANT_LEVEL"                                                                                     # Optional: defaults to "WORKSPACE"
-    supported_platforms       = [{ name = "AZURE" }, { name = "AWS" }]
-    run_transparency          = true                                            # Optional: defaults to false
-    use_in_landing_zones_only = true                                            # Optional: defaults to false
-    notification_subscribers  = ["user:some-username", "email:ops@example.com"] # Optional, note user: and email: prefix
+    supported_platforms       = [{ name = "AZURE" }, { name = "AWS" }]                                                             # Required if target_type is "TENANT_LEVEL"
+    run_transparency          = true                                                                                               # Optional: defaults to false
+    use_in_landing_zones_only = true                                                                                               # Optional: defaults to false
+    notification_subscribers  = ["user:some-username", "email:ops@example.com"]                                                    # Optional, note user: and email: prefix
 
-    # Optional: which run triggers need an operator's approval before the run is applied.
-    # Defaults to no approval gate at all. Only the terraform implementation supports approval policies, because an
-    # approver reviews the planned changes of a dry run. Flags left out default to false.
+    # Optional: the run triggers that need an approval before meshStack applies the run. Defaults to no approval.
+    # Only the Terraform implementation supports approvals.
     approval_policies = {
       version_upgrade = true
       manual_triggers = true
     }
 
-    # Optional: drift detection / reconciliation schedule. Defaults to mode = "DISABLED".
-    # DRIFT_DETECTION only reports drift and needs the terraform implementation; DRIFT_RECONCILIATION
-    # also fixes it and works with every implementation except manual.
+    # Optional: schedule for drift detection or drift reconciliation. Defaults to mode = "DISABLED".
+    # DRIFT_DETECTION triggers a dry run, and DRIFT_RECONCILIATION triggers a real run.
     schedule = {
       mode      = "DRIFT_DETECTION"
       frequency = "DAILY"
@@ -71,15 +69,14 @@ resource "meshstack_building_block_definition" "example_01_terraform" {
         updateable_by_consumer         = true                                                                      # Optional: defaults to false
         value_validation_regex         = "^[a-z0-9-]+$"                                                            # Optional
         validation_regex_error_message = "Resource name must contain only lowercase letters, numbers, and hyphens" # Optional
-        display_order                  = 2                                                                         # Optional: arranges inputs in meshPanel; part of the content hash, so it cannot change on a released version
+        display_order                  = 2                                                                         # Optional: position of this input in meshPanel
       }
       deploy_settings = {
         display_name    = "Deploy Settings"
         type            = "JSON"
         assignment_type = "USER_INPUT"
         condition       = "input.environment == 'prod'"
-        # This input gets a form of its own: meshPanel renders it from the schema, and what it produces
-        # reaches the building block as JSON text.
+        # meshPanel renders a form for this input from the schema. The building block gets the result as a JSON string.
         json_schema = jsonencode({
           type     = "object"
           required = ["region"]
@@ -143,7 +140,7 @@ resource "meshstack_building_block_definition" "example_01_terraform" {
         }
 
         # Optional: SSH known host configuration
-        ssh_known_host = { # Optional
+        ssh_known_host = {
           host      = "github.com"
           key_type  = "ssh-rsa"
           key_value = "AAAAB3NzaC1yc2EAAAABIwAAAQEAq2A7hRGmdnm9tUDbO9IDSwBK6TbQa+..."

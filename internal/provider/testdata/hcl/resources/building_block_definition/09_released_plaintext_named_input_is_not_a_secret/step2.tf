@@ -87,22 +87,20 @@ resource "meshstack_building_block_definition" "example_01_terraform" {
     support_url               = "https://support.example.com/building-blocks"                                                      # Optional
     documentation_url         = "https://docs.example.com/building-blocks"                                                         # Optional
     target_type               = "TENANT_LEVEL"                                                                                     # Optional: defaults to "WORKSPACE"
-    supported_platforms       = [{ name = "AZURE" }, { name = "AWS" }]
-    run_transparency          = true                      # Optional: defaults to false
-    use_in_landing_zones_only = true                      # Optional: defaults to false
-    notification_subscribers  = ["email:ops@example.com"] # Optional, note user: and email: prefix
+    supported_platforms       = [{ name = "AZURE" }, { name = "AWS" }]                                                             # Required if target_type is "TENANT_LEVEL"
+    run_transparency          = true                                                                                               # Optional: defaults to false
+    use_in_landing_zones_only = true                                                                                               # Optional: defaults to false
+    notification_subscribers  = ["email:ops@example.com"]                                                                          # Optional, note user: and email: prefix
 
-    # Optional: which run triggers need an operator's approval before the run is applied.
-    # Defaults to no approval gate at all. Only the terraform implementation supports approval policies, because an
-    # approver reviews the planned changes of a dry run. Flags left out default to false.
+    # Optional: the run triggers that need an approval before meshStack applies the run. Defaults to no approval.
+    # Only the Terraform implementation supports approvals.
     approval_policies = {
       version_upgrade = true
       manual_triggers = true
     }
 
-    # Optional: drift detection / reconciliation schedule. Defaults to mode = "DISABLED".
-    # DRIFT_DETECTION only reports drift and needs the terraform implementation; DRIFT_RECONCILIATION
-    # also fixes it and works with every implementation except manual.
+    # Optional: schedule for drift detection or drift reconciliation. Defaults to mode = "DISABLED".
+    # DRIFT_DETECTION triggers a dry run, and DRIFT_RECONCILIATION triggers a real run.
     schedule = {
       mode      = "DRIFT_DETECTION"
       frequency = "DAILY"
@@ -141,7 +139,7 @@ resource "meshstack_building_block_definition" "example_01_terraform" {
         }
 
         # Optional: SSH known host configuration
-        ssh_known_host = { # Optional
+        ssh_known_host = {
           host      = "github.com"
           key_type  = "ssh-rsa"
           key_value = "AAAAB3NzaC1yc2EAAAABIwAAAQEAq2A7hRGmdnm9tUDbO9IDSwBK6TbQa+..."
