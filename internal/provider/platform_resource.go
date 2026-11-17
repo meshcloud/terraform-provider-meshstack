@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
@@ -157,6 +158,12 @@ func (r *platformResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 								Optional:            true,
 								Computed:            true,
 								Default:             setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})),
+							},
+							"hidden_in_marketplace": schema.BoolAttribute{
+								MarkdownDescription: "Hides the meshPlatform from the marketplace catalog when `true`. Workspaces with access can still get tenants of it, for example through a building block definition that creates them. Defaults to `false`.",
+								Optional:            true,
+								Computed:            true,
+								Default:             booldefault.StaticBool(false),
 							},
 						},
 					},

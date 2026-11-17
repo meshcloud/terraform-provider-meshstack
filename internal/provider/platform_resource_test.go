@@ -38,6 +38,7 @@ func TestAccPlatformResource(t *testing.T) {
 							statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("Example Platform")),
 							statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("identifier"), knownvalue.StringExact("test-platform-"+suffix+".meshcloud-azure-dev")),
 							statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("spec").AtMapKey("access_information"), knownvalue.StringExact("Login via [Azure Portal](https://portal.azure.com) using your corporate credentials.")),
+							statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("spec").AtMapKey("availability").AtMapKey("hidden_in_marketplace"), knownvalue.Bool(false)),
 						},
 						checkPlatformConfigState(resourceAddress, "01_azure", suffix)...,
 					),
@@ -51,9 +52,16 @@ func TestAccPlatformResource(t *testing.T) {
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("Example Platform Updated")),
+						statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("spec").AtMapKey("availability").AtMapKey("hidden_in_marketplace"), knownvalue.Bool(true)),
 					},
 				},
-				platformExampleStep(t, "01_azure", 3, suffix),
+				func() resource.TestStep {
+					step := platformExampleStep(t, "01_azure", 3, suffix)
+					step.ConfigStateChecks = []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("spec").AtMapKey("availability").AtMapKey("hidden_in_marketplace"), knownvalue.Bool(false)),
+					}
+					return step
+				}(),
 				{
 					ImportState:     true,
 					ImportStateKind: resource.ImportBlockWithID,

@@ -741,6 +741,7 @@ Required:
 
 Optional:
 
+- `hidden_in_marketplace` (Boolean) Hides the meshPlatform from the marketplace catalog when `true`. Workspaces with access can still get tenants of it, for example through a building block definition that creates them. Defaults to `false`.
 - `restricted_to_workspaces` (Set of String) If the restriction is set to `RESTRICTED`, you can specify the workspace identifiers this meshPlatform is restricted to.
 
 

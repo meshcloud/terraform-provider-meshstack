@@ -106,6 +106,7 @@ Read-Only:
 
 Read-Only:
 
+- `hidden_in_marketplace` (Boolean) Whether the meshPlatform is hidden from the marketplace catalog. Workspaces with access can still get tenants of a hidden platform, for example through a building block definition that creates them.
 - `publication_state` (String) Publication state of the platform. Must be one of: PUBLISHED, UNPUBLISHED.
 - `restricted_to_workspaces` (Set of String) If the restriction is set to `RESTRICTED`, you can specify the workspace identifiers this meshPlatform is restricted to.
 - `restriction` (String) Access restriction for the platform. Must be one of: PUBLIC, PRIVATE, RESTRICTED.
