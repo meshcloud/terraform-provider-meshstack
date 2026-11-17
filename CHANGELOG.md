@@ -5,7 +5,8 @@ Requires meshStack 2026.47.0 or later to see `status.approval` on role bindings.
 FEATURES:
 - `meshstack_building_block_definition`: an input can take its value from the landing zone of the tenant the building
   block lands in, with `assignment_type = "LANDING_ZONE_IDENTIFIER"`. Only a `TENANT_LEVEL` definition can declare it.
-  This needs meshStack 2026.46.0 or later.
+  This needs meshStack 2026.46.0 or later. From meshStack 2026.47.0, the `condition` of a user or operator input can
+  read it.
 - `meshstack_workspace_user_binding`, `meshstack_workspace_group_binding`, `meshstack_project_user_binding`,
   `meshstack_project_group_binding` and their data sources: the new `status.approval` is `PENDING` while the binding
   waits for four-eyes approval in meshPanel, and `ASSIGNED` once the role is in effect. A pending binding gives no access
