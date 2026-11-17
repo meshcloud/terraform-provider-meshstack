@@ -192,6 +192,13 @@ resource "meshstack_building_block_definition" "example_01_terraform" {
         argument      = jsonencode("WORKSPACE.${meshstack_tag_definition.workspace_business_unit.spec.key}")
         display_order = 4
       }
+      landing_zone = {
+        display_name    = "Landing Zone"
+        description     = "Identifier of the landing zone of the tenant this building block lands in" # Optional
+        type            = "STRING"
+        assignment_type = "LANDING_ZONE_IDENTIFIER" # Only on TENANT_LEVEL
+        display_order   = 5
+      }
       "some-file.yaml" = {
         display_name    = "Some input file"
         type            = "FILE"
