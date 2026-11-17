@@ -669,7 +669,7 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 						Default:     setdefault.StaticValue(types.SetValueMust(types.StringType, nil)),
 						Validators: []validator.Set{
 							setvalidator.ValueStringsAre(
-								stringvalidator.OneOf(client.WorkspacePermissionCodes()...),
+								workspaceApiPermissionValidator(),
 							),
 						},
 					},

@@ -1,3 +1,12 @@
+# v0.28.2
+
+FIXES:
+- `meshstack_api_key` and `meshstack_building_block_definition`: `permissions` accepts a permission that meshStack added
+  after this provider version. The provider checks only the shape of a permission, an optional `MANAGED_` or `ADM_`
+  prefix, a resource and an action, such as `ADM_TENANT_LIST`. Before, it rejected every permission it did not know, so
+  the next apply removed a permission that meshStack had granted. meshStack rejects an unknown permission on apply. A
+  building block definition still takes no `ADM_` permission.
+
 # v0.28.1
 
 Requires meshStack 2026.47.0 or later to see `status.approval` on role bindings, to give an API key
