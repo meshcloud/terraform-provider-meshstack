@@ -270,6 +270,7 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 					).Markdown() + ", and **not** for the `manual` implementation. " +
 						"The condition of a " + client.MeshBuildingBlockInputAssignmentTypeUserInput.Markdown() + " may read other " + client.MeshBuildingBlockInputAssignmentTypeUserInput.Markdown() + " inputs. " +
 						"The condition of a " + client.MeshBuildingBlockInputAssignmentTypePlatformOperatorManualInput.Markdown() + " may read both, because the operator fills theirs in once the user's answers are already there. " +
+						"Both may read a " + client.MeshBuildingBlockInputAssignmentTypeLandingZoneIdentifier.Markdown() + " input, because the tenant brings its landing zone along; this needs meshStack 2026.47.0 or later. " +
 						"A referenced input must not be sensitive or of type " + client.MeshBuildingBlockIOTypeList.Markdown() + ", and its key must contain no `-`. " +
 						"Conditions must not read each other in a cycle. " +
 						"Only a subset of CEL is accepted (comparisons, `&&`/`||`/`!`, `in`, `startsWith`/`endsWith`/`contains`/`size`, whole-number arithmetic); " +
