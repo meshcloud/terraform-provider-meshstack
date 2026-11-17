@@ -19,6 +19,11 @@ FEATURES:
   runner to a draft. To specify a runner, set `version_spec.runner_ref`.
 - `meshstack_building_block_runner`: the data source returns meshStack's default runner when `metadata` and `spec` are
   omitted. The resource and the data source show `status.is_default`.
+- `meshstack_platform`: the new `spec.availability.hidden_in_marketplace` hides a platform from the marketplace
+  catalog. Workspaces with access can still get tenants of it, for example through a building block definition. It
+  defaults to `false`. A platform hidden in meshPanel now shows up as a change in the plan, where before an apply made
+  it visible again without one. The `meshstack_platform` and `meshstack_platforms` data sources read it. Setting it to
+  `true` needs meshStack 2026.47.0 or later.
 
 FIXES:
 - `meshstack_project`: `spec.substitute_payment_method_identifier` is sent to meshStack. Before, it was never sent, and

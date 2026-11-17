@@ -26,6 +26,7 @@ resource "meshstack_platform" "test" {
       restriction              = "PUBLIC"
       publication_state        = "PUBLISHED"
       restricted_to_workspaces = []
+      hidden_in_marketplace    = true
     }
 
     quota_definitions = []

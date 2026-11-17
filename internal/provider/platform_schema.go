@@ -68,6 +68,7 @@ func platformSpecDataSourceSchema() schema.Attribute {
 						ElementType:         types.StringType,
 						Computed:            true,
 					},
+					"hidden_in_marketplace": computedBool("Whether the meshPlatform is hidden from the marketplace catalog. Workspaces with access can still get tenants of a hidden platform, for example through a building block definition that creates them."),
 				},
 			},
 			"quota_definitions": schema.SetAttribute{
