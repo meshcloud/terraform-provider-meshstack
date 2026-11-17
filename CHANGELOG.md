@@ -1,8 +1,12 @@
 # v0.28.1
 
-Requires meshStack 2026.47.0 or later to see `status.approval` on role bindings.
+Requires meshStack 2026.47.0 or later to see `status.approval` on role bindings and to give an API key
+`(MANAGED_|ADM_)BUILDINGBLOCKRUN_APPROVE`.
 
 FEATURES:
+- `meshstack_api_key`: `permissions` accepts `(MANAGED_|ADM_)BUILDINGBLOCKRUN_APPROVE`, the permission to approve and
+  reject building block runs that wait for approval. meshStack gives it to every API key that holds the matching
+  `(MANAGED_|ADM_)BUILDINGBLOCK_SAVE`, so the next apply removes it from such a key unless its `permissions` list it.
 - `meshstack_building_block_definition`: an input can take its value from the landing zone of the tenant the building
   block lands in, with `assignment_type = "LANDING_ZONE_IDENTIFIER"`. Only a `TENANT_LEVEL` definition can declare it.
   This needs meshStack 2026.46.0 or later. From meshStack 2026.47.0, the `condition` of a user or operator input can
