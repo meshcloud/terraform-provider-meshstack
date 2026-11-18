@@ -199,6 +199,13 @@ resource "meshstack_building_block_definition" "example_01_terraform" {
         assignment_type = "LANDING_ZONE_IDENTIFIER" # Only on TENANT_LEVEL
         display_order   = 5
       }
+      building_block_uuid = {
+        display_name    = "Building Block UUID"
+        description     = "UUID of this building block" # Optional
+        type            = "STRING"
+        assignment_type = "BUILDING_BLOCK_UUID" # The old name TENANT_BUILDING_BLOCK_UUID still works
+        display_order   = 6
+      }
       "some-file.yaml" = {
         display_name    = "Some input file"
         type            = "FILE"

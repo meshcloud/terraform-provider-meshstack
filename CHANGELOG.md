@@ -1,3 +1,12 @@
+# v0.28.2
+
+Requires meshStack 2026.48.0 or later to use `assignment_type = "BUILDING_BLOCK_UUID"`.
+
+FEATURES:
+- `meshstack_building_block_definition`: `assignment_type` accepts `BUILDING_BLOCK_UUID`, the new name of the input
+  source that gives a building block its own UUID. The old name `TENANT_BUILDING_BLOCK_UUID` stays valid and gives the
+  same value, so a configuration that uses it needs no change.
+
 # v0.28.1
 
 Requires meshStack 2026.47.0 or later to see `status.approval` on role bindings, to give an API key
