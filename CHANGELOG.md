@@ -1,7 +1,7 @@
 # v0.28.1
 
-Requires meshStack 2026.47.0 or later to see `status.approval` on role bindings and to give an API key
-`(MANAGED_|ADM_)BUILDINGBLOCKRUN_APPROVE`.
+Requires meshStack 2026.47.0 or later to see `status.approval` on role bindings, to give an API key
+`(MANAGED_|ADM_)BUILDINGBLOCKRUN_APPROVE` and to hide a platform with `hidden_in_marketplace`.
 
 FEATURES:
 - `meshstack_api_key`: `permissions` accepts `(MANAGED_|ADM_)BUILDINGBLOCKRUN_APPROVE`, the permission to approve and
@@ -21,9 +21,8 @@ FEATURES:
   omitted. The resource and the data source show `status.is_default`.
 - `meshstack_platform`: the new `spec.availability.hidden_in_marketplace` hides a platform from the marketplace
   catalog. Workspaces with access can still get tenants of it, for example through a building block definition. It
-  defaults to `false`. A platform hidden in meshPanel now shows up as a change in the plan, where before an apply made
-  it visible again without one. The `meshstack_platform` and `meshstack_platforms` data sources read it. Setting it to
-  `true` needs meshStack 2026.47.0 or later.
+  defaults to `false`, so if your configuration leaves it out, the plan shows a platform hidden in meshPanel as a change
+  and the apply makes it visible again. The `meshstack_platform` and `meshstack_platforms` data sources read it.
 
 FIXES:
 - `meshstack_project`: `spec.substitute_payment_method_identifier` is sent to meshStack. Before, it was never sent, and
