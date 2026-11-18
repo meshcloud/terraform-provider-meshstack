@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/meshcloud/meshstack-cli/client"
 
 	"github.com/meshcloud/terraform-provider-meshstack/internal/types/generic"
@@ -25,7 +26,8 @@ func NewIntegrationResource() resource.Resource {
 }
 
 type integrationResource struct {
-	integrationClient client.MeshIntegrationClient
+	integrationClient         client.MeshIntegrationClient
+	buildingBlockRunnerClient client.MeshBuildingBlockRunnerClient
 }
 
 func (r *integrationResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -35,6 +37,7 @@ func (r *integrationResource) Metadata(_ context.Context, req resource.MetadataR
 func (r *integrationResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	resp.Diagnostics.Append(configureProviderClient(req.ProviderData, func(client client.Client) {
 		r.integrationClient = client.Integration
+		r.buildingBlockRunnerClient = client.BuildingBlockRunner
 	})...)
 }
 
@@ -75,26 +78,9 @@ type integrationModel struct {
 }
 
 func (model integrationModel) ToClientDto(diags *diag.Diagnostics) client.MeshIntegration {
-	configType, err := model.Spec.Config.InferType()
-	if err != nil {
+	if _, err := model.Spec.Config.InferType(); err != nil {
 		diags.AddAttributeError(path.Root("spec").AtName("config"), "integration type cannot be determined", err.Error())
 		return client.MeshIntegration{}
-	}
-	setRunnerRefIfNil := func(runnerRef **client.UuidRef) {
-		if *runnerRef == nil {
-			*runnerRef = &client.UuidRef{
-				Kind: client.MeshObjectKind.BuildingBlockRunner,
-				Uuid: SharedBuildingBlockRunnerUuid,
-			}
-		}
-	}
-	switch configType {
-	case client.MeshIntegrationConfigTypeGithub:
-		setRunnerRefIfNil(&model.Spec.Config.Github.RunnerRef)
-	case client.MeshIntegrationConfigTypeGitlab:
-		setRunnerRefIfNil(&model.Spec.Config.Gitlab.RunnerRef)
-	case client.MeshIntegrationConfigTypeAzureDevops:
-		setRunnerRefIfNil(&model.Spec.Config.AzureDevops.RunnerRef)
 	}
 	return client.MeshIntegration{Metadata: model.Metadata, Spec: model.Spec}
 }
@@ -152,6 +138,42 @@ func (r *integrationResource) ModifyPlan(ctx context.Context, req resource.Modif
 	secret.WalkSecretPathsIn(req.Plan.Raw, &resp.Diagnostics, func(attributePath path.Path, diags *diag.Diagnostics) {
 		secret.SetToUnknownIfVersionChangedOrCreated(ctx, req.Plan, req.State, &resp.Plan)(attributePath, diags)
 	})
+	r.planDefaultRunnerRef(ctx, req, resp)
+}
+
+func (r *integrationResource) planDefaultRunnerRef(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	if r.buildingBlockRunnerClient == nil {
+		return
+	}
+	for _, integrationType := range []string{"github", "gitlab", "azuredevops"} {
+		typePath := path.Root("spec").AtName("config").AtName(integrationType)
+		runnerRefPath := typePath.AtName("runner_ref")
+		var configuredType, configuredRunner types.Object
+		resp.Diagnostics.Append(req.Config.GetAttribute(ctx, typePath, &configuredType)...)
+		if resp.Diagnostics.HasError() || configuredType.IsNull() || configuredType.IsUnknown() {
+			continue
+		}
+		resp.Diagnostics.Append(req.Config.GetAttribute(ctx, runnerRefPath, &configuredRunner)...)
+		if resp.Diagnostics.HasError() || !configuredRunner.IsNull() {
+			continue
+		}
+		if !req.State.Raw.IsNull() {
+			var currentUuid types.String
+			resp.Diagnostics.Append(req.State.GetAttribute(ctx, runnerRefPath.AtName("uuid"), &currentUuid)...)
+			if resp.Diagnostics.HasError() || !currentUuid.IsNull() {
+				continue
+			}
+		}
+		defaultUuid, err := defaultBuildingBlockRunnerUuid(ctx, r.buildingBlockRunnerClient)
+		if err != nil {
+			resp.Diagnostics.AddError(defaultRunnerNotFound, err.Error())
+			return
+		}
+		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, runnerRefPath, client.UuidRef{
+			Kind: client.MeshObjectKind.BuildingBlockRunner,
+			Uuid: defaultUuid,
+		})...)
+	}
 }
 
 func (r *integrationResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
