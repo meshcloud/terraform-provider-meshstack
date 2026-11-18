@@ -59,7 +59,7 @@ const AdminWorkspaceIdentifier = "demo-partner"
 
 // Binding subjects seeded by the dev dump.
 const (
-	seededUsername  = "customer@meshcloud.io"
+	seededUsername  = clientmock.SeededUsername
 	seededGroupName = "global-group"
 )
 

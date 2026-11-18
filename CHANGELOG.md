@@ -8,6 +8,16 @@ FEATURES:
   `tofu apply -replace=<resource address>`.
 - `meshstack_building_block` resource and data source, `meshstack_building_blocks`: `all_inputs` shows
   `updateable_by_consumer` for each input.
+- `meshstack_workspace_user_group`: new resource and data source for a group of users in a workspace. `spec.members`
+  lists the members by username. Set it to manage the complete member list, or leave it unset to manage the members
+  elsewhere. Deleting the group also deletes its role bindings.
+- `meshstack_workspace_user_group_member`: new resource that adds one user to a workspace user group whose other
+  members are managed elsewhere. Do not combine it with `spec.members` of `meshstack_workspace_user_group` for the same
+  group.
+- `meshstack_user`: new data source that reads the one meshUser matching a username, UUID, email address or EUID, and
+  fails unless exactly one matches.
+- `meshstack_users`: new data source that lists meshUsers, optionally only those with access to a workspace, with a
+  workspace role or with access to a project.
 
 FIXES:
 - Provider: with no `profile` set, the provider takes the profile that the last `meshstack login` selected only when it
