@@ -105,8 +105,8 @@ func (r *integrationResource) Schema(_ context.Context, _ resource.SchemaRequest
 										MarkdownDescription: "Private key for the GitHub App.",
 										Optional:            false,
 									}),
-									"runner_ref": meshRefByUuid(meshRefOptions{Kind: client.MeshObjectKind.BuildingBlockRunner, Description: "Reference to the building block runner that executes GitHub workflows." +
-										"If omitted, the pre-defined shared runner is used.", OptionalComputed: true}),
+									"runner_ref": meshRefByUuid(meshRefOptions{Kind: client.MeshObjectKind.BuildingBlockRunner, Description: "Reference to the building block runner that executes GitHub workflows. " +
+										"If omitted, a new integration gets meshStack's default runner.", OptionalComputed: true}),
 								},
 							},
 							"gitlab": schema.SingleNestedAttribute{
@@ -114,8 +114,8 @@ func (r *integrationResource) Schema(_ context.Context, _ resource.SchemaRequest
 								Optional:            true,
 								Attributes: map[string]schema.Attribute{
 									"base_url": requiredString("Base URL of the GitLab instance (e.g., `https://gitlab.com` or your self-hosted GitLab URL)."),
-									"runner_ref": meshRefByUuid(meshRefOptions{Kind: client.MeshObjectKind.BuildingBlockRunner, Description: "Reference to the building block runner that executes GitLab pipelines." +
-										"If omitted, the pre-defined shared runner is used.", OptionalComputed: true}),
+									"runner_ref": meshRefByUuid(meshRefOptions{Kind: client.MeshObjectKind.BuildingBlockRunner, Description: "Reference to the building block runner that executes GitLab pipelines. " +
+										"If omitted, a new integration gets meshStack's default runner.", OptionalComputed: true}),
 								},
 							},
 							"azuredevops": schema.SingleNestedAttribute{
@@ -129,7 +129,7 @@ func (r *integrationResource) Schema(_ context.Context, _ resource.SchemaRequest
 										Optional:            true,
 									}),
 									"runner_ref": meshRefByUuid(meshRefOptions{Kind: client.MeshObjectKind.BuildingBlockRunner, Description: "Reference to the building block runner that executes Azure DevOps pipelines. " +
-										"If omitted, the pre-defined shared runner is used.", OptionalComputed: true}),
+										"If omitted, a new integration gets meshStack's default runner.", OptionalComputed: true}),
 								},
 							},
 							"entraid": schema.SingleNestedAttribute{
