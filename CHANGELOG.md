@@ -1,3 +1,19 @@
+# v0.28.2
+
+FEATURES:
+- `meshstack_project_tags`: new resource that manages all tags of a project that this configuration does not create.
+  Every apply writes exactly the configured tags and removes all others.
+- `meshstack_project_tag`: new resource that manages one tag of a project that this configuration does not create, and
+  leaves its other tags as they are. Both resources rewrite the whole project on every change, including its payment
+  methods, so prefer `spec.tags` on `meshstack_project` where you can. Within one apply, the provider writes a project
+  one change at a time, so several `meshstack_project_tag` resources on one project need no `depends_on`.
+
+FIXES:
+- `meshstack_workspace_tag`, `meshstack_workspace_tags`: within one apply, the provider now writes a workspace one
+  change at a time. Several `meshstack_workspace_tag` resources on the same workspace no longer lose each other's tags,
+  so they no longer need `depends_on`. `meshstack_workspace` takes part as well, so its writes do not interleave with
+  those of the tag resources. Separate applies and changes in meshPanel can still overwrite each other.
+
 # v0.28.1
 
 Requires meshStack 2026.47.0 or later to see `status.approval` on role bindings, to give an API key

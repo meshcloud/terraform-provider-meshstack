@@ -15,7 +15,7 @@ type MeshProjectClient struct {
 
 func (m MeshProjectClient) Read(_ context.Context, workspace string, name string) (*client.MeshProject, error) {
 	v, _ := m.Store.Get(workspace + "." + name)
-	return v, nil
+	return copyProject(v), nil
 }
 
 func (m MeshProjectClient) List(_ context.Context, workspaceIdentifier string, paymentMethodIdentifier *string) ([]client.MeshProject, error) {
@@ -54,8 +54,9 @@ func (m MeshProjectClient) Create(_ context.Context, project *client.MeshProject
 		},
 		Spec: project.Spec,
 	}
+	created.Spec.Tags = copyTags(project.Spec.Tags)
 	m.Store.Set(project.Metadata.OwnedByWorkspace+"."+project.Metadata.Name, created)
-	return created, nil
+	return copyProject(created), nil
 }
 
 func (m MeshProjectClient) Update(_ context.Context, project *client.MeshProjectCreate) (*client.MeshProject, error) {
@@ -65,10 +66,20 @@ func (m MeshProjectClient) Update(_ context.Context, project *client.MeshProject
 		return nil, fmt.Errorf("project not found: %s", key)
 	}
 	existing.Spec = project.Spec
-	return existing, nil
+	existing.Spec.Tags = copyTags(project.Spec.Tags)
+	return copyProject(existing), nil
 }
 
 func (m MeshProjectClient) Delete(_ context.Context, workspace string, name string) error {
 	m.Store.Delete(workspace + "." + name)
 	return nil
+}
+
+func copyProject(project *client.MeshProject) *client.MeshProject {
+	if project == nil {
+		return nil
+	}
+	copied := *project
+	copied.Spec.Tags = copyTags(project.Spec.Tags)
+	return &copied
 }
