@@ -47,7 +47,14 @@ func (r *projectResource) Configure(_ context.Context, req resource.ConfigureReq
 // Schema defines the schema for the resource.
 func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Single project by name and workspace.",
+		MarkdownDescription: "Single project by name and workspace.\n\n" +
+			"~> **Tag Management:** Manage a project's tags inline via `spec.tags` here. This is the recommended " +
+			"approach and the only one that can set tags that are mandatory at project creation. The dedicated " +
+			"`meshstack_project_tags` / `meshstack_project_tag` resources exist for projects this configuration " +
+			"does not create, and carry caveats (full-project rewrites, races, provisional schema) documented on those " +
+			"resources — reach for them only when necessary. Whichever approach you choose, use exactly one per " +
+			"project; **do not mix inline `tags` with the dedicated tag resources**, as doing so causes state drift and " +
+			"plan conflicts.",
 
 		Attributes: map[string]schema.Attribute{
 			"metadata": schema.SingleNestedAttribute{
@@ -156,6 +163,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
+	defer lockProject(create.Metadata.OwnedByWorkspace, create.Metadata.Name)()
 	project, err := r.meshProjectClient.Create(ctx, &create)
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -221,6 +229,7 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
+	defer lockProject(create.Metadata.OwnedByWorkspace, create.Metadata.Name)()
 	project, err := r.meshProjectClient.Update(ctx, &create)
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -246,6 +255,7 @@ func (r *projectResource) Delete(ctx context.Context, req resource.DeleteRequest
 		return
 	}
 
+	defer lockProject(workspace, name)()
 	err := r.meshProjectClient.Delete(ctx, workspace, name)
 	if err != nil {
 		resp.Diagnostics.AddError(

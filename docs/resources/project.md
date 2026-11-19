@@ -4,11 +4,14 @@ page_title: "meshstack_project Resource - terraform-provider-meshstack"
 subcategory: ""
 description: |-
   Single project by name and workspace.
+  ~> Tag Management: Manage a project's tags inline via spec.tags here. This is the recommended approach and the only one that can set tags that are mandatory at project creation. The dedicated meshstack_project_tags / meshstack_project_tag resources exist for projects this configuration does not create, and carry caveats (full-project rewrites, races, provisional schema) documented on those resources — reach for them only when necessary. Whichever approach you choose, use exactly one per project; do not mix inline tags with the dedicated tag resources, as doing so causes state drift and plan conflicts.
 ---
 
 # meshstack_project (Resource)
 
 Single project by name and workspace.
+
+~> **Tag Management:** Manage a project's tags inline via `spec.tags` here. This is the recommended approach and the only one that can set tags that are mandatory at project creation. The dedicated `meshstack_project_tags` / `meshstack_project_tag` resources exist for projects this configuration does not create, and carry caveats (full-project rewrites, races, provisional schema) documented on those resources — reach for them only when necessary. Whichever approach you choose, use exactly one per project; **do not mix inline `tags` with the dedicated tag resources**, as doing so causes state drift and plan conflicts.
 
 ## Example Usage
 

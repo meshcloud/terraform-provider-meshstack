@@ -28,3 +28,7 @@ var meshObjectLocks keyedMutex
 func lockWorkspace(name string) (unlock func()) {
 	return meshObjectLocks.lock("meshWorkspace/" + name)
 }
+
+func lockProject(workspace, name string) (unlock func()) {
+	return meshObjectLocks.lock("meshProject/" + workspace + "." + name)
+}
