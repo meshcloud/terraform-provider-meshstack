@@ -1,3 +1,14 @@
+# v0.28.2
+
+FEATURES:
+- `meshstack_building_block`: when meshStack rejects the update of a `USER_INPUT` that the building block definition
+  declares with `updateable_by_consumer = false`, the error names the inputs and the ways out. meshStack accepts such a
+  change in place only from an API key with admin or platform operator permissions. With any other key, ask the owner of
+  the definition to make the input updateable by consumers, or taint the building block to replace it. The resource
+  documentation describes how, also for a building block that a building block run created.
+- `meshstack_building_block` resource and data source, `meshstack_building_blocks`: `all_inputs` shows
+  `updateable_by_consumer` for each input.
+
 # v0.28.1
 
 Requires meshStack 2026.47.0 or later to see `status.approval` on role bindings, to give an API key

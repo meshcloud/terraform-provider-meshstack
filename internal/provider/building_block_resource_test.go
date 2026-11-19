@@ -927,6 +927,84 @@ func TestAccBuildingBlock(t *testing.T) {
 			},
 		})
 	})
+
+	t.Run("17_locked_input_change", func(t *testing.T) {
+		suffix := acctest.RandString(8)
+		config := func(name, environment string) string {
+			return hclStep(t, "resources/building_block/17_locked_input_change", 1, hclStepVars{
+				"suffix": suffix, "name": name, "environment": environment,
+			})
+		}
+		buildingBlockAddr := "meshstack_building_block.example_workspace"
+		updatedInPlace := statecheck.CompareValue(compare.ValuesSame())
+
+		ApplyAndTest(t, resource.TestCase{
+			Steps: []resource.TestStep{
+				{
+					Config: config("my-name", "dev"),
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(buildingBlockAddr, tfjsonpath.New("all_inputs").AtMapKey("name").AtMapKey("updateable_by_consumer"), knownvalue.Bool(true)),
+						statecheck.ExpectKnownValue(buildingBlockAddr, tfjsonpath.New("all_inputs").AtMapKey("environment").AtMapKey("updateable_by_consumer"), knownvalue.Bool(false)),
+						updatedInPlace.AddStateValue(buildingBlockAddr, tfjsonpath.New("metadata").AtMapKey("uuid")),
+					},
+				},
+				{
+					Config: config("my-name", "prod"),
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PreApply: []plancheck.PlanCheck{plancheck.ExpectResourceAction(buildingBlockAddr, plancheck.ResourceActionUpdate)},
+					},
+					ConfigStateChecks: []statecheck.StateCheck{
+						updatedInPlace.AddStateValue(buildingBlockAddr, tfjsonpath.New("metadata").AtMapKey("uuid")),
+						statecheck.ExpectKnownValue(buildingBlockAddr, tfjsonpath.New("all_inputs").AtMapKey("environment").AtMapKey("value"), knownvalue.StringExact(`"prod"`)),
+					},
+				},
+			},
+		})
+	})
+
+	t.Run("18_locked_input_change_rejected", func(t *testing.T) {
+		if IsMockClientTest() {
+			t.Skip("the mock has no permission boundaries, so it never rejects an update")
+		}
+
+		acctestSuffix := acctest.RandString(8)
+		vars := func(environment string) hclStepVars {
+			return hclStepVars{"suffix": acctestSuffix, "environment": environment}
+		}
+		apiKeyAddr := "meshstack_api_key.consumer"
+		var apiKeyClientId, apiKeyClientSecret lazyVariable
+		consumerVariables := tfconfig.Variables{
+			"apikey_client_id":     &apiKeyClientId,
+			"apikey_client_secret": &apiKeyClientSecret,
+		}
+
+		ApplyAndTest(t, resource.TestCase{
+			Steps: []resource.TestStep{
+				{
+					Config: hclStep(t, "resources/building_block/18_locked_input_change_rejected", 1, vars("dev")),
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(apiKeyAddr, tfjsonpath.New("status").AtMapKey("client_id"), xknownvalue.NotEmptyString(func(clientId string) error {
+							apiKeyClientId = lazyVariable(clientId)
+							return nil
+						})),
+						statecheck.ExpectKnownValue(apiKeyAddr, tfjsonpath.New("status").AtMapKey("client_secret"), xknownvalue.NotEmptyString(func(clientSecret string) error {
+							apiKeyClientSecret = lazyVariable(clientSecret)
+							return nil
+						})),
+					},
+				},
+				{
+					Config:          hclStep(t, "resources/building_block/18_locked_input_change_rejected", 2, vars("dev")),
+					ConfigVariables: consumerVariables,
+				},
+				{
+					Config:          hclStep(t, "resources/building_block/18_locked_input_change_rejected", 2, vars("prod")),
+					ConfigVariables: consumerVariables,
+					ExpectError:     expectErrorWords("not updateable by consumers", `"environment"`, "taint"),
+				},
+			},
+		})
+	})
 }
 
 // bbv3StateChecks returns the baseline state checks shared by every BB v3 create and move step.
