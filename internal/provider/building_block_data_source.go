@@ -236,6 +236,10 @@ func buildingBlockReadAllInputsAttribute() schema.MapNestedAttribute {
 				}),
 				"value_type":      computedString("Data type of the value. One of " + client.MeshBuildingBlockIOTypes.Markdown() + "."),
 				"assignment_type": computedString("How the input value is assigned."),
+				"updateable_by_consumer": schema.BoolAttribute{
+					MarkdownDescription: buildingBlockInputUpdateableByConsumerDescription,
+					Computed:            true,
+				},
 			},
 		},
 	}

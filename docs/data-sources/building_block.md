@@ -62,6 +62,7 @@ Read-Only:
 
 - `assignment_type` (String) How the input value is assigned.
 - `sensitive` (Attributes) Sensitive input value (hash only). (see [below for nested schema](#nestedatt--all_inputs--sensitive))
+- `updateable_by_consumer` (Boolean) Whether a consumer can change the input after the building block is created, as the building block definition version declares it. Null when meshStack does not report it.
 - `value` (String) Non-sensitive input value, as a `jsonencode`d representation (e.g. `"my-name"` or `16`).
 - `value_type` (String) Data type of the value. One of `STRING`, `CODE`, `INTEGER`, `BOOLEAN`, `FILE`, `LIST`, `SINGLE_SELECT`, `MULTI_SELECT`.
 

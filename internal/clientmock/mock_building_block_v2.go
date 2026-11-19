@@ -68,6 +68,21 @@ func materializeNullRows(inputs map[string]*client.MeshBuildingBlockInput, bbdVe
 	}
 }
 
+func reportUpdateableByConsumer(inputs map[string]*client.MeshBuildingBlockInput, bbdVersionStore *Store[client.MeshBuildingBlockDefinitionVersion], versionRefUuid string) {
+	if bbdVersionStore == nil {
+		return
+	}
+	version, ok := bbdVersionStore.Get(versionRefUuid)
+	if !ok {
+		return
+	}
+	for key, input := range inputs {
+		if defInput, declared := version.Spec.Inputs[key]; declared {
+			input.UpdateableByConsumer = new(defInput.UpdateableByConsumer)
+		}
+	}
+}
+
 type MeshBuildingBlockV2Client struct {
 	client.MeshBuildingBlockV2Client
 
@@ -168,6 +183,7 @@ func (m MeshBuildingBlockV2Client) Create(_ context.Context, bb client.MeshBuild
 	// Materialize null-valued USER_INPUT rows for unconfigured definition inputs,
 	// mirroring real backend behaviour.
 	materializeNullRows(stored.Spec.Inputs, m.BbdVersionStore, stored.Spec.BuildingBlockDefinitionVersionRef.Uuid)
+	reportUpdateableByConsumer(stored.Spec.Inputs, m.BbdVersionStore, stored.Spec.BuildingBlockDefinitionVersionRef.Uuid)
 
 	stored.Metadata = client.MeshBuildingBlockV2Metadata{
 		Uuid:             &id,
@@ -219,6 +235,7 @@ func (m MeshBuildingBlockV2Client) Update(_ context.Context, bb client.MeshBuild
 	backendSecretBehavior(false, stored, existing)
 
 	materializeNullRows(stored.Spec.Inputs, m.BbdVersionStore, stored.Spec.BuildingBlockDefinitionVersionRef.Uuid) // see Create
+	reportUpdateableByConsumer(stored.Spec.Inputs, m.BbdVersionStore, stored.Spec.BuildingBlockDefinitionVersionRef.Uuid)
 
 	// The provider waits for a run that differs from the answer, so the answer keeps the run before.
 	answered := deepCopyBB(stored)

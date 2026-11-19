@@ -443,6 +443,10 @@ func (r *buildingBlockResource) Schema(ctx context.Context, req resource.SchemaR
 							).Markdown() + ".",
 							Computed: true,
 						},
+						"updateable_by_consumer": schema.BoolAttribute{
+							MarkdownDescription: buildingBlockInputUpdateableByConsumerDescription,
+							Computed:            true,
+						},
 					},
 				},
 				Computed:      true,
@@ -477,6 +481,8 @@ type buildingBlockAllInput struct {
 	Sensitive      *secret.HashOnly                                        `tfsdk:"sensitive"`
 	ValueType      enum.Entry[client.MeshBuildingBlockIOType]              `tfsdk:"value_type"`
 	AssignmentType enum.Entry[client.MeshBuildingBlockInputAssignmentType] `tfsdk:"assignment_type"`
+
+	UpdateableByConsumer *bool `tfsdk:"updateable_by_consumer"`
 }
 
 // buildAllInput converts a single backend building block input into its read-only all_inputs
@@ -501,6 +507,7 @@ func buildAllInput(in *client.MeshBuildingBlockInput, diags *diag.Diagnostics) (
 		out.ValueType = *in.ValueType
 	}
 	out.AssignmentType = in.AssignmentType
+	out.UpdateableByConsumer = in.UpdateableByConsumer
 	return
 }
 
@@ -1178,6 +1185,12 @@ func (r *buildingBlockResource) Update(ctx context.Context, req resource.UpdateR
 				fmt.Sprintf("The backend rejected the update with a conflict (409). This usually means the building block is not in a completed state for the requested change (for example a version upgrade while a run is still pending). Resolve any pending input or run first, then retry. Underlying error: %s", err.Error()),
 			)
 			return
+		}
+		if httpErr, ok := errors.AsType[client.HttpError](err); ok && httpErr.IsForbidden() {
+			if lockedInputs := changedLockedInputsOf(ctx, req.Plan, req.State, plan.Spec.Inputs, state.AllInputs, &resp.Diagnostics); len(lockedInputs) > 0 {
+				resp.Diagnostics.AddError(lockedInputUpdateRejected(lockedInputs, err))
+				return
+			}
 		}
 		resp.Diagnostics.AddError("Error updating building block", err.Error())
 		return
