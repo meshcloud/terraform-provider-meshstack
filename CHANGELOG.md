@@ -12,6 +12,12 @@ FEATURES:
 - `meshstack_building_block_definition`: `assignment_type` accepts `BUILDING_BLOCK_UUID`, the new name of the input
   source that gives a building block its own UUID (since meshStack 2026.48.0). The old name
   `TENANT_BUILDING_BLOCK_UUID` is deprecated.
+- `meshstack_project_tags`: new resource that manages all tags of a project that this configuration does not create.
+  Every apply writes exactly the configured tags and removes all others.
+- `meshstack_project_tag`: new resource that manages one tag of a project that this configuration does not create, and
+  leaves its other tags as they are. Both resources rewrite the whole project on every change, including its payment
+  methods, so prefer `spec.tags` on `meshstack_project` where you can. Within one apply, the provider writes a project
+  one change at a time, so several `meshstack_project_tag` resources on one project need no `depends_on`.
 
 FIXES:
 - `meshstack_workspace_tag`, `meshstack_workspace_tags`: within one apply, the provider now writes a workspace one
