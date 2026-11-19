@@ -146,7 +146,7 @@ Required:
 Optional:
 
 - `personal_access_token` (Attributes) Personal Access Token (PAT) for authentication. (see [below for nested schema](#nestedatt--spec--config--azuredevops--personal_access_token))
-- `runner_ref` (Attributes) Reference to the building block runner that executes Azure DevOps pipelines. If omitted, a new integration gets meshStack's default runner. (see [below for nested schema](#nestedatt--spec--config--azuredevops--runner_ref))
+- `runner_ref` (Attributes) Reference to the building block runner that executes Azure DevOps pipelines. If omitted, a new integration gets meshStack's default runner. An existing integration keeps its runner. (see [below for nested schema](#nestedatt--spec--config--azuredevops--runner_ref))
 
 <a id="nestedatt--spec--config--azuredevops--personal_access_token"></a>
 ### Nested Schema for `spec.config.azuredevops.personal_access_token`
@@ -216,7 +216,7 @@ Required:
 
 Optional:
 
-- `runner_ref` (Attributes) Reference to the building block runner that executes GitHub workflows. If omitted, a new integration gets meshStack's default runner. (see [below for nested schema](#nestedatt--spec--config--github--runner_ref))
+- `runner_ref` (Attributes) Reference to the building block runner that executes GitHub workflows. If omitted, a new integration gets meshStack's default runner. An existing integration keeps its runner. (see [below for nested schema](#nestedatt--spec--config--github--runner_ref))
 
 <a id="nestedatt--spec--config--github--app_private_key"></a>
 ### Nested Schema for `spec.config.github.app_private_key`
@@ -253,7 +253,7 @@ Required:
 
 Optional:
 
-- `runner_ref` (Attributes) Reference to the building block runner that executes GitLab pipelines. If omitted, a new integration gets meshStack's default runner. (see [below for nested schema](#nestedatt--spec--config--gitlab--runner_ref))
+- `runner_ref` (Attributes) Reference to the building block runner that executes GitLab pipelines. If omitted, a new integration gets meshStack's default runner. An existing integration keeps its runner. (see [below for nested schema](#nestedatt--spec--config--gitlab--runner_ref))
 
 <a id="nestedatt--spec--config--gitlab--runner_ref"></a>
 ### Nested Schema for `spec.config.gitlab.runner_ref`
