@@ -9,6 +9,12 @@ FEATURES:
   API versions meshBuildingBlock v2 and meshBuildingBlockDefinition v1.
 - `meshstack_integration`: a new GitHub, GitLab or Azure DevOps integration without `runner_ref` gets meshStack's
   default runner. Before, it got the hosted runner with a fixed uuid.
+- `meshstack_project_tags`: new resource that manages all tags of a project that this configuration does not create.
+  Every apply writes exactly the configured tags and removes all others.
+- `meshstack_project_tag`: new resource that manages one tag of a project that this configuration does not create, and
+  leaves its other tags as they are. Both resources rewrite the whole project on every change, including its payment
+  methods, so prefer `spec.tags` on `meshstack_project` where you can. Within one apply, the provider writes a project
+  one change at a time, so several `meshstack_project_tag` resources on one project need no `depends_on`.
 
 FIXES:
 - `meshstack_workspace_tag`, `meshstack_workspace_tags`: within one apply, the provider now writes a workspace one
