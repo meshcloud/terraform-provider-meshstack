@@ -144,6 +144,7 @@ func (r *workspaceTagsResource) setTags(ctx context.Context, tfPlan tfsdk.Plan, 
 	}
 
 	wsName := plan.Metadata.WorkspaceIdentifier.ValueString()
+	defer lockWorkspace(wsName)()
 	workspace := readTaggedWorkspace(ctx, r.meshWorkspaceClient, wsName, diags)
 	if diags.HasError() {
 		return
@@ -185,6 +186,7 @@ func (r *workspaceTagsResource) Delete(ctx context.Context, req resource.DeleteR
 	}
 
 	wsName := state.Metadata.WorkspaceIdentifier.ValueString()
+	defer lockWorkspace(wsName)()
 	workspace := readTaggedWorkspace(ctx, r.meshWorkspaceClient, wsName, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return

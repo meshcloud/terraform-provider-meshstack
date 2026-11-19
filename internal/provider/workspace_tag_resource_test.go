@@ -57,6 +57,28 @@ func TestAccWorkspaceTag(t *testing.T) {
 		})
 	})
 
+	t.Run("tags_in_parallel", func(t *testing.T) {
+		vars := hclStepVars{"suffix": acctest.RandString(8)}
+
+		ApplyAndTest(t, resource.TestCase{
+			Steps: []resource.TestStep{
+				{
+					Config: hclStep(t, "resources/workspace_tag/tags_in_parallel", 1, vars),
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue("meshstack_workspace_tag.a", tfjsonpath.New("spec").AtMapKey("values"), knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("a")})),
+						statecheck.ExpectKnownValue("meshstack_workspace_tag.b", tfjsonpath.New("spec").AtMapKey("values"), knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("b")})),
+						statecheck.ExpectKnownValue("meshstack_workspace_tag.c", tfjsonpath.New("spec").AtMapKey("values"), knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("c")})),
+						statecheck.ExpectKnownValue("meshstack_workspace_tag.d", tfjsonpath.New("spec").AtMapKey("values"), knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("d")})),
+						statecheck.ExpectKnownValue("meshstack_workspace_tag.e", tfjsonpath.New("spec").AtMapKey("values"), knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("e")})),
+					},
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+					},
+				},
+			},
+		})
+	})
+
 	t.Run("workspace_not_found", func(t *testing.T) {
 		// This resource cannot create the workspace it tags, so a missing one must be a clear error
 		// rather than a nil-deref or a silent no-op.
