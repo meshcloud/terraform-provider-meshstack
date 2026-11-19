@@ -102,6 +102,7 @@ func (r *workspaceResource) Create(ctx context.Context, req resource.CreateReque
 		return
 	}
 
+	defer lockWorkspace(workspace.Metadata.Name)()
 	createdWorkspace, err := r.meshWorkspaceClient.Create(ctx, &workspace)
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -170,6 +171,7 @@ func (r *workspaceResource) Update(ctx context.Context, req resource.UpdateReque
 		return
 	}
 
+	defer lockWorkspace(workspace.Metadata.Name)()
 	updatedWorkspace, err := r.meshWorkspaceClient.Update(ctx, workspace.Metadata.Name, &workspace)
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -194,6 +196,7 @@ func (r *workspaceResource) Delete(ctx context.Context, req resource.DeleteReque
 		return
 	}
 
+	defer lockWorkspace(name)()
 	err := r.meshWorkspaceClient.Delete(ctx, name)
 	if err != nil {
 		resp.Diagnostics.AddError(

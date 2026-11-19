@@ -1,3 +1,11 @@
+# v0.28.2
+
+FIXES:
+- `meshstack_workspace_tag`, `meshstack_workspace_tags`: within one apply, the provider now writes a workspace one
+  change at a time. Several `meshstack_workspace_tag` resources on the same workspace no longer lose each other's tags,
+  so they no longer need `depends_on`. `meshstack_workspace` takes part as well, so its writes do not interleave with
+  those of the tag resources. Separate applies and changes in meshPanel can still overwrite each other.
+
 # v0.28.1
 
 Requires meshStack 2026.47.0 or later to see `status.approval` on role bindings, to give an API key
