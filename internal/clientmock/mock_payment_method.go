@@ -14,7 +14,7 @@ type MeshPaymentMethodClient struct {
 
 func (m MeshPaymentMethodClient) Read(_ context.Context, identifier string) (*client.MeshPaymentMethod, error) {
 	v, _ := m.Store.Get(identifier)
-	return v, nil
+	return copyPaymentMethod(v), nil
 }
 
 func (m MeshPaymentMethodClient) Create(_ context.Context, paymentMethod *client.MeshPaymentMethodCreate) (*client.MeshPaymentMethod, error) {
@@ -27,12 +27,9 @@ func (m MeshPaymentMethodClient) Create(_ context.Context, paymentMethod *client
 		Spec: paymentMethod.Spec,
 	}
 
-	if created.Spec.Tags == nil {
-		created.Spec.Tags = map[string][]string{}
-	}
-
+	created.Spec.Tags = copyTags(paymentMethod.Spec.Tags)
 	m.Store.Set(paymentMethod.Metadata.Name, created)
-	return created, nil
+	return copyPaymentMethod(created), nil
 }
 
 func (m MeshPaymentMethodClient) Update(_ context.Context, identifier string, paymentMethod *client.MeshPaymentMethodCreate) (*client.MeshPaymentMethod, error) {
@@ -42,14 +39,20 @@ func (m MeshPaymentMethodClient) Update(_ context.Context, identifier string, pa
 	}
 
 	existing.Spec = paymentMethod.Spec
-	if existing.Spec.Tags == nil {
-		existing.Spec.Tags = map[string][]string{}
-	}
-
-	return existing, nil
+	existing.Spec.Tags = copyTags(paymentMethod.Spec.Tags)
+	return copyPaymentMethod(existing), nil
 }
 
 func (m MeshPaymentMethodClient) Delete(_ context.Context, identifier string) error {
 	m.Store.Delete(identifier)
 	return nil
+}
+
+func copyPaymentMethod(paymentMethod *client.MeshPaymentMethod) *client.MeshPaymentMethod {
+	if paymentMethod == nil {
+		return nil
+	}
+	copied := *paymentMethod
+	copied.Spec.Tags = copyTags(paymentMethod.Spec.Tags)
+	return &copied
 }
