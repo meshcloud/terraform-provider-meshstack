@@ -13,7 +13,7 @@ type MeshLandingZoneClient struct {
 
 func (m MeshLandingZoneClient) Read(_ context.Context, name string) (*client.MeshLandingZone, error) {
 	v, _ := m.Store.Get(name)
-	return v, nil
+	return copyLandingZone(v), nil
 }
 
 // List applies only the plain attribute filters from the query; it does not simulate marketplace
@@ -37,7 +37,7 @@ func (m MeshLandingZoneClient) List(_ context.Context, query client.MeshLandingZ
 		if query.OwnedByWorkspace != nil && landingZone.Metadata.OwnedByWorkspace != *query.OwnedByWorkspace {
 			continue
 		}
-		result = append(result, *landingZone)
+		result = append(result, *copyLandingZone(landingZone))
 	}
 	return result, nil
 }
@@ -51,8 +51,9 @@ func (m MeshLandingZoneClient) Create(_ context.Context, landingZone *client.Mes
 			Restricted: landingZone.Spec.Restricted,
 		},
 	}
+	created.Metadata.Tags = copyTags(landingZone.Metadata.Tags)
 	m.Store.Set(landingZone.Metadata.Name, created)
-	return created, nil
+	return copyLandingZone(created), nil
 }
 
 func (m MeshLandingZoneClient) Update(_ context.Context, name string, landingZone *client.MeshLandingZoneCreate) (*client.MeshLandingZone, error) {
@@ -63,11 +64,21 @@ func (m MeshLandingZoneClient) Update(_ context.Context, name string, landingZon
 
 	existing.Metadata = landingZone.Metadata
 	existing.Spec = landingZone.Spec
+	existing.Metadata.Tags = copyTags(landingZone.Metadata.Tags)
 	existing.Status.Restricted = landingZone.Spec.Restricted
-	return existing, nil
+	return copyLandingZone(existing), nil
 }
 
 func (m MeshLandingZoneClient) Delete(_ context.Context, name string) error {
 	m.Store.Delete(name)
 	return nil
+}
+
+func copyLandingZone(landingZone *client.MeshLandingZone) *client.MeshLandingZone {
+	if landingZone == nil {
+		return nil
+	}
+	copied := *landingZone
+	copied.Metadata.Tags = copyTags(landingZone.Metadata.Tags)
+	return &copied
 }
