@@ -1,4 +1,4 @@
-# v0.28.2
+# v0.29.0
 
 An API key that creates a `meshstack_integration` without `runner_ref` now needs the permission to list building block
 runners.
