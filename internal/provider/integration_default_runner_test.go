@@ -28,7 +28,7 @@ func TestAccIntegrationDefaultRunner(t *testing.T) {
 		runner, err := seeded.BuildingBlockRunner.Create(t.Context(), client.MeshBuildingBlockRunner{
 			Metadata: client.MeshBuildingBlockRunnerMetadata{OwnedByWorkspace: "meshcloud"},
 			Spec: client.MeshBuildingBlockRunnerSpec{
-				DisplayName:        "meshStack Hosted Runner (Keycloak)",
+				DisplayName:        "meshcloud-hosted Runner (meshStack identity)",
 				ImplementationType: string(client.MeshBuildingBlockRunnerImplementationTypeAll),
 				Restriction:        new("PUBLIC"),
 			},
