@@ -2,6 +2,7 @@ package clientmock
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -12,7 +13,19 @@ type MeshIntegrationClient struct {
 	Store *Store[client.MeshIntegration]
 }
 
+func requireRunnerRef(config client.MeshIntegrationConfig) error {
+	if (config.Github != nil && config.Github.RunnerRef == nil) ||
+		(config.Gitlab != nil && config.Gitlab.RunnerRef == nil) ||
+		(config.AzureDevops != nil && config.AzureDevops.RunnerRef == nil) {
+		return errors.New("400 Bad Request: runnerRef must not be null")
+	}
+	return nil
+}
+
 func (m MeshIntegrationClient) Create(_ context.Context, integration client.MeshIntegration) (*client.MeshIntegration, error) {
+	if err := requireRunnerRef(integration.Spec.Config); err != nil {
+		return nil, err
+	}
 	integrationUuid := uuid.NewString()
 	created := &client.MeshIntegration{
 		Metadata: client.MeshIntegrationMetadata{
@@ -45,6 +58,9 @@ func (m MeshIntegrationClient) Read(_ context.Context, uuid string) (*client.Mes
 }
 
 func (m MeshIntegrationClient) Update(_ context.Context, integration client.MeshIntegration) (*client.MeshIntegration, error) {
+	if err := requireRunnerRef(integration.Spec.Config); err != nil {
+		return nil, err
+	}
 	if existing, ok := m.Store.Get(*integration.Metadata.Uuid); ok {
 		backendSecretBehavior(false, &integration, existing)
 		if integration.Spec.Config.EntraId != nil && existing.Spec.Config.EntraId != nil {

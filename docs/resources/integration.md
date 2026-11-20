@@ -26,7 +26,6 @@ resource "meshstack_integration" "example_github" {
         base_url        = "https://github.com"
         app_id          = "123456"
         app_private_key = { secret_value = "-----BEGIN RSA PRIVATE KEY-----\nMOCK_KEY_CONTENT\n-----END RSA PRIVATE KEY-----" }
-        runner_ref      = { uuid = "98520496-627d-43e6-82da-ce499179ff3f" } # Optional, by default, pre-defined shared runner is used
       }
     }
   }
@@ -147,7 +146,7 @@ Required:
 Optional:
 
 - `personal_access_token` (Attributes) Personal Access Token (PAT) for authentication. (see [below for nested schema](#nestedatt--spec--config--azuredevops--personal_access_token))
-- `runner_ref` (Attributes) Reference to the building block runner that executes Azure DevOps pipelines. If omitted, the pre-defined shared runner is used. (see [below for nested schema](#nestedatt--spec--config--azuredevops--runner_ref))
+- `runner_ref` (Attributes) Reference to the building block runner that executes Azure DevOps pipelines. If omitted, a new integration gets meshStack's default runner. An existing integration keeps its runner. (see [below for nested schema](#nestedatt--spec--config--azuredevops--runner_ref))
 
 <a id="nestedatt--spec--config--azuredevops--personal_access_token"></a>
 ### Nested Schema for `spec.config.azuredevops.personal_access_token`
@@ -217,7 +216,7 @@ Required:
 
 Optional:
 
-- `runner_ref` (Attributes) Reference to the building block runner that executes GitHub workflows.If omitted, the pre-defined shared runner is used. (see [below for nested schema](#nestedatt--spec--config--github--runner_ref))
+- `runner_ref` (Attributes) Reference to the building block runner that executes GitHub workflows. If omitted, a new integration gets meshStack's default runner. An existing integration keeps its runner. (see [below for nested schema](#nestedatt--spec--config--github--runner_ref))
 
 <a id="nestedatt--spec--config--github--app_private_key"></a>
 ### Nested Schema for `spec.config.github.app_private_key`
@@ -254,7 +253,7 @@ Required:
 
 Optional:
 
-- `runner_ref` (Attributes) Reference to the building block runner that executes GitLab pipelines.If omitted, the pre-defined shared runner is used. (see [below for nested schema](#nestedatt--spec--config--gitlab--runner_ref))
+- `runner_ref` (Attributes) Reference to the building block runner that executes GitLab pipelines. If omitted, a new integration gets meshStack's default runner. An existing integration keeps its runner. (see [below for nested schema](#nestedatt--spec--config--gitlab--runner_ref))
 
 <a id="nestedatt--spec--config--gitlab--runner_ref"></a>
 ### Nested Schema for `spec.config.gitlab.runner_ref`

@@ -1,3 +1,12 @@
+# v0.29.0
+
+An API key that creates a `meshstack_integration` without `runner_ref` now needs the permission to list building block
+runners.
+
+FEATURES:
+- `meshstack_integration`: a new GitHub, GitLab or Azure DevOps integration without `runner_ref` gets meshStack's
+  default runner. Before, it got the hosted runner with a fixed uuid. An existing integration keeps its runner.
+
 # v0.28.1
 
 Requires meshStack 2026.47.0 or later to see `status.approval` on role bindings, to give an API key
