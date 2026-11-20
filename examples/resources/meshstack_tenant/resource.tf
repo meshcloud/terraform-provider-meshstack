@@ -11,6 +11,15 @@ resource "meshstack_tenant" "example" {
 
   # wait until the tenant's platform_tenant_id is set (not necessarily full replication); defaults to true
   wait_for_completion = true
+
+  # on destroy, wait until meshStack has deleted the tenant; defaults to wait_for_completion
+  wait_for_deletion = true
+
+  # how long the waits above may take; both default to 30m
+  timeouts = {
+    create = "30m"
+    delete = "30m"
+  }
 }
 
 # Resolve the platform and landing zone from the plural (marketplace) data sources instead of
