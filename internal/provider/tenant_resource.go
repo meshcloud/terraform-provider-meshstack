@@ -484,10 +484,27 @@ func tenantBodyAttributes() map[string]schema.Attribute {
 		},
 
 		"wait_for_deletion": schema.BoolAttribute{
-			MarkdownDescription: "Wait for tenant deletion to complete on destroy, at most for `timeouts.delete`. meshStack deletes a tenant asynchronously and refuses to delete a workspace while one of its projects still has a tenant being deleted. Set it to `false` to return as soon as meshStack accepts the deletion, for example when nothing else in the run waits for the tenant to be gone, or when the deletion waits for manual approval. Defaults to `true`.",
+			MarkdownDescription: "Wait for tenant deletion to complete on destroy, at most for `timeouts.delete`. meshStack deletes a tenant asynchronously and refuses to delete a workspace while one of its projects still has a tenant being deleted. Set it to `false` to return as soon as meshStack accepts the deletion, for example when nothing else in the run waits for the tenant to be gone, or when the deletion waits for manual approval. Defaults to the value of `wait_for_completion`.",
 			Optional:            true,
 			Computed:            true,
-			Default:             booldefault.StaticBool(true),
+			PlanModifiers:       []planmodifier.Bool{waitForDeletionDefault{}},
 		},
 	}
+}
+
+type waitForDeletionDefault struct{}
+
+func (waitForDeletionDefault) Description(context.Context) string {
+	return "Defaults to the value of wait_for_completion."
+}
+
+func (m waitForDeletionDefault) MarkdownDescription(ctx context.Context) string {
+	return m.Description(ctx)
+}
+
+func (waitForDeletionDefault) PlanModifyBool(ctx context.Context, req planmodifier.BoolRequest, resp *planmodifier.BoolResponse) {
+	if !req.ConfigValue.IsNull() || req.Plan.Raw.IsNull() {
+		return
+	}
+	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("wait_for_completion"), &resp.PlanValue)...)
 }

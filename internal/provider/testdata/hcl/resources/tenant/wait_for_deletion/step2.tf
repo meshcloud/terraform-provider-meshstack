@@ -134,6 +134,7 @@ resource "meshstack_tenant" "example" {
   wait_for_deletion   = [[.wait_for_deletion]]
 
   timeouts = {
-    delete = "10m"
+    create = "5m"
+    delete = "6m"
   }
 }

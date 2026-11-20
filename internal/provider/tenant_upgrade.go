@@ -108,9 +108,8 @@ var tenantSchemaV2Once = sync.OnceValue(func() schema.Schema {
 	return s
 })
 
-// upgradeFromV2 migrates state written before wait_for_deletion existed. Back then,
-// wait_for_completion also decided whether destroy waited for the deletion, so a destroy right after
-// the upgrade behaves as before. With wait_for_completion = false, the next plan shows the new default.
+// upgradeFromV2 migrates state written before wait_for_deletion existed, when wait_for_completion also
+// decided whether destroy waited for the deletion.
 func (r *tenantResource) upgradeFromV2(ctx context.Context, req resource.UpgradeStateRequest, resp *resource.UpgradeStateResponse) {
 	prior := generic.Get[tenantResourceModelV2](ctx, req.State, &resp.Diagnostics, tenantConverterOptions()...)
 	if resp.Diagnostics.HasError() {

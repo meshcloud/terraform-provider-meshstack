@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-testing/compare"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -18,6 +19,7 @@ import (
 
 	"github.com/meshcloud/terraform-provider-meshstack/internal/clientmock"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/xknownvalue"
+	"github.com/meshcloud/terraform-provider-meshstack/internal/util/poll"
 )
 
 func TestAccTenant(t *testing.T) {
@@ -241,11 +243,10 @@ func TestAccTenant(t *testing.T) {
 	for _, tc := range []struct {
 		name            string
 		waitForDeletion string
-		wantStateValue  knownvalue.Check
 		wantAwaited     bool
 	}{
-		{name: "wait_for_deletion_by_default", waitForDeletion: "null", wantStateValue: knownvalue.Bool(true), wantAwaited: true},
-		{name: "no_wait_for_deletion", waitForDeletion: "false", wantStateValue: knownvalue.Bool(false), wantAwaited: false},
+		{name: "wait_for_deletion", waitForDeletion: "true", wantAwaited: true},
+		{name: "wait_for_deletion_follows_wait_for_completion", waitForDeletion: "null", wantAwaited: false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			if !tc.wantAwaited && !IsMockClientTest() {
@@ -256,6 +257,12 @@ func TestAccTenant(t *testing.T) {
 
 			var mock clientmock.Client
 			var tenantUuid string
+			tenantClient := func() client.MeshTenantClient {
+				if IsMockClientTest() {
+					return mock.Tenant
+				}
+				return acceptanceClient(t).Tenant
+			}
 			readTenantAfterDestroy := func() (*client.MeshTenant, error) {
 				if IsMockClientTest() {
 					tenant, ok := mock.Tenant.Store.Get(tenantUuid)
@@ -264,7 +271,7 @@ func TestAccTenant(t *testing.T) {
 					}
 					return tenant, nil
 				}
-				return acceptanceClient(t).Tenant.Read(context.Background(), tenantUuid)
+				return tenantClient().Read(context.Background(), tenantUuid)
 			}
 
 			ApplyAndTest(t, resource.TestCase{
@@ -273,11 +280,14 @@ func TestAccTenant(t *testing.T) {
 						Config: hclStep(t, "resources/tenant/wait_for_deletion", 1, vars),
 						ConfigStateChecks: []statecheck.StateCheck{
 							statecheck.ExpectKnownValue(tenantAddress, tfjsonpath.New("wait_for_completion"), knownvalue.Bool(false)),
-							statecheck.ExpectKnownValue(tenantAddress, tfjsonpath.New("wait_for_deletion"), tc.wantStateValue),
-							statecheck.ExpectKnownValue(tenantAddress, tfjsonpath.New("metadata").AtMapKey("uuid"), xknownvalue.NotEmptyString(func(v string) error {
-								tenantUuid = v
-								return nil
-							})),
+							statecheck.ExpectKnownValue(tenantAddress, tfjsonpath.New("wait_for_deletion"), knownvalue.Bool(tc.wantAwaited)),
+						},
+						// meshStack never deletes the building blocks of a tenant whose deletion starts while
+						// its mandatory building block still runs, so the tenant would stay marked for deletion.
+						Check: func(s *terraform.State) error {
+							tenantUuid = s.RootModule().Resources[tenantAddress].Primary.Attributes["metadata.uuid"]
+							return poll.AtMostFor(5*time.Minute, tenantClient().ReadFunc(tenantUuid)).
+								Until(context.Background(), (*client.MeshTenant).CreationSuccessful)
 						},
 					},
 					{
@@ -288,7 +298,7 @@ func TestAccTenant(t *testing.T) {
 							},
 						},
 						ConfigStateChecks: []statecheck.StateCheck{
-							statecheck.ExpectKnownValue(tenantAddress, tfjsonpath.New("timeouts").AtMapKey("delete"), knownvalue.StringExact("10m")),
+							statecheck.ExpectKnownValue(tenantAddress, tfjsonpath.New("timeouts").AtMapKey("delete"), knownvalue.StringExact("6m")),
 						},
 					},
 					{
@@ -313,6 +323,40 @@ func TestAccTenant(t *testing.T) {
 			}, SeedingMock(func(m clientmock.Client) { mock = m }))
 		})
 	}
+
+	t.Run("wait_for_deletion_follows_a_change_of_wait_for_completion", func(t *testing.T) {
+		vars := hclStepVars{"suffix": acctest.RandString(8)}
+		tenantAddress := "meshstack_tenant.example"
+
+		ApplyAndTest(t, resource.TestCase{
+			Steps: []resource.TestStep{
+				{
+					Config: hclStep(t, "resources/tenant/wait_for_deletion_default", 1, vars),
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(tenantAddress, tfjsonpath.New("wait_for_deletion"), knownvalue.Bool(true)),
+					},
+				},
+				{
+					Config: hclStep(t, "resources/tenant/wait_for_deletion_default", 2, vars),
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PreApply: []plancheck.PlanCheck{
+							plancheck.ExpectResourceAction(tenantAddress, plancheck.ResourceActionUpdate),
+						},
+					},
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(tenantAddress, tfjsonpath.New("wait_for_completion"), knownvalue.Bool(false)),
+						statecheck.ExpectKnownValue(tenantAddress, tfjsonpath.New("wait_for_deletion"), knownvalue.Bool(false)),
+					},
+				},
+				{
+					Config: hclStep(t, "resources/tenant/wait_for_deletion_default", 1, vars),
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(tenantAddress, tfjsonpath.New("wait_for_deletion"), knownvalue.Bool(true)),
+					},
+				},
+			},
+		})
+	})
 
 	// requires_replace asserts that changing platform_ref forces a replacement rather than an
 	// in-place update. platform_ref (and landing_zone_ref) carry the RequiresReplace plan modifier
