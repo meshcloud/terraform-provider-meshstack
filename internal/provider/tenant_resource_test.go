@@ -1,6 +1,8 @@
 package provider
 
 import (
+	"context"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -10,8 +12,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
+	"github.com/meshcloud/meshstack-cli/client"
 
+	"github.com/meshcloud/terraform-provider-meshstack/internal/clientmock"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/xknownvalue"
 )
 
@@ -232,6 +237,82 @@ func TestAccTenant(t *testing.T) {
 			},
 		})
 	})
+
+	for _, tc := range []struct {
+		name            string
+		waitForDeletion string
+		wantStateValue  knownvalue.Check
+		wantAwaited     bool
+	}{
+		{name: "wait_for_deletion_by_default", waitForDeletion: "null", wantStateValue: knownvalue.Bool(true), wantAwaited: true},
+		{name: "no_wait_for_deletion", waitForDeletion: "false", wantStateValue: knownvalue.Bool(false), wantAwaited: false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if !tc.wantAwaited && !IsMockClientTest() {
+				t.Skip("meshStack refuses to delete the test's workspace while its tenant is still being deleted; mock-only")
+			}
+			vars := hclStepVars{"suffix": acctest.RandString(8), "wait_for_deletion": tc.waitForDeletion}
+			tenantAddress := "meshstack_tenant.example"
+
+			var mock clientmock.Client
+			var tenantUuid string
+			readTenantAfterDestroy := func() (*client.MeshTenant, error) {
+				if IsMockClientTest() {
+					tenant, ok := mock.Tenant.Store.Get(tenantUuid)
+					if !ok {
+						return nil, fmt.Errorf("tenant %s is missing from the mock store", tenantUuid)
+					}
+					return tenant, nil
+				}
+				return acceptanceClient(t).Tenant.Read(context.Background(), tenantUuid)
+			}
+
+			ApplyAndTest(t, resource.TestCase{
+				Steps: []resource.TestStep{
+					{
+						Config: hclStep(t, "resources/tenant/wait_for_deletion", 1, vars),
+						ConfigStateChecks: []statecheck.StateCheck{
+							statecheck.ExpectKnownValue(tenantAddress, tfjsonpath.New("wait_for_completion"), knownvalue.Bool(false)),
+							statecheck.ExpectKnownValue(tenantAddress, tfjsonpath.New("wait_for_deletion"), tc.wantStateValue),
+							statecheck.ExpectKnownValue(tenantAddress, tfjsonpath.New("metadata").AtMapKey("uuid"), xknownvalue.NotEmptyString(func(v string) error {
+								tenantUuid = v
+								return nil
+							})),
+						},
+					},
+					{
+						Config: hclStep(t, "resources/tenant/wait_for_deletion", 2, vars),
+						ConfigPlanChecks: resource.ConfigPlanChecks{
+							PreApply: []plancheck.PlanCheck{
+								plancheck.ExpectResourceAction(tenantAddress, plancheck.ResourceActionUpdate),
+							},
+						},
+						ConfigStateChecks: []statecheck.StateCheck{
+							statecheck.ExpectKnownValue(tenantAddress, tfjsonpath.New("timeouts").AtMapKey("delete"), knownvalue.StringExact("10m")),
+						},
+					},
+					{
+						Config: hclStep(t, "resources/tenant/wait_for_deletion", 3, vars),
+						ConfigPlanChecks: resource.ConfigPlanChecks{
+							PreApply: []plancheck.PlanCheck{
+								plancheck.ExpectResourceAction(tenantAddress, plancheck.ResourceActionDestroy),
+							},
+						},
+						Check: func(*terraform.State) error {
+							tenant, err := readTenantAfterDestroy()
+							if err != nil {
+								return fmt.Errorf("reading tenant %s after its destroy: %w", tenantUuid, err)
+							}
+							if done, _ := tenant.DeletionSuccessful(); done != tc.wantAwaited {
+								return fmt.Errorf("expected destroy to await the deletion of tenant %s: %t, but it was left with %s", tenantUuid, tc.wantAwaited, tenant.DeletionState())
+							}
+							return nil
+						},
+					},
+				},
+			}, SeedingMock(func(m clientmock.Client) { mock = m }))
+		})
+	}
 
 	// requires_replace asserts that changing platform_ref forces a replacement rather than an
 	// in-place update. platform_ref (and landing_zone_ref) carry the RequiresReplace plan modifier

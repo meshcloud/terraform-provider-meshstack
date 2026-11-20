@@ -58,7 +58,9 @@ locals {
 
 ### Optional
 
-- `wait_for_completion` (Boolean) Wait for tenant creation/deletion to complete. Note that tenant creation is considered complete when `spec.platformTenantId` is set and not necessarily when replication is finished. Defaults to `true`.
+- `timeouts` (Attributes) (see [below for nested schema](#nestedatt--timeouts))
+- `wait_for_completion` (Boolean) Wait for tenant creation to complete, at most for `timeouts.create`. Tenant creation is considered complete when `spec.platform_tenant_id` is set and not necessarily when replication is finished. Set it to `false` for a tenant that gets its platform tenant ID later, for example from a building block that is ordered on the tenant after it exists. Defaults to `true`.
+- `wait_for_deletion` (Boolean) Wait for tenant deletion to complete on destroy, at most for `timeouts.delete`. meshStack deletes a tenant asynchronously and refuses to delete a workspace while one of its projects still has a tenant being deleted. Set it to `false` to return as soon as meshStack accepts the deletion, for example when nothing else in the run waits for the tenant to be gone, or when the deletion waits for manual approval. Defaults to `true`.
 
 ### Read-Only
 
@@ -119,6 +121,15 @@ Required:
 
 - `value` (Number) The requested quota value.
 
+
+
+<a id="nestedatt--timeouts"></a>
+### Nested Schema for `timeouts`
+
+Optional:
+
+- `create` (String) Maximum time to wait for tenant creation to complete, if `wait_for_completion` is `true`. Defaults to 30 minutes. A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration), e.g. "30s" or "2h45m".
+- `delete` (String) Maximum time to wait for tenant deletion to complete, if `wait_for_deletion` is `true`. Defaults to 30 minutes. A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration), e.g. "30s" or "2h45m".
 
 
 <a id="nestedatt--ref"></a>

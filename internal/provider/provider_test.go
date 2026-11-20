@@ -102,9 +102,11 @@ type applyAndTestOptions struct {
 	SeedMock           []func(mock clientmock.Client)
 }
 
-// SeedingMock fills the mock store before a mock run reads from it, for a data source whose object
-// no Terraform resource creates. It is an option here rather than a mock the test builds itself,
-// because ApplyAndTest is the one place besides New that decides where a provider gets its client.
+// SeedingMock hands the mock to a test before a mock run reads from it: to fill the store for a data
+// source whose object no Terraform resource creates, or to keep the mock and inspect the store after
+// a destroy, when the provider no longer reads the object. It is an option here rather than a mock the
+// test builds itself, because ApplyAndTest is the one place besides New that decides where a provider
+// gets its client.
 func SeedingMock(seed func(mock clientmock.Client)) ApplyAndTestOption {
 	return func(options *applyAndTestOptions) {
 		options.SeedMock = append(options.SeedMock, seed)

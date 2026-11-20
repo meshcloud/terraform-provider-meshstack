@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
-	"time"
 
+	timeouts "github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -48,11 +48,20 @@ func (r *tenantResource) Configure(_ context.Context, req resource.ConfigureRequ
 	})...)
 }
 
-func (r *tenantResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *tenantResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+	attributes := tenantBodyAttributes()
+	attributes["timeouts"] = timeouts.Attributes(ctx, timeouts.Opts{
+		Create: true,
+		Delete: true,
+		CreateDescription: "Maximum time to wait for tenant creation to complete, if `wait_for_completion` is `true`. Defaults to 30 minutes. " +
+			"A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration), e.g. \"30s\" or \"2h45m\".",
+		DeleteDescription: "Maximum time to wait for tenant deletion to complete, if `wait_for_deletion` is `true`. Defaults to 30 minutes. " +
+			"A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration), e.g. \"30s\" or \"2h45m\".",
+	})
 	resp.Schema = schema.Schema{
-		Version:             2,
+		Version:             3,
 		MarkdownDescription: "Manages a `meshTenant`.",
-		Attributes:          tenantBodyAttributes(),
+		Attributes:          attributes,
 	}
 }
 
@@ -82,7 +91,11 @@ func (r *tenantResource) Create(ctx context.Context, req resource.CreateRequest,
 	}
 
 	if plan.WaitForCompletion {
-		err := poll.AtMostFor(30*time.Minute, r.meshTenantClient.ReadFunc(tenant.Metadata.Uuid), poll.WithLastResultTo(&tenant)).
+		timeout := resolveTimeout(ctx, req.Plan, "create", &resp.Diagnostics)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		err := poll.AtMostFor(timeout, r.meshTenantClient.ReadFunc(tenant.Metadata.Uuid), poll.WithLastResultTo(&tenant)).
 			Until(ctx, (*client.MeshTenant).CreationSuccessful)
 		if err != nil {
 			resp.Diagnostics.AddError("Failed to await tenant creation", err.Error())
@@ -92,7 +105,8 @@ func (r *tenantResource) Create(ctx context.Context, req resource.CreateRequest,
 
 	warnOnUnrealizedQuotas(plan.Spec, tenant.Status, &resp.Diagnostics)
 
-	model := tenantResourceModelFromDto(tenant, plan.Spec.RequestedQuotas, plan.WaitForCompletion)
+	model := tenantResourceModelFromDto(tenant, plan.Spec.RequestedQuotas, plan.WaitForCompletion, plan.WaitForDeletion)
+	model.Timeouts = plan.Timeouts
 	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, model, tenantConverterOptions()...)...)
 }
 
@@ -119,7 +133,8 @@ func (r *tenantResource) Read(ctx context.Context, req resource.ReadRequest, res
 
 	// spec.requested_quotas is Optional (not computed) and create-only, so preserve the configured value
 	// from state rather than deriving it from the backend's effective quotas.
-	model := tenantResourceModelFromDto(tenant, state.Spec.RequestedQuotas, state.WaitForCompletion)
+	model := tenantResourceModelFromDto(tenant, state.Spec.RequestedQuotas, state.WaitForCompletion, state.WaitForDeletion)
+	model.Timeouts = state.Timeouts
 	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, model, tenantConverterOptions()...)...)
 }
 
@@ -131,16 +146,18 @@ func (r *tenantResource) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
-	// wait_for_completion is a provider-only toggle (no API call), so a change to just it is allowed
-	// and simply written back to state. Every other tenant attribute is either immutable
+	// wait_for_completion, wait_for_deletion and timeouts are provider-only settings (no API call), so a
+	// change to just them is allowed and simply written back to state. Every other tenant attribute is either immutable
 	// (RequiresReplace) or computed (UseStateForUnknown, so it equals state in the plan), so any
 	// remaining diff is an unsupported in-place update.
 	normalized := state
 	normalized.WaitForCompletion = plan.WaitForCompletion
+	normalized.WaitForDeletion = plan.WaitForDeletion
+	normalized.Timeouts = plan.Timeouts
 	if !reflect.DeepEqual(plan, normalized) {
 		resp.Diagnostics.AddError(
 			"Tenants can't be updated",
-			"Unsupported operation: a tenant can't be updated in place; only wait_for_completion may be changed. "+
+			"Unsupported operation: a tenant can't be updated in place; only wait_for_completion, wait_for_deletion and timeouts may be changed. "+
 				"The meshTenant API is create/delete only. In particular, quotas can only be set at creation — "+
 				"change a live tenant's quotas via a quota request in the meshStack panel (Tenant > Settings > "+
 				"Quotas), which is subject to platform-operator approval, not through Terraform.",
@@ -164,19 +181,25 @@ func (r *tenantResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		return
 	}
 
-	if state.WaitForCompletion {
-		var lastSeen *client.MeshTenant
-		if err := poll.AtMostFor(30*time.Minute, r.meshTenantClient.ReadFunc(uuid), poll.WithLastResultTo(&lastSeen)).
-			Until(ctx, (*client.MeshTenant).DeletionSuccessful); err != nil {
-			resp.Diagnostics.AddError("Failed to await tenant deletion", fmt.Sprintf(
-				"Could not confirm deletion of tenant %s: %s. Last observed state: %s. "+
-					"meshStack deletes a tenant asynchronously, so the provider waits for the deletion to complete; "+
-					"a deletion that never completes usually means the platform replicator is not processing it. "+
-					"Check the tenant in the meshStack panel.",
-				uuid, err, lastSeen.DeletionState(),
-			))
-			return
-		}
+	if !state.WaitForDeletion {
+		return
+	}
+
+	timeout := resolveTimeout(ctx, req.State, "delete", &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	var lastSeen *client.MeshTenant
+	if err := poll.AtMostFor(timeout, r.meshTenantClient.ReadFunc(uuid), poll.WithLastResultTo(&lastSeen)).
+		Until(ctx, (*client.MeshTenant).DeletionSuccessful); err != nil {
+		resp.Diagnostics.AddError("Failed to await tenant deletion", fmt.Sprintf(
+			"Could not confirm deletion of tenant %s: %s. Last observed state: %s. "+
+				"meshStack deletes a tenant asynchronously, so the provider waits for the deletion to complete; "+
+				"a deletion that never completes usually means the platform replicator is not processing it. "+
+				"Check the tenant in the meshStack panel, or raise timeouts.delete to wait longer.",
+			uuid, err, lastSeen.DeletionState(),
+		))
+		return
 	}
 }
 
@@ -211,11 +234,13 @@ func (r *tenantResource) ImportState(ctx context.Context, req resource.ImportSta
 	}
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("wait_for_completion"), types.BoolValue(true))...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("wait_for_deletion"), types.BoolValue(true))...)
 }
 
 func (r *tenantResource) UpgradeState(_ context.Context) map[int64]resource.StateUpgrader {
 	priorV0Schema := tenantV0Schema()
 	priorV1Schema := tenantSchemaV1Once()
+	priorV2Schema := tenantSchemaV2Once()
 	return map[int64]resource.StateUpgrader{
 		0: {
 			PriorSchema:   &priorV0Schema,
@@ -224,6 +249,10 @@ func (r *tenantResource) UpgradeState(_ context.Context) map[int64]resource.Stat
 		1: {
 			PriorSchema:   &priorV1Schema,
 			StateUpgrader: r.upgradeFromV1,
+		},
+		2: {
+			PriorSchema:   &priorV2Schema,
+			StateUpgrader: r.upgradeFromV2,
 		},
 	}
 }
@@ -252,7 +281,7 @@ func (r *tenantResource) upgradeFromV0(ctx context.Context, req resource.Upgrade
 	// spec.requested_quotas is Optional (not computed) and echoes the configured value; a migrated config
 	// that omits quotas plans null, so carry null here (not the backend's effective quotas) to avoid a
 	// spurious spec quota diff that would route to the unsupported tenant Update.
-	model := tenantResourceModelFromDto(tenant, nil, true)
+	model := tenantResourceModelFromDto(tenant, nil, true, true)
 	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, model, tenantConverterOptions()...)...)
 }
 
@@ -448,7 +477,14 @@ func tenantBodyAttributes() map[string]schema.Attribute {
 		},
 
 		"wait_for_completion": schema.BoolAttribute{
-			MarkdownDescription: "Wait for tenant creation/deletion to complete. Note that tenant creation is considered complete when `spec.platformTenantId` is set and not necessarily when replication is finished. Defaults to `true`.",
+			MarkdownDescription: "Wait for tenant creation to complete, at most for `timeouts.create`. Tenant creation is considered complete when `spec.platform_tenant_id` is set and not necessarily when replication is finished. Set it to `false` for a tenant that gets its platform tenant ID later, for example from a building block that is ordered on the tenant after it exists. Defaults to `true`.",
+			Optional:            true,
+			Computed:            true,
+			Default:             booldefault.StaticBool(true),
+		},
+
+		"wait_for_deletion": schema.BoolAttribute{
+			MarkdownDescription: "Wait for tenant deletion to complete on destroy, at most for `timeouts.delete`. meshStack deletes a tenant asynchronously and refuses to delete a workspace while one of its projects still has a tenant being deleted. Set it to `false` to return as soon as meshStack accepts the deletion, for example when nothing else in the run waits for the tenant to be gone, or when the deletion waits for manual approval. Defaults to `true`.",
 			Optional:            true,
 			Computed:            true,
 			Default:             booldefault.StaticBool(true),

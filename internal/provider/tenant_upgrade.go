@@ -32,12 +32,10 @@ type tenantResourceModelV1 struct {
 	WaitForCompletion bool                      `tfsdk:"wait_for_completion"`
 }
 
-// tenantSchemaV1Once builds the schema version 1 shape for the state upgrader: the current schema with
-// the removed spec.quotas attribute added back.
+// tenantSchemaV1Once builds the schema version 1 shape for the state upgrader: the version 2 schema
+// with the removed spec.quotas attribute added back.
 var tenantSchemaV1Once = sync.OnceValue(func() schema.Schema {
-	var schemaResp resource.SchemaResponse
-	(&tenantResource{}).Schema(context.Background(), resource.SchemaRequest{}, &schemaResp)
-	s := schemaResp.Schema
+	s := tenantSchemaV2Once()
 	s.Version = 1
 
 	spec, ok := s.Attributes["spec"].(schema.SingleNestedAttribute)
@@ -85,5 +83,46 @@ func (r *tenantResource) upgradeFromV1(ctx context.Context, req resource.Upgrade
 		},
 		Status:            prior.Status,
 		WaitForCompletion: prior.WaitForCompletion,
+		WaitForDeletion:   prior.WaitForCompletion,
+	}, tenantConverterOptions()...)...)
+}
+
+type tenantResourceModelV2 struct {
+	Ref               tenantRef                 `tfsdk:"ref"`
+	Metadata          client.MeshTenantMetadata `tfsdk:"metadata"`
+	Spec              client.MeshTenantSpec     `tfsdk:"spec"`
+	Status            client.MeshTenantStatus   `tfsdk:"status"`
+	WaitForCompletion bool                      `tfsdk:"wait_for_completion"`
+}
+
+// tenantSchemaV2Once builds the schema version 2 shape for the state upgrader: the current schema
+// without wait_for_deletion and timeouts.
+var tenantSchemaV2Once = sync.OnceValue(func() schema.Schema {
+	var schemaResp resource.SchemaResponse
+	(&tenantResource{}).Schema(context.Background(), resource.SchemaRequest{}, &schemaResp)
+	s := schemaResp.Schema
+	s.Version = 2
+	s.Attributes = maps.Clone(s.Attributes)
+	delete(s.Attributes, "wait_for_deletion")
+	delete(s.Attributes, "timeouts")
+	return s
+})
+
+// upgradeFromV2 migrates state written before wait_for_deletion existed. Back then,
+// wait_for_completion also decided whether destroy waited for the deletion, so a destroy right after
+// the upgrade behaves as before. With wait_for_completion = false, the next plan shows the new default.
+func (r *tenantResource) upgradeFromV2(ctx context.Context, req resource.UpgradeStateRequest, resp *resource.UpgradeStateResponse) {
+	prior := generic.Get[tenantResourceModelV2](ctx, req.State, &resp.Diagnostics, tenantConverterOptions()...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, tenantResourceModel{
+		Ref:               prior.Ref,
+		Metadata:          prior.Metadata,
+		Spec:              prior.Spec,
+		Status:            prior.Status,
+		WaitForCompletion: prior.WaitForCompletion,
+		WaitForDeletion:   prior.WaitForCompletion,
 	}, tenantConverterOptions()...)...)
 }

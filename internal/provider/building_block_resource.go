@@ -47,9 +47,9 @@ var (
 	_ resource.ResourceWithUpgradeState = &buildingBlockResource{}
 )
 
-// defaultBuildingBlockTimeout is the fallback time to wait for a building block run to complete when
+// defaultTimeout is the fallback time to wait for a building block run or a tenant to complete when
 // the configuration does not set an explicit value in the `timeouts` block.
-const defaultBuildingBlockTimeout = 30 * time.Minute
+const defaultTimeout = 30 * time.Minute
 
 // runStartTimeout covers a meshStack redeploy, which can delay the start of a run by minutes.
 const runStartTimeout = 5 * time.Minute
@@ -656,7 +656,7 @@ func buildingBlockConverterOptions(ctx context.Context, config, plan, state gene
 }
 
 // resolveTimeout reads the configured timeout for the given operation ("create"/"update"/"delete")
-// from the resource's timeouts block, falling back to defaultBuildingBlockTimeout when unset. The
+// from the resource's timeouts block, falling back to defaultTimeout when unset. The
 // getter is the plan for create/update and the state for delete.
 func resolveTimeout(ctx context.Context, getter generic.AttributeGetter, op string, diags *diag.Diagnostics) time.Duration {
 	var configured timeouts.Value
@@ -668,11 +668,11 @@ func resolveTimeout(ctx context.Context, getter generic.AttributeGetter, op stri
 	)
 	switch op {
 	case "create":
-		timeout, tdiags = configured.Create(ctx, defaultBuildingBlockTimeout)
+		timeout, tdiags = configured.Create(ctx, defaultTimeout)
 	case "update":
-		timeout, tdiags = configured.Update(ctx, defaultBuildingBlockTimeout)
+		timeout, tdiags = configured.Update(ctx, defaultTimeout)
 	case "delete":
-		timeout, tdiags = configured.Delete(ctx, defaultBuildingBlockTimeout)
+		timeout, tdiags = configured.Delete(ctx, defaultTimeout)
 	}
 	diags.Append(tdiags...)
 	return timeout

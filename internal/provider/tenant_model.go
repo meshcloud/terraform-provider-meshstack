@@ -15,7 +15,8 @@ type tenantRef struct {
 
 // tenantModel wraps a MeshTenant DTO with its computed ref. It backs the plural meshstack_tenants
 // data source, whose element schema (ref + metadata + spec + status) matches the DTO exactly. The
-// resource needs the extra provider-only wait_for_completion toggle and uses tenantResourceModel.
+// resource needs the extra provider-only wait_for_completion and wait_for_deletion toggles and uses
+// tenantResourceModel.
 type tenantModel struct {
 	*client.MeshTenant
 	Ref tenantRef `tfsdk:"ref"`
@@ -29,20 +30,27 @@ func tenantModelFromDto(tenant *client.MeshTenant) tenantModel {
 }
 
 // tenantResourceModel backs the unsuffixed meshstack_tenant resource. It reuses the DTO sub-types
-// (metadata/spec/status) and adds the provider-only wait_for_completion toggle, which is not part of
-// the API DTO.
+// (metadata/spec/status) and adds the provider-only wait_for_completion and wait_for_deletion toggles
+// and timeouts, which are not part of the API DTO.
 type tenantResourceModel struct {
 	Ref               tenantRef                 `tfsdk:"ref"`
 	Metadata          client.MeshTenantMetadata `tfsdk:"metadata"`
 	Spec              client.MeshTenantSpec     `tfsdk:"spec"`
 	Status            client.MeshTenantStatus   `tfsdk:"status"`
 	WaitForCompletion bool                      `tfsdk:"wait_for_completion"`
+	WaitForDeletion   bool                      `tfsdk:"wait_for_deletion"`
+	Timeouts          *tenantTimeouts           `tfsdk:"timeouts"`
+}
+
+type tenantTimeouts struct {
+	Create *string `tfsdk:"create"`
+	Delete *string `tfsdk:"delete"`
 }
 
 // tenantResourceModelFromDto takes specRequestedQuotas separately because spec.requested_quotas is
 // Optional (not computed) and create-only: the backend never returns it, so state must echo the value
 // the caller configured or the apply fails with an inconsistent result.
-func tenantResourceModelFromDto(dto *client.MeshTenant, specRequestedQuotas map[string]client.RequestQuotaValue, waitForCompletion bool) tenantResourceModel {
+func tenantResourceModelFromDto(dto *client.MeshTenant, specRequestedQuotas map[string]client.RequestQuotaValue, waitForCompletion, waitForDeletion bool) tenantResourceModel {
 	spec := dto.Spec
 	spec.RequestedQuotas = specRequestedQuotas
 	return tenantResourceModel{
@@ -51,6 +59,7 @@ func tenantResourceModelFromDto(dto *client.MeshTenant, specRequestedQuotas map[
 		Spec:              spec,
 		Status:            dto.Status,
 		WaitForCompletion: waitForCompletion,
+		WaitForDeletion:   waitForDeletion,
 	}
 }
 

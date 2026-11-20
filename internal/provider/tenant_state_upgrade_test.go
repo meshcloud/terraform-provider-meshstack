@@ -15,6 +15,14 @@ var (
 	tenantStateV1NoQuotas string
 )
 
+// As provider v0.28.1 wrote it.
+var (
+	//go:embed testdata/tenant/state-v2-wait-for-completion.json
+	tenantStateV2WaitForCompletion string
+	//go:embed testdata/tenant/state-v2-no-wait-for-completion.json
+	tenantStateV2NoWaitForCompletion string
+)
+
 func TestTenantUpgradeState(t *testing.T) {
 	t.Run("v1_to_v2", func(t *testing.T) {
 		if !HasNestedAttributeForTest(t, tenantSchemaV1Once(), "spec", "quotas") {
@@ -86,5 +94,36 @@ func TestTenantUpgradeState(t *testing.T) {
 				t.Errorf("requested_quotas became %v, want nil", upgraded.Spec.RequestedQuotas)
 			}
 		})
+	})
+	t.Run("v2_to_v3", func(t *testing.T) {
+		if _, found := tenantSchemaV2Once().Attributes["wait_for_deletion"]; found {
+			t.Error("prior v2 schema declares wait_for_deletion; state written by v0.28.1 lacks that key")
+		}
+
+		for _, tc := range []struct {
+			name      string
+			rawJSON   string
+			wantValue bool
+		}{
+			{name: "waits for the deletion when it waited for the creation", rawJSON: tenantStateV2WaitForCompletion, wantValue: true},
+			{name: "skips the deletion wait when it skipped the creation wait", rawJSON: tenantStateV2NoWaitForCompletion, wantValue: false},
+		} {
+			t.Run(tc.name, func(t *testing.T) {
+				var upgraded tenantResourceModel
+				diags := UpgradeResourceStateFromJSON(t, &tenantResource{}, 2, tc.rawJSON, &upgraded)
+				if diags.HasError() {
+					t.Fatalf("upgrade produced errors: %s", diags)
+				}
+				if upgraded.WaitForCompletion != tc.wantValue {
+					t.Errorf("wait_for_completion = %t, want %t", upgraded.WaitForCompletion, tc.wantValue)
+				}
+				if upgraded.WaitForDeletion != tc.wantValue {
+					t.Errorf("wait_for_deletion = %t, want %t", upgraded.WaitForDeletion, tc.wantValue)
+				}
+				if upgraded.Metadata.Uuid != "8f1c2d3e-4a5b-6c7d-8e9f-0a1b2c3d4e5f" {
+					t.Errorf("metadata not carried over, got %+v", upgraded.Metadata)
+				}
+			})
+		}
 	})
 }
