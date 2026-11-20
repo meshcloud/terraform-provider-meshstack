@@ -109,4 +109,9 @@ resource "meshstack_tenant" "test" {
     }
   }
   wait_for_completion = true
+
+  timeouts = {
+    create = "5m"
+    delete = "5m"
+  }
 }

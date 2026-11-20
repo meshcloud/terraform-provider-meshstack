@@ -144,6 +144,11 @@ resource "meshstack_tenant" "example" {
   }
 
   wait_for_completion = true
+
+  timeouts = {
+    create = "5m"
+    delete = "5m"
+  }
 }
 
 data "meshstack_platforms" "available" {

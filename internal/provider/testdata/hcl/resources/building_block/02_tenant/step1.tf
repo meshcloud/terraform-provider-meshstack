@@ -121,6 +121,11 @@ resource "meshstack_tenant" "test" {
     landing_zone_ref = meshstack_landingzone.test.ref
   }
   wait_for_completion = true
+
+  timeouts = {
+    create = "5m"
+    delete = "5m"
+  }
 }
 
 resource "meshstack_building_block_definition" "example_tenant" {
