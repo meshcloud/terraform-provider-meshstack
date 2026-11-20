@@ -109,7 +109,8 @@ resource "meshstack_building_block_definition" "example_01_terraform" {
     }
 
     # Optional: schedule for drift detection or drift reconciliation. Defaults to mode = "DISABLED".
-    # DRIFT_DETECTION triggers a dry run, and DRIFT_RECONCILIATION triggers a real run.
+    # DRIFT_DETECTION reports drift with a dry run and needs the Terraform implementation. DRIFT_RECONCILIATION
+    # fixes drift with a real run and needs it too unless automatic_approval is true. Manual building blocks take no schedule.
     schedule = {
       mode      = "DRIFT_DETECTION"
       frequency = "DAILY"
