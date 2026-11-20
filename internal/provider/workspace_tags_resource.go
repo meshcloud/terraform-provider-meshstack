@@ -62,7 +62,7 @@ func (r *workspaceTagsResource) Schema(_ context.Context, _ resource.SchemaReque
 			"restricted tag definitions, and adopting those would produce a plan that never converges. Note also that a "+
 			"tag declared with an empty value list is kept in state, because the API returns no entry for it at all. Do "+
 			"not mix `meshstack_workspace_tags` with inline `tags` on "+
-			"`meshstack_workspace` or with `meshstack_workspace_tag` resources on the same workspace.",
+			"`meshstack_workspace` or with `meshstack_workspace_tag` or `meshstack_workspace_tag_value` resources on the same workspace.",
 		"Workspace tags",
 		map[string]schema.Attribute{
 			"workspace_identifier": requiredReplaceOnChangeString("Identifier of the workspace."),

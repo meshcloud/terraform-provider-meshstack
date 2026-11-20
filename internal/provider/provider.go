@@ -107,6 +107,8 @@ func (p *MeshStackProvider) Resources(_ context.Context) []func() resource.Resou
 		NewWorkspaceTagResource,
 		NewProjectTagsResource,
 		NewProjectTagResource,
+		NewWorkspaceTagValueResource,
+		NewProjectTagValueResource,
 		NewBuildingBlockResource,
 		NewBuildingBlockDefinitionResource,
 		NewTagDefinitionResource,

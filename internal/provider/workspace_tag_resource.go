@@ -20,15 +20,19 @@ var (
 	_ resource.ResourceWithImportState = &workspaceTagResource{}
 )
 
-var workspaceTagCaveats = tagResourceCaveats(taggedObject{
-	name:              "workspace",
-	kind:              "meshWorkspace",
-	ownerResource:     "meshstack_workspace",
-	inlineTags:        "metadata.tags",
-	tagResource:       "meshstack_workspace_tag",
-	tagsResource:      "meshstack_workspace_tags",
-	injectedDefaultOn: "a workspace created in meshPanel",
-})
+var workspaceTagCaveats = workspaceTagCaveatsFor("meshstack_workspace_tag")
+
+func workspaceTagCaveatsFor(tagResource string) string {
+	return tagResourceCaveats(taggedObject{
+		name:              "workspace",
+		kind:              "meshWorkspace",
+		ownerResource:     "meshstack_workspace",
+		inlineTags:        "metadata.tags",
+		tagResource:       tagResource,
+		tagsResource:      "meshstack_workspace_tags",
+		injectedDefaultOn: "a workspace created in meshPanel",
+	})
+}
 
 func NewWorkspaceTagResource() resource.Resource {
 	return &workspaceTagResource{}
@@ -67,7 +71,8 @@ func (r *workspaceTagResource) Schema(_ context.Context, _ resource.SchemaReques
 		"Manages a single dedicated tag for a meshStack workspace.\n\n"+
 			workspaceTagCaveats+"\n\n"+
 			"~> **Note:** Do not mix dedicated `meshstack_workspace_tag` resources with authoritative "+
-			"`meshstack_workspace_tags` or inline `tags` on `meshstack_workspace` for the same workspace. This resource only "+
+			"`meshstack_workspace_tags` or inline `tags` on `meshstack_workspace` for the same workspace, or with "+
+			"`meshstack_workspace_tag_value` resources for the same key. This resource only "+
 			"manages its own key; tags under other keys are read and written back unchanged.",
 		"Workspace tag",
 		map[string]schema.Attribute{

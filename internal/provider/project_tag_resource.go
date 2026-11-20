@@ -21,19 +21,23 @@ var (
 	_ resource.ResourceWithImportState = &projectTagResource{}
 )
 
-var projectTagCaveats = tagResourceCaveats(taggedObject{
-	name:              "project",
-	kind:              "meshProject",
-	ownerResource:     "meshstack_project",
-	inlineTags:        "spec.tags",
-	tagResource:       "meshstack_project_tag",
-	tagsResource:      "meshstack_project_tags",
-	injectedDefaultOn: "a project",
-}) + "\n\n" +
-	"~> **The payment methods are written back too.** Every write sends the project's display name, " +
-	"`payment_method_identifier` and `substitute_payment_method_identifier` as it read them. If meshStack switches the " +
-	"project to its substitute payment method between this resource's read and its write, the write puts the old " +
-	"payment method back."
+var projectTagCaveats = projectTagCaveatsFor("meshstack_project_tag")
+
+func projectTagCaveatsFor(tagResource string) string {
+	return tagResourceCaveats(taggedObject{
+		name:              "project",
+		kind:              "meshProject",
+		ownerResource:     "meshstack_project",
+		inlineTags:        "spec.tags",
+		tagResource:       tagResource,
+		tagsResource:      "meshstack_project_tags",
+		injectedDefaultOn: "a project",
+	}) + "\n\n" +
+		"~> **The payment methods are written back too.** Every write sends the project's display name, " +
+		"`payment_method_identifier` and `substitute_payment_method_identifier` as it read them. If meshStack switches the " +
+		"project to its substitute payment method between this resource's read and its write, the write puts the old " +
+		"payment method back."
+}
 
 func NewProjectTagResource() resource.Resource {
 	return &projectTagResource{}
@@ -73,7 +77,8 @@ func (r *projectTagResource) Schema(_ context.Context, _ resource.SchemaRequest,
 		"Manages a single dedicated tag for a meshStack project.\n\n"+
 			projectTagCaveats+"\n\n"+
 			"~> **Note:** Do not mix dedicated `meshstack_project_tag` resources with authoritative "+
-			"`meshstack_project_tags` or inline `tags` on `meshstack_project` for the same project. This resource only "+
+			"`meshstack_project_tags` or inline `tags` on `meshstack_project` for the same project, or with "+
+			"`meshstack_project_tag_value` resources for the same key. This resource only "+
 			"manages its own key; tags under other keys are read and written back unchanged.",
 		"Project tag",
 		map[string]schema.Attribute{

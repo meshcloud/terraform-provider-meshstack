@@ -18,6 +18,10 @@ FEATURES:
   leaves its other tags as they are. Both resources rewrite the whole project on every change, including its payment
   methods, so prefer `spec.tags` on `meshstack_project` where you can. Within one apply, the provider writes a project
   one change at a time, so several `meshstack_project_tag` resources on one project need no `depends_on`.
+- `meshstack_workspace_tag_value`, `meshstack_project_tag_value`: new resources that each manage one value of a
+  multi-select tag on a workspace or project that this configuration does not create. A resource adds its value and,
+  when destroyed, removes only that value, so several of them can share one tag without `depends_on`. Import with
+  `workspace.key=value` or `workspace.project.key=value`.
 
 FIXES:
 - `meshstack_workspace_tag`, `meshstack_workspace_tags`: within one apply, the provider now writes a workspace one

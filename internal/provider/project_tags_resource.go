@@ -63,7 +63,7 @@ func (r *projectTagsResource) Schema(_ context.Context, _ resource.SchemaRequest
 			"a project carries the defaults meshStack injects for restricted tag definitions, and adopting those "+
 			"would produce a plan that never converges. Note also that a tag declared with an empty value list is kept "+
 			"in state, because the API returns no entry for it at all. Do not mix `meshstack_project_tags` with inline "+
-			"`tags` on `meshstack_project` or with `meshstack_project_tag` resources on the same project.",
+			"`tags` on `meshstack_project` or with `meshstack_project_tag` or `meshstack_project_tag_value` resources on the same project.",
 		"Project tags",
 		map[string]schema.Attribute{
 			"workspace_identifier": requiredReplaceOnChangeString("Identifier of the workspace that owns the project."),

@@ -33,7 +33,7 @@ func tagResourceCaveats(o taggedObject) string {
 
 		"~> **Race conditions.** The read-modify-write cycle is not atomic and the API offers no optimistic locking. " +
 		"Within a single apply the provider serializes every write to the same " + o.name + " — from this resource, " +
-		"`" + o.tagResource + "`, `" + o.tagsResource + "` and `" + o.ownerResource + "` alike — so several " +
+		"the other " + o.name + " tag resources and `" + o.ownerResource + "` alike — so several " +
 		"`" + o.tagResource + "` resources on one " + o.name + " keep each other's tags without `depends_on`. Nothing " +
 		"outside that one provider instance is serialized: a concurrent write from another apply, a second provider " +
 		"configuration (alias) pointing at the same meshStack, a panel user, or any other automation can silently clobber " +
