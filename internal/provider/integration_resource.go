@@ -78,8 +78,27 @@ type integrationModel struct {
 }
 
 func (model integrationModel) ToClientDto(diags *diag.Diagnostics) client.MeshIntegration {
-	if _, err := model.Spec.Config.InferType(); err != nil {
+	configType, err := model.Spec.Config.InferType()
+	if err != nil {
 		diags.AddAttributeError(path.Root("spec").AtName("config"), "integration type cannot be determined", err.Error())
+		return client.MeshIntegration{}
+	}
+	var runnerRef *client.UuidRef
+	var runnerRefAttribute string
+	switch configType {
+	case client.MeshIntegrationConfigTypeGithub:
+		runnerRef, runnerRefAttribute = model.Spec.Config.Github.RunnerRef, "github"
+	case client.MeshIntegrationConfigTypeGitlab:
+		runnerRef, runnerRefAttribute = model.Spec.Config.Gitlab.RunnerRef, "gitlab"
+	case client.MeshIntegrationConfigTypeAzureDevops:
+		runnerRef, runnerRefAttribute = model.Spec.Config.AzureDevops.RunnerRef, "azuredevops"
+	}
+	if runnerRefAttribute != "" && runnerRef == nil {
+		diags.AddAttributeError(
+			path.Root("spec").AtName("config").AtName(runnerRefAttribute).AtName("runner_ref"),
+			"integration has no building block runner",
+			"The provider did not find a runner for this integration. Set runner_ref.",
+		)
 		return client.MeshIntegration{}
 	}
 	return client.MeshIntegration{Metadata: model.Metadata, Spec: model.Spec}
@@ -166,7 +185,8 @@ func (r *integrationResource) planDefaultRunnerRef(ctx context.Context, req reso
 		}
 		defaultUuid, err := defaultBuildingBlockRunnerUuid(ctx, r.buildingBlockRunnerClient)
 		if err != nil {
-			resp.Diagnostics.AddError(defaultRunnerNotFound, err.Error())
+			resp.Diagnostics.AddAttributeError(runnerRefPath, defaultRunnerNotFound, err.Error()+
+				"\n\nSet runner_ref to skip this lookup, or give the API key the permission to list building block runners.")
 			return
 		}
 		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, runnerRefPath, client.UuidRef{
