@@ -51,48 +51,12 @@ var (
 // the configuration does not set an explicit value in the `timeouts` block.
 const defaultBuildingBlockTimeout = 30 * time.Minute
 
-// runStartTimeout covers a meshStack redeploy, which can delay the start of a run by minutes.
-const runStartTimeout = 5 * time.Minute
-
-var (
-	errRunNotStarted         = errors.New("meshStack did not start a run")
-	errBuildingBlockVanished = errors.New("building block disappeared while waiting for its run")
-)
-
-var noPreviousRun *client.MeshBuildingBlockV2Status
+var errBuildingBlockVanished = errors.New("building block disappeared while waiting for its run")
 
 const waitingForARunDocs = "https://docs.meshcloud.io/concepts/building-block/#waiting-for-a-run"
 
-// runStartFailedOnPrivateKey keeps status.runStartFailedOn, which has no schema attribute, for the "before" of a delete.
-const runStartFailedOnPrivateKey = "run_start_failed_on"
-
 type privateState interface {
 	GetKey(context.Context, string) ([]byte, diag.Diagnostics)
-	SetKey(context.Context, string, []byte) diag.Diagnostics
-}
-
-func setRunStartFailedOn(ctx context.Context, private privateState, dto *client.MeshBuildingBlockV2) diag.Diagnostics {
-	var failedOn string
-	if dto.Status != nil {
-		failedOn = dto.Status.RunStartFailedOn
-	}
-	value, err := json.Marshal(failedOn)
-	if err != nil {
-		return diag.Diagnostics{diag.NewErrorDiagnostic("Could not store when meshStack last failed to start a run", err.Error())}
-	}
-	return private.SetKey(ctx, runStartFailedOnPrivateKey, value)
-}
-
-func getRunStartFailedOn(ctx context.Context, private privateState, diags *diag.Diagnostics) (failedOn string) {
-	value, getDiags := private.GetKey(ctx, runStartFailedOnPrivateKey)
-	diags.Append(getDiags...)
-	if len(value) == 0 {
-		return ""
-	}
-	if err := json.Unmarshal(value, &failedOn); err != nil {
-		diags.AddError("Could not read when meshStack last failed to start a run", err.Error())
-	}
-	return failedOn
 }
 
 func withBuildingBlockDetails(detail string, bb *client.MeshBuildingBlockV2) string {
@@ -387,8 +351,7 @@ func (r *buildingBlockResource) Schema(ctx context.Context, req resource.SchemaR
 					"`WAITING_FOR_DEPENDENCY`); run the apply again once that is resolved. Every outcome of the run is a warning, and " +
 					"the state holds the status meshStack reported last. To fail the apply when the run did not succeed, add a " +
 					"postcondition on `self.status.succeeded`. It only makes sense with `true`: with `false` the state holds the status " +
-					"meshStack answered the change with, before the run. After the repair of a failed run, that status still shows " +
-					"the failed run until the next refresh, so a plan with `-refresh=false` would run the repair again. Deletion always waits for the block to be fully removed " +
+					"meshStack answered the change with, which is `PENDING` when the change starts a run. Deletion always waits for the block to be fully removed " +
 					"(lifecycle DELETED, or gone after a purge) regardless of this flag, so dependent resources such as the building " +
 					"block definition can be deleted safely afterward; it fails at once when its run waits for a person or a " +
 					"dependency. Each wait is bounded by `timeouts` (see `timeouts.delete` for deprovisioning). See " +
@@ -758,47 +721,21 @@ func (r *buildingBlockResource) awaitRun(
 	ctx context.Context,
 	diags *diag.Diagnostics,
 	uuid string,
-	before *client.MeshBuildingBlockV2Status,
+	answer *client.MeshBuildingBlockV2,
 	timeout time.Duration,
 ) *client.MeshBuildingBlockV2 {
-	since, runStarted := waitBaseline(before)
-	runStartDeadline := time.Now().Add(runStartTimeout)
-	var final *client.MeshBuildingBlockV2
-	err := poll.AtMostFor(timeout, r.BuildingBlockClient.ReadFunc(uuid), poll.WithLastResultTo(&final)).
-		Until(ctx, func(bb *client.MeshBuildingBlockV2) (bool, error) {
-			if bb == nil {
-				return false, errBuildingBlockVanished
-			}
-			if !runStarted && bb.Status != nil {
-				runStarted = bb.Status.RunChangedSince(since)
-				if !runStarted && bb.Status.IsRunning() {
-					// meshStack starts the update's run only after the current run has ended.
-					runStartDeadline = time.Now().Add(runStartTimeout)
+	final := answer
+	var err error
+	if final.Status == nil || final.Status.IsRunning() {
+		err = poll.AtMostFor(timeout, r.BuildingBlockClient.ReadFunc(uuid), poll.WithLastResultTo(&final)).
+			Until(ctx, func(bb *client.MeshBuildingBlockV2) (bool, error) {
+				if bb == nil {
+					return false, errBuildingBlockVanished
 				}
-			}
-			if !runStarted && time.Now().After(runStartDeadline) {
-				return false, errRunNotStarted
-			}
-			return bb.RunEndedSince(since)
-		})
-	if errors.Is(err, poll.ErrTimedOut) && !runStarted {
-		err = errRunNotStarted
+				return bb.Status != nil && !bb.Status.IsRunning(), nil
+			})
 	}
 	switch {
-	case errors.Is(err, errRunNotStarted):
-		unchanged := fmt.Sprintf("action %s", before.Action)
-		if run := before.GetLatestRunUuid(); run != "" {
-			unchanged += fmt.Sprintf(", from run %s", run)
-		}
-		diags.AddError(
-			"meshStack did not start a run for the updated building block",
-			withBuildingBlockDetails(fmt.Sprintf("meshStack accepted the update of building block %s but did not start a run for it: "+
-				"the block still reports what it reported before the update, %s. The apply waits for that run until %.0f minutes after the "+
-				"previous run of the block has ended, and at most until timeouts.update runs out. Check the building block in "+
-				"meshPanel and run the apply again once its runs have finished. If no new run appears there at all, report the "+
-				"uuid of this building block as a meshStack issue.",
-				uuid, unchanged, runStartTimeout.Minutes()), final),
-		)
 	case errors.Is(err, errBuildingBlockVanished):
 		diags.AddError(
 			"Building block disappeared while waiting for its run",
@@ -831,14 +768,6 @@ func (r *buildingBlockResource) awaitRun(
 	return final
 }
 
-// waitBaseline treats a queued run as started: meshStack hands it the update and keeps its uuid.
-func waitBaseline(before *client.MeshBuildingBlockV2Status) (since client.MeshBuildingBlockV2Status, runStarted bool) {
-	if before == nil || before.Action == client.BuildingBlockActionPending {
-		return client.MeshBuildingBlockV2Status{}, true
-	}
-	return *before, false
-}
-
 func actionOf(bb *client.MeshBuildingBlockV2) string {
 	if bb == nil || bb.Status == nil {
 		return "(none yet)"
@@ -863,7 +792,6 @@ func (r *buildingBlockResource) Create(ctx context.Context, req resource.CreateR
 	plan.SetFromClientDto(created, false, &resp.Diagnostics)
 	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, plan, converterOptions...)...)
 	resp.Diagnostics.Append(resp.Private.SetKey(ctx, basedOnDraftVersionPrivateKey, basedOnDraftVersion(created))...)
-	resp.Diagnostics.Append(setRunStartFailedOn(ctx, resp.Private, created)...)
 	if resp.Diagnostics.HasError() || !waitForCompletion(ctx, req.Config, &resp.Diagnostics) {
 		return
 	}
@@ -872,11 +800,10 @@ func (r *buildingBlockResource) Create(ctx context.Context, req resource.CreateR
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	if final := r.awaitRun(ctx, &resp.Diagnostics, *created.Metadata.Uuid, noPreviousRun, timeout); final != nil {
+	if final := r.awaitRun(ctx, &resp.Diagnostics, *created.Metadata.Uuid, created, timeout); final != nil {
 		plan.SetFromClientDto(final, false, &resp.Diagnostics)
 		resp.Diagnostics.Append(generic.Set(ctx, &resp.State, plan, converterOptions...)...)
 		resp.Diagnostics.Append(resp.Private.SetKey(ctx, basedOnDraftVersionPrivateKey, basedOnDraftVersion(final))...)
-		resp.Diagnostics.Append(setRunStartFailedOn(ctx, resp.Private, final)...)
 	}
 }
 
@@ -909,7 +836,6 @@ func (r *buildingBlockResource) Read(ctx context.Context, req resource.ReadReque
 	state.PurgeOnDelete = purgeOnDelete
 	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, state, converterOptions...)...)
 	resp.Diagnostics.Append(resp.Private.SetKey(ctx, basedOnDraftVersionPrivateKey, basedOnDraftVersion(readDto))...)
-	resp.Diagnostics.Append(setRunStartFailedOn(ctx, resp.Private, readDto)...)
 }
 
 // requiresReplaceParentsWhenVersionUnchanged forces replacement when parent_building_block_refs changes
@@ -1193,19 +1119,17 @@ func (r *buildingBlockResource) Update(ctx context.Context, req resource.UpdateR
 		effective = triggered
 	}
 
-	if state.Status != nil {
-		state.Status.RunStartFailedOn = getRunStartFailedOn(ctx, req.Private, &resp.Diagnostics)
-	}
 	var plannedAction types.String
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("status").AtName("action"), &plannedAction)...)
 	statusPlannedUnknown := plannedAction.IsUnknown()
-	before, runFollows := runFollowingUpdate(state.Status, effective.Status, statusPlannedUnknown)
+	// A plan that kept the status known cannot take a new one: it would be an inconsistent result.
+	runFollows := statusPlannedUnknown && effective.Status != nil && effective.Status.IsRunning()
 	if (needsRun || runFollows) && waitForCompletion(ctx, req.Config, &resp.Diagnostics) {
 		timeout := resolveTimeout(ctx, req.Plan, "update", &resp.Diagnostics)
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		if final := r.awaitRun(ctx, &resp.Diagnostics, *updated.Metadata.Uuid, before, timeout); final != nil {
+		if final := r.awaitRun(ctx, &resp.Diagnostics, *updated.Metadata.Uuid, effective, timeout); final != nil {
 			effective = final
 		}
 	}
@@ -1217,23 +1141,6 @@ func (r *buildingBlockResource) Update(ctx context.Context, req resource.UpdateR
 	}
 	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, plan, converterOptions...)...)
 	resp.Diagnostics.Append(resp.Private.SetKey(ctx, basedOnDraftVersionPrivateKey, basedOnDraftVersion(effective))...)
-	resp.Diagnostics.Append(setRunStartFailedOn(ctx, resp.Private, effective)...)
-}
-
-// runFollowingUpdate finds a run that meshStack started or queued for an update, also when the plan expected none.
-// A plan that kept the status known cannot wait for it: the new status would be an inconsistent result.
-func runFollowingUpdate(prior, answer *client.MeshBuildingBlockV2Status, statusPlannedUnknown bool) (before *client.MeshBuildingBlockV2Status, found bool) {
-	if prior == nil || answer == nil || !statusPlannedUnknown {
-		return answer, false
-	}
-	if answer.RunChangedSince(*prior) {
-		if answer.Action == client.BuildingBlockActionInProgress {
-			// meshStack answers the PUT before it starts the update's run, so a run in progress cannot carry the update.
-			return answer, true
-		}
-		return prior, true
-	}
-	return answer, answer.Action == client.BuildingBlockActionPending
 }
 
 // requestDeletion waits out the conflict meshStack answers while the block's run has not reached a
@@ -1262,14 +1169,6 @@ func (r *buildingBlockResource) Delete(ctx context.Context, req resource.DeleteR
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	var before client.MeshBuildingBlockV2Status
-	if inState := generic.GetAttribute[*client.MeshBuildingBlockV2Status](ctx, req.State, path.Root("status"), &resp.Diagnostics, withBuildingBlockStatusValueToConverter()); inState != nil {
-		before = *inState
-	}
-	before.RunStartFailedOn = getRunStartFailedOn(ctx, req.Private, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
 	if err := r.requestDeletion(ctx, uuid, purgeOnDelete, timeout); err != nil {
 		resp.Diagnostics.AddError(
 			"Error deleting building block",
@@ -1286,7 +1185,7 @@ func (r *buildingBlockResource) Delete(ctx context.Context, req resource.DeleteR
 	var final *client.MeshBuildingBlockV2
 	err := poll.AtMostFor(timeout, r.BuildingBlockClient.ReadFunc(uuid),
 		poll.WithLastResultTo(&final)).
-		Until(ctx, func(bb *client.MeshBuildingBlockV2) (bool, error) { return bb.DeletionSuccessful(before) })
+		Until(ctx, (*client.MeshBuildingBlockV2).DeletionSuccessful)
 	if err != nil {
 		r.addRunFailureDiagnostics(ctx, &resp.Diagnostics, diag.SeverityError, "Building block deletion failed", err.Error(), final)
 		return // keep resource in state on failure
