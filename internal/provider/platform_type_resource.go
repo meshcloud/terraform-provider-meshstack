@@ -142,8 +142,8 @@ func (r *platformTypeResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
-	platformType := client.MeshPlatformTypeCreate{
-		Metadata: client.MeshPlatformTypeCreateMetadata{
+	platformType := client.MeshPlatformType{
+		Metadata: client.MeshPlatformTypeMetadata{
 			Name:             name,
 			OwnedByWorkspace: ownedByWorkspace,
 		},
@@ -155,7 +155,7 @@ func (r *platformTypeResource) Create(ctx context.Context, req resource.CreateRe
 		},
 	}
 
-	createdPlatformType, err := r.meshPlatformTypeClient.Create(ctx, &platformType)
+	createdPlatformType, err := r.meshPlatformTypeClient.Create(ctx, platformType)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Creating Platform Type",
@@ -164,7 +164,7 @@ func (r *platformTypeResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, newPlatformTypeModel(createdPlatformType))...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, newPlatformTypeModel(&createdPlatformType))...)
 }
 
 func (r *platformTypeResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -199,7 +199,6 @@ func (r *platformTypeResource) Update(ctx context.Context, req resource.UpdateRe
 	var planCategory string
 	var planDefaultEndpoint *string
 	var planIcon string
-	var stateName string
 
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("metadata").AtName("name"), &planName)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("metadata").AtName("owned_by_workspace"), &planOwnedByWorkspace)...)
@@ -207,14 +206,13 @@ func (r *platformTypeResource) Update(ctx context.Context, req resource.UpdateRe
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("spec").AtName("category"), &planCategory)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec").AtName("default_endpoint"), &planDefaultEndpoint)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec").AtName("icon"), &planIcon)...)
-	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("metadata").AtName("name"), &stateName)...)
 
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	platformType := client.MeshPlatformTypeCreate{
-		Metadata: client.MeshPlatformTypeCreateMetadata{
+	platformType := client.MeshPlatformType{
+		Metadata: client.MeshPlatformTypeMetadata{
 			Name:             planName,
 			OwnedByWorkspace: planOwnedByWorkspace,
 		},
@@ -226,7 +224,7 @@ func (r *platformTypeResource) Update(ctx context.Context, req resource.UpdateRe
 		},
 	}
 
-	updatedPlatformType, err := r.meshPlatformTypeClient.Update(ctx, stateName, &platformType)
+	updatedPlatformType, err := r.meshPlatformTypeClient.Update(ctx, platformType)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Updating Platform Type",
@@ -235,7 +233,7 @@ func (r *platformTypeResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, newPlatformTypeModel(updatedPlatformType))...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, newPlatformTypeModel(&updatedPlatformType))...)
 }
 
 func (r *platformTypeResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {

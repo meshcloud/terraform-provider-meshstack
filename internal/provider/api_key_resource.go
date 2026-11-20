@@ -149,7 +149,7 @@ func (r *apiKeyResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	created, err := r.meshApiKeyClient.Create(ctx, plan)
+	created, err := r.meshApiKeyClient.Create(ctx, *plan)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to create API key", err.Error())
 		return
@@ -196,7 +196,7 @@ func (r *apiKeyResource) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
-	updated, err := r.meshApiKeyClient.Update(ctx, *plan.Metadata.Uuid, plan)
+	updated, err := r.meshApiKeyClient.Update(ctx, *plan)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to update API key", err.Error())
 		return

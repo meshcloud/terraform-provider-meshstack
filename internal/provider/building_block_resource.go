@@ -32,6 +32,7 @@ import (
 	"github.com/meshcloud/meshstack-cli/client"
 	clientTypes "github.com/meshcloud/meshstack-cli/client/types"
 	"github.com/meshcloud/meshstack-cli/client/types/enum"
+	"github.com/meshcloud/meshstack-cli/client/types/hal"
 
 	"github.com/meshcloud/terraform-provider-meshstack/internal/types/generic"
 	"github.com/meshcloud/terraform-provider-meshstack/internal/types/secret"
@@ -99,8 +100,11 @@ func withBuildingBlockDetails(detail string, bb *client.MeshBuildingBlockV2) str
 	if reason := runStartFailureOf(bb); reason != "" {
 		detail += "\n\nmeshStack could not start the run: " + reason
 	}
-	if link := bb.MeshPanelLink(); link != "" {
-		detail += "\n\nOpen the building block in meshPanel: " + link
+	if bb == nil {
+		return detail
+	}
+	if meshPanel, found := bb.Links["meshPanel"]; found {
+		detail += "\n\nOpen the building block in meshPanel: " + meshPanel.Href
 	}
 	return detail
 }
@@ -698,7 +702,7 @@ func (r *buildingBlockResource) addRunFailureDiagnostics(
 	if bb == nil || bb.Status == nil || bb.Status.LatestRunUuid == nil || runStartFailureOf(bb) != "" {
 		return
 	}
-	logs, err := r.BuildingBlockRunClient.GetLogs(ctx, *bb.Status.LatestRunUuid)
+	logs, err := r.runLogs(ctx, *bb.Status.LatestRunUuid)
 	if err != nil {
 		// Fetching run logs can legitimately fail: the building block definition may have run
 		// transparency disabled, or the caller's permissions may not allow reading them. Surface it
@@ -744,6 +748,17 @@ func (r *buildingBlockResource) addRunFailureDiagnostics(
 	}
 }
 
+func (r *buildingBlockResource) runLogs(ctx context.Context, runUuid string) (client.MeshBuildingBlockRunLogs, error) {
+	run, err := r.BuildingBlockRunClient.Read(ctx, runUuid)
+	switch {
+	case err != nil:
+		return client.MeshBuildingBlockRunLogs{}, err
+	case run == nil:
+		return client.MeshBuildingBlockRunLogs{}, fmt.Errorf("run %s not found", runUuid)
+	}
+	return run.Links.Get[client.MeshBuildingBlockRunLogs](ctx, "downloadLogs")
+}
+
 func addWaitingForInputWarning(diags *diag.Diagnostics, bb *client.MeshBuildingBlockV2) {
 	diags.AddWarning(
 		"Building block run is waiting for input or approval",
@@ -764,7 +779,9 @@ func (r *buildingBlockResource) awaitRun(
 	since, runStarted := waitBaseline(before)
 	runStartDeadline := time.Now().Add(runStartTimeout)
 	var final *client.MeshBuildingBlockV2
-	err := poll.AtMostFor(timeout, r.BuildingBlockClient.ReadFunc(uuid), poll.WithLastResultTo(&final)).
+	err := poll.AtMostFor(timeout, func(ctx context.Context) (*client.MeshBuildingBlockV2, error) {
+		return r.BuildingBlockClient.Read(ctx, uuid)
+	}, poll.WithLastResultTo(&final)).
 		Until(ctx, func(bb *client.MeshBuildingBlockV2) (bool, error) {
 			if bb == nil {
 				return false, errBuildingBlockVanished
@@ -855,15 +872,15 @@ func (r *buildingBlockResource) Create(ctx context.Context, req resource.CreateR
 	}
 
 	// Send only Spec — Metadata.Uuid and Status are assigned by the backend.
-	created, err := r.BuildingBlockClient.Create(ctx, &client.MeshBuildingBlockV2{Spec: plan.Spec})
+	created, err := r.BuildingBlockClient.Create(ctx, client.MeshBuildingBlockV2{Spec: plan.Spec})
 	if err != nil {
 		resp.Diagnostics.AddError("Error creating building block", err.Error())
 		return
 	}
-	plan.SetFromClientDto(created, false, &resp.Diagnostics)
+	plan.SetFromClientDto(&created, false, &resp.Diagnostics)
 	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, plan, converterOptions...)...)
-	resp.Diagnostics.Append(resp.Private.SetKey(ctx, basedOnDraftVersionPrivateKey, basedOnDraftVersion(created))...)
-	resp.Diagnostics.Append(setRunStartFailedOn(ctx, resp.Private, created)...)
+	resp.Diagnostics.Append(resp.Private.SetKey(ctx, basedOnDraftVersionPrivateKey, basedOnDraftVersion(&created))...)
+	resp.Diagnostics.Append(setRunStartFailedOn(ctx, resp.Private, &created)...)
 	if resp.Diagnostics.HasError() || !waitForCompletion(ctx, req.Config, &resp.Diagnostics) {
 		return
 	}
@@ -893,7 +910,7 @@ func (r *buildingBlockResource) Read(ctx context.Context, req resource.ReadReque
 	}
 	// The block is gone when the read 404s (nil, e.g. after a hard delete/purge) or when the backend
 	// returns it soft-deleted (lifecycle DELETED — a soft delete does not 404). Either way, drop it.
-	if readDto == nil || (readDto.Status != nil && readDto.Status.Lifecycle.State == client.BuildingBlockLifecycleStateDeleted) {
+	if readDto == nil || (readDto.Status != nil && readDto.Status.Lifecycle.State == client.MeshLifecycleStateDeleted) {
 		resp.State.RemoveResource(ctx)
 		return
 	}
@@ -1148,7 +1165,7 @@ func (r *buildingBlockResource) Update(ctx context.Context, req resource.UpdateR
 	}
 
 	// Send only Metadata+Spec — Status is read-only and must not be passed to PUT.
-	updated, err := r.BuildingBlockClient.Update(ctx, &client.MeshBuildingBlockV2{
+	updated, err := r.BuildingBlockClient.Update(ctx, client.MeshBuildingBlockV2{
 		Metadata: plan.Metadata,
 		Spec:     plan.Spec,
 	})
@@ -1171,26 +1188,34 @@ func (r *buildingBlockResource) Update(ctx context.Context, req resource.UpdateR
 		planInputsChanged(plan.Spec.Inputs, state.Spec.Inputs) ||
 		!reflect.DeepEqual(plan.Spec.ParentBuildingBlockRefs, state.Spec.ParentBuildingBlockRefs) ||
 		secretRotated
-	effective := updated
+	effective := &updated
 	if needsRun && !backendWillRun {
-		triggered, err := r.BuildingBlockClient.TriggerRun(ctx, *updated.Metadata.Uuid)
+		triggered, err := updated.Links.Post[client.MeshBuildingBlockV2](ctx, "triggerRun", client.MeshBuildingBlockV2RunTrigger{})
 		if err != nil {
-			if httpErr, ok := errors.AsType[client.HttpError](err); ok && httpErr.IsForbidden() && repairNeeded {
+			httpErr, isHttpErr := errors.AsType[client.HttpError](err)
+			refused := errors.Is(err, hal.ErrNoLink) || isHttpErr && httpErr.IsForbidden()
+			if !refused {
+				resp.Diagnostics.AddError("Error triggering building block run", err.Error())
+				return
+			}
+			if repairNeeded {
 				resp.Diagnostics.AddError(
 					"Building block run did not succeed and meshStack refused to run it again",
 					withBuildingBlockDetails(fmt.Sprintf("The last run of building block %s ended with the action %s, so this apply tried "+
-						"to run it again, and meshStack rejected that with a 403. A workspace-scoped API key may only trigger runs on a "+
+						"to run it again, and meshStack refused that. A workspace-scoped API key may only trigger runs on a "+
 						"building block definition that has run transparency enabled. Ask the platform team owning the "+
 						"definition to enable run transparency, use an API key with admin or platform operator permissions, "+
 						"or run the building block in meshPanel. Underlying error: %s",
-						*updated.Metadata.Uuid, state.Status.Action, err.Error()), updated),
+						*updated.Metadata.Uuid, state.Status.Action, err.Error()), &updated),
 				)
 				return
 			}
-			resp.Diagnostics.AddError("Error triggering building block run", err.Error())
+			resp.Diagnostics.AddError("Error triggering building block run", fmt.Sprintf("This API key may not run building block %s. "+
+				"A workspace-scoped API key may only trigger runs on a building block definition that has run transparency enabled. "+
+				"Underlying error: %s", *updated.Metadata.Uuid, err.Error()))
 			return
 		}
-		effective = triggered
+		effective = &triggered
 	}
 
 	if state.Status != nil {
@@ -1241,7 +1266,7 @@ func runFollowingUpdate(prior, answer *client.MeshBuildingBlockV2Status, statusP
 // behind, and meshStack starts runs no apply asked for.
 func (r *buildingBlockResource) requestDeletion(ctx context.Context, uuid string, purge bool, timeout time.Duration) error {
 	return retry.RetryContext(ctx, timeout, func() *retry.RetryError {
-		err := r.BuildingBlockClient.Delete(ctx, uuid, purge)
+		err := r.deleteOrPurge(ctx, uuid, purge)
 		if httpErr, ok := errors.AsType[client.HttpError](err); ok && httpErr.IsConflict() {
 			return retry.RetryableError(err)
 		}
@@ -1250,6 +1275,24 @@ func (r *buildingBlockResource) requestDeletion(ctx context.Context, uuid string
 		}
 		return nil
 	})
+}
+
+func (r *buildingBlockResource) deleteOrPurge(ctx context.Context, uuid string, purge bool) error {
+	if !purge {
+		return r.BuildingBlockClient.Delete(ctx, uuid)
+	}
+	bb, err := r.BuildingBlockClient.Read(ctx, uuid)
+	if err != nil || bb == nil {
+		return err
+	}
+	err = bb.Links.Delete(ctx, "forcePurge")
+	if errors.Is(err, hal.ErrNoLink) {
+		return fmt.Errorf("%w: this API key may not purge building block %s, which needs admin authority, or its deletion has begun", err, uuid)
+	}
+	if httpErr, ok := errors.AsType[client.HttpError](err); ok && httpErr.IsNotFound() {
+		return nil
+	}
+	return err
 }
 
 func (r *buildingBlockResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -1284,8 +1327,9 @@ func (r *buildingBlockResource) Delete(ctx context.Context, req resource.DeleteR
 	// from state while teardown is still in flight, racing any dependent delete that follows — e.g.
 	// deleting the building block definition then fails 409 "existing BuildingBlocks referencing it".
 	var final *client.MeshBuildingBlockV2
-	err := poll.AtMostFor(timeout, r.BuildingBlockClient.ReadFunc(uuid),
-		poll.WithLastResultTo(&final)).
+	err := poll.AtMostFor(timeout, func(ctx context.Context) (*client.MeshBuildingBlockV2, error) {
+		return r.BuildingBlockClient.Read(ctx, uuid)
+	}, poll.WithLastResultTo(&final)).
 		Until(ctx, func(bb *client.MeshBuildingBlockV2) (bool, error) { return bb.DeletionSuccessful(before) })
 	if err != nil {
 		r.addRunFailureDiagnostics(ctx, &resp.Diagnostics, diag.SeverityError, "Building block deletion failed", err.Error(), final)

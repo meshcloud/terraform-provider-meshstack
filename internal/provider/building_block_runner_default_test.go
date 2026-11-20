@@ -17,7 +17,7 @@ type fakeRunnerLister struct {
 	list listRunnersFunc
 }
 
-func (f fakeRunnerLister) List(context.Context, client.MeshBuildingBlockRunnerFilter) ([]client.MeshBuildingBlockRunner, error) {
+func (f fakeRunnerLister) List(context.Context, client.MeshBuildingBlockRunnerFilter, ...client.ListOption) ([]client.MeshBuildingBlockRunner, error) {
 	return f.list()
 }
 

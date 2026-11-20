@@ -239,7 +239,7 @@ func Test_versionContentHash_userDataNamedPlaintext(t *testing.T) {
 				"argument": "hello"
 			}
 		},
-		"implementation": {"terraform": {}}
+		"implementation": {"type": "terraform", "terraform": {}}
 	}`
 	var versionSpec client.MeshBuildingBlockDefinitionVersionSpec
 	require.NoError(t, json.Unmarshal([]byte(userDataJson), &versionSpec))
@@ -301,5 +301,5 @@ func Test_versionContentHash_redactedImplementation(t *testing.T) {
 		calculateBuildingBlockDefinitionVersionContentHash(versionSpec, &diags)
 	})
 	require.Len(t, diags, 1)
-	assert.Contains(t, diags[0].Detail(), "cannot infer implementation type")
+	assert.Contains(t, diags[0].Detail(), "no subtype is set")
 }

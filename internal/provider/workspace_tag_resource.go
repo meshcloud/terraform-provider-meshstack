@@ -204,11 +204,11 @@ func (r *workspaceTagResource) setTag(ctx context.Context, tfPlan tfsdk.Plan, st
 	}
 	tags[key] = values
 
-	updatePayload := client.MeshWorkspaceCreate{
-		Metadata: client.MeshWorkspaceCreateMetadata{Name: wsName, Tags: tags},
+	updatePayload := client.MeshWorkspace{
+		Metadata: client.MeshWorkspaceMetadata{Name: wsName, Tags: tags},
 		Spec:     workspace.Spec,
 	}
-	if _, err := r.meshWorkspaceClient.Update(ctx, wsName, &updatePayload); err != nil {
+	if _, err := r.meshWorkspaceClient.Update(ctx, updatePayload); err != nil {
 		diags.AddError("Error Updating Workspace Tag", fmt.Sprintf("Could not set tag '%s' on workspace '%s': %v", key, wsName, err))
 		return
 	}
@@ -245,11 +245,11 @@ func (r *workspaceTagResource) Delete(ctx context.Context, req resource.DeleteRe
 		}
 	}
 
-	updatePayload := client.MeshWorkspaceCreate{
-		Metadata: client.MeshWorkspaceCreateMetadata{Name: wsName, Tags: tags},
+	updatePayload := client.MeshWorkspace{
+		Metadata: client.MeshWorkspaceMetadata{Name: wsName, Tags: tags},
 		Spec:     workspace.Spec,
 	}
-	if _, err := r.meshWorkspaceClient.Update(ctx, wsName, &updatePayload); err != nil {
+	if _, err := r.meshWorkspaceClient.Update(ctx, updatePayload); err != nil {
 		resp.Diagnostics.AddError("Error Removing Workspace Tag", fmt.Sprintf("Could not remove tag '%s' from workspace '%s': %v", key, wsName, err))
 		return
 	}

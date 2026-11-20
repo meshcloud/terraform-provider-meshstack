@@ -12,6 +12,8 @@ import (
 )
 
 type meshBuildingBlockDefinitionClient struct {
+	client.MeshBuildingBlockDefinitionClient
+
 	Store        *Store[client.MeshBuildingBlockDefinition]
 	StoreVersion *Store[client.MeshBuildingBlockDefinitionVersion]
 	StoreRunner  *Store[client.MeshBuildingBlockRunner]
@@ -30,7 +32,7 @@ func (m meshBuildingBlockDefinitionClient) setStatus(definition *client.MeshBuil
 	definition.Status.Versions = make([]client.MeshBuildingBlockDefinitionStatusVersion, len(versions))
 	for i, version := range versions {
 		definition.Status.Versions[i] = client.MeshBuildingBlockDefinitionStatusVersion{
-			VersionUuid:                version.Metadata.Uuid,
+			VersionUuid:                *version.Metadata.Uuid,
 			VersionNumber:              *version.Spec.VersionNumber,
 			State:                      *version.Spec.State,
 			WorkloadIdentityFederation: m.resolveWif(definition, version),
@@ -38,7 +40,7 @@ func (m meshBuildingBlockDefinitionClient) setStatus(definition *client.MeshBuil
 	}
 	if latest := len(versions) - 1; latest >= 0 {
 		definition.Status.LatestVersion = *versions[latest].Spec.VersionNumber
-		definition.Status.LatestVersionUuid = versions[latest].Metadata.Uuid
+		definition.Status.LatestVersionUuid = *versions[latest].Metadata.Uuid
 	}
 	return definition
 }
@@ -100,10 +102,10 @@ func (m meshBuildingBlockDefinitionClient) versions(definitionUuid string) (vers
 	return
 }
 
-func (m meshBuildingBlockDefinitionClient) List(_ context.Context, workspaceIdentifier *string) ([]client.MeshBuildingBlockDefinition, error) {
+func (m meshBuildingBlockDefinitionClient) List(_ context.Context, filter client.MeshBuildingBlockDefinitionFilter, _ ...client.ListOption) ([]client.MeshBuildingBlockDefinition, error) {
 	var result []client.MeshBuildingBlockDefinition
 	for _, def := range m.Store.Values() {
-		if workspaceIdentifier == nil || def.Metadata.OwnedByWorkspace == *workspaceIdentifier {
+		if filter.OwnedByWorkspace == nil || def.Metadata.OwnedByWorkspace == *filter.OwnedByWorkspace {
 			result = append(result, *m.setStatus(def))
 		}
 	}
@@ -117,7 +119,7 @@ func (m meshBuildingBlockDefinitionClient) Read(_ context.Context, uuid string) 
 	return nil, nil
 }
 
-func (m meshBuildingBlockDefinitionClient) Create(_ context.Context, definition client.MeshBuildingBlockDefinition) (*client.MeshBuildingBlockDefinition, error) {
+func (m meshBuildingBlockDefinitionClient) Create(_ context.Context, definition client.MeshBuildingBlockDefinition) (client.MeshBuildingBlockDefinition, error) {
 	definitionUuid := uuid.NewString()
 	definition.Metadata.Uuid = new(definitionUuid)
 	if definition.Spec.Symbol == nil {
@@ -129,7 +131,7 @@ func (m meshBuildingBlockDefinitionClient) Create(_ context.Context, definition 
 	versionUuid := uuid.NewString()
 	m.StoreVersion.Set(versionUuid, &client.MeshBuildingBlockDefinitionVersion{
 		Metadata: client.MeshBuildingBlockDefinitionVersionMetadata{
-			Uuid:             versionUuid,
+			Uuid:             &versionUuid,
 			OwnedByWorkspace: definition.Metadata.OwnedByWorkspace,
 		},
 		Spec: client.MeshBuildingBlockDefinitionVersionSpec{
@@ -143,16 +145,17 @@ func (m meshBuildingBlockDefinitionClient) Create(_ context.Context, definition 
 			State:         client.MeshBuildingBlockDefinitionVersionStateDraft.Ptr(),
 		},
 	})
-	return m.setStatus(&definition), nil
+	return *m.setStatus(&definition), nil
 }
 
-func (m meshBuildingBlockDefinitionClient) Update(_ context.Context, uuid string, definition client.MeshBuildingBlockDefinition) (*client.MeshBuildingBlockDefinition, error) {
+func (m meshBuildingBlockDefinitionClient) Update(_ context.Context, definition client.MeshBuildingBlockDefinition) (client.MeshBuildingBlockDefinition, error) {
+	uuid := *definition.Metadata.Uuid
 	if existing, ok := m.Store.Get(uuid); ok {
 		existing.Spec = definition.Spec
 		existing.Metadata.Tags = definition.Metadata.Tags
-		return m.setStatus(existing), nil
+		return *m.setStatus(existing), nil
 	}
-	return nil, fmt.Errorf("building block definition not found: %s", uuid)
+	return client.MeshBuildingBlockDefinition{}, fmt.Errorf("building block definition not found: %s", uuid)
 }
 
 func (m meshBuildingBlockDefinitionClient) Delete(_ context.Context, uuid string) error {

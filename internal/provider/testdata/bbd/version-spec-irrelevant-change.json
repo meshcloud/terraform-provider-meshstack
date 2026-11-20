@@ -32,6 +32,7 @@
   "versionNumber" : 2,
   "state" : "RELEASED",
   "implementation" : {
+    "type" : "terraform",
     "terraform" : {
       "terraformVersion" : "1.9.0",
       "repositoryUrl" : "https://github.com/example/building-block.git",

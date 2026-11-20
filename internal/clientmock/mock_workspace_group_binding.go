@@ -8,6 +8,8 @@ import (
 )
 
 type MeshWorkspaceGroupBindingClient struct {
+	client.MeshWorkspaceGroupBindingClient
+
 	Store *Store[client.MeshWorkspaceGroupBinding]
 }
 
@@ -16,7 +18,7 @@ func (m MeshWorkspaceGroupBindingClient) Read(_ context.Context, name string) (*
 	return v, nil
 }
 
-func (m MeshWorkspaceGroupBindingClient) List(_ context.Context, filter client.MeshWorkspaceBindingListFilter) ([]client.MeshWorkspaceGroupBinding, error) {
+func (m MeshWorkspaceGroupBindingClient) List(_ context.Context, filter client.MeshWorkspaceBindingFilter, _ ...client.ListOption) ([]client.MeshWorkspaceGroupBinding, error) {
 	if filter.Username != nil {
 		return nil, errors.New("group membership is not mocked")
 	}
@@ -29,9 +31,9 @@ func (m MeshWorkspaceGroupBindingClient) List(_ context.Context, filter client.M
 	return result, nil
 }
 
-func (m MeshWorkspaceGroupBindingClient) Create(_ context.Context, binding *client.MeshWorkspaceGroupBinding) (*client.MeshWorkspaceGroupBinding, error) {
+func (m MeshWorkspaceGroupBindingClient) Create(_ context.Context, binding client.MeshWorkspaceGroupBinding) (client.MeshWorkspaceGroupBinding, error) {
 	binding.Status = &client.MeshGroupBindingStatus{Approval: client.MeshBindingApprovalAssigned}
-	m.Store.Set(binding.Metadata.Name, binding)
+	m.Store.Set(binding.Metadata.Name, &binding)
 	return binding, nil
 }
 

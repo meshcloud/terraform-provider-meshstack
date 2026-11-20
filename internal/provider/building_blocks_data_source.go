@@ -139,7 +139,7 @@ func (d *buildingBlocksDataSource) Read(ctx context.Context, req datasource.Read
 		return
 	}
 
-	blocks, err := d.client.List(ctx, client.MeshBuildingBlockV2ListFilter{
+	blocks, err := d.client.List(ctx, client.MeshBuildingBlockV2Filter{
 		WorkspaceIdentifier:          config.WorkspaceIdentifier,
 		ProjectIdentifier:            config.ProjectIdentifier,
 		PlatformIdentifier:           config.PlatformIdentifier,

@@ -10,6 +10,8 @@ import (
 )
 
 type MeshTenantClient struct {
+	client.MeshTenantClient
+
 	Store *Store[client.MeshTenant]
 	// LandingZoneStore lets Create resolve the assigned landing zone's default quotas, which the backend
 	// merges into a tenant's effective quotas.
@@ -30,13 +32,7 @@ func (m MeshTenantClient) Read(_ context.Context, uuid string) (*client.MeshTena
 	return t, nil
 }
 
-func (m MeshTenantClient) ReadFunc(uuid string) func(ctx context.Context) (*client.MeshTenant, error) {
-	return func(ctx context.Context) (*client.MeshTenant, error) {
-		return m.Read(ctx, uuid)
-	}
-}
-
-func (m MeshTenantClient) Create(_ context.Context, tenant *client.MeshTenantCreate) (*client.MeshTenant, error) {
+func (m MeshTenantClient) Create(_ context.Context, tenant client.MeshTenant) (client.MeshTenant, error) {
 	id := uuid.NewString()
 
 	// Simulate a successful tenant creation with platformTenantId set
@@ -56,7 +52,7 @@ func (m MeshTenantClient) Create(_ context.Context, tenant *client.MeshTenantCre
 
 	created := &client.MeshTenant{
 		Metadata: client.MeshTenantMetadata{
-			Uuid:             id,
+			Uuid:             &id,
 			OwnedByProject:   tenant.Metadata.OwnedByProject,
 			OwnedByWorkspace: tenant.Metadata.OwnedByWorkspace,
 		},
@@ -77,7 +73,7 @@ func (m MeshTenantClient) Create(_ context.Context, tenant *client.MeshTenantCre
 	}
 
 	m.Store.Set(id, created)
-	return created, nil
+	return *created, nil
 }
 
 func (m MeshTenantClient) Delete(_ context.Context, uuid string) error {
@@ -130,7 +126,7 @@ func effectiveQuotas(landingZoneDefaults map[string]int64, requested map[string]
 	return out
 }
 
-func (m MeshTenantClient) List(_ context.Context, query client.MeshTenantQuery) ([]client.MeshTenant, error) {
+func (m MeshTenantClient) List(_ context.Context, query client.MeshTenantFilter, _ ...client.ListOption) ([]client.MeshTenant, error) {
 	var result []client.MeshTenant
 	for _, t := range m.Store.Values() {
 		if t.Status.Lifecycle.State != client.TenantLifecycleStateActive {
