@@ -1,16 +1,10 @@
 # v0.28.2
 
-BREAKING CHANGES:
-- `meshstack_tenant`: destroy now waits for meshStack to delete the tenant, also when `wait_for_completion = false`.
-  Before, such a tenant was left being deleted in the background. If its deletion waits for manual approval, the destroy
-  fails after `timeouts.delete`, 30 minutes by default. To keep the old behaviour, set `wait_for_deletion = false`.
-  The first plan after the upgrade shows this change for every tenant with `wait_for_completion = false`; until you
-  apply it, destroy behaves as before.
-
 FEATURES:
 - `meshstack_tenant`: the new `wait_for_deletion` decides whether destroy waits for meshStack to delete the tenant. It
-  defaults to `true`, because meshStack refuses to delete a workspace while one of its projects still has a tenant
-  being deleted. Set it to `false` to return as soon as meshStack accepts the deletion.
+  defaults to the value of `wait_for_completion`, so existing configurations keep their behaviour. Set it to `true` on
+  a tenant created with `wait_for_completion = false` when its workspace is destroyed in the same run: meshStack refuses
+  to delete a workspace while one of its projects still has a tenant being deleted.
 - `meshstack_tenant`: the new `timeouts.create` and `timeouts.delete` set how long create and destroy wait for the
   tenant. Both default to 30 minutes, the fixed wait before.
 
