@@ -5,7 +5,7 @@ runners.
 
 FEATURES:
 - `meshstack_integration`: a new GitHub, GitLab or Azure DevOps integration without `runner_ref` gets meshStack's
-  default runner. Before, it got the hosted runner with a fixed uuid. An existing integration keeps its runner.
+  default runner. Before, it got the hosted runner with a fixed uuid.
 
 # v0.28.2
 
