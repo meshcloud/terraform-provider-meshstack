@@ -63,35 +63,19 @@ func (r *workspaceTagResource) Configure(_ context.Context, req resource.Configu
 }
 
 func (r *workspaceTagResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	resp.Schema = schema.Schema{
-		MarkdownDescription: "Manages a single dedicated tag for a meshStack workspace.\n\n" +
-			workspaceTagCaveats + "\n\n" +
-			"~> **Note:** Do not mix dedicated `meshstack_workspace_tag` resources with authoritative " +
-			"`meshstack_workspace_tags` or inline `tags` on `meshstack_workspace` for the same workspace. This resource only " +
+	resp.Schema = tagResourceSchema(
+		"Manages a single dedicated tag for a meshStack workspace.\n\n"+
+			workspaceTagCaveats+"\n\n"+
+			"~> **Note:** Do not mix dedicated `meshstack_workspace_tag` resources with authoritative "+
+			"`meshstack_workspace_tags` or inline `tags` on `meshstack_workspace` for the same workspace. This resource only "+
 			"manages its own key; tags under other keys are read and written back unchanged.",
-
-		Attributes: map[string]schema.Attribute{
-			"metadata": schema.SingleNestedAttribute{
-				MarkdownDescription: "Workspace tag metadata.",
-				Required:            true,
-				Attributes: map[string]schema.Attribute{
-					"workspace_identifier": requiredReplaceOnChangeString("Identifier of the target workspace."),
-					"key":                  requiredReplaceOnChangeString("Key of the tag."),
-				},
-			},
-			"spec": schema.SingleNestedAttribute{
-				MarkdownDescription: "Workspace tag specification.",
-				Required:            true,
-				Attributes: map[string]schema.Attribute{
-					"values": schema.ListAttribute{
-						MarkdownDescription: "List of values for this tag.",
-						Required:            true,
-						ElementType:         types.StringType,
-					},
-				},
-			},
+		"Workspace tag",
+		map[string]schema.Attribute{
+			"workspace_identifier": requiredReplaceOnChangeString("Identifier of the target workspace."),
+			"key":                  requiredReplaceOnChangeString("Key of the tag."),
 		},
-	}
+		map[string]schema.Attribute{"values": tagValuesAttribute()},
+	)
 }
 
 func (r *workspaceTagResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -117,23 +101,13 @@ func (r *workspaceTagResource) Read(ctx context.Context, req resource.ReadReques
 		return
 	}
 
-	vals, ok := workspace.Metadata.Tags[key]
-	if !ok {
-		// The API cannot represent a tag with no values — a PUT carrying `{"k": []}` comes back with
-		// `"tags": {}` — so for a resource whose tracked value list is empty, "absent" is that same state
-		// and must not be read as a deletion, or the resource is destroyed and recreated on every apply.
-		// On import there is no prior state (values is null), so an absent key really is missing.
-		declaredEmpty := !state.Spec.Values.IsNull() && len(state.Spec.Values.Elements()) == 0
-		if !declaredEmpty {
-			resp.State.RemoveResource(ctx)
-			return
-		}
-		vals = []string{}
+	values, found, diags := trackedTagValues(ctx, workspace.Metadata.Tags, key, state.Spec.Values)
+	if !found {
+		resp.State.RemoveResource(ctx)
+		return
 	}
-
-	valList, diags := types.ListValueFrom(ctx, types.StringType, vals)
 	resp.Diagnostics.Append(diags...)
-	state.Spec.Values = valList
+	state.Spec.Values = values
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }

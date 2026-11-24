@@ -53,42 +53,24 @@ func (r *projectTagsResource) Configure(_ context.Context, req resource.Configur
 }
 
 func (r *projectTagsResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	resp.Schema = schema.Schema{
-		MarkdownDescription: "Authoritatively manages all tags for a meshStack project.\n\n" +
-			projectTagCaveats + "\n\n" +
-			"~> **Note:** This resource is authoritative on write: every apply replaces **all** tags on the target " +
-			"project with the ones configured here, and destroying it removes them all. It is not authoritative on " +
-			"read — refresh only tracks the keys you configure, so a tag added under another key outside Terraform is " +
-			"not reported as drift, and is removed by the next apply that writes this resource. This is deliberate: " +
-			"a project carries the defaults meshStack injects for restricted tag definitions, and adopting those " +
-			"would produce a plan that never converges. Note also that a tag declared with an empty value list is kept " +
-			"in state, because the API returns no entry for it at all. Do not mix `meshstack_project_tags` with inline " +
+	resp.Schema = tagResourceSchema(
+		"Authoritatively manages all tags for a meshStack project.\n\n"+
+			projectTagCaveats+"\n\n"+
+			"~> **Note:** This resource is authoritative on write: every apply replaces **all** tags on the target "+
+			"project with the ones configured here, and destroying it removes them all. It is not authoritative on "+
+			"read — refresh only tracks the keys you configure, so a tag added under another key outside Terraform is "+
+			"not reported as drift, and is removed by the next apply that writes this resource. This is deliberate: "+
+			"a project carries the defaults meshStack injects for restricted tag definitions, and adopting those "+
+			"would produce a plan that never converges. Note also that a tag declared with an empty value list is kept "+
+			"in state, because the API returns no entry for it at all. Do not mix `meshstack_project_tags` with inline "+
 			"`tags` on `meshstack_project` or with `meshstack_project_tag` resources on the same project.",
-
-		Attributes: map[string]schema.Attribute{
-			"metadata": schema.SingleNestedAttribute{
-				MarkdownDescription: "Project tags metadata.",
-				Required:            true,
-				Attributes: map[string]schema.Attribute{
-					"workspace_identifier": requiredReplaceOnChangeString("Identifier of the workspace that owns the project."),
-					"project_identifier":   requiredReplaceOnChangeString("Identifier of the project."),
-				},
-			},
-			"spec": schema.SingleNestedAttribute{
-				MarkdownDescription: "Project tags specification.",
-				Required:            true,
-				Attributes: map[string]schema.Attribute{
-					"tags": schema.MapAttribute{
-						MarkdownDescription: "All tags to set on the project. This map is authoritative: every apply writes " +
-							"exactly these tags, so any tag not listed here is removed. Only these keys are tracked on refresh — " +
-							"tags added under other keys outside Terraform do not show up as drift.",
-						ElementType: types.ListType{ElemType: types.StringType},
-						Required:    true,
-					},
-				},
-			},
+		"Project tags",
+		map[string]schema.Attribute{
+			"workspace_identifier": requiredReplaceOnChangeString("Identifier of the workspace that owns the project."),
+			"project_identifier":   requiredReplaceOnChangeString("Identifier of the project."),
 		},
-	}
+		map[string]schema.Attribute{"tags": tagsMapAttribute("project")},
+	)
 }
 
 func (r *projectTagsResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
