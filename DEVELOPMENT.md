@@ -17,8 +17,7 @@ End users consuming the released provider want the [`README.md`](README.md) inst
 Or skip installing these: `flake.nix` provides a complete dev shell with every tool pinned (Go,
 Task, OpenTofu, …). Run `nix develop` to enter it, or
 `nix develop --command task testacc` for a one-off. golangci-lint is not in that list on purpose —
-it is a `tool` directive in `go.mod`, so `task lint` builds it from source with the pinned Go and
-needs no dev shell at all.
+it is a `tool` directive in `go.mod`, so `task lint` builds it from source with the pinned Go.
 
 ## Build & install
 
@@ -159,12 +158,14 @@ enforces formatting — gci import ordering (stdlib → third-party → local, b
 gofmt. `govet` is a configured linter, so do **not** run `go vet` separately.
 
 ```bash
-task lint            # golangci-lint (includes format check)
+task lint            # golangci-lint (includes format check), then zizmor
+task lint:actions    # zizmor only: the workflows and the Dependabot config under .github/
 task lint -- --fix   # auto-fix formatting and fixable lint issues
 ```
 
 `task lint` runs `go tool golangci-lint`, so the version is the one pinned in `go.mod` and nothing
-has to be installed first. Do not call a `golangci-lint` on your PATH instead: its formatters use
+has to be installed for it. [zizmor](https://docs.zizmor.sh) checks the GitHub Actions workflows
+for security problems and comes from the dev shell. Do not call a `golangci-lint` on your PATH instead: its formatters use
 the `go/format` compiled into the binary, so a linter built by a different Go release enforces
 different formatting than CI does, and one built by an older Go refuses to run at all.
 

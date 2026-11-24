@@ -21,6 +21,7 @@ jobs:
         with:
           # Allow goreleaser to access older tag information.
           fetch-depth: 0
+          persist-credentials: false
       - uses: cachix/install-nix-action@3dc140bfc76c49fbd4dd958429132e3746bcb086 # v31.11.5
       - name: Import GPG key
         uses: crazy-max/ghaction-import-gpg@2dc316deee8e90f13e1a351ab510b4d5bc0c82cd # v7.0.0

@@ -46,11 +46,17 @@ tasks:
       - go install {{.CLI_ARGS}}
 
   lint:
-    desc: Run golangci-lint
+    desc: Run golangci-lint and zizmor
     cmds:
       # `go tool`, not a binary on PATH: golangci-lint's formatters use the go/format compiled into
       # it, so the formatting they enforce comes from the Go that BUILT the linter.
       - go tool golangci-lint run {{.CLI_ARGS}}
+      - task: lint:actions
+
+  lint:actions:
+    desc: Check the GitHub Actions workflows and the Dependabot config with zizmor
+    cmds:
+      - zizmor --offline ${GITHUB_ACTIONS:+--format=github} .
 
   cli:pin:
     desc: Check that go.mod pins the meshstack-cli sources that the go.work builds against

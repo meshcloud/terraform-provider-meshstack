@@ -6,7 +6,7 @@ name: Acceptance Tests
 # The push trigger is not decoration: running on the main push, and not only on pull requests, is
 # what surfaces a provider/backend regression before a release tag.
 on:
-  pull_request_target:
+  pull_request_target: # zizmor: ignore[dangerous-triggers] the job checks out nothing and only dispatches
   push:
     branches:
       - main
