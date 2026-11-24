@@ -21,16 +21,23 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+defaults:
+  run:
+    shell: nix develop -c bash -eo pipefail {0}
+
 jobs:
   build:
     name: Go Build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
+      - uses: cachix/install-nix-action@3dc140bfc76c49fbd4dd958429132e3746bcb086 # v31.11.5
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          go-version-file: 'go.mod'
-          cache: true
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: go-${{ runner.os }}-${{ github.job }}-${{ hashFiles('go.sum') }}
       - run: go mod tidy
       - run: go build -v .
       - name: git diff
@@ -50,10 +57,13 @@ jobs:
       GOPRIVATE: github.com/meshcloud/meshstack-cli
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
+      - uses: cachix/install-nix-action@3dc140bfc76c49fbd4dd958429132e3746bcb086 # v31.11.5
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          go-version-file: 'go.mod'
-          cache: true
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: go-${{ runner.os }}-${{ github.job }}-${{ hashFiles('go.sum') }}
       - name: Build against the meshstack-cli branch of the same name
         env:
           BRANCH: ${{ github.head_ref }}
@@ -74,16 +84,23 @@ jobs:
       pull-requests: read  # Required for only-new-issues on PRs
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
+      - uses: cachix/install-nix-action@3dc140bfc76c49fbd4dd958429132e3746bcb086 # v31.11.5
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          # The repository's pinned Go, because it is what builds the linter in the next step.
-          go-version-file: 'go.mod'
-          cache: true
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: go-${{ runner.os }}-${{ github.job }}-${{ hashFiles('go.sum') }}
       # Built here rather than downloaded by the action below, because golangci-lint's formatters
       # use the go/format compiled into the binary: the formatting they enforce comes from the Go
       # release that BUILT the linter, not from the toolchain on PATH.
       - name: Build the pinned golangci-lint
-        run: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint
+        run: |
+          go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint
+          {
+            echo "$(go env GOPATH)/bin"
+            dirname "$(command -v go)"
+          } >> "$GITHUB_PATH"
       - name: golangci-lint
         uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
         with:
@@ -102,10 +119,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
+      - uses: cachix/install-nix-action@3dc140bfc76c49fbd4dd958429132e3746bcb086 # v31.11.5
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          go-version-file: 'go.mod'
-          cache: true
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: go-${{ runner.os }}-${{ github.job }}-${{ hashFiles('go.sum') }}
       - run: go tool govulncheck ./...
 
   generate:
@@ -114,13 +134,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
+      - uses: cachix/install-nix-action@3dc140bfc76c49fbd4dd958429132e3746bcb086 # v31.11.5
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          go-version-file: 'go.mod'
-          cache: true
-      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
-        with:
-          terraform_wrapper: false
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: go-${{ runner.os }}-${{ github.job }}-${{ hashFiles('go.sum') }}
       - run: go generate
       - name: git diff
         run: |
@@ -133,31 +153,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
+      - uses: cachix/install-nix-action@3dc140bfc76c49fbd4dd958429132e3746bcb086 # v31.11.5
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          go-version-file: 'go.mod'
-          cache: true
-      # The mock tests (TF_ACC unset -> IsUnitTest) still drive a real CLI. Left to auto-install one,
-      # the framework races parallel exec against its own download ("text file busy"/ETXTBSY, plus
-      # occasional 502s); pin a pre-installed tofu instead.
-      - uses: opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4 # v2.0.2
-        with:
-          tofu_wrapper: false
-      # Coverage lands in a binary coverage-data directory (GOCOVERDIR format) rather than a text
-      # profile, because only the binary form can be merged with the acceptance run's coverage — and
-      # the instrumented binaries flush it on exit even when a test fails. `-coverpkg=./...` has to
-      # match what meshfed-release runs the acceptance suite with: instrument different package sets
-      # and the merged figure is a ratio over two different denominators.
-      - name: Run unit tests with gotestsum
-        env:
-          # OpenTofu resolves the test provider's legacy "-" namespace only against this host.
-          TF_ACC_PROVIDER_HOST: registry.opentofu.org
-        run: |
-          TF_ACC_TERRAFORM_PATH="$(command -v tofu)"
-          export TF_ACC_TERRAFORM_PATH
-          mkdir -p covdata/unit
-          go tool gotestsum --junitfile junit.xml --format testdox -- \
-            -coverpkg=./... ./... -args -test.gocoverdir="$PWD/covdata/unit"
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: go-${{ runner.os }}-${{ github.job }}-${{ hashFiles('go.sum') }}
+      - run: task test:coverage
 
       # meshfed-release merges this with its acceptance coverage and posts the single coverage
       # comment. It finds the run by the pull request head sha, so this has to be uploaded from a

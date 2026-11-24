@@ -27,7 +27,7 @@ the same shape: `api_version`, `kind` (e.g. `meshProject`), `metadata` (name, uu
 Iterating on the provider means driving real Terraform against a real meshStack:
 
 1. **Change** the resource/data source and its client — **`resource-development`**.
-2. **Build** the dev provider and point Terraform at it via `dev_overrides` — [`DEVELOPMENT.md`](DEVELOPMENT.md).
+2. **Build** the dev provider and point OpenTofu at it via `dev_overrides` — [`DEVELOPMENT.md`](DEVELOPMENT.md).
 3. **Reproduce, verify, or prototype** as a standalone config, as the **`terraform-provider-meshstack`**
    skill's "Run a config against a dev build" shows,
    against **any meshStack you hold API credentials for** — a local dev stack *or* a remote

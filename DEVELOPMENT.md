@@ -8,13 +8,17 @@ End users consuming the released provider want the [`README.md`](README.md) inst
 
 - **Go 1.27+** (`go.mod` targets `go 1.27`).
 - **[Task](https://taskfile.dev)** — the task runner for every workflow below (`Taskfile.yml`).
+- **[OpenTofu](https://opentofu.org)** — `task generate` and the tests run `tofu`. The test tasks
+  point the tests at it through `TF_ACC_TERRAFORM_PATH` and `TF_ACC_PROVIDER_HOST`, and so does the
+  nix dev shell; a `go test` without `task` outside that shell needs both set by hand.
 - A meshStack with **API credentials** for anything that talks to a backend (tests, manual runs) —
   see [Backends & authentication](#backends--authentication).
 
 Or skip installing these: `flake.nix` provides a complete dev shell with every tool pinned (Go,
-Task, Terraform, …). Run `nix develop` to enter it, or `nix develop --command task testacc` for
-a one-off. golangci-lint is not in that list on purpose — it is a `tool` directive in `go.mod`, so
-`task lint` builds it from source with the pinned Go and needs no dev shell at all.
+Task, OpenTofu, …). Run `nix develop` to enter it, or
+`nix develop --command task testacc` for a one-off. golangci-lint is not in that list on purpose —
+it is a `tool` directive in `go.mod`, so `task lint` builds it from source with the pinned Go and
+needs no dev shell at all.
 
 ## Build & install
 
@@ -24,10 +28,10 @@ task install   # go install into $GOBIN (for dev_overrides, below)
 task clean      # remove build artifacts
 ```
 
-### Run a dev build from real Terraform (`dev_overrides`)
+### Run a dev build from OpenTofu (`dev_overrides`)
 
 To exercise the just-built provider from your own `.tf` configs (rather than the released registry
-version), point Terraform at your `$GOBIN` in `~/.terraformrc`:
+version), point OpenTofu at your `$GOBIN` in `~/.terraformrc`:
 
 ```hcl
 provider_installation {
@@ -41,7 +45,7 @@ provider_installation {
 ```
 
 Replace `<GOBIN>` with `go env GOBIN` (or `go env GOPATH` + `/bin`). Run `task install` after each
-change. With a dev override Terraform prints a warning and **skips `terraform init`** — run
+change. With a dev override OpenTofu prints a warning and **skips `tofu init`** — run
 `plan`/`apply` directly. For a scoped, git-ignored playground that keeps this override out of your
 global `~/.terraformrc`, see "Run a config against a dev build" in the
 **`terraform-provider-meshstack`** skill — note it wires up a *different* target

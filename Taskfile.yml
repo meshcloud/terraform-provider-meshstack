@@ -5,16 +5,35 @@ dotenv: ['.env']
 tasks:
   testacc:
     desc: Run acceptance tests
-    env:
-      TF_ACC: 1
+    env: &tofu
+      # Without it, terraform-plugin-testing downloads a terraform when a test starts.
+      TF_ACC_TERRAFORM_PATH:
+        sh: command -v tofu
+      # OpenTofu resolves the test provider's legacy "-" namespace only against this host.
+      TF_ACC_PROVIDER_HOST: registry.opentofu.org
     cmds:
       # -count=1 disables Go's test result cache — acceptance tests test a live service (e.g. meshfed-api), whose changes are invisible to Go's source-based cache
-      - go test ./... -v -count=1 {{.CLI_ARGS}} -timeout 120m
+      - TF_ACC=1 go test ./... -v -count=1 -timeout 120m {{.CLI_ARGS}}
 
   test:
     desc: Run unit tests only
+    env: *tofu
     cmds:
       - go test ./... -v {{.CLI_ARGS}} -short
+
+  test:coverage:
+    desc: Run unit tests and write the coverage data that CI uploads
+    env: *tofu
+    cmds:
+      - mkdir -p covdata/unit
+      # Coverage lands in a binary coverage-data directory (GOCOVERDIR format) rather than a text
+      # profile, because only the binary form can be merged with the acceptance run's coverage — and
+      # the instrumented binaries flush it on exit even when a test fails. `-coverpkg=./...` has to
+      # match what meshfed-release runs the acceptance suite with: instrument different package sets
+      # and the merged figure is a ratio over two different denominators.
+      - >-
+        go tool gotestsum --junitfile junit.xml --format testdox --
+        -coverpkg=./... ./... -args -test.gocoverdir="{{.ROOT_DIR}}/covdata/unit"
 
   build:
     desc: Build the provider

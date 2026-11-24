@@ -51,7 +51,7 @@ Rebuild `.env` from the dev seed: `TF_ACC=1`, `MESHSTACK_ENDPOINT=http://localho
 ```bash
 set -a && source .env && set +a
 : > /tmp/acc-tests.log
-nohup bash -c "TF_ACC=1 go test -count=1 ./internal/provider/ -parallel 8 -timeout 300s -v > /tmp/acc-tests.log 2>&1" &
+nohup bash -c "task testacc -- -parallel 8 -timeout 300s > /tmp/acc-tests.log 2>&1" &
 ```
 
 - Run in the background and poll `/tmp/acc-tests.log` for at most 2–3 minutes. A hang or the 300s
