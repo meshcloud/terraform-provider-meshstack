@@ -13,9 +13,7 @@ on:
     branches:
       - main
 
-# Testing only needs permissions to read the repository contents.
-permissions:
-  contents: read
+permissions: {}
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -23,12 +21,14 @@ concurrency:
 
 defaults:
   run:
-    shell: nix develop -c bash -eo pipefail {0}
+    shell: nix develop -c bash -eo pipefail {0} # zizmor: ignore[misfeature] every step takes its tools from the dev shell
 
 jobs:
   build:
     name: Go Build
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -54,6 +54,8 @@ jobs:
     if: github.event_name == 'pull_request'
     needs: [ build ]
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     env:
       # A fresh branch commit is not always on the module proxy and checksum database yet.
       GOPRIVATE: github.com/meshcloud/meshstack-cli
@@ -122,17 +124,21 @@ jobs:
   zizmor:
     name: Workflow Security Check
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - uses: cachix/install-nix-action@3dc140bfc76c49fbd4dd958429132e3746bcb086 # v31.11.5
-      - run: zizmor --offline --format=github .
+      - run: zizmor --offline --persona=auditor --format=github .
 
   govulncheck:
     needs: [ build ]
     name: Go Vulnerability Check
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -150,6 +156,8 @@ jobs:
     name: Generate Terraform Provider Docs
     needs: [ build ]
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -171,6 +179,8 @@ jobs:
     name: Go Test
     needs: [ build ]
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

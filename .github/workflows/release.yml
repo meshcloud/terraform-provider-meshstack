@@ -8,14 +8,18 @@ on:
     tags:
       - 'v*'
 
-# Releases need permissions to read and write the repository contents.
-# GitHub considers creating releases and uploading assets as writing contents.
-permissions:
-  contents: write
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   goreleaser:
+    name: GoReleaser
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # GitHub considers creating releases and uploading assets as writing contents.
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -27,8 +31,8 @@ jobs:
         uses: crazy-max/ghaction-import-gpg@2dc316deee8e90f13e1a351ab510b4d5bc0c82cd # v7.0.0
         id: import_gpg
         with:
-          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
-          passphrase: ${{ secrets.PASSPHRASE }}
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }} # zizmor: ignore[secrets-outside-env] only a pushed v* tag starts this workflow
+          passphrase: ${{ secrets.PASSPHRASE }} # zizmor: ignore[secrets-outside-env] only a pushed v* tag starts this workflow
       - name: Run GoReleaser
         run: nix develop -c goreleaser release --clean
         env:
