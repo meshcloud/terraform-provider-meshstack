@@ -6,6 +6,10 @@ updates:
     directory: "/"
     schedule:
       interval: "daily"
+    cooldown:
+      default-days: 7
+      exclude:
+        - "github.com/meshcloud/*"
     # Combine Go module updates into a single PR instead of one PR per module.
     groups:
       go-modules:
@@ -18,6 +22,8 @@ updates:
     directory: "/infra/github"
     schedule:
       interval: "weekly"
+    cooldown:
+      default-days: 7
 
   - package-ecosystem: "nix"
     directory: "/"
@@ -32,6 +38,8 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    cooldown:
+      default-days: 7
     # Combine all GitHub Actions bumps into a single PR (including major versions),
     # so they can be reviewed and merged together rather than one PR per action.
     groups:
