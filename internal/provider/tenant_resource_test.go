@@ -326,6 +326,55 @@ func TestAccTenant(t *testing.T) {
 		})
 	}
 
+	t.Run("create_not_completed", func(t *testing.T) {
+		if !IsMockClientTest() {
+			t.Skip("needs a tenant whose creation never completes; mock-only")
+		}
+		vars := hclStepVars{"suffix": acctest.RandString(8)}
+		tenantAddress := "meshstack_tenant.example"
+		var mock clientmock.Client
+
+		platformTenantId := tfjsonpath.New("spec").AtMapKey("platform_tenant_id")
+		ApplyAndTest(t, resource.TestCase{
+			Steps: []resource.TestStep{
+				{
+					Config: hclStep(t, "resources/tenant/create_not_completed", 1, vars),
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(tenantAddress, platformTenantId, knownvalue.Null()),
+					},
+				},
+				{
+					Config:      hclStep(t, "resources/tenant/create_not_completed", 2, vars),
+					ExpectError: expectErrorWords("postcondition", "no", "platform", "tenant", "ID", "yet"),
+				},
+				{
+					PreConfig: func() {
+						tenant := *mock.Tenant.Store.Values()[0]
+						tenant.Spec.PlatformTenantId = new("replicated-tenant-id")
+						mock.Tenant.Store.Set(*tenant.Metadata.Uuid, &tenant)
+					},
+					Config: hclStep(t, "resources/tenant/create_not_completed", 2, vars),
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PreApply: []plancheck.PlanCheck{
+							plancheck.ExpectResourceAction(tenantAddress, plancheck.ResourceActionNoop),
+						},
+					},
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(tenantAddress, platformTenantId, knownvalue.StringExact("replicated-tenant-id")),
+					},
+				},
+			},
+			CheckDestroy: func(*terraform.State) error {
+				for _, tenant := range mock.Tenant.Store.Values() {
+					if tenant.Status.Lifecycle.State != client.TenantLifecycleStateDeleted {
+						return fmt.Errorf("tenant %s was left with lifecycle state %s", *tenant.Metadata.Uuid, tenant.Status.Lifecycle.State)
+					}
+				}
+				return nil
+			},
+		}, SeedingMock(func(m clientmock.Client) { mock = m }))
+	})
+
 	t.Run("wait_for_deletion_follows_a_change_of_wait_for_completion", func(t *testing.T) {
 		vars := hclStepVars{"suffix": acctest.RandString(8)}
 		tenantAddress := "meshstack_tenant.example"

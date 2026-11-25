@@ -41,6 +41,11 @@ FIXES:
   that input. Before, the plan showed an update, and the apply failed after it had changed other resources. meshStack
   does not let a sensitive input become non-sensitive. Add the non-sensitive input under a new key, or remove the input
   in one apply and add it back in the next.
+- `meshstack_tenant`: when the creation of a tenant does not complete within `timeouts.create`, the apply ends with a
+  warning and the tenant stays in the state. meshStack keeps replicating it, and a later refresh reads
+  `spec.platform_tenant_id` once meshStack sets it. To fail the apply on this, add a postcondition on
+  `self.spec.platform_tenant_id != null`. Before, the apply failed, and the tenant was missing from the state and
+  remained in meshStack without Terraform managing it.
 
 # v0.29.0
 

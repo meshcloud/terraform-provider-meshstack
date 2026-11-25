@@ -35,6 +35,14 @@ resource "meshstack_tenant" "example" {
     create = "30m"
     delete = "30m"
   }
+
+  # The provider only warns when the creation does not complete in time; this fails the apply without tainting the tenant.
+  lifecycle {
+    postcondition {
+      condition     = self.spec.platform_tenant_id != null
+      error_message = "Tenant ${self.metadata.uuid} has no platform tenant ID yet. Check its replication in meshPanel."
+    }
+  }
 }
 
 # Resolve the platform and landing zone from the plural (marketplace) data sources instead of
@@ -68,7 +76,7 @@ locals {
 ### Optional
 
 - `timeouts` (Attributes) (see [below for nested schema](#nestedatt--timeouts))
-- `wait_for_completion` (Boolean) Wait for tenant creation to complete, at most for `timeouts.create`. Tenant creation is considered complete when `spec.platform_tenant_id` is set and not necessarily when replication is finished. Set it to `false` for a tenant that gets its platform tenant ID later, for example from a building block that is ordered on the tenant after it exists. Defaults to `true`.
+- `wait_for_completion` (Boolean) Wait for tenant creation to complete, at most for `timeouts.create`. Tenant creation is considered complete when `spec.platform_tenant_id` is set and not necessarily when replication is finished. When the creation does not complete within `timeouts.create`, the apply ends with a warning and keeps the tenant in the state, and a later refresh reads `spec.platform_tenant_id` once meshStack sets it. To fail the apply on this, add a postcondition on `self.spec.platform_tenant_id != null`. Set it to `false` for a tenant that gets its platform tenant ID later, for example from a building block that is ordered on the tenant after it exists. Defaults to `true`.
 - `wait_for_deletion` (Boolean) Wait for tenant deletion to complete on destroy, at most for `timeouts.delete`. meshStack deletes a tenant asynchronously and refuses to delete a workspace while one of its projects still has a tenant being deleted. Set it to `false` to return as soon as meshStack accepts the deletion, for example when nothing else in the run waits for the tenant to be gone, or when the deletion waits for manual approval. Defaults to the value of `wait_for_completion`.
 
 ### Read-Only

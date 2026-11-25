@@ -2,9 +2,11 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 	"strings"
+	"time"
 
 	timeouts "github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -84,6 +86,14 @@ func (r *tenantResource) Create(ctx context.Context, req resource.CreateRequest,
 		},
 	}
 
+	var timeout time.Duration
+	if plan.WaitForCompletion {
+		timeout = resolveTimeout(ctx, req.Plan, "create", &resp.Diagnostics)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
 	created, err := r.meshTenantClient.Create(ctx, createRequest)
 	if err != nil {
 		resp.Diagnostics.AddError("Error creating tenant", fmt.Sprintf("Could not create tenant, unexpected error: %s", err.Error()))
@@ -91,18 +101,15 @@ func (r *tenantResource) Create(ctx context.Context, req resource.CreateRequest,
 	}
 
 	tenant := &created
+	var awaitErr error
 	if plan.WaitForCompletion {
-		timeout := resolveTimeout(ctx, req.Plan, "create", &resp.Diagnostics)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		err := poll.AtMostFor(timeout, func(ctx context.Context) (*client.MeshTenant, error) {
+		lastSeen := tenant
+		awaitErr = poll.AtMostFor(timeout, func(ctx context.Context) (*client.MeshTenant, error) {
 			return r.meshTenantClient.Read(ctx, *created.Metadata.Uuid)
-		}, poll.WithLastResultTo(&tenant)).
+		}, poll.WithLastResultTo(&lastSeen)).
 			Until(ctx, (*client.MeshTenant).CreationSuccessful)
-		if err != nil {
-			resp.Diagnostics.AddError("Failed to await tenant creation", err.Error())
-			return
+		if lastSeen != nil {
+			tenant = lastSeen
 		}
 	}
 
@@ -111,6 +118,23 @@ func (r *tenantResource) Create(ctx context.Context, req resource.CreateRequest,
 	model := tenantResourceModelFromDto(tenant, plan.Spec.RequestedQuotas, plan.WaitForCompletion, plan.WaitForDeletion)
 	model.Timeouts = plan.Timeouts
 	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, model, tenantConverterOptions()...)...)
+
+	switch {
+	case errors.Is(awaitErr, poll.ErrTimedOut):
+		resp.Diagnostics.AddWarning("Tenant creation has not completed", fmt.Sprintf(
+			"The creation of tenant %s did not complete within timeouts.create: meshStack has not set its spec.platform_tenant_id yet. "+
+				"meshStack keeps replicating the tenant, and a later refresh reads spec.platform_tenant_id once meshStack sets it. "+
+				"Check the tenant in meshPanel, or raise timeouts.create to wait longer. "+
+				"Add a postcondition on self.spec.platform_tenant_id != null to fail the apply on this.",
+			*tenant.Metadata.Uuid,
+		))
+	case awaitErr != nil:
+		resp.Diagnostics.AddError("Failed to await tenant creation", fmt.Sprintf(
+			"meshStack created tenant %s, but waiting for its creation to complete failed: %s. "+
+				"Terraform keeps the tenant in the state and marks it as tainted, so the next apply replaces it.",
+			*tenant.Metadata.Uuid, awaitErr,
+		))
+	}
 }
 
 func (r *tenantResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -482,7 +506,7 @@ func tenantBodyAttributes() map[string]schema.Attribute {
 		},
 
 		"wait_for_completion": schema.BoolAttribute{
-			MarkdownDescription: "Wait for tenant creation to complete, at most for `timeouts.create`. Tenant creation is considered complete when `spec.platform_tenant_id` is set and not necessarily when replication is finished. Set it to `false` for a tenant that gets its platform tenant ID later, for example from a building block that is ordered on the tenant after it exists. Defaults to `true`.",
+			MarkdownDescription: "Wait for tenant creation to complete, at most for `timeouts.create`. Tenant creation is considered complete when `spec.platform_tenant_id` is set and not necessarily when replication is finished. When the creation does not complete within `timeouts.create`, the apply ends with a warning and keeps the tenant in the state, and a later refresh reads `spec.platform_tenant_id` once meshStack sets it. To fail the apply on this, add a postcondition on `self.spec.platform_tenant_id != null`. Set it to `false` for a tenant that gets its platform tenant ID later, for example from a building block that is ordered on the tenant after it exists. Defaults to `true`.",
 			Optional:            true,
 			Computed:            true,
 			Default:             booldefault.StaticBool(true),

@@ -35,13 +35,16 @@ func (m MeshTenantClient) Read(_ context.Context, uuid string) (*client.MeshTena
 func (m MeshTenantClient) Create(_ context.Context, tenant client.MeshTenant) (client.MeshTenant, error) {
 	id := uuid.NewString()
 
-	// Simulate a successful tenant creation with platformTenantId set
 	tenantName := tenant.Metadata.OwnedByWorkspace + "." + tenant.Metadata.OwnedByProject + "." + tenant.Spec.PlatformRef.Uuid
 	platformTypeIdentifier := "mock-platform-type"
+	platformTenantId := new(acctest.RandString(16))
 	if platform, ok := m.PlatformStore.Get(tenant.Spec.PlatformRef.Uuid); ok {
 		tenantName = tenant.Metadata.OwnedByWorkspace + "." + tenant.Metadata.OwnedByProject + "." + platform.Metadata.Name + "." + platform.Spec.LocationRef.Name
 		if platform.Spec.Config != nil && platform.Spec.Config.Custom != nil {
 			platformTypeIdentifier = platform.Spec.Config.Custom.PlatformTypeRef.Name
+			if !m.landingZoneHasMandatoryBuildingBlocks(tenant.Spec.LandingZoneRef) {
+				platformTenantId = tenant.Spec.PlatformTenantId
+			}
 		}
 	}
 
@@ -58,7 +61,7 @@ func (m MeshTenantClient) Create(_ context.Context, tenant client.MeshTenant) (c
 		},
 		Spec: client.MeshTenantSpec{
 			PlatformRef:      tenant.Spec.PlatformRef,
-			PlatformTenantId: new(acctest.RandString(16)),
+			PlatformTenantId: platformTenantId,
 			LandingZoneRef:   tenant.Spec.LandingZoneRef,
 			RequestedQuotas:  tenant.Spec.RequestedQuotas,
 		},
@@ -88,6 +91,14 @@ func (m MeshTenantClient) Delete(_ context.Context, uuid string) error {
 	}
 	m.Store.Set(uuid, &marked)
 	return nil
+}
+
+func (m MeshTenantClient) landingZoneHasMandatoryBuildingBlocks(ref *client.NamedRef) bool {
+	if ref == nil || m.LandingZoneStore == nil {
+		return false
+	}
+	landingZone, ok := m.LandingZoneStore.Get(ref.Name)
+	return ok && len(landingZone.Spec.MandatoryBuildingBlockRefs) > 0
 }
 
 // landingZoneDefaultQuotas returns the default quotas of the landing zone a tenant is assigned to, or

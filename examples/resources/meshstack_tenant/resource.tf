@@ -20,6 +20,14 @@ resource "meshstack_tenant" "example" {
     create = "30m"
     delete = "30m"
   }
+
+  # The provider only warns when the creation does not complete in time; this fails the apply without tainting the tenant.
+  lifecycle {
+    postcondition {
+      condition     = self.spec.platform_tenant_id != null
+      error_message = "Tenant ${self.metadata.uuid} has no platform tenant ID yet. Check its replication in meshPanel."
+    }
+  }
 }
 
 # Resolve the platform and landing zone from the plural (marketplace) data sources instead of
