@@ -133,11 +133,10 @@ func (r *buildingBlockDefinitionResource) Schema(ctx context.Context, _ resource
 						client.MeshBuildingBlockInputAssignmentTypePaymentMethod.Markdown() + " only on " + client.MeshBuildingBlockTypeWorkspaceLevel.Markdown() + ".<br>" +
 						"The value of a " + client.MeshBuildingBlockInputAssignmentTypePaymentMethod.Markdown() + " input is the `ref` of one of the workspace's active Payment Methods, " +
 						"for example `jsonencode(meshstack_payment_method.mypay.ref)`. The run receives the same `{\"kind\": \"meshPaymentMethod\", \"name\": \"<identifier>\"}`.<br>" +
-						"The value of a " + client.MeshBuildingBlockInputAssignmentTypeLandingZoneIdentifier.Markdown() + " input is the identifier (`metadata.name`) of the landing zone of the tenant the building block lands in. " +
-						"It needs meshStack 2026.46.0 or later.<br>" +
+						"The value of a " + client.MeshBuildingBlockInputAssignmentTypeLandingZoneIdentifier.Markdown() + " input is the identifier (`metadata.name`) of the landing zone of the tenant the building block lands in (since meshStack 2026.46.0).<br>" +
 						"The value of a " + client.MeshBuildingBlockInputAssignmentTypeBuildingBlockUuid.Markdown() + " input is the UUID of the building block itself. " +
-						client.MeshBuildingBlockInputAssignmentTypeTenantBuildingBlockUuid.Markdown() + " is the old name of this assignment type: it gives the same value and stays valid, so a configuration that uses it needs no change. " +
-						client.MeshBuildingBlockInputAssignmentTypeBuildingBlockUuid.Markdown() + " needs meshStack 2026.48.0 or later.",
+						client.MeshBuildingBlockInputAssignmentTypeTenantBuildingBlockUuid.Markdown() + " is deprecated, use " +
+						client.MeshBuildingBlockInputAssignmentTypeBuildingBlockUuid.Markdown() + " instead (since meshStack 2026.48.0).",
 					Required: true,
 					Validators: []validator.String{
 						stringvalidator.OneOf(client.MeshBuildingBlockInputAssignmentTypes.Strings()...),
