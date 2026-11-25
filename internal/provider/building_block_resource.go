@@ -52,7 +52,7 @@ var (
 // the configuration does not set an explicit value in the `timeouts` block.
 const defaultTimeout = 30 * time.Minute
 
-var errBuildingBlockVanished = errors.New("building block disappeared while waiting for its run")
+var errBuildingBlockVanished = errors.New("building block disappeared during the wait")
 
 const waitingForARunDocs = "https://docs.meshcloud.io/concepts/building-block/#waiting-for-a-run"
 
@@ -62,7 +62,7 @@ type privateState interface {
 
 func withBuildingBlockDetails(detail string, bb *client.MeshBuildingBlockV2) string {
 	if reason := runStartFailureOf(bb); reason != "" {
-		detail += "\n\nmeshStack could not start the run: " + reason
+		detail += "\n\n" + reason
 	}
 	if bb == nil {
 		return detail
@@ -353,17 +353,14 @@ func (r *buildingBlockResource) Schema(ctx context.Context, req resource.SchemaR
 				},
 			},
 			"wait_for_completion": schema.BoolAttribute{
-				MarkdownDescription: "Whether create and update wait for the run of the building block to end. Defaults to `true`. The wait ends at once " +
-					"with a warning when the run waits for input, an approval or a dependency (`action` `PROVIDE_INPUT`, `APPROVE_RUN` or " +
-					"`WAITING_FOR_DEPENDENCY`); run the apply again once that is resolved. Every outcome of the run is a warning, and " +
-					"the state holds the status meshStack reported last. To fail the apply when the run did not succeed, add a " +
-					"postcondition on `self.status.succeeded`. It only makes sense with `true`: with `false` the state holds the status " +
-					"meshStack answered the change with, which is `PENDING` when the change starts a run. Deletion always waits for the block to be fully removed " +
-					"(lifecycle DELETED, or gone after a purge) regardless of this flag, so dependent resources such as the building " +
-					"block definition can be deleted safely afterward; it fails at once when its run waits for a person or a " +
-					"dependency. Each wait is bounded by `timeouts` (see `timeouts.delete` for deprovisioning). See " +
-					"[waiting for a run](" + waitingForARunDocs + ") for how meshStack reports a run. The value is write-only: it is " +
-					"never stored in state, so changing only this attribute plans no change.",
+				MarkdownDescription: "Whether create and update wait until `status.action` is no longer `PENDING` or `IN_PROGRESS`. " +
+					"Defaults to `true`. If the building block then needs something (`PROVIDE_INPUT`, `APPROVE_RUN`, " +
+					"`WAITING_FOR_DEPENDENCY` or `REVIEW_ERRORS`), the apply ends with a warning; a postcondition on " +
+					"`self.status.succeeded` fails it instead. With `false`, the apply returns once meshStack has accepted the change. " +
+					"Deletion always waits until the building block is removed, so that dependent resources such as its definition " +
+					"can be deleted afterward; it fails at once when the building block waits for a person or a dependency. Each wait " +
+					"is bounded by `timeouts`. See [waiting for a run](" + waitingForARunDocs + "). Write-only: changing only this " +
+					"attribute plans no change.",
 				Optional:  true,
 				WriteOnly: true,
 			},
@@ -682,9 +679,8 @@ func (r *buildingBlockResource) addRunFailureDiagnostics(
 		// as a warning so the run failure reported above still stands on its own.
 		diags.AddWarning(
 			"Could not fetch run logs",
-			"The building block run did not succeed but its logs could not be retrieved. This can happen when the "+
-				"building block definition has run transparency disabled or your permissions do not allow "+
-				"reading run logs. Inspect the run in meshPanel for details. Underlying error: "+err.Error(),
+			"The logs of the latest run could not be read, for example because run transparency is off or the API key "+
+				"may not read run logs: "+err.Error(),
 		)
 		return
 	}
@@ -734,9 +730,9 @@ func (r *buildingBlockResource) runLogs(ctx context.Context, runUuid string) (cl
 
 func addWaitingForInputWarning(diags *diag.Diagnostics, bb *client.MeshBuildingBlockV2) {
 	diags.AddWarning(
-		"Building block run is waiting for input or approval",
-		withBuildingBlockDetails(fmt.Sprintf("Building block %s has the action %s, so its outputs are not available yet. Provide the "+
-			"input, approve the run or wait for the dependency in meshPanel, then run the apply again.", *bb.Metadata.Uuid, bb.Status.Action), bb),
+		"Building block needs attention: "+bb.Status.Action.String(),
+		withBuildingBlockDetails(fmt.Sprintf("Building block %s has the action %s and no outputs yet. Resolve it in meshPanel, "+
+			"then apply again.", *bb.Metadata.Uuid, bb.Status.Action), bb),
 	)
 }
 
@@ -765,31 +761,28 @@ func (r *buildingBlockResource) awaitRun(
 	switch {
 	case errors.Is(err, errBuildingBlockVanished):
 		diags.AddError(
-			"Building block disappeared while waiting for its run",
-			fmt.Sprintf("Building block %s was deleted in meshStack while this apply waited for its run.", uuid),
+			"Building block disappeared during the wait",
+			fmt.Sprintf("Building block %s was deleted in meshStack while this apply waited for it.", uuid),
 		)
 	case errors.Is(err, poll.ErrTimedOut):
 		diags.AddWarning(
-			"Building block run has not finished",
-			withBuildingBlockDetails(fmt.Sprintf("The run of building block %s still has the action %s after %s. Check the run in "+
-				"meshPanel, or raise timeouts to wait longer.", uuid, actionOf(final), timeout), final),
+			"Building block has not applied the change yet",
+			withBuildingBlockDetails(fmt.Sprintf("Building block %s still has the action %s after %s. Raise timeouts to wait longer.",
+				uuid, actionOf(final), timeout), final),
 		)
 	case err != nil:
-		r.addRunFailureDiagnostics(ctx, diags, diag.SeverityError, "Building block run could not be awaited", err.Error(), final)
+		r.addRunFailureDiagnostics(ctx, diags, diag.SeverityError, "Could not wait for the building block", err.Error(), final)
 	case final.Status.RunFailed():
-		r.addRunFailureDiagnostics(ctx, diags, diag.SeverityWarning, "Building block run did not succeed",
-			fmt.Sprintf("The run of building block %s ended with the action %s, so the building block does not match its "+
-				"configuration. Check the run in meshPanel and fix the cause; the next plan shows an in-place update that "+
-				"runs it again. Add a postcondition on self.status.succeeded to fail the apply on this.",
-				uuid, final.Status.Action), final)
+		r.addRunFailureDiagnostics(ctx, diags, diag.SeverityWarning, "Building block needs attention: "+final.Status.Action.String(),
+			fmt.Sprintf("Building block %s has the action %s. Fix the cause in meshPanel; the next plan runs it again. "+
+				"A postcondition on self.status.succeeded fails the apply instead.", uuid, final.Status.Action), final)
 	case final.IsWaitingForInput():
 		addWaitingForInputWarning(diags, final)
 	case !slices.Contains(client.BuildingBlockActions, final.Status.Action):
 		diags.AddWarning(
 			"Building block has an action this provider does not know",
-			withBuildingBlockDetails(fmt.Sprintf("The run of building block %s ended with the action %s, which this provider version "+
-				"does not know. status.succeeded reads it as not succeeded. Check the building block in meshPanel, and "+
-				"upgrade the provider.", uuid, final.Status.Action), final),
+			withBuildingBlockDetails(fmt.Sprintf("Building block %s has the action %s, which this provider version reads "+
+				"as not succeeded. Upgrade the provider.", uuid, final.Status.Action), final),
 		)
 	}
 	return final
@@ -1098,7 +1091,7 @@ func (r *buildingBlockResource) Update(ctx context.Context, req resource.UpdateR
 		if httpErr, ok := errors.AsType[client.HttpError](err); ok && httpErr.IsConflict() {
 			resp.Diagnostics.AddError(
 				"Building block cannot be updated in its current state",
-				fmt.Sprintf("The backend rejected the update with a conflict (409). This usually means the building block is being deleted. Underlying error: %s", err.Error()),
+				fmt.Sprintf("meshStack answered 409, usually because the building block is being deleted: %s", err.Error()),
 			)
 			return
 		}

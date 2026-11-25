@@ -239,16 +239,17 @@ that is stuck. Apply it before you remove the resource block: the delete reads i
 
 ## Wait for runs and approvals
 
-The apply of a create or an update waits for the run to end, up to `timeouts` (30 minutes by
-default). Raise them for slow runs, for example `timeouts = { create = "60m", update = "60m" }`.
-The apply reports a run that does not succeed as a warning:
+The apply of a create or an update waits while `status.action` is `PENDING` or `IN_PROGRESS`, up to
+`timeouts` (30 minutes by default). This includes a run that waits for a free runner. Raise them for
+slow runs or many building blocks at once, for example `timeouts = { create = "60m", update = "60m" }`.
+When the building block then needs something, the apply ends with a warning:
 
 | The apply reports | What it means | What to do |
 |---|---|---|
-| `Building block run did not succeed` | the run failed or was aborted; the next warning names the first failed step | read the run, as [Why a run failed](https://raw.githubusercontent.com/meshcloud/meshstack-cli/main/skills/meshstack-cli/SKILL.md#why-a-run-failed) shows; fix the cause, then plan and apply again |
-| `Building block run is waiting for input or approval` | an approval gate or a missing operator input stops the run; the apply does not wait for it | read the preflight and ask the user to approve, as [Approval gates and preflight runs](https://raw.githubusercontent.com/meshcloud/meshstack-cli/main/skills/meshstack-cli/SKILL.md#approval-gates-and-preflight-runs) shows |
-| `Building block run has not finished` | the timeout ended while the run was pending or in progress | wait for it, as [Waiting for a run](https://raw.githubusercontent.com/meshcloud/meshstack-cli/main/skills/meshstack-cli/SKILL.md#waiting-for-a-run) shows |
-| `Building block run did not succeed` with `meshStack could not start the run` | meshStack could not start the run, or did not start it within 90 seconds | ask the platform team to check the definition's runner, then apply again |
+| `Building block needs attention: REVIEW_ERRORS` or `REVIEW_ABORTED_RUN` | the latest run failed or was aborted; the next warning names the first failed step | read the run, as [Why a run failed](https://raw.githubusercontent.com/meshcloud/meshstack-cli/main/skills/meshstack-cli/SKILL.md#why-a-run-failed) shows; fix the cause, then plan and apply again |
+| `Building block needs attention: APPROVE_RUN`, `PROVIDE_INPUT` or `WAITING_FOR_DEPENDENCY` | an approval gate, a missing operator input or a dependency stops the building block; the apply does not wait for it | read the preflight and ask the user to approve, as [Approval gates and preflight runs](https://raw.githubusercontent.com/meshcloud/meshstack-cli/main/skills/meshstack-cli/SKILL.md#approval-gates-and-preflight-runs) shows |
+| `Building block has not applied the change yet` | the timeout ended while `status.action` was still `PENDING` or `IN_PROGRESS` | wait for it, as [Waiting for a run](https://raw.githubusercontent.com/meshcloud/meshstack-cli/main/skills/meshstack-cli/SKILL.md#waiting-for-a-run) shows |
+| `Building block needs attention: REVIEW_ERRORS` with `meshStack did not queue a run` | meshStack queued no run for the change within 90 seconds | ask the platform team to check, then apply again |
 
 A human approves a gated run in meshPanel. Never try to approve it yourself. After a run ended
 outside the apply, `tofu plan` reads the block's new status. `status.action` names what a block
