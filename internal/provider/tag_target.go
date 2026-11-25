@@ -113,7 +113,7 @@ func (projectTagTarget) info() tagTargetInfo {
 		inlineTags:        "spec.tags",
 		injectedDefaultOn: "a project",
 		extraCaveats: "~> **The payment methods are written back too.** Every write sends the project's display name, " +
-			"`payment_method_identifier` and `substitute_payment_method_identifier` as it read them. If meshStack switches the " +
+			"payment method and substitute payment method as it read them. If meshStack switches the " +
 			"project to its substitute payment method between this resource's read and its write, the write puts the old " +
 			"payment method back.",
 	}
