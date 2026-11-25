@@ -41,7 +41,9 @@ resource "meshstack_tag_definition" "cost_center" {
     key          = "cost-center-[[.suffix]]"
     display_name = "Cost Center"
     value_type = {
-      string = {}
+      multi_select = {
+        options = ["12345", "67890"]
+      }
     }
   }
 }

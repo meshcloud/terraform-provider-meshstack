@@ -37,7 +37,9 @@ resource "meshstack_tag_definition" "my_key" {
     key          = "my-key-[[.suffix]]"
     display_name = "My Key"
     value_type = {
-      string = {}
+      multi_select = {
+        options = ["tag-value1", "tag-value2", "tag-valueN"]
+      }
     }
   }
 }
