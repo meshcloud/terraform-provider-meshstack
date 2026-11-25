@@ -54,10 +54,6 @@ resource "github_repository_ruleset" "protect_default_branch" {
   }
 
   rules {
-    deletion                = true
-    non_fast_forward        = true # force push
-    required_linear_history = true
-
     # The live rule also has require_extra_approval_for_unattributed_changes = true, which the
     # provider cannot express as of 6.13.0 - it is missing from the schema, so it appears in no plan.
     # GitHub kept the setting through the apply that imported this ruleset, so it survives a PUT that
@@ -86,5 +82,26 @@ resource "github_repository_ruleset" "protect_default_branch" {
         }
       }
     }
+  }
+}
+
+# A bypass actor skips every rule of a ruleset, so the rules that bind everyone have their own.
+resource "github_repository_ruleset" "linear_default_branch" {
+  repository  = local.github_repository_name
+  name        = "Linear default branch"
+  target      = "branch"
+  enforcement = "active"
+
+  conditions {
+    ref_name {
+      include = ["~DEFAULT_BRANCH"]
+      exclude = []
+    }
+  }
+
+  rules {
+    deletion                = true
+    non_fast_forward        = true
+    required_linear_history = true
   }
 }
