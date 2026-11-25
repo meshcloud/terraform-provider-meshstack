@@ -1043,6 +1043,30 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 			},
 		})
 	})
+
+	t.Run("20_sensitive_input_made_plain_rejected", func(t *testing.T) {
+		vars := hclStepVars{"suffix": acctest.RandString(8)}
+		addr := "meshstack_building_block_definition.test"
+		dir := "resources/building_block_definition/20_sensitive_input_made_plain_rejected"
+		madePlain := expectErrorWords("sensitive", "non-sensitive", "new key")
+
+		ApplyAndTest(t, resource.TestCase{
+			Steps: []resource.TestStep{
+				{Config: hclStep(t, dir, 1, vars)},
+				{Config: hclStep(t, dir, 2, vars), ExpectError: madePlain},
+				{Config: hclStep(t, dir, 3, vars)},
+				{Config: hclStep(t, dir, 4, vars), ExpectError: madePlain},
+				{
+					Config: hclStep(t, dir, 5, vars),
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_latest"), expectedVersion(2, versionStateDraft)),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_spec").AtMapKey("inputs").AtMapKey("CONNECTOR_PLAIN").AtMapKey("argument"),
+							knownvalue.StringExact(`"plaintext-secret-v1"`)),
+					},
+				},
+			},
+		})
+	})
 }
 
 // checkBBDMetadataFull checks metadata for the 01_terraform example (tags with 2 entries).

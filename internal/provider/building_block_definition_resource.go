@@ -601,6 +601,11 @@ func (r *buildingBlockDefinitionResource) ModifyPlan(ctx context.Context, req re
 		return
 	}
 
+	rejectSensitiveInputMadePlain(ctx, req, resp)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	secretsNeedPlaintext := r.versionSecretsNeedPlaintext(ctx, req, resp)
 	versionSpecSecretsChanged := false
 	secret.WalkSecretPathsIn(req.Plan.Raw, &resp.Diagnostics, func(attributePath path.Path, diags *diag.Diagnostics) {
@@ -840,6 +845,50 @@ func (r *buildingBlockDefinitionResource) ModifyPlan(ctx context.Context, req re
 		resp.Diagnostics.Append(req.State.GetAttribute(ctx, runnerRefPath, &currentRunner)...)
 		if !plannedRunner.Equal(currentRunner) {
 			latestVersionRef.WorkloadIdentityFederation = generic.NullIsUnknown[*client.MeshBuildingBlockDefinitionWif]{}
+		}
+	}
+}
+
+func rejectSensitiveInputMadePlain(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	if req.State.Raw.IsNull() {
+		return
+	}
+	versionSpecPath := path.Root("version_spec")
+	inputsPath := versionSpecPath.AtName("inputs")
+	var stateDraft, planDraft types.Bool
+	var stateInputs, planInputs types.Map
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, versionSpecPath.AtName("draft"), &stateDraft)...)
+	resp.Diagnostics.Append(resp.Plan.GetAttribute(ctx, versionSpecPath.AtName("draft"), &planDraft)...)
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, inputsPath, &stateInputs)...)
+	resp.Diagnostics.Append(resp.Plan.GetAttribute(ctx, inputsPath, &planInputs)...)
+	if resp.Diagnostics.HasError() || (!stateDraft.ValueBool() && !planDraft.ValueBool()) {
+		return
+	}
+
+	isSensitive := func(input attr.Value) (sensitive, known bool) {
+		object, ok := input.(types.Object)
+		if !ok || object.IsNull() || object.IsUnknown() {
+			return false, false
+		}
+		value := object.Attributes()["sensitive"]
+		if value == nil || value.IsUnknown() {
+			return false, false
+		}
+		return !value.IsNull(), true
+	}
+	for planKey, planInput := range planInputs.Elements() {
+		if sensitive, known := isSensitive(planInput); sensitive || !known {
+			continue
+		}
+		for stateKey, stateInput := range stateInputs.Elements() {
+			if sensitive, _ := isSensitive(stateInput); sensitive && strings.EqualFold(stateKey, planKey) {
+				resp.Diagnostics.AddAttributeError(inputsPath.AtMapKey(planKey), "Cannot make a sensitive input non-sensitive", fmt.Sprintf(
+					"Input '%s' is sensitive in the current version, and meshStack does not let a sensitive input become "+
+						"non-sensitive. Add the non-sensitive input under a new key and remove this one, or remove this input "+
+						"in one apply and add it back without 'sensitive' in the next. meshStack compares input keys "+
+						"case-insensitively, so a new key must differ in more than case.",
+					stateKey))
+			}
 		}
 	}
 }

@@ -34,6 +34,10 @@ FIXES:
   with the same public key keeps the hash. This also holds when `version_spec.runner_ref` is not set and the version
   moves to meshStack's default runner. When the provider cannot read one of the two runners, for example without the
   permission to list building block runners, it sends `secret_value` again on any change of runner.
+- `meshstack_building_block_definition`: making a sensitive input non-sensitive fails at plan time with an error on
+  that input. Before, the plan showed an update, and the apply failed after it had changed other resources. meshStack
+  does not let a sensitive input become non-sensitive. Add the non-sensitive input under a new key, or remove the input
+  in one apply and add it back in the next.
 
 # v0.29.0
 
