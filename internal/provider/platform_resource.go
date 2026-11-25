@@ -91,7 +91,7 @@ func (r *platformResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			},
 
 			"identifier": schema.StringAttribute{
-				MarkdownDescription: "Full platform identifier (`<platform-name>.<location-name>`), suitable for use as `platform_identifier` in tenant resources.",
+				MarkdownDescription: "Full platform identifier (`<platform-name>.<location-name>`), as the `meshstack_tenant` data source takes it in `metadata.platform_identifier`.",
 				Computed:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},

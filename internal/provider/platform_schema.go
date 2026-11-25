@@ -38,7 +38,7 @@ func platformMetadataDataSourceSchema(computed bool) schema.SingleNestedAttribut
 }
 
 func platformIdentifierDataSourceSchema() schema.Attribute {
-	return computedString("Full platform identifier (`<platform-name>.<location-name>`), suitable for use as `platform_identifier` in tenant resources.")
+	return computedString("Full platform identifier (`<platform-name>.<location-name>`), as the `meshstack_tenant` data source takes it in `metadata.platform_identifier`.")
 }
 
 func platformSpecDataSourceSchema() schema.Attribute {
