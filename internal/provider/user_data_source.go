@@ -113,7 +113,9 @@ func (d *userDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 		MarkdownDescription: "Read the one meshUser that matches what you set in `metadata` and `spec`, such as `spec.email`. " +
 			"Set at least one of `metadata.name`, `metadata.uuid`, `spec.email` and `spec.euid`. " +
 			"It fails unless exactly one user matches, so you can use it to check that a user exists. " +
-			"Deleted users are not found.",
+			"Deleted users are not found.\n\n" +
+			"~> Needs an API key with the admin permission `ADM_USER_LIST`. meshStack has no workspace-scoped " +
+			"permission to read users.",
 		Attributes: attributes,
 	}
 }

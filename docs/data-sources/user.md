@@ -4,11 +4,14 @@ page_title: "meshstack_user Data Source - terraform-provider-meshstack"
 subcategory: ""
 description: |-
   Read the one meshUser that matches what you set in metadata and spec, such as spec.email. Set at least one of metadata.name, metadata.uuid, spec.email and spec.euid. It fails unless exactly one user matches, so you can use it to check that a user exists. Deleted users are not found.
+  ~> Needs an API key with the admin permission ADM_USER_LIST. meshStack has no workspace-scoped permission to read users.
 ---
 
 # meshstack_user (Data Source)
 
 Read the one meshUser that matches what you set in `metadata` and `spec`, such as `spec.email`. Set at least one of `metadata.name`, `metadata.uuid`, `spec.email` and `spec.euid`. It fails unless exactly one user matches, so you can use it to check that a user exists. Deleted users are not found.
+
+~> Needs an API key with the admin permission `ADM_USER_LIST`. meshStack has no workspace-scoped permission to read users.
 
 ## Example Usage
 

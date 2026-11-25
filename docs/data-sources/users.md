@@ -3,12 +3,15 @@
 page_title: "meshstack_users Data Source - terraform-provider-meshstack"
 subcategory: ""
 description: |-
-  List the meshUsers your API key can see, optionally only those with access to a workspace or project. Deleted users are not listed. Use it to check many usernames at once, for example the members of meshstack_workspace_user_group resources.
+  List meshUsers, optionally only those with access to a workspace or project. Deleted users are not listed. Use it to check many usernames at once, for example the members of meshstack_workspace_user_group resources.
+  ~> Needs an API key with the admin permission ADM_USER_LIST. meshStack has no workspace-scoped permission to list users: the workspace_identifier filter narrows the list for such a key and grants no access.
 ---
 
 # meshstack_users (Data Source)
 
-List the meshUsers your API key can see, optionally only those with access to a workspace or project. Deleted users are not listed. Use it to check many usernames at once, for example the members of `meshstack_workspace_user_group` resources.
+List meshUsers, optionally only those with access to a workspace or project. Deleted users are not listed. Use it to check many usernames at once, for example the members of `meshstack_workspace_user_group` resources.
+
+~> Needs an API key with the admin permission `ADM_USER_LIST`. meshStack has no workspace-scoped permission to list users: the `workspace_identifier` filter narrows the list for such a key and grants no access.
 
 ## Example Usage
 
