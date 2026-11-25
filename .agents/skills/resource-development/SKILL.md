@@ -34,9 +34,10 @@ Mid-complexity, clean, and complete — prefer these over the large `building_bl
 ## Steps
 
 1. **`internal/provider/<name>_resource.go`** — implement `resource.Resource` +
-   `ResourceWithConfigure` (+ `ResourceWithImportState` for import). Standard schema shape:
-   `metadata` (name `RequiresReplace`, computed `uuid` with `UseStateForUnknown`), `spec`,
-   `status`. See `project_resource.go`.
+   `ResourceWithConfigure` (+ `ResourceWithImportState` for import). A meshObject resource takes
+   the standard schema shape: `metadata` (name `RequiresReplace`, computed `uuid` with
+   `UseStateForUnknown`), `spec`, `status`. See `project_resource.go`. Any other resource is flat,
+   see "Attribute design and naming" below.
 2. **`github.com/meshcloud/meshstack-cli/client`** — add the API client methods (typed via
    `MeshObjectClient[M]`), in the [meshstack-cli](https://github.com/meshcloud/meshstack-cli)
    repository, which ships them before the provider can use them.
@@ -48,6 +49,39 @@ Mid-complexity, clean, and complete — prefer these over the large `building_bl
    (see below).
 6. **`internal/provider/<name>_resource_test.go`** — a `TestAcc<Name>` test (see below).
 7. `task generate` (docs) and update `CHANGELOG.md`.
+
+## Attribute design and naming
+
+These rules keep the schema honest about what the API stores, and let a user wire one object into
+another with a single `ref`, without knowing how meshStack identifies it.
+
+- **`metadata`/`spec`/`status` only for a meshObject.** A resource or data source that maps one
+  meshObject mirrors its API shape. A resource that manages a part of another object, such as one tag
+  or one tag value, is no meshObject: it has flat top-level attributes, so its schema does not suggest
+  an API object that does not exist.
+- **A resource input that references another meshObject is a `*_ref` object** that carries exactly
+  the target's identity: `{kind, name}` (`meshRefByName`), `{kind, uuid}` (`meshRefByUuid`), or
+  `{kind, owned_by_workspace, name}` for a project (`meshProjectRef`), whose name is unique only within
+  its workspace and which has no uuid. Every resource and data source of a referenced kind exposes the
+  matching read-only `ref`, so the wiring is one expression.
+- **A workspace is referenced by its plain name**, such as `owned_by_workspace = "my-workspace"`. It
+  has no ref object.
+- **Name an attribute after the API field it carries**, in snake case and without a type suffix:
+  `owned_by_workspace`, `key`, `display_name`. Never add `_identifier` to a new attribute. An attribute
+  that names the workspace a non-meshObject resource acts on is `workspace`.
+- **A data source lookup may take plain values.** A filter that matches an attribute of the listed
+  objects is named after that attribute, such as `owned_by_workspace`; other filters keep the name of
+  the API query parameter. Strict `*_ref` inputs apply to resources only.
+- **Existing names change only in a breaking release**, with a state upgrader (`rawStateUpgrader` in
+  `state_upgrade_raw.go`) when the attribute's path or type changes.
+
+<example>
+resource "meshstack_project_tag_value" "team_a" {
+  project_ref = data.meshstack_project.example.ref
+  key         = "teams"
+  value       = "team-a"
+}
+</example>
 
 ## meshObject reference attributes ({kind, uuid|name})
 
