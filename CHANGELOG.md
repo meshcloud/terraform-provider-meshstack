@@ -34,16 +34,16 @@ FEATURES:
   (`{kind, owned_by_workspace, name}`) references the project, for example in `project_ref` or `target_ref`.
 - `meshstack_project`: the new `spec.payment_method_ref` and `spec.substitute_payment_method_ref` take a payment
   method's `ref`, such as `meshstack_payment_method.example.ref`. `spec.payment_method_identifier` and
-  `spec.substitute_payment_method_identifier` are deprecated; set one attribute of each pair. A later release removes
-  the identifiers and makes `spec.payment_method_ref` required. The data sources return both forms.
-- `meshstack_project_user_binding`, `meshstack_project_group_binding`: `target_ref` takes an optional `kind`, so
-  `target_ref = meshstack_project.example.ref` works. Existing configurations keep working.
-- `meshstack_project_tags`: new resource that manages all tags of a project that this configuration does not create.
-  Every apply writes exactly the configured tags and removes all others.
-- `meshstack_project_tag`: new resource that manages one tag of a project that this configuration does not create, and
-  leaves its other tags as they are. Both resources rewrite the whole project on every change, including its payment
-  methods, so prefer `spec.tags` on `meshstack_project` where you can. Within one apply, the provider writes a project
-  one change at a time, so several `meshstack_project_tag` resources on one project need no `depends_on`.
+  `spec.substitute_payment_method_identifier` are deprecated; set at most one attribute of each pair. A later release
+  removes the identifiers and makes `spec.payment_method_ref` required. The data sources return both forms.
+- `meshstack_project_user_binding`, `meshstack_project_group_binding` resources and data sources: `target_ref` takes an
+  optional `kind`, so `target_ref = meshstack_project.example.ref` works. Existing configurations keep working.
+- `meshstack_project_tags`, `meshstack_project_tag`: new resources for the tags of a project that this configuration
+  does not create. `meshstack_project_tags` writes exactly the configured tags and removes all others;
+  `meshstack_project_tag` manages one tag and leaves the others as they are. Both rewrite the whole project on every
+  change, including its payment methods, so prefer `spec.tags` on `meshstack_project` where you can. Within one apply,
+  the provider writes a project one change at a time, so several `meshstack_project_tag` resources on one project need
+  no `depends_on`.
 - `meshstack_workspace_tag_value`, `meshstack_project_tag_value`: new resources that each manage one value of a
   multi-select tag on a workspace or project that this configuration does not create. A resource adds its value and,
   when destroyed, removes only that value, so several of them can share one tag without `depends_on`. Import with
