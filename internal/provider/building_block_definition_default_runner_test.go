@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-testing/compare"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
@@ -121,4 +122,85 @@ func TestAccBuildingBlockDefinitionDefaultRunner(t *testing.T) {
 			},
 		},
 	}}, seedNewDefault)
+}
+
+func TestAccBuildingBlockDefinitionDefaultRunnerKeepsSecret(t *testing.T) {
+	if !IsMockClientTest() {
+		t.Skip("a test cannot change the default runner of a real meshStack")
+	}
+
+	var mock clientmock.Client
+	runnerUuids := map[string]string{}
+	seedRunners := SeedingMock(func(seeded clientmock.Client) {
+		mock = seeded
+		for name, publicKey := range map[string]string{"first": runnerPublicKeyOfCertificate, "sameKey": runnerPublicKeyOfCertificate, "otherKey": otherRunnerPublicKey} {
+			runner, err := seeded.BuildingBlockRunner.Create(t.Context(), client.MeshBuildingBlockRunner{
+				Metadata: client.MeshBuildingBlockRunnerMetadata{OwnedByWorkspace: "meshcloud"},
+				Spec: client.MeshBuildingBlockRunnerSpec{
+					DisplayName:        "Runner " + name,
+					PublicKey:          publicKey,
+					ImplementationType: client.MeshBuildingBlockRunnerImplementationTypeAll,
+					Restriction:        new("PUBLIC"),
+				},
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			runnerUuids[name] = *runner.Metadata.Uuid
+		}
+		seeded.BuildingBlockRunner.MakeDefault(runnerUuids["first"])
+	})
+	makeDefault := func(name string) func() {
+		return func() { mock.BuildingBlockRunner.MakeDefault(runnerUuids[name]) }
+	}
+	isRunner := func(name string) knownvalue.Check {
+		return xknownvalue.NotEmptyString(func(actual string) error {
+			if actual != runnerUuids[name] {
+				return fmt.Errorf("expected runner %s with uuid %s, got %s", name, runnerUuids[name], actual)
+			}
+			return nil
+		})
+	}
+
+	config := hclStep(t, "resources/building_block_definition/default_runner", 2, hclStepVars{"suffix": acctest.RandString(8)})
+	bbdAddr := "meshstack_building_block_definition.test"
+	runnerUuidPath := tfjsonpath.New("version_spec").AtMapKey("runner_ref").AtMapKey("uuid")
+	secretHashPath := tfjsonpath.New("version_spec").AtMapKey("inputs").AtMapKey("CONNECTOR_SECRET").
+		AtMapKey("sensitive").AtMapKey("argument").AtMapKey("secret_hash")
+	keptSecretHash := statecheck.CompareValue(compare.ValuesSame())
+
+	ApplyAndTest(t, resource.TestCase{Steps: []resource.TestStep{
+		{
+			Config: config,
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue(bbdAddr, runnerUuidPath, isRunner("first")),
+				keptSecretHash.AddStateValue(bbdAddr, secretHashPath),
+			},
+		},
+		{
+			PreConfig: makeDefault("sameKey"),
+			Config:    config,
+			ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
+				plancheck.ExpectResourceAction(bbdAddr, plancheck.ResourceActionUpdate),
+				plancheck.ExpectKnownValue(bbdAddr, runnerUuidPath, isRunner("sameKey")),
+				plancheck.ExpectKnownValue(bbdAddr, secretHashPath, xknownvalue.NotEmptyString()),
+			}},
+			ConfigStateChecks: []statecheck.StateCheck{
+				keptSecretHash.AddStateValue(bbdAddr, secretHashPath),
+			},
+		},
+		{
+			PreConfig: makeDefault("otherKey"),
+			Config:    config,
+			ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
+				plancheck.ExpectResourceAction(bbdAddr, plancheck.ResourceActionUpdate),
+				plancheck.ExpectKnownValue(bbdAddr, runnerUuidPath, isRunner("otherKey")),
+				plancheck.ExpectUnknownValue(bbdAddr, secretHashPath),
+			}},
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue(bbdAddr, runnerUuidPath, isRunner("otherKey")),
+				statecheck.ExpectKnownValue(bbdAddr, secretHashPath, xknownvalue.NotEmptyString()),
+			},
+		},
+	}}, seedRunners)
 }

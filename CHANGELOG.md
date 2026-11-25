@@ -27,6 +27,13 @@ FIXES:
   longer fails every resource. A `profile` that `meshstack login` has not stored is an error.
 - `meshstack_building_block`: when the API key may not purge the block (`purge_on_delete`) or run it again, the error
   says so.
+- `meshstack_building_block_definition`: a version that moves to a runner with another public key, or to another
+  implementation type, keeps its sensitive inputs and secrets. meshStack encrypts them with the public key of the
+  runner and rejected the hash of an unchanged secret with "Secret at 'spec.inputs.*.argument' must not contain a hash
+  value". The provider now sends `secret_value` again in these cases, so `secret_hash` changes. A move to a runner
+  with the same public key keeps the hash. This also holds when `version_spec.runner_ref` is not set and the version
+  moves to meshStack's default runner. When the provider cannot read one of the two runners, for example without the
+  permission to list building block runners, it sends `secret_value` again on any change of runner.
 
 # v0.29.0
 

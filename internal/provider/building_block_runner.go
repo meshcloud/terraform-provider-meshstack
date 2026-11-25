@@ -2,6 +2,9 @@ package provider
 
 import (
 	"context"
+	"crypto"
+	"crypto/x509"
+	"encoding/pem"
 	"errors"
 	"fmt"
 
@@ -34,6 +37,49 @@ func defaultBuildingBlockRunnerUuid(ctx context.Context, runnerClient client.Mes
 		return "", fmt.Errorf("meshStack must have one default building block runner, but it returned %d: %v", len(defaults), defaults)
 	}
 	return defaults[0], nil
+}
+
+func runnersShareKey(ctx context.Context, runnerClient client.MeshBuildingBlockRunnerClient, uuid, otherUuid string) bool {
+	if runnerClient == nil {
+		return false
+	}
+	runner, err := runnerClient.Read(ctx, uuid)
+	if err != nil || runner == nil {
+		return false
+	}
+	other, err := runnerClient.Read(ctx, otherUuid)
+	if err != nil || other == nil {
+		return false
+	}
+	return samePublicKey(runner.Spec.PublicKey, other.Spec.PublicKey)
+}
+
+func samePublicKey(key, otherKey string) bool {
+	if key == otherKey {
+		return true
+	}
+	parsed, ok := parsePublicKey(key)
+	if !ok {
+		return false
+	}
+	otherParsed, ok := parsePublicKey(otherKey)
+	if !ok {
+		return false
+	}
+	equatable, ok := parsed.(interface{ Equal(crypto.PublicKey) bool })
+	return ok && equatable.Equal(otherParsed)
+}
+
+func parsePublicKey(keyOrCertificate string) (crypto.PublicKey, bool) {
+	block, _ := pem.Decode([]byte(keyOrCertificate))
+	if block == nil {
+		return nil, false
+	}
+	if certificate, err := x509.ParseCertificate(block.Bytes); err == nil {
+		return certificate.PublicKey, true
+	}
+	key, err := x509.ParsePKIXPublicKey(block.Bytes)
+	return key, err == nil
 }
 
 // subjectTemplateDescription documents the placeholder syntax of a runner's subject template. The

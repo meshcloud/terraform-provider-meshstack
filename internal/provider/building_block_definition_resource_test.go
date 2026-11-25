@@ -995,6 +995,54 @@ func TestAccBuildingBlockDefinition(t *testing.T) {
 			},
 		})
 	})
+
+	t.Run("19_runner_key_change_keeps_secret", func(t *testing.T) {
+		vars := hclStepVars{"suffix": acctest.RandString(8)}
+		addr := "meshstack_building_block_definition.test"
+		dir := "resources/building_block_definition/19_runner_key_change_keeps_secret"
+		secretHashPath := tfjsonpath.New("version_spec").AtMapKey("inputs").AtMapKey("CONNECTOR_SECRET").
+			AtMapKey("sensitive").AtMapKey("argument").AtMapKey("secret_hash")
+		resendsSecret := []plancheck.PlanCheck{
+			plancheck.ExpectResourceAction(addr, plancheck.ResourceActionUpdate),
+			plancheck.ExpectUnknownValue(addr, secretHashPath),
+		}
+		keptSecretHash := statecheck.CompareValue(compare.ValuesSame())
+
+		ApplyAndTest(t, resource.TestCase{
+			Steps: []resource.TestStep{
+				{Config: hclStep(t, dir, 1, vars)},
+				{Config: hclStep(t, dir, 2, vars)},
+				{
+					Config:           hclStep(t, dir, 3, vars),
+					ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: resendsSecret},
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_latest_release"), expectedVersion(1, versionStateReleased)),
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_latest"), expectedVersion(2, versionStateDraft)),
+						statecheck.ExpectKnownValue(addr, secretHashPath, xknownvalue.NotEmptyString()),
+					},
+				},
+				{
+					Config:           hclStep(t, dir, 4, vars),
+					ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: resendsSecret},
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_latest"), expectedVersion(2, versionStateDraft)),
+						keptSecretHash.AddStateValue(addr, secretHashPath),
+					},
+				},
+				{
+					Config: hclStep(t, dir, 5, vars),
+					ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(addr, plancheck.ResourceActionUpdate),
+						plancheck.ExpectKnownValue(addr, secretHashPath, xknownvalue.NotEmptyString()),
+					}},
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue(addr, tfjsonpath.New("version_latest"), expectedVersion(2, versionStateDraft)),
+						keptSecretHash.AddStateValue(addr, secretHashPath),
+					},
+				},
+			},
+		})
+	})
 }
 
 // checkBBDMetadataFull checks metadata for the 01_terraform example (tags with 2 entries).

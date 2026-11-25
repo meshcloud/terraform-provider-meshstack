@@ -601,15 +601,24 @@ func (r *buildingBlockDefinitionResource) ModifyPlan(ctx context.Context, req re
 		return
 	}
 
+	secretsNeedPlaintext := r.versionSecretsNeedPlaintext(ctx, req, resp)
 	versionSpecSecretsChanged := false
 	secret.WalkSecretPathsIn(req.Plan.Raw, &resp.Diagnostics, func(attributePath path.Path, diags *diag.Diagnostics) {
 		versionChanged := secret.SetToUnknownIfVersionChangedOrCreated(ctx, req.Plan, req.State, &resp.Plan)(attributePath, diags)
-		if versionChanged {
-			if steps := attributePath.Steps(); len(steps) > 0 {
-				if steps[0].Equal(path.PathStepAttributeName("version_spec")) {
-					versionSpecSecretsChanged = true
-				}
+		steps := attributePath.Steps()
+		if len(steps) == 0 || !steps[0].Equal(path.PathStepAttributeName("version_spec")) {
+			return
+		}
+		if !versionChanged && secretsNeedPlaintext {
+			var planned types.Object
+			diags.Append(resp.Plan.GetAttribute(ctx, attributePath, &planned)...)
+			if !planned.IsNull() {
+				versionChanged = true
+				diags.Append(resp.Plan.SetAttribute(ctx, attributePath.AtName("secret_hash"), types.StringUnknown())...)
 			}
+		}
+		if versionChanged {
+			versionSpecSecretsChanged = true
 		}
 	})
 	if resp.Diagnostics.HasError() {
@@ -833,6 +842,45 @@ func (r *buildingBlockDefinitionResource) ModifyPlan(ctx context.Context, req re
 			latestVersionRef.WorkloadIdentityFederation = generic.NullIsUnknown[*client.MeshBuildingBlockDefinitionWif]{}
 		}
 	}
+}
+
+func (r *buildingBlockDefinitionResource) versionSecretsNeedPlaintext(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) bool {
+	if req.State.Raw.IsNull() {
+		return false
+	}
+	versionSpecPath := path.Root("version_spec")
+	runnerUuidPath := versionSpecPath.AtName("runner_ref").AtName("uuid")
+	var stateDraft, planDraft types.Bool
+	var stateRunnerUuid, planRunnerUuid types.String
+	var stateImplementation, planImplementation types.Object
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, versionSpecPath.AtName("draft"), &stateDraft)...)
+	resp.Diagnostics.Append(resp.Plan.GetAttribute(ctx, versionSpecPath.AtName("draft"), &planDraft)...)
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, runnerUuidPath, &stateRunnerUuid)...)
+	resp.Diagnostics.Append(resp.Plan.GetAttribute(ctx, runnerUuidPath, &planRunnerUuid)...)
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, versionSpecPath.AtName("implementation"), &stateImplementation)...)
+	resp.Diagnostics.Append(resp.Plan.GetAttribute(ctx, versionSpecPath.AtName("implementation"), &planImplementation)...)
+	if resp.Diagnostics.HasError() || (!stateDraft.ValueBool() && !planDraft.ValueBool()) {
+		return false
+	}
+	if implementationKind(planImplementation) != implementationKind(stateImplementation) {
+		return true
+	}
+	if planRunnerUuid.Equal(stateRunnerUuid) {
+		return false
+	}
+	if planRunnerUuid.IsUnknown() || stateRunnerUuid.IsUnknown() {
+		return true
+	}
+	return !runnersShareKey(ctx, r.buildingBlockRunnerClient, stateRunnerUuid.ValueString(), planRunnerUuid.ValueString())
+}
+
+func implementationKind(implementation types.Object) string {
+	for name, value := range implementation.Attributes() {
+		if !value.IsNull() {
+			return name
+		}
+	}
+	return ""
 }
 
 func (r *buildingBlockDefinitionResource) planDefaultRunnerRef(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {

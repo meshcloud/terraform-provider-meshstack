@@ -119,7 +119,8 @@ func ValueFromConverter(ctx context.Context, plan, state generic.AttributeGetter
 
 // ValueToConverter is called during [generic.ValueTo] when converting Terraform value to a client DTO representation.
 // According to the given plan and state (during create and update resource phase), this converter pulls the write-only attribute secret_value
-// if the secret_version changes and provides this as a one-off value to the backend. Thus, secret rotation can be controlled with secret_version.
+// if the secret_version changes or the plan leaves secret_hash unknown, and provides this as a one-off value to the backend.
+// Thus, secret rotation can be controlled with secret_version.
 // Typically used with WithConverterSupport in conjunction with ValueFromConverter,
 // but the building_block_definition resource has some special needs as it combines secret values with arbitrary json-encoded strings.
 func ValueToConverter(ctx context.Context, config, plan, state generic.AttributeGetter, attributePath path.Path) (out clientTypes.Secret, err error) {
@@ -158,6 +159,8 @@ func ValueToConverter(ctx context.Context, config, plan, state generic.Attribute
 		return clientTypes.Secret{Hash: getAttributeFrom(state, hashAttributeKey)}, nil
 	}
 
+	var hashFromPlan types.String
+	diags.Append(plan.GetAttribute(ctx, attributePath.AtName(hashAttributeKey), &hashFromPlan)...)
 	versionFromState := tryGetAttributeFrom(state, versionAttributeKey)
 	versionFromPlan := tryGetAttributeFrom(plan, versionAttributeKey)
 	if diags.HasError() {
@@ -165,6 +168,8 @@ func ValueToConverter(ctx context.Context, config, plan, state generic.Attribute
 	}
 
 	switch {
+	case hashFromPlan.IsUnknown():
+		return clientTypes.Secret{Plaintext: getAttributeFrom(config, valueAttributeKey)}, nil
 	case versionFromState == nil && versionFromPlan == nil:
 		// both versions null -> no change
 		fallthrough
