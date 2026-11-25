@@ -8,6 +8,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/meshcloud/meshstack-cli/client"
+
+	"github.com/meshcloud/terraform-provider-meshstack/internal/types/generic"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
@@ -33,6 +35,8 @@ func (d *projectDataSource) Schema(ctx context.Context, req datasource.SchemaReq
 		MarkdownDescription: "Single project by name and workspace.",
 
 		Attributes: map[string]schema.Attribute{
+			"ref": meshProjectRef(meshRefOptions{Description: "Reference to this project, can be used as `target_ref` in project binding resources.", Output: true}),
+
 			"metadata": schema.SingleNestedAttribute{
 				MarkdownDescription: "Project metadata. Name and workspace of the target Project must be set here.",
 				Required:            true,
@@ -48,11 +52,12 @@ func (d *projectDataSource) Schema(ctx context.Context, req datasource.SchemaReq
 				MarkdownDescription: "Project specification.",
 				Computed:            true,
 				Attributes: map[string]schema.Attribute{
-
 					"display_name":                         schema.StringAttribute{Computed: true},
 					"tags":                                 tagsAttribute(tagsOptions{Kind: client.MeshObjectKind.Project, Output: true}),
 					"payment_method_identifier":            schema.StringAttribute{Computed: true},
+					"payment_method_ref":                   projectPaymentMethodRefOutput(),
 					"substitute_payment_method_identifier": schema.StringAttribute{Computed: true},
+					"substitute_payment_method_ref":        projectSubstitutePaymentMethodRefOutput(),
 				},
 			},
 		},
@@ -86,6 +91,5 @@ func (d *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		return
 	}
 
-	// client data maps directly to the schema so we just need to set the state
-	resp.Diagnostics.Append(resp.State.Set(ctx, project)...)
+	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, newProjectModel(*project))...)
 }

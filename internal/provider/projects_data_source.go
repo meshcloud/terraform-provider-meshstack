@@ -7,6 +7,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/meshcloud/meshstack-cli/client"
+
+	"github.com/meshcloud/terraform-provider-meshstack/internal/types/generic"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
@@ -37,7 +39,7 @@ func (d *projectsDataSource) Schema(ctx context.Context, req datasource.SchemaRe
 				Required:            true,
 			},
 			"payment_method_identifier": schema.StringAttribute{
-				MarkdownDescription: "Payment method identifier",
+				MarkdownDescription: "Only return projects with the payment method of this identifier. An empty string returns the projects without a payment method.",
 				Optional:            true,
 			},
 			"projects": schema.ListNestedAttribute{
@@ -45,6 +47,7 @@ func (d *projectsDataSource) Schema(ctx context.Context, req datasource.SchemaRe
 				Computed:            true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
+						"ref": meshProjectRef(meshRefOptions{Description: "Reference to this project, can be used as `target_ref` in project binding resources.", Output: true}),
 						"metadata": schema.SingleNestedAttribute{
 							MarkdownDescription: "Metadata of the project",
 							Computed:            true,
@@ -80,10 +83,12 @@ func (d *projectsDataSource) Schema(ctx context.Context, req datasource.SchemaRe
 									MarkdownDescription: "Payment method identifier",
 									Computed:            true,
 								},
+								"payment_method_ref": projectPaymentMethodRefOutput(),
 								"substitute_payment_method_identifier": schema.StringAttribute{
 									MarkdownDescription: "Substitute payment method identifier",
 									Computed:            true,
 								},
+								"substitute_payment_method_ref": projectSubstitutePaymentMethodRefOutput(),
 							},
 						},
 					},
@@ -116,5 +121,9 @@ func (d *projectsDataSource) Read(ctx context.Context, req datasource.ReadReques
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("projects"), &projects)...)
+	models := make([]projectModel, len(projects))
+	for i, project := range projects {
+		models[i] = newProjectModel(project)
+	}
+	resp.Diagnostics.Append(generic.SetAttributeTo(ctx, &resp.State, path.Root("projects"), models)...)
 }

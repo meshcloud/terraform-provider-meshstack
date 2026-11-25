@@ -4,8 +4,8 @@ resource "meshstack_project" "example" {
     owned_by_workspace = data.meshstack_workspace.example.metadata.name
   }
   spec = {
-    payment_method_identifier = data.meshstack_payment_method.example.metadata.name
-    display_name              = "My Project's Display Name"
+    payment_method_ref = data.meshstack_payment_method.example.ref
+    display_name       = "My Project's Display Name"
     tags = {
       (data.meshstack_tag_definition.my_key.spec.key) = [
         "tag-value1",

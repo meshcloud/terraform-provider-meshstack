@@ -98,6 +98,27 @@ func projectRefFromState(workspace, name, to []string) rawStateRewrite {
 	}
 }
 
+func addKindToState(at []string, kind string) rawStateRewrite {
+	return func(state rawState) error {
+		value, found, err := state.get(at)
+		if err != nil || !found {
+			return err
+		}
+		object, err := decodeRawState(value)
+		if err != nil || object == nil {
+			return err
+		}
+		if object["kind"], err = json.Marshal(kind); err != nil {
+			return err
+		}
+		encoded, err := json.Marshal(object, json.Deterministic(true))
+		if err != nil {
+			return err
+		}
+		return state.set(at, encoded)
+	}
+}
+
 func (s rawState) get(path []string) (jsontext.Value, bool, error) {
 	value, found := s[path[0]]
 	if !found || len(path) == 1 {

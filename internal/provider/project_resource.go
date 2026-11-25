@@ -5,14 +5,17 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/meshcloud/meshstack-cli/client"
+
+	"github.com/meshcloud/terraform-provider-meshstack/internal/types/generic"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -57,6 +60,8 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"plan conflicts.",
 
 		Attributes: map[string]schema.Attribute{
+			"ref": meshProjectRef(meshRefOptions{Description: "Reference to this project, can be used as `target_ref` in project binding resources.", Output: true}),
+
 			"metadata": schema.SingleNestedAttribute{
 				MarkdownDescription: "Project metadata. Name and workspace of the target Project must be set here.",
 				Required:            true,
@@ -82,86 +87,30 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Required:            true,
 				Attributes: map[string]schema.Attribute{
 					"display_name": schema.StringAttribute{Required: true},
-					// TODO: Blocks would be more terraform-y.
-					"tags": tagsAttribute(tagsOptions{Kind: client.MeshObjectKind.Project, Restricted: true}),
-					// These can have defaults set upon creation
-					"payment_method_identifier": schema.StringAttribute{
-						Optional: true,
-						Computed: true,
-					},
-					"substitute_payment_method_identifier": schema.StringAttribute{
-						MarkdownDescription: "Payment method that meshStack makes the payment method of the project when `payment_method_identifier` expires. " +
-							"meshStack then clears this attribute, so update both attributes after the expiry to end the drift.",
-						Optional: true,
-						Computed: true,
-					},
+					"tags":         tagsAttribute(tagsOptions{Kind: client.MeshObjectKind.Project, Restricted: true}),
+					"payment_method_identifier": projectPaymentMethodIdentifier("payment_method_ref",
+						"Identifier of the payment method of the project."),
+					"payment_method_ref": projectPaymentMethodRef("payment_method_identifier",
+						"Reference to the payment method of the project. meshStack may set one when it creates the project."),
+					"substitute_payment_method_identifier": projectPaymentMethodIdentifier("substitute_payment_method_ref",
+						"Payment method that meshStack makes the payment method of the project when `payment_method_identifier` expires. "+
+							"meshStack then clears this attribute, so update both attributes after the expiry to end the drift."),
+					"substitute_payment_method_ref": projectPaymentMethodRef("substitute_payment_method_identifier",
+						"Reference to the payment method that meshStack makes the payment method of the project when `payment_method_ref` expires. "+
+							"meshStack then clears this attribute, so update it and `payment_method_ref` after the expiry to end the drift."),
 				},
 			},
 		},
 	}
 }
 
-// These structs use Terraform types so that we can read the plan and check for unknown/null values.
-type projectCreate struct {
-	Metadata projectMetadata `json:"metadata" tfsdk:"metadata"`
-	Spec     projectSpec     `json:"spec" tfsdk:"spec"`
-}
-
-type projectMetadata struct {
-	Name             types.String `json:"name" tfsdk:"name"`
-	OwnedByWorkspace types.String `json:"ownedByWorkspace" tfsdk:"owned_by_workspace"`
-	CreatedOn        types.String `json:"createdOn" tfsdk:"created_on"`
-	DeletedOn        types.String `json:"deletedOn" tfsdk:"deleted_on"`
-}
-
-type projectSpec struct {
-	DisplayName                       types.String `json:"displayName" tfsdk:"display_name"`
-	Tags                              types.Map    `json:"tags" tfsdk:"tags"`
-	PaymentMethodIdentifier           types.String `json:"paymentMethodIdentifier" tfsdk:"payment_method_identifier"`
-	SubstitutePaymentMethodIdentifier types.String `json:"substitutePaymentMethodIdentifier" tfsdk:"substitute_payment_method_identifier"`
-}
-
-func (plan projectCreate) meshProject(ctx context.Context) (client.MeshProjectCreate, diag.Diagnostics) {
-	tags := make(map[string][]string)
-	var diags diag.Diagnostics
-	if !plan.Spec.Tags.IsNull() {
-		diags = plan.Spec.Tags.ElementsAs(ctx, &tags, false)
-	}
-	project := client.MeshProjectCreate{
-		Metadata: client.MeshProjectCreateMetadata{
-			Name:             plan.Metadata.Name.ValueString(),
-			OwnedByWorkspace: plan.Metadata.OwnedByWorkspace.ValueString(),
-		},
-		Spec: client.MeshProjectSpec{
-			DisplayName: plan.Spec.DisplayName.ValueString(),
-			Tags:        tags,
-		},
-	}
-	// Unknown values result in empty strings but we want nil instead
-	if !plan.Spec.PaymentMethodIdentifier.IsUnknown() {
-		project.Spec.PaymentMethodIdentifier = plan.Spec.PaymentMethodIdentifier.ValueStringPointer()
-	}
-	if !plan.Spec.SubstitutePaymentMethodIdentifier.IsUnknown() {
-		project.Spec.SubstitutePaymentMethodIdentifier = plan.Spec.SubstitutePaymentMethodIdentifier.ValueStringPointer()
-	}
-	return project, diags
-}
-
 // Create creates the resource and sets the initial Terraform state.
 func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var plan projectCreate
-
-	diags := req.Plan.Get(ctx, &plan)
-	resp.Diagnostics.Append(diags...)
+	plan := generic.Get[projectModel](ctx, req.Plan, &resp.Diagnostics, generic.WithSetUnknownValueToZero())
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
-	create, diags := plan.meshProject(ctx)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	create := plan.meshProjectCreate()
 
 	defer lockProject(create.Metadata.OwnedByWorkspace, create.Metadata.Name)()
 	project, err := r.meshProjectClient.Create(ctx, &create)
@@ -174,9 +123,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 	}
 
 	project.Spec.Tags = create.Spec.Tags
-
-	diags = resp.State.Set(ctx, project)
-	resp.Diagnostics.Append(diags...)
+	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, newProjectModel(*project))...)
 }
 
 // Read refreshes the Terraform state with the latest data.
@@ -209,28 +156,19 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	// client data maps directly to the schema so we just need to set the state
-	resp.Diagnostics.Append(resp.State.Set(ctx, project)...)
+	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, newProjectModel(*project))...)
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
 func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var plan projectCreate
-
-	diags := req.Plan.Get(ctx, &plan)
-	resp.Diagnostics.Append(diags...)
+	plan := generic.Get[projectModel](ctx, req.Plan, &resp.Diagnostics, generic.WithSetUnknownValueToZero())
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	update := plan.meshProjectCreate()
 
-	create, diags := plan.meshProject(ctx)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	defer lockProject(create.Metadata.OwnedByWorkspace, create.Metadata.Name)()
-	project, err := r.meshProjectClient.Update(ctx, &create)
+	defer lockProject(update.Metadata.OwnedByWorkspace, update.Metadata.Name)()
+	project, err := r.meshProjectClient.Update(ctx, &update)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error updating project",
@@ -239,10 +177,8 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	project.Spec.Tags = create.Spec.Tags
-
-	diags = resp.State.Set(ctx, project)
-	resp.Diagnostics.Append(diags...)
+	project.Spec.Tags = update.Spec.Tags
+	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, newProjectModel(*project))...)
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
@@ -279,4 +215,31 @@ func (r *projectResource) ImportState(ctx context.Context, req resource.ImportSt
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("metadata").AtName("owned_by_workspace"), identifier[0])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("metadata").AtName("name"), identifier[1])...)
+}
+
+func projectPaymentMethodIdentifier(conflictingRef, description string) schema.StringAttribute {
+	return schema.StringAttribute{
+		MarkdownDescription: description,
+		DeprecationMessage:  "Use `spec." + conflictingRef + "` instead. This attribute will be removed in a future release.",
+		Optional:            true,
+		Computed:            true,
+		Validators:          []validator.String{stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName(conflictingRef))},
+	}
+}
+
+func projectPaymentMethodRef(conflictingIdentifier, description string) schema.SingleNestedAttribute {
+	ref := meshRefByName(meshRefOptions{Kind: client.MeshObjectKind.PaymentMethod, Description: description})
+	ref.Required = false
+	ref.Optional = true
+	ref.Computed = true
+	ref.Validators = []validator.Object{
+		objectvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName(conflictingIdentifier)),
+		objectvalidator.AlsoRequires(path.MatchRelative().AtName("name")),
+	}
+	ref.Attributes["name"] = schema.StringAttribute{
+		MarkdownDescription: "Named identifier (`metadata.name`) of `" + client.MeshObjectKind.PaymentMethod + "`. Required when the reference is set.",
+		Optional:            true,
+		Computed:            true,
+	}
+	return ref
 }

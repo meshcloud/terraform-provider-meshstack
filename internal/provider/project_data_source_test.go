@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
+	"github.com/meshcloud/meshstack-cli/client"
 )
 
 func TestAccProjectDataSource(t *testing.T) {
@@ -26,6 +27,11 @@ func TestAccProjectDataSource(t *testing.T) {
 					statecheck.ExpectKnownValue(dataSourceAddress, tfjsonpath.New("metadata").AtMapKey("name"), knownvalue.StringExact("my-project")),
 					statecheck.ExpectKnownValue(dataSourceAddress, tfjsonpath.New("metadata").AtMapKey("owned_by_workspace"), knownvalue.StringExact("test-ws-"+suffix)),
 					statecheck.ExpectKnownValue(dataSourceAddress, tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("My Project's Display Name")),
+					statecheck.ExpectKnownValue(dataSourceAddress, tfjsonpath.New("ref"), knownvalue.ObjectExact(map[string]knownvalue.Check{
+						"kind":               knownvalue.StringExact(client.MeshObjectKind.Project),
+						"owned_by_workspace": knownvalue.StringExact("test-ws-" + suffix),
+						"name":               knownvalue.StringExact("my-project"),
+					})),
 				},
 			},
 		},

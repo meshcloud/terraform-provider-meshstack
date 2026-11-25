@@ -30,8 +30,8 @@ resource "meshstack_project" "test" {
     owned_by_workspace = meshstack_workspace.test.metadata.name
   }
   spec = {
-    display_name              = "Test Project"
-    payment_method_identifier = meshstack_payment_method.test.metadata.name
+    display_name       = "Test Project"
+    payment_method_ref = meshstack_payment_method.test.ref
   }
 }
 

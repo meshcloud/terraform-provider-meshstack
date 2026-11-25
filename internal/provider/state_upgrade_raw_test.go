@@ -31,6 +31,17 @@ func TestRewriteRawState(t *testing.T) {
 		assert.JSONEq(t, `{"project_ref":{"kind":"meshProject","owned_by_workspace":"ws","name":"prj"}}`, string(upgraded))
 	})
 
+	t.Run("adds a kind to an object and leaves null alone", func(t *testing.T) {
+		upgraded, err := rewriteRawState(
+			[]byte(`{"target_ref":{"name":"prj","owned_by_workspace":"ws"},"other_ref":null}`),
+			addKindToState([]string{"target_ref"}, "meshProject"),
+			addKindToState([]string{"other_ref"}, "meshProject"),
+			addKindToState([]string{"absent_ref"}, "meshProject"),
+		)
+		require.NoError(t, err)
+		assert.JSONEq(t, `{"target_ref":{"kind":"meshProject","name":"prj","owned_by_workspace":"ws"},"other_ref":null}`, string(upgraded))
+	})
+
 	t.Run("leaves a missing attribute alone", func(t *testing.T) {
 		upgraded, err := rewriteRawState([]byte(`{"a":1}`), moveStateAttribute([]string{"metadata", "x"}, []string{"y"}))
 		require.NoError(t, err)

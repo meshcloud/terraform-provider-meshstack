@@ -349,7 +349,9 @@ func UpgradeResourceState(t *testing.T, r fwresource.ResourceWithUpgradeState, v
 
 	upgrader, ok := r.UpgradeState(ctx)[version]
 	require.Truef(t, ok, "resource declares no state upgrader for version %d", version)
-	require.NotNilf(t, upgrader.PriorSchema, "state upgrader for version %d has no PriorSchema", version)
+	if upgrader.PriorSchema == nil {
+		return upgradeRawResourceState(t, r, upgrader, rawJSON)
+	}
 
 	priorValue, err := tfprotov6.RawState{JSON: []byte(rawJSON)}.UnmarshalWithOpts(
 		upgrader.PriorSchema.Type().TerraformType(ctx),
@@ -362,6 +364,27 @@ func UpgradeResourceState(t *testing.T, r fwresource.ResourceWithUpgradeState, v
 	resp := fwresource.UpgradeStateResponse{State: tfsdk.State{Schema: ResourceSchemaForTest(t, r)}}
 
 	upgrader.StateUpgrader(ctx, req, &resp)
+
+	return UpgradedState{t: t, state: resp.State}, resp.Diagnostics
+}
+
+func upgradeRawResourceState(t *testing.T, r fwresource.Resource, upgrader fwresource.StateUpgrader, rawJSON string) (UpgradedState, diag.Diagnostics) {
+	t.Helper()
+
+	ctx := context.Background()
+	currentSchema := ResourceSchemaForTest(t, r)
+	req := fwresource.UpgradeStateRequest{RawState: &tfprotov6.RawState{JSON: []byte(rawJSON)}}
+	resp := fwresource.UpgradeStateResponse{State: tfsdk.State{Schema: currentSchema}}
+
+	upgrader.StateUpgrader(ctx, req, &resp)
+	if resp.Diagnostics.HasError() {
+		return UpgradedState{t: t, state: resp.State}, resp.Diagnostics
+	}
+	require.NotNil(t, resp.DynamicValue, "the upgrader returned no state")
+
+	upgraded, err := resp.DynamicValue.Unmarshal(currentSchema.Type().TerraformType(ctx))
+	require.NoError(t, err, "decoding the upgraded state against the current schema")
+	resp.State.Raw = upgraded
 
 	return UpgradedState{t: t, state: resp.State}, resp.Diagnostics
 }
