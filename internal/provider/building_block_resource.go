@@ -1089,29 +1089,16 @@ func (r *buildingBlockResource) Update(ctx context.Context, req resource.UpdateR
 	repairNeeded := state.Status != nil && state.Status.RunFailed()
 	needsRun := rerunNeeded(plan.Spec, state.Spec, getBasedOnDraftVersion(ctx, req.Private, &resp.Diagnostics)) || secretRotated || repairNeeded
 
-	// The backend answers a version-change PUT with a 409 while the run has not finished. Fail fast with a
-	// clear message so that no raw 409 reaches the user.
-	versionChanging := plan.Spec.BuildingBlockDefinitionVersionRef.Uuid != state.Spec.BuildingBlockDefinitionVersionRef.Uuid
-	if versionChanging && state.Status != nil && (state.Status.IsRunning() || state.Status.IsWaitingForInput()) {
-		resp.Diagnostics.AddError(
-			"Building block must be in a completed state to change its definition version",
-			fmt.Sprintf("Changing the building block definition version requires a finished run; the building block has the action %s. Resolve any pending input or run first, then retry the upgrade.", state.Status.Action),
-		)
-		return
-	}
-
 	// Send only Metadata+Spec — Status is read-only and must not be passed to PUT.
 	updated, err := r.BuildingBlockClient.Update(ctx, client.MeshBuildingBlockV2{
 		Metadata: plan.Metadata,
 		Spec:     plan.Spec,
 	})
 	if err != nil {
-		// Map a backend 409 (e.g. a version change on a non-completed block that slipped past the
-		// pre-check, or a concurrent run) to a clear, actionable message instead of a raw HTTP error.
 		if httpErr, ok := errors.AsType[client.HttpError](err); ok && httpErr.IsConflict() {
 			resp.Diagnostics.AddError(
 				"Building block cannot be updated in its current state",
-				fmt.Sprintf("The backend rejected the update with a conflict (409). This usually means the building block is not in a completed state for the requested change (for example a version upgrade while a run is still pending). Resolve any pending input or run first, then retry. Underlying error: %s", err.Error()),
+				fmt.Sprintf("The backend rejected the update with a conflict (409). This usually means the building block is being deleted. Underlying error: %s", err.Error()),
 			)
 			return
 		}
@@ -1126,7 +1113,7 @@ func (r *buildingBlockResource) Update(ctx context.Context, req resource.UpdateR
 	}
 
 	// content_hash never reaches meshStack, so a rerun for it alone needs a trigger-run.
-	backendWillRun := versionChanging ||
+	backendWillRun := plan.Spec.BuildingBlockDefinitionVersionRef.Uuid != state.Spec.BuildingBlockDefinitionVersionRef.Uuid ||
 		planInputsChanged(plan.Spec.Inputs, state.Spec.Inputs) ||
 		!reflect.DeepEqual(plan.Spec.ParentBuildingBlockRefs, state.Spec.ParentBuildingBlockRefs) ||
 		secretRotated
