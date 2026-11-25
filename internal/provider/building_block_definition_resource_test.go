@@ -1241,7 +1241,7 @@ func checksForImplementation(suffix, exampleSuffix string) (checkInputs, checkIm
 					"is_environment":                 knownvalue.Bool(false),
 					"is_optional":                    knownvalue.Bool(true),
 					"updateable_by_consumer":         knownvalue.Bool(false),
-					"description":                    knownvalue.StringExact("The business unit tag of the workspace this building block belongs to"),
+					"description":                    knownvalue.StringExact("The business unit tag of the workspace that owns this building block"),
 					"argument":                       knownvalue.StringExact(`"WORKSPACE.business-unit-` + suffix + `"`),
 					"default_value":                  knownvalue.Null(),
 					"value_validation_regex":         knownvalue.Null(),

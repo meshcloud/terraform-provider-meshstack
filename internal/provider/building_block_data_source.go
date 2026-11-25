@@ -66,7 +66,7 @@ func (d *buildingBlockDataSource) Schema(_ context.Context, _ datasource.SchemaR
 						MarkdownDescription: "UUID which uniquely identifies the building block.",
 						Required:            true,
 					},
-					"owned_by_workspace": computedString("The workspace containing this building block."),
+					"owned_by_workspace": computedString("The workspace that owns this building block."),
 				},
 			},
 

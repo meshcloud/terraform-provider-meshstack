@@ -174,7 +174,7 @@ func (r *buildingBlockResource) Schema(ctx context.Context, req resource.SchemaR
 						Computed:            true,
 					},
 					"owned_by_workspace": schema.StringAttribute{
-						MarkdownDescription: "The workspace containing this building block.",
+						MarkdownDescription: "The workspace that owns this building block.",
 						Computed:            true,
 					},
 				},

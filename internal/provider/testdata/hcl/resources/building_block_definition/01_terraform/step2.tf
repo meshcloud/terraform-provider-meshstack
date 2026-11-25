@@ -171,8 +171,8 @@ resource "meshstack_building_block_definition" "example_01_terraform" {
       }
       business_unit = {
         display_name    = "Business Unit"
-        description     = "The business unit tag of the workspace this building block belongs to" # Optional
-        type            = "CODE"                                                                  # Tag inputs are always CODE: a tag value is a list of strings
+        description     = "The business unit tag of the workspace that owns this building block" # Optional
+        type            = "CODE"                                                                 # Tag inputs are always CODE: a tag value is a list of strings
         assignment_type = "TAG"
         is_optional     = true # Optional: run without the value while the tag is unset, instead of waiting for it
         argument        = jsonencode("WORKSPACE.${meshstack_tag_definition.workspace_business_unit.spec.key}")

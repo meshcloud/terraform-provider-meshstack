@@ -119,7 +119,7 @@ func (d *buildingBlocksDataSource) Schema(_ context.Context, _ datasource.Schema
 							Computed:            true,
 							Attributes: map[string]schema.Attribute{
 								"uuid":               computedString("UUID which uniquely identifies the building block."),
-								"owned_by_workspace": computedString("The workspace containing this building block."),
+								"owned_by_workspace": computedString("The workspace that owns this building block."),
 							},
 						},
 						"spec":       buildingBlockReadSpecAttribute(),

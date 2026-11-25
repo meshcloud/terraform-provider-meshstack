@@ -76,7 +76,7 @@ block takes the CLI profile and the workspace, as [provider.tf](https://raw.gith
   workspace of the profile, so the configuration acts in the same workspace for everyone who
   applies it. Use the identifier meshPanel shows, such as `devops-platform`.
 - The login acts with the user's role in that workspace. Set it to the workspace the objects belong
-  to: the platform team's workspace for a definition, the building block's workspace for a block.
+  to: the platform team's workspace for a definition, the workspace that owns a block.
 - For several workspaces, write one provider block per workspace with an `alias`, and set
   `provider = meshstack.<alias>` on each resource, as
   [provider_workspaces.tf](https://raw.githubusercontent.com/meshcloud/terraform-provider-meshstack/main/examples/provider/provider_workspaces.tf) shows.
