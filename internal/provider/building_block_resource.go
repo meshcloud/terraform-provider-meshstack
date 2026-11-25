@@ -164,7 +164,10 @@ func (r *buildingBlockResource) Schema(ctx context.Context, req resource.SchemaR
 			"typically only creates one directly to test a draft BBD in the operator's own workspace. " +
 			"Building blocks can depend on each other via `parent_building_block_refs`, forming a dependency hierarchy " +
 			"in which a child's inputs draw their values from a parent's outputs " +
-			"(see [building block concepts](https://docs.meshcloud.io/concepts/building-block/))." + agentContextNote(),
+			"(see [building block concepts](https://docs.meshcloud.io/concepts/building-block/)).\n\n" +
+			"~> **User inputs that consumers cannot update:** a change to a `USER_INPUT` whose `all_inputs.<key>.updateable_by_consumer` " +
+			"is `false` plans as an in-place update, but meshStack accepts it only from an API key with " + operatorPermissions + ". " +
+			"With any other API key, " + replaceBuildingBlockHint + agentContextNote(),
 		Attributes: map[string]schema.Attribute{
 			"ref": meshRefByUuid(meshRefOptions{Kind: client.MeshObjectKind.BuildingBlock, Description: "Reference to this building block, can be used in another building block's `spec.parent_building_block_refs`.", Output: true}),
 
@@ -1187,8 +1190,8 @@ func (r *buildingBlockResource) Update(ctx context.Context, req resource.UpdateR
 			return
 		}
 		if httpErr, ok := errors.AsType[client.HttpError](err); ok && httpErr.IsForbidden() {
-			if lockedInputs := changedLockedInputsOf(ctx, req.Plan, req.State, plan.Spec.Inputs, state.AllInputs, &resp.Diagnostics); len(lockedInputs) > 0 {
-				resp.Diagnostics.AddError(lockedInputUpdateRejected(lockedInputs, err))
+			if inputs := changedNonUpdateableUserInputs(ctx, req.Plan, req.State, plan.Spec.Inputs, state.AllInputs, &resp.Diagnostics); len(inputs) > 0 {
+				resp.Diagnostics.AddError(nonUpdateableUserInputChangeRejected(inputs, err))
 				return
 			}
 		}

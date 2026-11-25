@@ -5,6 +5,7 @@ subcategory: ""
 description: |-
   Manage a workspace or tenant building block created from a building block definition (BBD).
   A building block is usually managed by the app team that owns its workspace; a platform operator typically only creates one directly to test a draft BBD in the operator's own workspace. Building blocks can depend on each other via parent_building_block_refs, forming a dependency hierarchy in which a child's inputs draw their values from a parent's outputs (see building block concepts https://docs.meshcloud.io/concepts/building-block/).
+  ~> User inputs that consumers cannot update: a change to a USER_INPUT whose all_inputs.<key>.updateable_by_consumer is false plans as an in-place update, but meshStack accepts it only from an API key with admin or platform operator permissions (ADM_BUILDINGBLOCK_SAVE, or MANAGED_BUILDINGBLOCK_SAVE for the definition's owning workspace). With any other API key, tofu apply -replace=<resource address> (or terraform apply -replace=...) replaces the building block on the next apply: it destroys the building block and creates it again with the new inputs.
   -> AI agents: Read the meshStack agent context https://docs.meshcloud.io/agent-context/index.md before you act, starting with its guardrails.
 ---
 
@@ -13,6 +14,8 @@ description: |-
 Manage a workspace or tenant building block created from a building block definition (BBD).
 
 A building block is usually managed by the app team that owns its workspace; a platform operator typically only creates one directly to test a draft BBD in the operator's own workspace. Building blocks can depend on each other via `parent_building_block_refs`, forming a dependency hierarchy in which a child's inputs draw their values from a parent's outputs (see [building block concepts](https://docs.meshcloud.io/concepts/building-block/)).
+
+~> **User inputs that consumers cannot update:** a change to a `USER_INPUT` whose `all_inputs.<key>.updateable_by_consumer` is `false` plans as an in-place update, but meshStack accepts it only from an API key with admin or platform operator permissions (`ADM_BUILDINGBLOCK_SAVE`, or `MANAGED_BUILDINGBLOCK_SAVE` for the definition's owning workspace). With any other API key, `tofu apply -replace=<resource address>` (or `terraform apply -replace=...`) replaces the building block on the next apply: it destroys the building block and creates it again with the new inputs.
 
 -> **AI agents:** Read the [meshStack agent context](https://docs.meshcloud.io/agent-context/index.md) before you act, starting with its guardrails.
 
@@ -263,61 +266,6 @@ Read-Only:
 - `assignment_type` (String) How the input value is assigned. One of `NONE`, `PLATFORM_TENANT_ID`, `SIGN_IN_URL`, `RESOURCE_URL`, `SUMMARY`.
 - `value` (String) Output value. Use `jsondecode(...)` to obtain polymorphic value depending on `value_type`.
 - `value_type` (String) Data type of the value. One of `STRING`, `CODE`, `INTEGER`, `BOOLEAN`, `FILE`, `LIST`, `SINGLE_SELECT`, `MULTI_SELECT`.
-
-## Changing an input that consumers cannot update
-
-A building block definition can declare a `USER_INPUT` with `updateable_by_consumer = false`. The building block shows
-this flag in `all_inputs.<key>.updateable_by_consumer`. meshStack lets only an API key with admin or platform operator
-permissions (`ADM_BUILDINGBLOCK_SAVE`, or `MANAGED_BUILDINGBLOCK_SAVE` for the definition's owning workspace) change
-such an input in place. With any other API key the plan still shows an in-place update, and the apply fails with a 403.
-
-You then have two options:
-
-- Ask the platform team that owns the building block definition to make the input updateable by consumers.
-- Replace the building block. This destroys the building block and creates it again with the new inputs, so the
-  provider never does it on its own. You have to taint the building block.
-
-### Taint a building block in your own state
-
-```shell
-tofu taint meshstack_building_block.example
-tofu apply
-# or in one step:
-tofu apply -replace=meshstack_building_block.example
-```
-
-`terraform` takes the same commands.
-
-### Taint a building block that a building block run created
-
-In a building block composition, the OpenTofu module of a parent building block creates the
-`meshstack_building_block`. The resource is then in the state of the **parent** building block. When the parent
-definition uses the HTTP backend built into meshStack, the [meshStack CLI](https://github.com/meshcloud/meshstack-cli)
-(v0.4.0 or later) gives you access to that state:
-
-1. Check out the OpenTofu module of the parent definition, at the version the parent building block runs.
-2. Initialize it against the state of the parent building block:
-   ```shell
-   meshstack buildingblock tfstate exec <parent-building-block-uuid> --override-backend -- tofu init
-   ```
-3. Find the address of the building block to replace:
-   ```shell
-   meshstack buildingblock tfstate exec <parent-building-block-uuid> --override-backend -- tofu state list
-   ```
-4. Taint it. `--mode readwrite` stores the changed state in meshStack, and `--backup-dir` keeps a copy of the state
-   from before the change:
-   ```shell
-   meshstack buildingblock tfstate exec <parent-building-block-uuid> --mode readwrite --override-backend \
-     --backup-dir ./tfstate-backups -- tofu taint meshstack_building_block.example
-   ```
-5. Run the parent building block again. The run replaces the tainted building block:
-   ```shell
-   meshstack buildingblock trigger-run <parent-building-block-uuid>
-   ```
-
-Writing the state needs an API key with `TFSTATE_SAVE` in the workspace of the parent building block, or a user who is
-Workspace Owner or Workspace Manager of the workspace that owns the parent definition. Run
-`meshstack buildingblock tfstate exec --help` for all options.
 
 ## Import
 

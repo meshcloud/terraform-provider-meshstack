@@ -362,6 +362,8 @@ func TestAccBuildingBlock(t *testing.T) {
 					},
 					ConfigStateChecks: append([]statecheck.StateCheck{
 						statecheck.ExpectKnownValue(buildingBlockAddr, tfjsonpath.New("spec").AtMapKey("inputs").AtMapKey("name").AtMapKey("value"), knownvalue.StringExact(`"my-name"`)),
+						statecheck.ExpectKnownValue(buildingBlockAddr, tfjsonpath.New("all_inputs").AtMapKey("name").AtMapKey("updateable_by_consumer"), knownvalue.Bool(false)),
+						statecheck.ExpectKnownValue(buildingBlockAddr, tfjsonpath.New("all_inputs").AtMapKey("environment").AtMapKey("updateable_by_consumer"), knownvalue.Bool(true)),
 					}, createStatusChecks...),
 				},
 				{
@@ -383,7 +385,7 @@ func TestAccBuildingBlock(t *testing.T) {
 					},
 				},
 				{
-					// Changing a consumer input is an in-place Update; the operator input stays put.
+					// Changing a user input that consumers cannot update is an in-place Update for an operator; the operator input stays put.
 					Config:          hclStep(t, "resources/building_block/05_operator_inputs", 4, vars),
 					ConfigVariables: creds,
 					ConfigPlanChecks: resource.ConfigPlanChecks{
@@ -928,41 +930,7 @@ func TestAccBuildingBlock(t *testing.T) {
 		})
 	})
 
-	t.Run("17_locked_input_change", func(t *testing.T) {
-		suffix := acctest.RandString(8)
-		config := func(name, environment string) string {
-			return hclStep(t, "resources/building_block/17_locked_input_change", 1, hclStepVars{
-				"suffix": suffix, "name": name, "environment": environment,
-			})
-		}
-		buildingBlockAddr := "meshstack_building_block.example_workspace"
-		updatedInPlace := statecheck.CompareValue(compare.ValuesSame())
-
-		ApplyAndTest(t, resource.TestCase{
-			Steps: []resource.TestStep{
-				{
-					Config: config("my-name", "dev"),
-					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(buildingBlockAddr, tfjsonpath.New("all_inputs").AtMapKey("name").AtMapKey("updateable_by_consumer"), knownvalue.Bool(true)),
-						statecheck.ExpectKnownValue(buildingBlockAddr, tfjsonpath.New("all_inputs").AtMapKey("environment").AtMapKey("updateable_by_consumer"), knownvalue.Bool(false)),
-						updatedInPlace.AddStateValue(buildingBlockAddr, tfjsonpath.New("metadata").AtMapKey("uuid")),
-					},
-				},
-				{
-					Config: config("my-name", "prod"),
-					ConfigPlanChecks: resource.ConfigPlanChecks{
-						PreApply: []plancheck.PlanCheck{plancheck.ExpectResourceAction(buildingBlockAddr, plancheck.ResourceActionUpdate)},
-					},
-					ConfigStateChecks: []statecheck.StateCheck{
-						updatedInPlace.AddStateValue(buildingBlockAddr, tfjsonpath.New("metadata").AtMapKey("uuid")),
-						statecheck.ExpectKnownValue(buildingBlockAddr, tfjsonpath.New("all_inputs").AtMapKey("environment").AtMapKey("value"), knownvalue.StringExact(`"prod"`)),
-					},
-				},
-			},
-		})
-	})
-
-	t.Run("18_locked_input_change_rejected", func(t *testing.T) {
+	t.Run("17_non_updateable_user_input_change", func(t *testing.T) {
 		if IsMockClientTest() {
 			t.Skip("the mock has no permission boundaries, so it never rejects an update")
 		}
@@ -981,7 +949,7 @@ func TestAccBuildingBlock(t *testing.T) {
 		ApplyAndTest(t, resource.TestCase{
 			Steps: []resource.TestStep{
 				{
-					Config: hclStep(t, "resources/building_block/18_locked_input_change_rejected", 1, vars("dev")),
+					Config: hclStep(t, "resources/building_block/17_non_updateable_user_input_change", 1, vars("dev")),
 					ConfigStateChecks: []statecheck.StateCheck{
 						statecheck.ExpectKnownValue(apiKeyAddr, tfjsonpath.New("status").AtMapKey("client_id"), xknownvalue.NotEmptyString(func(clientId string) error {
 							apiKeyClientId = lazyVariable(clientId)
@@ -994,13 +962,13 @@ func TestAccBuildingBlock(t *testing.T) {
 					},
 				},
 				{
-					Config:          hclStep(t, "resources/building_block/18_locked_input_change_rejected", 2, vars("dev")),
+					Config:          hclStep(t, "resources/building_block/17_non_updateable_user_input_change", 2, vars("dev")),
 					ConfigVariables: consumerVariables,
 				},
 				{
-					Config:          hclStep(t, "resources/building_block/18_locked_input_change_rejected", 2, vars("prod")),
+					Config:          hclStep(t, "resources/building_block/17_non_updateable_user_input_change", 2, vars("prod")),
 					ConfigVariables: consumerVariables,
-					ExpectError:     expectErrorWords("not updateable by consumers", `"environment"`, "taint"),
+					ExpectError:     expectErrorWords("not updateable by consumers", `"environment"`, "-replace"),
 				},
 			},
 		})

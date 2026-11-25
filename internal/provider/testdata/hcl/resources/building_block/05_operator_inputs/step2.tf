@@ -49,7 +49,8 @@ resource "meshstack_building_block_definition" "example" {
 
   # Reuses the same input keys as the workspace example (resource_01_workspace.tf), except its
   # `payment_method`, but changes their behaviour: `size` is a platform-operator input (settable only by
-  # an operator/admin), while `name`/`environment` stay regular consumer inputs.
+  # an operator/admin), `name` is a user input that consumers cannot update, and `environment` stays a regular
+  # consumer input.
   version_spec = {
     draft = false
 
@@ -59,7 +60,7 @@ resource "meshstack_building_block_definition" "example" {
         description            = "Name of the resource"
         type                   = "STRING"
         assignment_type        = "USER_INPUT"
-        updateable_by_consumer = true
+        updateable_by_consumer = false
       }
       size = {
         display_name           = "Size"
