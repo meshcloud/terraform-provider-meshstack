@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/meshcloud/meshstack-cli/client"
 )
 
 // nestedObjectToObjectType converts a schema.NestedAttributeObject into a types.ObjectType
@@ -163,27 +164,42 @@ type meshRefOptions struct {
 
 // meshRefByUuid builds a {kind, uuid} reference for the given meshObject kind.
 func meshRefByUuid(opts meshRefOptions) schema.SingleNestedAttribute {
-	return meshRef("uuid", "UUID (`metadata.uuid`) of `"+opts.Kind+"`.", opts)
+	return meshRef([]refIdentity{{"uuid", "UUID (`metadata.uuid`) of `" + opts.Kind + "`."}}, opts)
 }
 
 // meshRefByName builds a {kind, name} reference for the given meshObject kind.
 func meshRefByName(opts meshRefOptions) schema.SingleNestedAttribute {
-	return meshRef("name", "Named identifier (`metadata.name`) of `"+opts.Kind+"`.", opts)
+	return meshRef([]refIdentity{{"name", "Named identifier (`metadata.name`) of `" + opts.Kind + "`."}}, opts)
 }
 
-// meshRef builds the whole {kind, <uuid|name>} reference attribute — block scaffolding, identifier
-// and kind discriminator — for a meshObject reference. Callers pick the identifier flavour via
-// meshRefByUuid / meshRefByName rather than calling this directly.
+// meshProjectRef builds a {kind, owned_by_workspace, name} reference: a project name is unique only
+// within its workspace, and a project has no uuid.
+func meshProjectRef(opts meshRefOptions) schema.SingleNestedAttribute {
+	opts.Kind = client.MeshObjectKind.Project
+	return meshRef([]refIdentity{
+		{"owned_by_workspace", "Named identifier (`metadata.name`) of the `meshWorkspace` that owns the `meshProject`."},
+		{"name", "Named identifier (`metadata.name`) of the `meshProject`."},
+	}, opts)
+}
+
+type refIdentity struct {
+	name        string
+	description string
+}
+
+// meshRef builds the whole {kind, <identity>} reference attribute — block scaffolding, the identity
+// attributes and kind discriminator — for a meshObject reference. Callers pick the identity via
+// meshRefByUuid / meshRefByName / meshProjectRef rather than calling this directly.
 //
 // It intentionally does not fit refs with bespoke schemas: the discriminated uuid-or-name target_ref
 // and the building_block_definition_version_ref (which carries an extra content_hash on the v3 path).
-func meshRef(idName, idDesc string, opts meshRefOptions) schema.SingleNestedAttribute {
+func meshRef(ids []refIdentity, opts meshRefOptions) schema.SingleNestedAttribute {
 	kindAttr := schema.StringAttribute{
 		MarkdownDescription: "meshObject type, always `" + opts.Kind + "`.",
 		Default:             stringdefault.StaticString(opts.Kind),
 		PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 	}
-	idAttr := schema.StringAttribute{MarkdownDescription: idDesc}
+	var idAttr schema.StringAttribute
 	block := schema.SingleNestedAttribute{MarkdownDescription: opts.Description}
 
 	// `kind` is always lenient for inputs: optional, defaulted to the single valid value, and
@@ -207,7 +223,7 @@ func meshRef(idName, idDesc string, opts meshRefOptions) schema.SingleNestedAttr
 		idAttr.Computed = true
 		idAttr.PlanModifiers = []planmodifier.String{stringplanmodifier.UseStateForUnknown()}
 		// Keep `kind` known at plan time; only the identifier is genuinely computed.
-		block.PlanModifiers = []planmodifier.Object{refOutputKind{kind: opts.Kind, idName: idName}}
+		block.PlanModifiers = []planmodifier.Object{refOutputKind{kind: opts.Kind, ids: ids}}
 
 	case opts.OptionalComputed:
 		// meshStack defaults this input, so the user may omit it: block and identifier are Optional+Computed.
@@ -225,8 +241,8 @@ func meshRef(idName, idDesc string, opts meshRefOptions) schema.SingleNestedAttr
 		lenientKind()
 		computedId()
 		block.Required = true
-		block.Validators = []validator.Object{
-			objectvalidator.AlsoRequires(path.MatchRelative().AtName(idName)),
+		for _, id := range ids {
+			block.Validators = append(block.Validators, objectvalidator.AlsoRequires(path.MatchRelative().AtName(id.name)))
 		}
 		// Note goes on the identifier, not the block: set-element-typed refs
 		// (dependency_refs, mandatory_building_block_refs) are spread into a NestedAttributeObject
@@ -249,7 +265,12 @@ func meshRef(idName, idDesc string, opts meshRefOptions) schema.SingleNestedAttr
 		block.PlanModifiers = append(block.PlanModifiers, objectplanmodifier.RequiresReplace())
 	}
 
-	block.Attributes = map[string]schema.Attribute{"kind": kindAttr, idName: idAttr}
+	block.Attributes = map[string]schema.Attribute{"kind": kindAttr}
+	for _, id := range ids {
+		attr := idAttr
+		attr.MarkdownDescription = id.description + idAttr.MarkdownDescription
+		block.Attributes[id.name] = attr
+	}
 	return block
 }
 
@@ -264,8 +285,8 @@ func meshRef(idName, idDesc string, opts meshRefOptions) schema.SingleNestedAttr
 // identifiers still can't be plain Required (see meshRef). Plan modifiers run for resources only, so
 // this is inert for data-source refs, which instead resolve `kind` at their plan-time read.
 type refOutputKind struct {
-	kind   string
-	idName string
+	kind string
+	ids  []refIdentity
 }
 
 func (m refOutputKind) Description(context.Context) string {
@@ -283,10 +304,11 @@ func (m refOutputKind) PlanModifyObject(ctx context.Context, req planmodifier.Ob
 		return
 	}
 
-	obj, diags := types.ObjectValue(req.PlanValue.AttributeTypes(ctx), map[string]attr.Value{
-		"kind":   types.StringValue(m.kind),
-		m.idName: types.StringUnknown(),
-	})
+	values := map[string]attr.Value{"kind": types.StringValue(m.kind)}
+	for _, id := range m.ids {
+		values[id.name] = types.StringUnknown()
+	}
+	obj, diags := types.ObjectValue(req.PlanValue.AttributeTypes(ctx), values)
 	resp.Diagnostics.Append(diags...)
 	resp.PlanValue = obj
 }
