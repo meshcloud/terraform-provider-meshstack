@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"os"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -59,21 +60,42 @@ func (p *MeshStackProvider) Configure(ctx context.Context, req provider.Configur
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	resp.DataSourceData = providerClient
-	resp.ResourceData = providerClient
+	configured := configuredProvider{
+		client: providerClient,
+		resolveWorkspace: func(ctx context.Context) (string, error) {
+			workspace, err := data.Lookup(ctx, setting.Workspace.EnvKey())
+			if workspace != "" || err != nil {
+				return workspace, err
+			}
+			return os.Getenv(setting.Workspace.EnvKey()), nil
+		},
+	}
+	resp.DataSourceData = configured
+	resp.ResourceData = configured
 }
 
-func configureProviderClient(providerData any, consumer func(client client.Client)) (diags diag.Diagnostics) {
+type configuredProvider struct {
+	client           client.Client
+	resolveWorkspace func(ctx context.Context) (string, error)
+}
+
+func configureProviderClient(providerData any, consumer func(client client.Client)) diag.Diagnostics {
+	return configureProvider(providerData, func(configured configuredProvider) {
+		consumer(configured.client)
+	})
+}
+
+func configureProvider(providerData any, consumer func(configured configuredProvider)) (diags diag.Diagnostics) {
 	if providerData == nil {
 		// do nothing as Terraform calls Configure without providerData
 		return
 	}
-	if providerClient, ok := providerData.(client.Client); ok {
-		consumer(providerClient)
+	if configured, ok := providerData.(configuredProvider); ok {
+		consumer(configured)
 	} else {
 		diags.AddError(
 			"Unexpected Provider Client type",
-			fmt.Sprintf("Expected type client.Client, got: %T. Please report this issue to the provider developers.", providerData),
+			fmt.Sprintf("Expected type %T, got: %T. Please report this issue to the provider developers.", configuredProvider{}, providerData),
 		)
 	}
 	return

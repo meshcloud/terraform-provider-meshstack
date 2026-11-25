@@ -20,6 +20,9 @@ FEATURES:
   fails unless exactly one matches. The read-only `ref` (`{kind, name}`) references the user.
 - `meshstack_users`: new data source that lists meshUsers, optionally only those with access to a workspace, with a
   workspace role or with access to a project. Each user has the read-only `ref`.
+- `meshstack_workspace` data source: `metadata.name` is optional. Without it, the data source reads the workspace the
+  provider acts in, which the provider's `workspace` or `MESHSTACK_WORKSPACE` names, so a configuration need not repeat
+  the workspace name. This works with any login: with an API key, set `workspace` for this.
 
 FIXES:
 - Provider: with no `profile` set, the provider takes the profile that the last `meshstack login` selected only when it

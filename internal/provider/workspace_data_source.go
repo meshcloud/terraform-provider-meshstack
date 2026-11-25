@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/meshcloud/meshstack-cli/client"
 )
 
@@ -21,7 +22,8 @@ func NewWorkspaceDataSource() datasource.DataSource {
 }
 
 type workspaceDataSource struct {
-	meshWorkspaceClient client.MeshWorkspaceClient
+	meshWorkspaceClient      client.MeshWorkspaceClient
+	resolveProviderWorkspace func(ctx context.Context) (string, error)
 }
 
 func (d *workspaceDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -31,17 +33,20 @@ func (d *workspaceDataSource) Metadata(_ context.Context, req datasource.Metadat
 // Schema defines the schema for the data source.
 func (d *workspaceDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Read a single workspace by identifier.",
+		MarkdownDescription: "Read a single workspace by identifier. Without `metadata.name`, it reads the workspace the provider acts in, " +
+			"which the provider's `workspace` or `MESHSTACK_WORKSPACE` names.",
 
 		Attributes: map[string]schema.Attribute{
 			"ref": meshRefByName(meshRefOptions{Kind: client.MeshObjectKind.Workspace, Description: "Reference to this workspace, can be used as `target_ref` in building block resources.", Output: true}),
 
 			"metadata": schema.SingleNestedAttribute{
-				Required: true,
+				Optional: true,
+				Computed: true,
 				Attributes: map[string]schema.Attribute{
 					"name": schema.StringAttribute{
-						MarkdownDescription: "Workspace identifier.",
-						Required:            true,
+						MarkdownDescription: "Workspace identifier. Defaults to the workspace the provider acts in.",
+						Optional:            true,
+						Computed:            true,
 					},
 					"created_on": schema.StringAttribute{
 						MarkdownDescription: "Creation date of the workspace.",
@@ -74,20 +79,35 @@ func (d *workspaceDataSource) Schema(_ context.Context, _ datasource.SchemaReque
 
 // Configure adds the provider configured client to the data source.
 func (d *workspaceDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	resp.Diagnostics.Append(configureProviderClient(req.ProviderData, func(client client.Client) {
-		d.meshWorkspaceClient = client.Workspace
+	resp.Diagnostics.Append(configureProvider(req.ProviderData, func(configured configuredProvider) {
+		d.meshWorkspaceClient = configured.client.Workspace
+		d.resolveProviderWorkspace = configured.resolveWorkspace
 	})...)
 }
 
 // Read refreshes the Terraform state with the latest data.
 func (d *workspaceDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var name string
-
-	// Read Terraform configuration data into the model
-	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("metadata").AtName("name"), &name)...)
-
+	var configuredName types.String
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("metadata").AtName("name"), &configuredName)...)
 	if resp.Diagnostics.HasError() {
 		return
+	}
+
+	name := configuredName.ValueString()
+	if name == "" {
+		providerWorkspace, err := d.resolveProviderWorkspace(ctx)
+		if err != nil {
+			resp.Diagnostics.AddError("Could not resolve the workspace the provider acts in", err.Error())
+			return
+		}
+		if providerWorkspace == "" {
+			resp.Diagnostics.AddError(
+				"No workspace to read",
+				"Set `metadata.name`, or name the workspace the provider acts in with `workspace` in the provider block or `MESHSTACK_WORKSPACE`.",
+			)
+			return
+		}
+		name = providerWorkspace
 	}
 
 	workspace, err := d.meshWorkspaceClient.Read(ctx, name)

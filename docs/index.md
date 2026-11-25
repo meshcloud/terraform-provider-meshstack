@@ -110,7 +110,7 @@ resource "meshstack_building_block" "team_a_sandbox" {
   With no name given, the profile is the one the last `meshstack login` selected, if it has the endpoint in use, else the only profile with that endpoint. Without such a profile, the endpoint and the credential come from the other settings alone.
 - `workspace` (String) The workspace to work in, identified as in meshPanel, such as my-workspace-ab12c. Also read from MESHSTACK_WORKSPACE.
   
-  A browser login needs this or `MESHSTACK_WORKSPACE`: the provider does not take the profile's default workspace, which `meshstack login` stores. An API key or an API token needs no workspace.
+  A browser login needs this or `MESHSTACK_WORKSPACE`: the provider does not take the profile's default workspace, which `meshstack login` stores. An API key or an API token needs no workspace. The `meshstack_workspace` data source without `metadata.name` reads this workspace, with any login.
 
 ## Dependency Wiring Patterns
 

@@ -88,7 +88,8 @@ Give the key only the [permissions](https://docs.meshcloud.io/api/authentication
 the configuration needs. Leave the provider block empty and set `MESHSTACK_ENDPOINT`,
 `MESHSTACK_API_KEY` and `MESHSTACK_API_SECRET` from the secret store of the CI system. Never set
 `apisecret` in the provider block: Terraform then writes the secret to state. An API key needs no
-workspace.
+workspace, but set `workspace` or `MESHSTACK_WORKSPACE` when the configuration reads its workspace
+from the provider, as the next section shows.
 
 ## Find existing objects
 
@@ -100,6 +101,10 @@ uuids into the configuration. Examples:
 [payment method](https://raw.githubusercontent.com/meshcloud/terraform-provider-meshstack/main/examples/data-sources/meshstack_payment_method/data-source.tf) and
 [building blocks](https://raw.githubusercontent.com/meshcloud/terraform-provider-meshstack/main/examples/data-sources/meshstack_building_blocks/data-source.tf).
 
+- Without `metadata.name`, the workspace data source reads the workspace the provider acts in, which
+  `workspace` or `MESHSTACK_WORKSPACE` names, as
+  [data-source_provider.tf](https://raw.githubusercontent.com/meshcloud/terraform-provider-meshstack/main/examples/data-sources/meshstack_workspace/data-source_provider.tf)
+  shows. Pass its `metadata.name` on as `owned_by_workspace` instead of repeating the name.
 - The `ref` of a workspace is the `target_ref` of a workspace-level building block. For a
   tenant-level block, filter `meshstack_tenants` by `platform = "<platform>.<location>"` and take
   `one(data.meshstack_tenants.<name>.tenants).ref`.
