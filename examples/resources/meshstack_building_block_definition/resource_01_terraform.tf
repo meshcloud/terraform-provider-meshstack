@@ -122,7 +122,7 @@ resource "meshstack_building_block_definition" "example_01_terraform" {
         display_name    = "Building Block UUID"
         description     = "UUID of this building block" # Optional
         type            = "STRING"
-        assignment_type = "BUILDING_BLOCK_UUID" # The old name TENANT_BUILDING_BLOCK_UUID still works
+        assignment_type = "BUILDING_BLOCK_UUID" # The deprecated TENANT_BUILDING_BLOCK_UUID still works
         display_order   = 6
       }
       "some-file.yaml" = {

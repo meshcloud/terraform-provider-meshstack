@@ -1,8 +1,7 @@
 # v0.29.0
 
 Requires meshStack 2026.47.0 or later (previously 2026.36.0). An API key that creates a `meshstack_integration` without
-`runner_ref` now needs the permission to list building block runners. Using `assignment_type = "BUILDING_BLOCK_UUID"`
-needs meshStack 2026.48.0 or later.
+`runner_ref` now needs the permission to list building block runners.
 
 FEATURES:
 - `meshstack_building_block` and `meshstack_building_block_definition` resources and data sources,
@@ -11,8 +10,8 @@ FEATURES:
 - `meshstack_integration`: a new GitHub, GitLab or Azure DevOps integration without `runner_ref` gets meshStack's
   default runner. Before, it got the hosted runner with a fixed uuid.
 - `meshstack_building_block_definition`: `assignment_type` accepts `BUILDING_BLOCK_UUID`, the new name of the input
-  source that gives a building block its own UUID. The old name `TENANT_BUILDING_BLOCK_UUID` stays valid and gives the
-  same value, so a configuration that uses it needs no change.
+  source that gives a building block its own UUID (since meshStack 2026.48.0). The old name
+  `TENANT_BUILDING_BLOCK_UUID` is deprecated.
 
 # v0.28.2
 
