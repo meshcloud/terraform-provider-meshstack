@@ -107,7 +107,7 @@ uuids into the configuration. Examples:
   `metadata.owned_by_workspace` when two workspaces offer a definition of the same name.
 - `version_latest_release` of a definition is its newest released version, `version_latest` the
   newest including a draft, and `versions["v2"]` version 2.
-- `meshstack_building_blocks` filters by `workspace_identifier`, `name`, `definition_uuid`,
+- `meshstack_building_blocks` filters by `owned_by_workspace`, `name`, `definition_uuid`,
   `health_status`, `action` and more: see its
   [registry page](https://registry.terraform.io/providers/meshcloud/meshstack/latest/docs/data-sources/building_blocks).
 

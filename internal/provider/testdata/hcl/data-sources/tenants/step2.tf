@@ -137,6 +137,6 @@ resource "meshstack_tenant" "test" {
 }
 
 data "meshstack_tenants" "example" {
-  workspace = meshstack_workspace.test.metadata.name
-  project   = meshstack_project.test.metadata.name
+  owned_by_workspace = meshstack_workspace.test.metadata.name
+  project            = meshstack_project.test.metadata.name
 }

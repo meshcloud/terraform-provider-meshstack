@@ -96,7 +96,7 @@ resource "meshstack_building_block_definition" "example" {
 
 data "meshstack_building_blocks" "all" {
 
-  workspace_identifier = data.meshstack_workspace.example.metadata.name
+  owned_by_workspace = data.meshstack_workspace.example.metadata.name
 
   health_status = ["SUCCEEDED", "FAILED"]
 

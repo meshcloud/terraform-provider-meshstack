@@ -199,8 +199,8 @@ resource "meshstack_building_block_definition" "example_tenant" {
 }
 
 data "meshstack_tenants" "example" {
-  workspace = meshstack_tenant.test.metadata.owned_by_workspace
-  project   = meshstack_tenant.test.metadata.owned_by_project
+  owned_by_workspace = meshstack_tenant.test.metadata.owned_by_workspace
+  project            = meshstack_tenant.test.metadata.owned_by_project
 }
 
 data "meshstack_building_block_definition" "example" {

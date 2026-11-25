@@ -1,3 +1,3 @@
 data "meshstack_projects" "example_all_projects_in_workspace" {
-  workspace_identifier = data.meshstack_workspace.example.metadata.name
+  owned_by_workspace = data.meshstack_workspace.example.metadata.name
 }

@@ -32,7 +32,7 @@ func TestAccBuildingBlockDefinitionsDataSource(t *testing.T) {
 			{
 				Config: hclStep(t, "data-sources/building_block_definitions/simple_state_check", 2, vars),
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(dataSourceAddress, tfjsonpath.New("workspace_identifier"), knownvalue.StringExact("test-ws-"+suffix)),
+					statecheck.ExpectKnownValue(dataSourceAddress, tfjsonpath.New("owned_by_workspace"), knownvalue.StringExact("test-ws-"+suffix)),
 					statecheck.ExpectKnownValue(dataSourceAddress, tfjsonpath.New("building_block_definitions"), knownvalue.ListExact([]knownvalue.Check{
 						knownvalue.ObjectPartial(map[string]knownvalue.Check{
 							"metadata": knownvalue.ObjectPartial(map[string]knownvalue.Check{

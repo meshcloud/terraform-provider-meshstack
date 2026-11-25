@@ -99,7 +99,7 @@ provider "meshstack-other" {
 data "meshstack_building_block_definitions" "example" {
   provider = meshstack-other
 
-  workspace_identifier = meshstack_building_block_definition.example_03_manual.metadata.owned_by_workspace
+  owned_by_workspace = meshstack_building_block_definition.example_03_manual.metadata.owned_by_workspace
 }
 
 # Example: select exactly one BBD by display name pattern.

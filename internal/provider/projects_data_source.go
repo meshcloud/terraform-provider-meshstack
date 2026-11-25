@@ -32,8 +32,8 @@ func (d *projectsDataSource) Schema(ctx context.Context, req datasource.SchemaRe
 		MarkdownDescription: "Projects in a workspace.",
 
 		Attributes: map[string]schema.Attribute{
-			"workspace_identifier": schema.StringAttribute{
-				MarkdownDescription: "Workspace identifier",
+			"owned_by_workspace": schema.StringAttribute{
+				MarkdownDescription: "Identifier of the workspace that owns the projects.",
 				Required:            true,
 			},
 			"payment_method_identifier": schema.StringAttribute{
@@ -103,7 +103,7 @@ func (d *projectsDataSource) Read(ctx context.Context, req datasource.ReadReques
 	var workspaceIdentifier string
 	var paymentMethodIdentifier *string
 
-	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("workspace_identifier"), &workspaceIdentifier)...)
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("owned_by_workspace"), &workspaceIdentifier)...)
 	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("payment_method_identifier"), &paymentMethodIdentifier)...)
 
 	if resp.Diagnostics.HasError() {

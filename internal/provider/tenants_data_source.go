@@ -37,8 +37,8 @@ func (d *tenantsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 		MarkdownDescription: "Query tenants in a workspace with optional filters.",
 
 		Attributes: map[string]schema.Attribute{
-			"workspace": schema.StringAttribute{
-				MarkdownDescription: "Workspace identifier. Required.",
+			"owned_by_workspace": schema.StringAttribute{
+				MarkdownDescription: "Identifier of the workspace that owns the tenants.",
 				Required:            true,
 			},
 			"project": schema.StringAttribute{
@@ -101,7 +101,7 @@ func (d *tenantsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	var workspace string
 	var project, platform, platformType, landingZone, platformTenantId *string
 
-	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("workspace"), &workspace)...)
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("owned_by_workspace"), &workspace)...)
 	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("project"), &project)...)
 	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("platform"), &platform)...)
 	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("platform_type"), &platformType)...)

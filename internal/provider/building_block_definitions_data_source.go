@@ -30,7 +30,7 @@ type buildingBlockDefinitionsDataSource struct {
 }
 
 type buildingBlockDefinitionsDataSourceModel struct {
-	WorkspaceIdentifier      *string                                  `tfsdk:"workspace_identifier"`
+	WorkspaceIdentifier      *string                                  `tfsdk:"owned_by_workspace"`
 	Uuids                    []string                                 `tfsdk:"uuids"`
 	BuildingBlockDefinitions []buildingBlockDefinitionDataSourceModel `tfsdk:"building_block_definitions"`
 }
@@ -130,15 +130,15 @@ func (d *buildingBlockDefinitionsDataSource) Schema(_ context.Context, _ datasou
 		MarkdownDescription: "List building block definitions with optional workspace filter. " +
 			"To read one definition, use the `meshstack_building_block_definition` data source. " +
 			"For each returned definition, this data source performs an additional API call to load all versions; " +
-			"use `workspace_identifier` to narrow scope where possible. " +
+			"use `owned_by_workspace` to narrow scope where possible. " +
 			"\n\n" +
 			"**Cross-Workspace Access**: When accessing building block definitions from workspaces other than your own " +
 			"using a workspace-scoped API key, the `content_hash` attribute will be null as it requires detailed version " +
 			"information that is not accessible without workspace permissions. The `versions`, `version_latest`, and " +
 			"`version_latest_release` attributes will still be populated with uuid, number, state, and workload_identity_federation.",
 		Attributes: map[string]schema.Attribute{
-			"workspace_identifier": schema.StringAttribute{
-				MarkdownDescription: "Optional workspace identifier filter (maps to `ownedByWorkspace` query param).",
+			"owned_by_workspace": schema.StringAttribute{
+				MarkdownDescription: "Only return building block definitions owned by this workspace.",
 				Optional:            true,
 			},
 			"uuids": schema.SetAttribute{

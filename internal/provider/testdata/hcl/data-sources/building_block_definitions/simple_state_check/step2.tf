@@ -62,7 +62,7 @@ resource "meshstack_building_block_definition" "example_03_manual" {
 }
 
 data "meshstack_building_block_definitions" "example" {
-  workspace_identifier = data.meshstack_workspace.example.metadata.name
+  owned_by_workspace = data.meshstack_workspace.example.metadata.name
 }
 
 locals {

@@ -30,7 +30,7 @@ type buildingBlocksDataSource struct {
 // buildingBlocksDataSourceModel is the root model: optional filters plus the resulting list.
 // All filter fields are nil/empty when unset and are then omitted from the backend query.
 type buildingBlocksDataSourceModel struct {
-	WorkspaceIdentifier          *string                 `tfsdk:"workspace_identifier"`
+	OwnedByWorkspace             *string                 `tfsdk:"owned_by_workspace"`
 	ProjectIdentifier            *string                 `tfsdk:"project_identifier"`
 	PlatformIdentifier           *string                 `tfsdk:"platform_identifier"`
 	Name                         *string                 `tfsdk:"name"`
@@ -75,12 +75,12 @@ func (d *buildingBlocksDataSource) Schema(_ context.Context, _ datasource.Schema
 			"(`metadata`/`spec`/`status`/`all_inputs`).",
 		Attributes: map[string]schema.Attribute{
 			// ---- filters ----
-			"workspace_identifier": optionalString("Only return building blocks owned by or assigned to this workspace."),
-			"project_identifier":   optionalString("Only return building blocks in this project."),
-			"platform_identifier":  optionalString("Only return building blocks on this platform (`<platformInstance>.<location>`)."),
-			"name":                 optionalString("Only return building blocks with this exact name."),
-			"definition_uuid":      optionalString("Only return building blocks created from the building block definition with this UUID (the definition, not a specific version)."),
-			"version_uuid":         optionalString("Only return building blocks created from the building block definition version with this UUID."),
+			"owned_by_workspace":  optionalString("Only return building blocks owned by this workspace."),
+			"project_identifier":  optionalString("Only return building blocks in this project."),
+			"platform_identifier": optionalString("Only return building blocks on this platform (`<platformInstance>.<location>`)."),
+			"name":                optionalString("Only return building blocks with this exact name."),
+			"definition_uuid":     optionalString("Only return building blocks created from the building block definition with this UUID (the definition, not a specific version)."),
+			"version_uuid":        optionalString("Only return building blocks created from the building block definition version with this UUID."),
 			"version_number": optionalString("Only return building blocks created from this building block definition version number. " +
 				"Accepts a plain number (`1`) or a `v`-prefixed string (`v1`); the `v` is stripped server-side."),
 			"tenant_uuid": optionalString("Only return building blocks targeting the tenant with this UUID."),
@@ -140,7 +140,7 @@ func (d *buildingBlocksDataSource) Read(ctx context.Context, req datasource.Read
 	}
 
 	blocks, err := d.client.List(ctx, client.MeshBuildingBlockV2ListFilter{
-		WorkspaceIdentifier:          config.WorkspaceIdentifier,
+		WorkspaceIdentifier:          config.OwnedByWorkspace,
 		ProjectIdentifier:            config.ProjectIdentifier,
 		PlatformIdentifier:           config.PlatformIdentifier,
 		Name:                         config.Name,
