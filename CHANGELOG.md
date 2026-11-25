@@ -10,14 +10,16 @@ FEATURES:
   `updateable_by_consumer` for each input.
 - `meshstack_workspace_user_group`: new resource and data source for a group of users in a workspace. `spec.members`
   lists the members by username. Set it to manage the complete member list, or leave it unset to manage the members
-  elsewhere. Deleting the group also deletes its role bindings.
+  elsewhere. Deleting the group also deletes its role bindings. The read-only `ref` (`{kind, owned_by_workspace, name}`)
+  references the group.
 - `meshstack_workspace_user_group_member`: new resource that adds one user to a workspace user group whose other
-  members are managed elsewhere. Do not combine it with `spec.members` of `meshstack_workspace_user_group` for the same
-  group.
+  members are managed elsewhere. It takes the group as `group_ref` and the user as `user_ref`, such as
+  `meshstack_workspace_user_group.example.ref` and `data.meshstack_user.example.ref`. Do not combine it with
+  `spec.members` of `meshstack_workspace_user_group` for the same group. Import with `workspace.group.username`.
 - `meshstack_user`: new data source that reads the one meshUser matching a username, UUID, email address or EUID, and
-  fails unless exactly one matches.
+  fails unless exactly one matches. The read-only `ref` (`{kind, name}`) references the user.
 - `meshstack_users`: new data source that lists meshUsers, optionally only those with access to a workspace, with a
-  workspace role or with access to a project.
+  workspace role or with access to a project. Each user has the read-only `ref`.
 
 FIXES:
 - Provider: with no `profile` set, the provider takes the profile that the last `meshstack login` selected only when it

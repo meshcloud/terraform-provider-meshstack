@@ -19,7 +19,7 @@ data "meshstack_user" "example" {
   }
 }
 
-resource "meshstack_workspace_user_group" "test" {
+resource "meshstack_workspace_user_group" "example" {
   metadata = {
     name               = "my-user-group"
     owned_by_workspace = data.meshstack_workspace.example.metadata.name
@@ -28,7 +28,5 @@ resource "meshstack_workspace_user_group" "test" {
     display_name = "My User Group"
   }
 }
-
-[[ example "data-sources/meshstack_workspace_user_group/data-source.tf" ]]
 
 [[ example "resources/meshstack_workspace_user_group_member/resource.tf" ]]

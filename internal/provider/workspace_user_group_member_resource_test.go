@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
+	"github.com/meshcloud/meshstack-cli/client"
 )
 
 func TestAccWorkspaceUserGroupMember(t *testing.T) {
@@ -26,15 +27,21 @@ func TestAccWorkspaceUserGroupMember(t *testing.T) {
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectResourceAction(resourceAddress, plancheck.ResourceActionCreate),
-						plancheck.ExpectResourceAction("meshstack_workspace_user_group.test", plancheck.ResourceActionNoop),
+						plancheck.ExpectResourceAction("meshstack_workspace_user_group.example", plancheck.ResourceActionNoop),
 					},
 					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("metadata").AtMapKey("workspace_identifier"), knownvalue.StringExact("test-ws-"+suffix)),
-					statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("metadata").AtMapKey("group_identifier"), knownvalue.StringExact("my-user-group")),
-					statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("metadata").AtMapKey("username"), knownvalue.StringExact(seededUsername)),
-					statecheck.ExpectKnownValue("meshstack_workspace_user_group.test", tfjsonpath.New("spec").AtMapKey("members"), knownvalue.Null()),
+					statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("group_ref"), knownvalue.ObjectExact(map[string]knownvalue.Check{
+						"kind":               knownvalue.StringExact(client.MeshObjectKind.WorkspaceUserGroup),
+						"owned_by_workspace": knownvalue.StringExact("test-ws-" + suffix),
+						"name":               knownvalue.StringExact("my-user-group"),
+					})),
+					statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("user_ref"), knownvalue.ObjectExact(map[string]knownvalue.Check{
+						"kind": knownvalue.StringExact(client.MeshObjectKind.User),
+						"name": knownvalue.StringExact(seededUsername),
+					})),
+					statecheck.ExpectKnownValue("meshstack_workspace_user_group.example", tfjsonpath.New("spec").AtMapKey("members"), knownvalue.Null()),
 				},
 			},
 			{

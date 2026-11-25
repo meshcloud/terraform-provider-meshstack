@@ -20,11 +20,8 @@ One member of a workspace user group. Use it to add a user to a group whose othe
 
 ```terraform
 resource "meshstack_workspace_user_group_member" "example" {
-  metadata = {
-    workspace_identifier = data.meshstack_workspace_user_group.example.metadata.owned_by_workspace
-    group_identifier     = data.meshstack_workspace_user_group.example.metadata.name
-    username             = data.meshstack_user.example.metadata.name
-  }
+  group_ref = meshstack_workspace_user_group.example.ref
+  user_ref  = data.meshstack_user.example.ref
 }
 ```
 
@@ -33,16 +30,32 @@ resource "meshstack_workspace_user_group_member" "example" {
 
 ### Required
 
-- `metadata` (Attributes) The group and the user. (see [below for nested schema](#nestedatt--metadata))
+- `group_ref` (Attributes) Reference to the workspace user group, such as `meshstack_workspace_user_group.example.ref`. (see [below for nested schema](#nestedatt--group_ref))
+- `user_ref` (Attributes) Reference to the user who becomes a member, such as `data.meshstack_user.example.ref`. (see [below for nested schema](#nestedatt--user_ref))
 
-<a id="nestedatt--metadata"></a>
-### Nested Schema for `metadata`
+<a id="nestedatt--group_ref"></a>
+### Nested Schema for `group_ref`
 
 Required:
 
-- `group_identifier` (String) Identifier (`metadata.name`) of the workspace user group.
-- `username` (String) Username of the member. It must belong to an existing meshUser.
-- `workspace_identifier` (String) Identifier of the workspace that owns the group.
+- `name` (String) Named identifier (`metadata.name`) of the `meshWorkspaceUserGroup`.
+- `owned_by_workspace` (String) Named identifier (`metadata.name`) of the `meshWorkspace` that owns the `meshWorkspaceUserGroup`.
+
+Optional:
+
+- `kind` (String) meshObject type, always `meshWorkspaceUserGroup`.
+
+
+<a id="nestedatt--user_ref"></a>
+### Nested Schema for `user_ref`
+
+Required:
+
+- `name` (String) Named identifier (`metadata.name`) of `meshUser`.
+
+Optional:
+
+- `kind` (String) meshObject type, always `meshUser`.
 
 ## Import
 
