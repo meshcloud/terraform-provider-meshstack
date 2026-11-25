@@ -168,6 +168,7 @@ func (r *workspaceUserGroupResource) Create(ctx context.Context, req resource.Cr
 		return
 	}
 
+	defer lockWorkspaceUserGroup(metadata.OwnedByWorkspace, metadata.Name)()
 	created, err := r.meshWorkspaceUserGroupClient.Create(ctx, group)
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -247,7 +248,7 @@ func (r *workspaceUserGroupResource) Update(ctx context.Context, req resource.Up
 	}
 
 	identifier := client.NewMeshWorkspaceUserGroupId(metadata.OwnedByWorkspace, metadata.Name)
-	defer workspaceUserGroupWrites.lock(identifier)()
+	defer lockWorkspaceUserGroup(metadata.OwnedByWorkspace, metadata.Name)()
 
 	var unmanagedMembers []string
 	if spec.Members.IsNull() {
@@ -291,6 +292,7 @@ func (r *workspaceUserGroupResource) Delete(ctx context.Context, req resource.De
 		return
 	}
 
+	defer lockWorkspaceUserGroup(metadata.OwnedByWorkspace, metadata.Name)()
 	if err := r.meshWorkspaceUserGroupClient.Delete(ctx, client.NewMeshWorkspaceUserGroupId(metadata.OwnedByWorkspace, metadata.Name)); err != nil {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("Could not delete workspace user group '%s'", client.NewMeshWorkspaceUserGroupId(metadata.OwnedByWorkspace, metadata.Name)),

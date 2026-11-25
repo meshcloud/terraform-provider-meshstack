@@ -11,3 +11,7 @@ func lockWorkspace(name string) (unlock func()) {
 func lockProject(workspace, name string) (unlock func()) {
 	return meshObjectLocks.Lock("meshProject/" + workspace + "." + name)
 }
+
+func lockWorkspaceUserGroup(workspace, name string) (unlock func()) {
+	return meshObjectLocks.Lock("meshWorkspaceUserGroup/" + workspace + "." + name)
+}

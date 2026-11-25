@@ -133,7 +133,7 @@ func (r *workspaceUserGroupMemberResource) Delete(ctx context.Context, req resou
 
 func (r *workspaceUserGroupMemberResource) changeMembers(ctx context.Context, metadata workspaceUserGroupMemberMetadataModel, groupRequired bool, diags *diag.Diagnostics, change func([]string) []string) {
 	identifier := client.NewMeshWorkspaceUserGroupId(metadata.WorkspaceIdentifier, metadata.GroupIdentifier)
-	defer workspaceUserGroupWrites.lock(identifier)()
+	defer lockWorkspaceUserGroup(metadata.WorkspaceIdentifier, metadata.GroupIdentifier)()
 
 	group, err := r.meshWorkspaceUserGroupClient.Read(ctx, identifier)
 	switch {
