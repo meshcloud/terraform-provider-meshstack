@@ -14,8 +14,9 @@ import (
 )
 
 var (
-	_ resource.ResourceWithConfigure   = &bindingResource[client.MeshWorkspaceUserBinding]{}
-	_ resource.ResourceWithImportState = &bindingResource[client.MeshWorkspaceUserBinding]{}
+	_ resource.ResourceWithConfigure    = &bindingResource[client.MeshWorkspaceUserBinding]{}
+	_ resource.ResourceWithImportState  = &bindingResource[client.MeshWorkspaceUserBinding]{}
+	_ resource.ResourceWithUpgradeState = &bindingResource[client.MeshWorkspaceUserBinding]{}
 )
 
 type bindingResourceClient[B any] interface {
@@ -31,6 +32,9 @@ type bindingResource[B any] struct {
 	selectClient    func(client.Client) bindingResourceClient[B]
 	// approvalStatus lets Create and Read warn about a binding that waits for four-eyes approval.
 	approvalStatus func(*B) bindingApprovalStatus
+	version        int64
+	upgraders      map[int64]resource.StateUpgrader
+	converters     generic.ConverterOptions
 	client         bindingResourceClient[B]
 }
 
@@ -51,13 +55,18 @@ func (r *bindingResource[B]) Configure(_ context.Context, req resource.Configure
 func (r *bindingResource[B]) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		MarkdownDescription: capitalize(r.kind()) + " assigns a " + r.subject + " with a specific role to a " + r.target + ".",
+		Version:             r.version,
 		Attributes:          r.attributes,
 	}
 }
 
+func (r *bindingResource[B]) UpgradeState(context.Context) map[int64]resource.StateUpgrader {
+	return r.upgraders
+}
+
 func (r *bindingResource[B]) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	// An omitted expiry_date and the computed status plan as unknown, which the DTO's pointers cannot hold.
-	plan := generic.Get[*B](ctx, req.Plan, &resp.Diagnostics, generic.WithSetUnknownValueToZero())
+	plan := generic.Get[*B](ctx, req.Plan, &resp.Diagnostics, r.converters.Append(generic.WithSetUnknownValueToZero())...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -74,7 +83,7 @@ func (r *bindingResource[B]) Create(ctx context.Context, req resource.CreateRequ
 	var name string
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("metadata").AtName("name"), &name)...)
 	warnIfWaitingForApproval(&resp.Diagnostics, name, r.approvalStatus(binding))
-	resp.Diagnostics.Append(resp.State.Set(ctx, binding)...)
+	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, binding, r.converters...)...)
 }
 
 func (r *bindingResource[B]) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -95,7 +104,7 @@ func (r *bindingResource[B]) Read(ctx context.Context, req resource.ReadRequest,
 	}
 
 	warnIfWaitingForApproval(&resp.Diagnostics, name, r.approvalStatus(binding))
-	resp.Diagnostics.Append(resp.State.Set(ctx, binding)...)
+	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, binding, r.converters...)...)
 }
 
 func (r *bindingResource[B]) Update(_ context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -124,7 +133,7 @@ func (r *bindingResource[B]) ImportState(ctx context.Context, req resource.Impor
 type bindingResourceSchemaOptions struct {
 	target, subject        string
 	roleNameDescription    string
-	targetRef              map[string]schema.Attribute
+	targetRef              schema.SingleNestedAttribute
 	subjectNameDescription string
 	expiryDate             schema.StringAttribute
 }
@@ -146,11 +155,7 @@ func bindingResourceAttributes(opts bindingResourceSchemaOptions) map[string]sch
 				"name": requiredReplaceOnChangeString(opts.roleNameDescription),
 			},
 		},
-		"target_ref": schema.SingleNestedAttribute{
-			MarkdownDescription: "Selects the " + opts.target + " to which this binding applies.",
-			Required:            true,
-			Attributes:          opts.targetRef,
-		},
+		"target_ref": opts.targetRef,
 		"subject": schema.SingleNestedAttribute{
 			MarkdownDescription: "Selects the " + opts.subject + " for this binding.",
 			Required:            true,

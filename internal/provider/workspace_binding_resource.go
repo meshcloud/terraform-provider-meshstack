@@ -44,8 +44,12 @@ func newWorkspaceBindingResource[B any](
 			target:              "workspace",
 			subject:             subject,
 			roleNameDescription: roleNameDescription,
-			targetRef: map[string]schema.Attribute{
-				"name": requiredReplaceOnChangeString("Workspace identifier."),
+			targetRef: schema.SingleNestedAttribute{
+				MarkdownDescription: "Selects the workspace to which this binding applies.",
+				Required:            true,
+				Attributes: map[string]schema.Attribute{
+					"name": requiredReplaceOnChangeString("Workspace identifier."),
+				},
 			},
 			subjectNameDescription: subjectNameDescription,
 			expiryDate: schema.StringAttribute{

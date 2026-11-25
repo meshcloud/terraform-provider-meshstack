@@ -1,0 +1,20 @@
+{
+  "expiry_date": "2099-12-31",
+  "metadata": {
+    "name": "example-project-user-binding"
+  },
+  "role_ref": {
+    "name": "Project Reader"
+  },
+  "status": {
+    "approval": "ASSIGNED",
+    "user_disabled": false
+  },
+  "subject": {
+    "name": "user@meshcloud.io"
+  },
+  "target_ref": {
+    "name": "my-project",
+    "owned_by_workspace": "my-workspace"
+  }
+}

@@ -7,10 +7,7 @@ resource "meshstack_project_group_binding" "example" {
     name = "Project Reader"
   }
 
-  target_ref = {
-    owned_by_workspace = meshstack_project.example.metadata.owned_by_workspace
-    name               = meshstack_project.example.metadata.name
-  }
+  target_ref = meshstack_project.example.ref
 
   # The subject must be a member of the workspace first.
   subject = {

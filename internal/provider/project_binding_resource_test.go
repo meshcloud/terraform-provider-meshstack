@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
+	"github.com/meshcloud/meshstack-cli/client"
 )
 
 func TestAccProjectUserBinding(t *testing.T) {
@@ -37,8 +38,11 @@ func testAccProjectBinding(t *testing.T, subjectKind, subjectName string, subjec
 				ConfigStateChecks: append([]statecheck.StateCheck{
 					statecheck.ExpectKnownValue(bindingAddress, tfjsonpath.New("metadata").AtMapKey("name"), knownvalue.StringExact("example-project-"+subjectKind+"-binding")),
 					statecheck.ExpectKnownValue(bindingAddress, tfjsonpath.New("role_ref").AtMapKey("name"), knownvalue.StringExact("Project Reader")),
-					statecheck.ExpectKnownValue(bindingAddress, tfjsonpath.New("target_ref").AtMapKey("name"), knownvalue.StringExact("test-proj-"+suffix)),
-					statecheck.ExpectKnownValue(bindingAddress, tfjsonpath.New("target_ref").AtMapKey("owned_by_workspace"), knownvalue.StringExact("test-ws-"+suffix)),
+					statecheck.ExpectKnownValue(bindingAddress, tfjsonpath.New("target_ref"), knownvalue.ObjectExact(map[string]knownvalue.Check{
+						"kind":               knownvalue.StringExact(client.MeshObjectKind.Project),
+						"owned_by_workspace": knownvalue.StringExact("test-ws-" + suffix),
+						"name":               knownvalue.StringExact("test-proj-" + suffix),
+					})),
 					statecheck.ExpectKnownValue(bindingAddress, tfjsonpath.New("subject").AtMapKey("name"), knownvalue.StringExact(subjectName)),
 					statecheck.ExpectKnownValue(bindingAddress, tfjsonpath.New("expiry_date"), knownvalue.StringExact("2099-12-31")),
 				}, subjectStateChecks(bindingAddress, subjectChecks)...),

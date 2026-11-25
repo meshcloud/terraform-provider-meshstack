@@ -14,6 +14,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/meshcloud/meshstack-cli/client"
+
+	"github.com/meshcloud/terraform-provider-meshstack/internal/types/generic"
 )
 
 var (
@@ -28,6 +30,7 @@ type bindingDataSource[M any] struct {
 	// lookups starts with metadata.name, which reads the binding directly.
 	lookups      []bindingLookup[M]
 	selectClient func(client.Client) bindingClient[M]
+	converters   generic.ConverterOptions
 	client       bindingClient[M]
 }
 
@@ -121,7 +124,7 @@ func (d *bindingDataSource[M]) Read(ctx context.Context, req datasource.ReadRequ
 	}
 	switch len(matches) {
 	case 1:
-		resp.Diagnostics.Append(resp.State.Set(ctx, &matches[0])...)
+		resp.Diagnostics.Append(generic.Set(ctx, &resp.State, matches[0], d.converters...)...)
 	case 0:
 		resp.Diagnostics.AddError(capitalize(d.kind)+" not found", fmt.Sprintf("No %s matches %s.", d.kind, d.describe(filter)))
 	default:

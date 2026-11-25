@@ -3,8 +3,10 @@ package provider
 import (
 	"context"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/meshcloud/meshstack-cli/client"
 )
 
@@ -44,6 +46,12 @@ func newProjectBindingDataSource[B any, M projectBindingView](
 				MarkdownDescription: "Project to which this binding applies.",
 				Computed:            true,
 				Attributes: map[string]schema.Attribute{
+					"kind": schema.StringAttribute{
+						MarkdownDescription: "meshObject type, always `" + client.MeshObjectKind.Project + "`. Optional, so a project `ref` can be the lookup.",
+						Optional:            true,
+						Computed:            true,
+						Validators:          []validator.String{stringvalidator.OneOf(client.MeshObjectKind.Project)},
+					},
 					"name":               schema.StringAttribute{MarkdownDescription: "Project identifier.", Computed: true},
 					"owned_by_workspace": schema.StringAttribute{MarkdownDescription: "Identifier of the workspace that owns the project.", Computed: true},
 				},
@@ -55,6 +63,7 @@ func newProjectBindingDataSource[B any, M projectBindingView](
 			{path.Root("subject").AtName("name"), func(m M) string { return m.projectBinding().Subject.Name }},
 			{path.Root("role_ref").AtName("name"), func(m M) string { return m.projectBinding().RoleRef.Name }},
 		},
+		converters: projectTargetRefConverters,
 		selectClient: func(c client.Client) bindingClient[M] {
 			bindings := selectClient(c)
 			// The API filters by project only, so subject and role are matched on the listed bindings.

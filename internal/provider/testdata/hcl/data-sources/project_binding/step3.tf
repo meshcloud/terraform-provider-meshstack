@@ -39,10 +39,7 @@ resource "meshstack_project_[[.subject_kind]]_binding" "test" {
   role_ref = {
     name = "Project Reader"
   }
-  target_ref = {
-    owned_by_workspace = meshstack_project.test.metadata.owned_by_workspace
-    name               = meshstack_project.test.metadata.name
-  }
+  target_ref = meshstack_project.test.ref
   subject = {
     name = meshstack_workspace_[[.subject_kind]]_binding.test.subject.name
   }
