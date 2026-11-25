@@ -19,13 +19,9 @@ resource "meshstack_tag_definition" "a" {
 }
 
 resource "meshstack_workspace_tag" "a" {
-  metadata = {
-    workspace_identifier = meshstack_workspace.test.metadata.name
-    key                  = meshstack_tag_definition.a.spec.key
-  }
-  spec = {
-    values = ["a"]
-  }
+  workspace = meshstack_workspace.test.metadata.name
+  key       = meshstack_tag_definition.a.spec.key
+  values    = ["a"]
 }
 
 resource "meshstack_tag_definition" "b" {
@@ -40,13 +36,9 @@ resource "meshstack_tag_definition" "b" {
 }
 
 resource "meshstack_workspace_tag" "b" {
-  metadata = {
-    workspace_identifier = meshstack_workspace.test.metadata.name
-    key                  = meshstack_tag_definition.b.spec.key
-  }
-  spec = {
-    values = ["b"]
-  }
+  workspace = meshstack_workspace.test.metadata.name
+  key       = meshstack_tag_definition.b.spec.key
+  values    = ["b"]
 }
 
 resource "meshstack_tag_definition" "c" {
@@ -61,13 +53,9 @@ resource "meshstack_tag_definition" "c" {
 }
 
 resource "meshstack_workspace_tag" "c" {
-  metadata = {
-    workspace_identifier = meshstack_workspace.test.metadata.name
-    key                  = meshstack_tag_definition.c.spec.key
-  }
-  spec = {
-    values = ["c"]
-  }
+  workspace = meshstack_workspace.test.metadata.name
+  key       = meshstack_tag_definition.c.spec.key
+  values    = ["c"]
 }
 
 resource "meshstack_tag_definition" "d" {
@@ -82,13 +70,9 @@ resource "meshstack_tag_definition" "d" {
 }
 
 resource "meshstack_workspace_tag" "d" {
-  metadata = {
-    workspace_identifier = meshstack_workspace.test.metadata.name
-    key                  = meshstack_tag_definition.d.spec.key
-  }
-  spec = {
-    values = ["d"]
-  }
+  workspace = meshstack_workspace.test.metadata.name
+  key       = meshstack_tag_definition.d.spec.key
+  values    = ["d"]
 }
 
 resource "meshstack_tag_definition" "e" {
@@ -103,11 +87,7 @@ resource "meshstack_tag_definition" "e" {
 }
 
 resource "meshstack_workspace_tag" "e" {
-  metadata = {
-    workspace_identifier = meshstack_workspace.test.metadata.name
-    key                  = meshstack_tag_definition.e.spec.key
-  }
-  spec = {
-    values = ["e"]
-  }
+  workspace = meshstack_workspace.test.metadata.name
+  key       = meshstack_tag_definition.e.spec.key
+  values    = ["e"]
 }

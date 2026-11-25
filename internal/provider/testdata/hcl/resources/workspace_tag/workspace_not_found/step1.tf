@@ -10,11 +10,7 @@ resource "meshstack_tag_definition" "test" {
 }
 
 resource "meshstack_workspace_tag" "test" {
-  metadata = {
-    workspace_identifier = "does-not-exist-workspace-[[.suffix]]"
-    key                  = meshstack_tag_definition.test.spec.key
-  }
-  spec = {
-    values = ["12345"]
-  }
+  workspace = "does-not-exist-workspace-[[.suffix]]"
+  key       = meshstack_tag_definition.test.spec.key
+  values    = ["12345"]
 }

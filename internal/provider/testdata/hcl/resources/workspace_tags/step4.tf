@@ -25,12 +25,8 @@ resource "meshstack_tag_definition" "cost_center" {
 }
 
 resource "meshstack_workspace_tags" "example" {
-  metadata = {
-    workspace_identifier = data.meshstack_workspace.example.metadata.name
-  }
-  spec = {
-    tags = {
-      (meshstack_tag_definition.cost_center.spec.key) = ["12345"]
-    }
+  workspace = data.meshstack_workspace.example.metadata.name
+  tags = {
+    (meshstack_tag_definition.cost_center.spec.key) = ["12345"]
   }
 }

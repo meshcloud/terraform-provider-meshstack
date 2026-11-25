@@ -32,14 +32,37 @@ func withoutTagValue(tags map[string][]string, key, value string) (updated map[s
 	return updated, true
 }
 
-func parseTagValueImportID(id string, identifiers int) (ids []string, key, value string, ok bool) {
+func splitTagImportID(id string, identifiers int, withRest bool) (ids []string, rest string, ok bool) {
 	parts := strings.SplitN(id, ".", identifiers+1)
-	if len(parts) != identifiers+1 {
+	want := identifiers
+	if withRest {
+		want++
+	}
+	if len(parts) != want || slices.Contains(parts, "") {
+		return nil, "", false
+	}
+	if withRest {
+		rest = parts[identifiers]
+	}
+	return parts[:identifiers], rest, true
+}
+
+func parseTagValueImportID(id string, identifiers int) (ids []string, key, value string, ok bool) {
+	ids, rest, ok := splitTagImportID(id, identifiers, true)
+	key, value, found := strings.Cut(rest, "=")
+	if !ok || !found || key == "" || value == "" {
 		return nil, "", "", false
 	}
-	key, value, found := strings.Cut(parts[identifiers], "=")
-	if !found || key == "" || value == "" || slices.Contains(parts[:identifiers], "") {
-		return nil, "", "", false
-	}
-	return parts[:identifiers], key, value, true
+	return ids, key, value, true
+}
+
+func tagValueNote(object string) string {
+	return "~> **Note:** Use one `meshstack_" + object + "_tag_value` resource per value. The resource adds its value to the " +
+		"tag and removes only that value again, so several of them can share a tag — but two resources declaring the same " +
+		"value share it, too: destroying either removes it, and the other drops out of state and adds it again on the next " +
+		"apply. A value that is already on the tag when this resource is created is adopted, and destroying the resource " +
+		"removes it. meshStack decides which values a tag accepts; adding a second value to a tag that is not multi-select " +
+		"fails when it rejects the write. Do not combine this resource with " +
+		"`meshstack_" + object + "_tag` for the same key, or with `meshstack_" + object + "_tags` or inline `tags` on " +
+		"`meshstack_" + object + "` for the same " + object + "."
 }

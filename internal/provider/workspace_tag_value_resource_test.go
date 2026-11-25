@@ -20,9 +20,9 @@ func TestAccWorkspaceTagValue(t *testing.T) {
 				{
 					Config: hclStep(t, "resources/workspace_tag_value/tags_in_parallel", 1, vars),
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue("meshstack_workspace_tag_value.team_a", tfjsonpath.New("spec").AtMapKey("value"), knownvalue.StringExact("team-a")),
-						statecheck.ExpectKnownValue("meshstack_workspace_tag_value.team_b", tfjsonpath.New("spec").AtMapKey("value"), knownvalue.StringExact("team-b")),
-						statecheck.ExpectKnownValue("meshstack_workspace_tag_value.team_c", tfjsonpath.New("spec").AtMapKey("value"), knownvalue.StringExact("team-c")),
+						statecheck.ExpectKnownValue("meshstack_workspace_tag_value.team_a", tfjsonpath.New("value"), knownvalue.StringExact("team-a")),
+						statecheck.ExpectKnownValue("meshstack_workspace_tag_value.team_b", tfjsonpath.New("value"), knownvalue.StringExact("team-b")),
+						statecheck.ExpectKnownValue("meshstack_workspace_tag_value.team_c", tfjsonpath.New("value"), knownvalue.StringExact("team-c")),
 					},
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
@@ -64,9 +64,9 @@ func TestAccWorkspaceTagValue(t *testing.T) {
 					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(teamA, tfjsonpath.New("metadata").AtMapKey("workspace_identifier"), knownvalue.StringExact("test-ws-"+suffix)),
-					statecheck.ExpectKnownValue(teamA, tfjsonpath.New("metadata").AtMapKey("key"), knownvalue.StringExact("teams-"+suffix)),
-					statecheck.ExpectKnownValue(teamA, tfjsonpath.New("spec").AtMapKey("value"), knownvalue.StringExact("team-a")),
+					statecheck.ExpectKnownValue(teamA, tfjsonpath.New("workspace"), knownvalue.StringExact("test-ws-"+suffix)),
+					statecheck.ExpectKnownValue(teamA, tfjsonpath.New("key"), knownvalue.StringExact("teams-"+suffix)),
+					statecheck.ExpectKnownValue(teamA, tfjsonpath.New("value"), knownvalue.StringExact("team-a")),
 				},
 			},
 			{
@@ -88,7 +88,7 @@ func TestAccWorkspaceTagValue(t *testing.T) {
 					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(teamB, tfjsonpath.New("spec").AtMapKey("value"), knownvalue.StringExact("team-b")),
+					statecheck.ExpectKnownValue(teamB, tfjsonpath.New("value"), knownvalue.StringExact("team-b")),
 				},
 			},
 			{

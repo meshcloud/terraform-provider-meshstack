@@ -18,11 +18,7 @@ data "meshstack_tag_definition" "teams" {
 }
 
 resource "meshstack_workspace_tag_value" "test" {
-  metadata = {
-    workspace_identifier = "does-not-exist-workspace-[[.suffix]]"
-    key                  = data.meshstack_tag_definition.teams.spec.key
-  }
-  spec = {
-    value = "team-a"
-  }
+  workspace = "does-not-exist-workspace-[[.suffix]]"
+  key       = data.meshstack_tag_definition.teams.spec.key
+  value     = "team-a"
 }

@@ -1,30 +1,9 @@
 package provider
 
 import (
-	"context"
-
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
-
-func tagResourceSchema(description, title string, metadata, spec map[string]schema.Attribute) schema.Schema {
-	return schema.Schema{
-		MarkdownDescription: description,
-		Attributes: map[string]schema.Attribute{
-			"metadata": schema.SingleNestedAttribute{
-				MarkdownDescription: title + " metadata.",
-				Required:            true,
-				Attributes:          metadata,
-			},
-			"spec": schema.SingleNestedAttribute{
-				MarkdownDescription: title + " specification.",
-				Required:            true,
-				Attributes:          spec,
-			},
-		},
-	}
-}
 
 func tagValuesAttribute() schema.ListAttribute {
 	return schema.ListAttribute{
@@ -44,19 +23,13 @@ func tagsMapAttribute(objectName string) schema.MapAttribute {
 	}
 }
 
-func trackedTagValues(ctx context.Context, tags map[string][]string, key string, tracked types.List) (values types.List, found bool, diags diag.Diagnostics) {
-	vals, ok := tags[key]
-	if !ok {
-		// The API cannot represent a tag with no values — a PUT carrying `{"k": []}` comes back with
-		// `"tags": {}` — so for a resource whose tracked value list is empty, "absent" is that same state
-		// and must not be read as a deletion, or the resource is destroyed and recreated on every apply.
-		// On import there is no prior state (values is null), so an absent key really is missing.
-		declaredEmpty := !tracked.IsNull() && len(tracked.Elements()) == 0
-		if !declaredEmpty {
-			return types.ListNull(types.StringType), false, nil
-		}
-		vals = []string{}
+func trackedTagValues(tags map[string][]string, key string, tracked []string) (values []string, found bool) {
+	if values, found = tags[key]; found {
+		return values, true
 	}
-	values, diags = types.ListValueFrom(ctx, types.StringType, vals)
-	return values, true, diags
+	// The API drops a tag with no values, so a tracked empty list stays present. On import tracked is nil.
+	if tracked != nil && len(tracked) == 0 {
+		return []string{}, true
+	}
+	return nil, false
 }

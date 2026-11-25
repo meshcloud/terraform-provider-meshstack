@@ -19,11 +19,7 @@ resource "meshstack_tag_definition" "first" {
 }
 
 resource "meshstack_workspace_tag" "first" {
-  metadata = {
-    workspace_identifier = meshstack_workspace.test.metadata.name
-    key                  = meshstack_tag_definition.first.spec.key
-  }
-  spec = {
-    values = ["12345"]
-  }
+  workspace = meshstack_workspace.test.metadata.name
+  key       = meshstack_tag_definition.first.spec.key
+  values    = ["12345"]
 }

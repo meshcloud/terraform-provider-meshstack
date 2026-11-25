@@ -19,12 +19,10 @@ resource "meshstack_tag_definition" "test" {
 }
 
 resource "meshstack_project_tag" "test" {
-  metadata = {
-    workspace_identifier = meshstack_workspace.test.metadata.name
-    project_identifier   = "does-not-exist-project-[[.suffix]]"
-    key                  = meshstack_tag_definition.test.spec.key
+  project_ref = {
+    owned_by_workspace = meshstack_workspace.test.metadata.name
+    name               = "does-not-exist-project-[[.suffix]]"
   }
-  spec = {
-    values = ["12345"]
-  }
+  key    = meshstack_tag_definition.test.spec.key
+  values = ["12345"]
 }

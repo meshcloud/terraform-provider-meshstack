@@ -29,14 +29,12 @@ resource "meshstack_tag_definition" "first" {
 }
 
 resource "meshstack_project_tag" "first" {
-  metadata = {
-    workspace_identifier = meshstack_project.test.metadata.owned_by_workspace
-    project_identifier   = meshstack_project.test.metadata.name
-    key                  = meshstack_tag_definition.first.spec.key
+  project_ref = {
+    owned_by_workspace = meshstack_project.test.metadata.owned_by_workspace
+    name               = meshstack_project.test.metadata.name
   }
-  spec = {
-    values = ["12345"]
-  }
+  key    = meshstack_tag_definition.first.spec.key
+  values = ["12345"]
 }
 
 resource "meshstack_tag_definition" "second" {
@@ -51,12 +49,10 @@ resource "meshstack_tag_definition" "second" {
 }
 
 resource "meshstack_project_tag" "second" {
-  metadata = {
-    workspace_identifier = meshstack_project_tag.first.metadata.workspace_identifier
-    project_identifier   = meshstack_project.test.metadata.name
-    key                  = meshstack_tag_definition.second.spec.key
+  project_ref = {
+    owned_by_workspace = meshstack_project_tag.first.project_ref.owned_by_workspace
+    name               = meshstack_project.test.metadata.name
   }
-  spec = {
-    values = ["second"]
-  }
+  key    = meshstack_tag_definition.second.spec.key
+  values = ["second"]
 }

@@ -27,12 +27,10 @@ data "meshstack_tag_definition" "teams" {
 }
 
 resource "meshstack_project_tag_value" "test" {
-  metadata = {
-    workspace_identifier = meshstack_workspace.test.metadata.name
-    project_identifier   = "does-not-exist-project-[[.suffix]]"
-    key                  = data.meshstack_tag_definition.teams.spec.key
+  project_ref = {
+    owned_by_workspace = meshstack_workspace.test.metadata.name
+    name               = "does-not-exist-project-[[.suffix]]"
   }
-  spec = {
-    value = "team-a"
-  }
+  key   = data.meshstack_tag_definition.teams.spec.key
+  value = "team-a"
 }

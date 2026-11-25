@@ -30,13 +30,9 @@ resource "meshstack_tag_definition" "second" {
 }
 
 resource "meshstack_workspace_tags" "test" {
-  metadata = {
-    workspace_identifier = meshstack_workspace.test.metadata.name
-  }
-  spec = {
-    tags = {
-      (meshstack_tag_definition.first.spec.key)  = ["first"]
-      (meshstack_tag_definition.second.spec.key) = ["second"]
-    }
+  workspace = meshstack_workspace.test.metadata.name
+  tags = {
+    (meshstack_tag_definition.first.spec.key)  = ["first"]
+    (meshstack_tag_definition.second.spec.key) = ["second"]
   }
 }

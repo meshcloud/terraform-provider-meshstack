@@ -1,0 +1,9 @@
+{
+  "metadata": {
+    "key": "cost-center",
+    "workspace_identifier": "my-workspace"
+  },
+  "spec": {
+    "values": ["12345", "67890"]
+  }
+}

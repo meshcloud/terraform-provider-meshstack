@@ -23,7 +23,7 @@ func TestAccProjectTags(t *testing.T) {
 				{
 					Config: hclStep(t, "resources/project_tags/declared_empty_value_list", 1, vars),
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(projectTagsAddress, tfjsonpath.New("spec").AtMapKey("tags"), knownvalue.MapExact(map[string]knownvalue.Check{
+						statecheck.ExpectKnownValue(projectTagsAddress, tfjsonpath.New("tags"), knownvalue.MapExact(map[string]knownvalue.Check{
 							tagKey: knownvalue.ListSizeExact(0),
 						})),
 					},
@@ -47,7 +47,7 @@ func TestAccProjectTags(t *testing.T) {
 				{
 					Config: hclStep(t, "resources/project_tags/removing_one_key_of_several", 1, vars),
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(projectTagsAddress, tfjsonpath.New("spec").AtMapKey("tags"), knownvalue.MapExact(map[string]knownvalue.Check{
+						statecheck.ExpectKnownValue(projectTagsAddress, tfjsonpath.New("tags"), knownvalue.MapExact(map[string]knownvalue.Check{
 							firstKey:  knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("first")}),
 							secondKey: knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("second")}),
 						})),
@@ -62,7 +62,7 @@ func TestAccProjectTags(t *testing.T) {
 						PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(projectTagsAddress, tfjsonpath.New("spec").AtMapKey("tags"), knownvalue.MapExact(map[string]knownvalue.Check{
+						statecheck.ExpectKnownValue(projectTagsAddress, tfjsonpath.New("tags"), knownvalue.MapExact(map[string]knownvalue.Check{
 							firstKey: knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("first")}),
 						})),
 					},
@@ -101,10 +101,10 @@ func TestAccProjectTags(t *testing.T) {
 					},
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(projectTagsAddress, tfjsonpath.New("metadata").AtMapKey("workspace_identifier"), knownvalue.StringExact("test-ws-"+suffix)),
-					statecheck.ExpectKnownValue(projectTagsAddress, tfjsonpath.New("metadata").AtMapKey("project_identifier"), knownvalue.StringExact("my-project")),
+					statecheck.ExpectKnownValue(projectTagsAddress, tfjsonpath.New("project_ref").AtMapKey("owned_by_workspace"), knownvalue.StringExact("test-ws-"+suffix)),
+					statecheck.ExpectKnownValue(projectTagsAddress, tfjsonpath.New("project_ref").AtMapKey("name"), knownvalue.StringExact("my-project")),
 					statecheck.ExpectKnownValue("meshstack_project.test", tfjsonpath.New("spec").AtMapKey("payment_method_identifier"), knownvalue.StringExact("test-pm-"+suffix)),
-					statecheck.ExpectKnownValue(projectTagsAddress, tfjsonpath.New("spec").AtMapKey("tags"), knownvalue.MapExact(map[string]knownvalue.Check{
+					statecheck.ExpectKnownValue(projectTagsAddress, tfjsonpath.New("tags"), knownvalue.MapExact(map[string]knownvalue.Check{
 						"cost-center-" + suffix: knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("12345")}),
 					})),
 				},
@@ -117,7 +117,7 @@ func TestAccProjectTags(t *testing.T) {
 					},
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(projectTagsAddress, tfjsonpath.New("spec").AtMapKey("tags"), knownvalue.MapSizeExact(0)),
+					statecheck.ExpectKnownValue(projectTagsAddress, tfjsonpath.New("tags"), knownvalue.MapSizeExact(0)),
 				},
 			},
 			{

@@ -26,7 +26,7 @@ func TestAccWorkspaceTags(t *testing.T) {
 				{
 					Config: hclStep(t, "resources/workspace_tags/declared_empty_value_list", 1, vars),
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(workspaceTagsAddress, tfjsonpath.New("spec").AtMapKey("tags"), knownvalue.MapExact(map[string]knownvalue.Check{
+						statecheck.ExpectKnownValue(workspaceTagsAddress, tfjsonpath.New("tags"), knownvalue.MapExact(map[string]knownvalue.Check{
 							tagKey: knownvalue.ListSizeExact(0),
 						})),
 					},
@@ -52,7 +52,7 @@ func TestAccWorkspaceTags(t *testing.T) {
 				{
 					Config: hclStep(t, "resources/workspace_tags/removing_one_key_of_several", 1, vars),
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(workspaceTagsAddress, tfjsonpath.New("spec").AtMapKey("tags"), knownvalue.MapExact(map[string]knownvalue.Check{
+						statecheck.ExpectKnownValue(workspaceTagsAddress, tfjsonpath.New("tags"), knownvalue.MapExact(map[string]knownvalue.Check{
 							firstKey:  knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("first")}),
 							secondKey: knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("second")}),
 						})),
@@ -67,7 +67,7 @@ func TestAccWorkspaceTags(t *testing.T) {
 						PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(workspaceTagsAddress, tfjsonpath.New("spec").AtMapKey("tags"), knownvalue.MapExact(map[string]knownvalue.Check{
+						statecheck.ExpectKnownValue(workspaceTagsAddress, tfjsonpath.New("tags"), knownvalue.MapExact(map[string]knownvalue.Check{
 							firstKey: knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("first")}),
 						})),
 					},
@@ -106,8 +106,8 @@ func TestAccWorkspaceTags(t *testing.T) {
 					},
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(workspaceTagsAddress, tfjsonpath.New("metadata").AtMapKey("workspace_identifier"), knownvalue.StringExact("test-ws-"+suffix)),
-					statecheck.ExpectKnownValue(workspaceTagsAddress, tfjsonpath.New("spec").AtMapKey("tags"), knownvalue.MapExact(map[string]knownvalue.Check{
+					statecheck.ExpectKnownValue(workspaceTagsAddress, tfjsonpath.New("workspace"), knownvalue.StringExact("test-ws-"+suffix)),
+					statecheck.ExpectKnownValue(workspaceTagsAddress, tfjsonpath.New("tags"), knownvalue.MapExact(map[string]knownvalue.Check{
 						"cost-center-" + suffix: knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("12345")}),
 					})),
 				},
@@ -120,7 +120,7 @@ func TestAccWorkspaceTags(t *testing.T) {
 					},
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(workspaceTagsAddress, tfjsonpath.New("spec").AtMapKey("tags"), knownvalue.MapSizeExact(0)),
+					statecheck.ExpectKnownValue(workspaceTagsAddress, tfjsonpath.New("tags"), knownvalue.MapSizeExact(0)),
 				},
 			},
 			{

@@ -389,3 +389,21 @@ func expectErrorWords(words ...string) *regexp.Regexp {
 	}
 	return regexp.MustCompile(`(?s)` + strings.Join(quoted, `.*`))
 }
+
+func UpgradeRawResourceState(t *testing.T, r fwresource.Resource, version int64, prior string) string {
+	t.Helper()
+	ctx := context.Background()
+
+	withUpgrade, ok := r.(fwresource.ResourceWithUpgradeState)
+	require.True(t, ok, "resource has no state upgraders")
+	upgrader, ok := withUpgrade.UpgradeState(ctx)[version]
+	require.Truef(t, ok, "resource declares no state upgrader for version %d", version)
+
+	var resp fwresource.UpgradeStateResponse
+	upgrader.StateUpgrader(ctx, fwresource.UpgradeStateRequest{RawState: &tfprotov6.RawState{JSON: []byte(prior)}}, &resp)
+	require.False(t, resp.Diagnostics.HasError(), "upgrade produced errors: %s", resp.Diagnostics)
+
+	_, err := resp.DynamicValue.Unmarshal(ResourceSchemaForTest(t, r).Type().TerraformType(ctx))
+	require.NoError(t, err, "upgraded state does not match the current schema")
+	return string(resp.DynamicValue.JSON)
+}

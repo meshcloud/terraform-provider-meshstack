@@ -19,12 +19,8 @@ resource "meshstack_tag_definition" "test" {
 }
 
 resource "meshstack_workspace_tags" "test" {
-  metadata = {
-    workspace_identifier = meshstack_workspace.test.metadata.name
-  }
-  spec = {
-    tags = {
-      (meshstack_tag_definition.test.spec.key) = []
-    }
+  workspace = meshstack_workspace.test.metadata.name
+  tags = {
+    (meshstack_tag_definition.test.spec.key) = []
   }
 }

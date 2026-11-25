@@ -57,12 +57,10 @@ data "meshstack_workspace" "example" {
 [[ example "data-sources/meshstack_project/data-source.tf" ]]
 
 resource "meshstack_project_tag_value" "team_b" {
-  metadata = {
-    workspace_identifier = data.meshstack_project.example.metadata.owned_by_workspace
-    project_identifier   = data.meshstack_project.example.metadata.name
-    key                  = data.meshstack_tag_definition.teams.spec.key
+  project_ref = {
+    owned_by_workspace = data.meshstack_project.example.metadata.owned_by_workspace
+    name               = data.meshstack_project.example.metadata.name
   }
-  spec = {
-    value = "team-b"
-  }
+  key   = data.meshstack_tag_definition.teams.spec.key
+  value = "team-b"
 }

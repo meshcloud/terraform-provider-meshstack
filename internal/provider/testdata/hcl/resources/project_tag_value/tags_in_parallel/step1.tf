@@ -49,34 +49,28 @@ data "meshstack_tag_definition" "teams" {
 }
 
 resource "meshstack_project_tag_value" "team_a" {
-  metadata = {
-    workspace_identifier = meshstack_project.test.metadata.owned_by_workspace
-    project_identifier   = meshstack_project.test.metadata.name
-    key                  = data.meshstack_tag_definition.teams.spec.key
+  project_ref = {
+    owned_by_workspace = meshstack_project.test.metadata.owned_by_workspace
+    name               = meshstack_project.test.metadata.name
   }
-  spec = {
-    value = "team-a"
-  }
+  key   = data.meshstack_tag_definition.teams.spec.key
+  value = "team-a"
 }
 
 resource "meshstack_project_tag_value" "team_b" {
-  metadata = {
-    workspace_identifier = meshstack_project.test.metadata.owned_by_workspace
-    project_identifier   = meshstack_project.test.metadata.name
-    key                  = data.meshstack_tag_definition.teams.spec.key
+  project_ref = {
+    owned_by_workspace = meshstack_project.test.metadata.owned_by_workspace
+    name               = meshstack_project.test.metadata.name
   }
-  spec = {
-    value = "team-b"
-  }
+  key   = data.meshstack_tag_definition.teams.spec.key
+  value = "team-b"
 }
 
 resource "meshstack_project_tag_value" "team_c" {
-  metadata = {
-    workspace_identifier = meshstack_project.test.metadata.owned_by_workspace
-    project_identifier   = meshstack_project.test.metadata.name
-    key                  = data.meshstack_tag_definition.teams.spec.key
+  project_ref = {
+    owned_by_workspace = meshstack_project.test.metadata.owned_by_workspace
+    name               = meshstack_project.test.metadata.name
   }
-  spec = {
-    value = "team-c"
-  }
+  key   = data.meshstack_tag_definition.teams.spec.key
+  value = "team-c"
 }

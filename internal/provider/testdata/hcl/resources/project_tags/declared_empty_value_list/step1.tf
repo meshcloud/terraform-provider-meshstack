@@ -29,13 +29,11 @@ resource "meshstack_tag_definition" "test" {
 }
 
 resource "meshstack_project_tags" "test" {
-  metadata = {
-    workspace_identifier = meshstack_project.test.metadata.owned_by_workspace
-    project_identifier   = meshstack_project.test.metadata.name
+  project_ref = {
+    owned_by_workspace = meshstack_project.test.metadata.owned_by_workspace
+    name               = meshstack_project.test.metadata.name
   }
-  spec = {
-    tags = {
-      (meshstack_tag_definition.test.spec.key) = []
-    }
+  tags = {
+    (meshstack_tag_definition.test.spec.key) = []
   }
 }

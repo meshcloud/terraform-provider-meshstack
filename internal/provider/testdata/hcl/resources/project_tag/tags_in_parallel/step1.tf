@@ -29,14 +29,12 @@ resource "meshstack_tag_definition" "a" {
 }
 
 resource "meshstack_project_tag" "a" {
-  metadata = {
-    workspace_identifier = meshstack_project.test.metadata.owned_by_workspace
-    project_identifier   = meshstack_project.test.metadata.name
-    key                  = meshstack_tag_definition.a.spec.key
+  project_ref = {
+    owned_by_workspace = meshstack_project.test.metadata.owned_by_workspace
+    name               = meshstack_project.test.metadata.name
   }
-  spec = {
-    values = ["a"]
-  }
+  key    = meshstack_tag_definition.a.spec.key
+  values = ["a"]
 }
 
 resource "meshstack_tag_definition" "b" {
@@ -51,14 +49,12 @@ resource "meshstack_tag_definition" "b" {
 }
 
 resource "meshstack_project_tag" "b" {
-  metadata = {
-    workspace_identifier = meshstack_project.test.metadata.owned_by_workspace
-    project_identifier   = meshstack_project.test.metadata.name
-    key                  = meshstack_tag_definition.b.spec.key
+  project_ref = {
+    owned_by_workspace = meshstack_project.test.metadata.owned_by_workspace
+    name               = meshstack_project.test.metadata.name
   }
-  spec = {
-    values = ["b"]
-  }
+  key    = meshstack_tag_definition.b.spec.key
+  values = ["b"]
 }
 
 resource "meshstack_tag_definition" "c" {
@@ -73,14 +69,12 @@ resource "meshstack_tag_definition" "c" {
 }
 
 resource "meshstack_project_tag" "c" {
-  metadata = {
-    workspace_identifier = meshstack_project.test.metadata.owned_by_workspace
-    project_identifier   = meshstack_project.test.metadata.name
-    key                  = meshstack_tag_definition.c.spec.key
+  project_ref = {
+    owned_by_workspace = meshstack_project.test.metadata.owned_by_workspace
+    name               = meshstack_project.test.metadata.name
   }
-  spec = {
-    values = ["c"]
-  }
+  key    = meshstack_tag_definition.c.spec.key
+  values = ["c"]
 }
 
 resource "meshstack_tag_definition" "d" {
@@ -95,14 +89,12 @@ resource "meshstack_tag_definition" "d" {
 }
 
 resource "meshstack_project_tag" "d" {
-  metadata = {
-    workspace_identifier = meshstack_project.test.metadata.owned_by_workspace
-    project_identifier   = meshstack_project.test.metadata.name
-    key                  = meshstack_tag_definition.d.spec.key
+  project_ref = {
+    owned_by_workspace = meshstack_project.test.metadata.owned_by_workspace
+    name               = meshstack_project.test.metadata.name
   }
-  spec = {
-    values = ["d"]
-  }
+  key    = meshstack_tag_definition.d.spec.key
+  values = ["d"]
 }
 
 resource "meshstack_tag_definition" "e" {
@@ -117,12 +109,10 @@ resource "meshstack_tag_definition" "e" {
 }
 
 resource "meshstack_project_tag" "e" {
-  metadata = {
-    workspace_identifier = meshstack_project.test.metadata.owned_by_workspace
-    project_identifier   = meshstack_project.test.metadata.name
-    key                  = meshstack_tag_definition.e.spec.key
+  project_ref = {
+    owned_by_workspace = meshstack_project.test.metadata.owned_by_workspace
+    name               = meshstack_project.test.metadata.name
   }
-  spec = {
-    values = ["e"]
-  }
+  key    = meshstack_tag_definition.e.spec.key
+  values = ["e"]
 }

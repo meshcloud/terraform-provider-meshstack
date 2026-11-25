@@ -33,11 +33,7 @@ data "meshstack_workspace" "example" {
 }
 
 resource "meshstack_workspace_tag_value" "team_b" {
-  metadata = {
-    workspace_identifier = data.meshstack_workspace.example.metadata.name
-    key                  = data.meshstack_tag_definition.teams.spec.key
-  }
-  spec = {
-    value = "team-b"
-  }
+  workspace = data.meshstack_workspace.example.metadata.name
+  key       = data.meshstack_tag_definition.teams.spec.key
+  value     = "team-b"
 }

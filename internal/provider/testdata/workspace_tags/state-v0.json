@@ -1,0 +1,11 @@
+{
+  "metadata": {
+    "workspace_identifier": "my-workspace"
+  },
+  "spec": {
+    "tags": {
+      "cost-center": ["12345"],
+      "empty": []
+    }
+  }
+}

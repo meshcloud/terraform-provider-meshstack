@@ -30,10 +30,10 @@ func TestAccWorkspaceTag(t *testing.T) {
 				{
 					Config: hclStep(t, "resources/workspace_tag/two_tags_on_one_workspace", 1, vars),
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(firstAddress, tfjsonpath.New("metadata").AtMapKey("key"), knownvalue.StringExact(firstKey)),
-						statecheck.ExpectKnownValue(firstAddress, tfjsonpath.New("spec").AtMapKey("values"), knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("12345")})),
-						statecheck.ExpectKnownValue(secondAddress, tfjsonpath.New("metadata").AtMapKey("key"), knownvalue.StringExact(secondKey)),
-						statecheck.ExpectKnownValue(secondAddress, tfjsonpath.New("spec").AtMapKey("values"), knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("second")})),
+						statecheck.ExpectKnownValue(firstAddress, tfjsonpath.New("key"), knownvalue.StringExact(firstKey)),
+						statecheck.ExpectKnownValue(firstAddress, tfjsonpath.New("values"), knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("12345")})),
+						statecheck.ExpectKnownValue(secondAddress, tfjsonpath.New("key"), knownvalue.StringExact(secondKey)),
+						statecheck.ExpectKnownValue(secondAddress, tfjsonpath.New("values"), knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("second")})),
 					},
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
@@ -50,7 +50,7 @@ func TestAccWorkspaceTag(t *testing.T) {
 						PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
 					},
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue(firstAddress, tfjsonpath.New("spec").AtMapKey("values"), knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("12345")})),
+						statecheck.ExpectKnownValue(firstAddress, tfjsonpath.New("values"), knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("12345")})),
 					},
 				},
 			},
@@ -65,11 +65,11 @@ func TestAccWorkspaceTag(t *testing.T) {
 				{
 					Config: hclStep(t, "resources/workspace_tag/tags_in_parallel", 1, vars),
 					ConfigStateChecks: []statecheck.StateCheck{
-						statecheck.ExpectKnownValue("meshstack_workspace_tag.a", tfjsonpath.New("spec").AtMapKey("values"), knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("a")})),
-						statecheck.ExpectKnownValue("meshstack_workspace_tag.b", tfjsonpath.New("spec").AtMapKey("values"), knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("b")})),
-						statecheck.ExpectKnownValue("meshstack_workspace_tag.c", tfjsonpath.New("spec").AtMapKey("values"), knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("c")})),
-						statecheck.ExpectKnownValue("meshstack_workspace_tag.d", tfjsonpath.New("spec").AtMapKey("values"), knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("d")})),
-						statecheck.ExpectKnownValue("meshstack_workspace_tag.e", tfjsonpath.New("spec").AtMapKey("values"), knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("e")})),
+						statecheck.ExpectKnownValue("meshstack_workspace_tag.a", tfjsonpath.New("values"), knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("a")})),
+						statecheck.ExpectKnownValue("meshstack_workspace_tag.b", tfjsonpath.New("values"), knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("b")})),
+						statecheck.ExpectKnownValue("meshstack_workspace_tag.c", tfjsonpath.New("values"), knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("c")})),
+						statecheck.ExpectKnownValue("meshstack_workspace_tag.d", tfjsonpath.New("values"), knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("d")})),
+						statecheck.ExpectKnownValue("meshstack_workspace_tag.e", tfjsonpath.New("values"), knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("e")})),
 					},
 					ConfigPlanChecks: resource.ConfigPlanChecks{
 						PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
@@ -111,9 +111,9 @@ func TestAccWorkspaceTag(t *testing.T) {
 					},
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(workspaceTagAddress, tfjsonpath.New("metadata").AtMapKey("workspace_identifier"), knownvalue.StringExact("test-ws-"+suffix)),
-					statecheck.ExpectKnownValue(workspaceTagAddress, tfjsonpath.New("metadata").AtMapKey("key"), knownvalue.StringExact("cost-center-"+suffix)),
-					statecheck.ExpectKnownValue(workspaceTagAddress, tfjsonpath.New("spec").AtMapKey("values"), knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("12345")})),
+					statecheck.ExpectKnownValue(workspaceTagAddress, tfjsonpath.New("workspace"), knownvalue.StringExact("test-ws-"+suffix)),
+					statecheck.ExpectKnownValue(workspaceTagAddress, tfjsonpath.New("key"), knownvalue.StringExact("cost-center-"+suffix)),
+					statecheck.ExpectKnownValue(workspaceTagAddress, tfjsonpath.New("values"), knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("12345")})),
 				},
 			},
 			{
@@ -124,7 +124,7 @@ func TestAccWorkspaceTag(t *testing.T) {
 					},
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(workspaceTagAddress, tfjsonpath.New("spec").AtMapKey("values"), knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("12345"), knownvalue.StringExact("67890")})),
+					statecheck.ExpectKnownValue(workspaceTagAddress, tfjsonpath.New("values"), knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("12345"), knownvalue.StringExact("67890")})),
 				},
 			},
 			{
