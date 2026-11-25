@@ -69,6 +69,7 @@ Optional:
 
 Optional:
 
+- `kind` (String) meshObject type, always `meshProject`. Optional, so a project `ref` can be the lookup.
 - `name` (String) Project identifier. Set it to narrow the lookup.
 - `owned_by_workspace` (String) Identifier of the workspace that owns the project. Set it to narrow the lookup.
 

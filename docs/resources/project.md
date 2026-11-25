@@ -22,8 +22,8 @@ resource "meshstack_project" "example" {
     owned_by_workspace = data.meshstack_workspace.example.metadata.name
   }
   spec = {
-    payment_method_identifier = data.meshstack_payment_method.example.metadata.name
-    display_name              = "My Project's Display Name"
+    payment_method_ref = data.meshstack_payment_method.example.ref
+    display_name       = "My Project's Display Name"
     tags = {
       (data.meshstack_tag_definition.my_key.spec.key) = [
         "tag-value1",
@@ -42,6 +42,10 @@ resource "meshstack_project" "example" {
 
 - `metadata` (Attributes) Project metadata. Name and workspace of the target Project must be set here. (see [below for nested schema](#nestedatt--metadata))
 - `spec` (Attributes) Project specification. (see [below for nested schema](#nestedatt--spec))
+
+### Read-Only
+
+- `ref` (Attributes) Reference to this project, can be used as `target_ref` in project binding resources. (see [below for nested schema](#nestedatt--ref))
 
 <a id="nestedatt--metadata"></a>
 ### Nested Schema for `metadata`
@@ -66,9 +70,39 @@ Required:
 
 Optional:
 
-- `payment_method_identifier` (String)
-- `substitute_payment_method_identifier` (String) Payment method that meshStack makes the payment method of the project when `payment_method_identifier` expires. meshStack then clears this attribute, so update both attributes after the expiry to end the drift.
+- `payment_method_identifier` (String, Deprecated) Identifier of the payment method of the project.
+- `payment_method_ref` (Attributes) Reference to the payment method of the project. meshStack may set one when it creates the project. (see [below for nested schema](#nestedatt--spec--payment_method_ref))
+- `substitute_payment_method_identifier` (String, Deprecated) Payment method that meshStack makes the payment method of the project when `payment_method_identifier` expires. meshStack then clears this attribute, so update both attributes after the expiry to end the drift.
+- `substitute_payment_method_ref` (Attributes) Reference to the payment method that meshStack makes the payment method of the project when `payment_method_ref` expires. meshStack then clears this attribute, so update it and `payment_method_ref` after the expiry to end the drift. (see [below for nested schema](#nestedatt--spec--substitute_payment_method_ref))
 - `tags` (Map of List of String) Tags of `meshProject`. Only the tags you declare here are managed by Terraform; restricted-tag defaults meshStack injects are not tracked and never show as drift.
+
+<a id="nestedatt--spec--payment_method_ref"></a>
+### Nested Schema for `spec.payment_method_ref`
+
+Optional:
+
+- `kind` (String) meshObject type, always `meshPaymentMethod`.
+- `name` (String) Named identifier (`metadata.name`) of `meshPaymentMethod`. Required when the reference is set.
+
+
+<a id="nestedatt--spec--substitute_payment_method_ref"></a>
+### Nested Schema for `spec.substitute_payment_method_ref`
+
+Optional:
+
+- `kind` (String) meshObject type, always `meshPaymentMethod`.
+- `name` (String) Named identifier (`metadata.name`) of `meshPaymentMethod`. Required when the reference is set.
+
+
+
+<a id="nestedatt--ref"></a>
+### Nested Schema for `ref`
+
+Read-Only:
+
+- `kind` (String) meshObject type, always `meshProject`.
+- `name` (String) Named identifier (`metadata.name`) of the `meshProject`.
+- `owned_by_workspace` (String) Named identifier (`metadata.name`) of the `meshWorkspace` that owns the `meshProject`.
 
 ## Import
 

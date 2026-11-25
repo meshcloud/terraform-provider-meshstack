@@ -3,13 +3,13 @@
 page_title: "meshstack_building_block_definitions Data Source - terraform-provider-meshstack"
 subcategory: ""
 description: |-
-  List building block definitions with optional workspace filter. To read one definition, use the meshstack_building_block_definition data source. For each returned definition, this data source performs an additional API call to load all versions; use workspace_identifier to narrow scope where possible.
+  List building block definitions with optional workspace filter. To read one definition, use the meshstack_building_block_definition data source. For each returned definition, this data source performs an additional API call to load all versions; use owned_by_workspace to narrow scope where possible.
   Cross-Workspace Access: When accessing building block definitions from workspaces other than your own using a workspace-scoped API key, the content_hash attribute will be null as it requires detailed version information that is not accessible without workspace permissions. The versions, version_latest, and version_latest_release attributes will still be populated with uuid, number, state, and workload_identity_federation.
 ---
 
 # meshstack_building_block_definitions (Data Source)
 
-List building block definitions with optional workspace filter. To read one definition, use the `meshstack_building_block_definition` data source. For each returned definition, this data source performs an additional API call to load all versions; use `workspace_identifier` to narrow scope where possible. 
+List building block definitions with optional workspace filter. To read one definition, use the `meshstack_building_block_definition` data source. For each returned definition, this data source performs an additional API call to load all versions; use `owned_by_workspace` to narrow scope where possible. 
 
 **Cross-Workspace Access**: When accessing building block definitions from workspaces other than your own using a workspace-scoped API key, the `content_hash` attribute will be null as it requires detailed version information that is not accessible without workspace permissions. The `versions`, `version_latest`, and `version_latest_release` attributes will still be populated with uuid, number, state, and workload_identity_federation.
 
@@ -19,7 +19,7 @@ List building block definitions with optional workspace filter. To read one defi
 data "meshstack_building_block_definitions" "example" {
   # Optional server-side filter: limit to one workspace.
   # Additional filtering (e.g. by display name) is done in Terraform expressions.
-  workspace_identifier = "my-workspace"
+  owned_by_workspace = "my-workspace"
 }
 
 # Example: select exactly one BBD by display name pattern.
@@ -37,8 +37,8 @@ locals {
 
 ### Optional
 
+- `owned_by_workspace` (String) Only return building block definitions owned by this workspace.
 - `uuids` (Set of String) Optional filter: return only the definitions with these uuids. The versions of the other definitions are then not loaded. A uuid that matches no definition is ignored.
-- `workspace_identifier` (String) Optional workspace identifier filter (maps to `ownedByWorkspace` query param).
 
 ### Read-Only
 

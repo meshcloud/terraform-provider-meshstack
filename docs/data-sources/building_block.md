@@ -52,7 +52,7 @@ Required:
 
 Read-Only:
 
-- `owned_by_workspace` (String) The workspace containing this building block.
+- `owned_by_workspace` (String) The workspace that owns this building block.
 
 
 <a id="nestedatt--all_inputs"></a>

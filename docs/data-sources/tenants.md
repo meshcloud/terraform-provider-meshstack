@@ -14,8 +14,8 @@ Query tenants in a workspace with optional filters.
 
 ```terraform
 data "meshstack_tenants" "example" {
-  workspace = "my-workspace"
-  project   = "my-project"
+  owned_by_workspace = "my-workspace"
+  project            = "my-project"
 }
 ```
 
@@ -24,7 +24,7 @@ data "meshstack_tenants" "example" {
 
 ### Required
 
-- `workspace` (String) Workspace identifier. Required.
+- `owned_by_workspace` (String) Identifier of the workspace that owns the tenants.
 
 ### Optional
 

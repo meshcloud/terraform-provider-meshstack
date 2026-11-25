@@ -228,7 +228,7 @@ Read-Only:
 
 Read-Only:
 
-- `owned_by_workspace` (String) The workspace containing this building block.
+- `owned_by_workspace` (String) The workspace that owns this building block.
 - `uuid` (String) UUID which uniquely identifies the building block.
 
 

@@ -22,10 +22,7 @@ resource "meshstack_project_user_binding" "example" {
     name = "Project Reader"
   }
 
-  target_ref = {
-    owned_by_workspace = meshstack_project.example.metadata.owned_by_workspace
-    name               = meshstack_project.example.metadata.name
-  }
+  target_ref = meshstack_project.example.ref
 
   # The subject must be a member of the workspace first.
   subject = {
@@ -84,8 +81,12 @@ Required:
 
 Required:
 
-- `name` (String) Project identifier.
-- `owned_by_workspace` (String) Identifier of workspace containing the target project.
+- `name` (String) Named identifier (`metadata.name`) of the `meshProject`.
+- `owned_by_workspace` (String) Named identifier (`metadata.name`) of the `meshWorkspace` that owns the `meshProject`.
+
+Optional:
+
+- `kind` (String) meshObject type, always `meshProject`.
 
 
 <a id="nestedatt--status"></a>

@@ -6,11 +6,12 @@ description: |-
   Authoritatively manages all tags for a meshStack project.
   !> Not recommended for general use. Prefer managing tags inline via spec.tags on meshstack_project. Only reach for this resource when the project itself is not managed by your Terraform configuration (for example it was created in meshPanel or by another team) and you understand the trade-offs below. All of them follow from the same limitation: the meshObject API has no endpoint for individual tags, so every create, update and delete here reads the entire meshProject object and writes it back with the tags replaced.
   ~> The entire project is rewritten on every change. The Terraform plan only shows a tag changing, but each apply issues a full project update. Everything meshStack does on a project update — audit-log entries, notifications etc. — happens every time, and any project field changed outside Terraform between this resource's read and its write is written back with the value it read.
-  ~> Tags you do not manage are written back verbatim. Preserving a project's other tags is what lets several meshstack_project_tag resources coexist, but the object read back can carry entries nobody declared here — notably the defaults meshStack injects for restricted tag definitions on a project — and every write sends all of them back. So this resource writes tag entries you never configured, and if your meshStack rejects writing a restricted tag's value, the update fails and no tag on that project can be managed with this resource — use inline spec.tags on meshstack_project instead. meshstack_project_tags is unaffected: it sends exactly the tags you configure.
+  ~> Tags you do not manage are written back verbatim. Preserving a project's other tags is what lets several meshstack_project_tag resources coexist, but the object read back can carry entries nobody declared here — notably the defaults meshStack injects for restricted tag definitions on a project — and every write sends all of them back. So this resource writes tag entries you never configured. meshstack_project_tags sends exactly the tags you configure.
+  ~> Restricted tags need an API key with admin rights. Only an API key with admin rights can change a tag whose definition is restricted. For any other API key, meshStack keeps the stored values of the restricted tags and ignores changes to them without an error; for an admin API key, it removes every tag the write leaves out. This resource compares the tags meshStack stored with the tags it manages after each write and fails when meshStack ignored the change.
   ~> Race conditions. The read-modify-write cycle is not atomic and the API offers no optimistic locking. Within a single apply the provider serializes every write to the same project — from this resource, the other project tag resources and meshstack_project alike — so several meshstack_project_tag resources on one project keep each other's tags without depends_on. Nothing outside that one provider instance is serialized: a concurrent write from another apply, a second provider configuration (alias) pointing at the same meshStack, a panel user, or any other automation can silently clobber this resource's tags or be clobbered by them. Manage all tags of a project from a single Terraform state and never run two applies against the same project in parallel.
   ~> Cannot manage tags that are mandatory at project creation. This resource can only set a tag on a project that already exists, so it cannot supply tag values that meshStack requires when the project is created — the meshstack_project create fails before this resource ever runs. Set mandatory tags inline via spec.tags on meshstack_project.
   ~> Subject to change. This resource is provisional. Once meshStack's meshObject API supports project tags as individual meshObjects, it will be reworked in terms of that API.
-  ~> The payment methods are written back too. Every write sends the project's display name, payment_method_identifier and substitute_payment_method_identifier as it read them. If meshStack switches the project to its substitute payment method between this resource's read and its write, the write puts the old payment method back.
+  ~> The payment methods are written back too. Every write sends the project's display name, payment method and substitute payment method as it read them. If meshStack switches the project to its substitute payment method between this resource's read and its write, the write puts the old payment method back.
   ~> Note: This resource is authoritative on write: every apply replaces all tags on the target project with the ones configured here, and destroying it removes them all. It is not authoritative on read — refresh only tracks the keys you configure, so a tag added under another key outside Terraform is not reported as drift, and is removed by the next apply that writes this resource. This is deliberate: a project carries the defaults meshStack injects for restricted tag definitions, and adopting those would produce a plan that never converges. Note also that a tag declared with an empty value list is kept in state, because the API returns no entry for it at all. Do not mix meshstack_project_tags with inline tags on meshstack_project or with meshstack_project_tag or meshstack_project_tag_value resources on the same project.
 ---
 
@@ -22,7 +23,9 @@ Authoritatively manages all tags for a meshStack project.
 
 ~> **The entire project is rewritten on every change.** The Terraform plan only shows a tag changing, but each apply issues a full project update. Everything meshStack does on a project update — audit-log entries, notifications etc. — happens every time, and any project field changed outside Terraform between this resource's read and its write is written back with the value it read.
 
-~> **Tags you do not manage are written back verbatim.** Preserving a project's other tags is what lets several `meshstack_project_tag` resources coexist, but the object read back can carry entries nobody declared here — notably the defaults meshStack injects for restricted tag definitions on a project — and every write sends all of them back. So this resource writes tag entries you never configured, and if your meshStack rejects writing a restricted tag's value, the update fails and no tag on that project can be managed with this resource — use inline `spec.tags` on `meshstack_project` instead. `meshstack_project_tags` is unaffected: it sends exactly the tags you configure.
+~> **Tags you do not manage are written back verbatim.** Preserving a project's other tags is what lets several `meshstack_project_tag` resources coexist, but the object read back can carry entries nobody declared here — notably the defaults meshStack injects for restricted tag definitions on a project — and every write sends all of them back. So this resource writes tag entries you never configured. `meshstack_project_tags` sends exactly the tags you configure.
+
+~> **Restricted tags need an API key with admin rights.** Only an API key with admin rights can change a tag whose definition is restricted. For any other API key, meshStack keeps the stored values of the restricted tags and ignores changes to them without an error; for an admin API key, it removes every tag the write leaves out. This resource compares the tags meshStack stored with the tags it manages after each write and fails when meshStack ignored the change.
 
 ~> **Race conditions.** The read-modify-write cycle is not atomic and the API offers no optimistic locking. Within a single apply the provider serializes every write to the same project — from this resource, the other project tag resources and `meshstack_project` alike — so several `meshstack_project_tag` resources on one project keep each other's tags without `depends_on`. Nothing outside that one provider instance is serialized: a concurrent write from another apply, a second provider configuration (alias) pointing at the same meshStack, a panel user, or any other automation can silently clobber this resource's tags or be clobbered by them. Manage all tags of a project from a single Terraform state and never run two applies against the same project in parallel.
 
@@ -30,7 +33,7 @@ Authoritatively manages all tags for a meshStack project.
 
 ~> **Subject to change.** This resource is provisional. Once meshStack's meshObject API supports project tags as individual meshObjects, it will be reworked in terms of that API.
 
-~> **The payment methods are written back too.** Every write sends the project's display name, `payment_method_identifier` and `substitute_payment_method_identifier` as it read them. If meshStack switches the project to its substitute payment method between this resource's read and its write, the write puts the old payment method back.
+~> **The payment methods are written back too.** Every write sends the project's display name, payment method and substitute payment method as it read them. If meshStack switches the project to its substitute payment method between this resource's read and its write, the write puts the old payment method back.
 
 ~> **Note:** This resource is authoritative on write: every apply replaces **all** tags on the target project with the ones configured here, and destroying it removes them all. It is not authoritative on read — refresh only tracks the keys you configure, so a tag added under another key outside Terraform is not reported as drift, and is removed by the next apply that writes this resource. This is deliberate: a project carries the defaults meshStack injects for restricted tag definitions, and adopting those would produce a plan that never converges. Note also that a tag declared with an empty value list is kept in state, because the API returns no entry for it at all. Do not mix `meshstack_project_tags` with inline `tags` on `meshstack_project` or with `meshstack_project_tag` or `meshstack_project_tag_value` resources on the same project.
 
@@ -38,14 +41,9 @@ Authoritatively manages all tags for a meshStack project.
 
 ```terraform
 resource "meshstack_project_tags" "example" {
-  metadata = {
-    workspace_identifier = data.meshstack_project.example.metadata.owned_by_workspace
-    project_identifier   = data.meshstack_project.example.metadata.name
-  }
-  spec = {
-    tags = {
-      (data.meshstack_tag_definition.cost_center.spec.key) = ["12345"]
-    }
+  project_ref = data.meshstack_project.example.ref
+  tags = {
+    (data.meshstack_tag_definition.cost_center.spec.key) = ["12345"]
   }
 }
 ```
@@ -55,24 +53,20 @@ resource "meshstack_project_tags" "example" {
 
 ### Required
 
-- `metadata` (Attributes) Project tags metadata. (see [below for nested schema](#nestedatt--metadata))
-- `spec` (Attributes) Project tags specification. (see [below for nested schema](#nestedatt--spec))
-
-<a id="nestedatt--metadata"></a>
-### Nested Schema for `metadata`
-
-Required:
-
-- `project_identifier` (String) Identifier of the project.
-- `workspace_identifier` (String) Identifier of the workspace that owns the project.
-
-
-<a id="nestedatt--spec"></a>
-### Nested Schema for `spec`
-
-Required:
-
+- `project_ref` (Attributes) Reference to the project to tag. (see [below for nested schema](#nestedatt--project_ref))
 - `tags` (Map of List of String) All tags to set on the project. This map is authoritative: every apply writes exactly these tags, so any tag not listed here is removed. Only these keys are tracked on refresh — tags added under other keys outside Terraform do not show up as drift.
+
+<a id="nestedatt--project_ref"></a>
+### Nested Schema for `project_ref`
+
+Required:
+
+- `name` (String) Named identifier (`metadata.name`) of the `meshProject`.
+- `owned_by_workspace` (String) Named identifier (`metadata.name`) of the `meshWorkspace` that owns the `meshProject`.
+
+Optional:
+
+- `kind` (String) meshObject type, always `meshProject`.
 
 ## Import
 

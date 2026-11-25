@@ -30,6 +30,7 @@ data "meshstack_project" "example" {
 
 ### Read-Only
 
+- `ref` (Attributes) Reference to this project, can be used as `target_ref` in project binding resources. (see [below for nested schema](#nestedatt--ref))
 - `spec` (Attributes) Project specification. (see [below for nested schema](#nestedatt--spec))
 
 <a id="nestedatt--metadata"></a>
@@ -46,6 +47,16 @@ Read-Only:
 - `deleted_on` (String)
 
 
+<a id="nestedatt--ref"></a>
+### Nested Schema for `ref`
+
+Read-Only:
+
+- `kind` (String) meshObject type, always `meshProject`.
+- `name` (String) Named identifier (`metadata.name`) of the `meshProject`.
+- `owned_by_workspace` (String) Named identifier (`metadata.name`) of the `meshWorkspace` that owns the `meshProject`.
+
+
 <a id="nestedatt--spec"></a>
 ### Nested Schema for `spec`
 
@@ -53,5 +64,24 @@ Read-Only:
 
 - `display_name` (String)
 - `payment_method_identifier` (String)
+- `payment_method_ref` (Attributes) Reference to the payment method of the project. (see [below for nested schema](#nestedatt--spec--payment_method_ref))
 - `substitute_payment_method_identifier` (String)
+- `substitute_payment_method_ref` (Attributes) Reference to the payment method that meshStack makes the payment method of the project when `payment_method_ref` expires. (see [below for nested schema](#nestedatt--spec--substitute_payment_method_ref))
 - `tags` (Map of List of String) Tags of `meshProject`.
+
+<a id="nestedatt--spec--payment_method_ref"></a>
+### Nested Schema for `spec.payment_method_ref`
+
+Read-Only:
+
+- `kind` (String) meshObject type, always `meshPaymentMethod`.
+- `name` (String) Named identifier (`metadata.name`) of `meshPaymentMethod`.
+
+
+<a id="nestedatt--spec--substitute_payment_method_ref"></a>
+### Nested Schema for `spec.substitute_payment_method_ref`
+
+Read-Only:
+
+- `kind` (String) meshObject type, always `meshPaymentMethod`.
+- `name` (String) Named identifier (`metadata.name`) of `meshPaymentMethod`.

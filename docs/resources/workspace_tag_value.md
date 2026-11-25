@@ -6,11 +6,12 @@ description: |-
   Manages a single value of a multi-select tag on a meshStack workspace.
   !> Not recommended for general use. Prefer managing tags inline via metadata.tags on meshstack_workspace. Only reach for this resource when the workspace itself is not managed by your Terraform configuration (for example it was created in meshPanel or by another team) and you understand the trade-offs below. All of them follow from the same limitation: the meshObject API has no endpoint for individual tags, so every create, update and delete here reads the entire meshWorkspace object and writes it back with the tags replaced.
   ~> The entire workspace is rewritten on every change. The Terraform plan only shows a tag changing, but each apply issues a full workspace update. Everything meshStack does on a workspace update — audit-log entries, notifications etc. — happens every time, and any workspace field changed outside Terraform between this resource's read and its write is written back with the value it read.
-  ~> Tags you do not manage are written back verbatim. Preserving a workspace's other tags is what lets several meshstack_workspace_tag_value resources coexist, but the object read back can carry entries nobody declared here — notably the defaults meshStack injects for restricted tag definitions on a workspace created in meshPanel — and every write sends all of them back. So this resource writes tag entries you never configured, and if your meshStack rejects writing a restricted tag's value, the update fails and no tag on that workspace can be managed with this resource — use inline metadata.tags on meshstack_workspace instead. meshstack_workspace_tags is unaffected: it sends exactly the tags you configure.
+  ~> Tags you do not manage are written back verbatim. Preserving a workspace's other tags is what lets several meshstack_workspace_tag_value resources coexist, but the object read back can carry entries nobody declared here — notably the defaults meshStack injects for restricted tag definitions on a workspace created in meshPanel — and every write sends all of them back. So this resource writes tag entries you never configured. meshstack_workspace_tags sends exactly the tags you configure.
+  ~> Restricted tags need an API key with admin rights. Only an API key with admin rights can change a tag whose definition is restricted. For any other API key, meshStack keeps the stored values of the restricted tags and ignores changes to them without an error; for an admin API key, it removes every tag the write leaves out. This resource compares the tags meshStack stored with the tags it manages after each write and fails when meshStack ignored the change.
   ~> Race conditions. The read-modify-write cycle is not atomic and the API offers no optimistic locking. Within a single apply the provider serializes every write to the same workspace — from this resource, the other workspace tag resources and meshstack_workspace alike — so several meshstack_workspace_tag_value resources on one workspace keep each other's tags without depends_on. Nothing outside that one provider instance is serialized: a concurrent write from another apply, a second provider configuration (alias) pointing at the same meshStack, a panel user, or any other automation can silently clobber this resource's tags or be clobbered by them. Manage all tags of a workspace from a single Terraform state and never run two applies against the same workspace in parallel.
   ~> Cannot manage tags that are mandatory at workspace creation. This resource can only set a tag on a workspace that already exists, so it cannot supply tag values that meshStack requires when the workspace is created — the meshstack_workspace create fails before this resource ever runs. Set mandatory tags inline via metadata.tags on meshstack_workspace.
   ~> Subject to change. This resource is provisional. Once meshStack's meshObject API supports workspace tags as individual meshObjects, it will be reworked in terms of that API.
-  ~> Note: Use one meshstack_workspace_tag_value resource per value. The resource adds its value to the tag and removes only that value again, so several of them can share a tag — but two resources declaring the same value share it, too: destroying either removes it, and the other drops out of state and adds it again on the next apply. A value that is already on the tag when this resource is created is adopted, and destroying the resource removes it. meshStack decides which values a tag accepts; adding a second value to a tag that is not multi-select fails when it rejects the write. Do not combine this resource with meshstack_workspace_tag for the same key, or with meshstack_workspace_tags or inline tags on meshstack_workspace for the same workspace.
+  ~> Note: Use one meshstack_workspace_tag_value resource per value. The resource adds its value to the tag and removes only that value again, so several of them can share a tag — but two resources declaring the same value share it, too: destroying either removes it, and the other drops out of state and adds it again on the next apply. A value that is already on the tag when this resource is created is adopted, and destroying the resource removes it. Use this resource only for a tag whose definition is multi-select: recent meshStack versions reject a second value on a tag that is not multi-select, and older versions store it. Do not combine this resource with meshstack_workspace_tag for the same key, or with meshstack_workspace_tags or inline tags on meshstack_workspace for the same workspace.
 ---
 
 # meshstack_workspace_tag_value (Resource)
@@ -21,7 +22,9 @@ Manages a single value of a multi-select tag on a meshStack workspace.
 
 ~> **The entire workspace is rewritten on every change.** The Terraform plan only shows a tag changing, but each apply issues a full workspace update. Everything meshStack does on a workspace update — audit-log entries, notifications etc. — happens every time, and any workspace field changed outside Terraform between this resource's read and its write is written back with the value it read.
 
-~> **Tags you do not manage are written back verbatim.** Preserving a workspace's other tags is what lets several `meshstack_workspace_tag_value` resources coexist, but the object read back can carry entries nobody declared here — notably the defaults meshStack injects for restricted tag definitions on a workspace created in meshPanel — and every write sends all of them back. So this resource writes tag entries you never configured, and if your meshStack rejects writing a restricted tag's value, the update fails and no tag on that workspace can be managed with this resource — use inline `metadata.tags` on `meshstack_workspace` instead. `meshstack_workspace_tags` is unaffected: it sends exactly the tags you configure.
+~> **Tags you do not manage are written back verbatim.** Preserving a workspace's other tags is what lets several `meshstack_workspace_tag_value` resources coexist, but the object read back can carry entries nobody declared here — notably the defaults meshStack injects for restricted tag definitions on a workspace created in meshPanel — and every write sends all of them back. So this resource writes tag entries you never configured. `meshstack_workspace_tags` sends exactly the tags you configure.
+
+~> **Restricted tags need an API key with admin rights.** Only an API key with admin rights can change a tag whose definition is restricted. For any other API key, meshStack keeps the stored values of the restricted tags and ignores changes to them without an error; for an admin API key, it removes every tag the write leaves out. This resource compares the tags meshStack stored with the tags it manages after each write and fails when meshStack ignored the change.
 
 ~> **Race conditions.** The read-modify-write cycle is not atomic and the API offers no optimistic locking. Within a single apply the provider serializes every write to the same workspace — from this resource, the other workspace tag resources and `meshstack_workspace` alike — so several `meshstack_workspace_tag_value` resources on one workspace keep each other's tags without `depends_on`. Nothing outside that one provider instance is serialized: a concurrent write from another apply, a second provider configuration (alias) pointing at the same meshStack, a panel user, or any other automation can silently clobber this resource's tags or be clobbered by them. Manage all tags of a workspace from a single Terraform state and never run two applies against the same workspace in parallel.
 
@@ -29,19 +32,15 @@ Manages a single value of a multi-select tag on a meshStack workspace.
 
 ~> **Subject to change.** This resource is provisional. Once meshStack's meshObject API supports workspace tags as individual meshObjects, it will be reworked in terms of that API.
 
-~> **Note:** Use one `meshstack_workspace_tag_value` resource per value. The resource adds its value to the tag and removes only that value again, so several of them can share a tag — but two resources declaring the same value share it, too: destroying either removes it, and the other drops out of state and adds it again on the next apply. A value that is already on the tag when this resource is created is adopted, and destroying the resource removes it. meshStack decides which values a tag accepts; adding a second value to a tag that is not multi-select fails when it rejects the write. Do not combine this resource with `meshstack_workspace_tag` for the same key, or with `meshstack_workspace_tags` or inline `tags` on `meshstack_workspace` for the same workspace.
+~> **Note:** Use one `meshstack_workspace_tag_value` resource per value. The resource adds its value to the tag and removes only that value again, so several of them can share a tag — but two resources declaring the same value share it, too: destroying either removes it, and the other drops out of state and adds it again on the next apply. A value that is already on the tag when this resource is created is adopted, and destroying the resource removes it. Use this resource only for a tag whose definition is multi-select: recent meshStack versions reject a second value on a tag that is not multi-select, and older versions store it. Do not combine this resource with `meshstack_workspace_tag` for the same key, or with `meshstack_workspace_tags` or inline `tags` on `meshstack_workspace` for the same workspace.
 
 ## Example Usage
 
 ```terraform
 resource "meshstack_workspace_tag_value" "team_a" {
-  metadata = {
-    workspace_identifier = data.meshstack_workspace.example.metadata.name
-    key                  = data.meshstack_tag_definition.teams.spec.key
-  }
-  spec = {
-    value = "team-a"
-  }
+  workspace = data.meshstack_workspace.example.metadata.name
+  key       = data.meshstack_tag_definition.teams.spec.key
+  value     = "team-a"
 }
 ```
 
@@ -50,24 +49,9 @@ resource "meshstack_workspace_tag_value" "team_a" {
 
 ### Required
 
-- `metadata` (Attributes) Workspace tag value metadata. (see [below for nested schema](#nestedatt--metadata))
-- `spec` (Attributes) Workspace tag value specification. (see [below for nested schema](#nestedatt--spec))
-
-<a id="nestedatt--metadata"></a>
-### Nested Schema for `metadata`
-
-Required:
-
 - `key` (String) Key of the tag.
-- `workspace_identifier` (String) Identifier of the target workspace.
-
-
-<a id="nestedatt--spec"></a>
-### Nested Schema for `spec`
-
-Required:
-
 - `value` (String) Value to add to the tag.
+- `workspace` (String) Name (`metadata.name`) of the workspace to tag.
 
 ## Import
 

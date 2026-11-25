@@ -16,10 +16,10 @@ List building blocks, with optional filters. Each returned building block is rea
 data "meshstack_building_blocks" "all" {
   # All filters are optional. Only active building blocks are returned.
 
-  # workspace_identifier = "my-workspace"
-  # project_identifier   = "my-project"
-  # platform_identifier  = "my-platform.my-location"
-  # name                 = "my-building-block"
+  # owned_by_workspace  = "my-workspace"
+  # project_identifier  = "my-project"
+  # platform_identifier = "my-platform.my-location"
+  # name                = "my-building-block"
 
   # Filter by the owning building block definition (the definition, not a version):
   # definition_uuid = "00000000-0000-0000-0000-000000000000"
@@ -54,13 +54,13 @@ data "meshstack_building_blocks" "all" {
 - `managed_by_definition_uuid` (String) Platform-operator scope: return building blocks created from the definition owned by the caller with this UUID. Requires the `MANAGED_BUILDINGBLOCK_LIST` authority.
 - `managed_by_workspace_identifier` (String) Platform-operator scope: return building blocks created from definitions owned by this workspace. Requires the `MANAGED_BUILDINGBLOCK_LIST` authority.
 - `name` (String) Only return building blocks with this exact name.
+- `owned_by_workspace` (String) Only return building blocks owned by this workspace.
 - `platform_identifier` (String) Only return building blocks on this platform (`<platformInstance>.<location>`).
 - `project_identifier` (String) Only return building blocks in this project.
 - `target_kind` (String) Only return building blocks with this target kind. One of `meshTenant`, `meshWorkspace`.
 - `tenant_uuid` (String) Only return building blocks targeting the tenant with this UUID.
 - `version_number` (String) Only return building blocks created from this building block definition version number. Accepts a plain number (`1`) or a `v`-prefixed string (`v1`); the `v` is stripped server-side.
 - `version_uuid` (String) Only return building blocks created from the building block definition version with this UUID.
-- `workspace_identifier` (String) Only return building blocks owned by or assigned to this workspace.
 
 ### Read-Only
 
@@ -100,7 +100,7 @@ Read-Only:
 
 Read-Only:
 
-- `owned_by_workspace` (String) The workspace containing this building block.
+- `owned_by_workspace` (String) The workspace that owns this building block.
 - `uuid` (String) UUID which uniquely identifies the building block.
 
 

@@ -14,13 +14,13 @@ Projects in a workspace.
 
 ```terraform
 data "meshstack_projects" "example_all_projects_in_workspace" {
-  workspace_identifier = data.meshstack_workspace.example.metadata.name
+  owned_by_workspace = data.meshstack_workspace.example.metadata.name
 }
 ```
 
 ```terraform
 data "meshstack_projects" "example_all_projects_in_workspace_with_payment_method" {
-  workspace_identifier = data.meshstack_workspace.example.metadata.name
+  owned_by_workspace = data.meshstack_workspace.example.metadata.name
 
   # use empty string "" for listing projects without a payment method (omit for all projects, see example above)
   payment_method_identifier = data.meshstack_payment_method.example.metadata.name
@@ -32,11 +32,11 @@ data "meshstack_projects" "example_all_projects_in_workspace_with_payment_method
 
 ### Required
 
-- `workspace_identifier` (String) Workspace identifier
+- `owned_by_workspace` (String) Identifier of the workspace that owns the projects.
 
 ### Optional
 
-- `payment_method_identifier` (String) Payment method identifier
+- `payment_method_identifier` (String) Only return projects with the payment method of this identifier. An empty string returns the projects without a payment method.
 
 ### Read-Only
 
@@ -48,6 +48,7 @@ data "meshstack_projects" "example_all_projects_in_workspace_with_payment_method
 Read-Only:
 
 - `metadata` (Attributes) Metadata of the project (see [below for nested schema](#nestedatt--projects--metadata))
+- `ref` (Attributes) Reference to this project, can be used as `target_ref` in project binding resources. (see [below for nested schema](#nestedatt--projects--ref))
 - `spec` (Attributes) Specifications of the project (see [below for nested schema](#nestedatt--projects--spec))
 
 <a id="nestedatt--projects--metadata"></a>
@@ -61,6 +62,16 @@ Read-Only:
 - `owned_by_workspace` (String) Workspace that owns the project
 
 
+<a id="nestedatt--projects--ref"></a>
+### Nested Schema for `projects.ref`
+
+Read-Only:
+
+- `kind` (String) meshObject type, always `meshProject`.
+- `name` (String) Named identifier (`metadata.name`) of the `meshProject`.
+- `owned_by_workspace` (String) Named identifier (`metadata.name`) of the `meshWorkspace` that owns the `meshProject`.
+
+
 <a id="nestedatt--projects--spec"></a>
 ### Nested Schema for `projects.spec`
 
@@ -68,5 +79,24 @@ Read-Only:
 
 - `display_name` (String) Display name of the project
 - `payment_method_identifier` (String) Payment method identifier
+- `payment_method_ref` (Attributes) Reference to the payment method of the project. (see [below for nested schema](#nestedatt--projects--spec--payment_method_ref))
 - `substitute_payment_method_identifier` (String) Substitute payment method identifier
+- `substitute_payment_method_ref` (Attributes) Reference to the payment method that meshStack makes the payment method of the project when `payment_method_ref` expires. (see [below for nested schema](#nestedatt--projects--spec--substitute_payment_method_ref))
 - `tags` (Map of List of String) Tags of `meshProject`.
+
+<a id="nestedatt--projects--spec--payment_method_ref"></a>
+### Nested Schema for `projects.spec.payment_method_ref`
+
+Read-Only:
+
+- `kind` (String) meshObject type, always `meshPaymentMethod`.
+- `name` (String) Named identifier (`metadata.name`) of `meshPaymentMethod`.
+
+
+<a id="nestedatt--projects--spec--substitute_payment_method_ref"></a>
+### Nested Schema for `projects.spec.substitute_payment_method_ref`
+
+Read-Only:
+
+- `kind` (String) meshObject type, always `meshPaymentMethod`.
+- `name` (String) Named identifier (`metadata.name`) of `meshPaymentMethod`.

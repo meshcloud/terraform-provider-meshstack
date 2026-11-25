@@ -3,6 +3,23 @@
 Requires meshStack 2026.47.0 or later (previously 2026.36.0). An API key that creates a `meshstack_integration` without
 `runner_ref` now needs the permission to list building block runners.
 
+BREAKING CHANGES:
+- `meshstack_workspace_tag`, `meshstack_workspace_tags`: the attributes are top-level, because these resources manage
+  a part of a workspace and are not meshObjects. Write `workspace`, `key` and `values` (`tags`) in place of
+  `metadata.workspace_identifier`, `metadata.key` and `spec.values` (`spec.tags`). The provider upgrades existing
+  state, so only the configuration changes:
+
+  ```hcl
+  resource "meshstack_workspace_tag" "environment" {
+    workspace = "my-workspace"
+    key       = "environment"
+    values    = ["dev"]
+  }
+  ```
+- `meshstack_projects`, `meshstack_tenants`, `meshstack_building_block_definitions` and `meshstack_building_blocks`:
+  the filter by owning workspace is `owned_by_workspace` in all of them, the name of the attribute it matches. Before,
+  it was `workspace_identifier`, or `workspace` on `meshstack_tenants`.
+
 FEATURES:
 - `meshstack_building_block` and `meshstack_building_block_definition` resources and data sources,
   `meshstack_building_blocks` and `meshstack_building_block_definitions`: they are generally available and use the GA
@@ -12,6 +29,14 @@ FEATURES:
 - `meshstack_building_block_definition`: `assignment_type` accepts `BUILDING_BLOCK_UUID`, the new name of the input
   source that gives a building block its own UUID (since meshStack 2026.48.0). The old name
   `TENANT_BUILDING_BLOCK_UUID` is deprecated.
+- `meshstack_project` resource and data source, `meshstack_projects`: the new read-only `ref`
+  (`{kind, owned_by_workspace, name}`) references the project, for example in `project_ref` or `target_ref`.
+- `meshstack_project`: the new `spec.payment_method_ref` and `spec.substitute_payment_method_ref` take a payment
+  method's `ref`, such as `meshstack_payment_method.example.ref`. `spec.payment_method_identifier` and
+  `spec.substitute_payment_method_identifier` are deprecated; set one attribute of each pair. A later release removes
+  the identifiers and makes `spec.payment_method_ref` required. The data sources return both forms.
+- `meshstack_project_user_binding`, `meshstack_project_group_binding`: `target_ref` takes an optional `kind`, so
+  `target_ref = meshstack_project.example.ref` works. Existing configurations keep working.
 - `meshstack_project_tags`: new resource that manages all tags of a project that this configuration does not create.
   Every apply writes exactly the configured tags and removes all others.
 - `meshstack_project_tag`: new resource that manages one tag of a project that this configuration does not create, and
@@ -28,6 +53,9 @@ FIXES:
   change at a time. Several `meshstack_workspace_tag` resources on the same workspace no longer lose each other's tags,
   so they no longer need `depends_on`. `meshstack_workspace` takes part as well, so its writes do not interleave with
   those of the tag resources. Separate applies and changes in meshPanel can still overwrite each other.
+- `meshstack_workspace_tag`, `meshstack_workspace_tags` and the new tag resources: an apply fails when meshStack does
+  not store the tag. meshStack ignores a change to a restricted tag when the API key has no admin rights. Before, the
+  apply reported success and the next plan showed the change again.
 
 # v0.28.2
 
