@@ -30,19 +30,19 @@ type buildingBlocksDataSource struct {
 // buildingBlocksDataSourceModel is the root model: optional filters plus the resulting list.
 // All filter fields are nil/empty when unset and are then omitted from the backend query.
 type buildingBlocksDataSourceModel struct {
-	OwnedByWorkspace             *string                 `tfsdk:"owned_by_workspace"`
-	ProjectIdentifier            *string                 `tfsdk:"project_identifier"`
-	PlatformIdentifier           *string                 `tfsdk:"platform_identifier"`
-	Name                         *string                 `tfsdk:"name"`
-	DefinitionUuid               *string                 `tfsdk:"definition_uuid"`
-	VersionUuid                  *string                 `tfsdk:"version_uuid"`
-	VersionNumber                *string                 `tfsdk:"version_number"`
-	TenantUuid                   *string                 `tfsdk:"tenant_uuid"`
-	TargetKind                   *string                 `tfsdk:"target_kind"`
-	HealthStatus                 clientTypes.Set[string] `tfsdk:"health_status"`
-	Action                       clientTypes.Set[string] `tfsdk:"action"`
-	ManagedByWorkspaceIdentifier *string                 `tfsdk:"managed_by_workspace_identifier"`
-	ManagedByDefinitionUuid      *string                 `tfsdk:"managed_by_definition_uuid"`
+	OwnedByWorkspace        *string                 `tfsdk:"owned_by_workspace"`
+	ProjectIdentifier       *string                 `tfsdk:"project_identifier"`
+	PlatformIdentifier      *string                 `tfsdk:"platform_identifier"`
+	Name                    *string                 `tfsdk:"name"`
+	DefinitionUuid          *string                 `tfsdk:"definition_uuid"`
+	VersionUuid             *string                 `tfsdk:"version_uuid"`
+	VersionNumber           *string                 `tfsdk:"version_number"`
+	TenantUuid              *string                 `tfsdk:"tenant_uuid"`
+	TargetKind              *string                 `tfsdk:"target_kind"`
+	HealthStatus            clientTypes.Set[string] `tfsdk:"health_status"`
+	Action                  clientTypes.Set[string] `tfsdk:"action"`
+	ManagedByWorkspace      *string                 `tfsdk:"managed_by_workspace"`
+	ManagedByDefinitionUuid *string                 `tfsdk:"managed_by_definition_uuid"`
 
 	BuildingBlocks []buildingBlockListItem `tfsdk:"building_blocks"`
 }
@@ -103,7 +103,7 @@ func (d *buildingBlocksDataSource) Schema(_ context.Context, _ datasource.Schema
 				ElementType: types.StringType,
 				Optional:    true,
 			},
-			"managed_by_workspace_identifier": optionalString("Platform-operator scope: return building blocks created from definitions owned by this workspace. " +
+			"managed_by_workspace": optionalString("Platform-operator scope: return building blocks created from definitions owned by this workspace. " +
 				"Requires the `MANAGED_BUILDINGBLOCK_LIST` authority."),
 			"managed_by_definition_uuid": optionalString("Platform-operator scope: return building blocks created from the definition owned by the caller with this UUID. " +
 				"Requires the `MANAGED_BUILDINGBLOCK_LIST` authority."),
@@ -151,7 +151,7 @@ func (d *buildingBlocksDataSource) Read(ctx context.Context, req datasource.Read
 		TargetKind:                   config.TargetKind,
 		HealthStatus:                 config.HealthStatus,
 		Action:                       config.Action,
-		ManagedByWorkspaceIdentifier: config.ManagedByWorkspaceIdentifier,
+		ManagedByWorkspaceIdentifier: config.ManagedByWorkspace,
 		ManagedByDefinitionUuid:      config.ManagedByDefinitionUuid,
 	})
 	if err != nil {

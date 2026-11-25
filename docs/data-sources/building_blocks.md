@@ -39,7 +39,7 @@ data "meshstack_building_blocks" "all" {
   # Platform-operator scope (requires the MANAGED_BUILDINGBLOCK_LIST authority): list building
   # blocks created from definitions you own, even when they live in other workspaces.
   # managed_by_definition_uuid      = "00000000-0000-0000-0000-000000000000"
-  # managed_by_workspace_identifier = "my-workspace"
+  # managed_by_workspace = "my-workspace"
 }
 ```
 
@@ -52,7 +52,7 @@ data "meshstack_building_blocks" "all" {
 - `definition_uuid` (String) Only return building blocks created from the building block definition with this UUID (the definition, not a specific version).
 - `health_status` (Set of String) Only return building blocks with one of these health statuses (see `status.health_status`). One of `NONE`, `SUCCEEDED`, `FAILED`, `DELETED`; later meshStack releases may add values.
 - `managed_by_definition_uuid` (String) Platform-operator scope: return building blocks created from the definition owned by the caller with this UUID. Requires the `MANAGED_BUILDINGBLOCK_LIST` authority.
-- `managed_by_workspace_identifier` (String) Platform-operator scope: return building blocks created from definitions owned by this workspace. Requires the `MANAGED_BUILDINGBLOCK_LIST` authority.
+- `managed_by_workspace` (String) Platform-operator scope: return building blocks created from definitions owned by this workspace. Requires the `MANAGED_BUILDINGBLOCK_LIST` authority.
 - `name` (String) Only return building blocks with this exact name.
 - `owned_by_workspace` (String) Only return building blocks owned by this workspace.
 - `platform_identifier` (String) Only return building blocks on this platform (`<platformInstance>.<location>`).

@@ -120,7 +120,7 @@ data "meshstack_building_blocks" "all" {
   # Platform-operator scope (requires the MANAGED_BUILDINGBLOCK_LIST authority): list building
   # blocks created from definitions you own, even when they live in other workspaces.
   # managed_by_definition_uuid      = "00000000-0000-0000-0000-000000000000"
-  # managed_by_workspace_identifier = "my-workspace"
+  # managed_by_workspace = "my-workspace"
   owned_by_workspace = meshstack_building_block.example_workspace.metadata.owned_by_workspace
   version_number     = "v2"
 }

@@ -18,7 +18,8 @@ BREAKING CHANGES:
   ```
 - `meshstack_projects`, `meshstack_tenants`, `meshstack_building_block_definitions` and `meshstack_building_blocks`:
   the filter by owning workspace is `owned_by_workspace` in all of them, the name of the attribute it matches. Before,
-  it was `workspace_identifier`, or `workspace` on `meshstack_tenants`.
+  it was `workspace_identifier`, or `workspace` on `meshstack_tenants`. On `meshstack_building_blocks`,
+  `managed_by_workspace_identifier` is now `managed_by_workspace`.
 
 FEATURES:
 - `meshstack_building_block` and `meshstack_building_block_definition` resources and data sources,
