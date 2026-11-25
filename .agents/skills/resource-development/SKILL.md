@@ -66,12 +66,14 @@ another with a single `ref`, without knowing how meshStack identifies it.
   matching read-only `ref`, so the wiring is one expression.
 - **A workspace is referenced by its plain name**, such as `owned_by_workspace = "my-workspace"`. It
   has no ref object.
-- **Name an attribute after the API field it carries**, in snake case and without a type suffix:
-  `owned_by_workspace`, `key`, `display_name`. Never add `_identifier` to a new attribute. An attribute
-  that names the workspace a non-meshObject resource acts on is `workspace`.
+- **Name an attribute after the API field it carries**, in snake case: `owned_by_workspace`, `key`,
+  `display_name`. A resource input that references another object never ends in `_identifier`: it is a
+  `*_ref`, or `workspace` for the workspace a non-meshObject resource acts on. Read-only outputs keep
+  the API field's name, such as `status.platform_type_identifier`.
 - **A data source lookup may take plain values.** A filter that matches an attribute of the listed
-  objects is named after that attribute, such as `owned_by_workspace`; other filters keep the name of
-  the API query parameter. Strict `*_ref` inputs apply to resources only.
+  objects is named after that attribute, such as `owned_by_workspace`. Any other filter takes the
+  snake-case name of the API query parameter it maps to, such as `workspace_identifier` for
+  `workspaceIdentifier`, with no exception for workspaces. Strict `*_ref` inputs apply to resources only.
 - **Existing names change only in a breaking release**, with a state upgrader (`rawStateUpgrader` in
   `state_upgrade_raw.go`) when the attribute's path or type changes.
 
