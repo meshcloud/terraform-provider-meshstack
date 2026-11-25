@@ -89,8 +89,8 @@ func (workspaceTagTarget) describe(name string) string {
 }
 
 func writeWorkspaceTags(ctx context.Context, workspaces client.MeshWorkspaceClient, workspace *client.MeshWorkspace, tags map[string][]string) (map[string][]string, error) {
-	updated, err := workspaces.Update(ctx, workspace.Metadata.Name, &client.MeshWorkspaceCreate{
-		Metadata: client.MeshWorkspaceCreateMetadata{Name: workspace.Metadata.Name, Tags: tags},
+	updated, err := workspaces.Update(ctx, client.MeshWorkspace{
+		Metadata: client.MeshWorkspaceMetadata{Name: workspace.Metadata.Name, Tags: tags},
 		Spec:     workspace.Spec,
 	})
 	if err != nil {
@@ -136,7 +136,7 @@ func (projectTagTarget) lock(ref projectRef) func() {
 }
 
 func (t projectTagTarget) read(ctx context.Context, ref projectRef) (*tagSnapshot, error) {
-	project, err := t.projects.Read(ctx, ref.OwnedByWorkspace, ref.Name)
+	project, err := t.projects.Read(ctx, client.NewMeshProjectId(ref.OwnedByWorkspace, ref.Name))
 	if err != nil || project == nil {
 		return nil, err
 	}
@@ -155,8 +155,8 @@ func (projectTagTarget) describe(ref projectRef) string {
 func writeProjectTags(ctx context.Context, projects client.MeshProjectClient, project *client.MeshProject, tags map[string][]string) (map[string][]string, error) {
 	spec := project.Spec
 	spec.Tags = tags
-	updated, err := projects.Update(ctx, &client.MeshProjectCreate{
-		Metadata: client.MeshProjectCreateMetadata{Name: project.Metadata.Name, OwnedByWorkspace: project.Metadata.OwnedByWorkspace},
+	updated, err := projects.Update(ctx, client.MeshProject{
+		Metadata: client.MeshProjectMetadata{Name: project.Metadata.Name, OwnedByWorkspace: project.Metadata.OwnedByWorkspace},
 		Spec:     spec,
 	})
 	if err != nil {

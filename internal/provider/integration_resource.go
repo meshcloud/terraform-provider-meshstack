@@ -127,7 +127,7 @@ func (r *integrationResource) Create(ctx context.Context, req resource.CreateReq
 		resp.Diagnostics.AddError("Error creating meshIntegration", err.Error())
 		return
 	}
-	plan.SetFromClientDto(createdDto)
+	plan.SetFromClientDto(&createdDto)
 	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, plan, secret.WithConverterSupport(ctx, req.Config, req.Plan, nil)...)...)
 }
 
@@ -211,7 +211,7 @@ func (r *integrationResource) Update(ctx context.Context, req resource.UpdateReq
 		resp.Diagnostics.AddError("Error updating meshIntegration", fmt.Sprintf("Updating integration '%s' failed: %s", *plan.Metadata.Uuid, err.Error()))
 		return
 	}
-	plan.SetFromClientDto(updatedDto)
+	plan.SetFromClientDto(&updatedDto)
 	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, plan, secret.WithConverterSupport(ctx, req.Config, req.Plan, nil)...)...)
 }
 

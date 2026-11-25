@@ -85,8 +85,8 @@ func (r *paymentMethodResource) Schema(_ context.Context, _ resource.SchemaReque
 }
 
 func (r *paymentMethodResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	paymentMethod := client.MeshPaymentMethodCreate{
-		Metadata: client.MeshPaymentMethodCreateMetadata{},
+	paymentMethod := client.MeshPaymentMethod{
+		Metadata: client.MeshPaymentMethodMetadata{},
 	}
 
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec"), &paymentMethod.Spec)...)
@@ -97,7 +97,7 @@ func (r *paymentMethodResource) Create(ctx context.Context, req resource.CreateR
 		return
 	}
 
-	createdPaymentMethod, err := r.meshPaymentMethodClient.Create(ctx, &paymentMethod)
+	createdPaymentMethod, err := r.meshPaymentMethodClient.Create(ctx, paymentMethod)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Creating Payment Method",
@@ -113,7 +113,7 @@ func (r *paymentMethodResource) Create(ctx context.Context, req resource.CreateR
 		createdPaymentMethod.Spec.Tags = make(map[string][]string)
 	}
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, newPaymentMethodModel(createdPaymentMethod))...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, newPaymentMethodModel(&createdPaymentMethod))...)
 }
 
 func (r *paymentMethodResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -155,8 +155,8 @@ func (r *paymentMethodResource) Read(ctx context.Context, req resource.ReadReque
 }
 
 func (r *paymentMethodResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	paymentMethod := client.MeshPaymentMethodCreate{
-		Metadata: client.MeshPaymentMethodCreateMetadata{},
+	paymentMethod := client.MeshPaymentMethod{
+		Metadata: client.MeshPaymentMethodMetadata{},
 	}
 
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec"), &paymentMethod.Spec)...)
@@ -168,7 +168,7 @@ func (r *paymentMethodResource) Update(ctx context.Context, req resource.UpdateR
 		return
 	}
 
-	updatedPaymentMethod, err := r.meshPaymentMethodClient.Update(ctx, paymentMethod.Metadata.Name, &paymentMethod)
+	updatedPaymentMethod, err := r.meshPaymentMethodClient.Update(ctx, paymentMethod)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Updating Payment Method",
@@ -183,7 +183,7 @@ func (r *paymentMethodResource) Update(ctx context.Context, req resource.UpdateR
 		updatedPaymentMethod.Spec.Tags = make(map[string][]string)
 	}
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, newPaymentMethodModel(updatedPaymentMethod))...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, newPaymentMethodModel(&updatedPaymentMethod))...)
 }
 
 func (r *paymentMethodResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {

@@ -128,7 +128,7 @@ type stubBuildingBlockDefinitionClient struct {
 	readErr error
 }
 
-func (s stubBuildingBlockDefinitionClient) List(context.Context, *string) ([]client.MeshBuildingBlockDefinition, error) {
+func (s stubBuildingBlockDefinitionClient) List(context.Context, client.MeshBuildingBlockDefinitionFilter, ...client.ListOption) ([]client.MeshBuildingBlockDefinition, error) {
 	return s.listed, nil
 }
 

@@ -98,8 +98,8 @@ func (r *locationResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	location := client.MeshLocationCreate{
-		Metadata: client.MeshLocationCreateMetadata{
+	location := client.MeshLocation{
+		Metadata: client.MeshLocationMetadata{
 			Name:             name,
 			OwnedByWorkspace: ownedByWorkspace,
 		},
@@ -109,7 +109,7 @@ func (r *locationResource) Create(ctx context.Context, req resource.CreateReques
 		},
 	}
 
-	createdLocation, err := r.meshLocationClient.Create(ctx, &location)
+	createdLocation, err := r.meshLocationClient.Create(ctx, location)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Creating Location",
@@ -118,7 +118,7 @@ func (r *locationResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, newLocationModel(createdLocation))...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, newLocationModel(&createdLocation))...)
 }
 
 func (r *locationResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -151,20 +151,18 @@ func (r *locationResource) Update(ctx context.Context, req resource.UpdateReques
 	var planOwnedByWorkspace string
 	var planDisplayName string
 	var planDescription string
-	var stateName string
 
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("metadata").AtName("name"), &planName)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("metadata").AtName("owned_by_workspace"), &planOwnedByWorkspace)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec").AtName("display_name"), &planDisplayName)...)
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("spec").AtName("description"), &planDescription)...)
-	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("metadata").AtName("name"), &stateName)...)
 
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	location := client.MeshLocationCreate{
-		Metadata: client.MeshLocationCreateMetadata{
+	location := client.MeshLocation{
+		Metadata: client.MeshLocationMetadata{
 			Name:             planName,
 			OwnedByWorkspace: planOwnedByWorkspace,
 		},
@@ -174,7 +172,7 @@ func (r *locationResource) Update(ctx context.Context, req resource.UpdateReques
 		},
 	}
 
-	updatedLocation, err := r.meshLocationClient.Update(ctx, stateName, &location)
+	updatedLocation, err := r.meshLocationClient.Update(ctx, location)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Updating Location",
@@ -183,7 +181,7 @@ func (r *locationResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, newLocationModel(updatedLocation))...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, newLocationModel(&updatedLocation))...)
 }
 
 func (r *locationResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {

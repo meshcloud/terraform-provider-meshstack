@@ -286,7 +286,9 @@ func TestAccTenant(t *testing.T) {
 						// its mandatory building block still runs, so the tenant would stay marked for deletion.
 						Check: func(s *terraform.State) error {
 							tenantUuid = s.RootModule().Resources[tenantAddress].Primary.Attributes["metadata.uuid"]
-							return poll.AtMostFor(5*time.Minute, tenantClient().ReadFunc(tenantUuid)).
+							return poll.AtMostFor(5*time.Minute, func(ctx context.Context) (*client.MeshTenant, error) {
+								return tenantClient().Read(ctx, tenantUuid)
+							}).
 								Until(context.Background(), (*client.MeshTenant).CreationSuccessful)
 						},
 					},

@@ -110,10 +110,10 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	create := plan.meshProjectCreate()
+	create := plan.meshProject()
 
 	defer lockProject(create.Metadata.OwnedByWorkspace, create.Metadata.Name)()
-	project, err := r.meshProjectClient.Create(ctx, &create)
+	project, err := r.meshProjectClient.Create(ctx, create)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating project",
@@ -123,7 +123,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 	}
 
 	project.Spec.Tags = create.Spec.Tags
-	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, newProjectModel(*project))...)
+	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, newProjectModel(project))...)
 }
 
 // Read refreshes the Terraform state with the latest data.
@@ -137,7 +137,7 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	project, err := r.meshProjectClient.Read(ctx, workspace, name)
+	project, err := r.meshProjectClient.Read(ctx, client.NewMeshProjectId(workspace, name))
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read project", err.Error())
 	}
@@ -165,10 +165,10 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	update := plan.meshProjectCreate()
+	update := plan.meshProject()
 
 	defer lockProject(update.Metadata.OwnedByWorkspace, update.Metadata.Name)()
-	project, err := r.meshProjectClient.Update(ctx, &update)
+	project, err := r.meshProjectClient.Update(ctx, update)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error updating project",
@@ -178,7 +178,7 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 	}
 
 	project.Spec.Tags = update.Spec.Tags
-	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, newProjectModel(*project))...)
+	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, newProjectModel(project))...)
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
@@ -192,7 +192,7 @@ func (r *projectResource) Delete(ctx context.Context, req resource.DeleteRequest
 	}
 
 	defer lockProject(workspace, name)()
-	err := r.meshProjectClient.Delete(ctx, workspace, name)
+	err := r.meshProjectClient.Delete(ctx, client.NewMeshProjectId(workspace, name))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error deleting project",

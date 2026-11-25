@@ -32,7 +32,7 @@ func TestAccBuildingBlockDefinitionDefaultRunner(t *testing.T) {
 			Metadata: client.MeshBuildingBlockRunnerMetadata{OwnedByWorkspace: "meshcloud"},
 			Spec: client.MeshBuildingBlockRunnerSpec{
 				DisplayName:        "meshStack Hosted Runner (Keycloak)",
-				ImplementationType: string(client.MeshBuildingBlockRunnerImplementationTypeAll),
+				ImplementationType: client.MeshBuildingBlockRunnerImplementationTypeAll,
 				Restriction:        new("PUBLIC"),
 				WorkloadIdentityFederation: &client.MeshRunnerWorkloadIdentityFed{
 					Issuer:          new(defaultRunnerIssuer),

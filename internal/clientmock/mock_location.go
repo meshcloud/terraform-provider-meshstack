@@ -9,6 +9,8 @@ import (
 )
 
 type MeshLocationClient struct {
+	client.MeshLocationClient
+
 	Store *Store[client.MeshLocation]
 }
 
@@ -19,13 +21,13 @@ func (m MeshLocationClient) Read(_ context.Context, name string) (*client.MeshLo
 	return nil, nil
 }
 
-func (m MeshLocationClient) Create(_ context.Context, location *client.MeshLocationCreate) (*client.MeshLocation, error) {
+func (m MeshLocationClient) Create(_ context.Context, location client.MeshLocation) (client.MeshLocation, error) {
 	locationUuid := uuid.NewString()
 	created := &client.MeshLocation{
 		Metadata: client.MeshLocationMetadata{
 			Name:             location.Metadata.Name,
 			OwnedByWorkspace: location.Metadata.OwnedByWorkspace,
-			Uuid:             locationUuid,
+			Uuid:             &locationUuid,
 		},
 		Spec: location.Spec,
 		Status: client.MeshLocationStatus{
@@ -33,15 +35,16 @@ func (m MeshLocationClient) Create(_ context.Context, location *client.MeshLocat
 		},
 	}
 	m.Store.Set(created.Metadata.Name, created)
-	return created, nil
+	return *created, nil
 }
 
-func (m MeshLocationClient) Update(_ context.Context, name string, location *client.MeshLocationCreate) (*client.MeshLocation, error) {
+func (m MeshLocationClient) Update(_ context.Context, location client.MeshLocation) (client.MeshLocation, error) {
+	name := location.Metadata.Name
 	if existing, ok := m.Store.Get(name); ok {
 		existing.Spec = location.Spec
-		return existing, nil
+		return *existing, nil
 	}
-	return nil, fmt.Errorf("location not found: %s", name)
+	return client.MeshLocation{}, fmt.Errorf("location not found: %s", name)
 }
 
 func (m MeshLocationClient) Delete(_ context.Context, name string) error {

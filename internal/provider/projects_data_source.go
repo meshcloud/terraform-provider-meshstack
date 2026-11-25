@@ -115,7 +115,7 @@ func (d *projectsDataSource) Read(ctx context.Context, req datasource.ReadReques
 		return
 	}
 
-	projects, err := d.meshProjectClient.List(ctx, workspaceIdentifier, paymentMethodIdentifier)
+	projects, err := d.meshProjectClient.List(ctx, client.MeshProjectFilter{WorkspaceIdentifier: workspaceIdentifier, PaymentIdentifier: paymentMethodIdentifier})
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read projects", err.Error())
 		return

@@ -29,7 +29,7 @@ func TestAccIntegrationDefaultRunner(t *testing.T) {
 			Metadata: client.MeshBuildingBlockRunnerMetadata{OwnedByWorkspace: "meshcloud"},
 			Spec: client.MeshBuildingBlockRunnerSpec{
 				DisplayName:        "meshcloud-hosted Runner (meshStack identity)",
-				ImplementationType: string(client.MeshBuildingBlockRunnerImplementationTypeAll),
+				ImplementationType: client.MeshBuildingBlockRunnerImplementationTypeAll,
 				Restriction:        new("PUBLIC"),
 			},
 		})

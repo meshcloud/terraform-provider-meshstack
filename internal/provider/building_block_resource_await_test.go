@@ -1,32 +1,44 @@
 package provider
 
 import (
+	"bytes"
 	"cmp"
 	"context"
+	"encoding/json/v2"
+	"io"
 	nethttp "net/http"
 	"testing"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/meshcloud/meshstack-cli/client"
+	"github.com/meshcloud/meshstack-cli/client/http"
 	"github.com/meshcloud/meshstack-cli/client/types/enum"
+	"github.com/meshcloud/meshstack-cli/client/types/hal"
 	"github.com/stretchr/testify/require"
 )
 
-// stubRunLogsClient is a stub MeshBuildingBlockRunClient returning canned logs/error for GetLogs.
-// awaitRun's failure path calls only GetLogs, so the embedded interface stays nil.
+// awaitRun's failure path calls only Read, so the embedded interface stays nil.
 type stubRunLogsClient struct {
 	client.MeshBuildingBlockRunClient
 	logs client.MeshBuildingBlockRunLogs
 	err  error
 }
 
-func (c stubRunLogsClient) GetLogs(_ context.Context, _ string) (client.MeshBuildingBlockRunLogs, error) {
-	return c.logs, c.err
+func (c stubRunLogsClient) Read(context.Context, string) (*client.MeshBuildingBlockRun, error) {
+	return &client.MeshBuildingBlockRun{Links: hal.Links{"downloadLogs": hal.NewLink("logs", c.downloadLogs)}}, nil
+}
+
+func (c stubRunLogsClient) downloadLogs(context.Context, string, string, ...http.RequestOption) (io.ReadCloser, error) {
+	if c.err != nil {
+		return nil, c.err
+	}
+	data, err := json.Marshal(c.logs)
+	return io.NopCloser(bytes.NewReader(data)), err
 }
 
 // sequencedBBClient is a stub MeshBuildingBlockV2Client whose Read returns a queued sequence of
-// building block states (repeating the last once exhausted). awaitRun only calls Read/ReadFunc, so
+// building block states (repeating the last once exhausted). awaitRun only calls Read, so
 // the embedded interface stays nil and would panic if any other method were unexpectedly invoked.
 type sequencedBBClient struct {
 	client.MeshBuildingBlockV2Client
@@ -38,10 +50,6 @@ func (c *sequencedBBClient) Read(_ context.Context, _ string) (*client.MeshBuild
 	state := c.states[min(c.reads, len(c.states)-1)]
 	c.reads++
 	return state, nil
-}
-
-func (c *sequencedBBClient) ReadFunc(uuid string) func(context.Context) (*client.MeshBuildingBlockV2, error) {
-	return func(ctx context.Context) (*client.MeshBuildingBlockV2, error) { return c.Read(ctx, uuid) }
 }
 
 func bbWithRun(action enum.Entry[client.BuildingBlockAction], runUuid string) *client.MeshBuildingBlockV2 {
@@ -215,7 +223,7 @@ type conflictingDeleteClient struct {
 	deletes   int
 }
 
-func (c *conflictingDeleteClient) Delete(_ context.Context, _ string, _ bool) error {
+func (c *conflictingDeleteClient) Delete(context.Context, string) error {
 	c.deletes++
 	if c.deletes <= c.conflicts {
 		return client.HttpError{StatusCode: nethttp.StatusConflict, ResponseBody: []byte(`{"errorCode":"BuildingBlockConflict"}`)}

@@ -10,6 +10,8 @@ import (
 )
 
 type MeshWorkspaceClient struct {
+	client.MeshWorkspaceClient
+
 	Store *Store[client.MeshWorkspace]
 }
 
@@ -25,7 +27,7 @@ func copyTags(tags map[string][]string) map[string][]string {
 	return cp
 }
 
-func (m MeshWorkspaceClient) List(_ context.Context) ([]client.MeshWorkspace, error) {
+func (m MeshWorkspaceClient) List(context.Context, client.NoFilter, ...client.ListOption) ([]client.MeshWorkspace, error) {
 	var result []client.MeshWorkspace
 	for _, workspace := range m.Store.Values() {
 		cp := *workspace
@@ -50,7 +52,7 @@ func (m MeshWorkspaceClient) Read(_ context.Context, name string) (*client.MeshW
 	return &cp, nil
 }
 
-func (m MeshWorkspaceClient) Create(_ context.Context, workspace *client.MeshWorkspaceCreate) (*client.MeshWorkspace, error) {
+func (m MeshWorkspaceClient) Create(_ context.Context, workspace client.MeshWorkspace) (client.MeshWorkspace, error) {
 	tagsCopy := copyTags(workspace.Metadata.Tags)
 	created := &client.MeshWorkspace{
 		Metadata: client.MeshWorkspaceMetadata{
@@ -62,13 +64,14 @@ func (m MeshWorkspaceClient) Create(_ context.Context, workspace *client.MeshWor
 	}
 
 	m.Store.Set(workspace.Metadata.Name, created)
-	return created, nil
+	return *created, nil
 }
 
-func (m MeshWorkspaceClient) Update(_ context.Context, name string, workspace *client.MeshWorkspaceCreate) (*client.MeshWorkspace, error) {
+func (m MeshWorkspaceClient) Update(_ context.Context, workspace client.MeshWorkspace) (client.MeshWorkspace, error) {
+	name := workspace.Metadata.Name
 	existing, _ := m.Store.Get(name)
 	if existing == nil {
-		return nil, fmt.Errorf("workspace not found: %s", name)
+		return client.MeshWorkspace{}, fmt.Errorf("workspace not found: %s", name)
 	}
 
 	tagsCopy := copyTags(workspace.Metadata.Tags)
@@ -82,7 +85,7 @@ func (m MeshWorkspaceClient) Update(_ context.Context, name string, workspace *c
 		Spec: workspace.Spec,
 	}
 	m.Store.Set(name, updated)
-	return updated, nil
+	return *updated, nil
 }
 
 func (m MeshWorkspaceClient) Delete(_ context.Context, name string) error {

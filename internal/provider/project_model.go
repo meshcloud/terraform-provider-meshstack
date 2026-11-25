@@ -35,13 +35,13 @@ func newProjectModel(project client.MeshProject) projectModel {
 	}
 }
 
-func (m projectModel) meshProjectCreate() client.MeshProjectCreate {
+func (m projectModel) meshProject() client.MeshProject {
 	tags := m.Spec.Tags
 	if tags == nil {
 		tags = map[string][]string{}
 	}
-	return client.MeshProjectCreate{
-		Metadata: client.MeshProjectCreateMetadata{
+	return client.MeshProject{
+		Metadata: client.MeshProjectMetadata{
 			Name:             m.Metadata.Name,
 			OwnedByWorkspace: m.Metadata.OwnedByWorkspace,
 		},

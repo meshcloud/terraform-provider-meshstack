@@ -108,7 +108,10 @@ func (d *buildingBlockDefinitionDataSource) Read(ctx context.Context, req dataso
 
 func (d *buildingBlockDefinitionDataSource) candidates(ctx context.Context, filter buildingBlockDefinitionFilter, diags *diag.Diagnostics) []client.MeshBuildingBlockDefinition {
 	if filter.Uuid == nil {
-		definitions, err := d.meshBuildingBlockDefinitionClient.List(ctx, filter.OwnedByWorkspace)
+		definitions, err := d.meshBuildingBlockDefinitionClient.List(ctx, client.MeshBuildingBlockDefinitionFilter{
+			OwnedByWorkspace:    filter.OwnedByWorkspace,
+			IncludeAllPublished: true,
+		})
 		if err != nil {
 			diags.AddError("Unable to list building block definitions", err.Error())
 			return nil

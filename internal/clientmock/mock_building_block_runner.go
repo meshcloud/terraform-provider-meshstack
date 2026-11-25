@@ -9,6 +9,8 @@ import (
 )
 
 type MeshBuildingBlockRunnerClient struct {
+	client.MeshBuildingBlockRunnerClient
+
 	Store *Store[client.MeshBuildingBlockRunner]
 }
 
@@ -27,7 +29,7 @@ func sharedBuildingBlockRunner() *client.MeshBuildingBlockRunner {
 		},
 		Spec: client.MeshBuildingBlockRunnerSpec{
 			DisplayName:        "meshStack Hosted Runner",
-			ImplementationType: string(client.MeshBuildingBlockRunnerImplementationTypeAll),
+			ImplementationType: client.MeshBuildingBlockRunnerImplementationTypeAll,
 			Restriction:        new("PUBLIC"),
 			IsSelfHosted:       new(false),
 			WorkloadIdentityFederation: &client.MeshRunnerWorkloadIdentityFed{
@@ -46,7 +48,7 @@ func sharedBuildingBlockRunner() *client.MeshBuildingBlockRunner {
 	}
 }
 
-func (m MeshBuildingBlockRunnerClient) Create(_ context.Context, runner client.MeshBuildingBlockRunner) (*client.MeshBuildingBlockRunner, error) {
+func (m MeshBuildingBlockRunnerClient) Create(_ context.Context, runner client.MeshBuildingBlockRunner) (client.MeshBuildingBlockRunner, error) {
 	runnerUuid := uuid.NewString()
 	restriction := runner.Spec.Restriction
 	if restriction == nil {
@@ -69,7 +71,7 @@ func (m MeshBuildingBlockRunnerClient) Create(_ context.Context, runner client.M
 		Status: &client.MeshBuildingBlockRunnerStatus{IsDefault: new(false)},
 	}
 	m.Store.Set(runnerUuid, created)
-	return created, nil
+	return *created, nil
 }
 
 func (m MeshBuildingBlockRunnerClient) Read(_ context.Context, uuid string) (*client.MeshBuildingBlockRunner, error) {
@@ -79,7 +81,7 @@ func (m MeshBuildingBlockRunnerClient) Read(_ context.Context, uuid string) (*cl
 	return nil, nil
 }
 
-func (m MeshBuildingBlockRunnerClient) List(_ context.Context, filter client.MeshBuildingBlockRunnerFilter) ([]client.MeshBuildingBlockRunner, error) {
+func (m MeshBuildingBlockRunnerClient) List(_ context.Context, filter client.MeshBuildingBlockRunnerFilter, _ ...client.ListOption) ([]client.MeshBuildingBlockRunner, error) {
 	var result []client.MeshBuildingBlockRunner
 	for _, runner := range m.Store.Values() {
 		if (filter.WorkspaceIdentifier == nil || runner.Metadata.OwnedByWorkspace == *filter.WorkspaceIdentifier) &&
@@ -90,9 +92,9 @@ func (m MeshBuildingBlockRunnerClient) List(_ context.Context, filter client.Mes
 	return result, nil
 }
 
-func (m MeshBuildingBlockRunnerClient) Update(_ context.Context, runner client.MeshBuildingBlockRunner) (*client.MeshBuildingBlockRunner, error) {
+func (m MeshBuildingBlockRunnerClient) Update(_ context.Context, runner client.MeshBuildingBlockRunner) (client.MeshBuildingBlockRunner, error) {
 	if runner.Metadata.Uuid == nil || *runner.Metadata.Uuid == "" {
-		return nil, fmt.Errorf("building block runner uuid is required for update")
+		return client.MeshBuildingBlockRunner{}, fmt.Errorf("building block runner uuid is required for update")
 	}
 
 	uuid := *runner.Metadata.Uuid
@@ -106,10 +108,10 @@ func (m MeshBuildingBlockRunnerClient) Update(_ context.Context, runner client.M
 			isSelfHosted := true
 			existing.Spec.IsSelfHosted = new(isSelfHosted)
 		}
-		return existing, nil
+		return *existing, nil
 	}
 
-	return nil, fmt.Errorf("building block runner not found: %s", uuid)
+	return client.MeshBuildingBlockRunner{}, fmt.Errorf("building block runner not found: %s", uuid)
 }
 
 func (m MeshBuildingBlockRunnerClient) Delete(_ context.Context, uuid string) error {

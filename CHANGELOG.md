@@ -1,3 +1,12 @@
+# v0.29.1
+
+FIXES:
+- Provider: with no `profile` set, the provider takes the profile that the last `meshstack login` selected only when it
+  has the endpoint in use, else the only stored profile with that endpoint. A selected profile of another endpoint no
+  longer fails every resource. A `profile` that `meshstack login` has not stored is an error.
+- `meshstack_building_block`: when the API key may not purge the block (`purge_on_delete`) or run it again, the error
+  says so.
+
 # v0.29.0
 
 Requires meshStack 2026.47.0 or later (previously 2026.36.0). An API key that creates a `meshstack_integration` without

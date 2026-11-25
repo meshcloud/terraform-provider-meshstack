@@ -44,7 +44,7 @@ func (d *tagDefinitionsDataSource) Configure(_ context.Context, req datasource.C
 }
 
 func (d *tagDefinitionsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	tags, err := d.meshTagDefinitionClient.List(ctx)
+	tags, err := d.meshTagDefinitionClient.List(ctx, client.NoFilter{})
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read meshTagDefinitions", err.Error())
 		return
