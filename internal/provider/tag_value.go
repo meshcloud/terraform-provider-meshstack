@@ -61,8 +61,8 @@ func tagValueNote(object string) string {
 		"tag and removes only that value again, so several of them can share a tag — but two resources declaring the same " +
 		"value share it, too: destroying either removes it, and the other drops out of state and adds it again on the next " +
 		"apply. A value that is already on the tag when this resource is created is adopted, and destroying the resource " +
-		"removes it. meshStack decides which values a tag accepts; adding a second value to a tag that is not multi-select " +
-		"fails when it rejects the write. Do not combine this resource with " +
+		"removes it. Use this resource only for a tag whose definition is multi-select: recent meshStack versions reject a " +
+		"second value on a tag that is not multi-select, and older versions store it. Do not combine this resource with " +
 		"`meshstack_" + object + "_tag` for the same key, or with `meshstack_" + object + "_tags` or inline `tags` on " +
 		"`meshstack_" + object + "` for the same " + object + "."
 }

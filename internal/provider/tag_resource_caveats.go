@@ -19,10 +19,14 @@ func tagResourceCaveats(o tagTargetInfo, tagResource string) string {
 		"~> **Tags you do not manage are written back verbatim.** Preserving a " + name + "'s other tags is what lets " +
 		"several `" + tagResource + "` resources coexist, but the object read back can carry entries nobody " +
 		"declared here — notably the defaults meshStack injects for restricted tag definitions on " + o.injectedDefaultOn + " " +
-		"— and every write sends all of them back. So this resource writes tag entries " +
-		"you never configured, and if your meshStack rejects writing a restricted tag's value, the update fails and no " +
-		"tag on that " + name + " can be managed with this resource — use inline `" + o.inlineTags + "` on `" + ownerResource + "` " +
-		"instead. `" + tagsResource + "` is unaffected: it sends exactly the tags you configure.\n\n" +
+		"— and every write sends all of them back. So this resource writes tag entries you never configured. " +
+		"`" + tagsResource + "` sends exactly the tags you configure.\n\n" +
+
+		"~> **Restricted tags need an API key with admin rights.** Only an API key with admin rights can change a tag " +
+		"whose definition is restricted. For any other API key, meshStack keeps the stored values of the restricted tags " +
+		"and ignores changes to them without an error; for an admin API key, it removes every tag the write leaves out. " +
+		"This resource compares the tags meshStack stored with the tags it manages after each write and fails when " +
+		"meshStack ignored the change.\n\n" +
 
 		"~> **Race conditions.** The read-modify-write cycle is not atomic and the API offers no optimistic locking. " +
 		"Within a single apply the provider serializes every write to the same " + name + " — from this resource, " +

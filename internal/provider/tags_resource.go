@@ -114,7 +114,11 @@ func (r *tagsResource[I]) setTags(ctx context.Context, plan tfsdk.Plan, state *t
 	if tags == nil {
 		tags = map[string][]string{}
 	}
-	r.write(ctx, id, snapshot, tags, "update tags", diags)
+	stored := r.write(ctx, id, snapshot, tags, "update tags", diags)
+	if diags.HasError() {
+		return
+	}
+	r.verifyStored(id, tags, stored, diags)
 	if diags.HasError() {
 		return
 	}

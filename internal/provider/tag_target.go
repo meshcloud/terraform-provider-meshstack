@@ -3,6 +3,8 @@ package provider
 import (
 	"context"
 	"fmt"
+	"maps"
+	"slices"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -231,6 +233,27 @@ func (r *tagResourceBase[I]) write(ctx context.Context, id I, snapshot *tagSnaps
 		diags.AddError("Error Updating "+r.target.info().title+" Tags", fmt.Sprintf("Could not %s on %s: %v", action, r.target.describe(id), err))
 	}
 	return stored
+}
+
+func (r *tagResourceBase[I]) verifyStored(id I, written, stored map[string][]string, diags *diag.Diagnostics) {
+	for _, key := range unstoredTags(written, stored) {
+		r.notStored(id, fmt.Sprintf("tag '%s'", key), diags)
+	}
+}
+
+func unstoredTags(written, stored map[string][]string) []string {
+	var keys []string
+	for _, key := range slices.Sorted(maps.Keys(written)) {
+		if !slices.Equal(stored[key], written[key]) {
+			keys = append(keys, key)
+		}
+	}
+	return keys
+}
+
+func (r *tagResourceBase[I]) notStored(id I, change string, diags *diag.Diagnostics) {
+	diags.AddError("Tag Change Ignored", fmt.Sprintf("meshStack did not store %s on %s. A tag defined as restricted can only be "+
+		"changed by an API key with admin rights; meshStack ignores the change otherwise.", change, r.target.describe(id)))
 }
 
 func (r *tagResourceBase[I]) importFailed(id, trailing string, diags *diag.Diagnostics) {

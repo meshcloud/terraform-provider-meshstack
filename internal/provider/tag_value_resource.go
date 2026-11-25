@@ -61,8 +61,12 @@ func (r *tagValueResource[I]) Create(ctx context.Context, req resource.CreateReq
 	}
 
 	if tags, changed := withTagValue(snapshot.tags, model.Key, model.Value); changed {
-		r.write(ctx, id, snapshot, tags, fmt.Sprintf("add value '%s' to tag '%s'", model.Value, model.Key), &resp.Diagnostics)
+		stored := r.write(ctx, id, snapshot, tags, fmt.Sprintf("add value '%s' to tag '%s'", model.Value, model.Key), &resp.Diagnostics)
 		if resp.Diagnostics.HasError() {
+			return
+		}
+		if !slices.Contains(stored[model.Key], model.Value) {
+			r.notStored(id, fmt.Sprintf("value '%s' of tag '%s'", model.Value, model.Key), &resp.Diagnostics)
 			return
 		}
 	}
@@ -104,7 +108,10 @@ func (r *tagValueResource[I]) Delete(ctx context.Context, req resource.DeleteReq
 	}
 
 	if tags, changed := withoutTagValue(snapshot.tags, model.Key, model.Value); changed {
-		r.write(ctx, id, snapshot, tags, fmt.Sprintf("remove value '%s' from tag '%s'", model.Value, model.Key), &resp.Diagnostics)
+		stored := r.write(ctx, id, snapshot, tags, fmt.Sprintf("remove value '%s' from tag '%s'", model.Value, model.Key), &resp.Diagnostics)
+		if !resp.Diagnostics.HasError() && slices.Contains(stored[model.Key], model.Value) {
+			r.notStored(id, fmt.Sprintf("the removal of value '%s' from tag '%s'", model.Value, model.Key), &resp.Diagnostics)
+		}
 	}
 }
 

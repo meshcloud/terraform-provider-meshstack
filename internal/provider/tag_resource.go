@@ -115,7 +115,11 @@ func (r *tagResource[I]) setTag(ctx context.Context, plan tfsdk.Plan, state *tfs
 	}
 	tags[model.Key] = model.Values
 
-	r.write(ctx, id, snapshot, tags, fmt.Sprintf("set tag '%s'", model.Key), diags)
+	stored := r.write(ctx, id, snapshot, tags, fmt.Sprintf("set tag '%s'", model.Key), diags)
+	if diags.HasError() {
+		return
+	}
+	r.verifyStored(id, map[string][]string{model.Key: model.Values}, stored, diags)
 	if diags.HasError() {
 		return
 	}
