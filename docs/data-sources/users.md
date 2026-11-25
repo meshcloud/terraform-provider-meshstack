@@ -55,6 +55,7 @@ data "meshstack_users" "workspace_managers" {
 Read-Only:
 
 - `metadata` (Attributes) Identifiers of the user. (see [below for nested schema](#nestedatt--users--metadata))
+- `ref` (Attributes) Reference to this user, can be used as `user_ref` in `meshstack_workspace_user_group_member`. (see [below for nested schema](#nestedatt--users--ref))
 - `spec` (Attributes) Profile of the user. (see [below for nested schema](#nestedatt--users--spec))
 - `status` (Attributes) Information meshStack keeps about the user. (see [below for nested schema](#nestedatt--users--status))
 
@@ -65,6 +66,15 @@ Read-Only:
 
 - `name` (String) Username of the user. A workspace user group lists its members by it, and a user binding names the user by it in `subject.name`.
 - `uuid` (String) UUID of the user.
+
+
+<a id="nestedatt--users--ref"></a>
+### Nested Schema for `users.ref`
+
+Read-Only:
+
+- `kind` (String) meshObject type, always `meshUser`.
+- `name` (String) Named identifier (`metadata.name`) of `meshUser`.
 
 
 <a id="nestedatt--users--spec"></a>

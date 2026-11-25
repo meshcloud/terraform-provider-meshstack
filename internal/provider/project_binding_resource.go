@@ -64,12 +64,12 @@ func newProjectBindingResource[B any](
 }
 
 var projectTargetRefConverters = generic.ConverterOptions{
-	generic.WithValueFromConverterFor[client.MeshProjectTargetRef](generic.ValueFromConverterForTypedNilHandler[projectRef](),
+	generic.WithValueFromConverterFor[client.MeshProjectTargetRef](generic.ValueFromConverterForTypedNilHandler[workspaceScopedRef](),
 		func(_ path.Path, in client.MeshProjectTargetRef) (tftypes.Value, error) {
 			return generic.ValueFrom(newProjectRef(in.OwnedByWorkspace, in.Name))
 		}),
 	generic.WithValueToConverterFor[client.MeshProjectTargetRef](func(_ path.Path, in tftypes.Value) (client.MeshProjectTargetRef, error) {
-		ref, err := generic.ValueTo[projectRef](in, generic.WithSetUnknownValueToZero())
+		ref, err := generic.ValueTo[workspaceScopedRef](in, generic.WithSetUnknownValueToZero())
 		return client.MeshProjectTargetRef{Name: ref.Name, OwnedByWorkspace: ref.OwnedByWorkspace}, err
 	}),
 }

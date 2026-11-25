@@ -10,6 +10,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/meshcloud/meshstack-cli/client"
+
+	"github.com/meshcloud/terraform-provider-meshstack/internal/types/generic"
 )
 
 var (
@@ -33,8 +35,29 @@ type userFilter struct {
 	Euid  *string
 }
 
+type userModel struct {
+	Ref      client.NamedRef         `tfsdk:"ref"`
+	Metadata client.MeshUserMetadata `tfsdk:"metadata"`
+	Spec     client.MeshUserSpec     `tfsdk:"spec"`
+	Status   client.MeshUserStatus   `tfsdk:"status"`
+}
+
+func newUserModel(user client.MeshUser) userModel {
+	return userModel{
+		Ref:      client.NamedRef{Kind: client.MeshObjectKind.User, Name: user.Metadata.Name},
+		Metadata: user.Metadata,
+		Spec:     user.Spec,
+		Status:   user.Status,
+	}
+}
+
 func userAttributes() map[string]schema.Attribute {
 	return map[string]schema.Attribute{
+		"ref": meshRefByName(meshRefOptions{
+			Kind:        client.MeshObjectKind.User,
+			Description: "Reference to this user, can be used as `user_ref` in `meshstack_workspace_user_group_member`.",
+			Output:      true,
+		}),
 		"metadata": schema.SingleNestedAttribute{
 			MarkdownDescription: "Identifiers of the user.",
 			Computed:            true,
@@ -128,7 +151,7 @@ func (d *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	resp.Diagnostics.Append(resp.State.Set(ctx, &user)...)
+	resp.Diagnostics.Append(generic.Set(ctx, &resp.State, newUserModel(user))...)
 }
 
 func (filter userFilter) listFilter() client.MeshUserFilter {

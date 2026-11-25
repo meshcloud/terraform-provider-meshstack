@@ -30,6 +30,7 @@ data "meshstack_user" "example" {
 
 ### Read-Only
 
+- `ref` (Attributes) Reference to this user, can be used as `user_ref` in `meshstack_workspace_user_group_member`. (see [below for nested schema](#nestedatt--ref))
 - `status` (Attributes) Information meshStack keeps about the user. (see [below for nested schema](#nestedatt--status))
 
 <a id="nestedatt--metadata"></a>
@@ -54,6 +55,15 @@ Read-Only:
 - `first_name` (String) First name of the user.
 - `last_name` (String) Last name of the user.
 - `tags` (Map of List of String) Tags of `meshUser`.
+
+
+<a id="nestedatt--ref"></a>
+### Nested Schema for `ref`
+
+Read-Only:
+
+- `kind` (String) meshObject type, always `meshUser`.
+- `name` (String) Named identifier (`metadata.name`) of `meshUser`.
 
 
 <a id="nestedatt--status"></a>

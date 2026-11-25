@@ -46,6 +46,7 @@ type workspaceUserGroupStatusModel struct {
 }
 
 type workspaceUserGroupModel struct {
+	Ref      workspaceScopedRef              `tfsdk:"ref"`
 	Metadata workspaceUserGroupMetadataModel `tfsdk:"metadata"`
 	Spec     workspaceUserGroupSpecModel     `tfsdk:"spec"`
 	Status   workspaceUserGroupStatusModel   `tfsdk:"status"`
@@ -91,6 +92,8 @@ func (r *workspaceUserGroupResource) Schema(_ context.Context, _ resource.Schema
 			"~> **Deletion:** Deleting the group also deletes all of its role bindings.",
 
 		Attributes: map[string]schema.Attribute{
+			"ref": workspaceUserGroupRefOutput(),
+
 			"metadata": schema.SingleNestedAttribute{
 				MarkdownDescription: "Identifiers of the workspace user group.",
 				Required:            true,
@@ -179,6 +182,7 @@ func (r *workspaceUserGroupResource) Create(ctx context.Context, req resource.Cr
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, workspaceUserGroupModel{
+		Ref:      newWorkspaceUserGroupRef(metadata.OwnedByWorkspace, metadata.Name),
 		Metadata: metadata,
 		Spec:     spec,
 		Status:   newWorkspaceUserGroupStatusModel(&created),
@@ -225,6 +229,7 @@ func (r *workspaceUserGroupResource) Read(ctx context.Context, req resource.Read
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, workspaceUserGroupModel{
+		Ref:      newWorkspaceUserGroupRef(group.Metadata.OwnedByWorkspace, group.Metadata.Name),
 		Metadata: workspaceUserGroupMetadataModel{Name: group.Metadata.Name, OwnedByWorkspace: group.Metadata.OwnedByWorkspace},
 		Spec: workspaceUserGroupSpecModel{
 			DisplayName: group.Spec.DisplayName,
@@ -279,6 +284,7 @@ func (r *workspaceUserGroupResource) Update(ctx context.Context, req resource.Up
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, workspaceUserGroupModel{
+		Ref:      newWorkspaceUserGroupRef(metadata.OwnedByWorkspace, metadata.Name),
 		Metadata: metadata,
 		Spec:     spec,
 		Status:   newWorkspaceUserGroupStatusModel(&updated),
@@ -330,4 +336,11 @@ func readWorkspaceUserGroup(ctx context.Context, groups client.MeshWorkspaceUser
 			fmt.Sprintf("No workspace user group '%s' exists in workspace '%s', or your API key cannot see it.", name, ownedByWorkspace))
 	}
 	return group
+}
+
+func workspaceUserGroupRefOutput() schema.SingleNestedAttribute {
+	return meshWorkspaceScopedRef(client.MeshObjectKind.WorkspaceUserGroup, meshRefOptions{
+		Description: "Reference to this workspace user group, can be used as `group_ref` in `meshstack_workspace_user_group_member`.",
+		Output:      true,
+	})
 }

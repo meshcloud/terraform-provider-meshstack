@@ -9,6 +9,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/meshcloud/meshstack-cli/client"
+
+	"github.com/meshcloud/terraform-provider-meshstack/internal/types/generic"
 )
 
 var (
@@ -82,8 +84,9 @@ func (d *usersDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 		resp.Diagnostics.AddError("Unable to list users", err.Error())
 		return
 	}
-	if users == nil {
-		users = []client.MeshUser{}
+	models := make([]userModel, len(users))
+	for i, user := range users {
+		models[i] = newUserModel(user)
 	}
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("users"), users)...)
+	resp.Diagnostics.Append(generic.SetAttributeTo(ctx, &resp.State, path.Root("users"), models)...)
 }

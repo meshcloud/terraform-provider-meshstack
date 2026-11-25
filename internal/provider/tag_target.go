@@ -123,19 +123,19 @@ func (projectTagTarget) identitySchema() schema.Attribute {
 	return meshProjectRef(meshRefOptions{Description: "Reference to the project to tag.", RequiresReplace: true})
 }
 
-func (projectTagTarget) identityFromImport(ids []string) projectRef {
+func (projectTagTarget) identityFromImport(ids []string) workspaceScopedRef {
 	return newProjectRef(ids[0], ids[1])
 }
 
-func (projectTagTarget) withClient(c client.Client) tagTarget[projectRef] {
+func (projectTagTarget) withClient(c client.Client) tagTarget[workspaceScopedRef] {
 	return projectTagTarget{projects: c.Project}
 }
 
-func (projectTagTarget) lock(ref projectRef) func() {
+func (projectTagTarget) lock(ref workspaceScopedRef) func() {
 	return lockProject(ref.OwnedByWorkspace, ref.Name)
 }
 
-func (t projectTagTarget) read(ctx context.Context, ref projectRef) (*tagSnapshot, error) {
+func (t projectTagTarget) read(ctx context.Context, ref workspaceScopedRef) (*tagSnapshot, error) {
 	project, err := t.projects.Read(ctx, client.NewMeshProjectId(ref.OwnedByWorkspace, ref.Name))
 	if err != nil || project == nil {
 		return nil, err
@@ -148,7 +148,7 @@ func (t projectTagTarget) read(ctx context.Context, ref projectRef) (*tagSnapsho
 	}, nil
 }
 
-func (projectTagTarget) describe(ref projectRef) string {
+func (projectTagTarget) describe(ref workspaceScopedRef) string {
 	return fmt.Sprintf("project '%s' in workspace '%s'", ref.Name, ref.OwnedByWorkspace)
 }
 

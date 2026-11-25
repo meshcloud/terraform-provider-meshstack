@@ -6,7 +6,7 @@ import (
 )
 
 type projectModel struct {
-	Ref      projectRef                 `tfsdk:"ref"`
+	Ref      workspaceScopedRef         `tfsdk:"ref"`
 	Metadata client.MeshProjectMetadata `tfsdk:"metadata"`
 	Spec     projectSpecModel           `tfsdk:"spec"`
 }

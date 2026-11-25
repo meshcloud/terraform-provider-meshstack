@@ -16,7 +16,7 @@ import (
 
 var (
 	_ resource.ResourceWithConfigure    = &tagResource[string]{}
-	_ resource.ResourceWithImportState  = &tagResource[projectRef]{}
+	_ resource.ResourceWithImportState  = &tagResource[workspaceScopedRef]{}
 	_ resource.ResourceWithUpgradeState = &tagResource[string]{}
 )
 
@@ -36,7 +36,7 @@ func NewWorkspaceTagResource() resource.Resource {
 }
 
 func NewProjectTagResource() resource.Resource {
-	return &tagResource[projectRef]{tagResourceBase[projectRef]{target: projectTagTarget{}, suffix: "tag"}}
+	return &tagResource[workspaceScopedRef]{tagResourceBase[workspaceScopedRef]{target: projectTagTarget{}, suffix: "tag"}}
 }
 
 type tagResource[I any] struct {

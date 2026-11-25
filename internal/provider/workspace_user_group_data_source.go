@@ -40,6 +40,7 @@ func (d *workspaceUserGroupDataSource) Schema(_ context.Context, _ datasource.Sc
 			"For a global group, set `metadata.owned_by_workspace` to `meshcloud-global-partner`.",
 
 		Attributes: map[string]schema.Attribute{
+			"ref": workspaceUserGroupRefOutput(),
 			"metadata": schema.SingleNestedAttribute{
 				MarkdownDescription: "Identifiers of the workspace user group.",
 				Required:            true,
@@ -113,6 +114,7 @@ func (d *workspaceUserGroupDataSource) Read(ctx context.Context, req datasource.
 		return
 	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, workspaceUserGroupModel{
+		Ref:      newWorkspaceUserGroupRef(metadata.OwnedByWorkspace, metadata.Name),
 		Metadata: metadata,
 		Spec: workspaceUserGroupSpecModel{
 			DisplayName: group.Spec.DisplayName,

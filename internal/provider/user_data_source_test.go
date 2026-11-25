@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
+	"github.com/meshcloud/meshstack-cli/client"
 
 	"github.com/meshcloud/terraform-provider-meshstack/internal/provider/acctest/xknownvalue"
 )
@@ -23,6 +24,10 @@ func TestAccUserDataSource(t *testing.T) {
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue("data.meshstack_user.by_name", tfjsonpath.New("metadata").AtMapKey("name"), knownvalue.StringExact(seededUsername)),
 					statecheck.ExpectKnownValue("data.meshstack_user.by_name", tfjsonpath.New("metadata").AtMapKey("uuid"), xknownvalue.NotEmptyString()),
+					statecheck.ExpectKnownValue("data.meshstack_user.by_name", tfjsonpath.New("ref"), knownvalue.ObjectExact(map[string]knownvalue.Check{
+						"kind": knownvalue.StringExact(client.MeshObjectKind.User),
+						"name": knownvalue.StringExact(seededUsername),
+					})),
 					statecheck.ExpectKnownValue("data.meshstack_user.by_name", tfjsonpath.New("spec").AtMapKey("email"), xknownvalue.NotEmptyString()),
 					statecheck.ExpectKnownValue("data.meshstack_user.by_name", tfjsonpath.New("status").AtMapKey("lifecycle").AtMapKey("state"), knownvalue.StringExact("ACTIVE")),
 					statecheck.CompareValuePairs(

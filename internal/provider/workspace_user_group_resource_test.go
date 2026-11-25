@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
+	"github.com/meshcloud/meshstack-cli/client"
 )
 
 func TestAccWorkspaceUserGroup(t *testing.T) {
@@ -30,6 +31,11 @@ func TestAccWorkspaceUserGroup(t *testing.T) {
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("metadata").AtMapKey("name"), knownvalue.StringExact("my-user-group")),
+					statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("ref"), knownvalue.ObjectExact(map[string]knownvalue.Check{
+						"kind":               knownvalue.StringExact(client.MeshObjectKind.WorkspaceUserGroup),
+						"owned_by_workspace": knownvalue.StringExact("test-ws-" + suffix),
+						"name":               knownvalue.StringExact("my-user-group"),
+					})),
 					statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("metadata").AtMapKey("owned_by_workspace"), knownvalue.StringExact("test-ws-"+suffix)),
 					statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("My User Group")),
 					statecheck.ExpectKnownValue(resourceAddress, tfjsonpath.New("spec").AtMapKey("egid"), knownvalue.Null()),

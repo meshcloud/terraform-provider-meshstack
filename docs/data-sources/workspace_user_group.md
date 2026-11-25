@@ -30,6 +30,7 @@ data "meshstack_workspace_user_group" "example" {
 
 ### Read-Only
 
+- `ref` (Attributes) Reference to this workspace user group, can be used as `group_ref` in `meshstack_workspace_user_group_member`. (see [below for nested schema](#nestedatt--ref))
 - `spec` (Attributes) Configuration of the workspace user group. (see [below for nested schema](#nestedatt--spec))
 - `status` (Attributes) Information meshStack keeps about the group. (see [below for nested schema](#nestedatt--status))
 
@@ -40,6 +41,16 @@ Required:
 
 - `name` (String) Identifier of the workspace user group.
 - `owned_by_workspace` (String) Identifier of the workspace that owns the group.
+
+
+<a id="nestedatt--ref"></a>
+### Nested Schema for `ref`
+
+Read-Only:
+
+- `kind` (String) meshObject type, always `meshWorkspaceUserGroup`.
+- `name` (String) Named identifier (`metadata.name`) of the `meshWorkspaceUserGroup`.
+- `owned_by_workspace` (String) Named identifier (`metadata.name`) of the `meshWorkspace` that owns the `meshWorkspaceUserGroup`.
 
 
 <a id="nestedatt--spec"></a>

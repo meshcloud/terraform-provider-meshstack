@@ -172,14 +172,18 @@ func meshRefByName(opts meshRefOptions) schema.SingleNestedAttribute {
 	return meshRef([]refIdentity{{"name", "Named identifier (`metadata.name`) of `" + opts.Kind + "`."}}, opts)
 }
 
-// meshProjectRef builds a {kind, owned_by_workspace, name} reference: a project name is unique only
-// within its workspace, and a project has no uuid.
-func meshProjectRef(opts meshRefOptions) schema.SingleNestedAttribute {
-	opts.Kind = client.MeshObjectKind.Project
+// meshWorkspaceScopedRef builds a {kind, owned_by_workspace, name} reference to a meshObject whose name is
+// unique only within its workspace and which has no uuid, such as a project.
+func meshWorkspaceScopedRef(kind string, opts meshRefOptions) schema.SingleNestedAttribute {
+	opts.Kind = kind
 	return meshRef([]refIdentity{
-		{"owned_by_workspace", "Named identifier (`metadata.name`) of the `meshWorkspace` that owns the `meshProject`."},
-		{"name", "Named identifier (`metadata.name`) of the `meshProject`."},
+		{"owned_by_workspace", "Named identifier (`metadata.name`) of the `meshWorkspace` that owns the `" + kind + "`."},
+		{"name", "Named identifier (`metadata.name`) of the `" + kind + "`."},
 	}, opts)
+}
+
+func meshProjectRef(opts meshRefOptions) schema.SingleNestedAttribute {
+	return meshWorkspaceScopedRef(client.MeshObjectKind.Project, opts)
 }
 
 type refIdentity struct {
@@ -189,7 +193,7 @@ type refIdentity struct {
 
 // meshRef builds the whole {kind, <identity>} reference attribute — block scaffolding, the identity
 // attributes and kind discriminator — for a meshObject reference. Callers pick the identity via
-// meshRefByUuid / meshRefByName / meshProjectRef rather than calling this directly.
+// meshRefByUuid / meshRefByName / meshWorkspaceScopedRef rather than calling this directly.
 //
 // It intentionally does not fit refs with bespoke schemas: the discriminated uuid-or-name target_ref
 // and the building_block_definition_version_ref (which carries an extra content_hash on the v3 path).

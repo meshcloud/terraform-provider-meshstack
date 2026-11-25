@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
+	"github.com/meshcloud/meshstack-cli/client"
 )
 
 func TestAccWorkspaceUserGroupDataSource(t *testing.T) {
@@ -24,6 +25,11 @@ func TestAccWorkspaceUserGroupDataSource(t *testing.T) {
 				Config: hclStep(t, "data-sources/workspace_user_group", 2, vars),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(dataSourceAddress, tfjsonpath.New("metadata").AtMapKey("owned_by_workspace"), knownvalue.StringExact("test-ws-"+suffix)),
+					statecheck.ExpectKnownValue(dataSourceAddress, tfjsonpath.New("ref"), knownvalue.ObjectExact(map[string]knownvalue.Check{
+						"kind":               knownvalue.StringExact(client.MeshObjectKind.WorkspaceUserGroup),
+						"owned_by_workspace": knownvalue.StringExact("test-ws-" + suffix),
+						"name":               knownvalue.StringExact("my-user-group"),
+					})),
 					statecheck.ExpectKnownValue(dataSourceAddress, tfjsonpath.New("spec").AtMapKey("display_name"), knownvalue.StringExact("My User Group")),
 					statecheck.ExpectKnownValue(dataSourceAddress, tfjsonpath.New("spec").AtMapKey("members"), knownvalue.SetExact([]knownvalue.Check{knownvalue.StringExact(seededUsername)})),
 					statecheck.ExpectKnownValue(dataSourceAddress, tfjsonpath.New("status").AtMapKey("disabled_usernames"), knownvalue.SetExact([]knownvalue.Check{})),

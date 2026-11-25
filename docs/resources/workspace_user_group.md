@@ -44,6 +44,7 @@ resource "meshstack_workspace_user_group" "example" {
 
 ### Read-Only
 
+- `ref` (Attributes) Reference to this workspace user group, can be used as `group_ref` in `meshstack_workspace_user_group_member`. (see [below for nested schema](#nestedatt--ref))
 - `status` (Attributes) Information meshStack keeps about the group. (see [below for nested schema](#nestedatt--status))
 
 <a id="nestedatt--metadata"></a>
@@ -67,6 +68,16 @@ Optional:
 - `egid` (String) Identifier of the group in the system it comes from, such as the group's ID in your identity provider. meshStack keeps it unique across all workspace user groups.
 - `members` (Set of String) Usernames of the group's members. Each one must belong to an existing meshUser; look it up with the `meshstack_user` or `meshstack_users` data source. When you set this attribute, Terraform removes every member it does not list. When you leave it unset, Terraform leaves the members as they are.
 - `tags` (Map of List of String) Tags of `meshWorkspaceUserGroup`. Only the tags you declare here are managed by Terraform.
+
+
+<a id="nestedatt--ref"></a>
+### Nested Schema for `ref`
+
+Read-Only:
+
+- `kind` (String) meshObject type, always `meshWorkspaceUserGroup`.
+- `name` (String) Named identifier (`metadata.name`) of the `meshWorkspaceUserGroup`.
+- `owned_by_workspace` (String) Named identifier (`metadata.name`) of the `meshWorkspace` that owns the `meshWorkspaceUserGroup`.
 
 
 <a id="nestedatt--status"></a>

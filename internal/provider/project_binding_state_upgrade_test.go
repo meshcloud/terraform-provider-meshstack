@@ -21,7 +21,7 @@ func TestProjectBindingUpgradeState(t *testing.T) {
 		upgraded, diags := UpgradeResourceState(t, binding, 0, projectBindingStateV0)
 		require.False(t, diags.HasError(), "upgrade produced errors: %s", diags)
 
-		var targetRef projectRef
+		var targetRef workspaceScopedRef
 		upgraded.Attribute("target_ref", &targetRef)
 		assert.Equal(t, newProjectRef("my-workspace", "my-project"), targetRef)
 
