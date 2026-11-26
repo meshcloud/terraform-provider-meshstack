@@ -699,11 +699,6 @@ func TestAccBuildingBlock(t *testing.T) {
 		// What run_transparency gates for a workspace-scoped key is whether the repair may be triggered at
 		// all: with it ON the re-run starts and fails on the broken ref again, with it OFF meshStack
 		// refuses the trigger-run and that refusal is the error instead.
-		//
-		// Two things this case deliberately does not assert. That an unsuccessful run is a warning rather
-		// than an error is TestAwaitRun's job. So is the failing step's log reaching the diagnostics: it is
-		// a warning now, Terraform prints warnings to stdout, and the framework matches ExpectError against
-		// stderr.
 		runCase := func(t *testing.T, runTransparency bool, expectRepairErr *regexp.Regexp) {
 			t.Helper()
 			// Workspace W owns the BBD; workspace O consumes it across the workspace boundary.
