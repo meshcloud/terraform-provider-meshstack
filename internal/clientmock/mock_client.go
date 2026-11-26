@@ -208,23 +208,23 @@ func walkSecrets[T any](dto, existingDto *T, visit func(path reflectwalk.WalkPat
 		case !v.CanAddr():
 			return nil
 		case v.Type().ConvertibleTo(secretType):
-			secret, _ := v.Addr().Interface().(*clientTypes.Secret)
+			secret, _ := reflect.TypeAssert[*clientTypes.Secret](v.Addr())
 			var existingSecret *clientTypes.Secret
 			if existingDto != nil {
 				if vExisting, err := path.TryTraverse(existingDto); err == nil {
-					existingSecret, _ = vExisting.Addr().Interface().(*clientTypes.Secret)
+					existingSecret, _ = reflect.TypeAssert[*clientTypes.Secret](vExisting.Addr())
 				}
 			}
 			visit(path, secret, existingSecret)
 			return path.Stop()
 		case v.Type().ConvertibleTo(secretOrAnyType):
-			secretOrAny, _ := v.Addr().Interface().(*clientTypes.SecretOrAny)
+			secretOrAny, _ := reflect.TypeAssert[*clientTypes.SecretOrAny](v.Addr())
 			if secretOrAny.HasX() {
 				secret := &secretOrAny.X
 				var existingSecret *clientTypes.Secret
 				if existingDto != nil {
 					if vExisting, err := path.TryTraverse(existingDto); err == nil {
-						existingSecretOrAny, _ := vExisting.Addr().Interface().(*clientTypes.SecretOrAny)
+						existingSecretOrAny, _ := reflect.TypeAssert[*clientTypes.SecretOrAny](vExisting.Addr())
 						if existingSecretOrAny.HasX() {
 							existingSecret = &existingSecretOrAny.X
 						}

@@ -168,7 +168,7 @@ has to be installed first. Do not call a `golangci-lint` on your PATH instead: i
 the `go/format` compiled into the binary, so a linter built by a different Go release enforces
 different formatting than CI does, and one built by an older Go refuses to run at all.
 
-For the occasional `go fix` modernizer sweep, see the **`modern-go`** skill.
+`task lint` also runs the `go fix` modernizers, as the linter `modernize`. See the **`modern-go`** skill.
 
 ## Docs, release notes & CI
 

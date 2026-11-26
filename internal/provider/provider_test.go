@@ -324,7 +324,7 @@ func (u UpgradedState) Attribute(attributePath string, target any) {
 	u.t.Helper()
 
 	p := path.Empty()
-	for _, step := range strings.Split(attributePath, ".") {
+	for step := range strings.SplitSeq(attributePath, ".") {
 		p = p.AtName(step)
 	}
 	diags := u.state.GetAttribute(context.Background(), p, target)

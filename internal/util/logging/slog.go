@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"maps"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -72,11 +73,11 @@ func (h SlogHandler) WithGroup(name string) slog.Handler {
 }
 
 func (h SlogHandler) put(fields map[string]any, attr slog.Attr) {
-	prefix := ""
+	var prefix strings.Builder
 	for _, group := range h.groups {
-		prefix += group + "."
+		prefix.WriteString(group + ".")
 	}
-	putAttr(fields, prefix, attr)
+	putAttr(fields, prefix.String(), attr)
 }
 
 func putAttr(fields map[string]any, prefix string, attr slog.Attr) {

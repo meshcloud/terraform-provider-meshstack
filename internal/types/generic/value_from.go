@@ -57,7 +57,7 @@ func WithValueFromConverterFor[T any](nilHandler func() (tftypes.Value, error), 
 			}
 			return
 		}
-		if targetValue, ok := in.Interface().(T); ok {
+		if targetValue, ok := reflect.TypeAssert[T](in); ok {
 			out, err = f(attributePath, targetValue)
 		} else {
 			// this should never happen, as we've checked conversion above!
@@ -103,7 +103,7 @@ dereference:
 	}
 
 	if in.IsValid() {
-		if u, ok := in.Interface().(unknowable); ok {
+		if u, ok := reflect.TypeAssert[unknowable](in); ok {
 			return conv.valueFrom(u.Unwrap(), path, haveNil, u.IsUnknown())
 		}
 	}

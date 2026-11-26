@@ -6,8 +6,8 @@ description: Modern Go idioms used in this repo (Go 1.27) — the new(expression
 # Modern Go in this repo
 
 `go.mod` declares **`go 1.27`**. Two idioms matter most here: `new(expression)` for pointers, and
-the codebase's generics. To keep the tree on those idioms, run the [`go fix`](#go-fix--the-modernizer-pass)
-modernizer pass occasionally.
+the codebase's generics. `task lint` keeps the tree on those idioms with the
+[`go fix`](#go-fix--the-modernizer-pass) analyzers.
 
 Bumping the Go version is a **two-file** change: `flake.nix` pins the toolchain (`go_1_27` and the
 `GOROOT` derived from it), so a `go.mod` bump must update the flake's pin in lock-step — otherwise
@@ -127,9 +127,10 @@ go fix -diff ./...        # preview every suggested fix as a unified diff — re
 go fix ./...              # apply them in place
 ```
 
-Not part of CI or `task lint` (lint is golangci-lint only — see AGENTS.md "Always-on rules"). Treat
-`go fix` as an occasional, human-reviewed sweep, not an automated gate: some analyzers report
-non-problems, so always read `-diff` first and commit the result as its own `chore`.
+`task lint` runs the same analyzers as the golangci-lint linter `modernize`, so CI fails on a
+finding. `task lint -- --fix` applies the fixes that are safe to apply, and `go fix -diff ./...`
+previews them. Read every fix before you commit it, because an analyzer can report a non-problem.
+For one of those, write `//nolint:modernize` with the reason after it.
 
 **Read each fix, don't rubber-stamp it.** The concrete pass on this repo (commit `chore: apply
 go1.26 go fix idioms`) is the worked example:

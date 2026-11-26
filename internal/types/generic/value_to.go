@@ -73,7 +73,7 @@ func (conv converter) valueTo(in tftypes.Value, out reflect.Value, path reflectw
 
 	if out.CanAddr() {
 		// unwrap UnknownIsNull wrapping struct
-		if u, ok := out.Addr().Interface().(unknowableAddr); ok {
+		if u, ok := reflect.TypeAssert[unknowableAddr](out.Addr()); ok {
 			if in.IsKnown() {
 				unwrapped := u.UnwrapAddr()
 				unwrapped.Set(reflect.New(unwrapped.Type().Elem()))

@@ -373,7 +373,7 @@ func (model *buildingBlockDefinition) SetFromVersionClientDtos(diags *diag.Diagn
 func versionSpecContainsPlaintextSecret(versionSpecDto client.MeshBuildingBlockDefinitionVersionSpec) bool {
 	found := false
 	_ = reflectwalk.Walk(reflect.ValueOf(versionSpecDto), func(_ reflectwalk.WalkPath, v reflect.Value) error {
-		if s, ok := v.Interface().(clientTypes.Secret); ok && s.Plaintext != nil {
+		if s, ok := reflect.TypeAssert[clientTypes.Secret](v); ok && s.Plaintext != nil {
 			found = true
 		}
 		return nil
