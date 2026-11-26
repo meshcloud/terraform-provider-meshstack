@@ -1,0 +1,41 @@
+name: Release Notes Preview
+
+on:
+  push:
+    branches:
+      - main
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: nix develop -c bash -eo pipefail {0} # zizmor: ignore[misfeature] every step takes its tools from the dev shell
+
+jobs:
+  preview:
+    name: Release Notes Preview
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read # The release notes take their entries from the pull request descriptions.
+      issues: read # The release notes name the issues that a pull request closed.
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: cachix/install-nix-action@3dc140bfc76c49fbd4dd958429132e3746bcb086 # v31.11.5
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: go-${{ runner.os }}-${{ github.job }}-${{ hashFiles('go.sum') }}
+      - name: Preview the release notes
+        run: go run ./tools/releaser "$(git describe --tags --abbrev=0 HEAD^)..HEAD" >> "$GITHUB_STEP_SUMMARY"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
