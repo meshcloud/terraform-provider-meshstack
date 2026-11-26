@@ -29,6 +29,7 @@ linters:
     - misspell
     - modernize
     - nilerr
+    - nolintlint
     - predeclared
     - staticcheck
     - usetesting
@@ -39,6 +40,9 @@ linters:
     - testifylint
     - thelper
   settings:
+    nolintlint:
+      require-explanation: true
+      require-specific: true
     depguard:
       # Every directory pattern is listed twice, as '**/dir/*.go' and
       # '**/dir/**/*.go'. The second form matches files in subdirectories of dir

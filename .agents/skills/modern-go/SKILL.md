@@ -130,7 +130,8 @@ go fix ./...              # apply them in place
 `task lint` runs the same analyzers as the golangci-lint linter `modernize`, so CI fails on a
 finding. `task lint -- --fix` applies the fixes that are safe to apply, and `go fix -diff ./...`
 previews them. Read every fix before you commit it, because an analyzer can report a non-problem.
-For one of those, write `//nolint:modernize` with the reason after it.
+For one of those, write `//nolint:modernize // <reason>`; the linter `nolintlint` rejects a `//nolint`
+that names no linter or gives no reason.
 
 **Read each fix, don't rubber-stamp it.** The concrete pass on this repo (commit `chore: apply
 go1.26 go fix idioms`) is the worked example:

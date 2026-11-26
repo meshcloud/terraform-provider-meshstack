@@ -27,14 +27,14 @@ func (visitor *capturingVisitor) CaptureAndTraverse(path WalkPath, v reflect.Val
 
 func TestWalk(t *testing.T) {
 	type (
-		//nolint:unused
+		//nolint:unused // the unexported fields exist only so that Walk skips them
 		testStruct1 struct {
 			F1          string
 			F2          *int
 			ignored     any
 			alsoIgnored any
 		}
-		//nolint:unused
+		//nolint:unused // the unexported fields exist only so that Walk skips them
 		testStruct2 struct {
 			*testStruct1
 			F3      []string
