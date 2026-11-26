@@ -48,7 +48,8 @@ Mid-complexity, clean, and complete — prefer these over the large `building_bl
 5. **`internal/provider/testdata/hcl/resources/<name>/step<N>.tf`** — one HCL file per test step
    (see below).
 6. **`internal/provider/<name>_resource_test.go`** — a `TestAcc<Name>` test (see below).
-7. `task generate` (docs) and update `CHANGELOG.md`.
+7. `task generate` (docs), and write the release note entry into the pull request description
+   (see the `release-notes` skill).
 
 ## Attribute design and naming
 

@@ -150,7 +150,7 @@ refs, DTOs, `Id`/`Uuid` naming, receivers, preview API, computed-only outputs). 
 4. `examples/resources/meshstack_<name>/` — example `.tf`.
 5. `internal/provider/testdata/hcl/resources/<name>/step<N>.tf` — one HCL file per test step.
 6. `task generate` — regenerate `docs/`.
-7. Update `CHANGELOG.md`.
+7. Write the release note entry into the pull request description (the **`release-notes`** skill).
 
 ## Lint & formatting
 
@@ -170,14 +170,31 @@ different formatting than CI does, and one built by an older Go refuses to run a
 
 For the occasional `go fix` modernizer sweep, see the **`modern-go`** skill.
 
-## Docs, changelog & CI
+## Docs, release notes & CI
 
 - **Registry docs** are generated — run `task generate` after schema changes and commit `docs/`.
-- **Changelog**: every user-facing change needs a `CHANGELOG.md` entry. The top section always
-  names the concrete anticipated next version (never "Unreleased") — `main` is always ready to tag.
-  See the **`changelog-management`** skill.
+- **Release notes**: the repository has no changelog file. When a `vX.Y.Z` tag is pushed, the
+  `Release` workflow runs `tools/releaser`, which builds the GitHub release notes from the commits
+  on `main` since the previous tag. Every `feat` commit, every `fix` commit and every commit with
+  `!` gets an entry, and the text of the entry is a leading blockquote in the pull request
+  description. Preview the notes and the next version with
+
+  ```bash
+  GOWORK=off go run ./tools/releaser "$(git describe --tags --abbrev=0 HEAD^)..HEAD"
+  ```
+
+  The notes go to stdout, the warnings and the next version go to stderr. The releaser needs a token
+  in `GITHUB_TOKEN` or `GH_TOKEN`, for example from `export GH_TOKEN=$(gh auth token)`. The
+  `Release Notes Preview` workflow shows the same on every push to `main`. The **`release-notes`**
+  skill describes how to write an entry, how to link an issue that the change closes and how to pick
+  the version.
 - **Commits** follow Conventional Commits (`feat:`, `fix:`, `docs:`, `chore:`, `feat!:` for
-  breaking).
+  breaking). Pull requests are rebase-merged, so `main` has a linear history and every commit title
+  lands on it. A ruleset on `main` accepts only commit titles that match
+
+  ```text
+  ^(feat|fix|docs|test|ci|chore|refactor|build|perf|revert)(\([^)]+\))?!?: .+
+  ```
 - **CI/CD**: GitHub Actions, every action pinned to a full 40-char SHA — for a new action resolve the
   latest release (`gh api repos/<o>/<r>/releases/latest --jq .tag_name`, then
   `gh api repos/<o>/<r>/git/refs/tags/<tag> --jq .object.sha`) rather than copying a SHA out of an

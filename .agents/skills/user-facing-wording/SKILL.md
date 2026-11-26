@@ -1,6 +1,6 @@
 ---
 name: user-facing-wording
-description: Find and fix wording inconsistencies in this provider's user-facing text (diagnostics, schema descriptions, example comments, changelog prose, docs) — against meshStack itself and against the provider's own other surfaces. Use when writing or changing an AddError/AddAttributeError message, a MarkdownDescription, a client error string, an example .tf comment, a CHANGELOG entry, or when asked to review or align wording.
+description: Find and fix wording inconsistencies in this provider's user-facing text (diagnostics, schema descriptions, example comments, release note entries, docs) — against meshStack itself and against the provider's own other surfaces. Use when writing or changing an AddError/AddAttributeError message, a MarkdownDescription, a client error string, an example .tf comment, a release note entry in a pull request description, or when asked to review or align wording.
 ---
 
 # Wording consistency
@@ -25,7 +25,7 @@ usually not the intent.
 ## What counts as user-facing text
 
 Anything a user or Registry reader ends up reading: diagnostic summaries and details, schema
-descriptions, example config comments, client error strings, changelog entries, and any other
+descriptions, example config comments, client error strings, release note entries, and any other
 generated or published documentation. Treat a change to any of these as seriously as a change to
 docs — several of them are published verbatim.
 

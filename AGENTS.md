@@ -69,10 +69,13 @@ opens a browser.
 
 - **Lint only via `task lint`** (golangci-lint, which also enforces gci import ordering + gofmt). It
   already runs `govet`, so **do not run `go vet` separately**. Auto-fix with `task lint -- --fix`.
-- **Changelog for user-facing changes.** Every feature, fix, or breaking change needs a
-  `CHANGELOG.md` entry under the concrete anticipated next version — never an "Unreleased" heading,
-  because `main` is always ready to tag. See **`changelog-management`**.
+- **Release note entries live in the pull request description.** Every `feat` commit, every `fix`
+  commit and every commit with `!` gets one leading blockquote in the description of its pull
+  request. The release notes are generated from these when a tag is pushed, and `main` is always
+  ready to tag. See **`release-notes`**.
 - **Conventional Commits** for messages (`feat:`, `fix:`, `docs:`, `chore:`, `feat!:` for breaking).
+  Pull requests are rebase-merged, so every commit title lands on `main` and decides whether the
+  commit gets a release note entry.
 - **The user skill changes with the resources.** `skills/terraform-provider-meshstack/` is for those
   who **use** the provider; only its last section, on running a config against a dev build, is for
   contributors. A change to a resource or data source that the
@@ -118,7 +121,7 @@ require them.
 | `modern-go` | Modern Go idioms (`new(expr)`, generics), the `encoding/json/v2` tag rules, the `go fix` sweep |
 | `acceptance-testing` | Run & debug the acceptance suite against a local backend |
 | `terraform-provider-meshstack` | Use the provider; its last section runs a standalone repro/debug/prototype config against a dev build. It lives in `skills/` for users, and `.agents/skills/` links it |
-| `changelog-management` | Pick the next version, maintain `CHANGELOG.md` |
+| `release-notes` | Write the release note entries of a pull request, preview the notes, pick the next version, tag a release |
 
 ## Key directories
 
