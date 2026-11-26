@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/meshcloud/meshstack-cli/client"
 )
@@ -21,7 +22,9 @@ func (m MeshWorkspaceUserGroupClient) List(_ context.Context, filter client.Mesh
 		group, _ := m.Store.Get(identifier)
 		if (filter.WorkspaceIdentifier == "" || group.Metadata.OwnedByWorkspace == filter.WorkspaceIdentifier) &&
 			(filter.Username == "" || slices.Contains(group.Spec.Members, filter.Username)) &&
-			(filter.SourceSystem == "" || group.Metadata.SourceSystem != nil && *group.Metadata.SourceSystem == filter.SourceSystem) {
+			(filter.SourceSystem == "" || group.Metadata.SourceSystem != nil && *group.Metadata.SourceSystem == filter.SourceSystem) &&
+			(filter.Egid == "" || group.Spec.Egid != nil && *group.Spec.Egid == filter.Egid) &&
+			(filter.DisplayName == "" || strings.EqualFold(group.Spec.DisplayName, filter.DisplayName)) {
 			result = append(result, *group)
 		}
 	}

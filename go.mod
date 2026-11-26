@@ -20,7 +20,7 @@ require (
 	github.com/hashicorp/terraform-plugin-log v0.11.0
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.41.1
 	github.com/hashicorp/terraform-plugin-testing v1.16.0
-	github.com/meshcloud/meshstack-cli v0.11.1-0.20261125121237-e2b4e86b3273
+	github.com/meshcloud/meshstack-cli v0.11.1-0.20261126093417-83b370eeb96c
 	github.com/stretchr/testify v1.12.1
 )
 
