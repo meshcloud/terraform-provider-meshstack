@@ -105,7 +105,7 @@ GOWORK=off go run ./tools/releaser "$(git describe --tags --abbrev=0 HEAD^)..HEA
 The notes go to stdout. The warnings and the next version go to stderr. The releaser needs a token
 in `GITHUB_TOKEN` or `GH_TOKEN` to read the pull requests, the authors and the issues from GitHub;
 `export GH_TOKEN=$(gh auth token)` sets one. Without a token it warns, and every entry uses the
-commit text. The `Release Notes Preview` workflow runs the same command on every push to `main` and
+commit text. The `Release notes` workflow runs the same command on every push to `main` and
 shows the notes in its run summary.
 
 Fix a warning about a blockquote count by editing the pull request description, then run the
