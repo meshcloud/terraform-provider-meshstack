@@ -54,6 +54,12 @@ resource "github_repository_ruleset" "protect_default_branch" {
   }
 
   rules {
+    commit_message_pattern {
+      name     = "Conventional Commits title"
+      operator = "regex"
+      pattern  = "^(feat|fix|docs|test|ci|chore|refactor|build|perf|revert)(\\([^)]+\\))?!?: .+"
+    }
+
     # The live rule also has require_extra_approval_for_unattributed_changes = true, which the
     # provider cannot express as of 6.13.0 - it is missing from the schema, so it appears in no plan.
     # GitHub kept the setting through the apply that imported this ruleset, so it survives a PUT that
