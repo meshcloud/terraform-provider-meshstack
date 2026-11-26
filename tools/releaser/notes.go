@@ -204,7 +204,7 @@ func unwrap(text string) string {
 
 func (e entry) suffix() string {
 	var out strings.Builder
-	out.WriteString(" (" + e.Reference)
+	out.WriteString("(" + e.Reference)
 	if e.Author != "" {
 		out.WriteString(" by @" + e.Author)
 	}
@@ -218,12 +218,18 @@ func (e entry) suffix() string {
 }
 
 func renderItem(e entry) string {
+	lines := strings.Split(unwrap(strings.TrimSpace(e.Text)), "\n")
+	if len(lines) == 1 {
+		lines[0] = strings.TrimRight(lines[0], trailingWhitespace) + " " + e.suffix()
+	} else {
+		lines = append(lines, "", e.suffix())
+	}
 	var out strings.Builder
-	for i, line := range strings.Split(unwrap(strings.TrimSpace(e.Text)), "\n") {
+	for i, line := range lines {
 		line = strings.TrimRight(line, trailingWhitespace)
 		switch {
 		case i == 0:
-			out.WriteString("- " + line + e.suffix())
+			out.WriteString("- " + line)
 		case line != "":
 			out.WriteString("  " + line)
 		}
