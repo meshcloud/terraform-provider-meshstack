@@ -108,6 +108,10 @@ uuids into the configuration. Examples:
 - The `ref` of a workspace is the `target_ref` of a workspace-level building block. For a
   tenant-level block, filter `meshstack_tenants` by `platform = "<platform>.<location>"` and take
   `one(data.meshstack_tenants.<name>.tenants).ref`.
+- meshStack generates the name of a group that your identity provider created through SCIM. Filter
+  `meshstack_workspace_user_groups` by `egid`, the group's ID in your identity provider, and pass
+  `one(data.meshstack_workspace_user_groups.<name>.workspace_user_groups).metadata.name` on as
+  `subject.name` of a group binding.
 - The definition data source fails unless exactly one definition matches. Add
   `metadata.owned_by_workspace` when two workspaces offer a definition of the same name.
 - `version_latest_release` of a definition is its newest released version, `version_latest` the
